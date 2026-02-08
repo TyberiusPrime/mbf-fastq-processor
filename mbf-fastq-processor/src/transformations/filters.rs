@@ -7,10 +7,10 @@ mod sample;
 mod skip;
 
 // Re-export all public structs
-pub use by_numeric_tag::ByNumericTag;
-pub use by_tag::ByTag;
-pub use empty::Empty;
+pub use by_numeric_tag::{ByNumericTag, PartialByNumericTag};
+pub use by_tag::{ByTag, PartialByTag};
+pub use empty::{Empty, PartialEmpty};
 pub use head::{Head, PartialHead};
-pub use reservoir_sample::ReservoirSample;
-pub use sample::Sample;
-pub use skip::Skip;
+pub use reservoir_sample::{ReservoirSample, PartialReservoirSample};
+pub use sample::{Sample, PartialSample};
+pub use skip::{Skip, PartialSkip};

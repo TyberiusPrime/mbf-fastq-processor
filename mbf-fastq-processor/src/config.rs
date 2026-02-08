@@ -10,6 +10,7 @@ use schemars::JsonSchema;
 use std::cell::RefCell;
 use std::collections::{BTreeMap, HashSet};
 use std::path::Path;
+use std::sync::{Arc, Mutex};
 use toml_pretty_deser::prelude::*;
 
 pub mod deser;
@@ -187,70 +188,68 @@ fn expand_reports<F: FnMut(Transformation), G: FnMut(Transformation)>(
 ) {
     use crate::transformations::prelude::DemultiplexedData;
     use crate::transformations::reports;
-    //TODO
-    // push_existing(Transformation::Report(config.clone())); // for validation. We remove it again later
-    // // on.
-    // // Transformation::Expand
-    // res_report_labels.push(config.name);
-    // if config.count {
-    //     push_new(Transformation::_ReportCount(Box::new(
-    //         reports::_ReportCount::new(*report_no),
-    //     )));
-    // }
-    // if config.length_distribution {
-    //     push_new(Transformation::_ReportLengthDistribution(Box::new(
-    //         reports::_ReportLengthDistribution::new(*report_no),
-    //     )));
-    // }
-    // if config.duplicate_count_per_read {
-    //     push_new(Transformation::_ReportDuplicateCount(Box::new(
-    //         reports::_ReportDuplicateCount {
-    //             report_no: *report_no,
-    //             data_per_segment: Arc::new(Mutex::new(DemultiplexedData::default())),
-    //             debug_reproducibility: config.debug_reproducibility,
-    //             initial_filter_capacity: Arc::new(Mutex::new(None)),
-    //             actual_filter_capacity: None,
-    //         },
-    //     )));
-    // }
-    // if config.duplicate_count_per_fragment {
-    //     push_new(Transformation::_ReportDuplicateFragmentCount(Box::new(
-    //         reports::_ReportDuplicateFragmentCount {
-    //             report_no: *report_no,
-    //             data: Arc::new(Mutex::new(DemultiplexedData::default())),
-    //             debug_reproducibility: config.debug_reproducibility,
-    //             initial_filter_capacity: Arc::new(Mutex::new(None)),
-    //             actual_filter_capacity: None,
-    //         },
-    //     )));
-    // }
-    // if config.base_statistics {
-    //     use crate::transformations::reports;
-    //     push_new(Transformation::_ReportBaseStatisticsPart1(Box::new(
-    //         reports::_ReportBaseStatisticsPart1::new(*report_no),
-    //     )));
-    //     push_new(Transformation::_ReportBaseStatisticsPart2(Box::new(
-    //         reports::_ReportBaseStatisticsPart2::new(*report_no),
-    //     )));
-    // }
-    //
-    // if let Some(count_oligos) = config.count_oligos.as_ref() {
-    //     push_new(Transformation::_ReportCountOligos(Box::new(
-    //         reports::_ReportCountOligos::new(
-    //             *report_no,
-    //             count_oligos,
-    //             config.count_oligos_segment.clone(),
-    //         ),
-    //     )));
-    // }
-    // if let Some(tag_histograms) = config.tag_histograms.as_ref() {
-    //     for tag_name in tag_histograms {
-    //         push_new(Transformation::_ReportTagHistogram(Box::new(
-    //             reports::_ReportTagHistogram::new(*report_no, tag_name.clone()),
-    //         )));
-    //     }
-    // }
-    // *report_no += 1;
+    push_existing(Transformation::Report(config.clone())); // for validation. 
+    // We remove it again later on. Transformation::Expand
+    res_report_labels.push(config.name);
+    if config.count {
+        push_new(Transformation::_ReportCount(Box::new(
+            reports::_ReportCount::new(*report_no),
+        )));
+    }
+    if config.length_distribution {
+        push_new(Transformation::_ReportLengthDistribution(Box::new(
+            reports::_ReportLengthDistribution::new(*report_no),
+        )));
+    }
+    if config.duplicate_count_per_read {
+        push_new(Transformation::_ReportDuplicateCount(Box::new(
+            reports::_ReportDuplicateCount {
+                report_no: *report_no,
+                data_per_segment: Arc::new(Mutex::new(DemultiplexedData::default())),
+                debug_reproducibility: config.debug_reproducibility,
+                initial_filter_capacity: Arc::new(Mutex::new(None)),
+                actual_filter_capacity: None,
+            },
+        )));
+    }
+    if config.duplicate_count_per_fragment {
+        push_new(Transformation::_ReportDuplicateFragmentCount(Box::new(
+            reports::_ReportDuplicateFragmentCount {
+                report_no: *report_no,
+                data: Arc::new(Mutex::new(DemultiplexedData::default())),
+                debug_reproducibility: config.debug_reproducibility,
+                initial_filter_capacity: Arc::new(Mutex::new(None)),
+                actual_filter_capacity: None,
+            },
+        )));
+    }
+    if config.base_statistics {
+        use crate::transformations::reports;
+        push_new(Transformation::_ReportBaseStatisticsPart1(Box::new(
+            reports::_ReportBaseStatisticsPart1::new(*report_no),
+        )));
+        push_new(Transformation::_ReportBaseStatisticsPart2(Box::new(
+            reports::_ReportBaseStatisticsPart2::new(*report_no),
+        )));
+    }
+
+    if let Some(count_oligos) = config.count_oligos.as_ref() {
+        push_new(Transformation::_ReportCountOligos(Box::new(
+            reports::_ReportCountOligos::new(
+                *report_no,
+                count_oligos,
+                config.count_oligos_segment.clone(),
+            ),
+        )));
+    }
+    if let Some(tag_histograms) = config.tag_histograms.as_ref() {
+        for tag_name in tag_histograms {
+            push_new(Transformation::_ReportTagHistogram(Box::new(
+                reports::_ReportTagHistogram::new(*report_no, tag_name.clone()),
+            )));
+        }
+    }
+    *report_no += 1;
 }
 
 impl Config {
@@ -278,109 +277,108 @@ impl Config {
             .drain(..)
         {
             match t {
-                //TODO
-                // Transformation::ExtractRegion(step_config) => {
-                //     let regions = vec![crate::transformations::RegionDefinition {
-                //         source: step_config.source,
-                //         resolved_source: None,
-                //         start: step_config.start,
-                //         length: step_config.len,
-                //         anchor: step_config.anchor,
-                //     }];
-                //     push_new(Transformation::ExtractRegions(
-                //         crate::transformations::extract::Regions {
-                //             out_label: step_config.out_label,
-                //             regions,
-                //             // region_separator: None,
-                //             output_tag_type: std::sync::OnceLock::new(),
-                //         },
-                //     ));
-                // }
-                //
-                // Transformation::Report(report_config) => {
-                //     expand_reports(
-                //         &mut push_new,
-                //         &mut push_existing,
-                //         &mut res_report_labels,
-                //         &mut report_no,
-                //         report_config,
-                //     );
-                // }
-                //
-                // Transformation::_InternalReadCount(step_config) => {
-                //     res_report_labels.push(step_config.out_label.clone());
-                //     let step_config: Box<_> =
-                //         Box::new(crate::transformations::_InternalReadCount::new(
-                //             step_config.out_label,
-                //             report_no,
-                //         ));
-                //     report_no += 1;
-                //     push_new(Transformation::_InternalReadCount(step_config));
-                // }
-                // Transformation::CalcGCContent(step_config) => {
-                //     push_new(Transformation::CalcBaseContent(
-                //         step_config.into_base_content(),
-                //     ));
-                // }
-                // Transformation::CalcNCount(config) => {
-                //     push_new(Transformation::CalcBaseContent(config.into_base_content()));
-                // }
-                // Transformation::FilterEmpty(step_config) => {
-                //     // Replace FilterEmpty with CalcLength + FilterByNumericTag
-                //     let length_tag_label =
-                //         format!("_internal_length_{}", expanded_transforms.borrow().len());
-                //     push_new(Transformation::CalcLength(
-                //         crate::transformations::calc::Length {
-                //             out_label: length_tag_label.clone(),
-                //             segment: step_config.segment,
-                //             segment_index: step_config.segment_index,
-                //         },
-                //     ));
-                //     push_new(Transformation::FilterByNumericTag(
-                //         crate::transformations::filters::ByNumericTag {
-                //             in_label: length_tag_label,
-                //             min_value: Some(1.0), // Non-empty means length >= 1
-                //             max_value: None,
-                //             keep_or_remove: crate::transformations::KeepOrRemove::Keep,
-                //         },
-                //     ));
-                // }
-                // Transformation::ConvertQuality(ref step_config) => {
-                //     //implies a check beforehand
-                //     push_new(Transformation::ValidateQuality(
-                //         crate::transformations::validation::ValidateQuality {
-                //             encoding: step_config.from,
-                //             segment: SegmentOrAll("all".to_string()),
-                //             segment_index: Some(SegmentIndexOrAll::All),
-                //         },
-                //     ));
-                //     push_new(t);
-                // }
-                // Transformation::ValidateName(step_config) => {
-                //     let mut replacement =
-                //         crate::transformations::validation::SpotCheckReadPairing::default();
-                //     replacement.sample_stride = 1;
-                //     replacement.readname_end_char = step_config.readname_end_char;
-                //     push_new(Transformation::SpotCheckReadPairing(replacement));
-                // }
-                // Transformation::Lowercase(step_config) => {
-                //     push_new(Transformation::_ChangeCase(
-                //         crate::transformations::edits::_ChangeCase::new(
-                //             step_config.target,
-                //             crate::transformations::edits::CaseType::Lower,
-                //             step_config.if_tag,
-                //         ),
-                //     ));
-                // }
-                // Transformation::Uppercase(step_config) => {
-                //     push_new(Transformation::_ChangeCase(
-                //         crate::transformations::edits::_ChangeCase::new(
-                //             step_config.target,
-                //             crate::transformations::edits::CaseType::Upper,
-                //             step_config.if_tag,
-                //         ),
-                //     ));
-                // }
+                Transformation::ExtractRegion(step_config) => {
+                    let regions = vec![crate::transformations::RegionDefinition {
+                        source: step_config.source,
+                        resolved_source: None,
+                        start: step_config.start,
+                        length: step_config.len,
+                        anchor: step_config.anchor,
+                    }];
+                    push_new(Transformation::ExtractRegions(
+                        crate::transformations::extract::Regions {
+                            out_label: step_config.out_label,
+                            regions,
+                            // region_separator: None,
+                            output_tag_type: std::sync::OnceLock::new(),
+                        },
+                    ));
+                }
+
+                Transformation::Report(report_config) => {
+                    expand_reports(
+                        &mut push_new,
+                        &mut push_existing,
+                        &mut res_report_labels,
+                        &mut report_no,
+                        report_config,
+                    );
+                }
+
+                Transformation::_InternalReadCount(step_config) => {
+                    res_report_labels.push(step_config.out_label.clone());
+                    let step_config: Box<_> =
+                        Box::new(crate::transformations::_InternalReadCount::new(
+                            step_config.out_label,
+                            report_no,
+                        ));
+                    report_no += 1;
+                    push_new(Transformation::_InternalReadCount(step_config));
+                }
+                Transformation::CalcGCContent(step_config) => {
+                    push_new(Transformation::CalcBaseContent(
+                        step_config.into_base_content(),
+                    ));
+                }
+                Transformation::CalcNCount(config) => {
+                    push_new(Transformation::CalcBaseContent(config.into_base_content()));
+                }
+                Transformation::FilterEmpty(step_config) => {
+                    // Replace FilterEmpty with CalcLength + FilterByNumericTag
+                    let length_tag_label =
+                        format!("_internal_length_{}", expanded_transforms.borrow().len());
+                    push_new(Transformation::CalcLength(
+                        crate::transformations::calc::Length {
+                            out_label: length_tag_label.clone(),
+                            segment: step_config.segment,
+                            segment_index: step_config.segment_index,
+                        },
+                    ));
+                    push_new(Transformation::FilterByNumericTag(
+                        crate::transformations::filters::ByNumericTag {
+                            in_label: length_tag_label,
+                            min_value: Some(1.0), // Non-empty means length >= 1
+                            max_value: None,
+                            keep_or_remove: crate::transformations::KeepOrRemove::Keep,
+                        },
+                    ));
+                }
+                Transformation::ConvertQuality(ref step_config) => {
+                    //implies a check beforehand
+                    push_new(Transformation::ValidateQuality(
+                        crate::transformations::validation::ValidateQuality {
+                            encoding: step_config.from,
+                            segment: SegmentOrAll("all".to_string()),
+                            segment_index: Some(SegmentIndexOrAll::All),
+                        },
+                    ));
+                    push_new(t);
+                }
+                Transformation::ValidateName(step_config) => {
+                    let mut replacement =
+                        crate::transformations::validation::SpotCheckReadPairing::default();
+                    replacement.sample_stride = 1;
+                    replacement.readname_end_char = step_config.readname_end_char;
+                    push_new(Transformation::SpotCheckReadPairing(replacement));
+                }
+                Transformation::Lowercase(step_config) => {
+                    push_new(Transformation::_ChangeCase(
+                        crate::transformations::edits::_ChangeCase::new(
+                            step_config.target,
+                            crate::transformations::edits::CaseType::Lower,
+                            step_config.if_tag,
+                        ),
+                    ));
+                }
+                Transformation::Uppercase(step_config) => {
+                    push_new(Transformation::_ChangeCase(
+                        crate::transformations::edits::_ChangeCase::new(
+                            step_config.target,
+                            crate::transformations::edits::CaseType::Upper,
+                            step_config.if_tag,
+                        ),
+                    ));
+                }
                 other => {
                     push_existing(other);
                 }

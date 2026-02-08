@@ -5,6 +5,7 @@ use crate::transformations::prelude::*;
 use crate::dna::TagValue;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[tpd]
 pub enum CaseType {
     Lower,
     Upper,
@@ -16,22 +17,23 @@ impl Default for CaseType {
     }
 }
 
-#[derive(eserde::Deserialize, Debug, Clone)]
-#[serde(deny_unknown_fields)]
+
+#[derive(Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct _ChangeCase {
-    #[serde(alias = "segment")]
-    #[serde(alias = "source")]
+    #[tpd_alias("segment")]
+    #[tpd_alias("source")]
     target: String,
 
-    #[serde(default)]
-    #[serde(skip)]
+    #[tpd_skip]
+    #[schemars(skip)]
     resolved_source: Option<ResolvedSourceAll>,
 
-    #[serde(default)]
-    #[serde(skip)]
+    #[tpd_default]
+    #[schemars(skip)]
     case_type: CaseType,
 
-    #[serde(default)]
     pub if_tag: Option<String>,
 }
 

@@ -8,7 +8,7 @@ use super::super::tag::default_segment_all;
 
 /// Include a report at this position
 #[derive(Clone, JsonSchema)]
-#[tpd(partial=false)]
+#[tpd(partial = false)]
 #[derive(Debug)]
 #[allow(clippy::struct_excessive_bools)]
 pub struct Report {
@@ -43,13 +43,14 @@ impl VerifyFromToml for PartialReport {
         Self: Sized,
     {
         self.name = self.name.verify(helper, |name: &String| {
-            if name.is_empty() {
+            if !name.is_empty() {
                 Ok(())
             } else {
                 Err(("Name must not be empty".to_string(), None))
             }
         });
         self.count = self.count.or_default(true);
+        self.count_oligos_segment = self.count_oligos_segment.or_default(default_segment_all());
         //TODO: count_oligos_segmen
         self
     }

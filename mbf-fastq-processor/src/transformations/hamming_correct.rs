@@ -10,8 +10,10 @@ use crate::{
 use crate::dna::{Hits, TagValue};
 
 /// Correct a tag (extracted region) to known barcodes
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+
+#[derive(Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct HammingCorrect {
     /// Input tag to correct
     pub in_label: String,
@@ -24,21 +26,19 @@ pub struct HammingCorrect {
     /// What to do when no match is found
     pub on_no_match: OnNoMatch,
 
-    #[serde(default)] // eserde compatibility
-    #[serde(skip)]
+    #[tpd_skip] // eserde compatibility
+    #[schemars(skip)]
     pub resolved_barcodes: Option<IndexMap<BString, String>>,
-    #[serde(default)] // eserde compatibility
-    #[serde(skip)]
+    #[tpd_skip] // eserde compatibility
+    #[schemars(skip)]
     pub had_iupac: bool,
 }
 
-#[derive(eserde::Deserialize, Debug, Clone, Copy, JsonSchema)]
+#[derive( Debug, Clone, Copy, JsonSchema)]
+#[tpd]
 pub enum OnNoMatch {
-    #[serde(alias = "remove")]
     Remove,
-    #[serde(alias = "empty")]
     Empty,
-    #[serde(alias = "keep")]
     Keep,
 }
 

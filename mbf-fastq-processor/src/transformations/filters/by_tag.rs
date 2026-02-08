@@ -2,8 +2,10 @@
 use crate::{dna::TagValue, transformations::prelude::*};
 
 /// Filter reads by presence/value of a (non-numeric) tag
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+
+#[derive(Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct ByTag {
     in_label: String,
     keep_or_remove: super::super::KeepOrRemove,

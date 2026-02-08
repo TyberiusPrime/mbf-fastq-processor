@@ -10,24 +10,35 @@ use super::super::tag::default_region_separator;
 type QuantifyTagCollector = Arc<Mutex<DemultiplexedData<BTreeMap<Vec<u8>, usize>>>>;
 
 /// Write a histogram of tag values to a JSON file.
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct QuantifyTag {
     pub infix: String,
     pub in_label: String,
 
-    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
-    #[serde(skip)]
+    #[tpd_skip] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
+    #[schemars(skip)]
     pub collector: QuantifyTagCollector,
 
-    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
-    #[serde(skip)]
+    #[tpd_skip] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
+    #[schemars(skip)]
     pub output_streams: Arc<Mutex<DemultiplexedOutputFiles>>,
 
-    #[serde(default = "default_region_separator")]
-    #[serde(deserialize_with = "bstring_from_string")]
     #[schemars(with = "String")]
+    #[tpd_with(tpd_adapt_bstring)]
+    #[tpd_adapt_in_verify]
     region_separator: BString,
+}
+
+impl VerifyFromToml for PartialQuantifyTag {
+    fn verify(mut self, helper: &mut TomlHelper<'_>) -> Self
+    where
+        Self: Sized,
+    {
+        self.region_separator = self.region_separator.or_default_with(default_region_separator);
+        self
+    }
 }
 
 impl Step for QuantifyTag {

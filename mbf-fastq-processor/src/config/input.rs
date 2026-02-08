@@ -362,40 +362,23 @@ pub enum CompressionFormat {
     #[serde(alias = "uncompressed")]
     #[serde(alias = "Uncompressed")]
     #[serde(alias = "raw")]
-    #[serde(alias = "Raw")]
     #[default]
     Uncompressed,
     #[serde(alias = "gzip")]
     #[serde(alias = "gz")]
-    #[serde(alias = "Gzip")]
-    #[serde(alias = "Gz")]
     Gzip,
     #[serde(alias = "zstd")]
     #[serde(alias = "zst")]
-    #[serde(alias = "Zstd")]
-    #[serde(alias = "Zst")]
     Zstd,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Default, JsonSchema)]
 #[tpd]
 pub enum FileFormat {
-    #[serde(alias = "fastq")]
-    #[serde(alias = "FastQ")]
-    #[serde(alias = "Fastq")]
-    #[serde(alias = "FASTQ")]
     #[default]
     Fastq,
-    #[serde(alias = "fasta")]
-    #[serde(alias = "Fasta")]
-    #[serde(alias = "FASTA")]
     Fasta,
-    #[serde(alias = "bam")]
-    #[serde(alias = "Bam")]
-    #[serde(alias = "BAM")]
     Bam,
-    #[serde(alias = "none")]
-    #[serde(alias = "None")]
     None,
 }
 

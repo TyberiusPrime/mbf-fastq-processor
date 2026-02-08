@@ -61,8 +61,8 @@ impl VerifyFromToml for PartialQualifiedBases {
         Self: Sized,
     {
         self.threshold = tpd_extract_u8_from_byte_or_char(
-            self.tpd_get_threshold(_helper, false),
-            self.tpd_get_threshold(_helper, true),
+            self.tpd_get_threshold(_helper, false, false),
+            self.tpd_get_threshold(_helper, true, false),
         );
         self
     }

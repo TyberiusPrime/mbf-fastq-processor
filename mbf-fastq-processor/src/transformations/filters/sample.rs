@@ -5,14 +5,15 @@ use super::super::extend_seed;
 use rand::Rng;
 
 /// Sample reads by probability. Cheap.
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct Sample {
-    pub p: f32,
+    pub p: f64,
     pub seed: u64,
 
-    #[serde(default)] // eserde compatibility
-    #[serde(skip)]
+    #[tpd_skip] // eserde compatibility
+    #[schemars(skip)]
     rng: Arc<Mutex<Option<rand_chacha::ChaChaRng>>>,
 }
 

@@ -3,8 +3,10 @@ use crate::transformations::prelude::*;
 use crate::{dna::TagValue, io};
 
 /// Convert region tag to a length tag
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+
+#[derive(Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct RegionsToLength {
     pub out_label: String,
     pub in_label: String,

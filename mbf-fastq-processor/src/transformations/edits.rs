@@ -16,7 +16,7 @@ mod truncate;
 mod uppercase;
 
 // Re-exports
-pub use _change_case::{_ChangeCase, CaseType};
+pub use _change_case::{_ChangeCase, Partial_ChangeCase, CaseType};
 pub use convert_quality::{ConvertQuality, PartialConvertQuality};
 pub use cut_end::{CutEnd, PartialCutEnd};
 pub use cut_start::{CutStart, PartialCutStart};

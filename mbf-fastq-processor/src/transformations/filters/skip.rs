@@ -2,13 +2,14 @@
 use crate::transformations::prelude::*;
 
 /// Skip the first n reads
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct Skip {
     pub n: usize,
 
-    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
-    #[serde(skip)]
+    #[tpd_skip] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
+    #[schemars(skip)]
     pub remaining: Arc<Mutex<DemultiplexedData<usize>>>,
 }
 
