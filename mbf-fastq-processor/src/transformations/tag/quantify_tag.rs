@@ -17,18 +17,18 @@ pub struct QuantifyTag {
     pub infix: String,
     pub in_label: String,
 
-    #[tpd_skip] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
+    #[schemars(with = "String")]
+    #[tpd(with="tpd_adapt_bstring")]
+    region_separator: BString,
+
+    #[tpd(skip)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[schemars(skip)]
     pub collector: QuantifyTagCollector,
 
-    #[tpd_skip] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
+    #[tpd(skip)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[schemars(skip)]
     pub output_streams: Arc<Mutex<DemultiplexedOutputFiles>>,
 
-    #[schemars(with = "String")]
-    #[tpd_with(tpd_adapt_bstring)]
-    #[tpd_default_in_verify]
-    region_separator: BString,
 }
 
 impl VerifyFromToml for PartialQuantifyTag {

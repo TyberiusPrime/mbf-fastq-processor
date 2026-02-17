@@ -22,11 +22,11 @@ impl Default for CaseType {
 #[tpd]
 #[derive(Debug)]
 pub struct _ChangeCase {
-    #[tpd_alias("segment")]
-    #[tpd_alias("source")]
+    #[tpd(alias="segment")]
+    #[tpd(alias="source")]
     target: String,
 
-    #[tpd_skip]
+    #[tpd(skip)]
     #[schemars(skip)]
     resolved_source: Option<ResolvedSourceAll>,
 

@@ -5,7 +5,6 @@ use crate::transformations::prelude::*;
 
 use crate::{
     config::{
-        SegmentOrNameIndex, SegmentSequenceOrName,
         deser::{bstring_from_string, u8_regex_from_string},
     },
     dna::Hits,
@@ -23,20 +22,20 @@ fn regex_replace_with_self() -> BString {
 #[tpd(partial=false)]
 #[derive(Debug)]
 pub struct Regex {
-    #[tpd_with(tpd_adapt_regex)]
-    #[tpd_alias("pattern")]
-    #[tpd_alias("query")]
+    #[tpd(with="tpd_adapt_regex")]
+    #[tpd(alias="pattern")]
+    #[tpd(alias="query")]
     #[schemars(with = "String")]
     pub search: regex::bytes::Regex,
 
     #[tpd_default_in_verify]
-    #[tpd_with(tpd_adapt_bstring)]
+    #[tpd(with="tpd_adapt_bstring")]
     #[schemars(with = "String")]
     pub replacement: BString,
     out_label: String,
-    #[tpd_alias("segment")]
+    #[tpd(alias="segment")]
     source: SegmentSequenceOrName,
-    #[tpd_skip]
+    #[tpd(skip)]
     #[schemars(skip)]
     segment_index: Option<SegmentOrNameIndex>,
 }

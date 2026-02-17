@@ -7,13 +7,11 @@ use crate::transformations::prelude::*;
 #[tpd]
 #[derive(Debug)]
 pub struct ValidateName {
-    #[tpd_adapt_in_verify]
-    #[tpd_alias("read_name_end_char")]
     pub readname_end_char: Option<u8>,
 }
 
-impl VerifyFromToml for PartialValidateName {
-    fn verify(mut self, helper: &mut TomlHelper<'_>) -> Self
+impl VerifyIn<PartialInput> for PartialValidateName {
+    fn verify(mut self, helper: &mut TomlHelper<'_>, _parent: &PartialInput) -> Self
     where
         Self: Sized,
     {

@@ -3,6 +3,7 @@ use crate::io::output::compressed_output::{SimulatedWriteError, SimulatedWriteFa
 use anyhow::{Context, Result};
 use schemars::JsonSchema;
 use toml_pretty_deser::prelude::*;
+use crate::config::input::PartialInput;
 
 #[derive(Clone, Default, JsonSchema)]
 #[tpd]
@@ -73,11 +74,11 @@ const fn default_spot_check_read_pairing() -> bool {
 }
 
 #[derive(JsonSchema)]
-#[tpd(partial = false)]
+#[tpd]
 #[derive(Debug)]
 pub struct Options {
     //#[serde(default)]
-    #[tpd_alias("thread_count")]
+    #[tpd(alias="thread_count")]
     pub threads: Option<usize>,
     pub max_blocks_in_flight: Option<usize>,
 
@@ -92,13 +93,13 @@ pub struct Options {
     //#[serde(default = "default_spot_check_read_pairing")]
     #[tpd_default_in_verify]
     pub spot_check_read_pairing: bool,
-    #[tpd_nested]
+    #[tpd(nested)]
     #[tpd_default]
     pub debug_failures: FailureOptions,
 }
 
-impl VerifyFromToml for PartialOptions {
-    fn verify(mut self, _helper: &mut TomlHelper<'_>) -> Self
+impl VerifyIn<PartialInput> for PartialOptions {
+    fn verify(mut self, _helper: &mut TomlHelper<'_>, _parent: &PartialInput) -> Self
     where
         Self: Sized,
     {

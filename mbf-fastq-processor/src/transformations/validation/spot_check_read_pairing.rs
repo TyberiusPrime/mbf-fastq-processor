@@ -15,16 +15,12 @@ fn default_sample_stride() -> u64 {
 #[tpd(partial=false)]
 #[derive(Debug)]
 pub struct SpotCheckReadPairing {
-    #[serde(default = "default_sample_stride")]
-    #[tpd_default_in_verify]
     pub sample_stride: u64,
 
-    #[tpd_adapt_in_verify]
-    #[serde(default, deserialize_with = "single_u8_from_string")]
-    #[tpd_alias("read_name_end_char")]
+    //#[tpd(alias="read_name_end_char")]
     pub readname_end_char: Option<u8>,
 
-    #[tpd_skip] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
+    #[tpd(skip)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[schemars(skip)]
     processed_reads: std::sync::atomic::AtomicU64,
 }

@@ -13,13 +13,8 @@ use crate::{
 #[tpd]
 #[derive(Debug)]
 pub struct RegionsOfLowQuality {
-    #[tpd_default]
-    segment: Segment,
-    #[tpd_skip]
-    #[schemars(skip)]
-    segment_index: Option<SegmentIndex>,
+    segment_index: SegmentIndex,
 
-    #[tpd_adapt_in_verify]
     pub min_quality: u8,
     pub min_length: usize,
     pub out_label: String,

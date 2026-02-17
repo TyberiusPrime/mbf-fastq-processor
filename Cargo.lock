@@ -199,7 +199,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "63044e1ae8e69f3b5a92c736ca6269b8d12fa7efe39bf34ddb06d102cf0e2cab"
 dependencies = [
  "memchr",
- "regex-automata",
  "serde",
 ]
 
@@ -2281,14 +2280,11 @@ dependencies = [
 
 [[package]]
 name = "toml-pretty-deser"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
- "bstr",
  "codesnake",
  "indexmap",
- "memchr",
  "mutants 0.0.4",
- "num-traits",
  "strsim",
  "toml-pretty-deser-macros",
  "toml_edit 0.24.0+spec-1.1.0",
@@ -2296,7 +2292,7 @@ dependencies = [
 
 [[package]]
 name = "toml-pretty-deser-macros"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "proc-macro2 1.0.103",
  "quote 1.0.42",

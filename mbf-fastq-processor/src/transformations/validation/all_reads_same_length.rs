@@ -10,31 +10,25 @@ fn default_source() -> String {
 
 /// Verify that all reads have the same length
 #[derive(Clone, JsonSchema)]
-#[tpd(partial=false)]
+#[tpd]
 #[derive(Debug)]
 pub struct ValidateAllReadsSameLength {
     /// Segment to validate (default: read1)
 
-    #[tpd_default_in_verify]
-    #[tpd_alias("segment")]
-    source: String,
+    #[tpd(alias="segment")]
+    source: ResolvedSourceAll,
 
-    /// Optional tag name to validate - all reads must have the same tag value
-    #[tpd_skip]
-    #[serde(skip)]
-    resolved_source: Option<ResolvedSourceAll>,
-
-    #[tpd_skip]
+    #[tpd(skip)]
     #[schemars(skip)]
     expected_length: std::sync::OnceLock<usize>,
 }
 
-impl VerifyFromToml for PartialValidateAllReadsSameLength {
-    fn verify(mut self, helper: &mut TomlHelper<'_>) -> Self
+impl VerifyIn<PartialInput> for PartialValidateAllReadsSameLength {
+    fn verify(mut self, helper: &mut TomlHelper<'_>, _parent: &PartialInput) -> Self
     where
         Self: Sized,
     {
-        self.source = self.source.or_default_with(default_source);
+        //self.source = self.source.or_default_with(default_source);
         self
     }
 }
@@ -153,4 +147,3 @@ impl ValidateAllReadsSameLength {
         Ok(())
     }
 }
-

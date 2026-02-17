@@ -91,9 +91,9 @@ impl From<HistogramData> for serde_json::Value {
 pub struct _ReportTagHistogram {
     pub report_no: usize,
     pub tag_name: String,
-    #[tpd_skip]
+    #[tpd(skip)]
     pub tag_type: OnceLock<TagValueType>,
-    #[tpd_skip]
+    #[tpd(skip)]
     pub data: Arc<Mutex<DemultiplexedData<HistogramData>>>,
 }
 

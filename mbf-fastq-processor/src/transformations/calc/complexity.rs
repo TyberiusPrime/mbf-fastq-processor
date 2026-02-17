@@ -11,7 +11,7 @@ pub struct Complexity {
     pub out_label: String,
     #[tpd_default]
     segment: SegmentOrAll,
-    #[tpd_skip]
+    #[tpd(skip)]
     #[schemars(skip)]
     segment_index: Option<SegmentIndexOrAll>,
 }

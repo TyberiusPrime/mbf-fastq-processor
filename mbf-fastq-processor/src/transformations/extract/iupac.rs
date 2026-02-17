@@ -2,7 +2,7 @@
 
 use crate::transformations::prelude::*;
 use crate::{
-    config::{Segment, SegmentIndex, deser::tpd_adapt_iupac_bstring},
+    config::{deser::tpd_adapt_iupac_bstring},
     dna::Anchor,
 };
 
@@ -19,15 +19,15 @@ use super::extract_region_tags;
 #[allow(clippy::upper_case_acronyms)]
 #[derive( Debug)]
 pub struct IUPAC {
-    #[tpd_with(tpd_adapt_iupac_bstring)]
-    #[tpd_alias("query")]
-    #[tpd_alias("pattern")]
+    #[tpd(with="tpd_adapt_iupac_bstring")]
+    #[tpd(alias="query")]
+    #[tpd(alias="pattern")]
     #[schemars(with = "StringOrVecString")]
     search: Vec<BString>,
 
     #[tpd_default]
     segment: Segment,
-    #[tpd_skip]
+    #[tpd(skip)]
     #[schemars(skip)]
     segment_index: Option<SegmentIndex>,
 

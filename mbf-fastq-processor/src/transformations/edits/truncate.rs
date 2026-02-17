@@ -11,7 +11,7 @@ pub struct Truncate {
     #[tpd_default]
     segment: Segment,
     #[schemars(skip)]
-    #[tpd_skip]
+    #[tpd(skip)]
     segment_index: Option<SegmentIndex>,
     if_tag: Option<String>,
 }

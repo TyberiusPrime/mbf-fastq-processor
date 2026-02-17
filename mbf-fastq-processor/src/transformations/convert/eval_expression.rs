@@ -23,21 +23,21 @@ pub struct EvalExpression {
     pub out_label: String,
     /// The arithmetic expression to evaluate
     /// Variables in the expression should match existing numeric tag names
-    #[tpd_alias("expr")]
+    #[tpd(alias="expr")]
     pub expression: String,
 
-    #[tpd_alias("output_type")]
+    #[tpd(alias="output_type")]
     pub result_type: ResultType,
 
-    #[tpd_skip(false)]
+    #[tpd(skip)]
     #[schemars(skip)]
     compiled: Option<CompiledExpression>,
 
-    #[tpd_skip]
+    #[tpd(skip)]
     #[schemars(skip)]
     segment_names: Option<Vec<String>>,
 
-    #[tpd_skip]
+    #[tpd(skip)]
     #[schemars(skip)]
     next_index: std::sync::atomic::AtomicU64, // for read_no
 }

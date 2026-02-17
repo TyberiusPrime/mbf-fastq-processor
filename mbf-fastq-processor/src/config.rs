@@ -28,8 +28,8 @@ pub use io::fileformats::PhredEncoding;
 pub use options::{Options, PartialOptions};
 pub use output::{Output, PartialOutput};
 pub use segments::{
-    Segment, SegmentIndex, SegmentIndexOrAll, SegmentOrAll, SegmentOrNameIndex,
-    SegmentSequenceOrName,
+    SegmentIndex, SegmentIndexOrAll, 
+    SegmentOrNameIndex,
 };
 
 #[derive(Debug)]
@@ -146,23 +146,23 @@ pub struct Stage {
 #[derive(Debug)]
 pub struct Config {
     /// The input configuration
-    #[tpd_nested]
+    #[tpd(nested)]
     pub input: Input,
-    #[tpd_nested]
+    #[tpd(nested)]
     pub output: Option<Output>,
     //
-    #[tpd_alias("step")]
-    #[tpd_nested]
+    #[tpd(alias="step")]
+    #[tpd(nested)]
     pub transform: Option<Vec<Transformation>>,
 
     #[tpd_default]
-    #[tpd_nested]
+    #[tpd(nested)]
     pub options: Options,
 
     #[schemars(with = "BTreeMap<String, Barcodes>")]
-    #[tpd_nested]
+    #[tpd(nested)]
     pub barcodes: Option<IndexMap<String, Barcodes>>,
-    #[tpd_nested]
+    #[tpd(nested)]
     pub benchmark: Option<Benchmark>,
 }
 

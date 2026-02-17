@@ -16,11 +16,11 @@ pub struct Demultiplex {
     /// reference to shared barcodes section (optional for boolean tag mode)
     pub barcodes: Option<String>,
 
-    #[tpd_skip] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
+    #[tpd(skip)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[schemars(skip)]
     pub resolved_barcodes: Option<IndexMap<BString, String>>,
 
-    #[tpd_skip(false)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
+    #[tpd(skip)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[schemars(skip)]
     any_hit_observed: std::sync::atomic::AtomicBool,
 }

@@ -11,15 +11,15 @@ use rand::Rng;
 pub struct ReservoirSample {
     pub n: usize,
     pub seed: u64,
-    #[tpd_skip] // eserde compatibility
+    #[tpd(skip)] // eserde compatibility
     #[schemars(skip)]
     pub buffers: Arc<Mutex<DemultiplexedData<Vec<FastQBlock>>>>,
 
-    #[tpd_skip] // eserde compatibility
+    #[tpd(skip)] // eserde compatibility
     #[schemars(skip)]
     pub counts: Arc<Mutex<DemultiplexedData<usize>>>,
 
-    #[tpd_skip] // eserde compatibility
+    #[tpd(skip)] // eserde compatibility
     #[schemars(skip)]
     rng: Arc<Mutex<Option<rand_chacha::ChaChaRng>>>,
 }

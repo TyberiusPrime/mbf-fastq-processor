@@ -8,7 +8,7 @@ use serde_json::json;
 pub struct _ReportCount {
     pub report_no: usize,
 
-    #[tpd_skip]
+    #[tpd(skip)]
     #[schemars(skip)]
     pub data: Arc<Mutex<DemultiplexedData<usize>>>,
 }

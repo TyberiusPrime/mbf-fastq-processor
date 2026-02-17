@@ -26,10 +26,10 @@ pub struct HammingCorrect {
     /// What to do when no match is found
     pub on_no_match: OnNoMatch,
 
-    #[tpd_skip] // eserde compatibility
+    #[tpd(skip)] // eserde compatibility
     #[schemars(skip)]
     pub resolved_barcodes: Option<IndexMap<BString, String>>,
-    #[tpd_skip] // eserde compatibility
+    #[tpd(skip)] // eserde compatibility
     #[schemars(skip)]
     pub had_iupac: bool,
 }

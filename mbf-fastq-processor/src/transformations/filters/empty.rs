@@ -6,11 +6,8 @@ use crate::transformations::prelude::*;
 #[tpd]
 #[derive(Debug)]
 pub struct Empty {
-    #[tpd_default]
-    pub segment: SegmentOrAll,
-    #[tpd_skip]
-    #[schemars(skip)]
-    pub segment_index: Option<SegmentIndexOrAll>,
+    #[tpd(default)]
+    pub segment: SegmentIndexOrAll,
 }
 
 impl Step for Empty {

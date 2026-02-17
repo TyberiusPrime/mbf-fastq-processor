@@ -23,7 +23,7 @@ impl Into<serde_json::Value> for BaseStatisticsPart1 {
 #[derive(Debug)]
 pub struct _ReportBaseStatisticsPart1 {
     pub report_no: usize,
-    #[tpd_skip]
+    #[tpd(skip)]
     pub data: Arc<Mutex<DemultiplexedData<PerReadReportData<BaseStatisticsPart1>>>>,
 }
 

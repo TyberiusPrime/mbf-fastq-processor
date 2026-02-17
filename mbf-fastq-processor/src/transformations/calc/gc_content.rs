@@ -11,7 +11,7 @@ pub struct GCContent {
     pub out_label: String,
     #[tpd_default]
     pub segment: SegmentOrAll,
-    #[tpd_skip]
+    #[tpd(skip)]
     #[schemars(skip)]
     pub segment_index: Option<SegmentIndexOrAll>,
 }

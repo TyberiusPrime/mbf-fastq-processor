@@ -4,7 +4,6 @@
 use crate::transformations::prelude::*;
 
 use crate::{
-    config::{Segment, SegmentIndex},
     dna::HitRegion,
 };
 
@@ -17,13 +16,13 @@ pub struct Swap {
     if_tag: Option<String>,
 
     segment_a: Option<Segment>,
-    #[tpd_skip]
+    #[tpd(skip)]
     #[schemars(skip)]
     segment_a_index: Option<SegmentIndex>,
 
     segment_b: Option<Segment>,
     
-    #[tpd_skip]
+    #[tpd(skip)]
     #[schemars(skip)]
     segment_b_index: Option<SegmentIndex>,
 }

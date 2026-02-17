@@ -38,21 +38,13 @@ use super::{
 #[derive(Debug)]
 pub struct StoreTagInComment {
     in_label: String,
-    #[tpd_default_in_verify]
-    segment: SegmentOrAll,
-    #[tpd_skip]
-    #[schemars(skip)]
-    segment_index: Option<SegmentIndexOrAll>,
+    segment: SegmentIndexOrAll,
 
-    #[tpd_adapt_in_verify]
-    #[tpd_default_in_verify]
     pub comment_separator: u8,
 
-    #[tpd_adapt_in_verify]
     comment_insert_char: Option<u8>,
 
-    #[tpd_default_in_verify]
-    #[tpd_with(tpd_adapt_bstring)]
+    #[tpd(with="tpd_adapt_bstring")]
     #[schemars(with = "String")]
     region_separator: BString,
 }

@@ -15,19 +15,19 @@ pub struct Prefix {
     #[tpd_default]
     segment: Segment,
     #[schemars(skip)]
-    #[tpd_skip]
+    #[tpd(skip)]
     segment_index: Option<SegmentIndex>,
 
     //todo
     //#[serde(deserialize_with = "dna_from_string")]
     #[schemars(with = "String")]
-    #[tpd_with(tpd_adapt_bstring)]
+    #[tpd(with="tpd_adapt_bstring")]
     pub seq: BString,
     //#[serde(deserialize_with = "bstring_from_string")]
     //we don't check the quality. It's on you if you
     //write non phred values in there
     #[schemars(with = "String")]
-    #[tpd_with(tpd_adapt_bstring)]
+    #[tpd(with="tpd_adapt_bstring")]
     pub qual: BString,
 
     if_tag: Option<String>,

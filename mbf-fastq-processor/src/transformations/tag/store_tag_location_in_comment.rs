@@ -4,10 +4,7 @@ use crate::config::deser::tpd_extract_u8_from_byte_or_char;
 use crate::transformations::prelude::*;
 
 use crate::{
-    config::{
-        SegmentIndexOrAll, SegmentOrAll,
-        deser::{opt_u8_from_char_or_number, u8_from_char_or_number},
-    },
+    config::deser::{opt_u8_from_char_or_number, u8_from_char_or_number},
     dna::TagValue,
 };
 
@@ -26,22 +23,16 @@ use super::{
 pub struct StoreTagLocationInComment {
     in_label: String,
 
-    #[tpd_default_in_verify]
-    segment: SegmentOrAll,
-    #[tpd_skip]
-    #[schemars(skip)]
-    segment_index: Option<SegmentIndexOrAll>,
+    segment: SegmentIndexOrAll,
 
-    #[tpd_adapt_in_verify]
-    #[tpd_default]
+    #[tpd(default)]
     comment_separator: u8,
 
-    #[tpd_adapt_in_verify]
     comment_insert_char: Option<u8>,
 }
 
-impl VerifyFromToml for PartialStoreTagLocationInComment {
-    fn verify(mut self, helper: &mut TomlHelper<'_>) -> Self
+impl VerifyIn<PartialInput> for PartialStoreTagLocationInComment {
+    fn verify(mut self, helper: &mut TomlHelper<'_>, _parent: &PartialInput) -> Self
     where
         Self: Sized,
     {
@@ -59,7 +50,8 @@ impl VerifyFromToml for PartialStoreTagLocationInComment {
             self.tpd_get_comment_insert_char(helper, false, false),
             false,
             helper,
-        ).into_optional();
+        )
+        .into_optional();
 
         self
     }

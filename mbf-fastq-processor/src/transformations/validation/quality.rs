@@ -8,11 +8,8 @@ use crate::transformations::prelude::*;
 #[derive(Debug)]
 pub struct ValidateQuality {
     pub encoding: PhredEncoding,
-    #[tpd_default]
-    pub segment: SegmentOrAll,
-    #[tpd_skip]
-    #[schemars(skip)]
-    pub segment_index: Option<SegmentIndexOrAll>,
+    #[schemars(with = "String")]
+    pub segment: Option<SegmentIndexOrAll>,
 }
 
 impl Step for ValidateQuality {

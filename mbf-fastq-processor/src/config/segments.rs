@@ -2,28 +2,28 @@ use anyhow::{Context, Result, bail};
 use schemars::JsonSchema;
 use toml_pretty_deser::prelude::*;
 
-#[derive(Clone, Eq, PartialEq, JsonSchema)]
-#[tpd]
-#[derive(Debug)]
-pub struct Segment(pub String);
-
-
-impl Default for Segment {
-    fn default() -> Self {
-        Segment(":::first_and_only_segment".to_string())
-    }
-}
-
-#[derive(Clone, Eq, PartialEq, JsonSchema)]
-#[tpd]
-#[derive(Debug)]
-pub struct SegmentOrAll(pub String);
-
-impl Default for SegmentOrAll {
-    fn default() -> Self {
-        SegmentOrAll(":::first_and_only_segment".to_string())
-    }
-}
+// #[derive(Clone, Eq, PartialEq, JsonSchema)]
+// #[tpd]
+// #[derive(Debug)]
+// pub struct Segment(pub String);
+//
+//
+// impl Default for Segment {
+//     fn default() -> Self {
+//         Segment(":::first_and_only_segment".to_string())
+//     }
+// }
+//
+// #[derive(Clone, Eq, PartialEq, JsonSchema)]
+// #[tpd]
+// #[derive(Debug)]
+// pub struct SegmentOrAll(pub String);
+//
+// impl Default for SegmentOrAll {
+//     fn default() -> Self {
+//         SegmentOrAll(":::first_and_only_segment".to_string())
+//     }
+// }
 
 #[derive(Debug, Clone, Eq, PartialEq, Copy)]
 pub struct SegmentIndex(pub usize);
@@ -109,10 +109,10 @@ impl TryInto<SegmentIndex> for SegmentIndexOrAll {
     }
 }
 
-#[derive(Clone, Eq, PartialEq, JsonSchema)]
-#[tpd]
-#[derive(Debug)]
-pub struct SegmentSequenceOrName(pub String);
+// #[derive(Clone, Eq, PartialEq, JsonSchema)]
+// #[tpd]
+// #[derive(Debug)]
+// pub struct SegmentSequenceOrName(pub String);
 
 /* impl Default for SegmentSequenceOrName {
     fn default() -> Self {

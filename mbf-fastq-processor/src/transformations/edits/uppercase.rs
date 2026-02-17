@@ -6,8 +6,8 @@ use crate::transformations::prelude::*;
 #[tpd]
 #[derive(Debug)]
 pub struct Uppercase {
-    #[tpd_alias("segment")]
-    #[tpd_alias("source")]
+    #[tpd(alias="segment")]
+    #[tpd(alias="source")]
     pub target: String,
 
     pub if_tag: Option<String>,

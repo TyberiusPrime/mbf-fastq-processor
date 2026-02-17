@@ -46,7 +46,7 @@ pub struct ConcatTags {
     out_label: String,
 
     #[schemars(skip)]
-    #[tpd_skip(false)]
+    #[tpd(skip)]
     output_tag_type: OnceLock<TagValueType>,
 
     /// Separator to use when concatenating strings (optional, defaults to empty)

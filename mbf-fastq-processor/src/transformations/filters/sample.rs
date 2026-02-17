@@ -12,7 +12,7 @@ pub struct Sample {
     pub p: f64,
     pub seed: u64,
 
-    #[tpd_skip] // eserde compatibility
+    #[tpd(skip)] // eserde compatibility
     #[schemars(skip)]
     rng: Arc<Mutex<Option<rand_chacha::ChaChaRng>>>,
 }

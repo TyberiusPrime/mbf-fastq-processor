@@ -37,15 +37,15 @@ pub struct Input {
     segments: IndexMap<String, Vec<String>>,
 
     #[tpd_default_in_verify]
-    #[tpd_nested]
+    #[tpd(nested)]
     #[serde(skip_serializing_if = "is_default")]
     pub options: InputOptions,
 
-    #[tpd_skip]
+    #[tpd(skip)]
     #[schemars(skip)]
     #[serde(skip_serializing)]
     pub structured: Option<StructuredInput>,
-    #[tpd_skip]
+    #[tpd(skip)]
     #[serde(skip_serializing)]
     pub stdin_stream: bool,
 }
@@ -387,15 +387,15 @@ impl Input {
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, JsonSchema)]
 #[tpd]
 pub enum CompressionFormat {
-    #[tpd_alias("uncompressed")]
-    #[tpd_alias("raw")]
+    #[tpd(alias="uncompressed")]
+    #[tpd(alias="raw")]
     #[default]
     Uncompressed,
-    #[tpd_alias("gzip")]
-    #[tpd_alias("gz")]
+    #[tpd(alias="gzip")]
+    #[tpd(alias="gz")]
     Gzip,
-    #[tpd_alias("zstd")]
-    #[tpd_alias("zst")]
+    #[tpd(alias="zstd")]
+    #[tpd(alias="zst")]
     Zstd,
 }
 
