@@ -162,11 +162,11 @@ impl Hits {
 #[tpd]
 #[derive(Debug)]
 pub enum Anchor {
-    #[tpd_alias("left")]
+    #[tpd(alias="left")]
     Left,
-    #[tpd_alias("right")]
+    #[tpd(alias="right")]
     Right,
-    #[tpd_alias("anywhere")]
+    #[tpd(alias="anywhere")]
     Anywhere,
 }
 

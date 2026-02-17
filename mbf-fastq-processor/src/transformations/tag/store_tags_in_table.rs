@@ -18,27 +18,25 @@ type InLabels = Arc<Mutex<Option<Vec<String>>>>;
 #[tpd(partial = false)]
 #[derive(Debug)]
 pub struct StoreTagsInTable {
-    #[tpd_default]
+    #[tpd(default)]
     infix: String,
-    #[tpd_default]
+    #[tpd(default)]
     compression: CompressionFormat,
 
     #[schemars(with = "String")]
-    #[tpd_with(tpd_adapt_bstring)]
-    #[tpd_default_in_verify]
+    #[tpd(with="tpd_adapt_bstring")]
     region_separator: BString,
 
-    #[tpd_skip]
+    #[tpd(skip)]
     #[schemars(skip)]
     output_handles: OutputHandles,
 
     #[schemars(with = "Option<Vec<String>>")]
-    #[tpd_adapt_in_verify]
     in_labels: InLabels,
 }
 
-impl VerifyFromToml for PartialStoreTagsInTable {
-    fn verify(mut self, helper: &mut TomlHelper<'_>) -> Self
+impl VerifyIn<PartialInput> for PartialStoreTagsInTable {
+    fn verify(mut self, helper: &mut TomlHelper<'_>, _parent: &PartialInput) -> Self
     where
         Self: Sized,
     {

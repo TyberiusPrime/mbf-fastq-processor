@@ -17,12 +17,7 @@ use crate::transformations::tag::initial_filter_elements;
 #[derive(Debug)]
 pub struct OtherFileByName {
     pub filename: String,
-    #[tpd_default]
-    segment: Segment,
-
-    #[tpd_skip]
-    #[schemars(skip)]
-    segment_index: Option<SegmentIndex>,
+    segment: SegmentIndex,
 
     pub out_label: String,
     pub seed: Option<u64>,
@@ -31,17 +26,13 @@ pub struct OtherFileByName {
     pub include_mapped: Option<bool>,
     pub include_unmapped: Option<bool>,
 
-    #[tpd_adapt_in_verify]
-    pub fastq_readname_end_char: Option<u8>,
-
-    #[tpd_adapt_in_verify]
     pub reference_readname_end_char: Option<u8>,
 
-    #[tpd_skip] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
+    #[tpd(skip)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[schemars(skip)]
     pub filter: Option<Arc<ApproxOrExactFilter>>,
 
-    #[tpd_skip] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
+    #[tpd(skip)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[schemars(skip)]
     pub progress_output: Option<crate::transformations::reports::Progress>,
 }

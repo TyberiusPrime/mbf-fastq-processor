@@ -13,7 +13,7 @@ use std::cell::RefCell;
 pub enum Algorithm {
     /// fastp algorithm: quality-score based mismatch resolution
     /// Uses hamming distance for overlap detection and chooses higher quality base for mismatches
-    //TODO #[tpd_alias("FastpSeemsWeird")]
+    //TODO #[tpd(alias="FastpSeemsWeird")]
     Fastp,
 }
 
@@ -64,12 +64,12 @@ pub struct MergeReads {
     pub reverse_complement_segment2: bool,
 
     pub segment1: Segment,
-    #[tpd_skip]
+    #[tpd(skip)]
     #[schemars(skip)]
     pub segment1_index: Option<SegmentIndex>,
 
     pub segment2: Segment,
-    #[tpd_skip]
+    #[tpd(skip)]
     #[schemars(skip)]
     pub segment2_index: Option<SegmentIndex>,
 }

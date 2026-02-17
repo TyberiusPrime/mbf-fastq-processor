@@ -26,7 +26,7 @@ pub struct ExpectedError {
     #[tpd_default]
     pub segment: SegmentOrAll,
 
-    #[tpd_skip]
+    #[tpd(skip)]
     #[schemars(skip)]
     pub segment_index: Option<SegmentIndexOrAll>,
 

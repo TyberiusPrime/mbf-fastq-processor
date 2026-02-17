@@ -13,7 +13,7 @@ use crate::dna::Hits;
 pub struct LowQualityStart {
     #[tpd_default]
     segment: Segment,
-    #[tpd_skip]
+    #[tpd(skip)]
     #[schemars(skip)]
     segment_index: Option<SegmentIndex>,
 

@@ -8,15 +8,15 @@ use crate::transformations::{RegionAnchor, prelude::*};
 #[derive(Debug)]
 pub struct Region {
     pub start: isize,
-    #[tpd_alias("length")]
+    #[tpd(alias="length")]
     pub len: usize,
 
     /// Source for extraction - segment name, "tag:name" for tag source, or "name:segment" for read name source
-    #[tpd_alias("segment")]
+    #[tpd(alias="segment")]
     pub source: String,
 
     #[schemars(skip)]
-    #[tpd_skip]
+    #[tpd(skip)]
     pub resolved_source: Option<ResolvedSourceNoAll>,
 
     /// Is the region from the `Start` or the `End` of the source?

@@ -2,20 +2,17 @@
 
 use crate::transformations::prelude::*;
 
-use crate::{
-    config::{Segment, SegmentIndex},
-    dna::HitRegion,
-};
+use crate::{config::SegmentIndex, dna::HitRegion};
 
 /// Reverse complement a read
-#[derive( Clone, JsonSchema)]
+#[derive(Clone, JsonSchema)]
 #[tpd]
 #[derive(Debug)]
 pub struct ReverseComplement {
     #[tpd_default]
     segment: Segment,
     #[schemars(skip)]
-    #[tpd_skip]
+    #[tpd(skip)]
     segment_index: Option<SegmentIndex>,
 
     if_tag: Option<String>,
@@ -92,3 +89,4 @@ impl Step for ReverseComplement {
         Ok((block, true))
     }
 }
+

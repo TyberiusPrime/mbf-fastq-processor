@@ -15,17 +15,17 @@ use super::extract_region_tags;
 pub struct IUPACSuffix {
     #[tpd_default]
     segment: Segment,
-    #[tpd_skip]
+    #[tpd(skip)]
     #[schemars(skip)]
     segment_index: Option<SegmentIndex>,
 
     pub out_label: String,
     pub min_length: usize,
     pub max_mismatches: usize,
-    #[tpd_with(tpd_adapt_dna_bstring)]
+    #[tpd(with="tpd_adapt_dna_bstring")]
     #[schemars(with = "String")]
-    #[tpd_alias("query")]
-    #[tpd_alias("pattern")]
+    #[tpd(alias="query")]
+    #[tpd(alias="pattern")]
     pub search: BString,
 }
 

@@ -13,7 +13,7 @@ use std::path::Path;
 use anyhow::{Result, bail};
 
 use crate::{
-    config::{self, Segment, SegmentIndex, SegmentIndexOrAll, SegmentOrAll},
+    config::{self,  SegmentIndex, SegmentIndexOrAll},
     demultiplex::{DemultiplexBarcodes, OptDemultiplex},
     dna::TagValue,
     io,
@@ -45,11 +45,11 @@ pub use internal_steps::{
 #[derive(Debug)]
 pub struct RegionDefinition {
     /// Source for extraction - segment name, "tag:name" for tag source, or "name:segment" for read name source
-    #[tpd_alias("segment")]
+    #[tpd(alias="segment")]
     pub source: String,
 
     #[schemars(skip)]
-    #[tpd_skip]
+    #[tpd(skip)]
     pub resolved_source: Option<ResolvedSourceNoAll>,
 
     pub start: isize,
@@ -63,9 +63,9 @@ pub struct RegionDefinition {
 #[tpd]
 #[derive(Debug)]
 pub enum RegionAnchor {
-    #[tpd_alias("left")]
+    #[tpd(alias="left")]
     Start,
-    #[tpd_alias("right")]
+    #[tpd(alias="right")]
     End,
 }
 
@@ -148,9 +148,9 @@ impl FragmentEntry<'_> {
 #[derive(Debug, Clone, PartialEq, Eq, Copy, JsonSchema)]
 #[tpd]
 pub enum KeepOrRemove {
-    #[tpd_alias("keep")]
+    #[tpd(alias="keep")]
     Keep,
-    #[tpd_alias("remove")]
+    #[tpd(alias="remove")]
     Remove,
 }
 
@@ -300,7 +300,7 @@ pub enum Transformation {
     FilterReservoirSample(filters::ReservoirSample),
     // //
     // //Validation
-    #[tpd_alias("SpotCheckReadNames")]
+    #[tpd(alias="SpotCheckReadNames")]
     SpotCheckReadPairing(validation::SpotCheckReadPairing),
     ValidateSeq(validation::ValidateSeq),
     ValidateQuality(validation::ValidateQuality),
@@ -323,7 +323,7 @@ pub enum Transformation {
     CalcKmers(calc::Kmers),
     //
     ConvertRegionsToLength(convert::RegionsToLength),
-    #[tpd_alias("EvaluateExpression")]
+    #[tpd(alias="EvaluateExpression")]
     EvalExpression(convert::EvalExpression),
     ExtractRegionsOfLowQuality(extract::RegionsOfLowQuality),
     ExtractLongestPolyX(extract::LongestPolyX),

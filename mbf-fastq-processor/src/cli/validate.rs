@@ -3,12 +3,12 @@ use ex::fs;
 use std::path::Path;
 
 use crate::config::{Config, PartialConfig};
-use toml_pretty_deser::{FieldMatchMode, VecMode, deserialize_with_mode};
+use toml_pretty_deser::prelude::*;
 
 pub fn validate_config(toml_file: &Path) -> Result<Vec<String>> {
     let raw_config = ex::fs::read_to_string(toml_file)
         .with_context(|| format!("Could not read toml file: {}", toml_file.to_string_lossy()))?;
-    let result = deserialize_with_mode::<PartialConfig, Config>(
+    let result = Config::tpd_from_toml(
         &raw_config,
         FieldMatchMode::AnyCase,
         VecMode::SingleOk,

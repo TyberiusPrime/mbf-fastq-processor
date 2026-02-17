@@ -12,7 +12,7 @@ pub struct CutStart {
     n: usize,
     #[tpd_default]
     segment: Segment,
-    #[tpd_skip]
+    #[tpd(skip)]
     #[schemars(skip)]
     segment_index: Option<SegmentIndex>,
     #[tpd_default]

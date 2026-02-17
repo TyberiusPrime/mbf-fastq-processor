@@ -8,11 +8,11 @@ use serde_json::{Map, Value};
 pub struct _ReportCountOligos {
     pub report_no: usize,
     pub oligos: Vec<String>,
-    #[tpd_skip]
+    #[tpd(skip)]
     #[schemars(skip)]
     pub counts: Arc<Mutex<DemultiplexedData<Vec<usize>>>>,
     pub segment: SegmentOrAll,
-    #[tpd_skip]
+    #[tpd(skip)]
     #[schemars(skip)]
     pub segment_index: Option<SegmentIndexOrAll>,
 }

@@ -13,18 +13,18 @@ use crate::config::{
 pub struct Postfix {
     #[tpd_default]
     pub segment: Segment,
-    #[tpd_skip]
+    #[tpd(skip)]
     #[schemars(skip)]
     segment_index: Option<SegmentIndex>,
 
     //TODO #[serde(deserialize_with = "dna_from_string")]
     #[schemars(with = "String")]
-    #[tpd_with(tpd_adapt_dna_bstring)]
+    #[tpd(with="tpd_adapt_dna_bstring")]
     pub seq: BString,
     //we don't check the quality. It's on you if you
     //write non phred values in there
     #[schemars(with = "String")]
-    #[tpd_with(tpd_adapt_bstring)]
+    #[tpd(with="tpd_adapt_bstring")]
     pub qual: BString,
 
     if_tag: Option<String>,

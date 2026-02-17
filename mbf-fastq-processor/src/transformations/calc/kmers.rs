@@ -16,24 +16,24 @@ pub struct Kmers {
     pub out_label: String,
     #[tpd_default]
     pub segment: SegmentOrAll,
-    #[tpd_skip]
+    #[tpd(skip)]
     #[schemars(skip)]
     pub segment_index: Option<SegmentIndexOrAll>,
 
     // Kmer database configuration
-    #[tpd_alias("files")]
-    #[tpd_alias("filenames")]
+    #[tpd(alias="files")]
+    #[tpd(alias="filenames")]
     pub filename: Vec<String>,
 
     pub k: usize,
 
-    #[tpd_alias("canonical")]
+    #[tpd(alias="canonical")]
     pub count_reverse_complement: bool,
 
     #[tpd_default_in_verify]
     pub min_count: usize,
 
-    #[tpd_skip] // eserde compatibility
+    #[tpd(skip)] // eserde compatibility
     #[schemars(skip)]
     pub resolved_kmer_db: Option<HashMap<Vec<u8>, usize>>,
 }

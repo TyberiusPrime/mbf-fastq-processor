@@ -40,9 +40,9 @@ impl Step for Box<_InternalDelay> {
 #[derive(Debug)]
 pub struct _InternalReadCount {
     pub out_label: String,
-    #[tpd_skip]
+    #[tpd(skip)]
     report_no: usize,
-    #[tpd_skip]
+    #[tpd(skip)]
     count: std::sync::atomic::AtomicUsize,
 }
 

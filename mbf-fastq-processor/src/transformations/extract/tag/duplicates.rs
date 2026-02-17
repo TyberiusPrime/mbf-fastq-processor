@@ -19,13 +19,12 @@ fn default_source() -> String {
 /// Tag duplicate reads
 
 #[derive(Clone, JsonSchema)]
-#[tpd(partial=false)]
+#[tpd]
 #[derive(Debug)]
 pub struct Duplicates {
-    #[tpd_default_in_verify]
     source: String,
 
-    #[tpd_skip]
+    #[tpd(skip)]
     #[schemars(skip)]
     resolved_source: Option<ResolvedSourceAll>,
 
@@ -36,7 +35,7 @@ pub struct Duplicates {
 
     pub initial_filter_capacity: Option<usize>,
 
-    #[tpd_skip] 
+    #[tpd(skip)] 
     #[schemars(skip)]
     pub filters: Arc<Mutex<DemultiplexedData<ApproxOrExactFilter>>>,
 }

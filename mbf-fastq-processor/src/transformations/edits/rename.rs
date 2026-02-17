@@ -10,19 +10,19 @@ use bstr::{ByteSlice};
 #[tpd]
 #[derive( Debug)]
 pub struct Rename {
-    #[tpd_with(tpd_adapt_regex)]
+    #[tpd(with="tpd_adapt_regex")]
     #[schemars(with = "String")]
     pub search: regex::bytes::Regex,
-    #[tpd_with(tpd_adapt_bstring)]
+    #[tpd(with="tpd_adapt_bstring")]
     #[schemars(with = "String")]
     pub replacement: BString,
 
     #[schemars(skip)]
-    #[tpd_skip]
+    #[tpd(skip)]
     next_index: std::sync::atomic::AtomicU64,
 
     #[schemars(skip)]
-    #[tpd_skip]
+    #[tpd(skip)]
     needs_counting: bool,
 }
 

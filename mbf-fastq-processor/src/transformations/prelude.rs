@@ -5,7 +5,8 @@ pub(crate) use super::{
     edits::get_bool_vec_from_tag, reproducible_cuckoofilter,
 };
 pub(crate) use crate::config::{
-    Segment, SegmentIndex, SegmentIndexOrAll, SegmentOrAll, TagMetadata,
+    PartialInput,
+    SegmentIndex, SegmentIndexOrAll, TagMetadata,
 };
 pub(crate) use crate::demultiplex::{
     DemultiplexBarcodes, DemultiplexedData, DemultiplexedOutputFiles, OptDemultiplex, OutputWriter,

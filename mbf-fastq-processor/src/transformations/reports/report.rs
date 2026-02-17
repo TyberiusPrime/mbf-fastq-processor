@@ -13,27 +13,25 @@ use super::super::tag::default_segment_all;
 #[allow(clippy::struct_excessive_bools)]
 pub struct Report {
     pub name: String,
-    #[tpd_default_in_verify]
     pub count: bool,
-    #[tpd_default]
+    #[tpd(default)]
     pub base_statistics: bool,
-    #[tpd_default]
+    #[tpd(default)]
     pub length_distribution: bool,
-    #[tpd_default]
+    #[tpd(default)]
     pub duplicate_count_per_read: bool,
-    #[tpd_default]
+    #[tpd(default)]
     pub duplicate_count_per_fragment: bool,
 
     #[schemars(skip)]
-    #[tpd_default]
+    #[tpd(default)]
     pub debug_reproducibility: bool,
 
     pub count_oligos: Option<Vec<String>>,
-    #[tpd_default_in_verify]
-    pub count_oligos_segment: SegmentOrAll,
+    pub count_oligos_segment: SegmentIndexOrAll,
 
     /// Generate histograms for specified tags
-    #[tpd_alias("tag_histogram")]
+    #[tpd(alias="tag_histogram")]
     pub tag_histograms: Option<Vec<String>>,
 }
 

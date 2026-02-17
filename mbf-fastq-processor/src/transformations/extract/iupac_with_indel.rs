@@ -13,14 +13,14 @@ use super::extract_region_tags;
 #[derive(Debug)]
 #[allow(clippy::upper_case_acronyms)]
 pub struct IUPACWithIndel {
-    #[tpd_with(tpd_adapt_iupac_bstring)]
+    #[tpd(with="tpd_adapt_iupac_bstring")]
     #[schemars(with = "String")]
-    #[tpd_alias("pattern")]
-    #[tpd_alias("query")]
+    #[tpd(alias="pattern")]
+    #[tpd(alias="query")]
     search: BString,
     #[tpd_default]
     segment: Segment,
-    #[tpd_skip]
+    #[tpd(skip)]
     #[schemars(skip)]
     segment_index: Option<SegmentIndex>,
 

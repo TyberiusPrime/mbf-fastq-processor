@@ -24,22 +24,22 @@ pub struct BaseContent {
     #[tpd_default_in_verify]
     pub relative: bool,
 
-    #[tpd_with(tpd_adapt_bstring)]
+    #[tpd(with="tpd_adapt_bstring")]
     #[schemars(with = "String")]
     pub bases_to_count: BString,
 
     #[tpd_default]
-    #[tpd_with(tpd_adapt_bstring)]
+    #[tpd(with="tpd_adapt_bstring")]
     #[schemars(with = "String")]
     pub bases_to_ignore: BString,
 
-    #[tpd_skip]
+    #[tpd(skip)]
     #[schemars(skip)]
     segment_index: Option<SegmentIndexOrAll>,
-    #[tpd_skip]
+    #[tpd(skip)]
     #[schemars(skip)]
     bases_to_count_lookup: Vec<bool>,
-    #[tpd_skip]
+    #[tpd(skip)]
     #[schemars(skip)]
     bases_to_ignore_lookup: Vec<bool>,
 }

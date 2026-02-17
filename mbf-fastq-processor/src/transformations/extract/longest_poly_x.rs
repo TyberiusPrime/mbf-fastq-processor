@@ -3,7 +3,7 @@
 use crate::transformations::prelude::*;
 
 use crate::{
-    config::{Segment, SegmentIndex, deser::tpd_extract_base_or_dot},
+    config::{deser::tpd_extract_base_or_dot},
     dna::Hits,
 };
 
@@ -18,7 +18,7 @@ use super::extract_region_tags;
 pub struct LongestPolyX {
     #[tpd_default]
     segment: Segment,
-    #[tpd_skip]
+    #[tpd(skip)]
     #[schemars(skip)]
     segment_index: Option<SegmentIndex>,
 

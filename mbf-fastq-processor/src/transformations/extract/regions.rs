@@ -17,7 +17,7 @@ use bstr::ByteVec;
 #[derive(Debug)]
 #[allow(clippy::struct_field_names)]
 pub struct Regions {
-    #[tpd_nested]
+    #[tpd(nested)]
     pub regions: Vec<RegionDefinition>, //validated to be non_empty in transformations::validate_regions
 
     pub out_label: String,
@@ -26,7 +26,7 @@ pub struct Regions {
     #[schemars(with = "Option<String>")]
     #[serde(default)]
     pub region_separator: Option<BString>, */
-    #[tpd_skip]
+    #[tpd(skip)]
     #[schemars(skip)]
     pub output_tag_type: OnceLock<TagValueType>,
 }

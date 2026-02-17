@@ -3,7 +3,7 @@ use crate::{config::deser::tpd_extract_u8_from_byte_or_char, transformations::pr
 
 use super::extract_numeric_tags_plus_all;
 use crate::{
-    config::{SegmentIndexOrAll, SegmentOrAll, deser::u8_from_char_or_number},
+    config::{SegmentIndexOrAll, deser::u8_from_char_or_number},
     io::WrappedFastQRead,
 };
 
@@ -12,25 +12,25 @@ use crate::{
 #[tpd]
 #[derive(Debug)]
 pub enum Operator {
-    #[tpd_alias(">")]
-    #[tpd_alias("above")]
-    #[tpd_alias("worse")]
-    #[tpd_alias("gt")]
+    #[tpd(alias=">")]
+    #[tpd(alias="above")]
+    #[tpd(alias="worse")]
+    #[tpd(alias="gt")]
     Above,
-    #[tpd_alias("<")]
-    #[tpd_alias("below")]
-    #[tpd_alias("better")]
-    #[tpd_alias("lt")]
+    #[tpd(alias="<")]
+    #[tpd(alias="below")]
+    #[tpd(alias="better")]
+    #[tpd(alias="lt")]
     Below,
-    #[tpd_alias(">=")]
-    #[tpd_alias("worse_or_equal")]
-    #[tpd_alias("above_or_equal")]
-    #[tpd_alias("gte")]
+    #[tpd(alias=">=")]
+    #[tpd(alias="worse_or_equal")]
+    #[tpd(alias="above_or_equal")]
+    #[tpd(alias="gte")]
     AboveOrEqual,
-    #[tpd_alias("<=")]
-    #[tpd_alias("better_or_equal")]
-    #[tpd_alias("below_or_equal")]
-    #[tpd_alias("lte")]
+    #[tpd(alias="<=")]
+    #[tpd(alias="better_or_equal")]
+    #[tpd(alias="below_or_equal")]
+    #[tpd(alias="lte")]
     BelowOrEqual,
 }
 
@@ -44,13 +44,13 @@ pub struct QualifiedBases {
     #[tpd_adapt_in_verify]
     pub threshold: u8,
 
-    #[tpd_alias("op")]
+    #[tpd(alias="op")]
     pub operator: Operator,
 
     #[tpd_default]
     segment: SegmentOrAll,
 
-    #[tpd_skip]
+    #[tpd(skip)]
     #[schemars(skip)]
     segment_index: Option<SegmentIndexOrAll>,
 }

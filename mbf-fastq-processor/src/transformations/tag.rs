@@ -27,7 +27,7 @@ pub use store_tag_location_in_comment::{StoreTagLocationInComment, PartialStoreT
 pub use store_tags_in_table::{StoreTagsInTable, PartialStoreTagsInTable};
 
 use crate::{
-    config::{SegmentIndexOrAll, SegmentOrAll},
+    config::{SegmentIndexOrAll},
     dna::TagValue,
     io,
 };

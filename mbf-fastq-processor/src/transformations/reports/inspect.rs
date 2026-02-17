@@ -18,33 +18,33 @@ impl std::fmt::Debug for ExFileDebug {
 #[tpd]
 pub struct Inspect {
     pub n: usize,
-    #[tpd_default]
+    #[tpd(default)]
     segment: SegmentOrAll,
-    #[tpd_skip]
+    #[tpd(skip)]
     segment_index: Option<SegmentIndexOrAll>, // needed to produce output filename
 
     pub infix: String,
-    #[tpd_default]
+    #[tpd(default)]
     pub suffix: Option<String>,
-    #[tpd_default]
+    #[tpd(default)]
     pub format: FileFormat,
-    #[tpd_default]
+    #[tpd(default)]
     pub compression: CompressionFormat,
-    #[tpd_default]
+    #[tpd(default)]
     pub compression_level: Option<u8>,
 
-    #[tpd_skip]
+    #[tpd(skip)]
     #[schemars(skip)]
     pub collector: Arc<Mutex<Vec<Vec<NameSeqQualTuple>>>>,
-    #[tpd_skip]
+    #[tpd(skip)]
     collected: std::sync::atomic::AtomicUsize,
 
-    #[tpd_skip(false)]
+    #[tpd(skip)]
     #[schemars(skip)]
     //we write either interleaved (one file) or one segment (one file)
     writer: Arc<Mutex<Option<ex::fs::File>>>,
 
-    #[tpd_skip]
+    #[tpd(skip)]
     #[schemars(skip)]
     demultiplex_names: Option<DemultiplexedData<String>>,
 }

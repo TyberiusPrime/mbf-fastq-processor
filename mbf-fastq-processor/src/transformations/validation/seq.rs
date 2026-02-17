@@ -8,20 +8,17 @@ use crate::config::deser::{bstring_from_string, tpd_adapt_bstring};
 #[tpd]
 #[derive(Debug)]
 pub struct ValidateSeq {
-    #[tpd_with(tpd_adapt_bstring)]
+    #[tpd(with="tpd_adapt_bstring")]
     #[schemars(with = "String")]
     pub allowed: BString,
 
-    #[tpd_default]
-    segment: SegmentOrAll,
-    #[tpd_skip]
     #[schemars(skip)]
-    segment_index: Option<SegmentIndexOrAll>,
+    segment: SegmentIndexOrAll,
 }
 
 impl Step for ValidateSeq {
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment_index = Some(self.segment.validate(input_def)?);
+        //self.segment_index = Some(self.segment.validate(input_def)?);
         Ok(())
     }
 

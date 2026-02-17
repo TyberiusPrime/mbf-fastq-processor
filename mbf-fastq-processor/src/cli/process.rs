@@ -5,13 +5,13 @@ use crate::config::CheckedConfig;
 use crate::config::{Config, PartialConfig};
 use crate::output::OutputRunMarker;
 use crate::pipeline;
-use toml_pretty_deser::{deserialize_with_mode, FieldMatchMode, VecMode};
+use toml_pretty_deser::prelude::*;
 
 pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> Result<()> {
     let output_directory = output_directory.to_owned();
     let raw_config = ex::fs::read_to_string(toml_file)
         .with_context(|| format!("Could not read toml file: {}", toml_file.to_string_lossy()))?;
-    let result = deserialize_with_mode::<PartialConfig, Config>(
+    let result = Config::tpd_from_toml(
         &raw_config,
         FieldMatchMode::AnyCase,
         VecMode::SingleOk,

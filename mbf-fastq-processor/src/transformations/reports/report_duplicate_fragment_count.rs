@@ -14,10 +14,10 @@ pub struct DuplicateFragmentCountData {
 pub struct _ReportDuplicateFragmentCount {
     pub report_no: usize,
     //that is per read1/read2...
-    #[tpd_skip]
+    #[tpd(skip)]
     pub data: Arc<Mutex<DemultiplexedData<DuplicateFragmentCountData>>>,
     pub debug_reproducibility: bool,
-    #[tpd_skip]
+    #[tpd(skip)]
     pub initial_filter_capacity: Arc<Mutex<Option<usize>>>,
     pub actual_filter_capacity: Option<usize>,
 }

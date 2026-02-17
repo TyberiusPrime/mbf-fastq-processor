@@ -56,7 +56,7 @@ indexmap.workspace = true
 	zstd = {workspace = true}
 	bstr = {workspace = true}
 	eserde = {workspace = true}
-	toml-pretty-deser = {path = "../../toml-pretty-deser/toml-pretty-deser",  version="0.2"}
+	toml-pretty-deser = {path = "../../toml-pretty-deser/toml-pretty-deser",  version="0.3"}
 	log = {workspace = true}
 	schemars = {workspace = true}
 	libc = {workspace = true}

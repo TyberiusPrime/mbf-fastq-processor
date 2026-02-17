@@ -8,7 +8,7 @@ use crate::io;
 #[derive(Debug)]
 pub struct _ReportLengthDistribution {
     pub report_no: usize,
-    #[tpd_skip]
+    #[tpd(skip)]
     pub data: Arc<Mutex<DemultiplexedData<PerReadReportData<Vec<usize>>>>>,
 }
 

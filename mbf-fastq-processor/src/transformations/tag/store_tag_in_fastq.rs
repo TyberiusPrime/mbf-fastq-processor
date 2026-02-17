@@ -29,35 +29,31 @@ pub struct StoreTagInFastQ {
     in_label: String,
 
     // Optional read name comment fields (like StoreTagInComment)
-    #[tpd_default]
+    #[tpd(default)]
     comment_tags: Vec<String>,
+    //
     // Optional location tags to add to read names
-    #[serde(default)]
+    #[tpd(default)]
     comment_location_tags: Option<Vec<String>>,
 
-    #[tpd_adapt_in_verify]
-    #[tpd_default_in_verify]
     comment_separator: u8,
 
-    #[tpd_adapt_in_verify]
-    #[tpd_default_in_verify]
     comment_insert_char: u8,
 
-    #[tpd_with(tpd_adapt_bstring)]
-    #[tpd_default_in_verify]
+    #[tpd(with="tpd_adapt_bstring")]
     #[schemars(with = "String")]
     region_separator: BString,
 
     // Optional format configuration (defaults to Raw)
-    #[tpd_default]
+    #[tpd(default)]
     format: FileFormat,
-    #[tpd_default]
+    #[tpd(default)]
     compression: CompressionFormat,
-    #[tpd_default]
+    #[tpd(default)]
     compression_level: Option<u8>,
 
     // Internal state for collecting reads during apply
-    #[tpd_skip]
+    #[tpd(skip)]
     #[schemars(skip)]
     output_streams: Arc<Mutex<DemultiplexedOutputFiles>>,
 }

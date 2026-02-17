@@ -13,7 +13,6 @@ pub struct ReplaceTagWithLetter {
     pub in_label: String,
     #[serde(deserialize_with = "u8_from_char_or_number")]
     /// Provide the replacement letter as a single character (e.g., 'N') or its ASCII numeric value (e.g., 78 for 'N').
-    #[tpd_adapt_in_verify]
     pub letter: u8,
 }
 

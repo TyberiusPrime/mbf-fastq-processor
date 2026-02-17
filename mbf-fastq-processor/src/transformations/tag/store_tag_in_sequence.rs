@@ -12,7 +12,7 @@ use crate::transformations::prelude::*;
 #[derive(Debug)]
 pub struct StoreTagInSequence {
     in_label: String,
-    #[tpd_default]
+    #[tpd(default)]
     ignore_missing: bool,
 }
 

@@ -7,7 +7,7 @@ use crate::transformations::prelude::*;
 #[derive(Debug)]
 pub struct Head {
     pub n: usize,
-    #[tpd_skip]
+    #[tpd(skip)]
     #[schemars(skip)]
     pub so_far: Arc<Mutex<DemultiplexedData<usize>>>,
 }
