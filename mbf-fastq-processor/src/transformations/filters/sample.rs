@@ -17,23 +17,28 @@ pub struct Sample {
     rng: Arc<Mutex<Option<rand_chacha::ChaChaRng>>>,
 }
 
+impl VerifyIn<PartialConfig> for PartialSample {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        self.p.verify(|p| {
+            if *p <= 0.0 || *p >= 1.0 {
+                Err(ValidationFailure::new(
+                    "p must be in (0.0..1.0). Set to a unit scale probability > 0 and < 1.",
+                    None,
+                ))
+            } else {
+                Ok(())
+            }
+        });
+        Ok(())
+    }
+}
+
 impl Step for Sample {
     fn must_see_all_tags(&self) -> bool {
         true
-    }
-
-    fn validate_others(
-        &self,
-        _input_def: &crate::config::Input,
-        _output_def: Option<&crate::config::Output>,
-        _all_transforms: &[Transformation],
-        _this_transforms_index: usize,
-    ) -> Result<()> {
-        if self.p <= 0.0 || self.p >= 1.0 {
-            // (Little sense in filtering all or no reads
-            bail!("p must be in (0.0..1.0). Set to a unit scale probability > 0 and < 1. )");
-        }
-        Ok(())
     }
 
     fn init(

@@ -3,19 +3,13 @@
 use crate::dna::TagValue;
 use crate::transformations::prelude::*;
 
-fn default_source() -> String {
-    //tha's first read segment if only one is set.
-    SegmentOrAll::default().0
-}
-
 /// Verify that all reads have the same length
 #[derive(Clone, JsonSchema)]
 #[tpd]
 #[derive(Debug)]
 pub struct ValidateAllReadsSameLength {
-    /// Segment to validate (default: read1)
-
-    #[tpd(alias="segment")]
+    #[schemars(with = "String")]
+    #[tpd(alias = "segment", adapt_in_verify(String))]
     source: ResolvedSourceAll,
 
     #[tpd(skip)]
@@ -23,30 +17,22 @@ pub struct ValidateAllReadsSameLength {
     expected_length: std::sync::OnceLock<usize>,
 }
 
-impl VerifyIn<PartialInput> for PartialValidateAllReadsSameLength {
-    fn verify(mut self, helper: &mut TomlHelper<'_>, _parent: &PartialInput) -> Self
+impl VerifyIn<PartialConfig> for PartialValidateAllReadsSameLength {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
     where
-        Self: Sized,
+        Self: Sized + toml_pretty_deser::Visitor,
     {
-        //self.source = self.source.or_default_with(default_source);
-        self
+        self.source.validate_segment(parent);
+        Ok(())
     }
 }
 
 impl Step for ValidateAllReadsSameLength {
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.resolved_source = Some(ResolvedSourceAll::parse(&self.source, input_def)?);
-        Ok(())
-    }
-
     fn uses_tags(
         &self,
         _tags_available: &IndexMap<String, TagMetadata>,
     ) -> Option<Vec<(String, &[TagValueType])>> {
-        self.resolved_source
-            .as_ref()
-            .expect("resolved_source must be set during initialization")
-            .get_tags()
+        self.source.get_tags()
     }
 
     fn apply(
@@ -56,11 +42,7 @@ impl Step for ValidateAllReadsSameLength {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<(FastQBlocksCombined, bool)> {
-        match self
-            .resolved_source
-            .as_ref()
-            .expect("resolved_source must be set during initialization")
-        {
+        match &self.source {
             ResolvedSourceAll::Segment(segment_index_or_all) => {
                 let mut pseudo_iter = block.get_pseudo_iter();
                 match segment_index_or_all {
@@ -138,8 +120,7 @@ impl ValidateAllReadsSameLength {
             != length_here
         {
             bail!(
-                "ValidateAllReadsSameLength: Observed differing read lengths for source '{}' ({}, {}). Check your input FASTQ or remove the step if this is expected.",
-                self.source,
+                "ValidateAllReadsSameLength: Observed differing read lengths for source ({}, {}). Check your input FASTQ or remove the step if this is expected.",
                 self.expected_length.get().expect("just set above"),
                 length_here,
             );

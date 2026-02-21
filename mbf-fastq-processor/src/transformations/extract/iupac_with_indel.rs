@@ -8,40 +8,42 @@ use super::extract_region_tags;
 /// Extract an IUPAC-described sequence while tolerating insertions and deletions.
 /// Useful for adapters where small indels are expected.
 
-#[derive(  Clone, JsonSchema)]
+#[derive(Clone, JsonSchema)]
 #[tpd]
 #[derive(Debug)]
 #[allow(clippy::upper_case_acronyms)]
 pub struct IUPACWithIndel {
-    #[tpd(with="tpd_adapt_iupac_bstring")]
+    #[tpd(with = "tpd_adapt_iupac_bstring")]
     #[schemars(with = "String")]
-    #[tpd(alias="pattern")]
-    #[tpd(alias="query")]
+    #[tpd(alias = "pattern")]
+    #[tpd(alias = "query")]
     search: BString,
-    #[tpd_default]
-    segment: Segment,
-    #[tpd(skip)]
-    #[schemars(skip)]
-    segment_index: Option<SegmentIndex>,
+
+    #[schemars(with = "String")]
+    #[tpd(adapt_in_verify(String))]
+    segment: SegmentIndex,
 
     anchor: Anchor,
     out_label: String,
-    #[tpd_default]
+    #[tpd(default)]
     max_mismatches: usize,
-    #[tpd_default]
+    #[tpd(default)]
     max_indel_bases: usize,
     max_total_edits: Option<usize>,
 }
 
-impl Step for IUPACWithIndel {
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment_index = Some(self.segment.validate(input_def)?);
-        if self.search.is_empty() {
-            anyhow::bail!("search pattern for ExtractIUPACWithIndel cannot be empty");
-        }
+impl VerifyIn<PartialConfig> for PartialIUPACWithIndel {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        self.segment.validate_segment(parent);
+
         Ok(())
     }
+}
 
+impl Step for IUPACWithIndel {
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((
             self.out_label.clone(),
@@ -56,9 +58,7 @@ impl Step for IUPACWithIndel {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let segment_index = self
-            .segment_index
-            .expect("segment index should be available after validation");
+        let segment_index = self.segment;
 
         extract_region_tags(&mut block, segment_index, &self.out_label, |read| {
             read.find_iupac_with_indel(

@@ -18,10 +18,10 @@ impl std::fmt::Debug for ExFileDebug {
 #[tpd]
 pub struct Inspect {
     pub n: usize,
-    #[tpd(default)]
-    segment: SegmentOrAll,
-    #[tpd(skip)]
-    segment_index: Option<SegmentIndexOrAll>, // needed to produce output filename
+
+    #[schemars(with = "String")]
+    #[tpd(adapt_in_verify(String))]
+    segment: SegmentIndexOrAll,
 
     pub infix: String,
     #[tpd(default)]
@@ -47,6 +47,26 @@ pub struct Inspect {
     #[tpd(skip)]
     #[schemars(skip)]
     demultiplex_names: Option<DemultiplexedData<String>>,
+}
+
+impl VerifyIn<PartialConfig> for PartialInspect {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        self.segment.validate_segment(parent);
+        self.format.verify(|format| {
+            if !matches!(format, FileFormat::Fastq | FileFormat::Fasta) {
+                return Err(ValidationFailure::new(
+                    "Inspect step supports only 'fastq' or 'fasta' formats",
+                    None,
+                ));
+            }
+            Ok(())
+        });
+        crate::config::validate_compression_level_u8(&self.compression, &mut self.compression_level);
+        Ok(())
+    }
 }
 
 impl Clone for Inspect {
@@ -78,30 +98,6 @@ impl Step for Inspect {
         true
     }
 
-    fn validate_others(
-        &self,
-        _input_def: &crate::config::Input,
-        _output_def: Option<&crate::config::Output>,
-        _all_transforms: &[Transformation],
-        _this_transforms_index: usize,
-    ) -> Result<()> {
-        // Validate compression level
-        crate::config::validate_compression_level_u8(self.compression, self.compression_level)?;
-        if !matches!(self.format, FileFormat::Fastq | FileFormat::Fasta) {
-            bail!(
-                "Inspect step supports only 'fastq' or 'fasta' formats. Received: {:?}",
-                self.format
-            );
-        }
-        Ok(())
-    }
-
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        let selection = self.segment.validate(input_def)?;
-        self.segment_index = Some(selection);
-        Ok(())
-    }
-
     fn init(
         &mut self,
         input_info: &InputInfo,
@@ -113,8 +109,7 @@ impl Step for Inspect {
     ) -> Result<Option<DemultiplexBarcodes>> {
         self.collector = Arc::new(Mutex::new(
             match self
-                .segment_index
-                .expect("segment_index must be set during initialization")
+                .segment
             {
                 SegmentIndexOrAll::All => (0..input_info.segment_order.len())
                     .map(|_| Vec::with_capacity(self.n))
@@ -126,8 +121,7 @@ impl Step for Inspect {
         let format_suffix = FileFormat::Fastq.get_suffix(self.compression, self.suffix.as_ref());
 
         let target = match self
-            .segment_index
-            .expect("segment_index must be set during initialization")
+            .segment
         {
             SegmentIndexOrAll::Indexed(idx) => input_info.segment_order[idx].clone(),
             SegmentIndexOrAll::All => "interleaved".to_string(),
@@ -175,8 +169,7 @@ impl Step for Inspect {
             }
 
             match self
-                .segment_index
-                .expect("segment_index must be set during initialization")
+                .segment
             {
                 SegmentIndexOrAll::All => {
                     for (collector_idx, segment_index) in

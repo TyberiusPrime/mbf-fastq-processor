@@ -3,17 +3,36 @@
 use crate::transformations::prelude::*;
 
 /// Truncate reads to a fixed length
-#[derive( Clone, JsonSchema)]
+#[derive(Clone, JsonSchema)]
 #[tpd]
 #[derive(Debug)]
 pub struct Truncate {
     n: usize,
-    #[tpd_default]
-    segment: Segment,
-    #[schemars(skip)]
-    #[tpd(skip)]
-    segment_index: Option<SegmentIndex>,
+
+    #[schemars(with = "String")]
+    #[tpd(adapt_in_verify(String))]
+    segment: SegmentIndex,
     if_tag: Option<String>,
+}
+
+impl VerifyIn<PartialConfig> for PartialTruncate {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        self.segment.validate_segment(parent);
+        self.n.verify(|v| {
+            if *v == 0 {
+                Err(ValidationFailure::new(
+                    "n must be > 0",
+                    Some("Set to a positive integer."),
+                ))
+            } else {
+                Ok(())
+            }
+        });
+        Ok(())
+    }
 }
 
 impl Step for Truncate {
@@ -34,11 +53,6 @@ impl Step for Truncate {
         })
     }
 
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment_index = Some(self.segment.validate(input_def)?);
-        Ok(())
-    }
-
     fn apply(
         &self,
         mut block: FastQBlocksCombined,
@@ -52,15 +66,11 @@ impl Step for Truncate {
         });
 
         block.apply_in_place(
-            self.segment_index
-                .expect("segment_index must be set during initialization"),
+            self.segment,
             |read| read.max_len(self.n),
             condition.as_deref(),
         );
-        block.filter_tag_locations_beyond_read_length(
-            self.segment_index
-                .expect("segment_index must be set during initialization"),
-        );
+        block.filter_tag_locations_beyond_read_length(self.segment);
         Ok((block, true))
     }
     //

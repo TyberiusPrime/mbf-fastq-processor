@@ -1,8 +1,8 @@
 #![allow(clippy::unnecessary_wraps)]
 
-use std::collections::HashMap;
 use crate::transformations::prelude::*;
 use crate::{config::deser, io};
+use std::collections::HashMap;
 
 fn default_min_count() -> usize {
     1
@@ -10,27 +10,25 @@ fn default_min_count() -> usize {
 
 /// Quantify Kmer occurance vs database
 #[derive(Clone, JsonSchema)]
-#[tpd(partial = false)]
+#[tpd]
 #[derive(Debug)]
 pub struct Kmers {
     pub out_label: String,
-    #[tpd_default]
-    pub segment: SegmentOrAll,
-    #[tpd(skip)]
-    #[schemars(skip)]
-    pub segment_index: Option<SegmentIndexOrAll>,
+
+    #[schemars(with = "String")]
+    #[tpd(adapt_in_verify(String))]
+    pub segment: SegmentIndexOrAll,
 
     // Kmer database configuration
-    #[tpd(alias="files")]
-    #[tpd(alias="filenames")]
+    #[tpd(alias = "files")]
+    #[tpd(alias = "filenames")]
     pub filename: Vec<String>,
 
     pub k: usize,
 
-    #[tpd(alias="canonical")]
+    #[tpd(alias = "canonical")]
     pub count_reverse_complement: bool,
 
-    #[tpd_default_in_verify]
     pub min_count: usize,
 
     #[tpd(skip)] // eserde compatibility
@@ -38,52 +36,45 @@ pub struct Kmers {
     pub resolved_kmer_db: Option<HashMap<Vec<u8>, usize>>,
 }
 
-impl VerifyFromToml for PartialKmers {
-    fn verify(mut self, _helper: &mut TomlHelper<'_>) -> Self
+impl VerifyIn<PartialConfig> for PartialKmers {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized,
     {
-        self.min_count = self.min_count.or_default_with(default_min_count);
-        self
+        self.segment.validate_segment(parent);
+        self.min_count.or_with(default_min_count);
+
+        self.filename.verify(|filenames| {
+            if filenames.is_empty() {
+                return Err(ValidationFailure::new(
+                    "At least one filename must be provided for the k-mer database.",
+                    Some("Please specify the path to your k-mer database file."),
+                ));
+            }
+            if filenames.iter().any(|filepath| filepath.as_ref().expect("Should not be reached on wrong type for filename") == crate::config::STDIN_MAGIC_PATH) {
+                return Err(ValidationFailure::new(
+                    "QuantifyKmers: K-mer database cannot be read from stdin",
+                    Some("Please specify a file path for the k-mer database instead of using '-' or 'stdin'.")
+                ));
+            }
+            Ok(())
+        });
+
+        self.k.verify(|k| {
+            if *k == 0 {
+                return Err(ValidationFailure::new(
+                    "'k' must be greater than 0.",
+                    Some("Please specify a positive integer value for k (e.g., k = 5 for 5-mers)."),
+                ));
+            }
+            Ok(())
+        });
+
+        Ok(())
     }
 }
 
 impl Step for Kmers {
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment_index = Some(self.segment.validate(input_def)?);
-        Ok(())
-    }
-
-    fn validate_others(
-        &self,
-        _input_def: &crate::config::Input,
-        _output_def: Option<&crate::config::Output>,
-        _all_transforms: &[crate::transformations::Transformation],
-        _this_transforms_index: usize,
-    ) -> Result<()> {
-        if self.filename.is_empty() {
-            bail!(
-                "QuantifyKmers: 'filename' must contain at least one file. Please specify the path to your k-mer database file."
-            );
-        }
-        if self.k == 0 {
-            bail!(
-                "QuantifyKmers: 'k' must be greater than 0. Please specify a positive integer value for k (e.g., k = 5 for 5-mers)."
-            );
-        }
-        // Check that files exist (will be checked again at runtime, but helpful to fail early)
-        if self
-            .filename
-            .iter()
-            .any(|filepath| filepath == crate::config::STDIN_MAGIC_PATH)
-        {
-            bail!(
-                "QuantifyKmers: K-mer database cannot be read from stdin. Please specify a file path for the k-mer database instead of using '-' or 'stdin'."
-            );
-        }
-        Ok(())
-    }
-
     fn init(
         &mut self,
         _input_info: &InputInfo,
@@ -125,8 +116,7 @@ impl Step for Kmers {
         let k = self.k;
 
         super::extract_numeric_tags_plus_all(
-            self.segment_index
-                .expect("segment_index must be set during initialization"),
+            self.segment,
             &self.out_label,
             #[allow(clippy::cast_precision_loss)]
             |read| {

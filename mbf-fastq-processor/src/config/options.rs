@@ -1,12 +1,13 @@
-#![allow(clippy::struct_field_names)] // FailureOptions - eserde(?) interferes with clippy here. 
+#![allow(clippy::struct_field_names)] use crate::config::PartialConfig;
+// FailureOptions - eserde(?) interferes with clippy here. 
+use crate::config::input::PartialInput;
 use crate::io::output::compressed_output::{SimulatedWriteError, SimulatedWriteFailure};
 use anyhow::{Context, Result};
 use schemars::JsonSchema;
 use toml_pretty_deser::prelude::*;
-use crate::config::input::PartialInput;
 
 #[derive(Clone, Default, JsonSchema)]
-#[tpd]
+#[tpd(no_verify)]
 #[derive(Debug)]
 pub struct FailureOptions {
     pub fail_output_after_bytes: Option<usize>,
@@ -78,42 +79,34 @@ const fn default_spot_check_read_pairing() -> bool {
 #[derive(Debug)]
 pub struct Options {
     //#[serde(default)]
-    #[tpd(alias="thread_count")]
+    #[tpd(alias = "thread_count")]
     pub threads: Option<usize>,
     pub max_blocks_in_flight: Option<usize>,
 
-    #[tpd_default_in_verify]
     pub block_size: usize,
-    #[tpd_default_in_verify]
     pub buffer_size: usize,
-    #[tpd_default_in_verify]
     pub output_buffer_size: usize,
-    #[tpd_default]
+    #[tpd(default)]
     pub accept_duplicate_files: bool,
     //#[serde(default = "default_spot_check_read_pairing")]
-    #[tpd_default_in_verify]
     pub spot_check_read_pairing: bool,
     #[tpd(nested)]
-    #[tpd_default]
+    #[tpd(default)]
     pub debug_failures: FailureOptions,
 }
 
-impl VerifyIn<PartialInput> for PartialOptions {
-    fn verify(mut self, _helper: &mut TomlHelper<'_>, _parent: &PartialInput) -> Self
+impl VerifyIn<PartialConfig> for PartialOptions {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized,
     {
-        self.block_size = self.block_size.or_default(default_block_size());
-        self.buffer_size = self.buffer_size.or_default(default_buffer_size());
-        self.output_buffer_size = self
-            .output_buffer_size
-            .or_default(default_output_buffer_size());
-        self.accept_duplicate_files = self.accept_duplicate_files.or_default(false);
-        self.spot_check_read_pairing = self
-            .spot_check_read_pairing
-            .or_default(default_spot_check_read_pairing());
-
-        self
+        self.block_size.or_with(default_block_size);
+        self.buffer_size.or_with(default_buffer_size);
+        self.output_buffer_size.or_with(default_output_buffer_size);
+        self.accept_duplicate_files.or(false);
+        self.spot_check_read_pairing
+            .or_with(default_spot_check_read_pairing);
+        Ok(())
     }
 }
 

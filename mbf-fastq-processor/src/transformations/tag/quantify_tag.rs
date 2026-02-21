@@ -11,7 +11,7 @@ type QuantifyTagCollector = Arc<Mutex<DemultiplexedData<BTreeMap<Vec<u8>, usize>
 
 /// Write a histogram of tag values to a JSON file.
 #[derive(Clone, JsonSchema)]
-#[tpd(partial=false)]
+#[tpd]
 #[derive(Debug)]
 pub struct QuantifyTag {
     pub infix: String,
@@ -31,13 +31,13 @@ pub struct QuantifyTag {
 
 }
 
-impl VerifyFromToml for PartialQuantifyTag {
-    fn verify(mut self, helper: &mut TomlHelper<'_>) -> Self
+impl VerifyIn<PartialConfig> for PartialQuantifyTag {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
     where
-        Self: Sized,
+        Self: Sized + toml_pretty_deser::Visitor,
     {
-        self.region_separator = self.region_separator.or_default_with(default_region_separator);
-        self
+        self.region_separator.or_with(default_region_separator);
+        Ok(())
     }
 }
 

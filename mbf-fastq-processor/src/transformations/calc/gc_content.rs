@@ -9,25 +9,28 @@ use crate::transformations::prelude::*;
 #[derive(Debug)]
 pub struct GCContent {
     pub out_label: String,
-    #[tpd_default]
-    pub segment: SegmentOrAll,
-    #[tpd(skip)]
-    #[schemars(skip)]
-    pub segment_index: Option<SegmentIndexOrAll>,
+    #[schemars(with = "String")]
+    #[tpd(adapt_in_verify(String))]
+    pub segment: SegmentIndexOrAll,
+}
+
+impl VerifyIn<PartialConfig> for PartialGCContent {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        self.segment.validate_segment(parent);
+        Ok(())
+    }
 }
 
 impl GCContent {
     pub(crate) fn into_base_content(self) -> BaseContent {
-        BaseContent::for_gc_replacement(self.out_label, self.segment, self.segment_index)
+        BaseContent::for_gc_replacement(self.out_label, self.segment)
     }
 }
 
 impl Step for GCContent {
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment_index = Some(self.segment.validate(input_def)?);
-        Ok(())
-    }
-
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((
             self.out_label.clone(),

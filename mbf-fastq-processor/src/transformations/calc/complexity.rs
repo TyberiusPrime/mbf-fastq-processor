@@ -9,18 +9,23 @@ use crate::transformations::prelude::*;
 #[derive(Debug)]
 pub struct Complexity {
     pub out_label: String,
-    #[tpd_default]
-    segment: SegmentOrAll,
-    #[tpd(skip)]
-    #[schemars(skip)]
-    segment_index: Option<SegmentIndexOrAll>,
+
+    #[schemars(with = "String")]
+    #[tpd(adapt_in_verify(String))]
+    segment: SegmentIndexOrAll,
+}
+
+impl VerifyIn<PartialConfig> for PartialComplexity {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        self.segment.validate_segment(parent);
+        Ok(())
+    }
 }
 
 impl Step for Complexity {
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment_index = Some(self.segment.validate(input_def)?);
-        Ok(())
-    }
 
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((
@@ -42,8 +47,7 @@ impl Step for Complexity {
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         extract_numeric_tags_plus_all(
-            self.segment_index
-                .expect("segment_index must be set during initialization"),
+            self.segment,
             &self.out_label,
             |read| {
                 // Calculate the number of transitions

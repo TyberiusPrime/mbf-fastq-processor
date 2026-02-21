@@ -12,15 +12,22 @@ pub struct ValidateSeq {
     #[schemars(with = "String")]
     pub allowed: BString,
 
-    #[schemars(skip)]
+    #[schemars(with = "String")]
+    #[tpd(adapt_in_verify(String))]
     segment: SegmentIndexOrAll,
 }
 
-impl Step for ValidateSeq {
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        //self.segment_index = Some(self.segment.validate(input_def)?);
+impl VerifyIn<PartialConfig> for PartialValidateSeq {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        self.segment.validate_segment(parent);
         Ok(())
     }
+}
+
+impl Step for ValidateSeq {
 
     fn apply(
         &self,
@@ -31,8 +38,7 @@ impl Step for ValidateSeq {
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let mut res = Ok(());
         block.apply_in_place_wrapped_plus_all(
-            self.segment_index
-                .expect("segment_index must be set during initialization"),
+            self.segment,
             |read| {
                 if res.is_ok() && read.seq().iter().any(|x| !self.allowed.contains(x)) {
                     res = Err(anyhow::anyhow!(

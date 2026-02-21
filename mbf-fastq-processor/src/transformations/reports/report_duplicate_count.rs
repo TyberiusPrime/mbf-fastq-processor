@@ -16,20 +16,14 @@ impl Into<serde_json::Value> for DuplicateCountData {
 }
 
 #[derive( Default, Clone)]
-#[tpd]
 //todo: maybe implement FromTomlTable myself and panic?
 #[derive(Debug)]
 pub struct _ReportDuplicateCount {
-    #[tpd(skip)]
     pub report_no: usize,
     //that is per read1/read2...
-    #[tpd(skip)]
     pub data_per_segment: Arc<Mutex<DemultiplexedData<PerReadReportData<DuplicateCountData>>>>,
-    #[tpd(skip)]
     pub debug_reproducibility: bool,
-    #[tpd(skip)]
     pub initial_filter_capacity: Arc<Mutex<Option<usize>>>,
-    #[tpd(skip)]
     pub actual_filter_capacity: Option<usize>,
 }
 

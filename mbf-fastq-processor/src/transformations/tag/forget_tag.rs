@@ -4,7 +4,7 @@ use crate::transformations::prelude::*;
 /// remove one tag from memory
 
 #[derive(Clone, JsonSchema)]
-#[tpd]
+#[tpd(no_verify)]
 #[derive(Debug)]
 pub struct ForgetTag {
     in_label: String,

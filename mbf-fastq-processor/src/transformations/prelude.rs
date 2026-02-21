@@ -1,12 +1,12 @@
 pub(crate) use super::{
-    ConditionalTag, FinalizeReportResult, FragmentEntry, InputInfo, OurCuckCooFilter,
-    FragmentEntryForCuckooFilter,
-    ResolvedSourceAll, ResolvedSourceNoAll, Step, TagValueType, Transformation,
-    edits::get_bool_vec_from_tag, reproducible_cuckoofilter,
+    ConditionalTag, FinalizeReportResult, FragmentEntry, FragmentEntryForCuckooFilter, InputInfo,
+    OurCuckCooFilter, Step, TagValueType, Transformation, edits::get_bool_vec_from_tag,
+    reproducible_cuckoofilter,
 };
 pub(crate) use crate::config::{
-    PartialInput,
-    SegmentIndex, SegmentIndexOrAll, TagMetadata,
+    PartialConfig, SegmentIndex, SegmentIndexOrAll, SegmentOrNameIndex, TagMetadata,
+    ValidateSegment,
+    ResolvedSourceAll, ResolvedSourceNoAll,
 };
 pub(crate) use crate::demultiplex::{
     DemultiplexBarcodes, DemultiplexedData, DemultiplexedOutputFiles, OptDemultiplex, OutputWriter,
@@ -15,7 +15,7 @@ pub(crate) use crate::demultiplex::{
 pub(crate) use crate::io::{FastQBlocksCombined, reads::NewLocation};
 pub(crate) use anyhow::{Context, Result, anyhow, bail};
 
-pub(crate) use bstr::{BString, BStr};
+pub(crate) use bstr::{BStr, BString};
 pub(crate) use schemars::JsonSchema;
 
 pub(crate) type DemultiplexTag = crate::demultiplex::Tag;

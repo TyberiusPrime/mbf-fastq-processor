@@ -10,13 +10,30 @@ use crate::dna::HitRegion;
 #[derive(Debug)]
 pub struct CutStart {
     n: usize,
-    #[tpd_default]
-    segment: Segment,
-    #[tpd(skip)]
-    #[schemars(skip)]
-    segment_index: Option<SegmentIndex>,
-    #[tpd_default]
+    #[schemars(with = "String")]
+    #[tpd(adapt_in_verify(String))]
+    segment: SegmentIndex,
+    #[tpd(default)]
     if_tag: Option<String>,
+}
+
+impl VerifyIn<PartialConfig> for PartialCutStart {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        self.n.verify(|v| {
+            if *v == 0 {
+                Err(ValidationFailure::new(
+                    "n must be > 0",
+                    Some("Set to a positive integer."),
+                ))
+            } else {
+                Ok(())
+            }
+        });
+        Ok(())
+    }
 }
 
 impl Step for CutStart {
@@ -41,11 +58,6 @@ impl Step for CutStart {
         true
     }
 
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment_index = Some(self.segment.validate(input_def)?);
-        Ok(())
-    }
-
     fn apply(
         &self,
         mut block: FastQBlocksCombined,
@@ -59,15 +71,13 @@ impl Step for CutStart {
         });
 
         block.apply_in_place(
-            self.segment_index
-                .expect("segment_index must be set during initialization"),
+            self.segment,
             |read| read.cut_start(self.n),
             condition.as_deref(),
         );
 
         block.filter_tag_locations(
-            self.segment_index
-                .expect("segment_index must be set during initialization"),
+            self.segment,
             |location: &HitRegion, _pos, _seq, _read_len: usize| -> NewLocation {
                 if location.start < self.n {
                     NewLocation::Remove

@@ -58,6 +58,50 @@ pub struct ConcatTags {
     on_missing: OnMissing,
 }
 
+impl VerifyIn<PartialConfig> for PartialConcatTags {
+    fn verify(&mut self, _parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        self.in_labels.verify_mut(|v| {
+            if v.len() < 2 {
+                return Err(ValidationFailure::new(
+                    "Must have at least two input labels",
+                    None,
+                ));
+            }
+            let mut seen = std::collections::HashSet::new();
+            for label in v.iter_mut(){
+                let lv = label.value.as_ref().expect("Parent was ok?");
+                if lv.is_empty() {
+                    label.state = TomlValueState::ValidationFailed {
+                        message: "Must not be empty".to_string(),
+                    };
+                } else {
+                    if !seen.insert(lv) {
+                        label.state = TomlValueState::ValidationFailed {
+                            message: format!("Duplicate input label"),
+                        };
+                    }
+                }
+            }
+            Ok(())
+        });
+        self.out_label.verify(|v| {
+            if v.is_empty() {
+                Err(ValidationFailure::new(
+                    "Output label must not be empty",
+                    None,
+                ))
+            } else {
+                Ok(())
+            }
+        });
+
+        Ok(())
+    }
+}
+
 impl Step for ConcatTags {
     fn validate_others(
         &self,

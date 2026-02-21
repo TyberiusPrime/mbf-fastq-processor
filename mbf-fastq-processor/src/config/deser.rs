@@ -1,110 +1,130 @@
 use crate::dna;
 use bstr::BString;
+use fasteval::Value;
 /// all our serde deserializers in one place.
 ///
 use serde::{Deserialize, Deserializer, de};
 use std::collections::BTreeMap;
 use std::{fmt, marker::PhantomData};
-use toml_pretty_deser::{TomlHelper, TomlValue};
+use toml_pretty_deser::{TomlHelper, TomlValue, ValidationFailure};
 
-pub fn tpd_adapt_bstring(input: &str) -> Result<BString, (String, Option<String>)> {
-    Ok(BString::from(input.as_bytes()))
+pub fn tpd_adapt_bstring(input: TomlValue<String>) -> TomlValue<BString> {
+    input.map(|s| BString::from(s.as_bytes()))
 }
 
-pub fn tpd_adapt_dna_bstring(input: &str) -> Result<BString, (String, Option<String>)> {
-    let res = BString::from(input.as_bytes());
-    for c in res.iter() {
-        let c = c.to_ascii_uppercase();
-        if !matches!(c, b'A' | b'C' | b'G' | b'T') {
-            return Err((format!("Invalid DNA base: '{c}'."), None));
+pub fn tpd_adapt_bstring_uppercase(input: TomlValue<String>) -> TomlValue<BString> {
+    input.map(|s| BString::from(s.as_bytes().to_ascii_uppercase()))
+}
+
+pub fn tpd_adapt_dna_bstring(mut input: TomlValue<String>) -> TomlValue<BString> {
+    input.try_map(|s| {
+        let res = BString::from(s.as_bytes());
+        for c in res.iter() {
+            let c = c.to_ascii_uppercase();
+            if !matches!(c, b'A' | b'C' | b'G' | b'T') {
+                return Err(ValidationFailure::new(
+                    format!("Invalid DNA base: '{c}'."),
+                    None,
+                ));
+            }
         }
-    }
-    Ok(res)
+        Ok(res)
+    })
 }
 
-pub fn tpd_adapt_iupac_bstring(input: &str) -> Result<BString, (String, Option<String>)> {
-    let res = BString::from(input.as_bytes());
-    if !dna::all_iupac(res.as_ref()) {
-        return Err((
-            format!("Invalid IUPAC base: '{input}'."),
-            Some("Allowed letters are AGTC I R Y S W K M B D H V N ".to_string()),
-        ));
-    }
-    Ok(res)
+pub fn tpd_adapt_dna_bstring_plus_n(mut input: TomlValue<String>) -> TomlValue<BString> {
+    input.try_map(|s| {
+        let res = BString::from(s.as_bytes());
+        for c in res.iter() {
+            let c = c.to_ascii_uppercase();
+            if !matches!(c, b'A' | b'C' | b'G' | b'T' | b'N') {
+                return Err(ValidationFailure::new(
+                    format!("Invalid DNA base: '{c}'."),
+                    None,
+                ));
+            }
+        }
+        Ok(res)
+    })
 }
 
-pub fn tpd_adapt_regex(input: &str) -> Result<regex::bytes::Regex, (String, Option<String>)> {
+pub fn tpd_adapt_iupac_bstring(mut input: TomlValue<String>) -> TomlValue<BString> {
+    input.try_map(|s| {
+        let res = BString::from(s.as_bytes());
+        if !dna::all_iupac(res.as_ref()) {
+            return Err(ValidationFailure::new(
+                format!("Invalid IUPAC base in '{res}'."),
+                Some("Allowed letters are AGTC I R Y S W K M B D H V N ".to_string()),
+            ));
+        }
+        Ok(res)
+    })
+}
+
+pub fn tpd_adapt_regex(mut input: TomlValue<String>) -> TomlValue<regex::bytes::Regex> {
     use regex::bytes::Regex;
-    Ok(Regex::new(input).map_err(|e| (format!("Invalid regex: {e}"), None))?)
+    input.try_map(|s| match Regex::new(s) {
+        Ok(r) => Ok(r),
+        Err(e) => Err(ValidationFailure::new(
+            "Invalid regex".to_string(),
+            Some(format!("Regex engine error: {e}")),
+        )),
+    })
 }
 
-pub fn tpd_extract_u8_from_byte_or_char(
-    toml_value_str: TomlValue<String>,
-    toml_value_u8: TomlValue<u8>,
-    missing_is_error: bool,
-    helper: &TomlHelper<'_>,
-) -> TomlValue<u8> {
-    fn err(helper: &TomlHelper<'_>, span: std::ops::Range<usize>) -> TomlValue<u8> {
-        let e = TomlValue::new_validation_failed(
-            span,
-            "Invalid value".to_string(),
-            Some("Use a single byte (number or char)".to_string()),
-        );
-        e.register_error(&helper.col);
-        e
-    }
-
-    if toml_value_str.is_missing() && toml_value_u8.is_missing() {
-        // Register error if the extraction failed (but not for missing - that's ok for optional)
-        if !toml_value_u8.is_ok() && (!toml_value_u8.is_missing() || missing_is_error) {
-            toml_value_u8.register_error(&helper.col);
-        }
-        return toml_value_u8;
-    }
-
-    match toml_value_str.as_ref() {
-        Some(s) => {
-            if s.as_bytes().len() != 1 {
-                err(helper, toml_value_str.span())
+pub fn tpd_adapt_u8_from_byte_or_char(mut input: TomlValue<toml_edit::Item>) -> TomlValue<u8> {
+    let help =
+        "Provide either a number (0..255), or a single letter string (with an ascii character)";
+    input.try_map(|input| match input {
+        toml_edit::Item::Value(toml_edit::Value::Integer(v)) => {
+            if let Ok(b) = TryInto::<u8>::try_into(*v.value()) {
+                Ok(b)
             } else {
-                TomlValue::new_ok(s.as_bytes()[0], toml_value_str.span())
+                Err(ValidationFailure::new(
+                    format!("Integer value {v} is out of range for a byte (0..255)"),
+                    Some(help.to_string()),
+                ))
             }
         }
-        None => match toml_value_u8.as_ref() {
-            Some(byte) => TomlValue::new_ok(*byte, toml_value_u8.span()),
-            None => err(helper, toml_value_u8.span()),
-        },
-    }
+        toml_edit::Item::Value(toml_edit::Value::String(v)) => {
+            let mut chars = v.value().chars();
+            let first = chars.next();
+            let second = chars.next();
+            if let Some(first) = first
+                && let None = second
+                && let Ok(char_first) = TryInto::<u8>::try_into(first)
+            {
+                Ok(char_first)
+            } else {
+                Err(ValidationFailure::new("Invalid value", Some(help)))
+            }
+        }
+        _ => Err(ValidationFailure::new(
+            "Wrong type, expected a byte",
+            Some(help),
+        )),
+    })
 }
 
-pub fn tpd_extract_base_or_dot(
-    toml_value_str: TomlValue<String>,
-    helper: &TomlHelper<'_>,
-) -> TomlValue<u8> {
-    fn err(helper: &TomlHelper<'_>, span: std::ops::Range<usize>) -> TomlValue<u8> {
-        let e = TomlValue::new_validation_failed(
-            span,
-            "Invalid DNA base".to_string(),
-            Some("Must be a single character: A, C, G, T, N or '.'".to_string()),
-        );
-        e.register_error(&helper.col);
-        e
+pub fn tpd_adapt_extract_base_or_dot(mut input: TomlValue<String>) -> TomlValue<u8> {
+    fn err() -> Result<u8, ValidationFailure> {
+        Err(ValidationFailure::new(
+            "Invalid DNA base",
+            Some("Must be a single character: A, C, G, T, N or '.'"),
+        ))
     }
-    match toml_value_str.as_ref() {
-        Some(s) => {
-            if s.len() == 1 {
-                let s = s.as_bytes()[0].to_ascii_uppercase();
-                if matches!(s, b'A' | b'C' | b'G' | b'T' | b'N' | b'.') {
-                    TomlValue::new_ok(s, toml_value_str.span())
-                } else {
-                    err(helper, toml_value_str.span())
-                }
+    input.try_map(|input| {
+        if input.len() == 1 {
+            let s = input.as_bytes()[0].to_ascii_uppercase();
+            if matches!(s, b'A' | b'C' | b'G' | b'T' | b'N' | b'.') {
+                Ok(s)
             } else {
-                err(helper, toml_value_str.span())
+                err()
             }
+        } else {
+            err()
         }
-        None => err(helper, toml_value_str.span()),
-    }
+    })
 }
 
 pub(crate) fn default_comment_insert_char() -> u8 {

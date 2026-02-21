@@ -14,15 +14,18 @@ use crate::transformations::tag::initial_filter_elements;
 #[derive(Debug)]
 pub struct OtherFileBySequence {
     pub filename: String,
-    segment_index: SegmentIndex,
+
+    #[schemars(with = "String")]
+    #[tpd(adapt_in_verify(String))]
+    segment: SegmentIndex,
 
     pub out_label: String,
 
     pub seed: Option<u64>,
     pub false_positive_rate: f64,
 
-    pub include_mapped: Option<bool>,
-    pub include_unmapped: Option<bool>,
+    pub include_mapped: bool,
+    pub include_unmapped: bool,
 
     #[tpd(skip)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[schemars(skip)]
@@ -31,6 +34,51 @@ pub struct OtherFileBySequence {
     #[tpd(skip)]
     #[schemars(skip)]
     pub progress_output: Option<crate::transformations::reports::Progress>,
+}
+
+impl VerifyIn<PartialConfig> for PartialOtherFileBySequence {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        self.segment.validate_segment(parent);
+        //todo: refactor with OtherFileByName to avoid code duplication.
+        if let Some(filename) = self.filename.as_ref() {
+            if (filename.ends_with(".bam") || filename.ends_with(".sam")) {
+                if self.include_unmapped.is_missing() {
+                    return Err(ValidationFailure::new(
+                        "Missing include_unmapped",
+                        Some(
+                            "When using a BAM file, you must specify `include_unmapped` = true|false",
+                        ),
+                    ));
+                }
+
+                if self.include_mapped.is_missing() {
+                    return Err(ValidationFailure::new(
+                        "Missing include_mapped",
+                        Some(
+                            "When using a BAM file, you must specify `include_mapped` = true|false",
+                        ),
+                    ));
+                }
+                if !(self.include_mapped.value.unwrap_or(false)
+                    || self.include_unmapped.value.unwrap_or(false))
+                {
+                    return Err(ValidationFailure::new(
+                        "Invalid include_mapped/include_unmapped combination",
+                        Some(
+                            "At least one of `include_mapped` or `include_unmapped` must be true when using a BAM/SAM file.",
+                        ),
+                    ));
+                }
+            } else {
+                self.include_mapped.or(false); // just so it's always set.
+                self.include_unmapped.or(false);
+            }
+        }
+        Ok(())
+    }
 }
 
 impl Step for OtherFileBySequence {
@@ -45,37 +93,6 @@ impl Step for OtherFileBySequence {
         crate::transformations::tag::validate_seed(self.seed, self.false_positive_rate)
     }
 
-    #[allow(clippy::case_sensitive_file_extension_comparisons)] //sorry, but .BAM is wrong :).
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment_index = Some(self.segment.validate(input_def)?);
-        if self.filename.ends_with(".bam") || self.filename.ends_with(".sam") {
-            if self.include_unmapped.is_none() {
-                return Err(anyhow::anyhow!(
-                    "When using a BAM file, you must specify `include_unmapped` = true|false"
-                ));
-            }
-
-            if self.include_mapped.is_none() {
-                return Err(anyhow::anyhow!(
-                    "When using a BAM file, you must specify `include_mapped` = true|false"
-                ));
-            }
-        }
-
-        self.include_mapped = self.include_mapped.or(Some(false)); // just so it's always set.
-        self.include_unmapped = self.include_unmapped.or(Some(false));
-        if self.filename.ends_with(".bam") || self.filename.ends_with(".sam") {
-            if let (false, false) = (
-                self.include_mapped.expect("Just set above"),
-                self.include_unmapped.expect("Just set above"),
-            ) {
-                return Err(anyhow::anyhow!(
-                    "At least one of `include_mapped` or `include_unmapped` must be true when using a BAM/SAM file."
-                ));
-            }
-        }
-        Ok(())
-    }
     fn store_progress_output(&mut self, progress: &crate::transformations::reports::Progress) {
         self.progress_output = Some(progress.clone());
     }
@@ -104,12 +121,7 @@ impl Step for OtherFileBySequence {
                 .expect("seed should be validated to exist when false_positive_rate > 0.0");
             ApproxOrExactFilter::Approximate(Box::new(reproducible_cuckoofilter(
                 seed,
-                initial_filter_elements(
-                    &self.filename,
-                    self.include_mapped.expect("Verified in validate_segments"),
-                    self.include_unmapped
-                        .expect("Verified in validate_segments"),
-                ),
+                initial_filter_elements(&self.filename, self.include_mapped, self.include_unmapped),
                 self.false_positive_rate,
             )))
         };
@@ -130,9 +142,8 @@ impl Step for OtherFileBySequence {
                 }
                 count.set(count.get() + 1);
             },
-            self.include_mapped.expect("Verified in validate_segments"),
-            self.include_unmapped
-                .expect("Verified in validate_segments"),
+            self.include_mapped,
+            self.include_unmapped,
         )?;
         if count.get() == 0 {
             bail!(
@@ -161,8 +172,7 @@ impl Step for OtherFileBySequence {
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         extract_bool_tags(
             &mut block,
-            self.segment_index
-                .expect("segment_index must be set during initialization"),
+            self.segment,
             &self.out_label,
             |read, _ignored_demultiplex_tag| {
                 let filter = self

@@ -3,28 +3,69 @@
 
 use crate::transformations::prelude::*;
 
-use crate::{
-    dna::HitRegion,
-};
+use crate::dna::HitRegion;
 
 /// Swap two segments
-#[derive( Clone, JsonSchema)]
+#[derive(Clone, JsonSchema)]
 #[tpd]
 #[derive(Debug)]
 pub struct Swap {
-    #[tpd_default]
+    #[tpd(default)]
     if_tag: Option<String>,
 
-    segment_a: Option<Segment>,
-    #[tpd(skip)]
-    #[schemars(skip)]
-    segment_a_index: Option<SegmentIndex>,
+    #[schemars(with = "String")]
+    #[tpd(adapt_in_verify(String))]
+    segment_a: SegmentIndex,
 
-    segment_b: Option<Segment>,
-    
-    #[tpd(skip)]
-    #[schemars(skip)]
-    segment_b_index: Option<SegmentIndex>,
+    #[schemars(with = "String")]
+    #[tpd(adapt_in_verify(String))]
+    segment_b: SegmentIndex,
+}
+
+impl VerifyIn<PartialConfig> for PartialSwap {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        let input_def = parent
+            .input
+            .as_ref()
+            .expect("Input definition must be set before config for Swap step validation");
+        let segment_order = input_def.get_segment_order();
+
+        if self.segment_a.is_missing() ^ self.segment_b.is_missing() {
+            return Err(ValidationFailure::new(
+                "Insuffient swap definition",
+                Some(
+                    "Please either specify both segment_a and segment_b, or omit both for auto-detection.",
+                ),
+            ));
+        } else if self.segment_a.is_missing() && self.segment_b.is_missing() {
+            if segment_order.len() == 2 {
+                self.segment_a = TomlValue::new_ok(MustAdapt::PostVerify(SegmentIndex(0)), 0..0);
+                self.segment_b = TomlValue::new_ok(MustAdapt::PostVerify(SegmentIndex(1)), 0..0);
+            } else {
+                return Err(ValidationFailure::new(
+                    "Insuffient swap definition",
+                    Some(
+                        "There were more (or fewer) than 2 segments, and you did not specify both segment_a and segment_b.",
+                    ),
+                ));
+            }
+        } else if self.segment_a.is_ok() && self.segment_b.is_ok() {
+            self.segment_a.validate_segment(parent);
+            self.segment_b.validate_segment(parent);
+            if self.segment_a.as_ref().unwrap().as_ref_post()
+                == self.segment_b.as_ref().unwrap().as_ref_post()
+            {
+                return Err(ValidationFailure::new(
+                    "segment_a and segment_b cannot be the same",
+                    Some("Please specify two different segments to swap."),
+                ));
+            }
+        }
+        Ok(())
+    }
 }
 
 impl Step for Swap {
@@ -49,22 +90,6 @@ impl Step for Swap {
         true
     }
 
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        if self.segment_a_index.is_none() {
-            (
-                self.segment_a,
-                self.segment_b,
-                self.segment_a_index,
-                self.segment_b_index,
-            ) = validate_swap_segments(
-                self.segment_a.as_ref(),
-                self.segment_b.as_ref(),
-                input_def,
-            )?;
-        }
-        Ok(())
-    }
-
     fn apply(
         &self,
         mut block: FastQBlocksCombined,
@@ -72,16 +97,8 @@ impl Step for Swap {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let index_a = self
-            .segment_a_index
-            .as_ref()
-            .expect("segment_a_index must be set during initialization")
-            .get_index();
-        let index_b = self
-            .segment_b_index
-            .as_ref()
-            .expect("segment_b_index must be set during initialization")
-            .get_index();
+        let index_a = self.segment_a.get_index();
+        let index_b = self.segment_b.get_index();
 
         // If no condition, do unconditional swap
         if self.if_tag.is_none() {
@@ -185,50 +202,4 @@ impl Step for Swap {
 
         Ok((block, true))
     }
-}
-
-#[allow(clippy::similar_names)]
-#[allow(clippy::type_complexity)]
-pub fn validate_swap_segments(
-    segment_a: Option<&Segment>,
-    segment_b: Option<&Segment>,
-    input_def: &crate::config::Input,
-) -> Result<(
-    Option<Segment>,
-    Option<Segment>,
-    Option<SegmentIndex>,
-    Option<SegmentIndex>,
-)> {
-    let segment_count = input_def.segment_count();
-    if let (Some(seg_a), Some(seg_b)) = (segment_a, segment_b) {
-        if seg_a == seg_b {
-            bail!(
-                "Swap was supplied the same segment for segment_a and segment_b. Please specify two different segments to swap."
-            );
-        }
-        return Ok((
-            segment_a.cloned(),
-            segment_b.cloned(),
-            Some(seg_a.validate(input_def)?),
-            Some(seg_b.validate(input_def)?),
-        ));
-    }
-    if segment_a.is_none() && segment_b.is_none() {
-        if segment_count != 2 {
-            bail!(
-                "Swap requires exactly 2 input segments when segment_a and segment_b are omitted, but {segment_count} segments were provided. Either specify segment_a and segment_b explicitly, or use exactly 2 input segments for auto-detection.",
-            );
-        }
-
-        let segment_order = input_def.get_segment_order();
-        let seg_a = Segment(segment_order[0].clone());
-        let seg_b = Segment(segment_order[1].clone());
-
-        let segment_a_index = Some(seg_a.validate(input_def)?);
-        let segment_b_index = Some(seg_b.validate(input_def)?);
-        return Ok((Some(seg_a), Some(seg_b), segment_a_index, segment_b_index));
-    }
-    bail!(
-        "Swap requires both segment_a and segment_b to be specified, or both to be omitted for auto-detection with exactly 2 segments. Please either specify both segments, or omit both for auto-detection."
-    );
 }

@@ -1,25 +1,23 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 
-use crate::{config::deser::tpd_extract_base_or_dot, transformations::prelude::*};
+use crate::{config::deser::tpd_adapt_extract_base_or_dot, transformations::prelude::*};
 
 use super::extract_region_tags;
-use crate::{dna::Hits};
+use crate::dna::Hits;
 
 /// Extract ends that are homo-polymers into a tag
 #[derive(Clone, JsonSchema)]
 #[tpd]
 #[derive(Debug)]
 pub struct PolyTail {
-    #[tpd_default]
-    segment: Segment,
-    #[tpd(skip)]
-    #[schemars(skip)]
-    segment_index: Option<SegmentIndex>,
+    #[tpd(adapt_in_verify(String))]
+    #[schemars(with="String")]
+    segment: SegmentIndex,
 
     pub out_label: String,
     //#[validate(minimum = 1)] todo
     pub min_length: usize,
-    #[tpd_adapt_in_verify]
+    #[tpd(with = "tpd_adapt_extract_base_or_dot")]
     pub base: u8,
     //#[validate(minimum = 0.)]// todo
     //#[validate(maximum = 1.)] //todo
@@ -27,21 +25,17 @@ pub struct PolyTail {
     pub max_consecutive_mismatches: usize,
 }
 
-impl VerifyFromToml for PartialPolyTail {
-    fn verify(mut self, helper: &mut TomlHelper<'_>) -> Self
+impl VerifyIn<PartialConfig> for PartialPolyTail {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
     where
-        Self: Sized,
+        Self: Sized + toml_pretty_deser::Visitor,
     {
-        self.base = tpd_extract_base_or_dot(self.tpd_get_base(helper, true, true), helper);
-        self
+        self.segment.validate_segment(parent);
+        Ok(())
     }
 }
 
 impl Step for PolyTail {
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment_index = Some(self.segment.validate(input_def)?);
-        Ok(())
-    }
 
     fn validate_others(
         &self,
@@ -81,8 +75,7 @@ impl Step for PolyTail {
         let max_consecutive_mismatches = self.max_consecutive_mismatches;
         extract_region_tags(
             &mut block,
-            self.segment_index
-                .expect("segment_index must be set during initialization"),
+            self.segment,
             &self.out_label,
             |read| {
                 {
@@ -102,8 +95,7 @@ impl Step for PolyTail {
                         Hits::new(
                             last_pos,
                             seq.len() - last_pos,
-                            self.segment_index
-                                .expect("segment_index must be set during initialization"),
+                            self.segment,
                             seq[last_pos..].to_vec().into(),
                         )
                     })

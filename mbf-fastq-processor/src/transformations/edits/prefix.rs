@@ -3,54 +3,40 @@
 use crate::transformations::prelude::*;
 
 use crate::{
-    config::deser::{tpd_adapt_bstring, tpd_adapt_dna_bstring},
+    config::deser::{tpd_adapt_bstring, tpd_adapt_dna_bstring_plus_n},
     dna::HitRegion,
 };
 
 /// add a fixed prefix to the start of reads
 #[derive(Clone, JsonSchema)]
-#[tpd(partial=false)]
+#[tpd]
 #[derive(Debug)]
 pub struct Prefix {
-    #[tpd_default]
-    segment: Segment,
-    #[schemars(skip)]
-    #[tpd(skip)]
-    segment_index: Option<SegmentIndex>,
+    #[tpd(adapt_in_verify)]
+    #[schemars(with = "String")]
+    segment: SegmentIndex,
 
     //todo
     //#[serde(deserialize_with = "dna_from_string")]
     #[schemars(with = "String")]
-    #[tpd(with="tpd_adapt_bstring")]
+    #[tpd(with = "tpd_adapt_dna_bstring_plus_n")]
     pub seq: BString,
     //#[serde(deserialize_with = "bstring_from_string")]
     //we don't check the quality. It's on you if you
     //write non phred values in there
     #[schemars(with = "String")]
-    #[tpd(with="tpd_adapt_bstring")]
+    #[tpd(with = "tpd_adapt_bstring")] //todo: actually verify range
     pub qual: BString,
 
     if_tag: Option<String>,
 }
 
-impl VerifyFromToml for PartialPrefix {
-    fn verify(mut self, helper: &mut TomlHelper<'_>) -> Self
+impl VerifyIn<PartialConfig> for PartialPrefix {
+    fn verify(&mut self, _parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
     where
-        Self: Sized,
+        Self: Sized + toml_pretty_deser::Visitor,
     {
-        self.seq = self.seq.verify(helper, |s: &BString| {
-            for c in s.iter() {
-                if !matches!(c, b'A' | b'C' | b'G' | b'T' | b'N') {
-                    return Err((
-                        "Invalid DNA base".to_string(),
-                        Some("Allowed characters are A, C, G, T, N".to_string()),
-                    ));
-                }
-            }
-            Ok(())
-        });
-
-        self
+        Ok(())
     }
 }
 
@@ -93,11 +79,6 @@ impl Step for Prefix {
         Ok(())
     }
 
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment_index = Some(self.segment.validate(input_def)?);
-        Ok(())
-    }
-
     fn apply(
         &self,
         mut block: FastQBlocksCombined,
@@ -111,16 +92,14 @@ impl Step for Prefix {
         });
 
         block.apply_in_place_wrapped(
-            self.segment_index
-                .expect("segment_index must be set during initialization"),
+            self.segment,
             |read| read.prefix(&self.seq, &self.qual),
             condition.as_deref(),
         );
         let prefix_len = self.seq.len();
 
         block.filter_tag_locations(
-            self.segment_index
-                .expect("segment_index must be set during initialization"),
+            self.segment,
             |location: &HitRegion, _pos, _seq, _read_len: usize| -> NewLocation {
                 {
                     NewLocation::New(HitRegion {

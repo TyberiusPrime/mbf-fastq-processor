@@ -9,13 +9,21 @@ use crate::{config::SegmentIndex, dna::HitRegion};
 #[tpd]
 #[derive(Debug)]
 pub struct ReverseComplement {
-    #[tpd_default]
-    segment: Segment,
-    #[schemars(skip)]
-    #[tpd(skip)]
-    segment_index: Option<SegmentIndex>,
+    #[schemars(with = "String")]
+    #[tpd(adapt_in_verify(String))]
+    segment: SegmentIndex,
 
     if_tag: Option<String>,
+}
+
+impl VerifyIn<PartialConfig> for PartialReverseComplement {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        self.segment.validate_segment(parent);
+        Ok(())
+    }
 }
 
 impl Step for ReverseComplement {
@@ -40,10 +48,6 @@ impl Step for ReverseComplement {
         true
     }
 
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment_index = Some(self.segment.validate(input_def)?);
-        Ok(())
-    }
 
     #[allow(clippy::redundant_closure_for_method_calls)] // otherwise the FnOnce is not general
     // enough
@@ -60,15 +64,13 @@ impl Step for ReverseComplement {
         });
 
         block.apply_in_place_wrapped(
-            self.segment_index
-                .expect("segment_index must be set during initialization"),
+            self.segment,
             |read| read.reverse_complement(),
             condition.as_deref(),
         );
 
         block.filter_tag_locations(
-            self.segment_index
-                .expect("segment_index must be set during initialization"),
+            self.segment,
             |location: &HitRegion, _pos, seq: &BString, read_len: usize| -> NewLocation {
                 {
                     let new_start = read_len - (location.start + location.len);
@@ -89,4 +91,3 @@ impl Step for ReverseComplement {
         Ok((block, true))
     }
 }
-

@@ -4,9 +4,7 @@ use crate::config::deser::{tpd_adapt_bstring, tpd_adapt_regex};
 use crate::transformations::prelude::*;
 
 use crate::{
-    config::{
-        deser::{bstring_from_string, u8_regex_from_string},
-    },
+    config::deser::{bstring_from_string, u8_regex_from_string},
     dna::Hits,
 };
 
@@ -19,34 +17,33 @@ fn regex_replace_with_self() -> BString {
 
 /// Region by regular expression
 #[derive(Clone, JsonSchema)]
-#[tpd(partial=false)]
+#[tpd]
 #[derive(Debug)]
 pub struct Regex {
-    #[tpd(with="tpd_adapt_regex")]
-    #[tpd(alias="pattern")]
-    #[tpd(alias="query")]
+    #[tpd(with = "tpd_adapt_regex")]
+    #[tpd(alias = "pattern")]
+    #[tpd(alias = "query")]
     #[schemars(with = "String")]
     pub search: regex::bytes::Regex,
 
-    #[tpd_default_in_verify]
-    #[tpd(with="tpd_adapt_bstring")]
+    #[tpd(with = "tpd_adapt_bstring")]
     #[schemars(with = "String")]
     pub replacement: BString,
     out_label: String,
-    #[tpd(alias="segment")]
-    source: SegmentSequenceOrName,
-    #[tpd(skip)]
-    #[schemars(skip)]
-    segment_index: Option<SegmentOrNameIndex>,
+
+    #[tpd(adapt_in_verify(String), alias = "segment")]
+    #[schemars(with = "String")]
+    source: SegmentOrNameIndex,
 }
 
-impl VerifyFromToml for PartialRegex {
-    fn verify(mut self, _helper: &mut TomlHelper<'_>) -> Self
+impl VerifyIn<PartialConfig> for PartialRegex {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
     where
-        Self: Sized,
+        Self: Sized + toml_pretty_deser::Visitor,
     {
-        self.replacement = self.replacement.or_default_with(regex_replace_with_self);
-        self
+        self.source.validate_segment(parent);
+        self.replacement.or_with(regex_replace_with_self);
+        Ok(())
     }
 }
 
@@ -72,19 +69,10 @@ impl Step for Regex {
         Ok(())
     }
 
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment_index = Some(self.source.validate(input_def)?);
-        Ok(())
-    }
-
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((
             self.out_label.clone(),
-            if self
-                .segment_index
-                .expect("segment_index must be set during initialization")
-                .is_name()
-            {
+            if self.source.is_name() {
                 crate::transformations::TagValueType::String
             } else {
                 crate::transformations::TagValueType::Location
@@ -99,9 +87,7 @@ impl Step for Regex {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let segment_or_name = self
-            .segment_index
-            .expect("segment_index must be set during initialization");
+        let segment_or_name = self.source;
         let segment_index = segment_or_name.get_segment_index();
 
         if segment_or_name.is_name() {

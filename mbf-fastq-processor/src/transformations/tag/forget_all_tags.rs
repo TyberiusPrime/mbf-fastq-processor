@@ -4,9 +4,12 @@ use crate::transformations::prelude::*;
 /// Remove all tags from memory
 
 #[derive(Clone, JsonSchema)]
-#[tpd]
+#[tpd(no_verify)]
 #[derive(Debug)]
-pub struct ForgetAllTags {}
+pub struct ForgetAllTags {
+    ignored: Option<u8> //tdp dislikes empty structs
+}
+
 
 impl Step for ForgetAllTags {
     fn removes_all_tags(&self) -> bool {

@@ -1,9 +1,9 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use crate::{config::deser::tpd_extract_u8_from_byte_or_char, transformations::prelude::*};
+use crate::transformations::prelude::*;
 
 use super::extract_numeric_tags_plus_all;
 use crate::{
-    config::{SegmentIndexOrAll, deser::u8_from_char_or_number},
+    config::{SegmentIndexOrAll, deser::tpd_adapt_u8_from_byte_or_char},
     io::WrappedFastQRead,
 };
 
@@ -12,69 +12,56 @@ use crate::{
 #[tpd]
 #[derive(Debug)]
 pub enum Operator {
-    #[tpd(alias=">")]
-    #[tpd(alias="above")]
-    #[tpd(alias="worse")]
-    #[tpd(alias="gt")]
+    #[tpd(alias = ">")]
+    #[tpd(alias = "above")]
+    #[tpd(alias = "worse")]
+    #[tpd(alias = "gt")]
     Above,
-    #[tpd(alias="<")]
-    #[tpd(alias="below")]
-    #[tpd(alias="better")]
-    #[tpd(alias="lt")]
+    #[tpd(alias = "<")]
+    #[tpd(alias = "below")]
+    #[tpd(alias = "better")]
+    #[tpd(alias = "lt")]
     Below,
-    #[tpd(alias=">=")]
-    #[tpd(alias="worse_or_equal")]
-    #[tpd(alias="above_or_equal")]
-    #[tpd(alias="gte")]
+    #[tpd(alias = ">=")]
+    #[tpd(alias = "worse_or_equal")]
+    #[tpd(alias = "above_or_equal")]
+    #[tpd(alias = "gte")]
     AboveOrEqual,
-    #[tpd(alias="<=")]
-    #[tpd(alias="better_or_equal")]
-    #[tpd(alias="below_or_equal")]
-    #[tpd(alias="lte")]
+    #[tpd(alias = "<=")]
+    #[tpd(alias = "better_or_equal")]
+    #[tpd(alias = "below_or_equal")]
+    #[tpd(alias = "lte")]
     BelowOrEqual,
 }
 
 /// Calculate bases passing quality threshold (in any direction)
 #[derive(Clone, JsonSchema)]
-#[tpd(partial = false)]
+#[tpd]
 #[derive(Debug)]
 pub struct QualifiedBases {
     pub out_label: String,
-
-    #[tpd_adapt_in_verify]
+    #[tpd(with="tpd_adapt_u8_from_byte_or_char")]
     pub threshold: u8,
 
-    #[tpd(alias="op")]
+    #[tpd(alias = "op")]
     pub operator: Operator,
 
-    #[tpd_default]
-    segment: SegmentOrAll,
-
-    #[tpd(skip)]
-    #[schemars(skip)]
-    segment_index: Option<SegmentIndexOrAll>,
+    #[schemars(with = "String")]
+    #[tpd(adapt_in_verify(String))]
+    segment: SegmentIndexOrAll,
 }
 
-impl VerifyFromToml for PartialQualifiedBases {
-    fn verify(mut self, helper: &mut TomlHelper<'_>) -> Self
+impl VerifyIn<PartialConfig> for PartialQualifiedBases {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized,
     {
-        self.threshold = tpd_extract_u8_from_byte_or_char(
-            self.tpd_get_threshold(helper, false, false),
-            self.tpd_get_threshold(helper, true, false),
-            true,
-            helper,
-        );
-        self
+        self.segment.validate_segment(parent);
+        Ok(())
     }
 }
 
 impl Step for QualifiedBases {
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment_index = Some(self.segment.validate(input_def)?);
-        Ok(())
-    }
 
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((
@@ -109,8 +96,7 @@ impl Step for QualifiedBases {
         };
 
         extract_numeric_tags_plus_all(
-            self.segment_index
-                .expect("segment_index must be set during initialization"),
+            self.segment,
             &self.out_label,
             one_read,
             |reads| reads.iter().map(one_read).sum(),

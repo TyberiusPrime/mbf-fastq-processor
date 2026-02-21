@@ -16,6 +16,22 @@ pub struct StoreTagInSequence {
     ignore_missing: bool,
 }
 
+impl VerifyIn<PartialConfig> for PartialStoreTagInSequence {
+    fn verify(&mut self, _parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        self.in_label.verify(|v| {
+            if v.is_empty() {
+                Err(ValidationFailure::new("Must not be empty", None))
+            } else {
+                Ok(())
+            }
+        });
+        Ok(())
+    }
+}
+
 impl Step for StoreTagInSequence {
     fn uses_tags(
         &self,

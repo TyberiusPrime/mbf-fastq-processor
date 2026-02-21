@@ -24,22 +24,28 @@ pub struct ReservoirSample {
     rng: Arc<Mutex<Option<rand_chacha::ChaChaRng>>>,
 }
 
+impl VerifyIn<PartialConfig> for PartialReservoirSample {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        self.n.verify(|n| {
+             if *n == 0 {
+                Err(ValidationFailure::new(
+                    "n must be > 0. Set to a positive integer.",
+                    None,
+                ))
+            } else {
+                Ok(())
+            }
+        });
+        Ok(())
+    }
+}
+
 impl Step for ReservoirSample {
     fn must_see_all_tags(&self) -> bool {
         true
-    }
-
-    fn validate_others(
-        &self,
-        _input_def: &crate::config::Input,
-        _output_def: Option<&crate::config::Output>,
-        _all_transforms: &[Transformation],
-        _this_transforms_index: usize,
-    ) -> Result<()> {
-        if self.n == 0 {
-            bail!("n must be > 0. Set to a positive integer.");
-        }
-        Ok(())
     }
 
     fn init(

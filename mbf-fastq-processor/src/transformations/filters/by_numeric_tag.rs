@@ -15,25 +15,31 @@ pub struct ByNumericTag {
     pub keep_or_remove: KeepOrRemove,
 }
 
+impl VerifyIn<PartialConfig> for PartialByNumericTag {
+    fn verify(&mut self, _parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        self.in_label.verify(|v| {
+            if v.is_empty() {
+                Err(ValidationFailure::new("Must not be empty", None))
+            } else {
+                Ok(())
+            }
+        });
+        if self.min_value.is_missing() && self.max_value.is_missing() {
+            return Err(ValidationFailure::new(
+                "At least one of min_value or max_value must be specified",
+                None,
+            ));
+        }
+        Ok(())
+    }
+}
+
 impl Step for ByNumericTag {
     fn must_see_all_tags(&self) -> bool {
         true
-    }
-
-    fn validate_others(
-        &self,
-        _input_def: &crate::config::Input,
-        _output_def: Option<&crate::config::Output>,
-        _all_transforms: &[Transformation],
-        _this_transforms_index: usize,
-    ) -> Result<()> {
-        if self.min_value.is_none() && self.max_value.is_none() {
-            return Err(anyhow::anyhow!(
-                "At least one of min_value or max_value must be specified"
-            ));
-        }
-
-        Ok(())
     }
 
     fn uses_tags(

@@ -8,20 +8,36 @@ use crate::dna::{HitRegion, TagValue};
 #[tpd]
 #[derive(Debug)]
 pub enum Direction {
-    #[tpd(alias="start")]
+    #[tpd(alias = "start")]
     Start,
-    #[tpd(alias="end")]
+    #[tpd(alias = "end")]
     End,
 }
 
 /// Trim reads at a tag's position
-#[derive( Clone, JsonSchema)]
+#[derive(Clone, JsonSchema)]
 #[tpd]
 #[derive(Debug)]
 pub struct TrimAtTag {
     in_label: String,
     direction: Direction,
     keep_tag: bool,
+}
+
+impl VerifyIn<PartialConfig> for PartialTrimAtTag {
+    fn verify(&mut self, _parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        self.in_label.verify(|v| {
+            if v.is_empty() {
+                Err(ValidationFailure::new("Must not be empty", None))
+            } else {
+                Ok(())
+            }
+        });
+        Ok(())
+    }
 }
 
 impl Step for TrimAtTag {
@@ -188,3 +204,4 @@ impl Step for TrimAtTag {
         true
     }
 }
+

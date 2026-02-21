@@ -9,54 +9,53 @@ pub fn default_ix_separator() -> String {
 }
 
 #[derive(Clone, JsonSchema)]
-#[tpd(partial = false)]
+#[tpd]
 #[derive(Debug)]
 pub struct Output {
     pub prefix: String,
-    #[tpd_default]
+    #[tpd(default)]
     pub suffix: Option<String>,
-    #[tpd_default]
+    #[tpd(default)]
     pub format: FileFormat,
-    #[tpd_default]
+    #[tpd(default)]
     pub compression: CompressionFormat,
-    #[tpd_default]
+    #[tpd(default)]
     pub compression_level: Option<u8>,
-    #[tpd_default]
+    #[tpd(default)]
     pub compression_threads: Option<usize>,
 
-    #[tpd_default]
+    #[tpd(default)]
     pub report_html: bool,
-    #[tpd_default]
+    #[tpd(default)]
     pub report_json: bool,
-    #[tpd_default]
+    #[tpd(default)]
     pub report_timing: bool,
 
-    #[tpd_default]
+    #[tpd(default)]
     pub stdout: bool,
-    #[tpd_default]
+    #[tpd(default)]
     pub interleave: Option<Vec<String>>,
 
-    #[tpd_default]
+    #[tpd(default)]
     pub output: Option<Vec<String>>,
 
-    #[tpd_default]
+    #[tpd(default)]
     pub output_hash_uncompressed: bool,
-    #[tpd_default]
+    #[tpd(default)]
     pub output_hash_compressed: bool,
-    #[tpd_default_in_verify]
     pub ix_separator: String,
 
-    #[tpd_default]
+    #[tpd(default)]
     pub chunksize: Option<usize>,
 }
 
-impl VerifyFromToml for PartialOutput {
-    fn verify(mut self, helper: &mut TomlHelper<'_>) -> Self
+impl VerifyIn<super::PartialConfig> for PartialOutput {
+    fn verify(&mut self, parent: &super::PartialConfig) -> Result<(), ValidationFailure>
     where
-        Self: Sized,
+        Self: Sized + toml_pretty_deser::Visitor,
     {
-        self.ix_separator = self.ix_separator.or_default_with(default_ix_separator);
-        self
+        self.ix_separator.or_with(default_ix_separator);
+        Ok(())
     }
 }
 

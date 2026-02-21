@@ -8,6 +8,7 @@ use std::{
 
 use crate::{dna::TagValue, io};
 
+#[derive(Debug)]
 struct CompiledExpression {
     slab: Slab,
     instruction: fasteval::Instruction,
@@ -23,23 +24,83 @@ pub struct EvalExpression {
     pub out_label: String,
     /// The arithmetic expression to evaluate
     /// Variables in the expression should match existing numeric tag names
-    #[tpd(alias="expr")]
+    #[tpd(alias = "expr")]
     pub expression: String,
 
-    #[tpd(alias="output_type")]
+    #[tpd(alias = "output_type")]
     pub result_type: ResultType,
 
     #[tpd(skip)]
     #[schemars(skip)]
-    compiled: Option<CompiledExpression>,
+    compiled: CompiledExpression,
 
     #[tpd(skip)]
     #[schemars(skip)]
-    segment_names: Option<Vec<String>>,
+    segment_names: Vec<String>, //todo: why do we need this copy of the segment order?
 
     #[tpd(skip)]
     #[schemars(skip)]
     next_index: std::sync::atomic::AtomicU64, // for read_no
+}
+
+impl VerifyIn<PartialConfig> for PartialEvalExpression {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        self.out_label.verify(|v| {
+            if v.trim().is_empty() {
+                return Err(ValidationFailure::new(
+                    "out_label cannot be empty",
+                    Some("Provide a label to store the result under"),
+                ));
+            }
+            Ok(())
+        });
+        self.expression.verify(|v| {
+            if v.trim().is_empty() {
+                return Err(ValidationFailure::new(
+                    "expression cannot be empty",
+                    Some("Provide an expression to evaluate"),
+                ));
+            }
+            Ok(())
+        });
+        if let Some(expression) = self.expression.as_ref() {
+            // Try parsing the expression to catch syntax errors early
+            let mut slab = Slab::new();
+            let parser = Parser::new();
+            match parser.parse(expression, &mut slab.ps) {
+                Err(e) => {
+                    let help_message = format!("Inner error message {}", e);
+                    return Err(ValidationFailure::new(
+                        "Syntax error".to_string(),
+                        Some(help_message),
+                    ));
+                }
+                Ok(parsed) => {
+                    let instruction = parsed.from(&slab.ps).compile(&slab.ps, &mut slab.cs);
+                    self.compiled = Some(CompiledExpression {
+                        var_names: instruction.var_names(&slab),
+                        slab,
+                        instruction,
+                    });
+                }
+            }
+        }
+
+        if let Some(input_def) = parent.input.as_ref() {
+            self.segment_names = Some(
+                input_def
+                    .get_segment_order()
+                    .iter()
+                    .map(Clone::clone)
+                    .collect(),
+            );
+        }
+
+        Ok(())
+    }
 }
 
 #[allow(clippy::missing_fields_in_debug)]
@@ -70,26 +131,6 @@ pub enum ResultType {
 
 impl Step for EvalExpression {
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        let mut slab = Slab::new();
-        let parser = Parser::new();
-        let instruction = parser
-            .parse(&self.expression, &mut slab.ps)
-            .with_context(|| format!("EvalExpression: invalid expression '{}'", self.expression))?
-            .from(&slab.ps)
-            .compile(&slab.ps, &mut slab.cs);
-        self.compiled = Some(CompiledExpression {
-            var_names: instruction.var_names(&slab),
-            slab,
-            instruction,
-        });
-        self.segment_names = Some(
-            input_def
-                .get_segment_order()
-                .iter()
-                .map(Clone::clone)
-                .collect(),
-        );
-
         Ok(())
     }
 
@@ -108,24 +149,14 @@ impl Step for EvalExpression {
         // Extract variable names and declare them as numeric tags
         // Since we support both numeric and bool tags in expressions,
         // we use TagValueType::Any for flexibility
-        let var_names = &self
-            .compiled
-            .as_ref()
-            .expect("compiled must be set during initialization")
-            .var_names;
+        let var_names = &self.compiled.var_names;
         if var_names.is_empty() {
             None
         } else {
             let mut out = Vec::new();
             for name in var_names {
                 if let Some(suffix) = name.strip_prefix("len_") {
-                    if !self
-                        .segment_names
-                        .as_ref()
-                        .expect("segment_names must be set during initialization")
-                        .iter()
-                        .any(|x| x == suffix)
-                    {
+                    if !self.segment_names.iter().any(|x| x == suffix) {
                         out.push((
                             suffix.to_string(),
                             &[TagValueType::String, TagValueType::Location][..],
@@ -157,10 +188,7 @@ impl Step for EvalExpression {
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(io::FastQBlocksCombined, bool)> {
         // Parse and compile the expression for better performance
-        let eval = &self
-            .compiled
-            .as_ref()
-            .expect("compiled must be set during initialization");
+        let eval = &self.compiled;
         let slab = &eval.slab;
         let compiled = &eval.instruction;
         let var_names = &eval.var_names;
@@ -186,8 +214,6 @@ impl Step for EvalExpression {
                     .1;
                 if let Some(segment_index) = self
                     .segment_names
-                    .as_ref()
-                    .expect("segment_names must be set during initialization")
                     .iter()
                     .position(|x| x == suffix)
                 {

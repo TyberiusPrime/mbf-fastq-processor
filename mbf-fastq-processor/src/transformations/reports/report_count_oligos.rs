@@ -11,21 +11,30 @@ pub struct _ReportCountOligos {
     #[tpd(skip)]
     #[schemars(skip)]
     pub counts: Arc<Mutex<DemultiplexedData<Vec<usize>>>>,
-    pub segment: SegmentOrAll,
-    #[tpd(skip)]
-    #[schemars(skip)]
-    pub segment_index: Option<SegmentIndexOrAll>,
+
+    #[schemars(with = "String")]
+    #[tpd(adapt_in_verify(String))]
+    pub segment: SegmentIndexOrAll,
+}
+
+impl VerifyIn<PartialConfig> for Partial_ReportCountOligos {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        self.segment.validate_segment(parent);
+        Ok(())
+    }
 }
 
 impl _ReportCountOligos {
-    pub fn new(report_no: usize, oligos: &[String], segment: SegmentOrAll) -> Self {
+    pub fn new(report_no: usize, oligos: &[String], segment: SegmentIndexOrAll) -> Self {
         let oligos = oligos.to_vec();
         Self {
             report_no,
             oligos,
             counts: Arc::new(Mutex::new(DemultiplexedData::default())),
             segment,
-            segment_index: None,
         }
     }
 }
@@ -36,11 +45,6 @@ impl Step for Box<_ReportCountOligos> {
     }
     fn needs_serial(&self) -> bool {
         false
-    }
-
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment_index = Some(self.segment.validate(input_def)?);
-        Ok(())
     }
 
     fn init(
@@ -67,10 +71,7 @@ impl Step for Box<_ReportCountOligos> {
         demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let mut blocks = Vec::new();
-        match &self
-            .segment_index
-            .expect("segment_index was not set during validate_segments")
-        {
+        match &self.segment {
             SegmentIndexOrAll::Indexed(idx) => {
                 blocks.push(&block.segments[*idx]);
             }

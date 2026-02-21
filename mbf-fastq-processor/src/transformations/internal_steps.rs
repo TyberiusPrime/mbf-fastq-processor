@@ -9,7 +9,10 @@ use std::thread;
 #[derive(Clone, JsonSchema)]
 #[tpd]
 #[derive(Debug)]
-pub struct _InternalDelay {}
+pub struct _InternalDelay {
+    ignored: Option<u8> //tpd does not like empty structs
+
+}
 
 impl Step for Box<_InternalDelay> {
     fn apply(

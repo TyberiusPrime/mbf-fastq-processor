@@ -6,19 +6,27 @@ use crate::transformations::prelude::*;
 #[tpd]
 #[derive(Debug)]
 pub struct Lowercase {
-    #[tpd(alias="segment")]
+    #[schemars(with = "String")]
+    #[tpd(adapt_in_verify(String))]
     #[tpd(alias="source")]
-    pub target: String,
+    #[tpd(alias="segment")]
+    pub target: ResolvedSourceAll,
 
     #[serde(default)]
     pub if_tag: Option<String>,
 }
 
-impl Step for Lowercase {
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        ResolvedSourceAll::parse(&self.target, input_def)?;
+impl VerifyIn<PartialConfig> for PartialLowercase {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        self.target.validate_segment(parent);
         Ok(())
     }
+}
+
+impl Step for Lowercase {
 
     fn apply(
         &self,

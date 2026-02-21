@@ -5,7 +5,7 @@ use std::{collections::HashSet, sync::OnceLock};
 //
 use crate::transformations::prelude::*;
 
-use super::super::{RegionDefinition, PartialRegionDefinition, extract_regions};
+use super::super::{PartialRegionDefinition, RegionDefinition, extract_regions};
 use crate::dna::{Hit, HitRegion, TagValue};
 use bstr::ByteVec;
 
@@ -31,6 +31,22 @@ pub struct Regions {
     pub output_tag_type: OnceLock<TagValueType>,
 }
 
+impl VerifyIn<PartialConfig> for PartialRegions {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        if let Some(regions) = self.regions.as_mut() {
+            for region in regions.iter_mut() {
+                if let Some(region) = region.as_mut() {
+                    region.source.validate_segment(parent);
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
 impl Step for Regions {
     fn declares_tag_type(&self) -> Option<(String, TagValueType)> {
         Some((
@@ -42,13 +58,6 @@ impl Step for Regions {
         ))
     }
 
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        super::super::validate_regions(&mut self.regions, input_def)?;
-        /* if self.regions.len() > 1 && self.region_separator.is_none() {
-            bail!("When extracting multiple regions, a region_separator must be provided. Can be an empty string.");
-        } */
-        Ok(())
-    }
 
     fn uses_tags(
         &self,
@@ -59,9 +68,7 @@ impl Step for Regions {
         let mut all_location = true;
         let mut any_tags = false;
         for region in &self.regions {
-            if let Some(ref resolved_source) = region.resolved_source
-                && let Some(source_tags) = resolved_source.get_tags()
-            {
+            if let Some(source_tags) = region.source.get_tags() {
                 any_tags = true;
                 for entry in source_tags {
                     if seen.insert(entry.0.clone()) {
@@ -80,8 +87,8 @@ impl Step for Regions {
         }
         let all_segments = self.regions.iter().all(|x| {
             matches!(
-                x.resolved_source.as_ref().expect("Must have been resolved"),
-                crate::transformations::ResolvedSourceNoAll::Segment(_)
+                x.source,
+                crate::config::ResolvedSourceNoAll::Segment(_)
             )
         });
         if (any_tags && all_location) || all_segments {

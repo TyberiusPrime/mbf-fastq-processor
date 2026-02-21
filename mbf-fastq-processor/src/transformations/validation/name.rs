@@ -1,5 +1,5 @@
 #![allow(clippy::unnecessary_wraps)] // eserde false positives
-use crate::config::deser::{single_u8_from_string, tpd_extract_u8_from_byte_or_char};
+use crate::config::deser::tpd_adapt_u8_from_byte_or_char;
 use crate::transformations::prelude::*;
 
 /// Validate that read names between segments match
@@ -7,23 +7,11 @@ use crate::transformations::prelude::*;
 #[tpd]
 #[derive(Debug)]
 pub struct ValidateName {
+    #[tpd(with = "tpd_adapt_u8_from_byte_or_char")]
     pub readname_end_char: Option<u8>,
 }
 
-impl VerifyIn<PartialInput> for PartialValidateName {
-    fn verify(mut self, helper: &mut TomlHelper<'_>, _parent: &PartialInput) -> Self
-    where
-        Self: Sized,
-    {
-        self.readname_end_char = tpd_extract_u8_from_byte_or_char(
-            self.tpd_get_readname_end_char(helper, false, false),
-            self.tpd_get_readname_end_char(helper, false, false),
-            false,
-            helper,
-        )
-        .into_optional();
-        self
-    }
+impl VerifyIn<PartialConfig> for PartialValidateName {
 }
 
 impl Step for ValidateName {

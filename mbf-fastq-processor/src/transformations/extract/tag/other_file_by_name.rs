@@ -3,11 +3,11 @@
 use crate::transformations::prelude::*;
 
 use std::cell::Cell;
-use std::{collections::HashSet};
+use std::collections::HashSet;
 
 use super::super::extract_bool_tags;
 use super::ApproxOrExactFilter;
-use crate::config::deser::{single_u8_from_string, tpd_extract_u8_from_byte_or_char};
+use crate::config::deser::tpd_adapt_u8_from_byte_or_char;
 use crate::transformations::read_name_canonical_prefix;
 use crate::transformations::tag::initial_filter_elements;
 
@@ -17,15 +17,21 @@ use crate::transformations::tag::initial_filter_elements;
 #[derive(Debug)]
 pub struct OtherFileByName {
     pub filename: String,
+
+    #[tpd(adapt_in_verify(String))]
+    #[schemars(with = "String")]
     segment: SegmentIndex,
 
     pub out_label: String,
     pub seed: Option<u64>,
     pub false_positive_rate: f64,
 
-    pub include_mapped: Option<bool>,
-    pub include_unmapped: Option<bool>,
+    pub include_mapped: bool,
+    pub include_unmapped: bool,
 
+    #[tpd(with = "tpd_adapt_u8_from_byte_or_char")]
+    pub fastq_readname_end_char: Option<u8>,
+    #[tpd(with = "tpd_adapt_u8_from_byte_or_char")]
     pub reference_readname_end_char: Option<u8>,
 
     #[tpd(skip)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
@@ -37,24 +43,47 @@ pub struct OtherFileByName {
     pub progress_output: Option<crate::transformations::reports::Progress>,
 }
 
-impl VerifyFromToml for PartialOtherFileByName {
-    fn verify(mut self, helper: &mut TomlHelper<'_>) -> Self
+impl VerifyIn<PartialConfig> for PartialOtherFileByName {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
     where
-        Self: Sized,
+        Self: Sized + toml_pretty_deser::Visitor,
     {
-        self.fastq_readname_end_char = tpd_extract_u8_from_byte_or_char(
-            self.tpd_get_fastq_readname_end_char(helper, false, false),
-            self.tpd_get_fastq_readname_end_char(helper, false, false),
-            false,
-            helper,
-        ).into_optional();
-        self.reference_readname_end_char = tpd_extract_u8_from_byte_or_char(
-            self.tpd_get_reference_readname_end_char(helper, false, false),
-            self.tpd_get_reference_readname_end_char(helper, false, false),
-            false,
-            helper,
-        ).into_optional();
-        self
+        self.segment.validate_segment(parent);
+        if let Some(filename) = self.filename.as_ref() {
+            if (filename.ends_with(".bam") || filename.ends_with(".sam")) {
+                if self.include_unmapped.is_missing() {
+                    return Err(ValidationFailure::new(
+                        "Missing include_unmapped",
+                        Some(
+                            "When using a BAM file, you must specify `include_unmapped` = true|false",
+                        ),
+                    ));
+                }
+
+                if self.include_mapped.is_missing() {
+                    return Err(ValidationFailure::new(
+                        "Missing include_mapped",
+                        Some(
+                            "When using a BAM file, you must specify `include_mapped` = true|false",
+                        ),
+                    ));
+                }
+                if !(self.include_mapped.value.unwrap_or(false)
+                    || self.include_unmapped.value.unwrap_or(false))
+                {
+                    return Err(ValidationFailure::new(
+                        "Invalid include_mapped/include_unmapped combination",
+                        Some(
+                            "At least one of `include_mapped` or `include_unmapped` must be true when using a BAM/SAM file.",
+                        ),
+                    ));
+                }
+            } else {
+                self.include_mapped.or(false); // just so it's always set.
+                self.include_unmapped.or(false);
+            }
+        }
+        Ok(())
     }
 }
 
@@ -94,33 +123,6 @@ impl Step for OtherFileByName {
 
     #[allow(clippy::case_sensitive_file_extension_comparisons)] //sorry, but .BAM is wrong :).
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment_index = Some(self.segment.validate(input_def)?);
-        if self.filename.ends_with(".bam") || self.filename.ends_with(".sam") {
-            if self.include_unmapped.is_none() {
-                return Err(anyhow::anyhow!(
-                    "When using a BAM file, you must specify `include_unmapped` = true|false"
-                ));
-            }
-
-            if self.include_mapped.is_none() {
-                return Err(anyhow::anyhow!(
-                    "When using a BAM file, you must specify `include_mapped` = true|false"
-                ));
-            }
-        }
-        self.include_mapped = self.include_mapped.or(Some(false)); // just so it's always set.
-        self.include_unmapped = self.include_unmapped.or(Some(false));
-        if self.filename.ends_with(".bam") || self.filename.ends_with(".sam") {
-            if let (false, false) = (
-                self.include_mapped.expect("Just set above"),
-                self.include_unmapped.expect("Just set above"),
-            ) {
-                return Err(anyhow::anyhow!(
-                    "At least one of `include_mapped` or `include_unmapped` must be true when using a BAM/SAM file."
-                ));
-            }
-        }
-
         Ok(())
     }
 
@@ -148,12 +150,7 @@ impl Step for OtherFileByName {
                 .expect("seed should be validated to exist when false_positive_rate > 0.0");
             ApproxOrExactFilter::Approximate(Box::new(reproducible_cuckoofilter(
                 seed,
-                initial_filter_elements(
-                    &self.filename,
-                    self.include_mapped.expect("Verified in validate_segments"),
-                    self.include_unmapped
-                        .expect("Verified in validate_segments"),
-                ),
+                initial_filter_elements(&self.filename, self.include_mapped, self.include_unmapped),
                 self.false_positive_rate,
             )))
         };
@@ -174,9 +171,8 @@ impl Step for OtherFileByName {
                 }
                 counter.set(counter.get() + 1);
             },
-            self.include_mapped.expect("Verified in validate_segments"),
-            self.include_unmapped
-                .expect("Verified in validate_segments"),
+            self.include_mapped,
+            self.include_unmapped,
         )?;
         if counter.get() == 0 {
             bail!(
@@ -207,8 +203,7 @@ impl Step for OtherFileByName {
         let count: Cell<usize> = Cell::new(0);
         extract_bool_tags(
             &mut block,
-            self.segment_index
-                .expect("segment_index must be set during initialization"),
+            self.segment,
             &self.out_label,
             |read, _ignored_demultiplex_tag| {
                 count.set(count.get() + 1);

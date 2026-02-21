@@ -1,10 +1,9 @@
 #![allow(clippy::unnecessary_wraps)]
-use crate::config::deser::{tpd_adapt_bstring, tpd_extract_u8_from_byte_or_char};
 //eserde false positives
 use crate::transformations::prelude::*;
 
 use crate::{
-    config::deser::{bstring_from_string, opt_u8_from_char_or_number, u8_from_char_or_number},
+    config::deser::{tpd_adapt_bstring, tpd_adapt_u8_from_byte_or_char},
     dna::TagValue,
 };
 
@@ -38,43 +37,29 @@ use super::{
 #[derive(Debug)]
 pub struct StoreTagInComment {
     in_label: String,
+    #[tpd(adapt_in_verify)]
+    #[schemars(with = "String")]
     segment: SegmentIndexOrAll,
 
+    #[tpd(with = "tpd_adapt_u8_from_byte_or_char")]
     pub comment_separator: u8,
 
+    #[tpd(with = "tpd_adapt_u8_from_byte_or_char")]
     comment_insert_char: Option<u8>,
 
-    #[tpd(with="tpd_adapt_bstring")]
+    #[tpd(with = "tpd_adapt_bstring")]
     #[schemars(with = "String")]
     region_separator: BString,
 }
 
-impl VerifyFromToml for PartialStoreTagInComment {
-    fn verify(mut self, helper: &mut TomlHelper<'_>) -> Self
+impl VerifyIn<PartialConfig> for PartialStoreTagInComment {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
     where
-        Self: Sized,
+        Self: Sized + toml_pretty_deser::Visitor,
     {
-        self.segment = self.segment.or_default_with(default_segment_all);
-        self.comment_separator = tpd_extract_u8_from_byte_or_char(
-            self.tpd_get_comment_separator(helper, false, false),
-            self.tpd_get_comment_separator(helper, true, false),
-            false,
-            helper,
-        )
-        .or_default_with(default_comment_separator);
-        self.comment_insert_char = tpd_extract_u8_from_byte_or_char(
-            self.tpd_get_comment_insert_char(helper, false, false),
-            self.tpd_get_comment_insert_char(helper, false, false),
-            false,
-            helper,
-        )
-        .into_optional();
-
-        self.region_separator = self
-            .region_separator
-            .or_default_with(default_region_separator);
-
-        self
+        self.comment_separator.or_with(default_comment_separator);
+        self.region_separator.or_with(default_region_separator);
+        Ok(())
     }
 }
 
@@ -86,11 +71,7 @@ impl Step for StoreTagInComment {
         _all_transforms: &[super::super::Transformation],
         _this_transforms_index: usize,
     ) -> anyhow::Result<()> {
-        match self
-            .segment_index
-            .as_ref()
-            .expect("segment_index must be set during initialization")
-        {
+        match &self.segment {
             SegmentIndexOrAll::All => {}
             SegmentIndexOrAll::Indexed(idx) => {
                 let name = &input_def.get_segment_order()[*idx];
@@ -146,16 +127,6 @@ impl Step for StoreTagInComment {
         Ok(())
     }
 
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.comment_insert_char = Some(
-            self.comment_insert_char
-                .unwrap_or(input_def.options.read_comment_character),
-        );
-
-        self.segment_index = Some(self.segment.validate(input_def)?);
-        Ok(())
-    }
-
     fn uses_tags(
         &self,
         _tags_available: &IndexMap<String, TagMetadata>,
@@ -180,9 +151,7 @@ impl Step for StoreTagInComment {
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let error_encountered = std::cell::RefCell::new(Option::<String>::None);
         apply_in_place_wrapped_with_tag(
-            self.segment_index
-                .as_ref()
-                .expect("segment_index must be set during initialization"),
+            &self.segment,
             &self.in_label,
             &mut block,
             |read: &mut crate::io::WrappedFastQReadMut, tag_val: &TagValue| {

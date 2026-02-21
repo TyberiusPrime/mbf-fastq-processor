@@ -6,7 +6,6 @@ use crate::{
     transformations::prelude::*,
 };
 
-
 use crate::dna::{Hits, TagValue};
 
 /// Correct a tag (extracted region) to known barcodes
@@ -34,7 +33,58 @@ pub struct HammingCorrect {
     pub had_iupac: bool,
 }
 
-#[derive( Debug, Clone, Copy, JsonSchema)]
+impl VerifyIn<PartialConfig> for PartialHammingCorrect {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        self.in_label.verify(|v| {
+            if v.is_empty() {
+                Err(ValidationFailure::new("Must not be empty", None))
+            } else {
+                Ok(())
+            }
+        });
+        self.out_label.verify(|v| {
+            if v.is_empty() {
+                Err(ValidationFailure::new("Must not be empty", None))
+            } else {
+                Ok(())
+            }
+        });
+        self.barcodes.verify(|v| {
+            if v.is_empty() {
+                Err(ValidationFailure::new("Must not be empty", None))
+            } else {
+                Ok(())
+            }
+        });
+        if let Some(out_label) = self.out_label.as_ref()
+            && let Some(in_label) = self.in_label.as_ref()
+            && out_label == in_label
+        {
+            let spans = vec![(self.in_label.span(), "The same as outlabel".to_string()), (
+                self.out_label.span(), "The same as inlabel".to_string())];
+            self.out_label.state = TomlValueState::Custom {spans};
+            self.out_label.help = 
+                Some("Please use different tag names for the input and output labels to avoid overwriting the source tag.".to_string())
+                ;
+        }
+        self.max_hamming_distance.verify(|v| {
+            if *v == 0 {
+                Err(ValidationFailure::new(
+                    "Must be greater than 0 to perform correction. Leave off the HammingCorrect step if no correction is desired.",
+                    None,
+                ))
+            } else {
+                Ok(())
+            }
+        });
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, Copy, JsonSchema)]
 #[tpd]
 pub enum OnNoMatch {
     Remove,
@@ -54,17 +104,6 @@ impl Step for HammingCorrect {
         _all_transforms: &[crate::transformations::Transformation],
         _this_transforms_index: usize,
     ) -> Result<()> {
-        if self.max_hamming_distance == 0 {
-            bail!(
-                "HammingCorrect: 'max_hamming_distance' must be greater than 0 to perform correction. Leave off the HammingCorrect step if no correction is desired."
-            );
-        }
-
-        if self.in_label == self.out_label {
-            bail!(
-                "HammingCorrect: 'in_label' and 'out_label' cannot be the same. Please use different tag names for the input and output labels to avoid overwriting the source tag."
-            );
-        }
         Ok(())
     }
 
@@ -270,3 +309,4 @@ fn correct_barcodes<'a, T: Clone + WithUpdatedSequence + 'a>(
     }
     corrected_hits
 }
+

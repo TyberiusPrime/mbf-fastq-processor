@@ -15,8 +15,8 @@ fn format_seconds_to_hhmmss(seconds: u64) -> String {
 }
 
 /// output a progress indicator
-#[derive( Clone, JsonSchema)]
-#[tpd(partial=false)]
+#[derive(Clone, JsonSchema)]
+#[tpd]
 #[derive(Debug)]
 pub struct Progress {
     #[tpd(skip)]
@@ -37,16 +37,15 @@ pub struct Progress {
     lock: Arc<Mutex<()>>,
 }
 
-impl VerifyFromToml for PartialProgress {
-    fn verify(mut self, _helper: &mut TomlHelper<'_>) -> Self
+impl VerifyIn<PartialConfig> for PartialProgress {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
     where
-        Self: Sized,
+        Self: Sized + toml_pretty_deser::Visitor,
     {
-        self.n = self.n.or_default_with(default_progress_n);
-        self
+        self.n.or_with(default_progress_n);
+        Ok(())
     }
 }
-
 
 impl Progress {
     pub fn output(&self, msg: &str) {
@@ -220,3 +219,4 @@ mod test {
         assert_eq!(super::format_seconds_to_hhmmss(86400 * 10), "240:00:00");
     }
 }
+

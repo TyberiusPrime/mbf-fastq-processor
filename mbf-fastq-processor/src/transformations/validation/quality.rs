@@ -9,14 +9,21 @@ use crate::transformations::prelude::*;
 pub struct ValidateQuality {
     pub encoding: PhredEncoding,
     #[schemars(with = "String")]
-    pub segment: Option<SegmentIndexOrAll>,
+    #[tpd(adapt_in_verify(String))]
+    pub segment: SegmentIndexOrAll,
+}
+
+impl VerifyIn<PartialConfig> for PartialValidateQuality {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        self.segment.validate_segment(parent);
+        Ok(())
+    }
 }
 
 impl Step for ValidateQuality {
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment_index = Some(self.segment.validate(input_def)?);
-        Ok(())
-    }
 
     fn apply(
         &self,
@@ -28,8 +35,7 @@ impl Step for ValidateQuality {
         let mut res = Ok(());
         let (lower, upper) = self.encoding.limits();
         block.apply_in_place_wrapped_plus_all(
-            self.segment_index
-                .expect("segment_index must be set during initialization"),
+            self.segment,
             |read| {
                 if res.is_ok() && read.qual().iter().any(|x| *x < lower || *x > upper) {
                     res = Err(anyhow::anyhow!(

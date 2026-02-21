@@ -17,32 +17,38 @@ impl Default for CaseType {
     }
 }
 
-
 #[derive(Clone, JsonSchema)]
 #[tpd]
 #[derive(Debug)]
 pub struct _ChangeCase {
-    #[tpd(alias="segment")]
-    #[tpd(alias="source")]
-    target: String,
+    #[tpd(alias = "segment")]
+    #[tpd(alias = "source")]
+    #[schemars(with = "String")]
+    #[tpd(adapt_in_verify(String))]
+    target: ResolvedSourceAll,
 
-    #[tpd(skip)]
-    #[schemars(skip)]
-    resolved_source: Option<ResolvedSourceAll>,
-
-    #[tpd_default]
+    #[tpd(default)]
     #[schemars(skip)]
     case_type: CaseType,
 
     pub if_tag: Option<String>,
 }
 
+impl VerifyIn<PartialConfig> for Partial_ChangeCase {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        self.target.validate_segment(parent);
+        Ok(())
+    }
+}
+
 impl _ChangeCase {
-    pub fn new(target: String, case_type: CaseType, if_tag: Option<String>) -> Self {
+    pub fn new(target: ResolvedSourceAll, case_type: CaseType, if_tag: Option<String>) -> Self {
         Self {
             target,
             case_type,
-            resolved_source: None,
             if_tag,
         }
     }
@@ -55,10 +61,8 @@ impl Step for _ChangeCase {
     ) -> Option<Vec<(String, &[TagValueType])>> {
         let mut tags = Vec::new();
 
-        if let Some(ref resolved) = self.resolved_source {
-            if let Some(resolved_tags) = resolved.get_tags() {
-                tags.extend(resolved_tags);
-            }
+        if let Some(resolved_tags) = self.target.get_tags() {
+            tags.extend(resolved_tags);
         }
 
         if let Some(ref tag_str) = self.if_tag {
@@ -76,11 +80,6 @@ impl Step for _ChangeCase {
         if tags.is_empty() { None } else { Some(tags) }
     }
 
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.resolved_source = Some(ResolvedSourceAll::parse(&self.target, input_def)?);
-        Ok(())
-    }
-
     fn apply(
         &self,
         mut block: FastQBlocksCombined,
@@ -93,10 +92,7 @@ impl Step for _ChangeCase {
             get_bool_vec_from_tag(&block, &cond_tag)
         });
 
-        let resolved_source = self
-            .resolved_source
-            .as_ref()
-            .expect("resolved_source must be set during initialization");
+        let resolved_source = &self.target;
 
         let case_converter: fn(u8) -> u8 = match self.case_type {
             CaseType::Lower => |b| b.to_ascii_lowercase(),
