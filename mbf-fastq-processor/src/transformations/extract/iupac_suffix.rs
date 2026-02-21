@@ -13,11 +13,10 @@ use super::extract_region_tags;
 #[tpd]
 #[derive(Debug)]
 pub struct IUPACSuffix {
-    #[tpd_default]
-    segment: Segment,
-    #[tpd(skip)]
-    #[schemars(skip)]
-    segment_index: Option<SegmentIndex>,
+
+    #[schemars(with = "String")]
+    #[tpd(adapt_in_verify(String))]
+    segment: SegmentIndex,
 
     pub out_label: String,
     pub min_length: usize,
@@ -27,6 +26,36 @@ pub struct IUPACSuffix {
     #[tpd(alias="query")]
     #[tpd(alias="pattern")]
     pub search: BString,
+}
+
+impl VerifyIn<PartialConfig> for PartialIUPACSuffix {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        self.segment.validate_segment(parent);
+        self.max_mismatches.verify(|v| {
+            if *v > 255 {
+                Err(ValidationFailure::new(
+                    "max_mismatches must be <= 255",
+                    Some("Set to a value between 0 and 255."),
+                ))
+            } else {
+                Ok(())
+            }
+        });
+        self.min_length.verify(|v| {
+            if *v == 0 {
+                Err(ValidationFailure::new(
+                    "min_length must be > 0",
+                    Some("Set to a positive integer."),
+                ))
+            } else {
+                Ok(())
+            }
+        });
+        Ok(())
+    }
 }
 
 impl IUPACSuffix {
@@ -51,26 +80,6 @@ impl IUPACSuffix {
 }
 
 impl Step for IUPACSuffix {
-    fn validate_others(
-        &self,
-        _input_def: &crate::config::Input,
-        _output_def: Option<&crate::config::Output>,
-        _all_transforms: &[Transformation],
-        _this_transforms_index: usize,
-    ) -> Result<()> {
-        if self.max_mismatches > self.min_length {
-            bail!("Max mismatches must be <= min length");
-        }
-        if self.min_length > self.search.len() {
-            bail!("Min length must be <= query length");
-        }
-        Ok(())
-    }
-
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment_index = Some(self.segment.validate(input_def)?);
-        Ok(())
-    }
 
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((
@@ -88,8 +97,7 @@ impl Step for IUPACSuffix {
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         extract_region_tags(
             &mut block,
-            self.segment_index
-                .expect("segment_index must be set during initialization"),
+            self.segment,
             &self.out_label,
             |read| {
                 let seq = read.seq();
@@ -105,8 +113,7 @@ impl Step for IUPACSuffix {
                     Hits::new(
                         seq.len() - suffix_len,
                         seq.len(),
-                        self.segment_index
-                            .expect("segment_index must be set during initialization"),
+                        self.segment,
                         seq[seq.len() - suffix_len..].to_vec().into(),
                     )
                 })

@@ -25,15 +25,24 @@ pub struct IUPAC {
     #[schemars(with = "StringOrVecString")]
     search: Vec<BString>,
 
-    #[tpd_default]
-    segment: Segment,
-    #[tpd(skip)]
-    #[schemars(skip)]
-    segment_index: Option<SegmentIndex>,
+    #[schemars(with = "String")]
+    #[tpd(adapt_in_verify(String))]
+    segment: SegmentIndex,
 
     anchor: Anchor,
     out_label: String,
     max_mismatches: u8,
+}
+
+
+impl VerifyIn<PartialConfig> for PartialIUPAC {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        self.segment.validate_segment(parent);
+        Ok(())
+    }
 }
 
 // Schema helper for string or list of strings
@@ -46,10 +55,6 @@ enum StringOrVecString {
 }
 
 impl Step for IUPAC {
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment_index = Some(self.segment.validate(input_def)?);
-        Ok(())
-    }
 
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((
@@ -67,8 +72,7 @@ impl Step for IUPAC {
     ) -> Result<(FastQBlocksCombined, bool)> {
         extract_region_tags(
             &mut block,
-            self.segment_index
-                .expect("segment_index must be set during initialization"),
+            self.segment,
             &self.out_label,
             |read| {
                 // Try each query pattern and return the first match
@@ -77,8 +81,7 @@ impl Step for IUPAC {
                         query,
                         self.anchor,
                         self.max_mismatches,
-                        self.segment_index
-                            .expect("segment_index must be set during initialization"),
+                        self.segment,
                     ) {
                         return Some(hit);
                     }

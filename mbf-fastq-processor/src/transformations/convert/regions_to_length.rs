@@ -12,6 +12,29 @@ pub struct RegionsToLength {
     pub in_label: String,
 }
 
+impl VerifyIn<PartialConfig> for PartialRegionsToLength {
+    fn verify(&mut self, _parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        self.out_label.verify(|v| {
+            if v.is_empty() {
+                Err(ValidationFailure::new("Must not be empty", None))
+            } else {
+                Ok(())
+            }
+        });
+        self.in_label.verify(|v| {
+            if v.is_empty() {
+                Err(ValidationFailure::new("Must not be empty", None))
+            } else {
+                Ok(())
+            }
+        });
+        Ok(())
+    }
+}
+
 impl Step for RegionsToLength {
     fn validate_others(
         &self,

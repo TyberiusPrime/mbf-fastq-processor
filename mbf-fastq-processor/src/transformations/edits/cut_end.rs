@@ -3,17 +3,34 @@
 use crate::transformations::prelude::*;
 
 /// Cut a fixed number of bases from the end of reads
-#[derive( Clone, JsonSchema)]
+#[derive(Clone, JsonSchema)]
 #[tpd]
-#[derive( Debug)]
+#[derive(Debug)]
 pub struct CutEnd {
     n: usize,
-    #[tpd_default]
-    segment: Segment,
-    #[tpd(skip)]
-    #[schemars(skip)]
-    segment_index: Option<SegmentIndex>,
+    #[schemars(with = "String")]
+    #[tpd(adapt_in_verify(String))]
+    segment: SegmentIndex,
     if_tag: Option<String>,
+}
+
+impl VerifyIn<PartialConfig> for PartialCutEnd {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        self.n.verify(|v| {
+            if *v == 0 {
+                Err(ValidationFailure::new(
+                    "n must be > 0",
+                    Some("Set to a positive integer."),
+                ))
+            } else {
+                Ok(())
+            }
+        });
+        Ok(())
+    }
 }
 
 impl Step for CutEnd {
@@ -34,11 +51,6 @@ impl Step for CutEnd {
         })
     }
 
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment_index = Some(self.segment.validate(input_def)?);
-        Ok(())
-    }
-
     fn apply(
         &self,
         mut block: FastQBlocksCombined,
@@ -52,15 +64,11 @@ impl Step for CutEnd {
         });
 
         block.apply_in_place(
-            self.segment_index
-                .expect("segment_index must be set during initialization"),
+            self.segment,
             |read| read.cut_end(self.n),
             condition.as_deref(),
         );
-        block.filter_tag_locations_beyond_read_length(
-            self.segment_index
-                .expect("segment_index must be set during initialization"),
-        );
+        block.filter_tag_locations_beyond_read_length(self.segment);
 
         Ok((block, true))
     }

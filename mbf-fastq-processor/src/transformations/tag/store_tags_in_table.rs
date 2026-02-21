@@ -15,7 +15,7 @@ type InLabels = Arc<Mutex<Option<Vec<String>>>>;
 
 /// Store all currently defined tags in a TSV
 #[derive(JsonSchema, Clone)]
-#[tpd(partial = false)]
+#[tpd]
 #[derive(Debug)]
 pub struct StoreTagsInTable {
     #[tpd(default)]
@@ -24,7 +24,7 @@ pub struct StoreTagsInTable {
     compression: CompressionFormat,
 
     #[schemars(with = "String")]
-    #[tpd(with="tpd_adapt_bstring")]
+    #[tpd(with = "tpd_adapt_bstring")]
     region_separator: BString,
 
     #[tpd(skip)]
@@ -32,35 +32,40 @@ pub struct StoreTagsInTable {
     output_handles: OutputHandles,
 
     #[schemars(with = "Option<Vec<String>>")]
-    in_labels: InLabels,
+    in_labels: Option<Vec<String>>,
+
+    #[tpd(skip)]
+    #[schemars(skip)]
+    final_in_labels: InLabels,
 }
 
-impl VerifyIn<PartialInput> for PartialStoreTagsInTable {
-    fn verify(mut self, helper: &mut TomlHelper<'_>, _parent: &PartialInput) -> Self
+impl VerifyIn<PartialConfig> for PartialStoreTagsInTable {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
     where
-        Self: Sized,
+        Self: Sized + toml_pretty_deser::Visitor,
     {
-        self.infix = self.infix.verify(helper, |infix: &String| {
+        self.infix.verify(|infix: &String| {
             if infix.is_empty() {
-                Err(("Infix must not be empty".to_string(), None))
+                Err(ValidationFailure::new("Infix must not be empty", None))
             } else {
                 Ok(())
             }
         });
-        self.region_separator = self.region_separator.or_default(default_region_separator());
-
-        let found: TomlValue<Vec<String>> = self.tpd_get_in_labels(helper, false, true);
-        match &found.state {
-            TomlValueState::Missing { key, parent_span } => {
-                self.in_labels = TomlValue::new_ok(Arc::new(Mutex::new(None)), parent_span.clone());
-            }
-            TomlValueState::Ok { span } => {
-                self.in_labels = TomlValue::new_ok(Arc::new(Mutex::new(found.value)), span.clone());
-            }
-
-            _ => self.in_labels = found.convert_failed_type(),
+        self.region_separator.or_with(default_region_separator);
+        if let Some(Some(in_labels)) = self.in_labels.take().into_inner() {
+            self.final_in_labels = Some(Arc::new(Mutex::new(Some(
+                in_labels
+                    .into_iter()
+                    .map(|tv| {
+                        tv.into_inner()
+                            .expect("Parent was ok, child should be as well")
+                    })
+                    .collect(),
+            ))));
+        } else {
+            self.final_in_labels = Some(Arc::new(Mutex::new(None)));
         }
-        self
+        Ok(())
     }
 }
 
@@ -168,7 +173,7 @@ impl Step for StoreTagsInTable {
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         // Initialize output handles and tag list on first call
         //TODO move into verify
-        let mut in_label_lock = self.in_labels.lock().expect("lock poisoned");
+        let mut in_label_lock = self.final_in_labels.lock().expect("lock poisoned");
         if in_label_lock.is_none() {
             // Sort tags for consistent column order
 

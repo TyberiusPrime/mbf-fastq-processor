@@ -6,7 +6,7 @@ use schemars::JsonSchema;
 use std::collections::HashMap;
 use toml_pretty_deser::prelude::*;
 
-use crate::config::deser::tpd_extract_u8_from_byte_or_char;
+use crate::config::deser::tpd_adapt_u8_from_byte_or_char;
 
 use super::deser::{self, deserialize_map_of_string_or_seq_string};
 use super::validate_segment_label;
@@ -22,21 +22,20 @@ pub const STDIN_MAGIC_PATH: &str = "--stdin--";
 
 /// Input configuration
 #[derive(serde::Serialize)]
-#[tpd(partial = false)]
+#[tpd]
 #[derive(Debug, Clone, JsonSchema)]
 pub struct Input {
     /// whether you have input files with interleaved reads, or one file per segment
     /// If interleaved, define the name of the segments here.
-    #[tpd_default]
+    #[tpd(default)]
     interleaved: Option<Vec<String>>,
 
     /// Your segments. Define just one with any name for interlaveed input.
     #[schemars(with = "BTreeMap<String, Vec<String>>")]
-    #[tpd_absorb_remaining]
+    #[tpd(absorb_remaining)]
     #[serde(flatten)]
     segments: IndexMap<String, Vec<String>>,
 
-    #[tpd_default_in_verify]
     #[tpd(nested)]
     #[serde(skip_serializing_if = "is_default")]
     pub options: InputOptions,
@@ -50,12 +49,15 @@ pub struct Input {
     pub stdin_stream: bool,
 }
 
-impl VerifyFromToml for PartialInput {
-    fn verify(mut self, helper: &mut TomlHelper<'_>) -> Self
+impl VerifyIn<super::PartialConfig> for PartialInput {
+    fn verify(
+        &mut self,
+        parent: &super::PartialConfig,
+    ) -> std::result::Result<(), ValidationFailure>
     where
-        Self: Sized,
+        Self: Sized + toml_pretty_deser::Visitor,
     {
-        self.options = self.options.or_default_with(|| {
+        self.options.or_with(|| {
             //this could be prettier...
             let default = InputOptions::default();
             PartialInputOptions {
@@ -68,7 +70,7 @@ impl VerifyFromToml for PartialInput {
                 threads_per_segment: TomlValue::new_ok(default.threads_per_segment, 0..0),
             }
         });
-        self
+        Ok(())
     }
 }
 
@@ -79,7 +81,7 @@ pub struct InputOptions {
     #[serde(skip_serializing_if = "Option::is_none")]
     // #[validate(minimum = 33)] TODO
     // #[validate(maximum = 126)] TODO
-    #[tpd_adapt_in_verify]
+    #[tpd(with = "tpd_adapt_u8_from_byte_or_char")]
     pub fasta_fake_quality: Option<u8>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -88,8 +90,7 @@ pub struct InputOptions {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub bam_include_unmapped: Option<bool>,
 
-    //Todo: #[serde(deserialize_with = "deser::u8_from_char_or_number")]
-    #[tpd_adapt_in_verify]
+    #[tpd(with = "tpd_adapt_u8_from_byte_or_char")]
     pub read_comment_character: u8,
 
     #[serde(skip_serializing)]
@@ -101,26 +102,28 @@ pub struct InputOptions {
     pub threads_per_segment: Option<usize>,
 }
 
-impl VerifyFromToml for PartialInputOptions {
-    fn verify(mut self, helper: &mut TomlHelper<'_>) -> Self
+impl VerifyIn<PartialInput> for PartialInputOptions {
+    fn verify(&mut self, parent: &PartialInput) -> std::result::Result<(), ValidationFailure>
     where
-        Self: Sized,
+        Self: Sized + toml_pretty_deser::Visitor,
     {
-        self.fasta_fake_quality = tpd_extract_u8_from_byte_or_char(
-            self.tpd_get_fasta_fake_quality(helper, false, false),
-            self.tpd_get_fasta_fake_quality(helper, false, false),
-            false,
-            helper,
-        )
-        .into_optional();
-        self.read_comment_character = tpd_extract_u8_from_byte_or_char(
-            self.tpd_get_read_comment_character(helper, false, false),
-            self.tpd_get_read_comment_character(helper, false, false),
-            false,
-            helper
-        )
-        .or_default_with(deser::default_comment_insert_char);
-        self
+        self.fasta_fake_quality.verify(|opt_v| {
+            if let Some(v) = opt_v {
+                if *v >= 33 && *v <= 126 {
+                    Ok(())
+                } else {
+                    Err(ValidationFailure::new(
+                        "Out of PHRED range (33..126)",
+                        Some("'B' might be a good value"),
+                    ))
+                }
+            } else {
+                Ok(())
+            }
+        });
+        self.read_comment_character
+            .or_with(deser::default_comment_insert_char);
+        Ok(())
     }
 }
 
@@ -384,18 +387,34 @@ impl Input {
     }
 }
 
+impl PartialInput {
+    #[must_use]
+    pub fn get_segment_order(&self) -> &Vec<String> {
+        match self
+            .structured
+            .as_ref()
+            .expect("structured input must be set after config parsing")
+            .as_ref()
+            .expect("structured input must be set after config parsing2")
+        {
+            StructuredInput::Interleaved { segment_order, .. }
+            | StructuredInput::Segmented { segment_order, .. } => segment_order,
+        }
+    }
+}
+
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, JsonSchema)]
 #[tpd]
 pub enum CompressionFormat {
-    #[tpd(alias="uncompressed")]
-    #[tpd(alias="raw")]
+    #[tpd(alias = "uncompressed")]
+    #[tpd(alias = "raw")]
     #[default]
     Uncompressed,
-    #[tpd(alias="gzip")]
-    #[tpd(alias="gz")]
+    #[tpd(alias = "gzip")]
+    #[tpd(alias = "gz")]
     Gzip,
-    #[tpd(alias="zstd")]
-    #[tpd(alias="zst")]
+    #[tpd(alias = "zstd")]
+    #[tpd(alias = "zst")]
     Zstd,
 }
 
@@ -454,35 +473,41 @@ impl CompressionFormat {
 
 /// Validates that the compression level is within the expected range for the given compression format
 pub fn validate_compression_level_u8(
-    compression: CompressionFormat,
-    compression_level: Option<u8>,
-) -> Result<()> {
-    if let Some(level) = compression_level {
-        match compression {
-            CompressionFormat::Uncompressed => {
-                if level != 0 {
-                    bail!(
-                        "Compression level {level} specified for uncompressed output, but no compression is applied.",
-                    );
+    compression: &TomlValue<CompressionFormat>,
+    compression_level: &mut TomlValue<Option<u8>>,
+) {
+    if let Some(Some(level)) = compression_level.as_ref() {
+        match compression.as_ref() {
+            Some(CompressionFormat::Uncompressed) => {
+                if *level != 0 {
+                    compression_level.state = TomlValueState::ValidationFailed {
+                        message: "Compression level {level} specified for uncompressed output"
+                            .to_string(),
+                    };
+                    compression_level.help = Some("Remove compression_level".to_string());
                 }
             }
-            CompressionFormat::Gzip => {
-                if level > 9 {
-                    bail!(
-                        "Compression level {level} is invalid for gzip compression. Valid range is 0-9.",
-                    );
+            Some(CompressionFormat::Gzip) => {
+                if *level > 9 {
+                    compression_level.state = TomlValueState::ValidationFailed {
+                        message: "Invalid Value".to_string(),
+                    };
+                    compression_level.help = Some("Valid range is 0-9 for gzip.".to_string());
                 }
             }
-            CompressionFormat::Zstd => {
-                if level == 0 || level > 22 {
-                    bail!(
-                        "Compression level {level} is invalid for zstd compression. Valid range is 1-22.",
-                    );
+            Some(CompressionFormat::Zstd) => {
+                if *level == 0 || *level > 22 {
+                    compression_level.state = TomlValueState::ValidationFailed {
+                        message: ("Invalid Value".to_string()),
+                    };
+                    compression_level.help = Some("Valid range is 1-22 for zstd.".to_string());
                 }
+            }
+            None => {
+                //nothing to verify, compression not set
             }
         }
     } else {
         // No compression level specified - rapidgzip is still invalid for output
     }
-    Ok(())
 }

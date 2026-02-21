@@ -1,19 +1,22 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 
-use crate::{config::deser::{tpd_adapt_bstring, tpd_adapt_regex}, transformations::prelude::*};
+use crate::{
+    config::deser::{tpd_adapt_bstring, tpd_adapt_regex},
+    transformations::prelude::*,
+};
 use std::sync::atomic::Ordering;
 
-use bstr::{ByteSlice};
+use bstr::ByteSlice;
 
 /// Rename (and/or renumber) reads by applying a regex
-#[derive( JsonSchema)]
+#[derive(JsonSchema)]
 #[tpd]
-#[derive( Debug)]
+#[derive(Debug)]
 pub struct Rename {
-    #[tpd(with="tpd_adapt_regex")]
+    #[tpd(with = "tpd_adapt_regex")]
     #[schemars(with = "String")]
     pub search: regex::bytes::Regex,
-    #[tpd(with="tpd_adapt_bstring")]
+    #[tpd(with = "tpd_adapt_bstring")]
     #[schemars(with = "String")]
     pub replacement: BString,
 
@@ -26,22 +29,26 @@ pub struct Rename {
     needs_counting: bool,
 }
 
-impl Step for Rename {
-    fn init(
-        &mut self,
-        _input_info: &InputInfo,
-        _output_prefix: &str,
-        _output_directory: &Path,
-        _output_ix_separator: &str,
-        _demultiplex_info: &OptDemultiplex,
-        _allow_overwrite: bool,
-    ) -> Result<Option<DemultiplexBarcodes>> {
+impl VerifyIn<PartialConfig> for PartialRename {
+    fn verify(&mut self, _parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
         // Check if replacement contains the {{READ_INDEX}} placeholder
-        if self.replacement.contains_str(b"{{READ_INDEX}}") {
-            self.needs_counting = true;
-        }
-        Ok(None)
+        self.needs_counting = Some(
+            if let Some(replacement) = self.replacement.as_ref()
+                && replacement.contains_str("{{READ_INDEX}}")
+            {
+                true
+            } else {
+                false
+            },
+        );
+        Ok(())
     }
+}
+
+impl Step for Rename {
     fn apply(
         &self,
         mut block: FastQBlocksCombined,
@@ -92,3 +99,4 @@ impl Step for Rename {
         self.needs_counting
     }
 }
+

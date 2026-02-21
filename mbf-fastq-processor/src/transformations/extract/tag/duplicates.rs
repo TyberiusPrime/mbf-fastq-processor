@@ -8,12 +8,10 @@ use super::super::extract_bool_tags_plus_all;
 use super::ApproxOrExactFilter;
 use crate::dna::TagValue;
 use crate::transformations::extract::extract_bool_tags_from_tag;
-use crate::transformations::{
-    read_name_canonical_prefix, tag::calculate_filter_capacity,
-};
+use crate::transformations::{read_name_canonical_prefix, tag::calculate_filter_capacity};
 
-fn default_source() -> String {
-    SegmentOrAll::default().0
+fn default_source() -> SegmentIndexOrAll {
+    SegmentIndexOrAll::All
 }
 
 /// Tag duplicate reads
@@ -22,11 +20,9 @@ fn default_source() -> String {
 #[tpd]
 #[derive(Debug)]
 pub struct Duplicates {
-    source: String,
-
-    #[tpd(skip)]
-    #[schemars(skip)]
-    resolved_source: Option<ResolvedSourceAll>,
+    #[tpd(adapt_in_verify(String))]
+    #[schemars(with = "String")]
+    source: ResolvedSourceAll,
 
     pub out_label: String,
     pub false_positive_rate: f64,
@@ -35,18 +31,18 @@ pub struct Duplicates {
 
     pub initial_filter_capacity: Option<usize>,
 
-    #[tpd(skip)] 
+    #[tpd(skip)]
     #[schemars(skip)]
     pub filters: Arc<Mutex<DemultiplexedData<ApproxOrExactFilter>>>,
 }
 
-impl VerifyFromToml for PartialDuplicates {
-    fn verify(mut self, _helper: &mut TomlHelper<'_>) -> Self
+impl VerifyIn<PartialConfig> for PartialDuplicates {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
     where
-        Self: Sized,
+        Self: Sized + toml_pretty_deser::Visitor,
     {
-        self.source = self.source.or_default_with(|| default_source());
-        self
+        self.source.validate_segment(parent);
+        Ok(())
     }
 }
 
@@ -68,11 +64,6 @@ impl Step for Duplicates {
         crate::transformations::tag::validate_seed(self.seed, self.false_positive_rate)
     }
 
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.resolved_source = Some(ResolvedSourceAll::parse(&self.source, input_def)?);
-        Ok(())
-    }
-
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((
             self.out_label.clone(),
@@ -84,10 +75,7 @@ impl Step for Duplicates {
         &self,
         _tags_available: &IndexMap<String, TagMetadata>,
     ) -> Option<Vec<(String, &[crate::transformations::TagValueType])>> {
-        self.resolved_source
-            .as_ref()
-            .expect("resolved_source must be set during initialization")
-            .get_tags()
+        self.source.get_tags()
     }
 
     fn init(
@@ -137,11 +125,7 @@ impl Step for Duplicates {
             }
         }
 
-        match &self
-            .resolved_source
-            .as_ref()
-            .expect("resolved_source must be set during initialization")
-        {
+        match &self.source {
             ResolvedSourceAll::Segment(segment_index_or_all) => {
                 let filters =
                     RefCell::new(self.filters.lock().expect("Failed to aquire filter lock"));

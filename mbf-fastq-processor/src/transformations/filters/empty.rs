@@ -6,8 +6,20 @@ use crate::transformations::prelude::*;
 #[tpd]
 #[derive(Debug)]
 pub struct Empty {
-    #[tpd(default)]
+    #[schemars(with = "String")]
+    #[tpd(adapt_in_verify(String))]
     pub segment: SegmentIndexOrAll,
+}
+
+
+impl VerifyIn<PartialConfig> for PartialEmpty {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        self.segment.validate_segment(parent);
+        Ok(())
+    }
 }
 
 impl Step for Empty {
@@ -21,8 +33,4 @@ impl Step for Empty {
         unreachable!("Should have been replaced before validation");
     }
 
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment_index = Some(self.segment.validate(input_def)?);
-        Ok(())
-    }
 }

@@ -7,7 +7,7 @@ use std::borrow::Cow;
 use std::cell::RefCell;
 
 /// Algorithm to use for scoring overlaps and resolving mismatches
-#[derive( Clone, PartialEq, Eq, JsonSchema)]
+#[derive(Clone, PartialEq, Eq, JsonSchema)]
 #[tpd]
 #[derive(Debug)]
 pub enum Algorithm {
@@ -18,9 +18,9 @@ pub enum Algorithm {
 }
 
 /// Strategy when reads cannot be merged due to insufficient overlap
-#[derive( Clone, PartialEq, Eq, JsonSchema)]
+#[derive(Clone, PartialEq, Eq, JsonSchema)]
 #[tpd]
-#[derive( Debug)]
+#[derive(Debug)]
 pub enum NoOverlapStrategy {
     /// Keep reads as they are (no merging)
     AsIs,
@@ -29,9 +29,9 @@ pub enum NoOverlapStrategy {
 }
 
 /// Merge paired end reads if they're overlapping
-#[derive( Clone, JsonSchema)]
+#[derive(Clone, JsonSchema)]
 #[tpd]
-#[derive( Debug)]
+#[derive(Debug)]
 pub struct MergeReads {
     /// Algorithm to use for overlap scoring and mismatch resolution
     pub algorithm: Algorithm,
@@ -63,41 +63,70 @@ pub struct MergeReads {
     /// Whether to reverse complement segment2 before merging
     pub reverse_complement_segment2: bool,
 
-    pub segment1: Segment,
-    #[tpd(skip)]
-    #[schemars(skip)]
-    pub segment1_index: Option<SegmentIndex>,
-
-    pub segment2: Segment,
-    #[tpd(skip)]
-    #[schemars(skip)]
-    pub segment2_index: Option<SegmentIndex>,
+    #[schemars(with = "String")]
+    #[tpd(adapt_in_verify(String))]
+    pub segment1: SegmentIndex,
+    #[schemars(with = "String")]
+    #[tpd(adapt_in_verify(String))]
+    pub segment2: SegmentIndex,
 }
 
-impl Step for MergeReads {
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment1_index = Some(self.segment1.validate(input_def)?);
-        self.segment2_index = Some(self.segment2.validate(input_def)?);
-
-        // Ensure they're different segments
-        if self.segment1_index == self.segment2_index {
-            bail!(
-                "MergeReads: 'segment1' and 'segment2' must be different segments. Please specify two different input segments to merge."
+impl VerifyIn<PartialConfig> for PartialMergeReads {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        self.segment1.validate_segment(parent);
+        self.segment2.validate_segment(parent);
+        if let Some(segment1) = self.segment1.as_ref()
+            && let Some(segment2) = self.segment2.as_ref()
+            && let MustAdapt::PostVerify(index1) = segment1
+            && let MustAdapt::PostVerify(index2) = segment2
+            && index1 == index2
+        {
+            let spans = vec![
+                (
+                    self.segment1.span(),
+                    format!("Must be different from segment2"),
+                ),
+                (
+                    self.segment2.span(),
+                    "Must be different from segment2".to_string(),
+                ),
+            ];
+            self.segment1 = TomlValue::new_custom(
+                Some(MustAdapt::PostVerify(*index1)),
+                spans,
+                Some(&format!(
+                    "Available segments: {}",
+                    parent
+                        .input
+                        .as_ref()
+                        .expect("Expected input_def to be present at this point")
+                        .get_segment_order()
+                        .join(", ")
+                )),
             );
         }
 
-        // Validate concatenate_spacer requirement
-        if self.no_overlap_strategy == NoOverlapStrategy::Concatenate
-            && self.concatenate_spacer.is_none()
+        if let Some(no_overlap_strategy) = self.no_overlap_strategy.as_ref()
+            && let Some(concatenate_spacer) = self.concatenate_spacer.as_ref()
+            && *no_overlap_strategy == NoOverlapStrategy::Concatenate
+            && concatenate_spacer.is_none()
         {
-            bail!(
-                "MergeReads: 'concatenate_spacer' is required when no_overlap_strategy = 'concatenate'. Please specify a spacer sequence (e.g., concatenate_spacer = \"NNNN\")."
-            );
+            return Err(ValidationFailure::new(
+                "Missing key: 'concatenate_spacer'",
+                Some(
+                    "concatenate_spacer is required when no_overlap_strategy = 'concatenate'. Please specify a spacer sequence (e.g., concatenate_spacer = \"NNNN\").",
+                ),
+            ));
         }
 
         Ok(())
     }
+}
 
+impl Step for MergeReads {
     fn validate_others(
         &self,
         _input_def: &crate::config::Input,
@@ -133,14 +162,8 @@ impl Step for MergeReads {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let seg1_idx = self
-            .segment1_index
-            .expect("segment1_index must be set during initialization")
-            .get_index();
-        let seg2_idx = self
-            .segment2_index
-            .expect("segment2_index must be set during initialization")
-            .get_index();
+        let seg1_idx = self.segment1.0;
+        let seg2_idx = self.segment2.0;
         let reverse_complement = self.reverse_complement_segment2;
         let no_overlap_strategy = self.no_overlap_strategy.clone();
         let concatenate_spacer = self.concatenate_spacer.clone();

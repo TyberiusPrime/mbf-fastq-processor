@@ -55,8 +55,8 @@ pub(crate) fn default_region_separator() -> bstr::BString {
     b"_".into()
 }
 
-pub(crate) fn default_segment_all() -> SegmentOrAll {
-    SegmentOrAll("all".to_string())
+pub(crate) fn default_segment_all() -> SegmentIndexOrAll {
+    SegmentIndexOrAll::All
 }
 
 pub(crate) fn default_comment_separator() -> u8 {

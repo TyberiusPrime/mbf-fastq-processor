@@ -1,4 +1,5 @@
-#![allow(clippy::unnecessary_wraps)] use indexmap::IndexMap;
+#![allow(clippy::unnecessary_wraps)]
+use indexmap::IndexMap;
 
 //eserde false positives
 use crate::transformations::prelude::*;
@@ -12,7 +13,7 @@ use std::collections::BTreeMap;
 pub struct Demultiplex {
     pub in_label: String,
     pub output_unmatched: Option<bool>,
-   
+
     /// reference to shared barcodes section (optional for boolean tag mode)
     pub barcodes: Option<String>,
 
@@ -23,6 +24,22 @@ pub struct Demultiplex {
     #[tpd(skip)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[schemars(skip)]
     any_hit_observed: std::sync::atomic::AtomicBool,
+}
+
+impl VerifyIn<PartialConfig> for PartialDemultiplex {
+    fn verify(&mut self, _parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        self.in_label.verify(|v| {
+            if v.is_empty() {
+                Err(ValidationFailure::new("Must not be empty", None))
+            } else {
+                Ok(())
+            }
+        });
+        Ok(())
+    }
 }
 
 impl Step for Demultiplex {

@@ -23,22 +23,24 @@ pub enum ExpectedErrorAggregate {
 pub struct ExpectedError {
     pub out_label: String,
 
-    #[tpd_default]
-    pub segment: SegmentOrAll,
-
-    #[tpd(skip)]
-    #[schemars(skip)]
-    pub segment_index: Option<SegmentIndexOrAll>,
+    #[schemars(with = "String")]
+    #[tpd(adapt_in_verify(String))]
+    pub segment: SegmentIndexOrAll,
 
     pub aggregate: ExpectedErrorAggregate,
 }
 
-impl Step for ExpectedError {
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment_index = Some(self.segment.validate(input_def)?);
+impl VerifyIn<PartialConfig> for PartialExpectedError {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        self.segment.validate_segment(parent);
         Ok(())
     }
+}
 
+impl Step for ExpectedError {
     fn declares_tag_type(&self) -> Option<(String, TagValueType)> {
         Some((self.out_label.clone(), TagValueType::Numeric))
     }
@@ -55,7 +57,7 @@ impl Step for ExpectedError {
         let aggregate = self.aggregate;
 
         extract_numeric_tags_plus_all(
-            self.segment_index.expect("segment_index validated"),
+            self.segment,
             &self.out_label,
             |read| {
                 if error_state.borrow().is_some() {

@@ -1,9 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] // eserde false positive
 
-use crate::config::deser::tpd_adapt_bstring;
+use crate::config::deser::tpd_adapt_bstring_uppercase;
 use crate::transformations::prelude::*;
-
-use crate::config::deser::bstring_from_string;
 
 use super::extract_numeric_tags_plus_all;
 
@@ -13,29 +11,26 @@ const fn default_relative() -> bool {
 
 /// Quantify base occurrence rate or count
 #[derive(Clone, JsonSchema)]
-#[tpd(partial=false)]
+#[tpd]
 #[derive(Debug)]
 pub struct BaseContent {
     pub out_label: String,
 
-    #[tpd_default]
-    segment: SegmentOrAll,
+    #[schemars(with = "String")]
+    #[tpd(adapt_in_verify(String))]
+    segment: SegmentIndexOrAll,
 
-    #[tpd_default_in_verify]
     pub relative: bool,
 
-    #[tpd(with="tpd_adapt_bstring")]
     #[schemars(with = "String")]
+    #[tpd(with = "tpd_adapt_bstring_uppercase")]
     pub bases_to_count: BString,
 
-    #[tpd_default]
-    #[tpd(with="tpd_adapt_bstring")]
+    #[tpd(default)]
     #[schemars(with = "String")]
+    #[tpd(with = "tpd_adapt_bstring_uppercase")]
     pub bases_to_ignore: BString,
 
-    #[tpd(skip)]
-    #[schemars(skip)]
-    segment_index: Option<SegmentIndexOrAll>,
     #[tpd(skip)]
     #[schemars(skip)]
     bases_to_count_lookup: Vec<bool>,
@@ -44,50 +39,48 @@ pub struct BaseContent {
     bases_to_ignore_lookup: Vec<bool>,
 }
 
-impl VerifyFromToml for PartialBaseContent {
-    fn verify(mut self, _helper: &mut TomlHelper<'_>) -> Self
+impl PartialBaseContent {
+    fn build_lookup(bases: &BString) -> Vec<bool> {
+        let mut lookup = vec![false; 256];
+
+        for ch in bases.as_slice() {
+            let idx = *ch as usize;
+            lookup[idx] = true;
+        }
+        lookup
+    }
+}
+
+impl VerifyIn<PartialConfig> for PartialBaseContent {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
     where
-        Self: Sized,
+        Self: Sized + toml_pretty_deser::Visitor,
     {
-        self.relative = self.relative.or_default(true);
-        self
+        self.relative.or(true);
+        self.segment.validate_segment(parent);
+
+        self.bases_to_count.verify(|v| {
+            if v.is_empty() {
+                return Err(ValidationFailure::new(
+                    "Must contain at least one letter (base)",
+                    None,
+                ));
+            }
+
+            Ok(())
+        });
+
+        if let Some(bases_to_count) = self.bases_to_count.as_ref() {
+            self.bases_to_count_lookup = Some(Self::build_lookup(bases_to_count));
+        }
+        if let Some(bases_to_ignore) = self.bases_to_ignore.as_ref() {
+            self.bases_to_ignore_lookup = Some(Self::build_lookup(bases_to_ignore));
+        }
+        Ok(())
     }
 }
 
 impl BaseContent {
-    fn ensure_lookups(&mut self) -> Result<()> {
-        if self.bases_to_count_lookup.is_empty() {
-            self.bases_to_count_lookup =
-                Self::build_lookup(&self.bases_to_count, "bases_to_count", false)?;
-        }
-        if self.bases_to_ignore_lookup.is_empty() {
-            self.bases_to_ignore_lookup =
-                Self::build_lookup(&self.bases_to_ignore, "bases_to_ignore", true)?;
-        }
-        Ok(())
-    }
-
-    fn build_lookup(bases: &BString, field_name: &str, allow_empty: bool) -> Result<Vec<bool>> {
-        let mut lookup = vec![false; 256];
-
-        if bases.is_empty() {
-            if allow_empty {
-                return Ok(lookup);
-            }
-            bail!("{field_name} must contain at least one letter");
-        }
-
-        for ch in bases.as_slice() {
-            if !ch.is_ascii_alphabetic() {
-                bail!("{field_name} must only contain ASCII letters");
-            }
-            let idx = ch.to_ascii_uppercase() as usize;
-            lookup[idx] = true;
-        }
-
-        Ok(lookup)
-    }
-
     fn sequence_totals(
         sequence: &[u8],
         bases_to_count: &[bool],
@@ -121,35 +114,25 @@ impl BaseContent {
         }
     }
 
-    pub(crate) fn for_gc_replacement(
-        out_label: String,
-        segment: SegmentOrAll,
-        segment_index: Option<SegmentIndexOrAll>,
-    ) -> Self {
+    pub(crate) fn for_gc_replacement(out_label: String, segment: SegmentIndexOrAll) -> Self {
         Self {
             out_label,
             segment,
             relative: true,
             bases_to_count: BString::from("GC"),
             bases_to_ignore: BString::from("N"),
-            segment_index,
             bases_to_count_lookup: Vec::new(),
             bases_to_ignore_lookup: Vec::new(),
         }
     }
 
-    pub(crate) fn for_n_count(
-        out_label: String,
-        segment: SegmentOrAll,
-        segment_index: Option<SegmentIndexOrAll>,
-    ) -> Self {
+    pub(crate) fn for_n_count(out_label: String, segment: SegmentIndexOrAll) -> Self {
         Self {
             out_label,
             segment,
             relative: false,
             bases_to_count: BString::from("N"),
             bases_to_ignore: BString::default(),
-            segment_index,
             bases_to_count_lookup: Vec::new(),
             bases_to_ignore_lookup: Vec::new(),
         }
@@ -157,50 +140,6 @@ impl BaseContent {
 }
 
 impl Step for BaseContent {
-    fn init(
-        &mut self,
-        _input_info: &InputInfo,
-        _output_prefix: &str,
-        _output_directory: &Path,
-        _output_ix_separator: &str,
-        _demultiplex_info: &OptDemultiplex,
-        _allow_overwrite: bool,
-    ) -> Result<Option<DemultiplexBarcodes>> {
-        self.ensure_lookups()?;
-        Ok(None)
-    }
-
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment_index = Some(self.segment.validate(input_def)?);
-        if !self.relative && !self.bases_to_ignore.is_empty() {
-            bail!(
-                "ExtractBaseContent: 'bases_to_ignore' cannot be used when relative = false. Either set relative = true or remove the bases_to_ignore parameter."
-            );
-        }
-        if self.bases_to_count.is_empty() {
-            bail!(
-                "ExtractBaseContent: 'bases_to_count' must contain at least one letter. Please specify which bases to count (e.g., bases_to_count = \"GC\")."
-            );
-        }
-        if self.bases_to_count.iter().any(|x| !x.is_ascii_alphabetic()) {
-            bail!(
-                "ExtractBaseContent: 'bases_to_count' must only contain ASCII letters (A-Z, a-z). Found invalid character in '{}'.",
-                String::from_utf8_lossy(&self.bases_to_count)
-            );
-        }
-        if self
-            .bases_to_ignore
-            .iter()
-            .any(|x| !x.is_ascii_alphabetic())
-        {
-            bail!(
-                "ExtractBaseContent: 'bases_to_ignore' must only contain ASCII letters (A-Z, a-z). Found invalid character in '{}'.",
-                String::from_utf8_lossy(&self.bases_to_ignore)
-            );
-        }
-        //self.ensure_lookups()?;
-        Ok(())
-    }
 
     fn declares_tag_type(&self) -> Option<(String, TagValueType)> {
         Some((self.out_label.clone(), TagValueType::Numeric))
@@ -214,9 +153,7 @@ impl Step for BaseContent {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let segment = self
-            .segment_index
-            .expect("segment_index set during validation");
+        let segment = self.segment;
         let bases_to_count_single = self.bases_to_count_lookup.clone();
         let bases_to_ignore_single = self.bases_to_ignore_lookup.clone();
         let bases_to_count_all = self.bases_to_count_lookup.clone();

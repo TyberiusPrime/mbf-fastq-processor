@@ -8,16 +8,14 @@ use crate::transformations::{RegionAnchor, prelude::*};
 #[derive(Debug)]
 pub struct Region {
     pub start: isize,
-    #[tpd(alias="length")]
+    #[tpd(alias = "length")]
     pub len: usize,
 
     /// Source for extraction - segment name, "tag:name" for tag source, or "name:segment" for read name source
-    #[tpd(alias="segment")]
-    pub source: String,
-
-    #[schemars(skip)]
-    #[tpd(skip)]
-    pub resolved_source: Option<ResolvedSourceNoAll>,
+    #[schemars(with = "String")]
+    #[tpd(adapt_in_verify(String))]
+    #[tpd(alias = "segment")]
+    pub source: ResolvedSourceNoAll,
 
     /// Is the region from the `Start` or the `End` of the source?
     pub anchor: RegionAnchor,
@@ -25,11 +23,17 @@ pub struct Region {
     pub out_label: String,
 }
 
-impl Step for Region {
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> anyhow::Result<()> {
-        self.resolved_source = Some(ResolvedSourceNoAll::parse(&self.source, input_def)?);
+impl VerifyIn<PartialConfig> for PartialRegion {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        self.source.validate_segment(parent);
         Ok(())
     }
+}
+
+impl Step for Region {
 
     fn apply(
         &self,
@@ -43,3 +47,4 @@ impl Step for Region {
         );
     }
 }
+

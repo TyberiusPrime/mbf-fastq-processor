@@ -3,7 +3,7 @@
 use crate::transformations::prelude::*;
 
 use super::extract_region_tags;
-use crate::config::deser::tpd_extract_u8_from_byte_or_char;
+use crate::config::deser::tpd_adapt_extract_base_or_dot;
 use crate::dna::Hits;
 
 /// Turn low quality start's of reads into a tag
@@ -11,38 +11,27 @@ use crate::dna::Hits;
 #[tpd]
 #[derive(Debug)]
 pub struct LowQualityStart {
-    #[tpd_default]
-    segment: Segment,
-    #[tpd(skip)]
-    #[schemars(skip)]
-    segment_index: Option<SegmentIndex>,
+    #[tpd(adapt_in_verify(String))]
+    #[schemars(with = "String")]
+    segment: SegmentIndex,
 
     pub out_label: String,
-    #[tpd_adapt_in_verify]
+    #[tpd(with = "tpd_adapt_extract_base_or_dot")]
     pub min_qual: u8,
 }
 
-impl VerifyFromToml for PartialLowQualityStart {
-    fn verify(mut self, helper: &mut TomlHelper<'_>) -> Self
+impl VerifyIn<PartialConfig> for PartialLowQualityStart {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
     where
-        Self: Sized,
+        Self: Sized + toml_pretty_deser::Visitor,
     {
-        self.min_qual = tpd_extract_u8_from_byte_or_char(
-            self.tpd_get_min_qual(helper, false, false), 
-            self.tpd_get_min_qual(helper, true, false),
-            true,
-            helper,
-        );
-        self
+        self.segment.validate_segment(parent);
+        Ok(())
     }
 }
 
 
 impl Step for LowQualityStart {
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment_index = Some(self.segment.validate(input_def)?);
-        Ok(())
-    }
 
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((
@@ -61,8 +50,7 @@ impl Step for LowQualityStart {
         let min_qual = self.min_qual;
         extract_region_tags(
             &mut block,
-            self.segment_index
-                .expect("segment_index must be set during initialization"),
+            self.segment,
             &self.out_label,
             |read| {
                 let mut cut_pos = 0;
@@ -78,8 +66,7 @@ impl Step for LowQualityStart {
                     Some(Hits::new(
                         0,
                         cut_pos,
-                        self.segment_index
-                            .expect("segment_index must be set during initialization"),
+                        self.segment,
                         read.seq()[..cut_pos].to_vec().into(),
                     ))
                 } else {

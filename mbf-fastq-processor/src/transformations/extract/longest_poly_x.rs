@@ -2,10 +2,7 @@
 
 use crate::transformations::prelude::*;
 
-use crate::{
-    config::{deser::tpd_extract_base_or_dot},
-    dna::Hits,
-};
+use crate::{config::deser::tpd_adapt_extract_base_or_dot, dna::Hits};
 
 use super::extract_region_tags;
 
@@ -16,30 +13,27 @@ use super::extract_region_tags;
 #[derive(Debug)]
 #[serde(deny_unknown_fields)]
 pub struct LongestPolyX {
-    #[tpd_default]
-    segment: Segment,
-    #[tpd(skip)]
-    #[schemars(skip)]
-    segment_index: Option<SegmentIndex>,
+    #[tpd(adapt_in_verify(String))]
+    #[schemars(with = "String")]
+    segment: SegmentIndex,
 
     pub out_label: String,
     pub min_length: usize,
-    #[tpd_adapt_in_verify]
+    #[tpd(with = "tpd_adapt_extract_base_or_dot")]
     pub base: u8,
     pub max_mismatch_rate: f64, //toml is f64.
     pub max_consecutive_mismatches: usize,
 }
 
-impl VerifyFromToml for PartialLongestPolyX {
-    fn verify(mut self, helper: &mut TomlHelper<'_>) -> Self
+impl VerifyIn<PartialConfig> for PartialLongestPolyX {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized,
     {
-        self.base = tpd_extract_base_or_dot(self.tpd_get_base(helper, true, true), helper);
-        self
+        self.segment.validate_segment(parent);
+        Ok(())
     }
 }
-
 
 impl LongestPolyX {
     fn pick_better(
@@ -142,11 +136,6 @@ impl LongestPolyX {
 }
 
 impl Step for LongestPolyX {
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment_index = Some(self.segment.validate(input_def)?);
-        Ok(())
-    }
-
     fn validate_others(
         &self,
         _input_def: &crate::config::Input,
@@ -180,9 +169,7 @@ impl Step for LongestPolyX {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let segment_index = self
-            .segment_index
-            .expect("segment_index must be set during initialization");
+        let segment_index = self.segment;
         let min_length = self.min_length;
         let base = self.base;
         let max_mismatch_fraction = self.max_mismatch_rate;

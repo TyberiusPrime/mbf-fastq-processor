@@ -8,7 +8,7 @@ use super::super::tag::default_segment_all;
 
 /// Include a report at this position
 #[derive(Clone, JsonSchema)]
-#[tpd(partial = false)]
+#[tpd]
 #[derive(Debug)]
 #[allow(clippy::struct_excessive_bools)]
 pub struct Report {
@@ -28,29 +28,31 @@ pub struct Report {
     pub debug_reproducibility: bool,
 
     pub count_oligos: Option<Vec<String>>,
+
+    #[tpd(adapt_in_verify(String))]
+    #[schemars(with="String")]
     pub count_oligos_segment: SegmentIndexOrAll,
 
     /// Generate histograms for specified tags
-    #[tpd(alias="tag_histogram")]
+    #[tpd(alias = "tag_histogram")]
     pub tag_histograms: Option<Vec<String>>,
 }
 
-impl VerifyFromToml for PartialReport {
-    fn verify(mut self, helper: &mut TomlHelper<'_>) -> Self
+impl VerifyIn<PartialConfig> for PartialReport {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
     where
-        Self: Sized,
+        Self: Sized + toml_pretty_deser::Visitor,
     {
-        self.name = self.name.verify(helper, |name: &String| {
+        self.name.verify(|name: &String| {
             if !name.is_empty() {
                 Ok(())
             } else {
-                Err(("Name must not be empty".to_string(), None))
+                Err(ValidationFailure::new("Name must not be empty", None))
             }
         });
-        self.count = self.count.or_default(true);
-        self.count_oligos_segment = self.count_oligos_segment.or_default(default_segment_all());
-        //TODO: count_oligos_segmen
-        self
+        self.count.or(true);
+        //self.count_oligos_segment = self.count_oligos_segment.or_default(default_segment_all());
+        Ok(())
     }
 }
 
@@ -130,3 +132,4 @@ impl Step for Report {
         panic!("Should not be reached - should be expanded into individual parts before");
     }
 }
+

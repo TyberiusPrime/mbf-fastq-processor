@@ -2,52 +2,35 @@
 
 use crate::transformations::prelude::*;
 
-use crate::config::{
-    deser::{tpd_adapt_bstring, tpd_adapt_dna_bstring},
-};
+use crate::config::deser::{tpd_adapt_bstring, tpd_adapt_dna_bstring_plus_n};
 
 /// Add a fixed sequence to the end of reads
-#[derive( Clone, JsonSchema)]
-#[tpd(partial=false)]
-#[derive( Debug)]
+#[derive(Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct Postfix {
-    #[tpd_default]
-    pub segment: Segment,
-    #[tpd(skip)]
-    #[schemars(skip)]
-    segment_index: Option<SegmentIndex>,
-
-    //TODO #[serde(deserialize_with = "dna_from_string")]
+    #[tpd(adapt_in_verify)]
     #[schemars(with = "String")]
-    #[tpd(with="tpd_adapt_dna_bstring")]
+    pub segment: SegmentIndex,
+
+    #[schemars(with = "String")]
+    #[tpd(with = "tpd_adapt_dna_bstring_plus_n")]
     pub seq: BString,
     //we don't check the quality. It's on you if you
     //write non phred values in there
     #[schemars(with = "String")]
-    #[tpd(with="tpd_adapt_bstring")]
+    #[tpd(with = "tpd_adapt_bstring")] //TODO: actually verify quality range
     pub qual: BString,
 
     if_tag: Option<String>,
 }
 
-impl VerifyFromToml for PartialPostfix {
-    fn verify(mut self, helper: &mut TomlHelper<'_>) -> Self
+impl VerifyIn<PartialConfig> for PartialPostfix {
+    fn verify(&mut self, _parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized,
     {
-        self.seq = self.seq.verify(helper, |s: &BString| {
-            for c in s.iter() {
-                if !matches!(c, b'A' | b'C' | b'G' | b'T' | b'N') {
-                    return Err((
-                        "Invalid DNA base".to_string(),
-                        Some("Allowed characters are A, C, G, T, N".to_string()),
-                    ));
-                }
-            }
-            Ok(())
-        });
-
-        self
+        Ok(())
     }
 }
 
@@ -85,10 +68,6 @@ impl Step for Postfix {
         }
         Ok(())
     }
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment_index = Some(self.segment.validate(input_def)?);
-        Ok(())
-    }
 
     fn apply(
         &self,
@@ -103,8 +82,7 @@ impl Step for Postfix {
         });
 
         block.apply_in_place_wrapped(
-            self.segment_index
-                .expect("segment_index must be set during initialization"),
+            self.segment,
             |read| read.postfix(&self.seq, &self.qual),
             condition.as_deref(),
         );

@@ -1,15 +1,13 @@
 #![allow(clippy::unnecessary_wraps)]
-use crate::config::deser::tpd_extract_u8_from_byte_or_char;
-//eserde false positives
 use crate::transformations::prelude::*;
 
 use crate::{
-    config::deser::{opt_u8_from_char_or_number, u8_from_char_or_number},
-    dna::TagValue,
+    config::deser::tpd_adapt_u8_from_byte_or_char, dna::TagValue,
+    transformations::prelude::ValidateSegment,
 };
 
 use super::{
-    apply_in_place_wrapped_with_tag, default_comment_separator, default_segment_all,
+    apply_in_place_wrapped_with_tag, default_comment_separator,
     store_tag_in_comment,
 };
 
@@ -18,42 +16,35 @@ use super::{
 ///
 /// (Aligners often keep only the read name).
 #[derive(Clone, JsonSchema)]
-#[tpd(partial = false)]
+#[tpd]
 #[derive(Debug)]
 pub struct StoreTagLocationInComment {
     in_label: String,
 
+    #[schemars(with = "String")]
+    #[tpd(adapt_in_verify(String))]
     segment: SegmentIndexOrAll,
 
-    #[tpd(default)]
+    #[tpd(with = "tpd_adapt_u8_from_byte_or_char")]
     comment_separator: u8,
 
+    #[tpd(with = "tpd_adapt_u8_from_byte_or_char")]
     comment_insert_char: Option<u8>,
 }
 
-impl VerifyIn<PartialInput> for PartialStoreTagLocationInComment {
-    fn verify(mut self, helper: &mut TomlHelper<'_>, _parent: &PartialInput) -> Self
+impl VerifyIn<PartialConfig> for PartialStoreTagLocationInComment {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
     where
-        Self: Sized,
+        Self: Sized + toml_pretty_deser::Visitor,
     {
-        self.segment = self.segment.or_default_with(default_segment_all);
-        self.comment_separator = tpd_extract_u8_from_byte_or_char(
-            self.tpd_get_comment_separator(helper, false, false),
-            self.tpd_get_comment_separator(helper, false, false),
-            false,
-            helper,
-        )
-        .or_default_with(default_comment_separator);
-
-        self.comment_insert_char = tpd_extract_u8_from_byte_or_char(
-            self.tpd_get_comment_insert_char(helper, false, false),
-            self.tpd_get_comment_insert_char(helper, false, false),
-            false,
-            helper,
-        )
-        .into_optional();
-
-        self
+        if self.segment.is_missing() {
+            self.segment.value = Some(MustAdapt::PreVerify(
+                "all".to_string()));
+            self.segment.state = TomlValueState::Ok;
+        }
+        self.segment.validate_segment(parent);
+        self.comment_separator.or_with(default_comment_separator);
+        Ok(())
     }
 }
 
@@ -63,16 +54,6 @@ impl Step for StoreTagLocationInComment {
         _tags_available: &IndexMap<String, TagMetadata>,
     ) -> Option<Vec<(String, &[TagValueType])>> {
         Some(vec![(self.in_label.clone(), &[TagValueType::Location])])
-    }
-
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.comment_insert_char = Some(
-            self.comment_insert_char
-                .unwrap_or(input_def.options.read_comment_character),
-        );
-
-        self.segment_index = Some(self.segment.validate(input_def)?);
-        Ok(())
     }
 
     fn apply(
@@ -85,9 +66,7 @@ impl Step for StoreTagLocationInComment {
         let label = format!("{}_location", self.in_label);
         let error_encountered = std::cell::RefCell::new(Option::<String>::None);
         apply_in_place_wrapped_with_tag(
-            self.segment_index
-                .as_ref()
-                .expect("segment_index must be set during initialization"),
+            &self.segment,
             &self.in_label,
             &mut block,
             |read: &mut crate::io::WrappedFastQReadMut, tag_val: &TagValue| {
@@ -139,4 +118,3 @@ impl Step for StoreTagLocationInComment {
         Ok((block, true))
     }
 }
-

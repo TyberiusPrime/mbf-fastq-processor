@@ -5,12 +5,34 @@ use crate::transformations::prelude::*;
 use crate::config::PhredEncoding;
 
 /// Convert PHRED scores between encodings
-#[derive( Clone, JsonSchema)]
+#[derive(Clone, JsonSchema)]
 #[tpd]
-#[derive( Debug)]
+#[derive(Debug)]
 pub struct ConvertQuality {
     pub from: PhredEncoding,
     to: PhredEncoding,
+}
+impl VerifyIn<PartialConfig> for PartialConvertQuality {
+    fn verify(&mut self, _parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        if let Some(from) = self.from.as_ref()
+            && let Some(to) = self.to.as_ref()
+            && from == to
+        {
+            let spans = vec![
+                (self.to.span.clone(), "Identical to from".to_string()),
+                (self.from.span.clone(), "Identical to to".to_string()),
+            ];
+            self.to.state = TomlValueState::Custom { spans };
+            self.to.help = Some(
+                "Conversion unnecessary? Please specify different encodings or remove this step."
+                    .to_string(),
+            );
+        }
+        Ok(())
+    }
 }
 
 #[allow(clippy::cast_possible_truncation)]
@@ -25,23 +47,6 @@ fn solexa_to_phred(q_solexa: i16) -> i16 {
 }
 
 impl Step for ConvertQuality {
-    fn validate_others(
-        &self,
-        _input_def: &crate::config::Input,
-        _output_def: Option<&crate::config::Output>,
-        _all_transforms: &[Transformation],
-        _this_transforms_index: usize,
-    ) -> Result<()> {
-        if self.from == self.to {
-            anyhow::bail!(
-                "ConvertQuality: 'from' and 'to' encodings are the same ({:?}), no conversion needed. Please specify different encodings or remove this step.",
-                self.from
-            );
-        }
-        //since this happens before expansion, we can't enforce that there's a ValidateQuality
-        //before us. Guess we have to accept it on faith / rely on our test case
-        Ok(())
-    }
 
     fn apply(
         &self,

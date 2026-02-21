@@ -12,6 +12,7 @@ pub struct Skip {
     #[schemars(skip)]
     pub remaining: Arc<Mutex<DemultiplexedData<usize>>>,
 }
+impl VerifyIn<PartialConfig> for PartialSkip { }
 
 impl Step for Skip {
     fn must_see_all_tags(&self) -> bool {

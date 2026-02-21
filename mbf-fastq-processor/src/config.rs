@@ -30,6 +30,7 @@ pub use output::{Output, PartialOutput};
 pub use segments::{
     SegmentIndex, SegmentIndexOrAll, 
     SegmentOrNameIndex,
+    ValidateSegment, ResolvedSourceAll, ResolvedSourceNoAll
 };
 
 #[derive(Debug)]
@@ -41,7 +42,7 @@ pub struct TagMetadata {
 }
 
 pub fn config_from_string(toml: &str) -> Result<Config, DeserError<PartialConfig>> {
-    deserialize_with_mode(&toml, FieldMatchMode::AnyCase, VecMode::SingleOk)
+    Config::tpd_from_toml(toml, FieldMatchMode::AnyCase, VecMode::SingleOk)
 }
 
 /// Validates that a tag name conforms to the pattern [a-zA-Z_][a-zA-Z0-9_]*
@@ -116,7 +117,7 @@ pub fn validate_segment_label(label: &str) -> Result<()> {
 
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
-#[tpd]
+#[tpd(no_verify)]
 pub struct Benchmark {
     /// Enable benchmark mode
     #[serde(default)]
@@ -142,7 +143,7 @@ pub struct Stage {
 }
 
 #[derive(JsonSchema)]
-#[tpd]
+#[tpd(root)]
 #[derive(Debug)]
 pub struct Config {
     /// The input configuration
@@ -155,7 +156,7 @@ pub struct Config {
     #[tpd(nested)]
     pub transform: Option<Vec<Transformation>>,
 
-    #[tpd_default]
+    #[tpd(default)]
     #[tpd(nested)]
     pub options: Options,
 
@@ -176,6 +177,15 @@ pub struct CheckedConfig {
     pub benchmark: Option<Benchmark>,
 
     pub report_labels: Vec<String>,
+}
+
+impl VerifyIn<TPDRoot> for PartialConfig {
+    fn verify(&mut self, _parent: &TPDRoot) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized ,
+    {
+        Ok(())
+    }
 }
 
 #[allow(clippy::used_underscore_items)]
@@ -253,6 +263,7 @@ fn expand_reports<F: FnMut(Transformation), G: FnMut(Transformation)>(
 }
 
 impl Config {
+
     /// There are transformations that we need to expand right away,
     /// so we can accurately check the names
     fn expand_transformations(&mut self, errors: &mut Vec<anyhow::Error>) -> Vec<String> {
@@ -280,7 +291,6 @@ impl Config {
                 Transformation::ExtractRegion(step_config) => {
                     let regions = vec![crate::transformations::RegionDefinition {
                         source: step_config.source,
-                        resolved_source: None,
                         start: step_config.start,
                         length: step_config.len,
                         anchor: step_config.anchor,
@@ -331,7 +341,6 @@ impl Config {
                         crate::transformations::calc::Length {
                             out_label: length_tag_label.clone(),
                             segment: step_config.segment,
-                            segment_index: step_config.segment_index,
                         },
                     ));
                     push_new(Transformation::FilterByNumericTag(
@@ -348,8 +357,7 @@ impl Config {
                     push_new(Transformation::ValidateQuality(
                         crate::transformations::validation::ValidateQuality {
                             encoding: step_config.from,
-                            segment: SegmentOrAll("all".to_string()),
-                            segment_index: Some(SegmentIndexOrAll::All),
+                            segment: SegmentIndexOrAll::All,
                         },
                     ));
                     push_new(t);
@@ -996,11 +1004,11 @@ impl Config {
             }
 
             // Validate compression level for output
-            if let Err(e) =
-                validate_compression_level_u8(output.compression, output.compression_level)
-            {
-                errors.push(anyhow!("(output): {e}"));
-            }
+            // if let Err(e) =
+            //     validate_compression_level_u8(output.compression, output.compression_level)
+            // {
+            //     errors.push(anyhow!("(output): {e}"));
+            //}
 
             if output.ix_separator.contains('/')
                 || output.ix_separator.contains('\\')
@@ -1277,7 +1285,7 @@ fn calculate_thread_counts(
 }
 
 #[derive(Clone, JsonSchema)]
-#[tpd(partial = false)]
+#[tpd]
 #[derive(Debug)]
 pub struct Barcodes {
     // #[serde(
@@ -1285,26 +1293,26 @@ pub struct Barcodes {
     //     flatten
     // )]
     #[schemars(with = "BTreeMap<String, String>")]
-    #[tpd_absorb_remaining]
+    #[tpd(absorb_remaining)]
     pub barcode_to_name: IndexMap<BString, String>,
 }
 
-impl VerifyFromToml for PartialBarcodes {
-    fn verify(self, helper: &mut TomlHelper<'_>) -> Self
+impl VerifyIn<PartialConfig> for PartialBarcodes {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized,
     {
-        if let Some(table) = helper.table.as_ref() {
-            for (key, _value) in table.iter() {
-                if !dna::all_iupac_or_underscore(key.as_bytes()) {
-                    helper.add_err_by_key(key,
-                    "Invalid IUPAC (uppercase only)",
-                    "See https://en.wikipedia.org/wiki/International_Union_of_Pure_and_Applied_Chemistry#Amino_acid_and_nucleotide_base_codes"
-                );
-                }
+        self.barcode_to_name.verify_keys(|key| {
+            if !dna::all_iupac_or_underscore(key.as_bytes()) {
+                Err(ValidationFailure::new(
+                        "Invalid IUPAC (uppercase only)",
+                        Some("See https://en.wikipedia.org/wiki/International_Union_of_Pure_and_Applied_Chemistry#Amino_acid_and_nucleotide_base_codes")
+                ))} else {
+                Ok(())
             }
-        }
-        self
+        
+        });
+        Ok(())
     }
 }
 //

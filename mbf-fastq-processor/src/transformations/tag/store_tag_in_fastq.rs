@@ -1,5 +1,8 @@
 #![allow(clippy::unnecessary_wraps)]
-use crate::{config::deser::{tpd_adapt_bstring, tpd_extract_u8_from_byte_or_char}, transformations::prelude::*};
+use crate::{
+    config::deser::{tpd_adapt_bstring, tpd_adapt_u8_from_byte_or_char},
+    transformations::prelude::*,
+};
 
 use std::io::Write;
 
@@ -23,7 +26,7 @@ use super::{
 ///
 /// Optionally adds comment tags to read names before writing, similar to `StoreTagInComment`.
 #[derive(JsonSchema, Clone)]
-#[tpd(partial = false)]
+#[tpd]
 #[derive(Debug)]
 pub struct StoreTagInFastQ {
     in_label: String,
@@ -33,14 +36,16 @@ pub struct StoreTagInFastQ {
     comment_tags: Vec<String>,
     //
     // Optional location tags to add to read names
-    #[tpd(default)]
-    comment_location_tags: Option<Vec<String>>,
+    //#[tpd(default)]
+    comment_location_tags: Vec<String>,
 
+    #[tpd(with = "tpd_adapt_u8_from_byte_or_char")]
     comment_separator: u8,
 
+    #[tpd(with = "tpd_adapt_u8_from_byte_or_char")]
     comment_insert_char: u8,
 
-    #[tpd(with="tpd_adapt_bstring")]
+    #[tpd(with = "tpd_adapt_bstring")]
     #[schemars(with = "String")]
     region_separator: BString,
 
@@ -58,31 +63,46 @@ pub struct StoreTagInFastQ {
     output_streams: Arc<Mutex<DemultiplexedOutputFiles>>,
 }
 
-impl VerifyFromToml for PartialStoreTagInFastQ {
-    fn verify(mut self, helper: &mut TomlHelper<'_>) -> Self
+impl VerifyIn<PartialConfig> for PartialStoreTagInFastQ {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
     where
-        Self: Sized,
+        Self: Sized + toml_pretty_deser::Visitor,
     {
-        self.comment_separator = tpd_extract_u8_from_byte_or_char(
-            self.tpd_get_comment_separator(helper, false, false),
-            self.tpd_get_comment_separator(helper, true, false),
-            false,
-            helper,
-        )
-        .or_default_with(default_comment_separator);
+        self.comment_separator.or_with(default_comment_separator);
 
-        self.comment_insert_char = tpd_extract_u8_from_byte_or_char(
-            self.tpd_get_comment_insert_char(helper, false, false),
-            self.tpd_get_comment_insert_char(helper, false, false),
-            false,
-            helper,
-        ).or_default_with(default_comment_insert_char);
+        self.comment_insert_char
+            .or_with(default_comment_insert_char);
 
-        self.region_separator = self
-            .region_separator
-            .or_default_with(default_region_separator);
+        self.region_separator.or_with(default_region_separator);
 
-        self
+        self.format.verify(|format| {
+            if !matches!(format, FileFormat::Fastq | FileFormat::Fasta) {
+                return Err(ValidationFailure::new(
+                    "StoreTagInFastQ supports only 'fastq' or 'fasta' formats",
+                    None,
+                ));
+            }
+            Ok(())
+        });
+
+        crate::config::validate_compression_level_u8(
+            &self.compression,
+            &mut self.compression_level,
+        );
+
+        if parent.output.is_missing() {
+            return Err(ValidationFailure::new(
+                "Missing output configuration",
+                Some(
+                    "StoreTagInFastQ requires output configuration to determine file paths and formats",
+                ),
+            ));
+        }
+        if let Some(in_label) = self.in_label.as_ref() {
+            self.comment_location_tags
+                .or_with(|| vec![TomlValue::new_ok(in_label.clone(), 0..0)]);
+        }
+        Ok(())
     }
 }
 
@@ -114,39 +134,6 @@ impl Step for StoreTagInFastQ {
         false // since we want to dump all the reads even if later on there's a Head
     }
 
-    fn validate_others(
-        &self,
-        _input_def: &crate::config::Input,
-        output_def: Option<&crate::config::Output>,
-        _all_transforms: &[super::super::Transformation],
-        _this_transforms_index: usize,
-    ) -> Result<()> {
-        // Check if output configuration is present
-        if output_def.is_none() {
-            bail!(
-                "StoreTagInFastQ requires output configuration to determine file paths and formats"
-            );
-        }
-
-        crate::config::validate_compression_level_u8(self.compression, self.compression_level)?;
-
-        if !matches!(self.format, FileFormat::Fastq | FileFormat::Fasta) {
-            bail!(
-                "StoreTagInFastQ supports only 'fastq' or 'fasta' formats. Received: {:?}",
-                self.format
-            );
-        }
-
-        Ok(())
-    }
-
-    fn validate_segments(&mut self, _input_def: &crate::config::Input) -> Result<()> {
-        if self.comment_location_tags.is_none() {
-            self.comment_location_tags = Some(vec![self.in_label.clone()]);
-        }
-        Ok(())
-    }
-
     fn uses_tags(
         &self,
         _tags_available: &IndexMap<String, TagMetadata>,
@@ -166,12 +153,10 @@ impl Step for StoreTagInFastQ {
         }));
 
         // Add location tags (deduplicated) - defaults to main label if not specified
-        if let Some(location_tags) = self.comment_location_tags.as_ref() {
-            for tag in location_tags {
-                if !tags.iter().any(|(name, _)| name == tag) {
-                    //prevent duplicates
-                    tags.push((tag.clone(), &[TagValueType::Location]));
-                }
+        for tag in &self.comment_location_tags {
+            if !tags.iter().any(|(name, _)| name == tag) {
+                //prevent duplicates
+                tags.push((tag.clone(), &[TagValueType::Location]));
             }
         }
         Some(tags)
@@ -294,11 +279,7 @@ impl Step for StoreTagInFastQ {
                         }
 
                         // Process location tags - always set by validation logic.
-                        for location_tag in self
-                            .comment_location_tags
-                            .as_ref()
-                            .expect("comment_location_tags must be set when enabled")
-                        {
+                        for location_tag in &self.comment_location_tags {
                             if let Some(tag_value) = block
                                 .tags
                                 .get(location_tag)
