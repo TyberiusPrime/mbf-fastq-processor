@@ -12,7 +12,7 @@ pub struct Head {
     pub so_far: Arc<Mutex<DemultiplexedData<usize>>>,
 }
 
-impl VerifyIn<PartialConfig> for PartialHead { }
+impl VerifyIn<PartialConfig> for PartialHead {}
 
 impl Step for Head {
     fn must_see_all_tags(&self) -> bool {
@@ -81,4 +81,3 @@ impl Step for Head {
         true
     }
 }
-

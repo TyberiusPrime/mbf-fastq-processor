@@ -30,7 +30,7 @@ pub struct Report {
     pub count_oligos: Option<Vec<String>>,
 
     #[tpd(adapt_in_verify(String))]
-    #[schemars(with="String")]
+    #[schemars(with = "String")]
     pub count_oligos_segment: SegmentIndexOrAll,
 
     /// Generate histograms for specified tags
@@ -132,4 +132,3 @@ impl Step for Report {
         panic!("Should not be reached - should be expanded into individual parts before");
     }
 }
-

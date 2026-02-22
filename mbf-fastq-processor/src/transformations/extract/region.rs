@@ -34,7 +34,6 @@ impl VerifyIn<PartialConfig> for PartialRegion {
 }
 
 impl Step for Region {
-
     fn apply(
         &self,
         _block: FastQBlocksCombined,
@@ -47,4 +46,3 @@ impl Step for Region {
         );
     }
 }
-

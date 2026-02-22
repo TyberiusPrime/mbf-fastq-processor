@@ -1,4 +1,4 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use std::path::Path;
 
 use crate::config::CheckedConfig;
@@ -11,11 +11,7 @@ pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> 
     let output_directory = output_directory.to_owned();
     let raw_config = ex::fs::read_to_string(toml_file)
         .with_context(|| format!("Could not read toml file: {}", toml_file.to_string_lossy()))?;
-    let result = Config::tpd_from_toml(
-        &raw_config,
-        FieldMatchMode::AnyCase,
-        VecMode::SingleOk,
-    );
+    let result = Config::tpd_from_toml(&raw_config, FieldMatchMode::AnyCase, VecMode::SingleOk);
     let parsed = match result {
         Ok(config) => config,
         Err(e) => {

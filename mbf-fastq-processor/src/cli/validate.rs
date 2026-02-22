@@ -8,11 +8,7 @@ use toml_pretty_deser::prelude::*;
 pub fn validate_config(toml_file: &Path) -> Result<Vec<String>> {
     let raw_config = ex::fs::read_to_string(toml_file)
         .with_context(|| format!("Could not read toml file: {}", toml_file.to_string_lossy()))?;
-    let result = Config::tpd_from_toml(
-        &raw_config,
-        FieldMatchMode::AnyCase,
-        VecMode::SingleOk,
-    );
+    let result = Config::tpd_from_toml(&raw_config, FieldMatchMode::AnyCase, VecMode::SingleOk);
     let checked = match result {
         Ok(config) => config,
         Err(e) => {
@@ -25,12 +21,8 @@ pub fn validate_config(toml_file: &Path) -> Result<Vec<String>> {
 
     let mut warnings = Vec::new();
 
-    match checked
-        .input
-        .structured
-        .as_ref()
-    {
-        Some(crate::config::StructuredInput::Interleaved { files, .. }) => {
+    match &checked.input.structured {
+        crate::config::StructuredInput::Interleaved { files, .. } => {
             for file in files {
                 if file != crate::config::STDIN_MAGIC_PATH {
                     let file_path = toml_dir.join(file);
@@ -40,7 +32,7 @@ pub fn validate_config(toml_file: &Path) -> Result<Vec<String>> {
                 }
             }
         }
-        Some(crate::config::StructuredInput::Segmented { segment_files, .. }) => {
+        crate::config::StructuredInput::Segmented { segment_files, .. } => {
             for (segment_name, files) in segment_files {
                 for file in files {
                     if file != crate::config::STDIN_MAGIC_PATH {
@@ -54,7 +46,6 @@ pub fn validate_config(toml_file: &Path) -> Result<Vec<String>> {
                 }
             }
         }
-        None => {}
     }
 
     Ok(warnings)

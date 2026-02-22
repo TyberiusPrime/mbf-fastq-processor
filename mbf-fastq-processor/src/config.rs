@@ -1,5 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-#![allow(clippy::struct_excessive_bools)] // output false positive, directly on struct doesn't work
+#![allow(clippy::struct_excessive_bools)]
+use crate::config::options::default_block_size;
+// output false positive, directly on struct doesn't work
 //
 use crate::io::{self, DetectedInputFormat};
 use crate::transformations::{PartialTransformation, Step, TagValueType, Transformation};
@@ -28,9 +30,8 @@ pub use io::fileformats::PhredEncoding;
 pub use options::{Options, PartialOptions};
 pub use output::{Output, PartialOutput};
 pub use segments::{
-    SegmentIndex, SegmentIndexOrAll, 
-    SegmentOrNameIndex,
-    ValidateSegment, ResolvedSourceAll, ResolvedSourceNoAll
+    ResolvedSourceAll, ResolvedSourceNoAll, SegmentIndex, SegmentIndexOrAll, SegmentOrNameIndex,
+    ValidateSegment,
 };
 
 #[derive(Debug)]
@@ -152,11 +153,10 @@ pub struct Config {
     #[tpd(nested)]
     pub output: Option<Output>,
     //
-    #[tpd(alias="step")]
+    #[tpd(alias = "step")]
     #[tpd(nested)]
     pub transform: Option<Vec<Transformation>>,
 
-    #[tpd(default)]
     #[tpd(nested)]
     pub options: Options,
 
@@ -182,8 +182,28 @@ pub struct CheckedConfig {
 impl VerifyIn<TPDRoot> for PartialConfig {
     fn verify(&mut self, _parent: &TPDRoot) -> std::result::Result<(), ValidationFailure>
     where
-        Self: Sized ,
+        Self: Sized,
     {
+        self.options.or_with(|| PartialOptions {
+            threads: TomlValue::new_ok(None, 0..0),
+            max_blocks_in_flight: TomlValue::new_ok(None, 0..0),
+            block_size: TomlValue::new_ok(default_block_size(), 0..0),
+            buffer_size: TomlValue::new_ok(options::default_buffer_size(), 0..0),
+            output_buffer_size: TomlValue::new_ok(options::default_output_buffer_size(), 0..0),
+            accept_duplicate_files: TomlValue::new_ok(false, 0..0),
+            spot_check_read_pairing: TomlValue::new_ok(
+                options::default_spot_check_read_pairing(),
+                0..0,
+            ),
+            debug_failures: TomlValue::new_ok(
+                options::PartialFailureOptions {
+                    fail_output_after_bytes: TomlValue::new_ok(None, 0..0),
+                    fail_output_error: TomlValue::new_ok(None, 0..0),
+                    fail_output_raw_os_code: TomlValue::new_ok(None, 0..0),
+                },
+                0..0,
+            ),
+        });
         Ok(())
     }
 }
@@ -263,7 +283,6 @@ fn expand_reports<F: FnMut(Transformation), G: FnMut(Transformation)>(
 }
 
 impl Config {
-
     /// There are transformations that we need to expand right away,
     /// so we can accurately check the names
     fn expand_transformations(&mut self, errors: &mut Vec<anyhow::Error>) -> Vec<String> {
@@ -566,12 +585,7 @@ impl Config {
         let mut saw_fastq = false;
         let mut saw_gzip = false;
 
-        match self
-            .input
-            .structured
-            .as_ref()
-            .expect("structured input is set during config parsing")
-        {
+        match &self.input.structured {
             StructuredInput::Interleaved { files, .. } => {
                 let mut interleaved_format: Option<DetectedInputFormat> = None;
                 for filename in files {
@@ -722,12 +736,7 @@ impl Config {
         let mut seen = HashSet::new();
         if !self.options.accept_duplicate_files {
             // Check for duplicate files across all segments
-            match self
-                .input
-                .structured
-                .as_ref()
-                .expect("structured input is set during config parsing")
-            {
+            match &self.input.structured {
                 StructuredInput::Interleaved { files, .. } => {
                     for f in files {
                         if !seen.insert(f.clone()) {
@@ -1310,7 +1319,6 @@ impl VerifyIn<PartialConfig> for PartialBarcodes {
                 ))} else {
                 Ok(())
             }
-        
         });
         Ok(())
     }

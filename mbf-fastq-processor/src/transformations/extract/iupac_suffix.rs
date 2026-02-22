@@ -13,7 +13,6 @@ use super::extract_region_tags;
 #[tpd]
 #[derive(Debug)]
 pub struct IUPACSuffix {
-
     #[schemars(with = "String")]
     #[tpd(adapt_in_verify(String))]
     segment: SegmentIndex,
@@ -21,10 +20,10 @@ pub struct IUPACSuffix {
     pub out_label: String,
     pub min_length: usize,
     pub max_mismatches: usize,
-    #[tpd(with="tpd_adapt_dna_bstring")]
+    #[tpd(with = "tpd_adapt_dna_bstring")]
     #[schemars(with = "String")]
-    #[tpd(alias="query")]
-    #[tpd(alias="pattern")]
+    #[tpd(alias = "query")]
+    #[tpd(alias = "pattern")]
     pub search: BString,
 }
 
@@ -80,7 +79,6 @@ impl IUPACSuffix {
 }
 
 impl Step for IUPACSuffix {
-
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((
             self.out_label.clone(),
@@ -95,30 +93,25 @@ impl Step for IUPACSuffix {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        extract_region_tags(
-            &mut block,
-            self.segment,
-            &self.out_label,
-            |read| {
-                let seq = read.seq();
+        extract_region_tags(&mut block, self.segment, &self.out_label, |read| {
+            let seq = read.seq();
 
-                //cheap empty range if read length too short no need for explicit check
-                Self::longest_suffix_that_is_a_prefix(
-                    seq,
-                    &self.search,
-                    self.max_mismatches,
-                    self.min_length,
+            //cheap empty range if read length too short no need for explicit check
+            Self::longest_suffix_that_is_a_prefix(
+                seq,
+                &self.search,
+                self.max_mismatches,
+                self.min_length,
+            )
+            .map(|suffix_len| {
+                Hits::new(
+                    seq.len() - suffix_len,
+                    seq.len(),
+                    self.segment,
+                    seq[seq.len() - suffix_len..].to_vec().into(),
                 )
-                .map(|suffix_len| {
-                    Hits::new(
-                        seq.len() - suffix_len,
-                        seq.len(),
-                        self.segment,
-                        seq[seq.len() - suffix_len..].to_vec().into(),
-                    )
-                })
-            },
-        );
+            })
+        });
         Ok((block, true))
     }
 }

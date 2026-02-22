@@ -26,7 +26,6 @@ impl VerifyIn<PartialConfig> for PartialLength {
 }
 
 impl Step for Length {
-
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((
             self.out_label.clone(),

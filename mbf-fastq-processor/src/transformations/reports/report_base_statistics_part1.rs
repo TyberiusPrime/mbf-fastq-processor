@@ -18,7 +18,7 @@ impl Into<serde_json::Value> for BaseStatisticsPart1 {
     }
 }
 
-#[derive( Default, Clone)]
+#[derive(Default, Clone)]
 #[tpd]
 #[derive(Debug)]
 pub struct _ReportBaseStatisticsPart1 {

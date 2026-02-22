@@ -63,10 +63,12 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
             && let Some(in_label) = self.in_label.as_ref()
             && out_label == in_label
         {
-            let spans = vec![(self.in_label.span(), "The same as outlabel".to_string()), (
-                self.out_label.span(), "The same as inlabel".to_string())];
-            self.out_label.state = TomlValueState::Custom {spans};
-            self.out_label.help = 
+            let spans = vec![
+                (self.in_label.span(), "The same as outlabel".to_string()),
+                (self.out_label.span(), "The same as inlabel".to_string()),
+            ];
+            self.out_label.state = TomlValueState::Custom { spans };
+            self.out_label.help =
                 Some("Please use different tag names for the input and output labels to avoid overwriting the source tag.".to_string())
                 ;
         }
@@ -309,4 +311,3 @@ fn correct_barcodes<'a, T: Clone + WithUpdatedSequence + 'a>(
     }
     corrected_hits
 }
-

@@ -11,8 +11,7 @@ pub struct ValidateName {
     pub readname_end_char: Option<u8>,
 }
 
-impl VerifyIn<PartialConfig> for PartialValidateName {
-}
+impl VerifyIn<PartialConfig> for PartialValidateName {}
 
 impl Step for ValidateName {
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {

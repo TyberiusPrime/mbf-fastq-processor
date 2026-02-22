@@ -24,8 +24,7 @@ pub struct SpotCheckReadPairing {
     processed_reads: std::sync::atomic::AtomicU64,
 }
 
-impl VerifyIn<PartialConfig> for PartialSpotCheckReadPairing {
-}
+impl VerifyIn<PartialConfig> for PartialSpotCheckReadPairing {}
 
 impl Default for SpotCheckReadPairing {
     fn default() -> Self {

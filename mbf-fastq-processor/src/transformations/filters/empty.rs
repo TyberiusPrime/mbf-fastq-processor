@@ -11,7 +11,6 @@ pub struct Empty {
     pub segment: SegmentIndexOrAll,
 }
 
-
 impl VerifyIn<PartialConfig> for PartialEmpty {
     fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
     where
@@ -32,5 +31,4 @@ impl Step for Empty {
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         unreachable!("Should have been replaced before validation");
     }
-
 }

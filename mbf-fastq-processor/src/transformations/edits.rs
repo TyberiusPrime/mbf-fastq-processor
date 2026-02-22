@@ -16,20 +16,20 @@ mod truncate;
 mod uppercase;
 
 // Re-exports
-pub use _change_case::{_ChangeCase, Partial_ChangeCase, CaseType};
+pub use _change_case::{_ChangeCase, CaseType, Partial_ChangeCase};
 pub use convert_quality::{ConvertQuality, PartialConvertQuality};
 pub use cut_end::{CutEnd, PartialCutEnd};
 pub use cut_start::{CutStart, PartialCutStart};
 pub use lowercase::{Lowercase, PartialLowercase};
 pub use merge_reads::{MergeReads, PartialMergeReads};
-pub use postfix::{Postfix, PartialPostfix};
-pub use prefix::{Prefix, PartialPrefix};
-pub use rename::{Rename, PartialRename};
-pub use reverse_complement::{ReverseComplement, PartialReverseComplement};
-pub use swap::{Swap, PartialSwap};
-pub use trim_at_tag::{TrimAtTag, PartialTrimAtTag};
-pub use truncate::{Truncate, PartialTruncate};
-pub use uppercase::{Uppercase, PartialUppercase};
+pub use postfix::{PartialPostfix, Postfix};
+pub use prefix::{PartialPrefix, Prefix};
+pub use rename::{PartialRename, Rename};
+pub use reverse_complement::{PartialReverseComplement, ReverseComplement};
+pub use swap::{PartialSwap, Swap};
+pub use trim_at_tag::{PartialTrimAtTag, TrimAtTag};
+pub use truncate::{PartialTruncate, Truncate};
+pub use uppercase::{PartialUppercase, Uppercase};
 
 use crate::{io::FastQBlocksCombined, transformations::ConditionalTag};
 

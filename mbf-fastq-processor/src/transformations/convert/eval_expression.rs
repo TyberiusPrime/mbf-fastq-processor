@@ -212,11 +212,7 @@ impl Step for EvalExpression {
                     .split_once('_')
                     .expect("var_name must have underscore separator")
                     .1;
-                if let Some(segment_index) = self
-                    .segment_names
-                    .iter()
-                    .position(|x| x == suffix)
-                {
+                if let Some(segment_index) = self.segment_names.iter().position(|x| x == suffix) {
                     #[allow(clippy::cast_precision_loss)]
                     for read in &block.segments[segment_index].entries {
                         tag_values.push(TagValue::Numeric(read.seq.len() as f64));

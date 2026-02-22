@@ -10,9 +10,17 @@ pub struct Skip {
 
     #[tpd(skip)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[schemars(skip)]
-    pub remaining: Arc<Mutex<DemultiplexedData<usize>>>,
+    pub remaining: Option<Arc<Mutex<DemultiplexedData<usize>>>>,
 }
-impl VerifyIn<PartialConfig> for PartialSkip { }
+impl VerifyIn<PartialConfig> for PartialSkip {
+    fn verify(&mut self, _parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        self.remaining = Some(None);
+        Ok(())
+    }
+}
 
 impl Step for Skip {
     fn must_see_all_tags(&self) -> bool {
@@ -28,10 +36,11 @@ impl Step for Skip {
         demultiplex_info: &OptDemultiplex,
         _allow_overwrite: bool,
     ) -> Result<Option<DemultiplexBarcodes>> {
-        let mut remaining = self.remaining.lock().expect("mutex poisoned");
+        let mut remaining = DemultiplexedData::new();
         for tag in demultiplex_info.iter_tags() {
             remaining.insert(tag, self.n);
         }
+        self.remaining = Some(Arc::new(Mutex::new(remaining)));
         Ok(None)
     }
 
@@ -42,7 +51,12 @@ impl Step for Skip {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let mut remaining = self.remaining.lock().expect("mutex poisoned");
+        let mut remaining = self
+            .remaining
+            .as_ref()
+            .expect("SHould have been set in input")
+            .lock()
+            .expect("mutex poisoned");
         if remaining.len() == 1 {
             let remaining = remaining
                 .get_mut(&DemultiplexTag::default())

@@ -2,12 +2,12 @@
 
 use crate::transformations::prelude::*;
 
-#[derive( Clone, JsonSchema)]
+#[derive(Clone, JsonSchema)]
 #[tpd]
 #[derive(Debug)]
 pub struct Uppercase {
-    #[tpd(alias="segment")]
-    #[tpd(alias="source")]
+    #[tpd(alias = "segment")]
+    #[tpd(alias = "source")]
     #[schemars(with = "String")]
     #[tpd(adapt_in_verify(String))]
     pub target: ResolvedSourceAll,
@@ -26,7 +26,6 @@ impl VerifyIn<PartialConfig> for PartialUppercase {
 }
 
 impl Step for Uppercase {
-
     fn apply(
         &self,
         block: FastQBlocksCombined,

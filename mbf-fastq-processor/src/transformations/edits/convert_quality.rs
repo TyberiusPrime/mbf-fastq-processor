@@ -47,7 +47,6 @@ fn solexa_to_phred(q_solexa: i16) -> i16 {
 }
 
 impl Step for ConvertQuality {
-
     fn apply(
         &self,
         mut block: FastQBlocksCombined,

@@ -22,6 +22,7 @@ impl VerifyIn<PartialConfig> for PartialCutStart {
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {
+        self.segment.validate_segment(parent);
         self.n.verify(|v| {
             if *v == 0 {
                 Err(ValidationFailure::new(

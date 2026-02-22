@@ -24,7 +24,6 @@ impl VerifyIn<PartialConfig> for PartialValidateQuality {
 }
 
 impl Step for ValidateQuality {
-
     fn apply(
         &self,
         mut block: FastQBlocksCombined,
