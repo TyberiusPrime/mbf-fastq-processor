@@ -6,6 +6,7 @@ use crate::transformations::prelude::*;
 #[derive(Clone, JsonSchema)]
 #[tpd(no_verify)]
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct ForgetAllTags {
     ignored: Option<u8>, //tdp dislikes empty structs
 }

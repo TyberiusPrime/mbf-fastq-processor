@@ -308,9 +308,6 @@ pub fn default_progress_n() -> usize {
     1_000_000
 }
 
-pub fn default_true() -> bool {
-    true
-}
 
 ///turn a float into a string with thousands formatting
 ///and arbirtrary post-decimal digits

@@ -12,15 +12,15 @@ pub struct ReservoirSample {
     pub n: usize,
     pub seed: u64,
     //Todo: refactor these into one member 'runtime_data'
-    #[tpd(skip)] // eserde compatibility
+    #[tpd(skip, default)] // 
     #[schemars(skip)]
     pub buffers: Option<Arc<Mutex<DemultiplexedData<Vec<FastQBlock>>>>>,
 
-    #[tpd(skip)] // eserde compatibility
+    #[tpd(skip, default)] // eserde compatibility
     #[schemars(skip)]
     pub counts: Option<Arc<Mutex<DemultiplexedData<usize>>>>,
 
-    #[tpd(skip)] // eserde compatibility
+    #[tpd(skip, default)] 
     #[schemars(skip)]
     rng: Option<Arc<Mutex<Option<rand_chacha::ChaChaRng>>>>,
 }
@@ -40,9 +40,6 @@ impl VerifyIn<PartialConfig> for PartialReservoirSample {
                 Ok(())
             }
         });
-        self.buffers = Some(None);
-        self.counts = Some(None);
-        self.rng = Some(None);
         Ok(())
     }
 }

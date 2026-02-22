@@ -10,9 +10,6 @@ use crate::dna::TagValue;
 use crate::transformations::extract::extract_bool_tags_from_tag;
 use crate::transformations::{read_name_canonical_prefix, tag::calculate_filter_capacity};
 
-fn default_source() -> SegmentIndexOrAll {
-    SegmentIndexOrAll::All
-}
 
 /// Tag duplicate reads
 

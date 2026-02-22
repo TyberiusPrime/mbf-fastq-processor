@@ -824,7 +824,7 @@ impl Config {
                     ));
                     continue;
                 }
-                tags_available.remove(&tag_name);
+                tags_available.shift_remove(&tag_name);
             }
 
             if t.removes_all_tags() {
