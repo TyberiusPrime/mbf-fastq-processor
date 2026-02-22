@@ -219,4 +219,3 @@ mod test {
         assert_eq!(super::format_seconds_to_hhmmss(86400 * 10), "240:00:00");
     }
 }
-

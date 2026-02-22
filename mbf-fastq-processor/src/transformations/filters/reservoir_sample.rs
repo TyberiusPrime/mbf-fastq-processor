@@ -11,17 +11,18 @@ use rand::Rng;
 pub struct ReservoirSample {
     pub n: usize,
     pub seed: u64,
+    //Todo: refactor these into one member 'runtime_data'
     #[tpd(skip)] // eserde compatibility
     #[schemars(skip)]
-    pub buffers: Arc<Mutex<DemultiplexedData<Vec<FastQBlock>>>>,
+    pub buffers: Option<Arc<Mutex<DemultiplexedData<Vec<FastQBlock>>>>>,
 
     #[tpd(skip)] // eserde compatibility
     #[schemars(skip)]
-    pub counts: Arc<Mutex<DemultiplexedData<usize>>>,
+    pub counts: Option<Arc<Mutex<DemultiplexedData<usize>>>>,
 
     #[tpd(skip)] // eserde compatibility
     #[schemars(skip)]
-    rng: Arc<Mutex<Option<rand_chacha::ChaChaRng>>>,
+    rng: Option<Arc<Mutex<Option<rand_chacha::ChaChaRng>>>>,
 }
 
 impl VerifyIn<PartialConfig> for PartialReservoirSample {
@@ -30,7 +31,7 @@ impl VerifyIn<PartialConfig> for PartialReservoirSample {
         Self: Sized + toml_pretty_deser::Visitor,
     {
         self.n.verify(|n| {
-             if *n == 0 {
+            if *n == 0 {
                 Err(ValidationFailure::new(
                     "n must be > 0. Set to a positive integer.",
                     None,
@@ -39,6 +40,9 @@ impl VerifyIn<PartialConfig> for PartialReservoirSample {
                 Ok(())
             }
         });
+        self.buffers = Some(None);
+        self.counts = Some(None);
+        self.rng = Some(None);
         Ok(())
     }
 }
@@ -59,9 +63,11 @@ impl Step for ReservoirSample {
     ) -> anyhow::Result<Option<DemultiplexBarcodes>> {
         use rand_chacha::rand_core::SeedableRng;
         let extended_seed = extend_seed(self.seed);
-        self.rng = Arc::new(Mutex::new(Some(rand_chacha::ChaChaRng::from_seed(
+        self.rng = Some(Arc::new(Mutex::new(Some(rand_chacha::ChaChaRng::from_seed(
             extended_seed,
-        ))));
+        )))));
+        self.buffers = Some(Arc::new(Mutex::new(DemultiplexedData::new())));
+        self.counts = Some(Arc::new(Mutex::new(DemultiplexedData::new())));
         Ok(None)
     }
     fn apply(
@@ -71,7 +77,7 @@ impl Step for ReservoirSample {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let mut rng_lock = self.rng.lock();
+        let mut rng_lock = self.rng.as_ref().expect("rng not set in init").lock();
         let rng = rng_lock
             .as_mut()
             .expect("rng mutex poisoned")
@@ -79,10 +85,10 @@ impl Step for ReservoirSample {
             .expect("rng must be initialized before process()");
         let mut pseudo_iter = block.get_pseudo_iter_including_tag();
 
-        let mut buffer_lock = self.buffers.lock();
+        let mut buffer_lock = self.buffers.as_ref().expect("Counts not set in init?").lock();
         let buffers = buffer_lock.as_mut().expect("buffers mutex poisoned");
 
-        let mut counts_lock = self.counts.lock();
+        let mut counts_lock = self.counts.as_ref().expect("Counts not set in init?").lock();
         let counts = counts_lock.as_mut().expect("counts mutex poisoned");
 
         while let Some((molecule, demultiplex_tag)) = pseudo_iter.pseudo_next() {

@@ -40,7 +40,7 @@ pub enum Operator {
 #[derive(Debug)]
 pub struct QualifiedBases {
     pub out_label: String,
-    #[tpd(with="tpd_adapt_u8_from_byte_or_char")]
+    #[tpd(with = "tpd_adapt_u8_from_byte_or_char")]
     pub threshold: u8,
 
     #[tpd(alias = "op")]
@@ -62,7 +62,6 @@ impl VerifyIn<PartialConfig> for PartialQualifiedBases {
 }
 
 impl Step for QualifiedBases {
-
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((
             self.out_label.clone(),

@@ -12,17 +12,17 @@ mod regions_of_low_quality;
 pub mod tag;
 
 use bstr::BString;
-pub use iupac::{IUPAC,PartialIUPAC};
-pub use iupac_suffix::{IUPACSuffix,PartialIUPACSuffix};
-pub use iupac_with_indel::{IUPACWithIndel,PartialIUPACWithIndel};
-pub use longest_poly_x::{LongestPolyX,PartialLongestPolyX};
-pub use low_quality_end::{LowQualityEnd,PartialLowQualityEnd};
-pub use low_quality_start::{LowQualityStart,PartialLowQualityStart};
-pub use poly_tail::{PolyTail,PartialPolyTail};
-pub use regex::{Regex,PartialRegex};
-pub use region::{Region,PartialRegion};
-pub use regions::{Regions,PartialRegions};
-pub use regions_of_low_quality::{RegionsOfLowQuality,PartialRegionsOfLowQuality};
+pub use iupac::{IUPAC, PartialIUPAC};
+pub use iupac_suffix::{IUPACSuffix, PartialIUPACSuffix};
+pub use iupac_with_indel::{IUPACWithIndel, PartialIUPACWithIndel};
+pub use longest_poly_x::{LongestPolyX, PartialLongestPolyX};
+pub use low_quality_end::{LowQualityEnd, PartialLowQualityEnd};
+pub use low_quality_start::{LowQualityStart, PartialLowQualityStart};
+pub use poly_tail::{PartialPolyTail, PolyTail};
+pub use regex::{PartialRegex, Regex};
+pub use region::{PartialRegion, Region};
+pub use regions::{PartialRegions, Regions};
+pub use regions_of_low_quality::{PartialRegionsOfLowQuality, RegionsOfLowQuality};
 
 use crate::{
     config::{SegmentIndex, SegmentIndexOrAll},

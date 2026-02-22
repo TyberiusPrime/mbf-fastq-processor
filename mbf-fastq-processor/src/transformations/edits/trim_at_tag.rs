@@ -204,4 +204,3 @@ impl Step for TrimAtTag {
         true
     }
 }
-

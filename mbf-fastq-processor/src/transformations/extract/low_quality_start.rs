@@ -30,9 +30,7 @@ impl VerifyIn<PartialConfig> for PartialLowQualityStart {
     }
 }
 
-
 impl Step for LowQualityStart {
-
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((
             self.out_label.clone(),
@@ -48,32 +46,27 @@ impl Step for LowQualityStart {
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let min_qual = self.min_qual;
-        extract_region_tags(
-            &mut block,
-            self.segment,
-            &self.out_label,
-            |read| {
-                let mut cut_pos = 0;
-                let qual = read.qual();
-                for (ii, q) in qual.iter().enumerate() {
-                    if *q < min_qual {
-                        cut_pos = ii + 1;
-                    } else {
-                        break;
-                    }
-                }
-                if cut_pos > 0 {
-                    Some(Hits::new(
-                        0,
-                        cut_pos,
-                        self.segment,
-                        read.seq()[..cut_pos].to_vec().into(),
-                    ))
+        extract_region_tags(&mut block, self.segment, &self.out_label, |read| {
+            let mut cut_pos = 0;
+            let qual = read.qual();
+            for (ii, q) in qual.iter().enumerate() {
+                if *q < min_qual {
+                    cut_pos = ii + 1;
                 } else {
-                    None
+                    break;
                 }
-            },
-        );
+            }
+            if cut_pos > 0 {
+                Some(Hits::new(
+                    0,
+                    cut_pos,
+                    self.segment,
+                    read.seq()[..cut_pos].to_vec().into(),
+                ))
+            } else {
+                None
+            }
+        });
 
         Ok((block, true))
     }

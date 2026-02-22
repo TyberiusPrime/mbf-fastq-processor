@@ -158,15 +158,15 @@ impl Hits {
 }
 
 /// Where to search
-#[derive( Copy, Clone, JsonSchema)]
+#[derive(Copy, Clone, JsonSchema)]
 #[tpd]
 #[derive(Debug)]
 pub enum Anchor {
-    #[tpd(alias="left")]
+    #[tpd(alias = "left")]
     Left,
-    #[tpd(alias="right")]
+    #[tpd(alias = "right")]
     Right,
-    #[tpd(alias="anywhere")]
+    #[tpd(alias = "anywhere")]
     Anywhere,
 }
 
@@ -410,7 +410,6 @@ pub fn all_iupac_or_underscore(input: &[u8]) -> bool {
         )
     })
 }
-
 
 /// Reverse complement a DNA sequence
 /// Handles standard bases (ATCGN) in upper and lowercase

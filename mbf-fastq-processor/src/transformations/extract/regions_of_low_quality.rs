@@ -45,7 +45,6 @@ impl VerifyIn<PartialConfig> for PartialRegionsOfLowQuality {
 }
 
 impl Step for RegionsOfLowQuality {
-
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((
             self.out_label.clone(),

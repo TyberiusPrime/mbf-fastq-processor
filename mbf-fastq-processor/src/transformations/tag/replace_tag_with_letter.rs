@@ -54,4 +54,3 @@ impl Step for ReplaceTagWithLetter {
         Ok((block, true))
     }
 }
-

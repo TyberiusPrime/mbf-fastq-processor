@@ -1,0 +1,29 @@
+[input]
+read1 = "/home/finkernagel/upstream/mbf-fastq-processor/pretty/cookbooks/04-phiX-removal/input/phix_sample.fq"
+
+[output]
+format = "Fastq"
+prefix = "reference_output_demultiplex/output"
+
+[[step]]
+action = "CalcKmers"
+count_reverse_complement = true
+files = ["/home/finkernagel/upstream/mbf-fastq-processor/pretty/cookbooks/04-phiX-removal/input/NC_001422.1.fasta"]
+k = 30
+out_label = "phix_kmer_count"
+segment = "read1"
+
+[[step]]
+action = "StoreTagsInTable"
+infix = "kmer_analysis"
+
+[[step]]
+action = "EvalExpression"
+expression = "phix_kmer_count >= 25"
+out_label = "is_phix"
+result_type = "bool"
+
+[[step]]
+action = "Demultiplex"
+in_label = "is_phix"
+output_unmatched = false

@@ -19,7 +19,6 @@ pub struct LowQualityEnd {
     pub min_qual: u8,
 }
 
-
 impl VerifyIn<PartialConfig> for PartialLowQualityEnd {
     fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
     where
@@ -31,7 +30,6 @@ impl VerifyIn<PartialConfig> for PartialLowQualityEnd {
 }
 
 impl Step for LowQualityEnd {
-
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((
             self.out_label.clone(),
@@ -47,32 +45,27 @@ impl Step for LowQualityEnd {
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let min_qual = self.min_qual;
-        extract_region_tags(
-            &mut block,
-            self.segment,
-            &self.out_label,
-            |read| {
-                let qual = read.qual();
-                let mut cut_pos = qual.len();
-                for q in qual.iter().rev() {
-                    if *q < min_qual {
-                        cut_pos -= 1;
-                    } else {
-                        break;
-                    }
-                }
-                if cut_pos < qual.len() {
-                    Some(Hits::new(
-                        cut_pos,
-                        qual.len() - cut_pos,
-                        self.segment,
-                        read.seq()[cut_pos..].to_vec().into(),
-                    ))
+        extract_region_tags(&mut block, self.segment, &self.out_label, |read| {
+            let qual = read.qual();
+            let mut cut_pos = qual.len();
+            for q in qual.iter().rev() {
+                if *q < min_qual {
+                    cut_pos -= 1;
                 } else {
-                    None
+                    break;
                 }
-            },
-        );
+            }
+            if cut_pos < qual.len() {
+                Some(Hits::new(
+                    cut_pos,
+                    qual.len() - cut_pos,
+                    self.segment,
+                    read.seq()[cut_pos..].to_vec().into(),
+                ))
+            } else {
+                None
+            }
+        });
 
         Ok((block, true))
     }

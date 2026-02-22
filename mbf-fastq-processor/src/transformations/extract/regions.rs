@@ -58,7 +58,6 @@ impl Step for Regions {
         ))
     }
 
-
     fn uses_tags(
         &self,
         tags_available: &IndexMap<String, TagMetadata>,
@@ -85,12 +84,10 @@ impl Step for Regions {
                 }
             }
         }
-        let all_segments = self.regions.iter().all(|x| {
-            matches!(
-                x.source,
-                crate::config::ResolvedSourceNoAll::Segment(_)
-            )
-        });
+        let all_segments = self
+            .regions
+            .iter()
+            .all(|x| matches!(x.source, crate::config::ResolvedSourceNoAll::Segment(_)));
         if (any_tags && all_location) || all_segments {
             self.output_tag_type
                 .set(TagValueType::Location)

@@ -13,6 +13,14 @@ impl std::fmt::Debug for ExFileDebug {
     }
 }
 
+struct DebugFile(ex::fs::File);
+
+impl std::fmt::Debug for DebugFile {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "ex::fs::File(...)")
+    }
+}
+
 /// Inspect reads within the workflow
 #[derive(JsonSchema)]
 #[tpd]
@@ -42,7 +50,7 @@ pub struct Inspect {
     #[tpd(skip)]
     #[schemars(skip)]
     //we write either interleaved (one file) or one segment (one file)
-    writer: Arc<Mutex<Option<ex::fs::File>>>,
+    writer: Arc<Mutex<Option<DebugFile>>>,
 
     #[tpd(skip)]
     #[schemars(skip)]
@@ -64,7 +72,10 @@ impl VerifyIn<PartialConfig> for PartialInspect {
             }
             Ok(())
         });
-        crate::config::validate_compression_level_u8(&self.compression, &mut self.compression_level);
+        crate::config::validate_compression_level_u8(
+            &self.compression,
+            &mut self.compression_level,
+        );
         Ok(())
     }
 }
@@ -107,22 +118,16 @@ impl Step for Inspect {
         demultiplex_info: &OptDemultiplex,
         allow_overwrite: bool,
     ) -> Result<Option<DemultiplexBarcodes>> {
-        self.collector = Arc::new(Mutex::new(
-            match self
-                .segment
-            {
-                SegmentIndexOrAll::All => (0..input_info.segment_order.len())
-                    .map(|_| Vec::with_capacity(self.n))
-                    .collect(),
-                SegmentIndexOrAll::Indexed(_) => vec![Vec::with_capacity(self.n)],
-            },
-        ));
+        self.collector = Arc::new(Mutex::new(match self.segment {
+            SegmentIndexOrAll::All => (0..input_info.segment_order.len())
+                .map(|_| Vec::with_capacity(self.n))
+                .collect(),
+            SegmentIndexOrAll::Indexed(_) => vec![Vec::with_capacity(self.n)],
+        }));
         self.collected.store(0, std::sync::atomic::Ordering::SeqCst);
         let format_suffix = FileFormat::Fastq.get_suffix(self.compression, self.suffix.as_ref());
 
-        let target = match self
-            .segment
-        {
+        let target = match self.segment {
             SegmentIndexOrAll::Indexed(idx) => input_info.segment_order[idx].clone(),
             SegmentIndexOrAll::All => "interleaved".to_string(),
         };
@@ -136,7 +141,7 @@ impl Step for Inspect {
         crate::output::ensure_output_destination_available(&full_path, allow_overwrite)?;
 
         let report_file = ex::fs::File::create(full_path)?;
-        self.writer = Arc::new(Mutex::new(Some(report_file)));
+        self.writer = Arc::new(Mutex::new(Some(DebugFile(report_file))));
 
         if let OptDemultiplex::Yes(info) = demultiplex_info {
             self.demultiplex_names = Some(
@@ -168,9 +173,7 @@ impl Step for Inspect {
                 break;
             }
 
-            match self
-                .segment
-            {
+            match self.segment {
                 SegmentIndexOrAll::All => {
                     for (collector_idx, segment_index) in
                         (0..input_info.segment_order.len()).enumerate()
@@ -213,7 +216,7 @@ impl Step for Inspect {
             .expect("writer must be set during initialization");
 
         let mut writer = HashedAndCompressedWriter::new(
-            report_file_handle,
+            report_file_handle.0,
             self.compression,
             false, // hash_uncompressed
             false, // hash_compressed

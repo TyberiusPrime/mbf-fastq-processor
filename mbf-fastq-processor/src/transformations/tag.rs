@@ -18,19 +18,17 @@ use bstr::{BStr, BString};
 pub use concat_tags::{ConcatTags, PartialConcatTags};
 pub use forget_all_tags::{ForgetAllTags, PartialForgetAllTags};
 pub use forget_tag::{ForgetTag, PartialForgetTag};
-pub use quantify_tag::{QuantifyTag, PartialQuantifyTag};
-pub use replace_tag_with_letter::{ReplaceTagWithLetter, PartialReplaceTagWithLetter};
-pub use store_tag_in_comment::{StoreTagInComment, PartialStoreTagInComment};
-pub use store_tag_in_fastq::{StoreTagInFastQ, PartialStoreTagInFastQ};
-pub use store_tag_in_sequence::{StoreTagInSequence, PartialStoreTagInSequence};
-pub use store_tag_location_in_comment::{StoreTagLocationInComment, PartialStoreTagLocationInComment};
-pub use store_tags_in_table::{StoreTagsInTable, PartialStoreTagsInTable};
-
-use crate::{
-    config::{SegmentIndexOrAll},
-    dna::TagValue,
-    io,
+pub use quantify_tag::{PartialQuantifyTag, QuantifyTag};
+pub use replace_tag_with_letter::{PartialReplaceTagWithLetter, ReplaceTagWithLetter};
+pub use store_tag_in_comment::{PartialStoreTagInComment, StoreTagInComment};
+pub use store_tag_in_fastq::{PartialStoreTagInFastQ, StoreTagInFastQ};
+pub use store_tag_in_sequence::{PartialStoreTagInSequence, StoreTagInSequence};
+pub use store_tag_location_in_comment::{
+    PartialStoreTagLocationInComment, StoreTagLocationInComment,
 };
+pub use store_tags_in_table::{PartialStoreTagsInTable, StoreTagsInTable};
+
+use crate::{config::SegmentIndexOrAll, dna::TagValue, io};
 
 pub(crate) fn apply_in_place_wrapped_with_tag(
     segment_index: &SegmentIndexOrAll,

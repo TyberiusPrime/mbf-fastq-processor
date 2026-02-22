@@ -11,7 +11,7 @@ use crate::dna::Hits;
 #[derive(Debug)]
 pub struct PolyTail {
     #[tpd(adapt_in_verify(String))]
-    #[schemars(with="String")]
+    #[schemars(with = "String")]
     segment: SegmentIndex,
 
     pub out_label: String,
@@ -36,7 +36,6 @@ impl VerifyIn<PartialConfig> for PartialPolyTail {
 }
 
 impl Step for PolyTail {
-
     fn validate_others(
         &self,
         _input_def: &crate::config::Input,
@@ -73,35 +72,30 @@ impl Step for PolyTail {
         let min_length = self.min_length;
         let max_mismatch_fraction = self.max_mismatch_rate;
         let max_consecutive_mismatches = self.max_consecutive_mismatches;
-        extract_region_tags(
-            &mut block,
-            self.segment,
-            &self.out_label,
-            |read| {
-                {
-                    let seq = read.seq();
-                    //dbg!(std::str::from_utf8(self.name()).unwrap());
-                    //
-                    let last_pos = find_poly_tail(
-                        seq,
-                        base,
-                        min_length,
-                        max_mismatch_fraction,
-                        max_consecutive_mismatches,
-                    );
+        extract_region_tags(&mut block, self.segment, &self.out_label, |read| {
+            {
+                let seq = read.seq();
+                //dbg!(std::str::from_utf8(self.name()).unwrap());
+                //
+                let last_pos = find_poly_tail(
+                    seq,
+                    base,
+                    min_length,
+                    max_mismatch_fraction,
+                    max_consecutive_mismatches,
+                );
 
-                    //dbg!(last_pos);
-                    last_pos.map(|last_pos| {
-                        Hits::new(
-                            last_pos,
-                            seq.len() - last_pos,
-                            self.segment,
-                            seq[last_pos..].to_vec().into(),
-                        )
-                    })
-                }
-            },
-        );
+                //dbg!(last_pos);
+                last_pos.map(|last_pos| {
+                    Hits::new(
+                        last_pos,
+                        seq.len() - last_pos,
+                        self.segment,
+                        seq[last_pos..].to_vec().into(),
+                    )
+                })
+            }
+        });
         Ok((block, true))
     }
 }

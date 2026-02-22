@@ -8,7 +8,7 @@ use crate::config::deser::{bstring_from_string, tpd_adapt_bstring};
 #[tpd]
 #[derive(Debug)]
 pub struct ValidateSeq {
-    #[tpd(with="tpd_adapt_bstring")]
+    #[tpd(with = "tpd_adapt_bstring")]
     #[schemars(with = "String")]
     pub allowed: BString,
 
@@ -28,7 +28,6 @@ impl VerifyIn<PartialConfig> for PartialValidateSeq {
 }
 
 impl Step for ValidateSeq {
-
     fn apply(
         &self,
         mut block: FastQBlocksCombined,

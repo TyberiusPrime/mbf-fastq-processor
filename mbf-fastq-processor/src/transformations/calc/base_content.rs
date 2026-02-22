@@ -140,7 +140,6 @@ impl BaseContent {
 }
 
 impl Step for BaseContent {
-
     fn declares_tag_type(&self) -> Option<(String, TagValueType)> {
         Some((self.out_label.clone(), TagValueType::Numeric))
     }

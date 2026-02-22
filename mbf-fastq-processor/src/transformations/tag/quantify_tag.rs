@@ -1,7 +1,10 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use crate::{config::{CompressionFormat, deser::tpd_adapt_bstring}, transformations::prelude::*};
+use crate::{
+    config::{CompressionFormat, deser::tpd_adapt_bstring},
+    transformations::prelude::*,
+};
 
-use std::{collections::BTreeMap};
+use std::collections::BTreeMap;
 
 use crate::config::deser::bstring_from_string;
 
@@ -18,7 +21,7 @@ pub struct QuantifyTag {
     pub in_label: String,
 
     #[schemars(with = "String")]
-    #[tpd(with="tpd_adapt_bstring")]
+    #[tpd(with = "tpd_adapt_bstring")]
     region_separator: BString,
 
     #[tpd(skip)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
@@ -28,7 +31,6 @@ pub struct QuantifyTag {
     #[tpd(skip)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[schemars(skip)]
     pub output_streams: Arc<Mutex<DemultiplexedOutputFiles>>,
-
 }
 
 impl VerifyIn<PartialConfig> for PartialQuantifyTag {

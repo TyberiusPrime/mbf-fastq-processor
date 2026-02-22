@@ -48,7 +48,6 @@ impl Step for ReverseComplement {
         true
     }
 
-
     #[allow(clippy::redundant_closure_for_method_calls)] // otherwise the FnOnce is not general
     // enough
     fn apply(

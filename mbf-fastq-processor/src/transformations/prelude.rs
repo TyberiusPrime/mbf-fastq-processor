@@ -4,9 +4,8 @@ pub(crate) use super::{
     reproducible_cuckoofilter,
 };
 pub(crate) use crate::config::{
-    PartialConfig, SegmentIndex, SegmentIndexOrAll, SegmentOrNameIndex, TagMetadata,
-    ValidateSegment,
-    ResolvedSourceAll, ResolvedSourceNoAll,
+    PartialConfig, ResolvedSourceAll, ResolvedSourceNoAll, SegmentIndex, SegmentIndexOrAll,
+    SegmentOrNameIndex, TagMetadata, ValidateSegment,
 };
 pub(crate) use crate::demultiplex::{
     DemultiplexBarcodes, DemultiplexedData, DemultiplexedOutputFiles, OptDemultiplex, OutputWriter,

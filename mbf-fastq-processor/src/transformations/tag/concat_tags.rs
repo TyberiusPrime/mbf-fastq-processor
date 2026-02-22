@@ -71,7 +71,7 @@ impl VerifyIn<PartialConfig> for PartialConcatTags {
                 ));
             }
             let mut seen = std::collections::HashSet::new();
-            for label in v.iter_mut(){
+            for label in v.iter_mut() {
                 let lv = label.value.as_ref().expect("Parent was ok?");
                 if lv.is_empty() {
                     label.state = TomlValueState::ValidationFailed {

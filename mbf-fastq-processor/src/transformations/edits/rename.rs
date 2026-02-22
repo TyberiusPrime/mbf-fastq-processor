@@ -99,4 +99,3 @@ impl Step for Rename {
         self.needs_counting
     }
 }
-

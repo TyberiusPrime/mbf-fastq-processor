@@ -8,8 +8,8 @@ use crate::transformations::prelude::*;
 pub struct Lowercase {
     #[schemars(with = "String")]
     #[tpd(adapt_in_verify(String))]
-    #[tpd(alias="source")]
-    #[tpd(alias="segment")]
+    #[tpd(alias = "source")]
+    #[tpd(alias = "segment")]
     pub target: ResolvedSourceAll,
 
     #[serde(default)]
@@ -27,7 +27,6 @@ impl VerifyIn<PartialConfig> for PartialLowercase {
 }
 
 impl Step for Lowercase {
-
     fn apply(
         &self,
         block: FastQBlocksCombined,

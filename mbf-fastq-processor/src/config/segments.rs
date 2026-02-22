@@ -42,15 +42,16 @@ impl ValidateSegment for TomlValue<MustAdapt<String, SegmentIndex>> {
             .expect("validate_segment called before input definition was read");
         let segment_order = input_def.get_segment_order();
         let span = self.span.clone();
-        if let Some(must_adapt) = self.as_mut() {
+        if matches!(self.state, TomlValueState::NeedsFurtherValidation)
+            && let Some(must_adapt) = self.value.as_ref()
+        {
             match must_adapt {
                 MustAdapt::PreVerify(str_segment) => {
                     let segment_index = segment_order.iter().position(|x| x == str_segment);
                     *self = match segment_index {
-                        Some(idx) => TomlValue::new_ok(
-                            MustAdapt::PostVerify(SegmentIndex(idx)),
-                            span,
-                        ),
+                        Some(idx) => {
+                            TomlValue::new_ok(MustAdapt::PostVerify(SegmentIndex(idx)), span)
+                        }
                         None => TomlValue::new_validation_failed(
                             span,
                             "Segment does not match input config".to_string(),
@@ -423,7 +424,9 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceNoAll>> {
                             );
                         }
                         Err(validation_err) => {
-                            self.state = TomlValueState::ValidationFailed{message: validation_err.message};
+                            self.state = TomlValueState::ValidationFailed {
+                                message: validation_err.message,
+                            };
                             self.help = validation_err.help;
                         }
                     }
@@ -493,8 +496,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceAll>> {
                                 "Must not be empty",
                                 Some("Please provide a segment name after 'name:'."),
                             ))
-                        }
-                        else if trimmed.to_ascii_lowercase() == "all" {
+                        } else if trimmed.to_ascii_lowercase() == "all" {
                             Ok(ResolvedSourceAll::Name {
                                 segment_index_or_all: SegmentIndexOrAll::All,
                                 split_character: *input_options
@@ -523,7 +525,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceAll>> {
                                 )),
                             ))
                         }
-                    }  else if source.to_ascii_lowercase() == "all" {
+                    } else if source.to_ascii_lowercase() == "all" {
                         Ok(ResolvedSourceAll::Segment(SegmentIndexOrAll::All))
                     } else {
                         if let Some(segment_index) = input_def
@@ -531,7 +533,9 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceAll>> {
                             .iter()
                             .position(|x| x == source)
                         {
-                            Ok(ResolvedSourceAll::Segment(SegmentIndexOrAll::Indexed(segment_index)))
+                            Ok(ResolvedSourceAll::Segment(SegmentIndexOrAll::Indexed(
+                                segment_index,
+                            )))
                         } else {
                             Err(ValidationFailure::new(
                                 "Segment not found".to_string(),
@@ -550,7 +554,9 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceAll>> {
                             );
                         }
                         Err(validation_err) => {
-                            self.state = TomlValueState::ValidationFailed{message: validation_err.message};
+                            self.state = TomlValueState::ValidationFailed {
+                                message: validation_err.message,
+                            };
                             self.help = validation_err.help;
                         }
                     }
@@ -563,7 +569,6 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceAll>> {
         }
     }
 }
-
 
 impl ResolvedSourceAll {
     // pub fn parse(

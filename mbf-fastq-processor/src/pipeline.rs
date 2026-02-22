@@ -553,12 +553,7 @@ impl RunStage1 {
                 // Benchmark mode: read first block and repeat it
                 let molecule_count = benchmark.molecule_count;
 
-                match parsed
-                    .input
-                    .structured
-                    .as_ref()
-                    .expect("structured input must be Some after config validation")
-                {
+                match &parsed.input.structured {
                     StructuredInput::Interleaved { segment_order, .. } => {
                         let segment_order_len = segment_order.len();
                         let input_threads = Vec::new();
@@ -665,12 +660,7 @@ impl RunStage1 {
             }
         } else {
             // Normal mode
-            match parsed
-                .input
-                .structured
-                .as_ref()
-                .expect("structured input must be Some after config validation")
-            {
+            match &parsed.input.structured {
                 StructuredInput::Interleaved { segment_order, .. } => {
                     let error_collector = error_collector.clone();
                     let segment_order_len = segment_order.len();

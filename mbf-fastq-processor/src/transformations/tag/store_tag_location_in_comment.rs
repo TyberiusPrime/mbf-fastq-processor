@@ -7,7 +7,7 @@ use crate::{
 };
 
 use super::{
-    apply_in_place_wrapped_with_tag, default_comment_separator,
+    apply_in_place_wrapped_with_tag, default_comment_insert_char, default_comment_separator,
     store_tag_in_comment,
 };
 
@@ -29,7 +29,7 @@ pub struct StoreTagLocationInComment {
     comment_separator: u8,
 
     #[tpd(with = "tpd_adapt_u8_from_byte_or_char")]
-    comment_insert_char: Option<u8>,
+    comment_insert_char: u8,
 }
 
 impl VerifyIn<PartialConfig> for PartialStoreTagLocationInComment {
@@ -38,12 +38,13 @@ impl VerifyIn<PartialConfig> for PartialStoreTagLocationInComment {
         Self: Sized + toml_pretty_deser::Visitor,
     {
         if self.segment.is_missing() {
-            self.segment.value = Some(MustAdapt::PreVerify(
-                "all".to_string()));
+            self.segment.value = Some(MustAdapt::PreVerify("all".to_string()));
             self.segment.state = TomlValueState::Ok;
         }
         self.segment.validate_segment(parent);
         self.comment_separator.or_with(default_comment_separator);
+        self.comment_insert_char
+            .or_with(default_comment_insert_char);
         Ok(())
     }
 }
@@ -96,8 +97,7 @@ impl Step for StoreTagLocationInComment {
                     label.as_bytes(),
                     &seq,
                     self.comment_separator,
-                    self.comment_insert_char
-                        .expect("comment_insert_char must be set during initialization"),
+                    self.comment_insert_char,
                 );
                 //I really don't expect location to fail, but what if the user set's
                 //comment_separator to '-'?

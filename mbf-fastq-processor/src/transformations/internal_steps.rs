@@ -10,8 +10,7 @@ use std::thread;
 #[tpd]
 #[derive(Debug)]
 pub struct _InternalDelay {
-    ignored: Option<u8> //tpd does not like empty structs
-
+    ignored: Option<u8>, //tpd does not like empty structs
 }
 
 impl Step for Box<_InternalDelay> {

@@ -21,7 +21,7 @@ pub use gc_content::{GCContent, PartialGCContent};
 pub use kmers::{Kmers, PartialKmers};
 pub use length::{Length, PartialLength};
 pub use n_count::{NCount, PartialNCount};
-pub use qualified_bases::{QualifiedBases, PartialQualifiedBases};
+pub use qualified_bases::{PartialQualifiedBases, QualifiedBases};
 
 pub(crate) fn extract_numeric_tags<F>(
     segment: SegmentIndex,
