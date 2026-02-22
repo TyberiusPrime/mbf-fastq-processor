@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use ex::fs;
 use std::path::Path;
 
-use crate::config::{Config, PartialConfig};
+use crate::config::Config;
 use toml_pretty_deser::prelude::*;
 
 pub fn validate_config(toml_file: &Path) -> Result<Vec<String>> {

@@ -3,7 +3,6 @@ use indexmap::IndexMap;
 
 //eserde false positives
 use crate::transformations::prelude::*;
-use std::collections::BTreeMap;
 
 ///Create multiple output files based on a tag
 

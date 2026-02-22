@@ -3,7 +3,7 @@ use crate::transformations::prelude::*;
 
 use crate::{
     config::CompressionFormat,
-    config::deser::{arc_mutex_option_vec_string, bstring_from_string, tpd_adapt_bstring},
+    config::deser::tpd_adapt_bstring,
     dna::TagValue,
 };
 
@@ -40,7 +40,7 @@ pub struct StoreTagsInTable {
 }
 
 impl VerifyIn<PartialConfig> for PartialStoreTagsInTable {
-    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    fn verify(&mut self, _parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {

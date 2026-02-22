@@ -100,7 +100,7 @@ impl ChainedParser {
         while self.current.is_none() {
             match self.pending.pop() {
                 Some(file) => {
-                    self.current_filename = file.get_filename().map(|x| x.clone());
+                    self.current_filename = file.get_filename().cloned();
                     let parser = file.get_parser(
                         self.target_reads_per_block,
                         self.buffer_size,

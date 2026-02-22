@@ -1,7 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::transformations::prelude::*;
 
-use crate::config::deser::{bstring_from_string, tpd_adapt_bstring};
+use crate::config::deser::tpd_adapt_bstring;
 
 /// Validate that the sequence is only consisting of the specified bases
 #[derive(Clone, JsonSchema)]

@@ -1,7 +1,6 @@
 #![allow(clippy::struct_field_names)]
 use crate::config::PartialConfig;
 // FailureOptions - eserde(?) interferes with clippy here.
-use crate::config::input::PartialInput;
 use crate::io::output::compressed_output::{SimulatedWriteError, SimulatedWriteFailure};
 use anyhow::{Context, Result};
 use schemars::JsonSchema;
@@ -61,6 +60,7 @@ pub const fn default_buffer_size() -> usize {
 }
 
 #[mutants::skip]
+#[must_use] 
 pub const fn default_output_buffer_size() -> usize {
     1024 * 1024 // bytes, per fastq input file
 }
@@ -71,6 +71,7 @@ pub const fn default_block_size() -> usize {
     10000 // in 'molecules', ie. read1, read2, index1, index2 tuples.
 }
 
+#[must_use] 
 pub const fn default_spot_check_read_pairing() -> bool {
     true
 }
@@ -96,7 +97,7 @@ pub struct Options {
 }
 
 impl VerifyIn<PartialConfig> for PartialOptions {
-    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    fn verify(&mut self, _parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized,
     {

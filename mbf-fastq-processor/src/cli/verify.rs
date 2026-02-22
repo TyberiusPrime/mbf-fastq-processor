@@ -5,7 +5,6 @@ use std::borrow::Cow;
 use std::io::Write;
 use std::path::Path;
 use std::time::Duration;
-use toml_pretty_deser::prelude::*;
 
 pub fn verify_outputs(
     toml_file: &Path,
@@ -39,7 +38,7 @@ pub fn verify_outputs(
     let expected_runtime_error = ExpectedFailure::new(&toml_dir, "runtime_error")?;
 
     let error_file_count =
-        expected_validation_error.is_some() as u8 + expected_runtime_error.is_some() as u8;
+        u8::from(expected_validation_error.is_some()) + u8::from(expected_runtime_error.is_some());
     if error_file_count > 1 {
         bail!(
             "Both expected_error(.txt|.regex) and expected_runtime_error(.txt|.regex) files exist. Please provide only one, depending on wether it's a validation or a processing error."
@@ -87,14 +86,14 @@ pub fn verify_outputs(
     let temp_dir = tempfile::tempdir().context("Failed to create temporary directory")?;
     let temp_path = if let Some(output_dir) = output_dir.as_ref() {
         if output_dir.exists() {
-            ex::fs::remove_dir_all(&output_dir).with_context(|| {
+            ex::fs::remove_dir_all(output_dir).with_context(|| {
                 format!(
                     "Failed to remove existing output directory: {}",
                     output_dir.display()
                 )
             })?;
         }
-        std::fs::create_dir_all(&output_dir).with_context(|| {
+        std::fs::create_dir_all(output_dir).with_context(|| {
             format!(
                 "Failed to create output directory: {}",
                 output_dir.display()
@@ -250,17 +249,15 @@ pub fn verify_outputs(
         if let Some(expected_warning) = expected_validation_warning {
             if warnings.is_empty() {
                 bail!("Expected validation warning, but none were produced.");
-            } else {
-                if !warnings
-                    .iter()
-                    .any(|w| expected_warning.validate_expected_failure(w).is_ok())
-                {
-                    bail!(
-                        "Validation warnings did not match expected pattern.\nExpected: {}\nActual warnings:\n{}",
-                        expected_warning,
-                        warnings.join("\n")
-                    );
-                }
+            } else if !warnings
+                .iter()
+                .any(|w| expected_warning.validate_expected_failure(w).is_ok())
+            {
+                bail!(
+                    "Validation warnings did not match expected pattern.\nExpected: {}\nActual warnings:\n{}",
+                    expected_warning,
+                    warnings.join("\n")
+                );
             }
         }
     }
@@ -328,13 +325,11 @@ pub fn verify_outputs(
             (Some(_), true) => {
                 if expected_validation_error.is_some() {
                     bail!(
-                        "Expected validation failure but 'validate' command succeeded. stderr: {}",
-                        stderr
+                        "Expected validation failure but 'validate' command succeeded. stderr: {stderr}"
                     );
                 } else {
                     bail!(
-                        "Expected runtime failure but 'process' command succeeded. stderr: {}",
-                        stderr
+                        "Expected runtime failure but 'process' command succeeded. stderr: {stderr}"
                     );
                 };
             }
@@ -388,7 +383,7 @@ pub fn verify_outputs(
 
                 if !uses_stdout {
                     let expected_files =
-                        find_output_files(expected_dir, &output_prefix).unwrap_or(Vec::new());
+                        find_output_files(expected_dir, &output_prefix).unwrap_or_default();
 
                     if expected_files.is_empty() {
                         bail!(
@@ -566,6 +561,7 @@ pub(crate) fn compare_files(expected: &Path, actual: &Path, input_dir: &Path) ->
     Ok(())
 }
 
+#[must_use] 
 pub fn normalize_report_content(content: &str, input_dir: Option<&Path>) -> String {
     let normalize_re = Regex::new(
         r#""(?P<key>version|program_version|cwd|working_directory|repository)"\s*:\s*"[^"]*""#,
@@ -601,6 +597,7 @@ pub fn normalize_report_content(content: &str, input_dir: Option<&Path>) -> Stri
     }
 }
 
+#[must_use] 
 pub fn normalize_progress_content(content: &str) -> String {
     let float_re = Regex::new(r"\d+[._0-9]*").expect("invalid float regex");
     let normalized = float_re.replace_all(content, "_IGNORED_").into_owned();
@@ -670,6 +667,7 @@ pub fn decompress_file(path: &Path) -> Result<Vec<u8>> {
     Ok(decompressed)
 }
 
+#[must_use] 
 pub fn calculate_size_difference_percent(len_a: u64, len_b: u64) -> f64 {
     if len_a > 0 {
         ((len_b as f64 - len_a as f64).abs() / len_a as f64) * 100.0
@@ -736,9 +734,7 @@ impl ExpectedFailure {
             ExpectedFailure::ExactText(expected_text) => {
                 if !stderr.contains(expected_text) {
                     bail!(
-                        "mbf-fastq-processor did not fail in the way that was expected.\nExpected message (substring): {}\nActual stderr: \n{}",
-                        expected_text,
-                        stderr
+                        "mbf-fastq-processor did not fail in the way that was expected.\nExpected message (substring): {expected_text}\nActual stderr: \n{stderr}"
                     );
                 }
                 if stderr.matches(expected_text).count() > 1 {
@@ -767,13 +763,13 @@ impl ExpectedFailure {
 impl std::fmt::Display for ExpectedFailure {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ExpectedFailure::ExactText(text) => write!(f, "ExactText({})", text),
+            ExpectedFailure::ExactText(text) => write!(f, "ExactText({text})"),
             ExpectedFailure::Regex(regex) => write!(f, "Regex({})", regex.as_str()),
         }
     }
 }
 
-fn strip_backtrace<'a>(stderr: &'a str) -> Cow<'a, str> {
+fn strip_backtrace(stderr: &str) -> Cow<'_, str> {
     let mut out = Vec::new();
     let lines = stderr.split('\n');
     let mut outside = true;
@@ -782,12 +778,10 @@ fn strip_backtrace<'a>(stderr: &'a str) -> Cow<'a, str> {
             if line.trim() == "Stack backtrace:" {
                 outside = false;
             } else {
-                out.push(line)
+                out.push(line);
             }
-        } else {
-            if line.trim().is_empty() {
-                outside = true;
-            }
+        } else if line.trim().is_empty() {
+            outside = true;
         }
     }
     Cow::Owned(out.join("\n"))

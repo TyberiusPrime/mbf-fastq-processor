@@ -116,7 +116,7 @@ impl Step for Box<_ReportLengthDistribution> {
                             .get(tag)
                             .expect("tag must exist in data map")
                             .store("length_distribution", &mut local);
-                        contents.insert(name.to_string(), local.into());
+                        contents.insert(name.clone(), local.into());
                     }
                 }
             }

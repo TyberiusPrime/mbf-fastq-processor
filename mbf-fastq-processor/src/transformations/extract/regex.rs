@@ -3,10 +3,7 @@
 use crate::config::deser::{tpd_adapt_bstring, tpd_adapt_regex};
 use crate::transformations::prelude::*;
 
-use crate::{
-    config::deser::{bstring_from_string, u8_regex_from_string},
-    dna::Hits,
-};
+use crate::dna::Hits;
 
 use super::extract_region_tags;
 use super::extract_string_tags;

@@ -88,13 +88,13 @@ impl LongestPolyX {
                 let current_length = end - start + 1;
 
                 if current_length >= min_length {
-                    let mismatch_ratio = mismatches as f64 / current_length as f64;
+                    let mismatch_ratio = f64::from(mismatches) / current_length as f64;
                     if mismatch_ratio <= max_mismatch_fraction {
                         best = Self::pick_better(best, Some((start, current_length)));
                     }
                 }
 
-                if (mismatches as f64) / (max_possible_length as f64) > max_mismatch_fraction {
+                if f64::from(mismatches) / (max_possible_length as f64) > max_mismatch_fraction {
                     break;
                 }
             }

@@ -6,7 +6,7 @@ pub mod verify;
 
 pub(crate) fn improve_error_messages(e: anyhow::Error, raw_toml: &str) -> anyhow::Error {
     let mut e = extend_with_step_annotation(e, raw_toml);
-    let msg = format!("{:?}", e);
+    let msg = format!("{e:?}");
     let barcode_regexp = Regex::new("barcodes.[^:]+: invalid type: sequence,")
         .expect("hardcoded regex pattern is valid");
     if barcode_regexp.is_match(&msg) {
@@ -35,7 +35,7 @@ pub(crate) fn improve_error_messages(e: anyhow::Error, raw_toml: &str) -> anyhow
 }
 
 fn extend_with_step_annotation(e: anyhow::Error, raw_toml: &str) -> anyhow::Error {
-    let msg = format!("{:?}", e);
+    let msg = format!("{e:?}");
     let step_regex = Regex::new(r"step.(\d+).").expect("hardcoded regex pattern is valid");
     if let Some(matches) = step_regex.captures(&msg) {
         let step_no = &matches[1];

@@ -152,7 +152,7 @@ impl Step for Box<_ReportBaseStatisticsPart2> {
                             .get(tag)
                             .expect("no-multiplex tag found but expected")
                             .store("base_statistics", &mut local);
-                        contents.insert(name.to_string(), local.into());
+                        contents.insert(name.clone(), local.into());
                     }
                 }
             }

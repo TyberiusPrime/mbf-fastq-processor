@@ -144,7 +144,7 @@ impl Step for Box<_ReportBaseStatisticsPart1> {
                             .get(tag)
                             .expect("no-demultiplex tag missing in data, but expected")
                             .store("base_statistics", &mut local);
-                        contents.insert(name.to_string(), local.into());
+                        contents.insert(name.clone(), local.into());
                     }
                 }
             }

@@ -72,7 +72,7 @@ impl VerifyIn<PartialConfig> for PartialEvalExpression {
             let parser = Parser::new();
             match parser.parse(expression, &mut slab.ps) {
                 Err(e) => {
-                    let help_message = format!("Inner error message {}", e);
+                    let help_message = format!("Inner error message {e}");
                     return Err(ValidationFailure::new(
                         "Syntax error".to_string(),
                         Some(help_message),
@@ -130,7 +130,7 @@ pub enum ResultType {
 }
 
 impl Step for EvalExpression {
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
+    fn validate_segments(&mut self, _input_def: &crate::config::Input) -> Result<()> {
         Ok(())
     }
 
@@ -166,7 +166,7 @@ impl Step for EvalExpression {
                     // read_no is virtual, no tag needed
                 } else {
                     out.push((
-                        name.to_string(),
+                        name.clone(),
                         &[
                             TagValueType::Bool,
                             TagValueType::Numeric,

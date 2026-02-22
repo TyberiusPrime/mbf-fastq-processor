@@ -6,7 +6,6 @@ use crate::{
 
 use std::collections::BTreeMap;
 
-use crate::config::deser::bstring_from_string;
 
 use super::super::tag::default_region_separator;
 
@@ -34,7 +33,7 @@ pub struct QuantifyTag {
 }
 
 impl VerifyIn<PartialConfig> for PartialQuantifyTag {
-    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    fn verify(&mut self, _parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {

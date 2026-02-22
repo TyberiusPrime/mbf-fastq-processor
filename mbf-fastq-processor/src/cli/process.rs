@@ -2,7 +2,7 @@ use anyhow::{Context, Result, bail};
 use std::path::Path;
 
 use crate::config::CheckedConfig;
-use crate::config::{Config, PartialConfig};
+use crate::config::Config;
 use crate::output::OutputRunMarker;
 use crate::pipeline;
 use toml_pretty_deser::prelude::*;
@@ -41,7 +41,7 @@ pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> 
             Ok(())
         }
         Err(e) => {
-            if format!("{:?}", e).contains("already exists") {
+            if format!("{e:?}").contains("already exists") {
                 marker.mark_complete()?;
             }
             Err(e)
@@ -61,7 +61,7 @@ fn _run(
         let run = pipeline::RunStage0::new(&parsed);
         let run = run.configure_demultiplex_and_init_stages(
             &mut parsed,
-            &output_directory,
+            output_directory,
             allow_overwrite,
         )?;
         let run = run.create_input_threads(&parsed)?;

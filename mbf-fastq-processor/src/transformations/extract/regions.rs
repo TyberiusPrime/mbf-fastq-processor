@@ -155,7 +155,7 @@ impl Step for Regions {
             }
         }
 
-        block.tags.insert(self.out_label.to_string(), out);
+        block.tags.insert(self.out_label.clone(), out);
 
         Ok((block, true))
     }

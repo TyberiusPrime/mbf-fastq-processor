@@ -9,7 +9,6 @@ use std::io::Write;
 use crate::{
     config::{
         CompressionFormat, FileFormat,
-        deser::{bstring_from_string, u8_from_char_or_number},
     },
     dna::TagValue,
 };

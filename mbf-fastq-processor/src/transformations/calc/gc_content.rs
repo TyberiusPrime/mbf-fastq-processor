@@ -3,7 +3,7 @@
 use super::BaseContent;
 use crate::transformations::prelude::*;
 
-/// Calculate (relative) GC content. See CalcBaseContent
+/// Calculate (relative) GC content. See `CalcBaseContent`
 #[derive(Clone, JsonSchema)]
 #[tpd]
 #[derive(Debug)]

@@ -50,7 +50,7 @@ pub struct Output {
 }
 
 impl VerifyIn<super::PartialConfig> for PartialOutput {
-    fn verify(&mut self, parent: &super::PartialConfig) -> Result<(), ValidationFailure>
+    fn verify(&mut self, _parent: &super::PartialConfig) -> Result<(), ValidationFailure>
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {
