@@ -87,7 +87,7 @@ impl VerifyIn<PartialConfig> for PartialMergeReads {
             let spans = vec![
                 (
                     self.segment1.span(),
-                    format!("Must be different from segment2"),
+                    "Must be different from segment2".to_string(),
                 ),
                 (
                     self.segment2.span(),
@@ -141,11 +141,10 @@ impl Step for MergeReads {
         if self.max_mismatch_rate < 0.0 || self.max_mismatch_rate >= 1.0 {
             bail!("max_mismatch_rate must be in [0.0..1.0). Set a valid value >= 0 and < 1.0.");
         }
-        if let Some(space_quality_char) = self.spacer_quality_char {
-            if space_quality_char < 33 || space_quality_char > 126 {
+        if let Some(space_quality_char) = self.spacer_quality_char
+            && (!(33..=126).contains(&space_quality_char)) {
                 bail!("spacer_quality_char must be in [33..126]. Set a valid value.");
             }
-        }
         Ok(())
     }
 

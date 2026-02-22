@@ -4,7 +4,7 @@ use crate::config::deser::tpd_adapt_dna_bstring;
 use crate::transformations::prelude::*;
 
 use crate::dna::hamming;
-use crate::{config::deser::dna_from_string, dna::Hits};
+use crate::dna::Hits;
 
 use super::extract_region_tags;
 

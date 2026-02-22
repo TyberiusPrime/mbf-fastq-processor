@@ -2,7 +2,7 @@
 use super::BaseContent;
 use crate::transformations::prelude::*;
 
-/// Count the number of N. See CalcBaseContent for general case
+/// Count the number of N. See `CalcBaseContent` for general case
 #[derive(Clone, JsonSchema)]
 #[tpd]
 #[derive(Debug)]

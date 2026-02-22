@@ -89,7 +89,7 @@ impl Step for Box<_ReportCount> {
                 for (tag, name) in &demultiplex_info.tag_to_name {
                     if let Some(name) = name {
                         contents.insert(
-                            name.to_string(),
+                            name.clone(),
                             json!({
                                 "molecule_count": *(data.get(tag).expect("tag must exist in data")),
                             }),

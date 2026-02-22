@@ -1,7 +1,7 @@
 #![allow(clippy::unnecessary_wraps)]
 
 use crate::transformations::prelude::*;
-use crate::{config::deser, io};
+use crate::io;
 use std::collections::HashMap;
 
 fn default_min_count() -> usize {

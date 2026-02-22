@@ -1,14 +1,14 @@
 use std::collections::{BTreeMap, HashSet};
 
-use anyhow::{Result, bail};
+use anyhow::Result;
 use indexmap::IndexMap;
 use schemars::JsonSchema;
 use std::collections::HashMap;
 use toml_pretty_deser::prelude::*;
 
-use crate::config::deser::{tpd_adapt_trim_string, tpd_adapt_u8_from_byte_or_char};
+use crate::config::deser::tpd_adapt_u8_from_byte_or_char;
 
-use super::deser::{self, deserialize_map_of_string_or_seq_string};
+use super::deser::{self};
 use super::validate_segment_label;
 
 fn is_default(opt: &InputOptions) -> bool {
@@ -63,7 +63,7 @@ impl PartialInput {
                 let spans: Vec<(std::ops::Range<usize>, String)> = segments
                     .map
                     .iter()
-                    .map(|(k, v)| {
+                    .map(|(_k, v)| {
                         (
                             v.span.clone(),
                             format!(
@@ -183,8 +183,7 @@ impl PartialInput {
                         message: "Invalid use of stdin magic value".to_string(),
                     };
                     self.segments.help = Some(format!(
-                        "When using '{STDIN_MAGIC_PATH}' as an input file, it must be the only file listed in the segment. Found additional files: {:?}",
-                        files
+                        "When using '{STDIN_MAGIC_PATH}' as an input file, it must be the only file listed in the segment. Found additional files: {files:?}"
                     ));
                 }
             }
@@ -205,7 +204,7 @@ impl PartialInput {
                 let mut spans: Vec<_> = segments
                     .map
                     .iter()
-                    .map(|(k, v)| (v.span.clone(), format!("More than one segment defined")))
+                    .map(|(_k, v)| (v.span.clone(), "More than one segment defined".to_string()))
                     .collect();
                 spans.push((
                     self.interleaved.span.clone(),
@@ -245,8 +244,7 @@ impl PartialInput {
             for segment_toml_value in interleaved.iter_mut() {
                 let segment_name = segment_toml_value
                     .as_ref()
-                    .expect("parent was ok")
-                    .to_string();
+                    .expect("parent was ok").clone();
                 let spans = seen.get(&segment_name).expect("We just built this map");
                 if spans.len() > 1 {
                     segment_toml_value.state = TomlValueState::Custom {
@@ -295,9 +293,7 @@ impl PartialInput {
             }
             if let Some(all_segment) = segments
                 .keys
-                .iter_mut()
-                .filter(|tv| tv.as_ref().expect("Parent was ok").to_ascii_lowercase() == "all")
-                .next()
+                .iter_mut().find(|tv| tv.as_ref().expect("Parent was ok").eq_ignore_ascii_case("all"))
             {
                 all_segment.state = TomlValueState::ValidationFailed {
                     message: "Reserved segment name".to_string(),
@@ -361,7 +357,7 @@ impl PartialInput {
 impl VerifyIn<super::PartialConfig> for PartialInput {
     fn verify(
         &mut self,
-        parent: &super::PartialConfig,
+        _parent: &super::PartialConfig,
     ) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized + toml_pretty_deser::Visitor,
@@ -417,7 +413,7 @@ pub struct InputOptions {
 }
 
 impl VerifyIn<PartialInput> for PartialInputOptions {
-    fn verify(&mut self, parent: &PartialInput) -> std::result::Result<(), ValidationFailure>
+    fn verify(&mut self, _parent: &PartialInput) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {

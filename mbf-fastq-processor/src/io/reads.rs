@@ -208,7 +208,7 @@ impl FastQElement {
 
                 // Try to reuse self's block space for other's data
                 if self_data.len() <= other_data.len() {
-                    self_data[..other_data.len()].copy_from_slice(&other_data);
+                    self_data[..other_data.len()].copy_from_slice(other_data);
                     pos_self.end = pos_self.start + other_data.len();
                 } else {
                     // Doesn't fit, make it owned
@@ -567,8 +567,7 @@ impl FastQBlock {
         assert_eq!(
             tags.len(),
             self.entries.len(),
-            "Tags and entries must have the same length. Label: {} ",
-            label,
+            "Tags and entries must have the same length. Label: {label} ",
         );
         for (ii, entry) in &mut self.entries.iter_mut().enumerate() {
             let mut wrapped = WrappedFastQReadMut(entry, &mut self.block);
@@ -778,7 +777,7 @@ impl WrappedFastQRead<'_> {
         }
     }
 
-    /// get only the comment (without read_comment_insert_char)
+    /// get only the comment (without `read_comment_insert_char`)
     /// or None if not present
     #[must_use]
     pub fn name_only_comment(&self, read_comment_insert_char: u8) -> Option<&[u8]> {
@@ -897,7 +896,7 @@ impl WrappedFastQReadMut<'_> {
         }
     }
 
-    /// get only the comment (without read_comment_insert_char)
+    /// get only the comment (without `read_comment_insert_char`)
     /// or None if not present
     #[must_use]
     pub fn name_only_comment(&self, read_comment_insert_char: u8) -> Option<&[u8]> {
@@ -1360,7 +1359,7 @@ impl FastQBlocksCombined {
 
     /// Apply a function in place to all reads in a segment
     /// with optional condition filter
-    /// using raw FastQRead
+    /// using raw `FastQRead`
     pub fn apply_in_place(
         &mut self,
         segment: SegmentIndex,
@@ -1434,7 +1433,7 @@ impl FastQBlocksCombined {
 
     /// Apply a boolean filter (vec) to all segments and tags
     pub fn apply_bool_filter(&mut self, keep: &[bool]) {
-        let should: usize = keep.iter().map(|x| *x as usize).sum();
+        let should: usize = keep.iter().map(|x| usize::from(*x)).sum();
         for segment_block in &mut self.segments {
             let mut iter = keep.iter();
             segment_block.entries.retain(|_| {

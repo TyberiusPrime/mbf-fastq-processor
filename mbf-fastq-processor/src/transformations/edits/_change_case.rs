@@ -6,16 +6,13 @@ use crate::dna::TagValue;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[tpd]
+#[derive(Default)]
 pub enum CaseType {
+    #[default]
     Lower,
     Upper,
 }
 
-impl Default for CaseType {
-    fn default() -> Self {
-        CaseType::Lower
-    }
-}
 
 #[derive(Clone, JsonSchema)]
 #[tpd]

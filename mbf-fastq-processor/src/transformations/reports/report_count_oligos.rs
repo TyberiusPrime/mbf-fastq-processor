@@ -139,7 +139,7 @@ impl Step for Box<_ReportCountOligos> {
                                 counts.get(tag).expect("tag must exist in counts")[ii].into(),
                             );
                         }
-                        contents.insert(name.to_string(), local.into());
+                        contents.insert(name.clone(), local.into());
                     }
                 }
             }

@@ -1,5 +1,4 @@
 use crate::config::SegmentIndex;
-use anyhow::Result;
 use bio::alignment::{
     AlignmentOperation,
     pairwise::{Aligner, MIN_SCORE, Scoring},

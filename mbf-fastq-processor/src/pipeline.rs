@@ -919,7 +919,7 @@ fn collect_thread_failures(
     for p in threads {
         if let Err(e) = p.join() {
             let err_msg = if let Some(e) = e.downcast_ref::<String>() {
-                e.to_string()
+                e.clone()
             } else if let Some(e) = e.downcast_ref::<&str>() {
                 (*e).to_string()
             } else {

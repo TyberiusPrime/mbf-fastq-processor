@@ -42,7 +42,7 @@ impl OutputRunMarker {
             .open(&path)
             .map_err(|e| {
                 if e.kind() == std::io::ErrorKind::NotFound {
-                    let parent_dir = path.parent().unwrap_or_else(|| output_directory);
+                    let parent_dir = path.parent().unwrap_or(output_directory);
                     anyhow!("Output directory does not exist: {}", parent_dir.display())
                 } else {
                     e.into()
@@ -201,16 +201,14 @@ impl OutputFile<'_> {
             if self.config.fragments_written_in_chunk >= chunk_size {
                 self.rotate_chunk()?;
             }
-        } else {
-            if buffer.len() > buffer_size {
-                match &mut self.handle {
-                    OutputFileHandle::Fastq(writer) | OutputFileHandle::Fasta(writer) => {
-                        writer.write_all(buffer)?;
-                    }
-                    _ => unreachable!("Text block writer expected"),
+        } else if buffer.len() > buffer_size {
+            match &mut self.handle {
+                OutputFileHandle::Fastq(writer) | OutputFileHandle::Fasta(writer) => {
+                    writer.write_all(buffer)?;
                 }
-                buffer.clear();
+                _ => unreachable!("Text block writer expected"),
             }
+            buffer.clear();
         }
         Ok(())
     }
@@ -341,7 +339,7 @@ impl OutputFileConfig {
             FileFormat::Fastq | FileFormat::Fasta => {}
             FileFormat::Bam => anyhow::bail!("BAM output is not supported on stdout"),
             FileFormat::None => unreachable!("Cannot emit 'none' format to stdout"),
-        };
+        }
         Ok(Self {
             directory: PathBuf::new(),
             basename: "stdout".to_string(),
@@ -361,7 +359,7 @@ impl OutputFileConfig {
     }
 
     fn to_writer<'a>(self) -> Result<OutputFile<'a>> {
-        let handle = ex::fs::File::create(&self.filename()).with_context(|| {
+        let handle = ex::fs::File::create(self.filename()).with_context(|| {
             format!(
                 "Could not open file for output: {}",
                 self.filename().display()
@@ -394,7 +392,7 @@ impl OutputFileConfig {
             if !name.is_empty() {
                 name.push('.');
             }
-            name.push_str(&suffix);
+            name.push_str(suffix);
         }
         directory.join(name)
     }
@@ -404,7 +402,7 @@ impl OutputFileConfig {
         allow_overwrite: bool,
         chunk_size: Option<usize>,
     ) -> Result<()> {
-        let metadata = ensure_output_destination_available(&filename, allow_overwrite)?;
+        let metadata = ensure_output_destination_available(filename, allow_overwrite)?;
         #[cfg(not(unix))]
         let _ = &metadata;
         #[cfg(unix)]
@@ -891,7 +889,7 @@ pub fn open_output_files(
                             Some(output_key),
                             allow_overwrite,
                         )?));
-                        seen.insert(output_key.to_string(), output.clone());
+                        seen.insert(output_key.clone(), output.clone());
                         res.insert(*tag, output);
                     }
                 }

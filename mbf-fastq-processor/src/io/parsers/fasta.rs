@@ -37,8 +37,7 @@ impl FastaParser {
             thread_count,
             index_gzip,
         } = decompression_options
-        {
-            if format == niffler::send::compression::Format::Gzip {
+            && format == niffler::send::compression::Format::Gzip {
                 let file = spawn_rapidgzip(
                     filename
                         .as_ref()
@@ -48,7 +47,6 @@ impl FastaParser {
                 )?;
                 reader = Box::new(file);
             }
-        }
 
         let buffered = BufReader::new(reader);
         let reader = fasta::Reader::from_bufread(buffered);

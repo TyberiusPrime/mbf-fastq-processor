@@ -50,7 +50,7 @@ impl VerifyIn<PartialConfig> for PartialOtherFileByName {
     {
         self.segment.validate_segment(parent);
         if let Some(filename) = self.filename.as_ref() {
-            if (filename.ends_with(".bam") || filename.ends_with(".sam")) {
+            if filename.ends_with(".bam") || filename.ends_with(".sam") {
                 if self.include_unmapped.is_missing() {
                     return Err(ValidationFailure::new(
                         "Missing include_unmapped",
@@ -122,7 +122,7 @@ impl Step for OtherFileByName {
     }
 
     #[allow(clippy::case_sensitive_file_extension_comparisons)] //sorry, but .BAM is wrong :).
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
+    fn validate_segments(&mut self, _input_def: &crate::config::Input) -> Result<()> {
         Ok(())
     }
 

@@ -268,7 +268,7 @@ fn expand_reports<F: FnMut(Transformation), G: FnMut(Transformation)>(
             reports::_ReportCountOligos::new(
                 *report_no,
                 count_oligos,
-                config.count_oligos_segment.clone(),
+                config.count_oligos_segment,
             ),
         )));
     }
@@ -837,7 +837,7 @@ impl Config {
             let tags_here: Vec<String> = if let Some(tag_names_and_types) =
                 t.uses_tags(&tags_available)
             {
-                for (tag_name, tag_types) in tag_names_and_types.iter() {
+                for (tag_name, tag_types) in &tag_names_and_types {
                     //no need to check if empty, empty will never be present
                     let entry = tags_available.get_mut(tag_name);
                     match entry {
@@ -866,12 +866,10 @@ impl Config {
                         .map(|(name, _)| name)
                         .collect()
                 }
+            } else if t.must_see_all_tags() {
+                tags_available.keys().cloned().collect()
             } else {
-                if t.must_see_all_tags() {
-                    tags_available.keys().cloned().collect()
-                } else {
-                    Vec::new()
-                }
+                Vec::new()
             };
 
             if let Some((tag_name, tag_type)) = t.declares_tag_type() {
@@ -1307,18 +1305,18 @@ pub struct Barcodes {
 }
 
 impl VerifyIn<PartialConfig> for PartialBarcodes {
-    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    fn verify(&mut self, _parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized,
     {
         self.barcode_to_name.verify_keys(|key| {
-            if !dna::all_iupac_or_underscore(key.as_bytes()) {
+            if dna::all_iupac_or_underscore(key.as_bytes()) {
+                Ok(())
+            } else {
                 Err(ValidationFailure::new(
                         "Invalid IUPAC (uppercase only)",
                         Some("See https://en.wikipedia.org/wiki/International_Union_of_Pure_and_Applied_Chemistry#Amino_acid_and_nucleotide_base_codes")
-                ))} else {
-                Ok(())
-            }
+                ))}
         });
         Ok(())
     }

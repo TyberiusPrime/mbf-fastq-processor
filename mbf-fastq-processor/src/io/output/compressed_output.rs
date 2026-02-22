@@ -419,9 +419,7 @@ impl<T: std::io::Write + Send + 'static> HashedAndCompressedWriterSingleCore<'_,
             }
         };
 
-        if failure.is_some() {
-            panic!("failure testing only implementd for multi core variant")
-        }
+        assert!(failure.is_none(), "failure testing only implementd for multi core variant");
         // let compressed = match failure {
         //     Some(failure_cfg) => Compressed::FailForTest(failure_cfg.into_writer(base_writer)),
         //     None => Compressed::Normal(base_writer),

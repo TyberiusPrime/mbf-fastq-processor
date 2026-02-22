@@ -357,7 +357,7 @@ impl<T: Into<serde_json::Value> + Clone> PerReadReportData<T> {
     pub fn store(&self, key: &str, target: &mut serde_json::Map<String, serde_json::Value>) {
         for (name, data) in &self.segments {
             let entry = target
-                .entry(name.to_string())
+                .entry(name.clone())
                 .or_insert(serde_json::Value::Object(serde_json::Map::new()));
             entry
                 .as_object_mut()

@@ -1,8 +1,7 @@
-use anyhow::{Context, Result, bail};
 use schemars::JsonSchema;
 use toml_pretty_deser::{prelude::*, suggest_alternatives};
 
-use crate::config::{Config, PartialConfig};
+use crate::config::PartialConfig;
 
 // #[derive(Clone, Eq, PartialEq, JsonSchema)]
 // #[tpd]
@@ -399,22 +398,20 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceNoAll>> {
                                 )),
                             ))
                         }
+                    } else if let Some(segment_index) = input_def
+                        .get_segment_order()
+                        .iter()
+                        .position(|x| x == source)
+                    {
+                        Ok(ResolvedSourceNoAll::Segment(SegmentIndex(segment_index)))
                     } else {
-                        if let Some(segment_index) = input_def
-                            .get_segment_order()
-                            .iter()
-                            .position(|x| x == source)
-                        {
-                            Ok(ResolvedSourceNoAll::Segment(SegmentIndex(segment_index)))
-                        } else {
-                            Err(ValidationFailure::new(
-                                "Segment not found".to_string(),
-                                Some(format!(
-                                    "Available segments: [{}]",
-                                    segment_order.join(", ")
-                                )),
-                            ))
-                        }
+                        Err(ValidationFailure::new(
+                            "Segment not found".to_string(),
+                            Some(format!(
+                                "Available segments: [{}]",
+                                segment_order.join(", ")
+                            )),
+                        ))
                     };
                     match resolved {
                         Ok(resolved) => {
@@ -442,6 +439,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceNoAll>> {
 
 impl ResolvedSourceNoAll {
     //that's the ones we're going to use
+    #[must_use] 
     pub fn get_tags(&self) -> Option<Vec<(String, &[crate::transformations::TagValueType])>> {
         match &self {
             ResolvedSourceNoAll::Tag(tag_name) => Some(vec![(
@@ -496,7 +494,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceAll>> {
                                 "Must not be empty",
                                 Some("Please provide a segment name after 'name:'."),
                             ))
-                        } else if trimmed.to_ascii_lowercase() == "all" {
+                        } else if trimmed.eq_ignore_ascii_case("all") {
                             Ok(ResolvedSourceAll::Name {
                                 segment_index_or_all: SegmentIndexOrAll::All,
                                 split_character: *input_options
@@ -525,26 +523,24 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceAll>> {
                                 )),
                             ))
                         }
-                    } else if source.to_ascii_lowercase() == "all" {
+                    } else if source.eq_ignore_ascii_case("all") {
                         Ok(ResolvedSourceAll::Segment(SegmentIndexOrAll::All))
+                    } else if let Some(segment_index) = input_def
+                        .get_segment_order()
+                        .iter()
+                        .position(|x| x == source)
+                    {
+                        Ok(ResolvedSourceAll::Segment(SegmentIndexOrAll::Indexed(
+                            segment_index,
+                        )))
                     } else {
-                        if let Some(segment_index) = input_def
-                            .get_segment_order()
-                            .iter()
-                            .position(|x| x == source)
-                        {
-                            Ok(ResolvedSourceAll::Segment(SegmentIndexOrAll::Indexed(
-                                segment_index,
-                            )))
-                        } else {
-                            Err(ValidationFailure::new(
-                                "Segment not found".to_string(),
-                                Some(format!(
-                                    "Available segments: [{}]",
-                                    segment_order.join(", ")
-                                )),
-                            ))
-                        }
+                        Err(ValidationFailure::new(
+                            "Segment not found".to_string(),
+                            Some(format!(
+                                "Available segments: [{}]",
+                                segment_order.join(", ")
+                            )),
+                        ))
                     };
                     match resolved {
                         Ok(resolved) => {
@@ -601,6 +597,7 @@ impl ResolvedSourceAll {
     // }
 
     //that's the ones we're going to use
+    #[must_use] 
     pub fn get_tags(&self) -> Option<Vec<(String, &[crate::transformations::TagValueType])>> {
         match &self {
             ResolvedSourceAll::Tag(tag_name) => Some(vec![(

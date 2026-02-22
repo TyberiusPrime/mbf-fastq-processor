@@ -212,13 +212,13 @@ fn calc_run_length(
         if *base == query {
             matches += 1;
             consecutive_mismatch_counter = 0;
-            let local_rate = mismatches as f64 / (matches + mismatches) as f64;
+            let local_rate = f64::from(mismatches) / f64::from(matches + mismatches);
             if seq.len() - ii >= min_length && local_rate <= max_mismatch_fraction {
                 last_base_pos = Some(ii);
             }
         } else {
             mismatches += 1;
-            if mismatches as f64 / seq_len > max_mismatch_fraction {
+            if f64::from(mismatches) / seq_len > max_mismatch_fraction {
                 //dbg!("do break - mismatch rate");
                 break;
             }

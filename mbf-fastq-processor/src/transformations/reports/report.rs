@@ -1,7 +1,6 @@
 use crate::transformations::prelude::*;
 
 use super::super::validate_dna;
-use super::common::default_true;
 use std::collections::HashSet;
 
 use super::super::tag::default_segment_all;
@@ -39,15 +38,15 @@ pub struct Report {
 }
 
 impl VerifyIn<PartialConfig> for PartialReport {
-    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    fn verify(&mut self, _parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {
         self.name.verify(|name: &String| {
-            if !name.is_empty() {
-                Ok(())
-            } else {
+            if name.is_empty() {
                 Err(ValidationFailure::new("Name must not be empty", None))
+            } else {
+                Ok(())
             }
         });
         self.count.or(true);

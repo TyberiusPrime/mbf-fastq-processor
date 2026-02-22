@@ -71,7 +71,7 @@ impl HistogramData {
 impl From<HistogramData> for serde_json::Value {
     fn from(value: HistogramData) -> Self {
         match value {
-            HistogramData::String(map) => map.iter().map(|(k, v)| (k.to_string(), *v)).collect(),
+            HistogramData::String(map) => map.iter().map(|(k, v)| (k.clone(), *v)).collect(),
             //json only does string keys
             HistogramData::Numeric(map) => map.iter().map(|(k, v)| (k.to_string(), *v)).collect(),
 
@@ -127,7 +127,7 @@ impl Step for Box<_ReportTagHistogram> {
             return None;
         }
         Some(vec![(
-            self.tag_name.to_string(),
+            self.tag_name.clone(),
             &[
                 TagValueType::String,
                 TagValueType::Bool,
@@ -212,7 +212,7 @@ impl Step for Box<_ReportTagHistogram> {
         let data = self.data.lock().expect("Lock poisoned");
         let mut contents = serde_json::Map::new();
         let mut histogram_contents = serde_json::Map::new();
-        let histogram_key = self.tag_name.to_string();
+        let histogram_key = self.tag_name.clone();
 
         match demultiplex_info {
             OptDemultiplex::No => {

@@ -26,6 +26,7 @@ pub enum DecompressionOptions {
 
 impl InputFile {
     #[mutants::skip] // will just fall back to default decompression options, which obvs. works
+    #[must_use] 
     pub fn get_filename(&self) -> Option<&PathBuf> {
         match self {
             InputFile::Fastq(_, filename) | InputFile::Fasta(_, filename) => filename.as_ref(),
@@ -159,8 +160,8 @@ pub fn detect_input_format(path: &Path) -> Result<(DetectedInputFormat, Compress
     };
     if bytes_read >= 1 {
         match buf[0] {
-            b'>' => return Ok((DetectedInputFormat::Fasta, compression_format)),
-            b'@' => return Ok((DetectedInputFormat::Fastq, compression_format)),
+            b'>' => Ok((DetectedInputFormat::Fasta, compression_format)),
+            b'@' => Ok((DetectedInputFormat::Fastq, compression_format)),
             _ => {
                 bail!(
                     "Could not detect input format for {path}. Expected FASTA, FASTQ, or BAM.",
@@ -171,7 +172,7 @@ pub fn detect_input_format(path: &Path) -> Result<(DetectedInputFormat, Compress
     } else {
         // an empty file. We just treat it as no reads fastq and let the downstream handle
         // 0 reads gracefully
-        return Ok((DetectedInputFormat::Fastq, compression_format));
+        Ok((DetectedInputFormat::Fastq, compression_format))
     }
 }
 

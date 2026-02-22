@@ -635,12 +635,11 @@ fn find_single_valid_toml() -> Result<PathBuf> {
                 bail!(
                     "TOML file(s) found in current directory, but none were valid TOML configuration files.\n A valid configuration must contain both [input] and [output] sections."
                 );
-            } else {
-                bail!(
-                    "No TOML file found in current directory by auto-detection.\n\
-                     Add one to the current directory or specify a configuration file explicitly."
-                );
             }
+            bail!(
+                "No TOML file found in current directory by auto-detection.\n\
+                 Add one to the current directory or specify a configuration file explicitly."
+            );
         }
         1 => {
             let path = valid_tomls

@@ -8,8 +8,7 @@ use crate::{
 };
 
 use super::{
-    apply_in_place_wrapped_with_tag, default_comment_separator, default_region_separator,
-    default_segment_all, format_numeric_for_comment, store_tag_in_comment,
+    apply_in_place_wrapped_with_tag, default_comment_separator, default_region_separator, format_numeric_for_comment, store_tag_in_comment,
 };
 
 /// Store currently present tags as comments on read names.
@@ -53,7 +52,7 @@ pub struct StoreTagInComment {
 }
 
 impl VerifyIn<PartialConfig> for PartialStoreTagInComment {
-    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    fn verify(&mut self, _parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {
@@ -90,7 +89,7 @@ impl Step for StoreTagInComment {
                         //actually, the only time this will happen is in a report only run.
                         //and if the user requests it (maybe commented out the output?)
                         //who are we to complain
-                        vec![name.to_string()]
+                        vec![name.clone()]
                         //todo: Think hard and long if this is the right behaviour
                     }
                 };

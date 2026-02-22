@@ -18,7 +18,7 @@ pub struct Sample {
 }
 
 impl VerifyIn<PartialConfig> for PartialSample {
-    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    fn verify(&mut self, _parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {
@@ -72,7 +72,7 @@ impl Step for Sample {
             .expect("rng must be initialized before process()");
 
         let keep = (0..block.segments[0].entries.len())
-            .map(|_| rng.random_bool(f64::from(self.p)))
+            .map(|_| rng.random_bool(self.p))
             .collect::<Vec<_>>();
         block.apply_bool_filter(&keep);
         Ok((block, true))

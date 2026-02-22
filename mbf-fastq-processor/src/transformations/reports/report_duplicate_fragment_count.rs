@@ -180,7 +180,7 @@ impl Step for Box<_ReportDuplicateFragmentCount> {
                                 .duplicate_count
                                 .into(),
                         );
-                        contents.insert(name.to_string(), local.into());
+                        contents.insert(name.clone(), local.into());
                     }
                 }
             }

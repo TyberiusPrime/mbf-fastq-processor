@@ -189,7 +189,7 @@ impl Step for Box<_ReportDuplicateCount> {
                             .get(tag)
                             .expect("tag must exist in data_per_read")
                             .store("duplicate_count", &mut local);
-                        contents.insert(name.to_string(), local.into());
+                        contents.insert(name.clone(), local.into());
                     }
                 }
             }

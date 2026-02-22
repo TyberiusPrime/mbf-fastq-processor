@@ -77,12 +77,10 @@ impl VerifyIn<PartialConfig> for PartialConcatTags {
                     label.state = TomlValueState::ValidationFailed {
                         message: "Must not be empty".to_string(),
                     };
-                } else {
-                    if !seen.insert(lv) {
-                        label.state = TomlValueState::ValidationFailed {
-                            message: format!("Duplicate input label"),
-                        };
-                    }
+                } else if !seen.insert(lv) {
+                    label.state = TomlValueState::ValidationFailed {
+                        message: "Duplicate input label".to_string(),
+                    };
                 }
             }
             Ok(())

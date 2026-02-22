@@ -13,7 +13,7 @@ use std::path::Path;
 use anyhow::{Result, bail};
 
 use crate::{
-    config::{self, ResolvedSourceAll, ResolvedSourceNoAll, SegmentIndex, SegmentIndexOrAll},
+    config::{ResolvedSourceNoAll, SegmentIndex},
     demultiplex::{DemultiplexBarcodes, OptDemultiplex},
     dna::TagValue,
     io,
