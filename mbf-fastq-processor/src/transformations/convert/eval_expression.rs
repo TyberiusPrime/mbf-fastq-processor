@@ -98,6 +98,7 @@ impl VerifyIn<PartialConfig> for PartialEvalExpression {
                     .collect(),
             );
         }
+        self.next_index = Some(std::sync::atomic::AtomicU64::new(0));
 
         Ok(())
     }

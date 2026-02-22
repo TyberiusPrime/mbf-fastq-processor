@@ -5,9 +5,6 @@ use crate::transformations::prelude::*;
 
 use super::extract_numeric_tags_plus_all;
 
-const fn default_relative() -> bool {
-    true
-}
 
 /// Quantify base occurrence rate or count
 #[derive(Clone, JsonSchema)]

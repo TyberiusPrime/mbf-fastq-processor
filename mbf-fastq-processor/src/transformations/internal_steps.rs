@@ -9,6 +9,7 @@ use std::thread;
 #[derive(Clone, JsonSchema)]
 #[tpd]
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct _InternalDelay {
     ignored: Option<u8>, //tpd does not like empty structs
 }

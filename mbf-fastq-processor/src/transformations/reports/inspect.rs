@@ -5,13 +5,6 @@ use std::io::Write;
 
 pub type NameSeqQualTuple = (Vec<u8>, Vec<u8>, Vec<u8>, DemultiplexTag);
 
-struct ExFileDebug(ex::fs::File);
-
-impl std::fmt::Debug for ExFileDebug {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "ex::fs::File(...)")
-    }
-}
 
 struct DebugFile(ex::fs::File);
 
