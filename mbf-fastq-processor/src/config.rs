@@ -106,7 +106,12 @@ pub struct Config {
     pub input: Input,
     #[tpd(nested)]
     pub output: Option<Output>,
-    //
+
+    //barcodes must happen before transforms
+    #[schemars(with = "BTreeMap<String, Barcodes>")]
+    #[tpd(nested)]
+    pub barcodes: Option<IndexMap<String, Barcodes>>,
+    
     #[tpd(alias = "step")]
     #[tpd(nested)]
     pub transform: Option<Vec<Transformation>>,
@@ -114,9 +119,6 @@ pub struct Config {
     #[tpd(nested)]
     pub options: Options,
 
-    #[schemars(with = "BTreeMap<String, Barcodes>")]
-    #[tpd(nested)]
-    pub barcodes: Option<IndexMap<String, Barcodes>>,
     #[tpd(nested)]
     pub benchmark: Option<Benchmark>,
 }
