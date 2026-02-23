@@ -1,1 +1,13 @@
-'bases_to_ignore' cannot be used when relative = false. Either set relative = true or remove the bases_to_ignore parameter.
+   ╭─config.toml
+   ┆
+ 7 │ [[step]]
+ 8 │ action = "CalcBaseContent"
+   ┆          ────────┬────────
+   ┆                  │
+   ┆                  ╰───────── Involving this enum variant.
+10 │ bases_to_ignore = "N"
+   ┆                   ─┬─
+   ┆                    │
+   ┆                    ╰── Bases can only be ignored in relative=true mode
+───╯
+Hint: Either set relative=false or remove the bases_to_ignore field

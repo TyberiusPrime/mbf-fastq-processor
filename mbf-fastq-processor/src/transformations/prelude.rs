@@ -30,5 +30,7 @@ pub(crate) const ANY_TAG_TYPE: &[TagValueType] = &[
     TagValueType::Location,
 ];
 
+pub use crate::config::deser::TagLabel;
+
 pub use indexmap::IndexMap;
 pub use toml_pretty_deser::prelude::*;

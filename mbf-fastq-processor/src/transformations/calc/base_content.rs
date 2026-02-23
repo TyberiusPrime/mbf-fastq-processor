@@ -63,6 +63,25 @@ impl VerifyIn<PartialConfig> for PartialBaseContent {
 
             Ok(())
         });
+        self.bases_to_ignore.verify(|v| {
+            if !self.relative.as_ref().map(|x| *x).unwrap_or(false) {
+                return Err(ValidationFailure::new(
+                    "Bases can only be ignored in relative=true mode",
+                    Some("Either set relative=false or remove the bases_to_ignore field"),
+                ));
+            }
+            for letter in v.iter() {
+                if !letter.is_ascii_alphabetic() {
+                    return Err(ValidationFailure::new(
+                        "Only ASCII letters are allowed as bases".to_string(),
+                        Some(format!("Invalid character: '{}'", *letter as char)),
+                    ));
+                }
+
+            }
+
+            Ok(())
+        });
 
         if let Some(bases_to_count) = self.bases_to_count.as_ref() {
             self.bases_to_count_lookup = Some(build_lookup(bases_to_count));

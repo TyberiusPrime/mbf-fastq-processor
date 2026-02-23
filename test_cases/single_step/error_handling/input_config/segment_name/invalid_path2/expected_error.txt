@@ -1,1 +1,1 @@
-Invalid segment label 'sh\u': Segment label must contain only letters, numbers, and underscores (^[a-zA-Z0-9_]+$), found '\' at position 2
+int: Segment label must contain only letters, numbers, and underscores (^[a-zA-Z0-9_]+$), found '\' at position 2

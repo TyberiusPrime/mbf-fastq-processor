@@ -1,1 +1,13 @@
-Max mismatches must be <= min length
+  ╭─config.toml
+   ┆
+ 7 │ [[step]]
+ 8 │ action = "ExtractIUPACSuffix"
+   ┆          ──────────┬─────────
+   ┆                    │
+   ┆                    ╰────────── Involving this enum variant.
+11 │ out_label = "..."
+   ┆             ──┬──
+   ┆               │
+   ┆               ╰─── Invalid label
+───╯
+Hint: Tag label must start with a letter or underscore (a-zA-Z_), got '.'

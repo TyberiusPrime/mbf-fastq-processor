@@ -17,7 +17,7 @@ pub struct IUPACSuffix {
     #[tpd(adapt_in_verify(String))]
     segment: SegmentIndex,
 
-    pub out_label: String,
+    pub out_label: TagLabel,
     pub min_length: usize,
     pub max_mismatches: usize,
     #[tpd(with = "tpd_adapt_dna_bstring")]
@@ -43,6 +43,7 @@ impl VerifyIn<PartialConfig> for PartialIUPACSuffix {
                 Ok(())
             }
         });
+        let ml_span = self.min_length.span();
         self.min_length.verify(|v| {
             if *v == 0 {
                 Err(ValidationFailure::new(
@@ -50,6 +51,22 @@ impl VerifyIn<PartialConfig> for PartialIUPACSuffix {
                     Some("Set to a positive integer."),
                 ))
             } else {
+                if let Some(search) = self.search.as_ref()
+                    && *v > search.len()
+                {
+                    let spans = vec![
+                        (
+                            ml_span,
+                            "Too large, can not be longer than the search pattern".to_string(),
+                        ),
+                        (self.search.span(), "or this too short?".to_string()),
+                    ];
+                    self.search.state = TomlValueState::Custom { spans };
+                    self.search.help = Some(
+                        "min_length cannot be greater than the length of the search pattern"
+                            .to_string(),
+                    );
+                }
                 Ok(())
             }
         });
@@ -81,7 +98,7 @@ impl IUPACSuffix {
 impl Step for IUPACSuffix {
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((
-            self.out_label.clone(),
+            self.out_label.0.clone(),
             crate::transformations::TagValueType::Location,
         ))
     }
@@ -93,7 +110,7 @@ impl Step for IUPACSuffix {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        extract_region_tags(&mut block, self.segment, &self.out_label, |read| {
+        extract_region_tags(&mut block, self.segment, &self.out_label.0, |read| {
             let seq = read.seq();
 
             //cheap empty range if read length too short no need for explicit check
