@@ -34,11 +34,11 @@ pub struct OtherFileByName {
     #[tpd(with = "tpd_adapt_u8_from_byte_or_char")]
     pub reference_readname_end_char: Option<u8>,
 
-    #[tpd(skip)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
+    #[tpd(skip, default)]
     #[schemars(skip)]
     pub filter: Option<Arc<ApproxOrExactFilter>>,
 
-    #[tpd(skip)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
+    #[tpd(skip, default)]
     #[schemars(skip)]
     pub progress_output: Option<crate::transformations::reports::Progress>,
 }

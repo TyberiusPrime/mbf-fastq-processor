@@ -6,7 +6,6 @@ use crate::{
 
 use std::collections::BTreeMap;
 
-
 use super::super::tag::default_region_separator;
 
 type QuantifyTagCollector = Arc<Mutex<DemultiplexedData<BTreeMap<Vec<u8>, usize>>>>;
@@ -23,13 +22,13 @@ pub struct QuantifyTag {
     #[tpd(with = "tpd_adapt_bstring")]
     region_separator: BString,
 
-    #[tpd(skip)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
+    #[tpd(skip, default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[schemars(skip)]
-    pub collector: QuantifyTagCollector,
+    pub collector: Option<QuantifyTagCollector>,
 
-    #[tpd(skip)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
+    #[tpd(skip, default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[schemars(skip)]
-    pub output_streams: Arc<Mutex<DemultiplexedOutputFiles>>,
+    pub output_streams: Option<Arc<Mutex<DemultiplexedOutputFiles>>>,
 }
 
 impl VerifyIn<PartialConfig> for PartialQuantifyTag {
@@ -66,11 +65,12 @@ impl Step for QuantifyTag {
         demultiplex_info: &OptDemultiplex,
         allow_overwrite: bool,
     ) -> Result<Option<DemultiplexBarcodes>> {
-        let mut collector = self.collector.lock().expect("Lock poisoned");
+        let mut collector = DemultiplexedData::new();
         for tag in demultiplex_info.iter_tags() {
             collector.insert(tag, BTreeMap::new());
         }
-        self.output_streams = Arc::new(Mutex::new(demultiplex_info.open_output_streams(
+        self.collector = Some(Arc::new(Mutex::new(collector)));
+        self.output_streams = Some(Arc::new(Mutex::new(demultiplex_info.open_output_streams(
             output_directory,
             output_prefix,
             &self.infix,
@@ -81,7 +81,7 @@ impl Step for QuantifyTag {
             false,
             false,
             allow_overwrite,
-        )?));
+        )?)));
 
         Ok(None)
     }
@@ -93,7 +93,12 @@ impl Step for QuantifyTag {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let mut collector = self.collector.lock().expect("Lock poisoned");
+        let mut collector = self
+            .collector
+            .as_ref()
+            .expect("collector should have been set in init")
+            .lock()
+            .expect("Lock poisoned");
         let hits = block
             .tags
             .get(&self.in_label)
@@ -125,8 +130,19 @@ impl Step for QuantifyTag {
 
     fn finalize(&self, _demultiplex_info: &OptDemultiplex) -> Result<Option<FinalizeReportResult>> {
         use std::io::Write;
-        let collector = self.collector.lock().expect("Lock poisoned");
-        let output_streams = self.output_streams.lock().expect("Lock poisoned").take();
+        let collector = self
+            .collector
+            .as_ref()
+            .expect("collector should have been set in init")
+            .lock()
+            .expect("Lock poisoned");
+        let output_streams = self
+            .output_streams
+            .as_ref()
+            .expect("output streams should have been set in init")
+            .lock()
+            .expect("Lock poisoned")
+            .take();
         for (tag, stream) in output_streams {
             if let Some(mut stream) = stream {
                 let mut str_collector: Vec<(String, usize)> = collector

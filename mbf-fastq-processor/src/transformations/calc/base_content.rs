@@ -5,7 +5,6 @@ use crate::transformations::prelude::*;
 
 use super::extract_numeric_tags_plus_all;
 
-
 /// Quantify base occurrence rate or count
 #[derive(Clone, JsonSchema)]
 #[tpd]
@@ -36,16 +35,14 @@ pub struct BaseContent {
     bases_to_ignore_lookup: Vec<bool>,
 }
 
-impl PartialBaseContent {
-    fn build_lookup(bases: &BString) -> Vec<bool> {
-        let mut lookup = vec![false; 256];
+fn build_lookup(bases: &BString) -> Vec<bool> {
+    let mut lookup = vec![false; 256];
 
-        for ch in bases.as_slice() {
-            let idx = *ch as usize;
-            lookup[idx] = true;
-        }
-        lookup
+    for ch in bases.as_slice() {
+        let idx = *ch as usize;
+        lookup[idx] = true;
     }
+    lookup
 }
 
 impl VerifyIn<PartialConfig> for PartialBaseContent {
@@ -68,16 +65,37 @@ impl VerifyIn<PartialConfig> for PartialBaseContent {
         });
 
         if let Some(bases_to_count) = self.bases_to_count.as_ref() {
-            self.bases_to_count_lookup = Some(Self::build_lookup(bases_to_count));
+            self.bases_to_count_lookup = Some(build_lookup(bases_to_count));
         }
         if let Some(bases_to_ignore) = self.bases_to_ignore.as_ref() {
-            self.bases_to_ignore_lookup = Some(Self::build_lookup(bases_to_ignore));
+            self.bases_to_ignore_lookup = Some(build_lookup(bases_to_ignore));
         }
         Ok(())
     }
 }
 
 impl BaseContent {
+    fn new(
+        out_label: String,
+        segment: SegmentIndexOrAll,
+        relative: bool,
+        bases_to_count: BString,
+        bases_to_ignore: BString,
+    ) -> Self {
+        let bases_to_count_lookup = build_lookup(&bases_to_count);
+        let bases_to_ignore_lookup = build_lookup(&bases_to_ignore);
+
+        Self {
+            out_label,
+            segment,
+            relative,
+            bases_to_count,
+            bases_to_ignore,
+            bases_to_count_lookup,
+            bases_to_ignore_lookup,
+        }
+    }
+
     fn sequence_totals(
         sequence: &[u8],
         bases_to_count: &[bool],
@@ -124,15 +142,13 @@ impl BaseContent {
     }
 
     pub(crate) fn for_n_count(out_label: String, segment: SegmentIndexOrAll) -> Self {
-        Self {
+        Self::new(
             out_label,
             segment,
-            relative: false,
-            bases_to_count: BString::from("N"),
-            bases_to_ignore: BString::default(),
-            bases_to_count_lookup: Vec::new(),
-            bases_to_ignore_lookup: Vec::new(),
-        }
+            false,
+            BString::from("N"),
+            BString::default(),
+        )
     }
 }
 

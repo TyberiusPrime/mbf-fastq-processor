@@ -36,7 +36,7 @@ use super::{
 #[derive(Debug)]
 pub struct StoreTagInComment {
     in_label: String,
-    #[tpd(adapt_in_verify)]
+    #[tpd(adapt_in_verify(String))]
     #[schemars(with = "String")]
     segment: SegmentIndexOrAll,
 
@@ -52,10 +52,11 @@ pub struct StoreTagInComment {
 }
 
 impl VerifyIn<PartialConfig> for PartialStoreTagInComment {
-    fn verify(&mut self, _parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {
+        self.segment.validate_segment(parent);
         self.comment_separator.or_with(default_comment_separator);
         self.region_separator.or_with(default_region_separator);
         Ok(())

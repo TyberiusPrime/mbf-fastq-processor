@@ -7,9 +7,9 @@ use crate::transformations::prelude::*;
 #[derive(Debug)]
 pub struct Head {
     pub n: usize,
-    #[tpd(skip)]
+    #[tpd(skip, default)]
     #[schemars(skip)]
-    pub so_far: Arc<Mutex<DemultiplexedData<usize>>>,
+    pub so_far: Option<Arc<Mutex<DemultiplexedData<usize>>>>,
 }
 
 impl VerifyIn<PartialConfig> for PartialHead {}
@@ -28,10 +28,11 @@ impl Step for Head {
         demultiplex_info: &OptDemultiplex,
         _allow_overwrite: bool,
     ) -> Result<Option<DemultiplexBarcodes>> {
-        let mut so_far = self.so_far.lock().expect("lock poisoned");
+        let mut so_far = DemultiplexedData::new();
         for tag in demultiplex_info.iter_tags() {
             so_far.insert(tag, 0);
         }
+        self.so_far = Some(Arc::new(Mutex::new(so_far)));
         Ok(None)
     }
     #[mutants::skip] // stop doesn't change anything on the output, just performance
@@ -42,7 +43,11 @@ impl Step for Head {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let mut so_far = self.so_far.lock().expect("lock poisoned");
+        let mut so_far = self.so_far
+            .as_ref()
+            .expect("should have been set in init")
+
+            .lock().expect("lock poisoned");
         if so_far.len() == 1 {
             let so_far = so_far.get_mut(&0).expect("tag 0 must exist in so_far");
             if *so_far >= self.n {

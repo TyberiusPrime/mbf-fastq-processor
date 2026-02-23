@@ -25,10 +25,10 @@ pub struct HammingCorrect {
     /// What to do when no match is found
     pub on_no_match: OnNoMatch,
 
-    #[tpd(skip)] // eserde compatibility
+    #[tpd(skip)] 
     #[schemars(skip)]
     pub resolved_barcodes: Option<IndexMap<BString, String>>,
-    #[tpd(skip)] // eserde compatibility
+    #[tpd(skip)] 
     #[schemars(skip)]
     pub had_iupac: bool,
 }
@@ -128,6 +128,7 @@ impl Step for HammingCorrect {
         _demultiplex_info: &OptDemultiplex,
         _allow_overwrite: bool,
     ) -> Result<Option<DemultiplexBarcodes>> {
+        //todo: move to verifyin
         let barcodes_data = &input_info.barcodes_data;
         match barcodes_data.get(&self.barcodes) {
             Some(barcodes_section) => {

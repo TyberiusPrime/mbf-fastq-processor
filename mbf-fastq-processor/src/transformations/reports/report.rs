@@ -50,7 +50,7 @@ impl VerifyIn<PartialConfig> for PartialReport {
             }
         });
         self.count.or(true);
-        //self.count_oligos_segment = self.count_oligos_segment.or_default(default_segment_all());
+        self.count_oligos_segment.or(SegmentIndexOrAll::All);
         Ok(())
     }
 }

@@ -8,6 +8,7 @@ use crate::transformations::prelude::*;
 use super::super::{PartialRegionDefinition, RegionDefinition, extract_regions};
 use crate::dna::{Hit, HitRegion, TagValue};
 use bstr::ByteVec;
+use toml_pretty_deser::Visitor;
 
 /// Extract regions by coordinates
 /// that is by (segment|source, 0-based start, length)
@@ -26,7 +27,7 @@ pub struct Regions {
     #[schemars(with = "Option<String>")]
     #[serde(default)]
     pub region_separator: Option<BString>, */
-    #[tpd(skip)]
+    #[tpd(skip, default)]
     #[schemars(skip)]
     pub output_tag_type: OnceLock<TagValueType>,
 }
@@ -36,11 +37,17 @@ impl VerifyIn<PartialConfig> for PartialRegions {
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {
-        if let Some(regions) = self.regions.as_mut() {
+        if let Some(regions) = self.regions.value.as_mut() {
             for region in regions.iter_mut() {
-                if let Some(region) = region.as_mut() {
-                    region.source.validate_segment(parent);
+                if let Some(region_def) = region.value.as_mut() {
+                    region_def.source.validate_segment(parent);
+                    if region_def.can_concrete() {
+                        region.state = TomlValueState::Ok;
+                    }
                 }
+            }
+            if regions.iter().all(|x| x.is_ok()) {
+                self.regions.state = TomlValueState::Ok
             }
         }
         Ok(())

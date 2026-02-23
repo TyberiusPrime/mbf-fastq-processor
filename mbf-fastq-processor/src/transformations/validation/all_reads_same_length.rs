@@ -12,7 +12,11 @@ pub struct ValidateAllReadsSameLength {
     #[tpd(alias = "segment", adapt_in_verify(String))]
     source: ResolvedSourceAll,
 
+    #[schemars(skip)]
     #[tpd(skip)]
+    source_name: String,
+
+    #[tpd(skip, default)]
     #[schemars(skip)]
     expected_length: std::sync::OnceLock<usize>,
 }
@@ -23,6 +27,31 @@ impl VerifyIn<PartialConfig> for PartialValidateAllReadsSameLength {
         Self: Sized + toml_pretty_deser::Visitor,
     {
         self.source.validate_segment(parent);
+
+        if let Some(MustAdapt::PostVerify(source)) = self.source.as_ref()
+            && let Some(input_def) = parent.input.as_ref()
+        {
+            self.source_name = Some(source.get_name(input_def.get_segment_order()))
+        } else {
+            self.source_name = Some("".to_string()); // just supress the error message.
+        }
+
+        if self.source.is_missing() {
+            self.source.help = Some(format!(
+                "Please provide a source, that is a <segment name>, a <name:segment_name> or tag name. Available segments: {}",
+                toml_pretty_deser::format_quoted_list(
+                    &(parent
+                        .input
+                        .as_ref()
+                        .map(|input_def| input_def
+                            .get_segment_order()
+                            .iter()
+                            .map(|x| x.as_str()).collect())
+                        .unwrap_or_else(||vec![""]))
+                )
+            ));
+        }
+
         Ok(())
     }
 }
@@ -120,9 +149,9 @@ impl ValidateAllReadsSameLength {
             != length_here
         {
             bail!(
-                "ValidateAllReadsSameLength: Observed differing read lengths for source ({}, {}). Check your input FASTQ or remove the step if this is expected.",
+                "ValidateAllReadsSameLength: Observed differing read lengths for source '{}' ({}, {length_here}). Check your input FASTQ or remove the step if this is expected.",
+                &self.source_name,
                 self.expected_length.get().expect("just set above"),
-                length_here,
             );
         }
         Ok(())

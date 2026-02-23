@@ -41,7 +41,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, SegmentIndex>> {
             .expect("validate_segment called before input definition was read");
         let segment_order = input_def.get_segment_order();
         let span = self.span.clone();
-        if matches!(self.state, TomlValueState::NeedsFurtherValidation)
+        if self.is_needs_further_validation()
             && let Some(must_adapt) = self.value.as_ref()
         {
             match must_adapt {
@@ -92,7 +92,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, SegmentIndexOrAll>> {
             .expect("validate_segment called before input definition was read");
         let segment_order = input_def.get_segment_order();
         let span = self.span();
-        if let Some(must_adapt) = self.as_mut() {
+        if self.is_needs_further_validation() && let Some(must_adapt) = self.value.as_ref() {
             match must_adapt {
                 MustAdapt::PreVerify(str_segment) => {
                     if str_segment == "all" || str_segment == "All" {
@@ -238,7 +238,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, SegmentOrNameIndex>> {
             .expect("validate_segment called before input definition was read");
         let segment_order = input_def.get_segment_order();
         let span = self.span.clone();
-        if let Some(must_adapt) = self.as_mut() {
+        if self.is_needs_further_validation() && let Some(must_adapt) = self.value.as_ref() {
             match must_adapt {
                 MustAdapt::PreVerify(str_segment) => {
                     if let Some(query) = str_segment.strip_prefix("name:") {
@@ -357,7 +357,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceNoAll>> {
             .as_ref()
             .expect("Options should have been set at this point");
         let segment_order = input_def.get_segment_order();
-        if let Some(must_adapt) = self.as_mut() {
+        if self.is_needs_further_validation() && let Some(must_adapt) = self.value.as_ref() {
             match must_adapt {
                 MustAdapt::PreVerify(source) => {
                     let resolved = if let Some(tag_name) = source.strip_prefix("tag:") {
@@ -439,7 +439,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceNoAll>> {
 
 impl ResolvedSourceNoAll {
     //that's the ones we're going to use
-    #[must_use] 
+    #[must_use]
     pub fn get_tags(&self) -> Option<Vec<(String, &[crate::transformations::TagValueType])>> {
         match &self {
             ResolvedSourceNoAll::Tag(tag_name) => Some(vec![(
@@ -474,7 +474,9 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceAll>> {
             .as_ref()
             .expect("Options should have been set at this point");
         let segment_order = input_def.get_segment_order();
-        if let Some(must_adapt) = self.as_mut() {
+        if self.is_needs_further_validation()
+            && let Some(must_adapt) = self.value.as_mut()
+        {
             match must_adapt {
                 MustAdapt::PreVerify(source) => {
                     let resolved = if let Some(tag_name) = source.strip_prefix("tag:") {
@@ -562,11 +564,72 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceAll>> {
                 }
             }
             //no default for missing.
+        } else {
+            if self.is_missing() {
+                //if we have exactly one segment, and no tags,
+                //we default to the one and only segment.
+                //Todo: this is not fully implemented, we're not checking the tags,
+                //since we're not yet buildng them in verify
+                if let Some(input_def) = config.input.as_ref() {
+                    let segment_count = input_def.get_segment_order().len();
+                    if segment_count == 1 {
+                        // && input_def.tag_at_this_step().is_empty() {
+                        self.value = Some(MustAdapt::PostVerify(ResolvedSourceAll::Segment(
+                            SegmentIndexOrAll::Indexed(0),
+                        )));
+                    }
+                }
+            }
+            //still missing? error message
+            if self.is_missing() {
+                self.help = Some(format!(
+                    "Please provide a source, that is a <segment name>, a <name:segment_name> or tag name. Use 'all' to refer to all <segment_name>s. Available segments: {}",
+                    toml_pretty_deser::format_quoted_list(
+                        &(config
+                            .input
+                            .as_ref()
+                            .map(|input_def| input_def
+                                .get_segment_order()
+                                .iter()
+                                .map(|x| x.as_str())
+                                .collect())
+                            .unwrap_or_else(|| vec![""]))
+                    )
+                ));
+            }
         }
     }
 }
 
 impl ResolvedSourceAll {
+    pub fn get_name(&self, segment_order: &[String]) -> String {
+        match self {
+            ResolvedSourceAll::Segment(SegmentIndexOrAll::Indexed(idx)) => {
+                segment_order.get(*idx).cloned().unwrap_or_else(|| {
+                    panic!(
+                        "Segment index {idx} out of bounds for segment order: [{segment_order:?}]"
+                    )
+                })
+            }
+            ResolvedSourceAll::Segment(SegmentIndexOrAll::All) => "all".to_string(),
+            ResolvedSourceAll::Tag(name) => format!("tag:{name}"),
+            ResolvedSourceAll::Name {
+                segment_index_or_all,
+                ..
+            } => format!(
+                "name:{}",
+                match segment_index_or_all {
+                    SegmentIndexOrAll::Indexed(idx) => {
+                        segment_order.get(*idx).cloned().unwrap_or_else(|| {
+                        panic!("Segment index {idx} out of bounds for segment order: [{segment_order:?}]")
+                    })
+                    }
+                    SegmentIndexOrAll::All => "all".to_string(),
+                }
+            ),
+        }
+    }
+
     // pub fn parse(
     //     source: &str,
     //     input_def: &config::Input,
@@ -597,7 +660,7 @@ impl ResolvedSourceAll {
     // }
 
     //that's the ones we're going to use
-    #[must_use] 
+    #[must_use]
     pub fn get_tags(&self) -> Option<Vec<(String, &[crate::transformations::TagValueType])>> {
         match &self {
             ResolvedSourceAll::Tag(tag_name) => Some(vec![(
