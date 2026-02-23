@@ -53,7 +53,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, SegmentIndex>> {
                         }
                         None => TomlValue::new_validation_failed(
                             span,
-                            "Segment does not match input config".to_string(),
+                            "Segment not present in [input] section".to_string(),
                             Some(suggest_alternatives(str_segment, segment_order)),
                         ),
                     }
@@ -92,7 +92,9 @@ impl ValidateSegment for TomlValue<MustAdapt<String, SegmentIndexOrAll>> {
             .expect("validate_segment called before input definition was read");
         let segment_order = input_def.get_segment_order();
         let span = self.span();
-        if self.is_needs_further_validation() && let Some(must_adapt) = self.value.as_ref() {
+        if self.is_needs_further_validation()
+            && let Some(must_adapt) = self.value.as_ref()
+        {
             match must_adapt {
                 MustAdapt::PreVerify(str_segment) => {
                     if str_segment == "all" || str_segment == "All" {
@@ -109,7 +111,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, SegmentIndexOrAll>> {
                             ),
                             None => TomlValue::new_validation_failed(
                                 span,
-                                "Segment does not match input config".to_string(),
+                                "Segment not present in [input] section".to_string(),
                                 Some(suggest_alternatives(str_segment, segment_order)),
                             ),
                         }
@@ -238,7 +240,9 @@ impl ValidateSegment for TomlValue<MustAdapt<String, SegmentOrNameIndex>> {
             .expect("validate_segment called before input definition was read");
         let segment_order = input_def.get_segment_order();
         let span = self.span.clone();
-        if self.is_needs_further_validation() && let Some(must_adapt) = self.value.as_ref() {
+        if self.is_needs_further_validation()
+            && let Some(must_adapt) = self.value.as_ref()
+        {
             match must_adapt {
                 MustAdapt::PreVerify(str_segment) => {
                     if let Some(query) = str_segment.strip_prefix("name:") {
@@ -250,7 +254,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, SegmentOrNameIndex>> {
                             ),
                             None => TomlValue::new_validation_failed(
                                 span,
-                                "Segment does not match input config".to_string(),
+                                "Segment not present in [input] section".to_string(),
                                 Some(suggest_alternatives(str_segment, segment_order)),
                             ),
                         }
@@ -265,7 +269,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, SegmentOrNameIndex>> {
                             ),
                             None => TomlValue::new_validation_failed(
                                 span,
-                                "Segment does not match input config".to_string(),
+                                "Segment not present in [input] section".to_string(),
                                 Some(suggest_alternatives(str_segment, segment_order)),
                             ),
                         }
@@ -357,7 +361,9 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceNoAll>> {
             .as_ref()
             .expect("Options should have been set at this point");
         let segment_order = input_def.get_segment_order();
-        if self.is_needs_further_validation() && let Some(must_adapt) = self.value.as_ref() {
+        if self.is_needs_further_validation()
+            && let Some(must_adapt) = self.value.as_ref()
+        {
             match must_adapt {
                 MustAdapt::PreVerify(source) => {
                     let resolved = if let Some(tag_name) = source.strip_prefix("tag:") {

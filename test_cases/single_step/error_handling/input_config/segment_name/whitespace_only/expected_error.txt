@@ -1,1 +1,1 @@
-Invalid segment label '': Segment name may not be empty or just whitespace. Please provide a segment name containing only letters, numbers, and underscores.
+Segment label must start with a letter or underscore (^[a-zA-Z_]), got '	'

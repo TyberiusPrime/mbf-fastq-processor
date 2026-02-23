@@ -12,7 +12,7 @@ pub struct ReservoirSample {
     pub n: usize,
     pub seed: u64,
     //Todo: refactor these into one member 'runtime_data'
-    #[tpd(skip, default)] // 
+    #[tpd(skip, default)] //
     #[schemars(skip)]
     pub buffers: Option<Arc<Mutex<DemultiplexedData<Vec<FastQBlock>>>>>,
 
@@ -20,7 +20,7 @@ pub struct ReservoirSample {
     #[schemars(skip)]
     pub counts: Option<Arc<Mutex<DemultiplexedData<usize>>>>,
 
-    #[tpd(skip, default)] 
+    #[tpd(skip, default)]
     #[schemars(skip)]
     rng: Option<Arc<Mutex<Option<rand_chacha::ChaChaRng>>>>,
 }
@@ -60,9 +60,9 @@ impl Step for ReservoirSample {
     ) -> anyhow::Result<Option<DemultiplexBarcodes>> {
         use rand_chacha::rand_core::SeedableRng;
         let extended_seed = extend_seed(self.seed);
-        self.rng = Some(Arc::new(Mutex::new(Some(rand_chacha::ChaChaRng::from_seed(
-            extended_seed,
-        )))));
+        self.rng = Some(Arc::new(Mutex::new(Some(
+            rand_chacha::ChaChaRng::from_seed(extended_seed),
+        ))));
         self.buffers = Some(Arc::new(Mutex::new(DemultiplexedData::new())));
         self.counts = Some(Arc::new(Mutex::new(DemultiplexedData::new())));
         Ok(None)
@@ -82,10 +82,18 @@ impl Step for ReservoirSample {
             .expect("rng must be initialized before process()");
         let mut pseudo_iter = block.get_pseudo_iter_including_tag();
 
-        let mut buffer_lock = self.buffers.as_ref().expect("Counts not set in init?").lock();
+        let mut buffer_lock = self
+            .buffers
+            .as_ref()
+            .expect("Counts not set in init?")
+            .lock();
         let buffers = buffer_lock.as_mut().expect("buffers mutex poisoned");
 
-        let mut counts_lock = self.counts.as_ref().expect("Counts not set in init?").lock();
+        let mut counts_lock = self
+            .counts
+            .as_ref()
+            .expect("Counts not set in init?")
+            .lock();
         let counts = counts_lock.as_mut().expect("counts mutex poisoned");
 
         while let Some((molecule, demultiplex_tag)) = pseudo_iter.pseudo_next() {

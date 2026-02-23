@@ -1,1 +1,13 @@
-Swap requires both segment_a and segment_b to be specified, or both to be omitted for auto-detection with exactly 2 segments
+   ╭─config.toml
+   ┆
+ 8 │ [[step]]
+ 9 │ action = "Swap"
+   ┆          ───┬──
+   ┆             │
+   ┆             ╰─── Involving this enum variant.
+10 │ segment_a = "read1"
+   ┆                    ┬
+   ┆                    │
+   ┆                    ╰─ Insuffient swap definition
+───╯
+Hint: Please either specify both segment_a and segment_b, or omit both for auto-detection.

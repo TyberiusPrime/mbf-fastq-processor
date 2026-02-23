@@ -561,7 +561,7 @@ pub(crate) fn compare_files(expected: &Path, actual: &Path, input_dir: &Path) ->
     Ok(())
 }
 
-#[must_use] 
+#[must_use]
 pub fn normalize_report_content(content: &str, input_dir: Option<&Path>) -> String {
     let normalize_re = Regex::new(
         r#""(?P<key>version|program_version|cwd|working_directory|repository)"\s*:\s*"[^"]*""#,
@@ -597,7 +597,7 @@ pub fn normalize_report_content(content: &str, input_dir: Option<&Path>) -> Stri
     }
 }
 
-#[must_use] 
+#[must_use]
 pub fn normalize_progress_content(content: &str) -> String {
     let float_re = Regex::new(r"\d+[._0-9]*").expect("invalid float regex");
     let normalized = float_re.replace_all(content, "_IGNORED_").into_owned();
@@ -667,7 +667,7 @@ pub fn decompress_file(path: &Path) -> Result<Vec<u8>> {
     Ok(decompressed)
 }
 
-#[must_use] 
+#[must_use]
 pub fn calculate_size_difference_percent(len_a: u64, len_b: u64) -> f64 {
     if len_a > 0 {
         ((len_b as f64 - len_a as f64).abs() / len_a as f64) * 100.0

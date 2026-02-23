@@ -3,8 +3,8 @@
 use crate::config::deser::tpd_adapt_dna_bstring;
 use crate::transformations::prelude::*;
 
-use crate::dna::hamming;
 use crate::dna::Hits;
+use crate::dna::hamming;
 
 use super::extract_region_tags;
 

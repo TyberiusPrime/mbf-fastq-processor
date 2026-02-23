@@ -265,11 +265,7 @@ fn expand_reports<F: FnMut(Transformation), G: FnMut(Transformation)>(
 
     if let Some(count_oligos) = config.count_oligos.as_ref() {
         push_new(Transformation::_ReportCountOligos(Box::new(
-            reports::_ReportCountOligos::new(
-                *report_no,
-                count_oligos,
-                config.count_oligos_segment,
-            ),
+            reports::_ReportCountOligos::new(*report_no, count_oligos, config.count_oligos_segment),
         )));
     }
     if let Some(tag_histograms) = config.tag_histograms.as_ref() {

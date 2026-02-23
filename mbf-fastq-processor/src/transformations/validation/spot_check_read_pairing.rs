@@ -19,12 +19,20 @@ pub struct SpotCheckReadPairing {
     #[tpd(with = "tpd_adapt_u8_from_byte_or_char")]
     pub readname_end_char: Option<u8>,
 
-    #[tpd(skip)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[schemars(skip)]
+    #[tpd(skip, default)]
     processed_reads: std::sync::atomic::AtomicU64,
 }
 
-impl VerifyIn<PartialConfig> for PartialSpotCheckReadPairing {}
+impl VerifyIn<PartialConfig> for PartialSpotCheckReadPairing {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        self.sample_stride.or_with(default_sample_stride);
+        Ok(())
+    }
+}
 
 impl Default for SpotCheckReadPairing {
     fn default() -> Self {

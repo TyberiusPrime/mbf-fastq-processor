@@ -1,1 +1,11 @@
-Compression level 10 is invalid for gzip compression. Valid range is 0-9
+   ╭─config.toml
+   ┆
+12 │ [[step]]
+13 │ action = "Inspect"
+14 │ compression = "gzip"
+15 │ compression_level = 10
+   ┆                     ─┬
+   ┆                      │
+   ┆                      ╰─ Invalid Value
+───╯
+Hint: Valid range is 0-9 for gzip.

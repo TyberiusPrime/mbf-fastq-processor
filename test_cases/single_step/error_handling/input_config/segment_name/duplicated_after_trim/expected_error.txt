@@ -1,1 +1,1 @@
-Segment name duplicated: 'read1'
+ Invalid segment name

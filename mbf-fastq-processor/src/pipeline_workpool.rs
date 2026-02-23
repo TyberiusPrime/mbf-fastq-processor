@@ -548,7 +548,8 @@ fn process_work_item(
         if let Ok(ref result) = result {
             let len_after = result.0.len();
             if len_before != len_after {
-                assert!(stage.transformation.must_see_all_tags(), 
+                assert!(
+                    stage.transformation.must_see_all_tags(),
                     "A filtering stage forgot to declare must_all_tags=true: {}",
                     stage.transformation
                 );

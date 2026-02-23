@@ -1,1 +1,13 @@
-At least one region must be defined.
+Error 1/1
+   ╭─config.toml
+   ┆
+11 │ [[step]]
+12 │ action = "ExtractRegions"
+   ┆          ────────┬───────
+   ┆                  │
+   ┆                  ╰──────── Involving this enum variant.
+14 │ regions = []
+   ┆           ─┬
+   ┆            │
+   ┆            ╰─ Must contain at least one region definition
+───╯

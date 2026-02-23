@@ -1,1 +1,10 @@
-Interleaved input must define at least two segments. Found: 1
+  ╭─config.toml
+  ┆
+1 │ [input]
+2 │ interleaved = ["read1"]
+  ┆               ────┬────
+  ┆                   │
+  ┆                   ╰───── Must define at least two segments
+──╯
+Hint: If you have single end reads, remove interleaved.
+      If you have paired end reads, name two 'virtual' segments, e.g. ['read1','read2']

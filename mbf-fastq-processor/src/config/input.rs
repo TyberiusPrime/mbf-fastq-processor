@@ -194,8 +194,11 @@ impl PartialInput {
         Ok(())
     }
     fn build_structured(&mut self) -> Result<(), ()> {
-        self.verify_segment_names()?;
+        if let Err(_) = self.verify_segment_names() {
+            self.segments.state = TomlValueState::Nested;
+        };
 
+        //We need to make it not fail on unset structrude
         //todo: refactor, but the borrow checking is annoying.
         if let Some(Some(interleaved)) = self.interleaved.as_mut()
             && let Some(segments) = self.segments.as_ref()
@@ -223,7 +226,7 @@ impl PartialInput {
                 };
                 self.interleaved.help = Some(
                     "If you have single end reads, remove interleaved.
-    If you have paired end reads, name two 'virtual' segments, e.g. ['read1','read2']"
+If you have paired end reads, name two 'virtual' segments, e.g. ['read1','read2']"
                         .to_string(),
                 );
                 return Err(());
@@ -242,9 +245,7 @@ impl PartialInput {
                 }
             }
             for segment_toml_value in interleaved.iter_mut() {
-                let segment_name = segment_toml_value
-                    .as_ref()
-                    .expect("parent was ok").clone();
+                let segment_name = segment_toml_value.as_ref().expect("parent was ok").clone();
                 let spans = seen.get(&segment_name).expect("We just built this map");
                 if spans.len() > 1 {
                     segment_toml_value.state = TomlValueState::Custom {
@@ -291,10 +292,11 @@ impl PartialInput {
                 );
                 return Err(());
             }
-            if let Some(all_segment) = segments
-                .keys
-                .iter_mut().find(|tv| tv.as_ref().expect("Parent was ok").eq_ignore_ascii_case("all"))
-            {
+            if let Some(all_segment) = segments.keys.iter_mut().find(|tv| {
+                tv.as_ref()
+                    .expect("Parent was ok")
+                    .eq_ignore_ascii_case("all")
+            }) {
                 all_segment.state = TomlValueState::ValidationFailed {
                     message: "Reserved segment name".to_string(),
                 };
@@ -350,6 +352,7 @@ impl PartialInput {
             });
             self.validate_stdin_usage()?;
         }
+
         Ok(())
     }
 }
@@ -378,7 +381,9 @@ impl VerifyIn<super::PartialConfig> for PartialInput {
 
         self.verify_same_number_of_input_segments();
 
-        self.build_structured().ok(); //errors go into the individiual fields
+        if let Err(_) = self.build_structured()
+        //errors go into the fields
+        {}
 
         Ok(())
     }

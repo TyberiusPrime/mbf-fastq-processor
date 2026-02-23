@@ -1,1 +1,8 @@
-No segments defined in input. At least one
+  ╭─config.toml
+  ┆
+1 │ [input]
+  ┆ ┬
+  ┆ │
+  ┆ ╰──────── No segments defined in input.
+──╯
+Hint: At least one segment must be defined. Example: read1 = ['filename.fq']

@@ -1,1 +1,12 @@
-'max_hamming_distance' must be greater than 0 to perform correction. Leave off the HammingCorrect step if no correction is desired.
+   ╭─config.toml
+   ┆
+29 │ [[step]]
+30 │ action = "HammingCorrect"
+   ┆          ────────┬───────
+   ┆                  │
+   ┆                  ╰──────── Involving this enum variant.
+33 │ max_hamming_distance = 0
+   ┆                        ┬
+   ┆                        │
+   ┆                        ╰─ Must be greater than 0 to perform correction. Leave off the HammingCorrect step if no correction is desired.
+───╯

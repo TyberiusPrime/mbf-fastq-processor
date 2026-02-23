@@ -1,1 +1,11 @@
-Swap requires exactly 2 input segments when segment_a and segment_b are omitted, but 3 segments were provided
+   ╭─config.toml
+   ┆
+ 9 │ [[step]]
+10 │ action = "Swap"
+   ┆          ───┬──┬
+   ┆             │  │
+   ┆             ╰─── Involving this enum variant.
+   ┆                │
+   ┆                ╰─ Insuffient swap definition
+───╯
+Hint: There were more (or fewer) than 2 segments, and you did not specify both segment_a and segment_b.

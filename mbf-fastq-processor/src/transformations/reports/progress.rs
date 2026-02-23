@@ -19,21 +19,21 @@ fn format_seconds_to_hhmmss(seconds: u64) -> String {
 #[tpd]
 #[derive(Debug)]
 pub struct Progress {
-    #[tpd(skip)]
     #[schemars(skip)]
+    #[tpd(skip, default)]
     pub total_count: Arc<Mutex<usize>>,
-    #[tpd(skip)]
     #[schemars(skip)]
+    #[tpd(skip, default)]
     pub start_time: Option<std::time::Instant>,
     pub n: usize,
     pub output_infix: Option<String>,
-    #[tpd(skip)]
-    #[schemars(skip)]
+
+    #[schemars(with = "String")]
     pub filename: Option<PathBuf>,
 
     //output lock
-    #[tpd(skip)]
     #[schemars(skip)]
+    #[tpd(skip, default)]
     lock: Arc<Mutex<()>>,
 }
 

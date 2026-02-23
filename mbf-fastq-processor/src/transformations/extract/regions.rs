@@ -50,6 +50,16 @@ impl VerifyIn<PartialConfig> for PartialRegions {
                 self.regions.state = TomlValueState::Ok
             }
         }
+        self.regions.verify(|regions| {
+            if regions.is_empty() {
+                Err(ValidationFailure::new(
+                    "Must contain at least one region definition",
+                    None,
+                ))
+            } else {
+                Ok(())
+            }
+        });
         Ok(())
     }
 }

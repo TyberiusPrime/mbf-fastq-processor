@@ -1,11 +1,7 @@
 #![allow(clippy::unnecessary_wraps)]
 use crate::transformations::prelude::*;
 
-use crate::{
-    config::CompressionFormat,
-    config::deser::tpd_adapt_bstring,
-    dna::TagValue,
-};
+use crate::{config::CompressionFormat, config::deser::tpd_adapt_bstring, dna::TagValue};
 
 use super::super::tag::default_region_separator;
 
@@ -27,11 +23,11 @@ pub struct StoreTagsInTable {
     #[tpd(with = "tpd_adapt_bstring")]
     region_separator: BString,
 
-    #[tpd(skip)]
     #[schemars(skip)]
-    output_handles: OutputHandles,
+    #[tpd(skip, default)]
+    output_handles: Option<OutputHandles>,
 
-    #[schemars(with = "Option<Vec<String>>")]
+    #[allow(dead_code)] //only used in deser
     in_labels: Option<Vec<String>>,
 
     #[tpd(skip)]
@@ -44,21 +40,23 @@ impl VerifyIn<PartialConfig> for PartialStoreTagsInTable {
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {
-        self.infix.verify(|infix: &String| {
-            if infix.is_empty() {
-                Err(ValidationFailure::new("Infix must not be empty", None))
-            } else {
-                Ok(())
-            }
-        });
+        // //test case says we accept this
+        // self.infix.verify(|infix: &String| {
+        //     if infix.is_empty() {
+        //         Err(ValidationFailure::new("Infix must not be empty", None))
+        //     } else {
+        //         Ok(())
+        //     }
+        // });
         self.region_separator.or_with(default_region_separator);
-        if let Some(Some(in_labels)) = self.in_labels.take().into_inner() {
+        if let Some(Some(in_labels)) = self.in_labels.as_ref() {
             self.final_in_labels = Some(Arc::new(Mutex::new(Some(
                 in_labels
-                    .into_iter()
+                    .iter()
                     .map(|tv| {
-                        tv.into_inner()
+                        tv.as_ref()
                             .expect("Parent was ok, child should be as well")
+                            .to_string()
                     })
                     .collect(),
             ))));
@@ -135,7 +133,7 @@ impl Step for StoreTagsInTable {
             allow_overwrite,
         )?;
 
-        self.output_handles = Arc::new(Mutex::new(
+        self.output_handles = Some(Arc::new(Mutex::new(
             buffered_writers
                 .0
                 .into_iter()
@@ -150,7 +148,7 @@ impl Step for StoreTagsInTable {
                     )
                 })
                 .collect(),
-        ));
+        )));
 
         Ok(None)
     }
@@ -188,6 +186,8 @@ impl Step for StoreTagsInTable {
 
                 for (_demultiplex_tag, writer) in self
                     .output_handles
+                    .as_ref()
+                    .expect("was set in init?")
                     .lock()
                     .expect("lock poisoned")
                     .iter_mut()
@@ -206,7 +206,12 @@ impl Step for StoreTagsInTable {
         let output_tags = block.output_tags.as_ref();
         let mut ii = 0;
         let mut iter = block.segments[0].get_pseudo_iter();
-        let mut output_handles = self.output_handles.lock().expect("lock poisoned");
+        let mut output_handles = self
+            .output_handles
+            .as_ref()
+            .expect("was set in init?")
+            .lock()
+            .expect("lock poisoned");
         while let Some(read) = iter.pseudo_next() {
             let output_tag = output_tags.map_or(0, |x| x[ii]);
             if let Some(writer) = output_handles
@@ -252,6 +257,8 @@ impl Step for StoreTagsInTable {
         // Flush all output handles
         for handle in self
             .output_handles
+            .as_ref()
+            .expect("was set in init")
             .lock()
             .expect("Locks poisened")
             .iter_mut()

@@ -1,1 +1,13 @@
-QuantifyKmers: 'filename' must contain at least one file
+   ╭─config.toml
+   ┆
+ 7 │ [[step]]
+ 8 │ action = "CalcKmers"
+   ┆          ─────┬─────
+   ┆               │
+   ┆               ╰────── Involving this enum variant.
+10 │ files = []
+   ┆         ─┬
+   ┆          │
+   ┆          ╰─ At least one filename must be provided for the k-mer database.
+───╯
+Hint: Please specify the path to your k-mer database file.
