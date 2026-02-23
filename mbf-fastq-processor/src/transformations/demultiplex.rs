@@ -16,11 +16,11 @@ pub struct Demultiplex {
     /// reference to shared barcodes section (optional for boolean tag mode)
     pub barcodes: Option<String>,
 
-    #[tpd(skip)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
+    #[tpd(skip, default)] 
     #[schemars(skip)]
     pub resolved_barcodes: Option<IndexMap<BString, String>>,
 
-    #[tpd(skip)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
+    #[tpd(skip, default)]
     #[schemars(skip)]
     any_hit_observed: std::sync::atomic::AtomicBool,
 }
@@ -103,6 +103,7 @@ impl Step for Demultiplex {
                 .load(std::sync::atomic::Ordering::Relaxed)
         );
 
+        //todo: move into verify.
         let barcodes_data = &input_info.barcodes_data;
         if let Some(barcodes_name) = &self.barcodes {
             // Barcode mode - resolve barcode reference

@@ -9,8 +9,8 @@ use crate::config::deser::{tpd_adapt_bstring, tpd_adapt_dna_bstring_plus_n};
 #[tpd]
 #[derive(Debug)]
 pub struct Postfix {
-    #[tpd(adapt_in_verify)]
     #[schemars(with = "String")]
+    #[tpd(adapt_in_verify(String))]
     pub segment: SegmentIndex,
 
     #[schemars(with = "String")]
@@ -26,10 +26,11 @@ pub struct Postfix {
 }
 
 impl VerifyIn<PartialConfig> for PartialPostfix {
-    fn verify(&mut self, _parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized,
     {
+        self.segment.validate_segment(parent);
         Ok(())
     }
 }

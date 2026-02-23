@@ -35,6 +35,7 @@ impl VerifyIn<PartialConfig> for PartialExpectedError {
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {
+        self.segment.or(SegmentIndexOrAll::All);
         self.segment.validate_segment(parent);
         Ok(())
     }

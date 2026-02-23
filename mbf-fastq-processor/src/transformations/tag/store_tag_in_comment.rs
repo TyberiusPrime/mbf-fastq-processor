@@ -8,7 +8,8 @@ use crate::{
 };
 
 use super::{
-    apply_in_place_wrapped_with_tag, default_comment_separator, default_region_separator, format_numeric_for_comment, store_tag_in_comment,
+    apply_in_place_wrapped_with_tag, default_comment_insert_char, default_comment_separator,
+    default_region_separator, format_numeric_for_comment, store_tag_in_comment,
 };
 
 /// Store currently present tags as comments on read names.
@@ -44,7 +45,7 @@ pub struct StoreTagInComment {
     pub comment_separator: u8,
 
     #[tpd(with = "tpd_adapt_u8_from_byte_or_char")]
-    comment_insert_char: Option<u8>,
+    comment_insert_char: u8,
 
     #[tpd(with = "tpd_adapt_bstring")]
     #[schemars(with = "String")]
@@ -56,9 +57,17 @@ impl VerifyIn<PartialConfig> for PartialStoreTagInComment {
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {
+        if let Some(input_def) = parent.input.as_ref()
+            && !input_def.get_segment_order().is_empty()
+        {
+            self.segment.or(SegmentIndexOrAll::All); //TODO: verify if this is what we want to do,
+            //or if the above comment on it being only on segment 0 is corect.
+        }
         self.segment.validate_segment(parent);
         self.comment_separator.or_with(default_comment_separator);
         self.region_separator.or_with(default_region_separator);
+        self.comment_insert_char
+            .or_with(default_comment_insert_char);
         Ok(())
     }
 }
@@ -109,11 +118,7 @@ impl Step for StoreTagInComment {
         }
         for (desc, k) in &[
             ("comment separator", self.comment_separator),
-            (
-                "comment insert char",
-                self.comment_insert_char
-                    .expect("comment_insert_char must be set during initialization"),
-            ),
+            ("comment insert char", self.comment_insert_char),
         ] {
             if self.in_label.bytes().any(|x| x == *k) {
                 bail!(
@@ -174,8 +179,7 @@ impl Step for StoreTagInComment {
                     self.in_label.as_bytes(),
                     &tag_value,
                     self.comment_separator,
-                    self.comment_insert_char
-                        .expect("comment_insert_char must be set during initialization"),
+                    self.comment_insert_char,
                 );
                 match new_name {
                     Err(err) => {

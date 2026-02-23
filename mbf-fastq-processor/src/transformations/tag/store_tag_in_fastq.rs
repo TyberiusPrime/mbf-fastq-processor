@@ -7,9 +7,7 @@ use crate::{
 use std::io::Write;
 
 use crate::{
-    config::{
-        CompressionFormat, FileFormat,
-    },
+    config::{CompressionFormat, FileFormat},
     dna::TagValue,
 };
 
@@ -57,9 +55,9 @@ pub struct StoreTagInFastQ {
     compression_level: Option<u8>,
 
     // Internal state for collecting reads during apply
-    #[tpd(skip)]
+    #[tpd(skip, default)]
     #[schemars(skip)]
-    output_streams: Arc<Mutex<DemultiplexedOutputFiles>>,
+    output_streams: Option<Arc<Mutex<DemultiplexedOutputFiles>>>,
 }
 
 impl VerifyIn<PartialConfig> for PartialStoreTagInFastQ {
@@ -170,7 +168,7 @@ impl Step for StoreTagInFastQ {
         demultiplex_info: &OptDemultiplex,
         allow_overwrite: bool,
     ) -> Result<Option<DemultiplexBarcodes>> {
-        self.output_streams = Arc::new(Mutex::new(demultiplex_info.open_output_streams(
+        self.output_streams = Some(Arc::new(Mutex::new(demultiplex_info.open_output_streams(
             output_directory,
             output_prefix,
             &format!("tag.{}", self.in_label),
@@ -181,7 +179,7 @@ impl Step for StoreTagInFastQ {
             false,
             false,
             allow_overwrite,
-        )?));
+        )?)));
         Ok(None)
     }
 
@@ -226,6 +224,8 @@ impl Step for StoreTagInFastQ {
 
                     if let Some(writer) = self
                         .output_streams
+                        .as_ref()
+                        .expect("Should have been set in init")
                         .lock()
                         .expect("lock poisoned")
                         .0
@@ -365,7 +365,13 @@ impl Step for StoreTagInFastQ {
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<crate::transformations::FinalizeReportResult>> {
         // Flush all output streams
-        let output_streams = self.output_streams.lock().expect("lock poisoned").take();
+        let output_streams = self
+            .output_streams
+            .as_ref()
+            .expect("output streams should have been set in init")
+            .lock()
+            .expect("lock poisoned")
+            .take();
         for (_tag, writer) in output_streams {
             if let Some(writer) = writer {
                 let (_, _) = writer.finish();
