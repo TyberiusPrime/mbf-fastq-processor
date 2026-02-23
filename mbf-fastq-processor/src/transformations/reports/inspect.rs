@@ -5,7 +5,6 @@ use std::io::Write;
 
 pub type NameSeqQualTuple = (Vec<u8>, Vec<u8>, Vec<u8>, DemultiplexTag);
 
-
 struct DebugFile(ex::fs::File);
 
 impl std::fmt::Debug for DebugFile {
@@ -40,12 +39,12 @@ pub struct Inspect {
     #[tpd(skip)]
     collected: std::sync::atomic::AtomicUsize,
 
-    #[tpd(skip)]
+    #[tpd(skip, default)]
     #[schemars(skip)]
     //we write either interleaved (one file) or one segment (one file)
     writer: Arc<Mutex<Option<DebugFile>>>,
 
-    #[tpd(skip)]
+    #[tpd(skip, default)]
     #[schemars(skip)]
     demultiplex_names: Option<DemultiplexedData<String>>,
 }
@@ -69,6 +68,18 @@ impl VerifyIn<PartialConfig> for PartialInspect {
             &self.compression,
             &mut self.compression_level,
         );
+        if let Some(MustAdapt::PostVerify(segment)) = self.segment.as_ref()
+            && let Some(segment_order) = parent.input.as_ref().map(|x| x.get_segment_order())
+        {
+            let n = self.n.as_ref().map(|x| *x).unwrap_or(0);
+            self.collector = Some(Arc::new(Mutex::new(match segment {
+                SegmentIndexOrAll::All => (0..segment_order.len())
+                    .map(|_| Vec::with_capacity(n))
+                    .collect(),
+                SegmentIndexOrAll::Indexed(_) => vec![Vec::with_capacity(n)],
+            })));
+        }
+        self.collected = Some(std::sync::atomic::AtomicUsize::new(0));
         Ok(())
     }
 }
@@ -111,13 +122,6 @@ impl Step for Inspect {
         demultiplex_info: &OptDemultiplex,
         allow_overwrite: bool,
     ) -> Result<Option<DemultiplexBarcodes>> {
-        self.collector = Arc::new(Mutex::new(match self.segment {
-            SegmentIndexOrAll::All => (0..input_info.segment_order.len())
-                .map(|_| Vec::with_capacity(self.n))
-                .collect(),
-            SegmentIndexOrAll::Indexed(_) => vec![Vec::with_capacity(self.n)],
-        }));
-        self.collected.store(0, std::sync::atomic::Ordering::SeqCst);
         let format_suffix = FileFormat::Fastq.get_suffix(self.compression, self.suffix.as_ref());
 
         let target = match self.segment {

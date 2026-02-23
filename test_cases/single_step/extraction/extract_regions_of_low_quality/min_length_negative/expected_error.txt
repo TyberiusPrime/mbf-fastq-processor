@@ -1,9 +1,14 @@
+Error 1/1
+  ╭─config.toml
+  ┆
 7 │ [[step]]
 8 │ action = "ExtractRegionsOfLowQuality"
   ┆          ──────────────┬─────────────
   ┆                        │
-  ┆                        ╰────────────── Involving variant 'ExtractRegionsOfLowQuality'
+  ┆                        ╰────────────── Involving this enum variant.
 9 │ min_length = -5
   ┆              ─┬
   ┆               │
-  ┆               ╰─ Integer out of range.
+  ┆               ╰─ integer (usize), must be positive
+──╯
+Hint: Use a number between 0 and 9223372036854775807 inclusive.

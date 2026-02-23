@@ -27,11 +27,11 @@ pub struct OtherFileBySequence {
     pub include_mapped: bool,
     pub include_unmapped: bool,
 
-    #[tpd(skip)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
+    #[tpd(skip, default)]
     #[schemars(skip)]
     pub filter: Option<Arc<ApproxOrExactFilter>>,
 
-    #[tpd(skip)]
+    #[tpd(skip, default)]
     #[schemars(skip)]
     pub progress_output: Option<crate::transformations::reports::Progress>,
 }
@@ -43,39 +43,39 @@ impl VerifyIn<PartialConfig> for PartialOtherFileBySequence {
     {
         self.segment.validate_segment(parent);
         //todo: refactor with OtherFileByName to avoid code duplication.
-        if let Some(filename) = self.filename.as_ref() {
-            if filename.ends_with(".bam") || filename.ends_with(".sam") {
-                if self.include_unmapped.is_missing() {
-                    return Err(ValidationFailure::new(
-                        "Missing include_unmapped",
-                        Some(
-                            "When using a BAM file, you must specify `include_unmapped` = true|false",
-                        ),
-                    ));
-                }
-
-                if self.include_mapped.is_missing() {
-                    return Err(ValidationFailure::new(
-                        "Missing include_mapped",
-                        Some(
-                            "When using a BAM file, you must specify `include_mapped` = true|false",
-                        ),
-                    ));
-                }
-                if !(self.include_mapped.value.unwrap_or(false)
-                    || self.include_unmapped.value.unwrap_or(false))
-                {
-                    return Err(ValidationFailure::new(
-                        "Invalid include_mapped/include_unmapped combination",
-                        Some(
-                            "At least one of `include_mapped` or `include_unmapped` must be true when using a BAM/SAM file.",
-                        ),
-                    ));
-                }
-            } else {
-                self.include_mapped.or(false); // just so it's always set.
-                self.include_unmapped.or(false);
+        if let Some(filename) = self.filename.as_ref()
+            && (filename.ends_with(".bam") || filename.ends_with(".sam"))
+        {
+            if self.include_unmapped.is_missing() {
+                self.include_unmapped.or(false); // just so it's always set, but still report the
+                // error.
+                return Err(ValidationFailure::new(
+                    "Missing include_unmapped",
+                    Some("When using a BAM file, you must specify `include_unmapped` = true|false"),
+                ));
             }
+
+            if self.include_mapped.is_missing() {
+                self.include_mapped.or(false); // just so it's always set, but still report the
+                // error.
+                return Err(ValidationFailure::new(
+                    "Missing include_mapped",
+                    Some("When using a BAM file, you must specify `include_mapped` = true|false"),
+                ));
+            }
+            if !(self.include_mapped.value.unwrap_or(false)
+                || self.include_unmapped.value.unwrap_or(false))
+            {
+                return Err(ValidationFailure::new(
+                    "Invalid include_mapped/include_unmapped combination",
+                    Some(
+                        "At least one of `include_mapped` or `include_unmapped` must be true when using a BAM/SAM file.",
+                    ),
+                ));
+            }
+        } else {
+            self.include_mapped.or(false); // just so it's always set.
+            self.include_unmapped.or(false);
         }
         Ok(())
     }

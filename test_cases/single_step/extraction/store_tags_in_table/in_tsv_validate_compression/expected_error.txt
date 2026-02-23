@@ -5,10 +5,10 @@ Error 1/1
 30 │ action = "StoreTagsInTable"
    ┆          ─────────┬────────
    ┆                   │
-   ┆                   ╰───────── Involving variant 'StoreTagsInTable'
+   ┆                   ╰───────── Involving this enum variant.
 31 │ compression = "shu"
    ┆               ──┬──
    ┆                 │
-   ┆                 ╰─── Invalid enum variant.
+   ┆                 ╰─── Invalid enum variant: 'shu'
 ───╯
-Hint: Did you mean: 'raw', 'gz', or 'Zstd'?
+Hint: Did you mean: Zstd, Gzip, or 'gz' (='Gzip')?

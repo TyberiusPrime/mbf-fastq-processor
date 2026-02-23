@@ -12,8 +12,8 @@ use crate::{
 #[tpd]
 #[derive(Debug)]
 pub struct Prefix {
-    #[tpd(adapt_in_verify)]
     #[schemars(with = "String")]
+    #[tpd(adapt_in_verify(String))]
     segment: SegmentIndex,
 
     //todo
@@ -32,10 +32,11 @@ pub struct Prefix {
 }
 
 impl VerifyIn<PartialConfig> for PartialPrefix {
-    fn verify(&mut self, _parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {
+        self.segment.validate_segment(parent);
         Ok(())
     }
 }

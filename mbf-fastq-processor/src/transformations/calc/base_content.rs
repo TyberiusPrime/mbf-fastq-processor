@@ -130,15 +130,13 @@ impl BaseContent {
     }
 
     pub(crate) fn for_gc_replacement(out_label: String, segment: SegmentIndexOrAll) -> Self {
-        Self {
+        Self::new(
             out_label,
             segment,
-            relative: true,
-            bases_to_count: BString::from("GC"),
-            bases_to_ignore: BString::from("N"),
-            bases_to_count_lookup: Vec::new(),
-            bases_to_ignore_lookup: Vec::new(),
-        }
+            true,
+            BString::from("GC"),
+            BString::from("N"),
+        )
     }
 
     pub(crate) fn for_n_count(out_label: String, segment: SegmentIndexOrAll) -> Self {

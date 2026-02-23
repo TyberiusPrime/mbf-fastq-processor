@@ -1,1 +1,12 @@
-search pattern for ExtractIUPACWithIndel cannot be empty
+  ╭─config.toml
+   ┆
+ 7 │ [[step]]
+ 8 │ action = "ExtractIUPACWithIndel"
+   ┆          ───────────┬───────────
+   ┆                     │
+   ┆                     ╰──────────── Involving this enum variant.
+14 │ search = ""
+   ┆          ─┬
+   ┆           │
+   ┆           ╰─ Must contain at least one letter (base)
+───╯

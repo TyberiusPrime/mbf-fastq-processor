@@ -38,6 +38,15 @@ impl VerifyIn<PartialConfig> for PartialIUPACWithIndel {
         Self: Sized + toml_pretty_deser::Visitor,
     {
         self.segment.validate_segment(parent);
+        self.search.verify(|v| {
+            if v.is_empty() {
+                return Err(ValidationFailure::new(
+                    "Must contain at least one letter (base)",
+                    None,
+                ));
+            }
+            Ok(())
+        });
 
         Ok(())
     }
