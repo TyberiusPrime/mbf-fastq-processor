@@ -44,6 +44,7 @@ impl VerifyIn<PartialConfig> for PartialRename {
                 false
             },
         );
+        self.next_index = Some(std::sync::atomic::AtomicU64::new(0));
         Ok(())
     }
 }

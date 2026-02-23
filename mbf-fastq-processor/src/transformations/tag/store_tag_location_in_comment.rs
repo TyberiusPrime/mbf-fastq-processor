@@ -38,7 +38,7 @@ impl VerifyIn<PartialConfig> for PartialStoreTagLocationInComment {
         Self: Sized + toml_pretty_deser::Visitor,
     {
         if self.segment.is_missing() {
-            self.segment.value = Some(MustAdapt::PreVerify("all".to_string()));
+            self.segment.value = Some(MustAdapt::PostVerify(SegmentIndexOrAll::All));
             self.segment.state = TomlValueState::Ok;
         }
         self.segment.validate_segment(parent);
