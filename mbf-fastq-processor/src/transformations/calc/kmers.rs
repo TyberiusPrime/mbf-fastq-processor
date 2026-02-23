@@ -1,7 +1,7 @@
 #![allow(clippy::unnecessary_wraps)]
 
-use crate::transformations::prelude::*;
 use crate::io;
+use crate::transformations::prelude::*;
 use std::collections::HashMap;
 
 fn default_min_count() -> usize {
@@ -31,8 +31,8 @@ pub struct Kmers {
 
     pub min_count: usize,
 
-    #[tpd(skip)] // eserde compatibility
     #[schemars(skip)]
+    #[tpd(skip, default)] 
     pub resolved_kmer_db: Option<HashMap<Vec<u8>, usize>>,
 }
 

@@ -3,7 +3,7 @@
 use crate::transformations::prelude::*;
 
 use super::extract_region_tags;
-use crate::config::deser::tpd_adapt_extract_base_or_dot;
+use crate::config::deser::tpd_adapt_u8_from_byte_or_char;
 use crate::dna::Hits;
 
 /// Turn low quality start's of reads into a tag
@@ -16,7 +16,7 @@ pub struct LowQualityStart {
     segment: SegmentIndex,
 
     pub out_label: String,
-    #[tpd(with = "tpd_adapt_extract_base_or_dot")]
+    #[tpd(with = "tpd_adapt_u8_from_byte_or_char")]
     pub min_qual: u8,
 }
 

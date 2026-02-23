@@ -142,9 +142,10 @@ impl Step for MergeReads {
             bail!("max_mismatch_rate must be in [0.0..1.0). Set a valid value >= 0 and < 1.0.");
         }
         if let Some(space_quality_char) = self.spacer_quality_char
-            && (!(33..=126).contains(&space_quality_char)) {
-                bail!("spacer_quality_char must be in [33..126]. Set a valid value.");
-            }
+            && (!(33..=126).contains(&space_quality_char))
+        {
+            bail!("spacer_quality_char must be in [33..126]. Set a valid value.");
+        }
         Ok(())
     }
 

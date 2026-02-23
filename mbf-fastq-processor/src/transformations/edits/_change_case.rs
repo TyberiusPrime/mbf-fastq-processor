@@ -13,7 +13,6 @@ pub enum CaseType {
     Upper,
 }
 
-
 #[derive(Clone, JsonSchema)]
 #[tpd]
 #[derive(Debug)]

@@ -46,8 +46,9 @@ impl VerifyIn<PartialConfig> for PartialValidateAllReadsSameLength {
                         .map(|input_def| input_def
                             .get_segment_order()
                             .iter()
-                            .map(|x| x.as_str()).collect())
-                        .unwrap_or_else(||vec![""]))
+                            .map(|x| x.as_str())
+                            .collect())
+                        .unwrap_or_else(|| vec![""]))
                 )
             ));
         }

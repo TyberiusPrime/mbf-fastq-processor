@@ -308,7 +308,6 @@ pub fn default_progress_n() -> usize {
     1_000_000
 }
 
-
 ///turn a float into a string with thousands formatting
 ///and arbirtrary post-decimal digits
 pub fn thousands_format(value: f64, digits: u8) -> String {

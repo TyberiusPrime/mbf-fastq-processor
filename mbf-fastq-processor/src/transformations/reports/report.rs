@@ -38,7 +38,7 @@ pub struct Report {
 }
 
 impl VerifyIn<PartialConfig> for PartialReport {
-    fn verify(&mut self, _parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {
@@ -51,6 +51,7 @@ impl VerifyIn<PartialConfig> for PartialReport {
         });
         self.count.or(true);
         self.count_oligos_segment.or(SegmentIndexOrAll::All);
+        self.count_oligos_segment.validate_segment(parent);
         Ok(())
     }
 }

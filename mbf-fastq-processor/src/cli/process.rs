@@ -15,7 +15,12 @@ pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> 
     let parsed = match result {
         Ok(config) => config,
         Err(e) => {
-            bail!("{}", e.pretty("config.toml"));
+            let pretty = e.pretty("config.toml");
+            if pretty.trim().is_empty() {
+                dbg!(&e);
+                bail!("Failed to parse config.toml and no pretty error available");
+            }
+            bail!("{}", pretty);
         }
     };
     let checked = parsed.check()?;

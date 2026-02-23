@@ -1,13 +1,13 @@
-Error 1/1
-  ╭─config.toml
-  ┆
-7 │ [[step]]
-  ┆ ────┬───
-  ┆     │
-  ┆     ╰──── Missing required key: 'min_length'.
-8 │ action = "ExtractRegionsOfLowQuality"
-  ┆          ──────────────┬─────────────
-  ┆                        │
-  ┆                        ╰────────────── Involving variant 'ExtractRegionsOfLowQuality'
-──╯
-Hint: This key is required but was not found in the TOML document.
+rror 1/1
+   ╭─config.toml
+   ┆
+ 7 │ [[step]]
+ 8 │ action = "ExtractRegionsOfLowQuality"
+   ┆          ──────────────┬─────────────
+   ┆                        │
+   ┆                        ╰────────────── Involving this enum variant.
+10 │ out_label = "low_quality"
+   ┆                          ┬
+   ┆                          │
+   ┆                          ╰─ Missing required key: 'min_length'.
+───╯

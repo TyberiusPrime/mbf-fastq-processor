@@ -60,7 +60,7 @@ pub const fn default_buffer_size() -> usize {
 }
 
 #[mutants::skip]
-#[must_use] 
+#[must_use]
 pub const fn default_output_buffer_size() -> usize {
     1024 * 1024 // bytes, per fastq input file
 }
@@ -71,7 +71,7 @@ pub const fn default_block_size() -> usize {
     10000 // in 'molecules', ie. read1, read2, index1, index2 tuples.
 }
 
-#[must_use] 
+#[must_use]
 pub const fn default_spot_check_read_pairing() -> bool {
     true
 }

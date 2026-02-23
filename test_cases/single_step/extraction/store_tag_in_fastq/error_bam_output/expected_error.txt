@@ -1,1 +1,12 @@
-StoreTagInFastQ supports only 'fastq' or 'fasta' formats. Received: Bam
+   ╭─config.toml
+   ┆
+14 │ [[step]]
+15 │ action = "StoreTagInFastQ"
+   ┆          ────────┬────────
+   ┆                  │
+   ┆                  ╰───────── Involving this enum variant.
+17 │ format = "BAM"
+   ┆          ──┬──
+   ┆            │
+   ┆            ╰─── StoreTagInFastQ supports only 'fastq' or 'fasta' formats
+───╯

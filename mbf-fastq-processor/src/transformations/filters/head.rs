@@ -43,11 +43,12 @@ impl Step for Head {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let mut so_far = self.so_far
+        let mut so_far = self
+            .so_far
             .as_ref()
             .expect("should have been set in init")
-
-            .lock().expect("lock poisoned");
+            .lock()
+            .expect("lock poisoned");
         if so_far.len() == 1 {
             let so_far = so_far.get_mut(&0).expect("tag 0 must exist in so_far");
             if *so_far >= self.n {

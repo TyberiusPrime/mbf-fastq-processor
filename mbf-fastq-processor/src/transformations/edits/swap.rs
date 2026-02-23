@@ -34,6 +34,8 @@ impl VerifyIn<PartialConfig> for PartialSwap {
         let segment_order = input_def.get_segment_order();
 
         if self.segment_a.is_missing() ^ self.segment_b.is_missing() {
+            self.segment_a.state = TomlValueState::Nested;
+            self.segment_b.state = TomlValueState::Nested;
             return Err(ValidationFailure::new(
                 "Insuffient swap definition",
                 Some(
@@ -45,6 +47,8 @@ impl VerifyIn<PartialConfig> for PartialSwap {
                 self.segment_a = TomlValue::new_ok(MustAdapt::PostVerify(SegmentIndex(0)), 0..0);
                 self.segment_b = TomlValue::new_ok(MustAdapt::PostVerify(SegmentIndex(1)), 0..0);
             } else {
+                self.segment_a.state = TomlValueState::Nested;
+                self.segment_b.state = TomlValueState::Nested;
                 return Err(ValidationFailure::new(
                     "Insuffient swap definition",
                     Some(
@@ -52,17 +56,33 @@ impl VerifyIn<PartialConfig> for PartialSwap {
                     ),
                 ));
             }
-        } else if self.segment_a.is_ok() && self.segment_b.is_ok() {
+        } else if self.segment_a.is_needs_further_validation()
+            && self.segment_b.is_needs_further_validation()
+        {
             self.segment_a.validate_segment(parent);
             self.segment_b.validate_segment(parent);
-            if self.segment_a.as_ref().unwrap().as_ref_post()
-                == self.segment_b.as_ref().unwrap().as_ref_post()
+            if self.segment_a.is_ok()
+                && self.segment_b.is_ok()
+                && self.segment_a.as_ref().unwrap().as_ref_post()
+                    == self.segment_b.as_ref().unwrap().as_ref_post()
             {
-                return Err(ValidationFailure::new(
-                    "segment_a and segment_b cannot be the same",
-                    Some("Please specify two different segments to swap."),
-                ));
+                let spans = vec![
+                    (self.segment_a.span(), "Identical to segment_b".to_string()),
+                    (self.segment_b.span(), "Identical to segment_a".to_string()),
+                ];
+                self.segment_a.state = TomlValueState::Custom { spans };
+                self.segment_a.help =
+                    Some("Please specify two different segments to swap.".to_string());
+                self.segment_b.state = TomlValueState::Nested;
             }
+        } else {
+            if self.segment_a.is_needs_further_validation() {
+                self.segment_a.validate_segment(parent);
+            }
+            if self.segment_b.is_needs_further_validation() {
+                self.segment_b.validate_segment(parent);
+            }
+            //all other errors we pass straight on
         }
         Ok(())
     }

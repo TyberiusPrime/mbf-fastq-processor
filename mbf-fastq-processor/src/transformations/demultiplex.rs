@@ -16,7 +16,7 @@ pub struct Demultiplex {
     /// reference to shared barcodes section (optional for boolean tag mode)
     pub barcodes: Option<String>,
 
-    #[tpd(skip, default)] 
+    #[tpd(skip, default)]
     #[schemars(skip)]
     pub resolved_barcodes: Option<IndexMap<BString, String>>,
 

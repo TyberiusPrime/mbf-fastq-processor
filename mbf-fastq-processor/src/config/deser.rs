@@ -7,17 +7,17 @@ use std::collections::BTreeMap;
 use std::{fmt, marker::PhantomData};
 use toml_pretty_deser::{TomlValue, ValidationFailure};
 
-#[must_use] 
+#[must_use]
 pub fn tpd_adapt_bstring(input: TomlValue<String>) -> TomlValue<BString> {
     input.map(|s| BString::from(s.as_bytes()))
 }
 
-#[must_use] 
+#[must_use]
 pub fn tpd_adapt_bstring_uppercase(input: TomlValue<String>) -> TomlValue<BString> {
     input.map(|s| BString::from(s.as_bytes().to_ascii_uppercase()))
 }
 
-#[must_use] 
+#[must_use]
 pub fn tpd_adapt_dna_bstring(mut input: TomlValue<String>) -> TomlValue<BString> {
     input.try_map(|s| {
         let res = BString::from(s.as_bytes());
@@ -34,7 +34,7 @@ pub fn tpd_adapt_dna_bstring(mut input: TomlValue<String>) -> TomlValue<BString>
     })
 }
 
-#[must_use] 
+#[must_use]
 pub fn tpd_adapt_dna_bstring_plus_n(mut input: TomlValue<String>) -> TomlValue<BString> {
     input.try_map(|s| {
         let res = BString::from(s.as_bytes());
@@ -51,7 +51,7 @@ pub fn tpd_adapt_dna_bstring_plus_n(mut input: TomlValue<String>) -> TomlValue<B
     })
 }
 
-#[must_use] 
+#[must_use]
 pub fn tpd_adapt_iupac_bstring(mut input: TomlValue<String>) -> TomlValue<BString> {
     input.try_map(|s| {
         let res = BString::from(s.as_bytes());
@@ -65,7 +65,7 @@ pub fn tpd_adapt_iupac_bstring(mut input: TomlValue<String>) -> TomlValue<BStrin
     })
 }
 
-#[must_use] 
+#[must_use]
 pub fn tpd_adapt_regex(mut input: TomlValue<String>) -> TomlValue<regex::bytes::Regex> {
     use regex::bytes::Regex;
     input.try_map(|s| match Regex::new(s) {
@@ -77,12 +77,12 @@ pub fn tpd_adapt_regex(mut input: TomlValue<String>) -> TomlValue<regex::bytes::
     })
 }
 
-#[must_use] 
+#[must_use]
 pub fn tpd_adapt_trim_string(mut input: TomlValue<String>) -> TomlValue<String> {
     input.try_map(|x| Ok(x.trim().to_string()))
 }
 
-#[must_use] 
+#[must_use]
 pub fn tpd_adapt_u8_from_byte_or_char(mut input: TomlValue<toml_edit::Item>) -> TomlValue<u8> {
     let help =
         "Provide either a number (0..255), or a single letter string (with an ascii character)";
@@ -117,7 +117,7 @@ pub fn tpd_adapt_u8_from_byte_or_char(mut input: TomlValue<toml_edit::Item>) -> 
     })
 }
 
-#[must_use] 
+#[must_use]
 pub fn tpd_adapt_extract_base_or_dot(mut input: TomlValue<String>) -> TomlValue<u8> {
     fn err() -> Result<u8, ValidationFailure> {
         Err(ValidationFailure::new(
