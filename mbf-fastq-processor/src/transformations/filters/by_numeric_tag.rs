@@ -27,7 +27,10 @@ impl VerifyIn<PartialConfig> for PartialByNumericTag {
                 Ok(())
             }
         });
-        if self.min_value.is_missing() && self.max_value.is_missing() {
+        //since options are not 'missing'
+        if let Some(None) = self.min_value.value
+            && let Some(None) = self.max_value.value
+        {
             return Err(ValidationFailure::new(
                 "At least one of min_value or max_value must be specified",
                 None,

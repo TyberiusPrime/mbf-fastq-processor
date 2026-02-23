@@ -1,1 +1,18 @@
-Min length must be <= query length
+Error 1/1
+   ╭─config.toml
+   ┆
+ 7 │ [[step]]
+ 8 │ action = "ExtractIUPACSuffix"
+   ┆          ──────────┬─────────
+   ┆                    │
+   ┆                    ╰────────── Involving this enum variant.
+10 │ min_length = 6
+   ┆              ┬
+   ┆              │
+   ┆              ╰─ Too large, can not be longer than the search pattern
+12 │ query = "agctc"
+   ┆         ───┬───
+   ┆            │
+   ┆            ╰──── or this too short?
+───╯
+Hint: min_length cannot be greater than the length of the search pattern

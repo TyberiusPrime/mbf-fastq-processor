@@ -304,6 +304,7 @@ If you have paired end reads, name two 'virtual' segments, e.g. ['read1','read2'
                     "Segment name 'all' is reserved and cannot be used as a segment name."
                         .to_string(),
                 );
+                self.segments.state = TomlValueState::Nested;
                 return Err(());
             }
             if let Some(all_segment) = segments
@@ -324,6 +325,7 @@ If you have paired end reads, name two 'virtual' segments, e.g. ['read1','read2'
                     "Segment names starting with '_internal_' are reserved and cannot be used as a segment name. Choose something else."
                         .to_string(),
                 );
+                self.segments.state = TomlValueState::Nested;
                 return Err(());
             }
 

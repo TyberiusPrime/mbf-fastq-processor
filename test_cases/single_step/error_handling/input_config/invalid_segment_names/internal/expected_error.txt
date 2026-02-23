@@ -1,1 +1,1 @@
-Segment name 'all' (or 'All') is reserved and cannot be used as a segment name.
+ Segment name 'all' is reserved and cannot be used as a segment name.

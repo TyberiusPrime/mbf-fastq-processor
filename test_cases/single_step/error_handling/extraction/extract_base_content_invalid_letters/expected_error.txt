@@ -1,1 +1,6 @@
-'bases_to_ignore' must only contain ASCII letters (A-Z, a-z). Found invalid character in 'N1'.
+10 │ bases_to_ignore = "N1"
+   ┆                   ──┬─
+   ┆                     │
+   ┆                     ╰── Only ASCII letters are allowed as bases
+───╯
+Hint: Invalid character: '1'

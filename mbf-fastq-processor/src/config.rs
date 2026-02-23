@@ -33,6 +33,7 @@ pub use segments::{
     ResolvedSourceAll, ResolvedSourceNoAll, SegmentIndex, SegmentIndexOrAll, SegmentOrNameIndex,
     ValidateSegment,
 };
+pub use deser::validate_tag_name;
 
 #[derive(Debug)]
 pub struct TagMetadata {
@@ -46,52 +47,6 @@ pub fn config_from_string(toml: &str) -> Result<Config, DeserError<PartialConfig
     Config::tpd_from_toml(toml, FieldMatchMode::AnyCase, VecMode::SingleOk)
 }
 
-/// Validates that a tag name conforms to the pattern [a-zA-Z_][a-zA-Z0-9_]*
-/// (starts with a letter or underscore, followed by zero or more alphanumeric characters or underscores)
-pub fn validate_tag_name(tag_name: &str) -> Result<()> {
-    if tag_name.is_empty() {
-        bail!(
-            "Tag label cannot be empty. Please provide a non-empty tag name that starts with a letter or underscore."
-        );
-    }
-
-    let mut chars = tag_name.chars();
-    let first_char = chars
-        .next()
-        .expect("tag_name is not empty so must have at least one char");
-
-    if !first_char.is_ascii_alphabetic() && first_char != '_' {
-        bail!("Tag label must start with a letter or underscore (a-zA-Z_), got '{first_char}'",);
-    }
-
-    for (i, ch) in chars.enumerate() {
-        if !ch.is_ascii_alphanumeric() && ch != '_' {
-            bail!(
-                "Tag label must contain only letters, numbers, and underscores (a-zA-Z0-9_), found '{ch}' at position {}",
-                i + 1
-            );
-        }
-    }
-
-    for (forbidden, reason) in &[
-        ("ReadName", "the index column in StoreTagsInTable"),
-        ("read_no", "read numbering in EvalExpression"),
-    ] {
-        if tag_name == *forbidden {
-            // because that's what we store in the output tables as
-            // column 0
-            bail!(
-                "Reserved tag label '{forbidden}' cannot be used as a tag label. This name is reserved for {reason}. Please choose a different tag name."
-            );
-        }
-    }
-    if tag_name.starts_with("len_") {
-        bail!(
-            "Tag label '{tag_name}' cannot start with reserved prefix 'len_'. This prefix is reserved for length-related internal tags. Please choose a different tag name that doesn't start with 'len_'."
-        );
-    }
-    Ok(())
-}
 
 /// Validates that a segment label conforms to the pattern [a-zA-Z0-9_]+
 /// (one or more alphanumeric characters or underscores)

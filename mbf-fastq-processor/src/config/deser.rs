@@ -1,5 +1,6 @@
 use crate::dna;
 use bstr::BString;
+use schemars::JsonSchema;
 /// all our serde deserializers in one place.
 ///
 use serde::{Deserialize, Deserializer, de};
@@ -756,3 +757,67 @@ mod tests {
         assert!(result.expect_err("expected error").contains("empty string"));
     }
 }
+
+#[derive(Clone, Debug, JsonSchema)]
+#[schemars(with = "String")]
+pub struct TagLabel(pub String);
+
+/// Validates that a tag name conforms to the pattern [a-zA-Z_][a-zA-Z0-9_]*
+/// (starts with a letter or underscore, followed by zero or more alphanumeric characters or underscores)
+pub fn validate_tag_name(tag_name: &str) -> anyhow::Result<()> {
+    use anyhow::bail;
+    if tag_name.is_empty() {
+        bail!(
+            "Tag label cannot be empty. Please provide a non-empty tag name that starts with a letter or underscore."
+        );
+    }
+
+    let mut chars = tag_name.chars();
+    let first_char = chars
+        .next()
+        .expect("tag_name is not empty so must have at least one char");
+
+    if !first_char.is_ascii_alphabetic() && first_char != '_' {
+        bail!("Tag label must start with a letter or underscore (a-zA-Z_), got '{first_char}'",);
+    }
+
+    for (i, ch) in chars.enumerate() {
+        if !ch.is_ascii_alphanumeric() && ch != '_' {
+            bail!(
+                "Tag label must contain only letters, numbers, and underscores (a-zA-Z0-9_), found '{ch}' at position {}",
+                i + 1
+            );
+        }
+    }
+
+    for (forbidden, reason) in &[
+        ("ReadName", "the index column in StoreTagsInTable"),
+        ("read_no", "read numbering in EvalExpression"),
+    ] {
+        if tag_name == *forbidden {
+            // because that's what we store in the output tables as
+            // column 0
+            bail!(
+                "Reserved tag label '{forbidden}' cannot be used as a tag label. This name is reserved for {reason}. Please choose a different tag name."
+            );
+        }
+    }
+    if tag_name.starts_with("len_") {
+        bail!(
+            "Tag label '{tag_name}' cannot start with reserved prefix 'len_'. This prefix is reserved for length-related internal tags. Please choose a different tag name that doesn't start with 'len_'."
+        );
+    }
+    Ok(())
+}
+impl TryFrom<&str> for TagLabel {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match validate_tag_name(value) {
+            Ok(()) => Ok(TagLabel(value.to_string())),
+            Err(e) => return Err(e.to_string()),
+        }
+    }
+}
+
+toml_pretty_deser::impl_visitor_for_try_from_str!(TagLabel, "Invalid label");

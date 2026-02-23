@@ -1,1 +1,13 @@
-Unknown segment: readx
+   ╭─config.toml
+   ┆
+11 │ [[step]]
+12 │ action = "Swap"
+   ┆          ───┬──
+   ┆             │
+   ┆             ╰─── Involving this enum variant.
+13 │ segment_a = "readx"
+   ┆             ───┬───
+   ┆                │
+   ┆                ╰──── Segment not present in [input] section
+───╯
+Hint: Did you mean: read1?

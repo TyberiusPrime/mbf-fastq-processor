@@ -1,1 +1,1 @@
-Invalid segment label '/shu': Segment label must start with a letter or underscore (^[a-zA-Z_]), got '/'
+Hint: Segment label must start with a letter or underscore (^[a-zA-Z_]), got '/'

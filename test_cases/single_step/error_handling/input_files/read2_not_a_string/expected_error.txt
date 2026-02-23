@@ -1,4 +1,4 @@
 3 │ read2 = true
   ┆         ──┬─
   ┆           │
-  ┆           ╰── Wrong type: expected String, found boolean
+  ┆           ╰── Wrong type: expected string, found boolean

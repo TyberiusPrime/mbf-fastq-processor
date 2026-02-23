@@ -46,16 +46,24 @@ impl ValidateSegment for TomlValue<MustAdapt<String, SegmentIndex>> {
         {
             match must_adapt {
                 MustAdapt::PreVerify(str_segment) => {
-                    let segment_index = segment_order.iter().position(|x| x == str_segment);
-                    *self = match segment_index {
-                        Some(idx) => {
-                            TomlValue::new_ok(MustAdapt::PostVerify(SegmentIndex(idx)), span)
-                        }
-                        None => TomlValue::new_validation_failed(
+                    *self = if str_segment.to_ascii_lowercase() == "all" {
+                        TomlValue::new_validation_failed(
                             span,
-                            "Segment not present in [input] section".to_string(),
-                            Some(suggest_alternatives(str_segment, segment_order)),
-                        ),
+                            "'all' segments not valid in this position".to_string(),
+                            Some(suggest_alternatives("", segment_order)),
+                        )
+                    } else {
+                        let segment_index = segment_order.iter().position(|x| x == str_segment);
+                        match segment_index {
+                            Some(idx) => {
+                                TomlValue::new_ok(MustAdapt::PostVerify(SegmentIndex(idx)), span)
+                            }
+                            None => TomlValue::new_validation_failed(
+                                span,
+                                "Segment not present in [input] section".to_string(),
+                                Some(suggest_alternatives(str_segment, segment_order)),
+                            ),
+                        }
                     }
                 }
                 MustAdapt::PostVerify(_) => {
@@ -140,63 +148,6 @@ impl ValidateSegment for TomlValue<MustAdapt<String, SegmentIndexOrAll>> {
     }
 }
 
-// impl Segment {
-//     /// validate and turn into an indexed segment
-//     pub(crate) fn validate(&self, input_def: &crate::config::Input) -> Result<SegmentIndex> {
-//         if self.0 == ":::first_and_only_segment" {
-//             if input_def.segment_count() == 1 {
-//                 return Ok(SegmentIndex(0));
-//             } else {
-//                 let segment_names = input_def.get_segment_order().join(", ");
-//                 bail!(
-//                     "Segment not specified but multiple segments available: [{segment_names}]. \
-//                      Please specify which segment to use with 'segment = \"segment_name\"'",
-//                 );
-//             }
-//         }
-//         if self.0 == "all" || self.0 == "All" {
-//             bail!(
-//                 "'all' (or 'All') is not a valid segment in this position. Choose one of these: [{}]",
-//                 input_def.get_segment_order().join(", ")
-//             );
-//         }
-//         let name = &self.0;
-//         let idx = input_def.index(name).with_context(|| {
-//             let segment_names = input_def.get_segment_order().join(", ");
-//             format!("Unknown segment: {name}. Available [{segment_names}]")
-//         })?;
-//         Ok(SegmentIndex(idx))
-//     }
-// }
-
-// impl SegmentOrAll {
-//     /// validate and turn into an indexed segment
-//     pub(crate) fn validate(
-//         &mut self,
-//         input_def: &crate::config::Input,
-//     ) -> Result<SegmentIndexOrAll> {
-//         if self.0 == ":::first_and_only_segment" {
-//             if input_def.segment_count() == 1 {
-//                 return Ok(SegmentIndexOrAll::Indexed(0));
-//             } else {
-//                 let segment_names = input_def.get_segment_order().join(", ");
-//                 bail!(
-//                     "Segment not specified but multiple segments available: [{segment_names}]. Also 'all' is valid here. \
-//                      Please specify which segment to use with 'segment = \"segment_name\"'",
-//                 );
-//             }
-//         }
-//         if self.0 == "all" || self.0 == "All" {
-//             return Ok(SegmentIndexOrAll::All);
-//         }
-//         let name = &self.0;
-//         let idx = input_def
-//             .index(name)
-//             .with_context(|| format!("Unknown segment: {name}"))?;
-//         Ok(SegmentIndexOrAll::Indexed(idx))
-//     }
-// }
-
 impl SegmentIndex {
     #[must_use]
     pub fn get_index(&self) -> usize {
@@ -245,9 +196,15 @@ impl ValidateSegment for TomlValue<MustAdapt<String, SegmentOrNameIndex>> {
         {
             match must_adapt {
                 MustAdapt::PreVerify(str_segment) => {
-                    if let Some(query) = str_segment.strip_prefix("name:") {
+                    *self = if str_segment.to_ascii_lowercase() == "all" {
+                        TomlValue::new_validation_failed(
+                            span,
+                            "'all' segments not valid in this position".to_string(),
+                            Some(suggest_alternatives("", segment_order)),
+                        )
+                    } else if let Some(query) = str_segment.strip_prefix("name:") {
                         let segment_index = segment_order.iter().position(|x| x == query);
-                        *self = match segment_index {
+                        match segment_index {
                             Some(idx) => TomlValue::new_ok(
                                 MustAdapt::PostVerify(SegmentOrNameIndex::Name(SegmentIndex(idx))),
                                 span,
@@ -260,7 +217,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, SegmentOrNameIndex>> {
                         }
                     } else {
                         let segment_index = segment_order.iter().position(|x| x == str_segment);
-                        *self = match segment_index {
+                        match segment_index {
                             Some(idx) => TomlValue::new_ok(
                                 MustAdapt::PostVerify(SegmentOrNameIndex::Sequence(SegmentIndex(
                                     idx,
@@ -366,7 +323,12 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceNoAll>> {
         {
             match must_adapt {
                 MustAdapt::PreVerify(source) => {
-                    let resolved = if let Some(tag_name) = source.strip_prefix("tag:") {
+                    let resolved = if source.to_ascii_lowercase() == "all" {
+                        Err(ValidationFailure::new(
+                            "'all' segments not valid in this position".to_string(),
+                            Some(suggest_alternatives("", segment_order)),
+                        ))
+                    } else if let Some(tag_name) = source.strip_prefix("tag:") {
                         let trimmed = tag_name.trim();
                         if trimmed.is_empty() {
                             Err(ValidationFailure::new(

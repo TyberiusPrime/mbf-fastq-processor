@@ -1,11 +1,29 @@
-[Step 0 (ExtractIUPAC)]
+Error 1/2
+   ╭─config.toml
+   ┆
+ 8 │ [[step]]
+ 9 │ action = "ExtractIUPAC"
+   ┆          ───────┬──────
+   ┆                 │
+   ┆                 ╰─────── Involving this enum variant.
+14 │ segment = "index1"
+   ┆           ────┬───
+   ┆               │
+   ┆               ╰──── Segment not present in [input] section
+───╯
+Hint: Did you mean: read1 or read2?
 
-Caused by:
-    Unknown segment: index1. Available [read1, read2]
-
----------
-
-[Step 1 (ExtractIUPAC)]
-
-Caused by:
-    Unknown segment: index2. Available [read1, read2]
+Error 2/2
+   ╭─config.toml
+   ┆
+16 │ [[step]]
+17 │ action = "ExtractIUPAC"
+   ┆          ───────┬──────
+   ┆                 │
+   ┆                 ╰─────── Involving this enum variant.
+22 │ segment = "index2"
+   ┆           ────┬───
+   ┆               │
+   ┆               ╰──── Segment not present in [input] section
+───╯
+Hint: Did you mean: read2 or read1?
