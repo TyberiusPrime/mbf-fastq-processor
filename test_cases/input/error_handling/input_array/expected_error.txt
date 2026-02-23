@@ -4,6 +4,5 @@ Error 1/1
 1 │ [[input]]
   ┆ ────┬────
   ┆     │
-  ┆     ╰───── Wrong type: expected Table-like for Partial struct, found array of tables
+  ┆     ╰───── Wrong type: expected table or inline table, found array of tables.
 ──╯
-Hint: This value has the wrong type.

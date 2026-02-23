@@ -1,1 +1,12 @@
-'bases_to_count' must contain at least one letter. Please specify which bases to count (e.g., bases_to_count = "GC").
+  ╭─config.toml
+  ┆
+7 │ [[step]]
+8 │ action = "CalcBaseContent"
+  ┆          ────────┬────────
+  ┆                  │
+  ┆                  ╰───────── Involving this enum variant.
+9 │ bases_to_count = ""
+  ┆                  ─┬
+  ┆                   │
+  ┆                   ╰─ Must contain at least one letter (base)
+──╯

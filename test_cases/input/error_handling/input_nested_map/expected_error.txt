@@ -1,4 +1,8 @@
- [input.read23]
+  ╭─config.toml
+  ┆
+1 │ [input.read23]
   ┆ ───────┬──────
   ┆        │
-  ┆        ╰─────── Wrong type: expected String, found table
+  ┆        ╰─────── Wrong type: expected array, found table.
+──╯
+Hint: This value has the wrong type.

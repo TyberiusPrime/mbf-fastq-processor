@@ -2,7 +2,9 @@
    ┆
 12 │ [[step]]
 13 │ action = "Inspect"
-14 │ compression = "gzip"
+   ┆          ────┬────
+   ┆              │
+   ┆              ╰───── Involving this enum variant.
 15 │ compression_level = 10
    ┆                     ─┬
    ┆                      │

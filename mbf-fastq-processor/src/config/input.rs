@@ -1,10 +1,11 @@
 use std::collections::{BTreeMap, HashSet};
 
 use anyhow::Result;
+use flate2::Compress;
 use indexmap::IndexMap;
 use schemars::JsonSchema;
 use std::collections::HashMap;
-use toml_pretty_deser::prelude::*;
+use toml_pretty_deser::{Visitor, prelude::*};
 
 use crate::config::deser::tpd_adapt_u8_from_byte_or_char;
 
@@ -244,20 +245,27 @@ If you have paired end reads, name two 'virtual' segments, e.g. ['read1','read2'
                     }
                 }
             }
+            let mut reported = HashSet::new();
             for segment_toml_value in interleaved.iter_mut() {
                 let segment_name = segment_toml_value.as_ref().expect("parent was ok").clone();
-                let spans = seen.get(&segment_name).expect("We just built this map");
-                if spans.len() > 1 {
-                    segment_toml_value.state = TomlValueState::Custom {
-                        spans: spans
-                            .iter()
-                            .map(|span| (span.clone(), "Duplicate value".to_string()))
-                            .collect(),
-                    };
-                    segment_toml_value.help = Some(format!(
-                        "Segment name '{segment_name}' is duplicated in interleaved definition"
-                    ));
+                if reported.insert(segment_name.clone()) {
+                    let spans = seen.get(&segment_name).expect("We just built this map");
+                    if spans.len() > 1 {
+                        segment_toml_value.state = TomlValueState::Custom {
+                            spans: spans
+                                .iter()
+                                .map(|span| (span.clone(), "Duplicate value".to_string()))
+                                .collect(),
+                        };
+                        segment_toml_value.help = Some(format!(
+                            "Use each segment only once in interleaved. If you really want to use the same reads twice, define multiple segments, set input.accept_duplicate_files = true."
+                        ));
+                    }
                 }
+            }
+            if !interleaved.can_concrete() {
+                self.interleaved.state = TomlValueState::Nested;
+                return Err(());
             }
 
             let files: Vec<String> = segments
@@ -352,8 +360,8 @@ If you have paired end reads, name two 'virtual' segments, e.g. ['read1','read2'
                 segment_files,
                 segment_order,
             });
-            self.validate_stdin_usage()?;
         }
+        self.validate_stdin_usage()?;
 
         Ok(())
     }
@@ -482,6 +490,12 @@ pub enum StructuredInput {
     },
 }
 
+impl StructuredInput {
+    pub fn is_interleaved(&self) -> bool {
+        matches!(self, StructuredInput::Interleaved { .. })
+    }
+}
+
 impl Input {
     #[must_use]
     pub fn is_interleaved(&self) -> bool {
@@ -559,6 +573,12 @@ pub enum CompressionFormat {
     Zstd,
 }
 
+impl CompressionFormat {
+    pub fn is_compressed(&self) -> bool {
+        !matches!(self, CompressionFormat::Uncompressed)
+    }
+}
+
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Default, JsonSchema)]
 #[tpd]
 pub enum FileFormat {
@@ -609,46 +629,5 @@ impl CompressionFormat {
             CompressionFormat::Gzip => format!("{base}.gz"),
             CompressionFormat::Zstd => format!("{base}.zst"),
         }
-    }
-}
-
-/// Validates that the compression level is within the expected range for the given compression format
-pub fn validate_compression_level_u8(
-    compression: &TomlValue<CompressionFormat>,
-    compression_level: &mut TomlValue<Option<u8>>,
-) {
-    if let Some(Some(level)) = compression_level.as_ref() {
-        match compression.as_ref() {
-            Some(CompressionFormat::Uncompressed) => {
-                if *level != 0 {
-                    compression_level.state = TomlValueState::ValidationFailed {
-                        message: "Compression level {level} specified for uncompressed output"
-                            .to_string(),
-                    };
-                    compression_level.help = Some("Remove compression_level".to_string());
-                }
-            }
-            Some(CompressionFormat::Gzip) => {
-                if *level > 9 {
-                    compression_level.state = TomlValueState::ValidationFailed {
-                        message: "Invalid Value".to_string(),
-                    };
-                    compression_level.help = Some("Valid range is 0-9 for gzip.".to_string());
-                }
-            }
-            Some(CompressionFormat::Zstd) => {
-                if *level == 0 || *level > 22 {
-                    compression_level.state = TomlValueState::ValidationFailed {
-                        message: ("Invalid Value".to_string()),
-                    };
-                    compression_level.help = Some("Valid range is 1-22 for zstd.".to_string());
-                }
-            }
-            None => {
-                //nothing to verify, compression not set
-            }
-        }
-    } else {
-        // No compression level specified - rapidgzip is still invalid for output
     }
 }

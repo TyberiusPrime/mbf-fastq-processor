@@ -22,18 +22,18 @@ mod output;
 mod segments;
 
 use crate::{dna, get_number_of_cores};
+pub use deser::validate_tag_name;
 pub use input::{
     CompressionFormat, FileFormat, Input, InputOptions, PartialInput, PartialInputOptions,
-    STDIN_MAGIC_PATH, StructuredInput, validate_compression_level_u8,
+    STDIN_MAGIC_PATH, StructuredInput,
 };
 pub use io::fileformats::PhredEncoding;
 pub use options::{Options, PartialOptions};
-pub use output::{Output, PartialOutput};
+pub use output::{Output, PartialOutput, validate_compression_level_u8};
 pub use segments::{
     ResolvedSourceAll, ResolvedSourceNoAll, SegmentIndex, SegmentIndexOrAll, SegmentOrNameIndex,
     ValidateSegment,
 };
-pub use deser::validate_tag_name;
 
 #[derive(Debug)]
 pub struct TagMetadata {
@@ -46,7 +46,6 @@ pub struct TagMetadata {
 pub fn config_from_string(toml: &str) -> Result<Config, DeserError<PartialConfig>> {
     Config::tpd_from_toml(toml, FieldMatchMode::AnyCase, VecMode::SingleOk)
 }
-
 
 /// Validates that a segment label conforms to the pattern [a-zA-Z0-9_]+
 /// (one or more alphanumeric characters or underscores)

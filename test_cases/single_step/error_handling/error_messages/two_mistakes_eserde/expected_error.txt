@@ -2,26 +2,26 @@ Error 1/2
   ╭─config.toml
   ┆
 7 │ [[step]]
-  ┆ ────┬───
-  ┆     │
-  ┆     ╰──── Missing required key: 'qual'.
 8 │ action = "Prefix"
   ┆          ────┬───
   ┆              │
-  ┆              ╰──── Involving variant 'Prefix'
+  ┆              ╰──── Involving this enum variant.
+9 │ seq = "A"
+  ┆          ┬
+  ┆          │
+  ┆          ╰─ Missing required key: 'qual'.
 ──╯
-Hint: This key is required but was not found in the TOML document.
 
 Error 2/2
    ╭─config.toml
    ┆
 11 │ [[step]]
-   ┆ ────┬───
-   ┆     │
-   ┆     ╰──── Missing required key: 'seq'.
 12 │ action = "Postfix"
    ┆          ────┬────
    ┆              │
-   ┆              ╰───── Involving variant 'Postfix'
+   ┆              ╰───── Involving this enum variant.
+13 │ qual = "B"
+   ┆           ┬
+   ┆           │
+   ┆           ╰─ Missing required key: 'seq'.
 ───╯
-Hint: This key is required but was not found in the TOML document.

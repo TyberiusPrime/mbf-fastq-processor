@@ -1,1 +1,3 @@
-Invalid segment label '23': Segment label must start with a letter or underscore (^[a-zA-Z_])
+Invalid segment name
+──╯
+Hint: Segment label must start with a letter or underscore (^[a-zA-Z_]), got '2'

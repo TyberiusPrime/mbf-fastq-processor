@@ -1,1 +1,14 @@
-Segment not specified but multiple segments available: [read1, read2]. Also 'all' is valid here. Please specify which segment to use with 'segment = "segment_name"'
+Error 1/1
+   ╭─config.toml
+   ┆
+ 8 │ [[step]]
+ 9 │ action = "ValidateSeq"
+   ┆          ──────┬──────
+   ┆                │
+   ┆                ╰─────── Involving this enum variant.
+10 │ allowed = "CGATN"
+   ┆                  ┬
+   ┆                  │
+   ┆                  ╰─ Segment not specified but multiple segments available
+───╯
+Hint: Available segments: read1, read2

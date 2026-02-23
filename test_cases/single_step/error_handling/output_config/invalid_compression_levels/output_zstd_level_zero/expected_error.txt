@@ -1,1 +1,10 @@
-(output): Compression level 0 is invalid for zstd compression. Valid range is 1-22
+  ╭─config.toml
+  ┆
+4 │ [output]
+5 │ compression = "zstd"
+6 │ compression_level = 0
+  ┆                     ┬
+  ┆                     │
+  ┆                     ╰─ Invalid Value
+──╯
+Hint: Valid range is 1-22 for zstd.

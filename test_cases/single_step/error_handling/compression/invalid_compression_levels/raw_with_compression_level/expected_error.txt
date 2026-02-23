@@ -1,1 +1,9 @@
-Compression level 5 specified for uncompressed output, but no compression is applied.
+  ╭─config.toml
+  ┆
+4 │ [output]
+5 │ compression_level = 5
+  ┆                     ┬
+  ┆                     │
+  ┆                     ╰─ Invalid when compression='uncompressed'
+──╯
+Hint: Either remove the compression_lever parameter, or set the compression to 'Gzip'/'Zstd'

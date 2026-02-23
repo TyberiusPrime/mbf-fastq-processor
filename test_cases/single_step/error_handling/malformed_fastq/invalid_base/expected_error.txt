@@ -1,13 +1,13 @@
+Error 1/1
    ╭─config.toml
    ┆
  7 │ [[step]]
  8 │ action = "Prefix"
    ┆          ────┬───
    ┆              │
-   ┆              ╰──── Involving variant 'Prefix'
+   ┆              ╰──── Involving this enum variant.
 10 │ seq = "X"
    ┆       ─┬─
    ┆        │
-   ┆        ╰── Invalid DNA base
+   ┆        ╰── Invalid DNA base: '88'.
 ───╯
-Hint: Allowed characters are A, C, G, T, N

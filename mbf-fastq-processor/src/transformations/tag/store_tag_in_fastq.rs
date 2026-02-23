@@ -87,7 +87,9 @@ impl VerifyIn<PartialConfig> for PartialStoreTagInFastQ {
             &mut self.compression_level,
         );
 
-        if parent.output.is_missing() {
+        if parent.output.is_ok()
+            && let Some(None) = parent.output.value.as_ref()
+        {
             return Err(ValidationFailure::new(
                 "Missing output configuration",
                 Some(

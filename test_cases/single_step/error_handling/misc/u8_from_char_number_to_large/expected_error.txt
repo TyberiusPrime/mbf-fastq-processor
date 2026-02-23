@@ -1,13 +1,13 @@
- ╭─config.toml
+  ╭─config.toml
   ┆
 7 │ [[step]]
 8 │ action = "ExtractLowQualityStart"
   ┆          ────────────┬───────────
   ┆                      │
-  ┆                      ╰──────────── Involving variant 'ExtractLowQualityStart'
+  ┆                      ╰──────────── Involving this enum variant.
 9 │ min_qual = 300
   ┆            ─┬─
   ┆             │
-  ┆             ╰── Invalid value
+  ┆             ╰── Integer value 300 is out of range for a byte (0..255)
 ──╯
-Hint: Use a single byte (number or char)
+Hint: Provide either a number (0..255), or a single letter string (with an ascii character)

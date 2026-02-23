@@ -1,1 +1,3 @@
-Interleaved input can only have one other key defining the segments. Found: 2 keys
+More than one segment defined
+──╯
+Hint: Interleaved input can only have exactly one other key defining the segments.
