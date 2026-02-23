@@ -97,7 +97,7 @@ pub struct Options {
 }
 
 impl VerifyIn<PartialConfig> for PartialOptions {
-    fn verify(&mut self, _parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized,
     {
@@ -111,6 +111,24 @@ impl VerifyIn<PartialConfig> for PartialOptions {
             fail_output_after_bytes: TomlValue::new_ok(None, 0..0),
             fail_output_error: TomlValue::new_ok(None, 0..0),
             fail_output_raw_os_code: TomlValue::new_ok(None, 0..0),
+        });
+
+        self.block_size.verify(|v| {
+            if parent
+                .input
+                .as_ref()
+                .and_then(|input_def| input_def.structured.as_ref())
+                .map(|x| x.is_interleaved())
+                .unwrap_or(false)
+            {
+                if !v.is_multiple_of(2) {
+                    return Err(ValidationFailure::new(
+                        "block_size must be a multiple of 2",
+                        None,
+                    ));
+                }
+            }
+            Ok(())
         });
         Ok(())
     }

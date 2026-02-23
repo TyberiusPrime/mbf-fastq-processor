@@ -1,11 +1,12 @@
    ╭─config.toml
    ┆
 14 │ [[step]]
-   ┆ ────┬───
-   ┆     │
-   ┆     ╰──── Missing required key: 'letter'.
 15 │ action = "ReplaceTagWithLetter"
    ┆          ───────────┬──────────
    ┆                     │
-   ┆                     ╰─────────── Involving variant 'ReplaceTagWithLetter'
+   ┆                     ╰─────────── Involving this enum variant.
+16 │ in_label = "low_quality"
+   ┆                         ┬
+   ┆                         │
+   ┆                         ╰─ Missing required key: 'letter'.
 ───╯

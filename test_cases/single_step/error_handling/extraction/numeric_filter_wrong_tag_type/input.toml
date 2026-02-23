@@ -5,6 +5,7 @@
     action = 'TagDuplicates'
     out_label = 'is_duplicate'
     false_positive_rate = 0.0
+    source = "read1"
 
 [[step]]
     action = 'FilterByNumericTag'

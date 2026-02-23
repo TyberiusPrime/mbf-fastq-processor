@@ -1,1 +1,18 @@
-ConvertQuality: 'from' and 'to' encodings are the same (Illumina13), no conversion needed. Please specify different encodings or remove this step.
+Error 1/1
+   ╭─config.toml
+   ┆
+ 7 │ [[step]]
+ 8 │ action = "ConvertQuality"
+   ┆          ────────┬───────
+   ┆                  │
+   ┆                  ╰──────── Involving this enum variant.
+ 9 │ from = "illumina1.3"
+   ┆        ──────┬──────
+   ┆              │
+   ┆              ╰─────── Identical to to
+10 │ to = "illumina1.3"
+   ┆      ──────┬──────
+   ┆            │
+   ┆            ╰─────── Identical to from
+───╯
+Hint: Conversion unnecessary? Please specify different encodings or remove this step.

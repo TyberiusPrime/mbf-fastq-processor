@@ -1,1 +1,13 @@
-Compression level 0 is invalid for zstd compression. Valid range is 1-22
+   ╭─config.toml
+   ┆
+12 │ [[step]]
+13 │ action = "Inspect"
+   ┆          ────┬────
+   ┆              │
+   ┆              ╰───── Involving this enum variant.
+15 │ compression_level = 0
+   ┆                     ┬
+   ┆                     │
+   ┆                     ╰─ Invalid Value
+───╯
+Hint: Valid range is 1-22 for zstd.

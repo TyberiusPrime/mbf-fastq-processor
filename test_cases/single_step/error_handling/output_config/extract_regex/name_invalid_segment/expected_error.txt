@@ -1,1 +1,14 @@
-Unknown segment in 'name:read2'. Available [read1]
+Error 1/1
+   ╭─config.toml
+   ┆
+ 7 │ [[step]]
+ 8 │ action = "ExtractRegex"
+   ┆          ───────┬──────
+   ┆                 │
+   ┆                 ╰─────── Involving this enum variant.
+12 │ segment = "name:read2"
+   ┆           ──────┬─────
+   ┆                 │
+   ┆                 ╰────── Segment not present in [input] section
+───╯
+Hint: Did you mean: read1?

@@ -1,5 +1,7 @@
+ ╭─config.toml
+  ┆
 1 │ [[barcodes.basic]]
   ┆ ─────────┬────────
   ┆          │
-  ┆          ╰───────── Wrong type: expected Table-like for Partial struct, found array of tables
+  ┆          ╰───────── Wrong type: expected table or inline table, found array of tables.
 ──╯

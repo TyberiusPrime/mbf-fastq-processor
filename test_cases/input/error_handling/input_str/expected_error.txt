@@ -1,4 +1,8 @@
-input = "filename.fq"
+  ╭─config.toml
+  ┆
+1 │ input = "filename.fq"
   ┆         ──────┬──────
   ┆               │
-  ┆               ╰─────── Wrong type: expected Table-like for Partial struct, found string
+  ┆               ╰─────── Wrong type: expected table or inline table, found string.
+──╯
+Hint: This value has the wrong type.

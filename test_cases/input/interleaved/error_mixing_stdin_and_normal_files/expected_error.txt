@@ -1,1 +1,16 @@
-Interleaved inputs may only use '--stdin--' when exactly one input file is listed. Found 2 files.
+  ╭─config.toml
+  ┆
+1 │ [input]
+2 │   interleaved = [
+  ┆                 ▲
+  ┆ ╭───────────────╯
+3 │ │     "read1",
+  ┆ │
+4 │ │     "read2",
+  ┆ │
+5 │ │ ]
+  ┆ │ ▲
+  ┆ │ │
+  ┆ ╰─┴─ Invalid use of stdin magic value
+──╯
+Hint: When using '--stdin--' as an input file, it must be the only file listed in the interleaved segment's input. Found 2 times.

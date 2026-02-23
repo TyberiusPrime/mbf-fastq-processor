@@ -5,10 +5,10 @@ Error 1/1
  8 │ action = "CalcKmers"
    ┆          ─────┬─────
    ┆               │
-   ┆               ╰────── Involving variant 'CalcKmers'
+   ┆               ╰────── Involving this enum variant.
 12 │     23,
    ┆     ─┬
    ┆      │
-   ┆      ╰── Wrong type: expected String, found integer
+   ┆      ╰── Wrong type: expected string, found integer.
 ───╯
 Hint: This value has the wrong type.

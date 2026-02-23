@@ -1,13 +1,12 @@
-Error 1/1
-  ╭─config.toml
-  ┆
-8 │ [[step]]
-  ┆ ────┬───
-  ┆     │
-  ┆     ╰──── Missing required key: 'source'.
-9 │ action = "ExtractRegex"
-  ┆          ───────┬──────
-  ┆                 │
-  ┆                 ╰─────── Involving variant 'ExtractRegex'
-──╯
-Hint: This key is required but was not found in the TOML document.
+   ╭─config.toml
+   ┆
+ 8 │ [[step]]
+ 9 │ action = "ExtractRegex"
+   ┆          ───────┬──────
+   ┆                 │
+   ┆                 ╰─────── Involving this enum variant.
+12 │ search = "ABC"
+   ┆               ┬
+   ┆               │
+   ┆               ╰─ Missing required key: 'source'.
+───╯

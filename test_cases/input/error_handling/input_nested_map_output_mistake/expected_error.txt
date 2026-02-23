@@ -1,4 +1,8 @@
+  ╭─config.toml
+  ┆
 4 │ [input.output]
   ┆ ───────┬──────
   ┆        │
-  ┆        ╰─────── Wrong type: expected String, found table
+  ┆        ╰─────── Wrong type: expected array, found table.
+──╯
+Hint: This value has the wrong type.

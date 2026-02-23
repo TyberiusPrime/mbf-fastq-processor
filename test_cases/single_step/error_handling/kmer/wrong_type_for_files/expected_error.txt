@@ -1,14 +1,13 @@
-Error 1/1
    ╭─config.toml
    ┆
  7 │ [[step]]
  8 │ action = "CalcKmers"
    ┆          ─────┬─────
    ┆               │
-   ┆               ╰────── Involving variant 'CalcKmers'
+   ┆               ╰────── Involving this enum variant.
 10 │ files = 23
    ┆         ─┬
    ┆          │
-   ┆          ╰─ Wrong type: expected String, found integer
+   ┆          ╰─ Wrong type: expected string, found integer.
 ───╯
 Hint: This value has the wrong type.

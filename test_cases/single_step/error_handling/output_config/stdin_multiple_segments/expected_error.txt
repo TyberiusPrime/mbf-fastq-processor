@@ -1,1 +1,14 @@
-'--stdin--' may only appear in a single segment
+rror 1/1
+  ╭─config.toml
+  ┆
+1 │ [input]
+2 │ read1 = "--stdin--"
+  ┆ ──┬──
+  ┆   │
+  ┆   ╰───────────────── Invalid use of {STDIN_MAGIC_PATH}
+3 │ read2 = "--stdin--"
+  ┆ ──┬──
+  ┆   │
+  ┆   ╰───────────────── Invalid use of {STDIN_MAGIC_PATH}
+──╯
+Hint: When using '--stdin--' as an input file, it must be the only file listed in exactly one segment. Found in segments: ["read1", "read2"]

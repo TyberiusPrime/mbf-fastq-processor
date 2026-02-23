@@ -79,9 +79,11 @@ impl VerifyIn<PartialConfig> for PartialBaseContent {
                 }
 
             }
-
             Ok(())
         });
+        //safe to do after verify. Verify only verifies if they're set, this then afterwards set it
+        //to empty string
+        self.bases_to_ignore.or_with(BString::default);
 
         if let Some(bases_to_count) = self.bases_to_count.as_ref() {
             self.bases_to_count_lookup = Some(build_lookup(bases_to_count));

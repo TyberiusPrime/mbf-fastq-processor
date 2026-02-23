@@ -1,10 +1,10 @@
-  ╭─config.toml
+ ╭─config.toml
   ┆
 7 │ [[step]]
 8 │ action = "ExtractPolyTail"
   ┆          ────────┬────────
   ┆                  │
-  ┆                  ╰───────── Involving variant 'ExtractPolyTail'
+  ┆                  ╰───────── Involving this enum variant.
 9 │ base = "x"
   ┆        ─┬─
   ┆         │

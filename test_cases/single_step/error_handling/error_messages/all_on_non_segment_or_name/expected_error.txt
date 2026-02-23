@@ -1,1 +1,13 @@
-'all' (or 'All') is not a valid segment in this position. Choose one of these: [read1]
+   ╭─config.toml
+   ┆
+ 7 │ [[step]]
+ 8 │ action = "ExtractRegex"
+   ┆          ───────┬──────
+   ┆                 │
+   ┆                 ╰─────── Involving this enum variant.
+11 │ source = "all"
+   ┆          ──┬──
+   ┆            │
+   ┆            ╰─── 'all' segments not valid in this position
+───╯
+Hint: Available are: read1
