@@ -1,5 +1,6 @@
 #![allow(clippy::unnecessary_wraps)]
 use indexmap::IndexMap;
+use toml_pretty_deser::suggest_alternatives;
 
 use crate::{
     dna::{hamming, iupac_hamming_distance},
@@ -27,14 +28,14 @@ pub struct HammingCorrect {
 
     #[tpd(skip)]
     #[schemars(skip)]
-    pub resolved_barcodes: Option<IndexMap<BString, String>>,
+    pub resolved_barcodes: IndexMap<BString, String>,
     #[tpd(skip)]
     #[schemars(skip)]
     pub had_iupac: bool,
 }
 
 impl VerifyIn<PartialConfig> for PartialHammingCorrect {
-    fn verify(&mut self, _parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {
@@ -82,6 +83,56 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
                 Ok(())
             }
         });
+
+        if let Some(barcodes_to_use) = self.barcodes.as_ref() {
+            if let Some(barcode_data) = parent.barcodes.as_ref() {
+                if let Some(barcodes_data) = barcode_data {
+                    match barcodes_data.map.get(barcodes_to_use) {
+                        Some(barcodes_section) => {
+                            let barcodes_section: IndexMap<BString, String> = barcodes_section
+                                .as_ref()
+                                .expect("parent ok")
+                                .barcode_to_name
+                                .as_ref()
+                                .expect("parent ok2")
+                                .map
+                                .iter()
+                                .map(|(k, v)| (k.clone(), v.value.as_ref().unwrap().to_owned()))
+                                .collect();
+                            // Copy the resolved barcodes
+
+                            // Check if any barcode contains IUPAC ambiguous bases
+                            self.had_iupac = Some(
+                                barcodes_section
+                                    .keys()
+                                    .any(|x| crate::dna::contains_iupac_ambigous(x)),
+                            );
+                            self.resolved_barcodes = Some(barcodes_section);
+                        }
+                        None => {
+                            self.barcodes.help = Some(suggest_alternatives(
+                                &barcodes_to_use,
+                                &barcodes_data.map.keys().collect::<Vec<_>>(),
+                            ));
+
+                            self.barcodes.state = TomlValueState::ValidationFailed {
+                                message: format!("Barcodes section not found"),
+                            };
+                        }
+                    }
+                    assert!(
+                        self.resolved_barcodes.is_some(),
+                        "Barcodes not resolved. Bug"
+                    )
+                } else {
+                    return Err(ValidationFailure::new(
+                        "HammingCorrect step requires a barcodes section to be defined in the config.",
+                        None, //todo link
+                    ));
+                }
+            }
+        }
+
         Ok(())
     }
 }
@@ -128,32 +179,6 @@ impl Step for HammingCorrect {
         _demultiplex_info: &OptDemultiplex,
         _allow_overwrite: bool,
     ) -> Result<Option<DemultiplexBarcodes>> {
-        //todo: move to verifyin
-        let barcodes_data = &input_info.barcodes_data;
-        match barcodes_data.get(&self.barcodes) {
-            Some(barcodes_section) => {
-                // Copy the resolved barcodes
-                self.resolved_barcodes = Some(barcodes_section.barcode_to_name.clone());
-
-                // Check if any barcode contains IUPAC ambiguous bases
-                self.had_iupac = barcodes_section
-                    .barcode_to_name
-                    .keys()
-                    .any(|x| crate::dna::contains_iupac_ambigous(x));
-            }
-            None => {
-                bail!(
-                    "Barcodes section '{}' not found. Available sections: {:?}",
-                    self.barcodes,
-                    barcodes_data.keys().collect::<Vec<_>>()
-                );
-            }
-        }
-        assert!(
-            self.resolved_barcodes.is_some(),
-            "Barcodes not resolved. Bug"
-        );
-
         Ok(None)
     }
 
@@ -166,10 +191,7 @@ impl Step for HammingCorrect {
     ) -> Result<(FastQBlocksCombined, bool)> {
         let input_tags = block.tags.get(&self.in_label).expect("Input tag not found");
 
-        let barcodes = self
-            .resolved_barcodes
-            .as_ref()
-            .expect("resolved_barcodes must be set during initialization");
+        let barcodes = &self.resolved_barcodes;
         let mut output_hits = Vec::new();
 
         for input_tag in input_tags {
