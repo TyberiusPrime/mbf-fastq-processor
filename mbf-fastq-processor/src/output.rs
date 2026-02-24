@@ -813,7 +813,7 @@ pub struct OutputFiles {
 
 pub struct OutputFilesReadyToWrite<'a> {
     pub output_segments:
-        BTreeMap<crate::demultiplex::Tag, Arc<Mutex<OutputFastqs<OutputFile<'a>>>>>,
+        BTreeMap<crate::demultiplex::Tag, OutputFastqs<OutputFile<'a>>>,
     pub output_reports: OutputReports,
 }
 
@@ -825,7 +825,7 @@ impl OutputFiles {
                 .map_err(|_| anyhow!("Arc had multiple references"))?
                 .into_inner()
                 .map_err(|_| anyhow!("Mutex was poisoned"))?;
-            output_segments.insert(k, Arc::new(Mutex::new(inner.into_writer()?)));
+            output_segments.insert(k, inner.into_writer()?);
         }
         Ok(OutputFilesReadyToWrite {
             output_segments,
@@ -906,7 +906,7 @@ pub fn open_output_files(
 pub fn output_block(
     block: &io::FastQBlocksCombined,
     //that's one set of OutputFastqs per (demultiplexd) output
-    output_files: &mut BTreeMap<crate::demultiplex::Tag, Arc<Mutex<OutputFastqs<OutputFile<'_>>>>>,
+    output_files: &mut BTreeMap<crate::demultiplex::Tag, OutputFastqs<OutputFile<'_>>>,
     interleave_order: &[usize],
     demultiplexed: &OptDemultiplex,
     buffer_size: usize,
@@ -942,16 +942,13 @@ pub fn output_block(
 #[allow(clippy::if_not_else)]
 fn output_block_demultiplex(
     block: &io::FastQBlocksCombined,
-    output_files: &mut Arc<Mutex<OutputFastqs<OutputFile<'_>>>>,
+    output_files: &mut OutputFastqs<OutputFile<'_>>,
     interleave_order: &[usize],
     tag: Option<crate::demultiplex::Tag>,
     buffer_size: usize,
 ) -> Result<()> {
     let mut buffer = Vec::with_capacity(buffer_size);
-    let mut of = output_files
-        .lock()
-        .expect("mutex lock should not be poisoned");
-    for (segment_block, output_file) in block.segments.iter().zip(of.segment_files.iter_mut()) {
+    for (segment_block, output_file) in block.segments.iter().zip(output_files.segment_files.iter_mut()) {
         if let Some(output_file) = output_file {
             output_block_inner(
                 output_file,
@@ -963,7 +960,7 @@ fn output_block_demultiplex(
             )?;
         }
     }
-    if let Some(interleaved_file) = &mut of.interleaved_file {
+    if let Some(interleaved_file) = &mut output_files.interleaved_file {
         let blocks_to_interleave: Vec<_> = interleave_order
             .iter()
             .map(|&i| &block.segments[i])
