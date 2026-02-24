@@ -704,7 +704,8 @@ fn find_struct_file_for_transformation(transformation: &str) -> Option<PathBuf> 
                         PathBuf::from("src/transformations/extract/tag/other_file_by_sequence.rs")
                     } else if struct_name == "ValidateAllReadsSameLength" {
                         PathBuf::from("src/transformations/validation/all_reads_same_length.rs")
-                    }else if struct_name == "EvalExpression>" { //todo: fix this more sensibly...
+                    } else if struct_name == "EvalExpression>" {
+                        //todo: fix this more sensibly...
                         PathBuf::from("src/transformations/convert/eval_expression.rs")
                     } else {
                         PathBuf::from(format!("src/transformations/{}/{}.rs", parts[0], file_name))

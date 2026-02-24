@@ -128,7 +128,6 @@ fn verify_coobooks_censored() {
             search_dir.display()
         );
 
-
         for entry in WalkDir::new(search_dir)
             .into_iter()
             .filter_map(Result::ok)
@@ -138,15 +137,19 @@ fn verify_coobooks_censored() {
             })
         {
             let content = std::fs::read_to_string(entry.path()).expect("Failed to read file");
-            if let Some(hit) = homes_re.captures(&content) &&
-                hit.get(1).expect("regex can't hit without group 1").as_str() != "user" {
-                    panic!(
-                        "found not /home/user home path in {}: {}. Rerun ./dev/censor_cookbooks.py",
-                        entry.path().display(),
-                        hit.get(0).expect("Regex hit = group 0 present").as_str()
-                    )
-                }
-            
+            if let Some(hit) = homes_re.captures(&content)
+                && hit
+                    .get(1)
+                    .expect("regex can't hit without group 1")
+                    .as_str()
+                    != "user"
+            {
+                panic!(
+                    "found not /home/user home path in {}: {}. Rerun ./dev/censor_cookbooks.py",
+                    entry.path().display(),
+                    hit.get(0).expect("Regex hit = group 0 present").as_str()
+                )
+            }
         }
     }
 }

@@ -50,8 +50,7 @@ pub fn verify_outputs(
         expected_validation_error.as_ref(),
         expected_runtime_error.as_ref(),
     ) {
-        (Some(x), None) |
-        (None, Some(x)) => Some(x),
+        (Some(x), None) | (None, Some(x)) => Some(x),
         (None, None) => None,
         (Some(_), Some(_)) => unreachable!(),
     };
@@ -737,7 +736,10 @@ impl ExpectedFailure {
             env!("CARGO_PKG_HOMEPAGE"),
             env!("CARGO_PKG_VERSION")
         );
-        let stderr = stderr.replace(&doc_url, "https://doc_url.example/version-stripped-from-test/docs/reference/");
+        let stderr = stderr.replace(
+            &doc_url,
+            "https://doc_url.example/version-stripped-from-test/docs/reference/",
+        );
 
         match self {
             ExpectedFailure::ExactText(expected_text) => {

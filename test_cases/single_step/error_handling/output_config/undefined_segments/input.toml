@@ -4,4 +4,4 @@
 [output]
 	prefix = 'output'
 	compression = 'gz'
-    output = ['no-such-segment']
+    output = ['no-such-segment', 'read1']

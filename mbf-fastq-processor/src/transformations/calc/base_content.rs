@@ -77,7 +77,6 @@ impl VerifyIn<PartialConfig> for PartialBaseContent {
                         Some(format!("Invalid character: '{}'", *letter as char)),
                     ));
                 }
-
             }
             Ok(())
         });

@@ -1,1 +1,10 @@
-ix_separator' must not contain path separators
+Error 1/1
+   ╭─config.toml
+   ┆
+10 │ [output]
+11 │ ix_separator = ":"
+   ┆                ─┬─
+   ┆                 │
+   ┆                 ╰── Invalid value
+───╯
+Hint: Must not contain '/', '\' or ':'

@@ -13,7 +13,7 @@ use std::cell::RefCell;
 pub enum Algorithm {
     /// fastp algorithm: quality-score based mismatch resolution
     /// Uses hamming distance for overlap detection and chooses higher quality base for mismatches
-    #[tpd(alias="FastpSeemsWeird")]
+    #[tpd(alias = "FastpSeemsWeird")]
     Fastp,
 }
 
@@ -328,7 +328,7 @@ fn try_merge_reads(
 #[allow(clippy::cast_possible_truncation)] // u64 to usize is fine.
 #[allow(clippy::cast_sign_loss)] // mas_mismatch_rate is 0..=1
 #[allow(clippy::cast_precision_loss)] // mas_mismatch_rate is 0..=1
-#[allow(clippy::nonminimal_bool)] 
+#[allow(clippy::nonminimal_bool)]
 fn find_best_overlap_fastp(
     seq1: &[u8],
     seq2: &[u8], //must already have been reverse complemented
@@ -346,7 +346,9 @@ fn find_best_overlap_fastp(
     let mut overlap_len;
     let mut offset: isize = 0;
     let mut diff;
-    let overlap_require: isize = min_overlap.try_into().expect("min_overlap too large for isize");
+    let overlap_require: isize = min_overlap
+        .try_into()
+        .expect("min_overlap too large for isize");
     let diff_percent_limit = max_mismatch_rate;
     let diff_limit = max_mismatch_count;
     let str1 = seq1;
@@ -354,7 +356,11 @@ fn find_best_overlap_fastp(
 
     // forward
     // a match of less than overlapRequire is considered as unconfident
-    while offset < len1.checked_sub(overlap_require).expect("Substraction below range") {
+    while offset
+        < len1
+            .checked_sub(overlap_require)
+            .expect("Substraction below range")
+    {
         // the overlap length of r1 & r2 when r2 is move right for offset
         overlap_len = (len1 - offset).min(len2);
         let overlap_diff_limit = diff_limit.min((overlap_len as f64 * diff_percent_limit) as usize);
