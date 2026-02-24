@@ -130,7 +130,7 @@ pub enum ResultType {
     Bool,
 }
 
-impl Step for EvalExpression {
+impl Step for Box<EvalExpression> {
     fn validate_segments(&mut self, _input_def: &crate::config::Input) -> Result<()> {
         Ok(())
     }

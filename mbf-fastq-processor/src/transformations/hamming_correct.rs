@@ -84,53 +84,57 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
             }
         });
 
-        if let Some(barcodes_to_use) = self.barcodes.as_ref() {
-            if let Some(barcode_data) = parent.barcodes.as_ref() {
-                if let Some(barcodes_data) = barcode_data {
-                    match barcodes_data.map.get(barcodes_to_use) {
-                        Some(barcodes_section) => {
-                            let barcodes_section: IndexMap<BString, String> = barcodes_section
-                                .as_ref()
-                                .expect("parent ok")
-                                .barcode_to_name
-                                .as_ref()
-                                .expect("parent ok2")
-                                .map
-                                .iter()
-                                .map(|(k, v)| (k.clone(), v.value.as_ref().unwrap().to_owned()))
-                                .collect();
-                            // Copy the resolved barcodes
+        if let Some(barcodes_to_use) = self.barcodes.as_ref()
+            && let Some(barcode_data) = parent.barcodes.as_ref()
+            && let Some(barcodes_data) = barcode_data
+        {
+            match barcodes_data.map.get(barcodes_to_use) {
+                Some(barcodes_section) => {
+                    let barcodes_section: IndexMap<BString, String> = barcodes_section
+                        .as_ref()
+                        .expect("parent ok")
+                        .barcode_to_name
+                        .as_ref()
+                        .expect("parent ok2")
+                        .map
+                        .iter()
+                        .map(|(k, v)| {
+                            (
+                                k.clone(),
+                                v.value.as_ref().expect("parent was ok").to_owned(),
+                            )
+                        })
+                        .collect();
+                    // Copy the resolved barcodes
 
-                            // Check if any barcode contains IUPAC ambiguous bases
-                            self.had_iupac = Some(
-                                barcodes_section
-                                    .keys()
-                                    .any(|x| crate::dna::contains_iupac_ambigous(x)),
-                            );
-                            self.resolved_barcodes = Some(barcodes_section);
-                        }
-                        None => {
-                            self.barcodes.help = Some(suggest_alternatives(
-                                &barcodes_to_use,
-                                &barcodes_data.map.keys().collect::<Vec<_>>(),
-                            ));
-
-                            self.barcodes.state = TomlValueState::ValidationFailed {
-                                message: format!("Barcodes section not found"),
-                            };
-                        }
-                    }
-                    assert!(
-                        self.resolved_barcodes.is_some(),
-                        "Barcodes not resolved. Bug"
-                    )
-                } else {
-                    return Err(ValidationFailure::new(
-                        "HammingCorrect step requires a barcodes section to be defined in the config.",
-                        None, //todo link
+                    // Check if any barcode contains IUPAC ambiguous bases
+                    self.had_iupac = Some(
+                        barcodes_section
+                            .keys()
+                            .any(|x| crate::dna::contains_iupac_ambigous(x)),
+                    );
+                    self.resolved_barcodes = Some(barcodes_section);
+                }
+                None => {
+                    self.barcodes.help = Some(suggest_alternatives(
+                        barcodes_to_use,
+                        &barcodes_data.map.keys().collect::<Vec<_>>(),
                     ));
+
+                    self.barcodes.state = TomlValueState::ValidationFailed {
+                        message: "Barcodes section not found".to_string(),
+                    };
                 }
             }
+            assert!(
+                self.resolved_barcodes.is_some(),
+                "Barcodes not resolved. Bug"
+            )
+        } else {
+            return Err(ValidationFailure::new(
+                "HammingCorrect step requires a barcodes section to be defined in the config.",
+                None, //todo link
+            ));
         }
 
         Ok(())

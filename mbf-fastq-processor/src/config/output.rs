@@ -61,7 +61,7 @@ impl VerifyIn<super::PartialConfig> for PartialOutput {
                 .as_ref()
                 .is_some_and(CompressionFormat::is_compressed)
             {
-                validate_compression_level_u8(&mut self.compression, &mut self.compression_level);
+                validate_compression_level_u8(&self.compression, &mut self.compression_level);
             } else {
                 self.compression_level.state = TomlValueState::ValidationFailed {
                     message: "Invalid when compression='uncompressed'".to_string(),

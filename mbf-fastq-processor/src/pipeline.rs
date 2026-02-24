@@ -988,7 +988,7 @@ impl RunStage3 {
                 .spawn(move || {
                     let mut last_block_outputted = 0;
                     let mut buffer = Vec::new();
-                    let output_files = output_files.to_writer();
+                    let output_files = output_files.into_writer();
                     if let Err(e) = output_files {
                         error_collector
                             .lock()
@@ -996,7 +996,7 @@ impl RunStage3 {
                             .push(format!("Error in output thread: {e:?}"));
                         return;
                     }
-                    let mut output_files = output_files.unwrap();
+                    let mut output_files = output_files.expect("Output_file was error?");
                     while let Ok((block_no, block, _expected_read_count)) = input_channel.recv() {
                         //resort out of order blocks into the right order.
                         buffer.push((block_no, block));
@@ -1144,6 +1144,7 @@ pub struct RunStage5 {
 mod tests {
     use super::checked_f64_to_u16;
     #[test]
+    #[allow(clippy::unwrap_used)]
     fn test_checked_f64_to_u16() {
         assert_eq!(checked_f64_to_u16(0.0).unwrap(), 0u16);
         assert_eq!(checked_f64_to_u16(65535.0).unwrap(), 65535u16);

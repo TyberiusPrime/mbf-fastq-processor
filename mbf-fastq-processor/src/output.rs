@@ -358,7 +358,7 @@ impl OutputFileConfig {
         })
     }
 
-    fn to_writer<'a>(self) -> Result<OutputFile<'a>> {
+    fn into_writer<'a>(self) -> Result<OutputFile<'a>> {
         let handle = ex::fs::File::create(self.filename()).with_context(|| {
             format!(
                 "Could not open file for output: {}",
@@ -398,7 +398,7 @@ impl OutputFileConfig {
     }
 
     fn ensure_writable(
-        filename: &PathBuf,
+        filename: &Path,
         allow_overwrite: bool,
         chunk_size: Option<usize>,
     ) -> Result<()> {
@@ -628,17 +628,17 @@ impl Default for OutputFastqs<OutputFileConfig> {
 }
 
 impl OutputFastqs<OutputFileConfig> {
-    pub fn to_writer<'a>(self) -> Result<OutputFastqs<OutputFile<'a>>> {
+    pub fn into_writer<'a>(self) -> Result<OutputFastqs<OutputFile<'a>>> {
         Ok(OutputFastqs {
             interleaved_file: match self.interleaved_file {
-                Some(config) => Some(config.to_writer()?),
+                Some(config) => Some(config.into_writer()?),
                 None => None,
             },
             segment_files: self
                 .segment_files
                 .into_iter()
                 .map(|opt_config| match opt_config {
-                    Some(config) => Ok(Some(config.to_writer()?)),
+                    Some(config) => Ok(Some(config.into_writer()?)),
                     None => Ok(None),
                 })
                 .collect::<Result<Vec<Option<OutputFile<'a>>>>>()?,
@@ -818,14 +818,14 @@ pub struct OutputFilesReadyToWrite<'a> {
 }
 
 impl OutputFiles {
-    pub fn to_writer<'a>(self) -> Result<OutputFilesReadyToWrite<'a>> {
+    pub fn into_writer<'a>(self) -> Result<OutputFilesReadyToWrite<'a>> {
         let mut output_segments = BTreeMap::new();
         for (k, v) in self.output_segments {
             let inner = Arc::try_unwrap(v)
                 .map_err(|_| anyhow!("Arc had multiple references"))?
                 .into_inner()
                 .map_err(|_| anyhow!("Mutex was poisoned"))?;
-            output_segments.insert(k, Arc::new(Mutex::new(inner.to_writer()?)));
+            output_segments.insert(k, Arc::new(Mutex::new(inner.into_writer()?)));
         }
         Ok(OutputFilesReadyToWrite {
             output_segments,

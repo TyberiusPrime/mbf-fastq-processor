@@ -704,6 +704,8 @@ fn find_struct_file_for_transformation(transformation: &str) -> Option<PathBuf> 
                         PathBuf::from("src/transformations/extract/tag/other_file_by_sequence.rs")
                     } else if struct_name == "ValidateAllReadsSameLength" {
                         PathBuf::from("src/transformations/validation/all_reads_same_length.rs")
+                    }else if struct_name == "EvalExpression>" { //todo: fix this more sensibly...
+                        PathBuf::from("src/transformations/convert/eval_expression.rs")
                     } else {
                         PathBuf::from(format!("src/transformations/{}/{}.rs", parts[0], file_name))
                     };
@@ -712,7 +714,7 @@ fn find_struct_file_for_transformation(transformation: &str) -> Option<PathBuf> 
                         return Some(file_path);
                     } else {
                         panic!(
-                            "Could not find struct file at expected path: {}",
+                            "Could not find struct file at expected path: {} for {struct_name}",
                             file_path.display()
                         );
                     }
@@ -1269,7 +1271,7 @@ fn test_llm_guide_toml_examples_parse() {
             }
         } else {
             // This is a complete configuration, parse directly
-            match config_from_string(&toml_block) {
+            match config_from_string(toml_block) {
                 Ok(parsed_config) => {
                     if let Err(e) = parsed_config.check() {
                         failed_examples.push(format!(
@@ -1420,7 +1422,7 @@ fn test_readme_toml_examples_validate() {
         println!("  Validating TOML block starting at line {line_no}...");
 
         // Parse the TOML using eserde (same as in run())
-        let parsed = match config_from_string(&toml_content) {
+        let parsed = match config_from_string(toml_content) {
             Ok(config) => config,
             Err(e) => {
                 panic!("README.md TOML block at line {line_no} failed to parse:\n{e:?}",);

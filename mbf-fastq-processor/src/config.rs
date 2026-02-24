@@ -508,7 +508,7 @@ impl Config {
         }
     }
 
-    fn check_head_rapidgzip_conflict(&self, stages: &Vec<Stage>, errors: &mut Vec<anyhow::Error>) {
+    fn check_head_rapidgzip_conflict(&self, stages: &[Stage], errors: &mut Vec<anyhow::Error>) {
         let has_head_transform = stages
             .iter()
             .any(|stage| matches!(stage.transformation, Transformation::Head { .. }));
@@ -1029,7 +1029,7 @@ impl Config {
         }
     }
 
-    fn check_for_any_output(&self, stages: &Vec<Stage>, errors: &mut Vec<anyhow::Error>) {
+    fn check_for_any_output(&self, stages: &[Stage], errors: &mut Vec<anyhow::Error>) {
         let has_fastq_output = self.output.as_ref().is_some_and(|o| {
             o.stdout
                 || o.output.as_ref().is_none_or(|o| !o.is_empty())

@@ -7,7 +7,7 @@ use std::thread;
 /// by a random amount.
 /// Used to inject chaos into test cases.
 #[derive(Clone, JsonSchema)]
-#[tpd]
+#[tpd(no_verify)]
 #[derive(Debug)]
 #[allow(dead_code)]
 pub struct _InternalDelay {
@@ -39,7 +39,7 @@ impl Step for Box<_InternalDelay> {
 /// An internal read counter, similar to `report::_ReportCount`
 /// but it does not block premature termination.
 /// We use this to test the head->early termination -> premature termination logic
-#[tpd]
+#[tpd(no_verify)]
 #[derive(Debug)]
 pub struct _InternalReadCount {
     pub out_label: String,
@@ -95,7 +95,7 @@ impl Step for Box<_InternalReadCount> {
 /// will make the *step* fail during processing.
 
 #[derive(Clone, JsonSchema)]
-#[tpd]
+#[tpd(no_verify)]
 #[derive(Debug)]
 pub struct _InduceFailure {
     msg: String,

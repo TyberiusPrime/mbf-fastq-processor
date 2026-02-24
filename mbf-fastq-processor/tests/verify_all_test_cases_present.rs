@@ -74,7 +74,7 @@ fn verify_all_shell_scripts_pass_shellcheck() {
         .arg("--version")
         .output();
 
-    if shellcheck.is_err() || !shellcheck.unwrap().status.success() {
+    if shellcheck.is_err() || !shellcheck.expect("shellcheck failure").status.success() {
         panic!("shellcheck not available");
     }
 
@@ -117,6 +117,7 @@ fn verify_all_shell_scripts_pass_shellcheck() {
 
 #[test]
 fn verify_coobooks_censored() {
+    let homes_re = regex::Regex::new("/home/([^/]+)").expect("regex wrong");
     for search_dir in &[
         PathBuf::from("../test_cases"),
         PathBuf::from("../cookbooks"),
@@ -127,7 +128,6 @@ fn verify_coobooks_censored() {
             search_dir.display()
         );
 
-        let homes_re = regex::Regex::new("/home/([^/]+)").expect("regex wrong");
 
         for entry in WalkDir::new(search_dir)
             .into_iter()
@@ -138,15 +138,15 @@ fn verify_coobooks_censored() {
             })
         {
             let content = std::fs::read_to_string(entry.path()).expect("Failed to read file");
-            if let Some(hit) = homes_re.captures(&content) {
-                if hit.get(1).unwrap().as_str() != "user" {
+            if let Some(hit) = homes_re.captures(&content) &&
+                hit.get(1).expect("regex can't hit without group 1").as_str() != "user" {
                     panic!(
                         "found not /home/user home path in {}: {}. Rerun ./dev/censor_cookbooks.py",
                         entry.path().display(),
-                        hit.get(0).unwrap().as_str()
+                        hit.get(0).expect("Regex hit = group 0 present").as_str()
                     )
                 }
-            }
+            
         }
     }
 }

@@ -593,6 +593,7 @@ fn iupac_to_bases(c: u8) -> &'static [u8] {
 }
 
 #[cfg(test)]
+#[allow(clippy::bool_assert_comparison)]
 mod test {
     use crate::config::SegmentIndex;
 

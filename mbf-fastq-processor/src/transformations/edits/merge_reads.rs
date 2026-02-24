@@ -328,6 +328,7 @@ fn try_merge_reads(
 #[allow(clippy::cast_possible_truncation)] // u64 to usize is fine.
 #[allow(clippy::cast_sign_loss)] // mas_mismatch_rate is 0..=1
 #[allow(clippy::cast_precision_loss)] // mas_mismatch_rate is 0..=1
+#[allow(clippy::nonminimal_bool)] 
 fn find_best_overlap_fastp(
     seq1: &[u8],
     seq2: &[u8], //must already have been reverse complemented
@@ -353,7 +354,7 @@ fn find_best_overlap_fastp(
 
     // forward
     // a match of less than overlapRequire is considered as unconfident
-    while offset < len1.checked_sub(overlap_require).unwrap() {
+    while offset < len1.checked_sub(overlap_require).expect("Substraction below range") {
         // the overlap length of r1 & r2 when r2 is move right for offset
         overlap_len = (len1 - offset).min(len2);
         let overlap_diff_limit = diff_limit.min((overlap_len as f64 * diff_percent_limit) as usize);
@@ -545,7 +546,7 @@ mod tests {
             0,
             18,
         )
-        .unwrap();
+        .expect("merge failed");
         assert_eq!(&r.0, b"AAAAAAAAATTATTAAAA");
         //assert_eq!(&r.1, b"cccc");
     }
