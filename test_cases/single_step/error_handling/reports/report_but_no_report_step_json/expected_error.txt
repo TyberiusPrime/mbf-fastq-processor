@@ -1,1 +1,12 @@
-but no report step in configuration.
+Error 1/1
+  ╭─config.toml
+  ┆
+4 │ [output]
+5 │ prefix = "output"
+6 │ report_json = true
+  ┆               ──┬─
+  ┆                 │
+  ┆                 ╰── Set to true?
+──╯
+Hint: No report step, but report output requested.
+      Remove/disable report_html & report_json, or add in a report step

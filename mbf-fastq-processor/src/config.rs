@@ -161,7 +161,92 @@ impl VerifyIn<TPDRoot> for PartialConfig {
                 0..0,
             ),
         });
+        self.verify_reports();
         Ok(())
+    }
+}
+
+impl PartialConfig {
+    fn verify_reports(&mut self) {
+        let report_html = self
+            .output
+            .as_ref()
+            .and_then(|x| x.as_ref())
+            .and_then(|x| x.report_html.as_ref())
+            .is_some_and(|o| *o);
+        let report_json = self
+            .output
+            .as_ref()
+            .and_then(|x| x.as_ref())
+            .and_then(|x| x.report_json.as_ref())
+            .is_some_and(|o| *o);
+        let is_benchmark = self
+            .benchmark
+            .as_ref()
+            .and_then(|x| x.as_ref())
+            .and_then(|x| x.enable.as_ref())
+            .is_some_and(|o| *o);
+        let mut report_transform = self.transform.as_mut().and_then(|x| {
+            x.iter_mut().find(|t| {
+                matches!(
+                    t.as_ref(),
+                    Some(PartialTransformation::Report { .. })
+                        | Some(PartialTransformation::_InternalReadCount { .. })
+                )
+            })
+        });
+
+        if let Some(report_transform) = &mut report_transform
+            && !(report_html || report_json)
+            && !is_benchmark
+        {
+            let spans = vec![
+                (
+                    self.output.span(),
+                    "Add report_json | report_html here?".to_string(),
+                ),
+                (
+                    report_transform.span(),
+                    "Report but no output.report_html | report_json".to_string(),
+                ),
+            ];
+
+            report_transform.state = TomlValueState::Custom { spans };
+            report_transform.help =
+                Some("Either remove the report, or enable it's output.".to_string());
+            self.transform.state = TomlValueState::Nested;
+        } else if (report_html || report_json) && report_transform.is_none() {
+            let mut spans = Vec::new();
+            if let Some(tv_report_html) = self
+                .output
+                .as_ref()
+                .and_then(|x| x.as_ref())
+                .map(|x| &x.report_html)
+            {
+                if let Some(true) = tv_report_html.as_ref() {
+                    spans.push((tv_report_html.span(), "Set to true?".to_string()));
+                }
+            }
+            if let Some(tv_report_json) = self
+                .output
+                .as_ref()
+                .and_then(|x| x.as_ref())
+                .map(|x| &x.report_json)
+            {
+                if let Some(true) = tv_report_json.as_ref() {
+                    spans.push((tv_report_json.span(), "Set to true?".to_string()));
+                }
+            }
+            if spans.is_empty() {
+                spans.push((
+                    self.output.span(),
+                    "Missing report_html | report_json = true?".to_string(),
+                ));
+            }
+            self.output.state = TomlValueState::Custom { spans };
+            self.output.help =
+                Some("No report step, but report output requested.\nRemove/disable report_html & report_json, or add in a report step.".to_string());
+        }
     }
 }
 
@@ -400,7 +485,6 @@ impl Config {
         if errors.is_empty() {
             //no point in checking them if segment definition is broken
             //self.check_output(&mut errors);
-            self.check_reports(&mut errors);
             self.check_barcodes(&mut errors);
             self.check_transform_segments(&mut errors);
             report_labels = Some(self.expand_transformations(&mut errors));
@@ -828,34 +912,6 @@ impl Config {
             .collect();
 
         (tags_available.keys().cloned().collect(), stages)
-    }
-
-    fn check_reports(&self, errors: &mut Vec<anyhow::Error>) {
-        let report_html = self.output.as_ref().is_some_and(|o| o.report_html);
-        let report_json = self.output.as_ref().is_some_and(|o| o.report_json);
-        let is_benchmark = self.benchmark.as_ref().is_some_and(|b| b.enable);
-        let has_report_transforms = self.transform.iter().any(|t| {
-            matches!(
-                t,
-                Transformation::Report { .. } | Transformation::_InternalReadCount { .. }
-            )
-        });
-
-        if has_report_transforms && !(report_html || report_json) && !is_benchmark {
-            errors.push(anyhow!(
-                "(output): Report step configured, but neither output.report_json nor output.report_html is true. Enable at least one to write report files.",
-            ));
-        }
-
-        if (report_html || report_json) && !has_report_transforms {
-            errors.push(anyhow!("(output): Report (html|json) requested, but no report step in configuration. Either disable the reporting, or add a
-\"\"\"
-[step]
-    type = \"report\"
-    count = true
-    ...
-\"\"\" section"));
-        }
     }
 
     fn check_for_any_output(&self, stages: &[Stage], errors: &mut Vec<anyhow::Error>) {
