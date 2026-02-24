@@ -121,15 +121,11 @@ impl WorkpoolCoordinator {
         (coordinator, stages_for_workers)
     }
 
+    #[allow(clippy::too_many_lines)]
     pub fn run(mut self, demultiplex_infos: &[(usize, OptDemultiplex)]) {
         loop {
             // Check if we're at capacity
             let accept_new_incoming = self.current_blocks_in_flight < self.max_blocks_in_flight;
-            // dbg!(
-            //     accept_new_incoming,
-            //     self.current_blocks_in_flight,
-            //     self.max_blocks_in_flight,
-            // );
             if self.incoming_rx.is_none() || !accept_new_incoming {
                 // Only listen for completed work when input is closed
                 select! {

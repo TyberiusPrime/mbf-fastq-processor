@@ -181,6 +181,8 @@ impl Step for Box<EvalExpression> {
         }
     }
 
+    #[allow(clippy::too_many_lines)]
+    #[allow(clippy::cast_precision_loss)]
     fn apply(
         &self,
         mut block: io::FastQBlocksCombined,

@@ -44,7 +44,9 @@ impl VerifyIn<PartialConfig> for PartialOtherFileBySequence {
         self.segment.validate_segment(parent);
         //todo: refactor with OtherFileByName to avoid code duplication.
         if let Some(filename) = self.filename.as_ref()
-            && (filename.ends_with(".bam") || filename.ends_with(".sam"))
+            && Path::new(filename)
+                .extension()
+                .is_some_and(|x| x.eq_ignore_ascii_case("bam") || x.eq_ignore_ascii_case("sam"))
         {
             if self.include_unmapped.is_missing() {
                 self.include_unmapped.or(false); // just so it's always set, but still report the

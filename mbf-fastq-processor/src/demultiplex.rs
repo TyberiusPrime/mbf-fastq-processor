@@ -120,6 +120,7 @@ impl<T> IntoIterator for DemultiplexedData<T> {
     }
 }
 
+#[allow(clippy::into_iter_without_iter)]
 impl<'a, T> IntoIterator for &'a DemultiplexedData<T> {
     type Item = (Tag, &'a T);
     type IntoIter = std::iter::Map<

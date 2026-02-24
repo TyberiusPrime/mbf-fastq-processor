@@ -338,15 +338,15 @@ fn find_best_overlap_fastp(
 ) -> Option<(isize, usize)> {
     //offset, length
     //use bio::alignment::distance::hamming;
-    let len1 = seq1.len() as isize;
-    let len2 = seq2.len() as isize; //already reverse complement
+    let len1: isize = seq1.len().try_into().expect("seq1 len too large for isize");
+    let len2: isize = seq2.len().try_into().expect("seq2 len too large for isize"); //already reverse complement
 
     let complete_compare_require = 50;
 
     let mut overlap_len;
     let mut offset: isize = 0;
     let mut diff;
-    let overlap_require = min_overlap as isize;
+    let overlap_require: isize = min_overlap.try_into().expect("min_overlap too large for isize");
     let diff_percent_limit = max_mismatch_rate;
     let diff_limit = max_mismatch_count;
     let str1 = seq1;

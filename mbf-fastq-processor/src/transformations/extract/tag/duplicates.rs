@@ -87,6 +87,7 @@ impl Step for Duplicates {
         Ok(None)
     }
 
+    #[allow(clippy::too_many_lines)]
     fn apply(
         &self,
         mut block: FastQBlocksCombined,

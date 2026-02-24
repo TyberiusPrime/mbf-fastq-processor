@@ -46,8 +46,8 @@ impl VerifyIn<PartialConfig> for PartialRegions {
                     }
                 }
             }
-            if regions.iter().all(|x| x.is_ok()) {
-                self.regions.state = TomlValueState::Ok
+            if regions.iter().all(TomlValue::is_ok) {
+                self.regions.state = TomlValueState::Ok;
             }
         }
         self.regions.verify(|regions| {

@@ -69,9 +69,12 @@ impl VerifyIn<PartialConfig> for PartialInspect {
             &mut self.compression_level,
         );
         if let Some(MustAdapt::PostVerify(segment)) = self.segment.as_ref()
-            && let Some(segment_order) = parent.input.as_ref().map(|x| x.get_segment_order())
+            && let Some(segment_order) = parent
+                .input
+                .as_ref()
+                .map(crate::config::PartialInput::get_segment_order)
         {
-            let n = self.n.as_ref().map(|x| *x).unwrap_or(0);
+            let n = self.n.as_ref().map_or(0, |x| *x);
             self.collector = Some(Arc::new(Mutex::new(match segment {
                 SegmentIndexOrAll::All => (0..segment_order.len())
                     .map(|_| Vec::with_capacity(n))

@@ -129,7 +129,7 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
             assert!(
                 self.resolved_barcodes.is_some(),
                 "Barcodes not resolved. Bug"
-            )
+            );
         } else {
             return Err(ValidationFailure::new(
                 "HammingCorrect step requires a barcodes section to be defined in the config.",
