@@ -148,6 +148,7 @@ fn test_list_steps_command() {
         .unwrap();
     let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
 
+    dbg!(&stdout);
     assert!(stdout.contains("Available transformation steps:"));
     assert!(stdout.contains("Report"));
     assert!(stdout.contains("Head"));
@@ -595,7 +596,7 @@ prefix = 'output'
         "Expected validation failure message"
     );
     assert!(
-        stderr.contains("Block size must be even for interleaved input."),
+        stderr.contains("blocksize must be a multiple of 2"),
         "Expected error about invalid action: {stderr}"
     );
     assert!(

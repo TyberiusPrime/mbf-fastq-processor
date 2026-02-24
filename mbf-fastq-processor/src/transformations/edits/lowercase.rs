@@ -2,6 +2,7 @@
 
 use crate::transformations::prelude::*;
 
+/// Convert a read, name, tag into lower case
 #[derive(Clone, JsonSchema)]
 #[tpd]
 #[derive(Debug)]

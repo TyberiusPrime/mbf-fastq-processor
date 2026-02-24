@@ -10,11 +10,11 @@ use crate::dna::TagValue;
 use crate::transformations::extract::extract_bool_tags_from_tag;
 use crate::transformations::{read_name_canonical_prefix, tag::calculate_filter_capacity};
 
-/// Tag duplicate reads
 
 #[derive(Clone, JsonSchema)]
 #[tpd]
 #[derive(Debug)]
+/// Tag duplicate reads
 pub struct Duplicates {
     #[tpd(adapt_in_verify(String))]
     #[schemars(with = "String")]

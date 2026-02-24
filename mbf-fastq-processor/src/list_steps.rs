@@ -13,27 +13,36 @@ pub fn list_steps() -> Vec<(String, String)> {
         .expect("schema_for! always produces an object")
         .get("oneOf")
         .expect("Transformation schema must have oneOf field");
+    let defs = schema.get("$defs").expect("No defs");
     for entry in one_ofs
         .as_array()
         .expect("oneOf field in schema must be an array")
     {
-        let action = entry
-            .as_object()
-            .expect("each oneOf entry must be an object")
+        let action_kind = entry
+            .get("required")
+            .expect("Could not decode schema")
+            .get(0)
+            .expect("Could not decode schema - 2")
+            .as_str()
+            .expect("required field must be an array of strings");
+        let inner_kind = entry
             .get("properties")
-            .expect("each transformation variant must have properties")
-            .get("action");
-        if let Some(action) = action
-            && let Some(str) = action.get("const").and_then(|x| x.as_str())
-        {
-            let desc = entry
-                .as_object()
-                .expect("each oneOf entry must be an object")
-                .get("description")
-                .and_then(|x| x.as_str())
-                .unwrap_or("");
-            steps.push((str.to_string(), desc.to_string()));
-        }
+            .expect("No props")
+            .get(action_kind)
+            .expect("No action_kind")
+            .get("$ref")
+            .expect("no $ref")
+            .as_str()
+            .expect("inner kind not a string")
+            .rsplit('/')
+            .next()
+            .expect("no / in $ref");
+        let description = defs
+            .get(inner_kind)
+            .and_then(|x| x.get("description"))
+            .and_then(|x| x.as_str())
+            .unwrap_or("");
+        steps.push((action_kind.to_string(), description.to_string()));
     }
 
     // Sort by action name
