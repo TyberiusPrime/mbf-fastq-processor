@@ -1,1 +1,11 @@
-(output.output): Segment 'no-such-segment' not found in input segments: {"read1"}
+  ╭─config.toml
+  ┆
+4 │ [output]
+5 │ compression = "gz"
+6 │ output = [
+7 │     "no-such-segment",
+  ┆     ────────┬────────
+  ┆             │
+  ┆             ╰────────── Not found in input segments
+──╯
+Hint: All known keys have been used.

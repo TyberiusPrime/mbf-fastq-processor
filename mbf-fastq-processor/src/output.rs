@@ -812,8 +812,7 @@ pub struct OutputFiles {
 }
 
 pub struct OutputFilesReadyToWrite<'a> {
-    pub output_segments:
-        BTreeMap<crate::demultiplex::Tag, OutputFastqs<OutputFile<'a>>>,
+    pub output_segments: BTreeMap<crate::demultiplex::Tag, OutputFastqs<OutputFile<'a>>>,
     pub output_reports: OutputReports,
 }
 
@@ -948,7 +947,11 @@ fn output_block_demultiplex(
     buffer_size: usize,
 ) -> Result<()> {
     let mut buffer = Vec::with_capacity(buffer_size);
-    for (segment_block, output_file) in block.segments.iter().zip(output_files.segment_files.iter_mut()) {
+    for (segment_block, output_file) in block
+        .segments
+        .iter()
+        .zip(output_files.segment_files.iter_mut())
+    {
         if let Some(output_file) = output_file {
             output_block_inner(
                 output_file,

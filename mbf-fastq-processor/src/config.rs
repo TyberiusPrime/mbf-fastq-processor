@@ -254,10 +254,7 @@ impl Config {
 
         self.expand_spot_checks(&mut push_new);
 
-        for t in self
-            .transform
-            .drain(..)
-        {
+        for t in self.transform.drain(..) {
             match t {
                 Transformation::ExtractRegion(step_config) => {
                     let regions = vec![crate::transformations::RegionDefinition {
@@ -402,7 +399,7 @@ impl Config {
         let mut report_labels = None;
         if errors.is_empty() {
             //no point in checking them if segment definition is broken
-            self.check_output(&mut errors);
+            //self.check_output(&mut errors);
             self.check_reports(&mut errors);
             self.check_barcodes(&mut errors);
             self.check_transform_segments(&mut errors);
@@ -705,11 +702,7 @@ impl Config {
 
     fn check_transform_segments(&mut self, errors: &mut Vec<anyhow::Error>) {
         // check each transformations (before & after expansion), validate labels
-        for (step_no, t) in self
-            .transform
-            .iter_mut()
-            .enumerate()
-        {
+        for (step_no, t) in self.transform.iter_mut().enumerate() {
             if let Err(e) = t.validate_segments(&self.input) {
                 errors.push(e.context(format!("[Step {step_no} ({t})]")));
             }
@@ -724,17 +717,10 @@ impl Config {
         let mut tags_available: IndexMap<String, TagMetadata> = IndexMap::new();
         let mut allowed_tags_per_stage = Vec::new();
 
-        for (step_no, t) in self
-            .transform
-            .iter()
-            .enumerate()
-        {
-            if let Err(e) = t.validate_others(
-                &self.input,
-                self.output.as_ref(),
-                &self.transform,
-                step_no,
-            ) {
+        for (step_no, t) in self.transform.iter().enumerate() {
+            if let Err(e) =
+                t.validate_others(&self.input, self.output.as_ref(), &self.transform, step_no)
+            {
                 errors.push(e.context(format!("[Step {step_no} ({t})]:")));
                 continue; // Skip further processing of this transform if validation failed
             }
@@ -830,7 +816,8 @@ impl Config {
                 tag_type = metadata.tag_type,
             ));
         }
-        let stages: Vec<Stage> = self.transform
+        let stages: Vec<Stage> = self
+            .transform
             .drain(..)
             .zip(allowed_tags_per_stage)
             .filter(|(t, _)| !matches!(t, Transformation::Report { .. }))
@@ -843,142 +830,16 @@ impl Config {
         (tags_available.keys().cloned().collect(), stages)
     }
 
-    #[allow(clippy::too_many_lines)]
-    fn check_output(&mut self, errors: &mut Vec<anyhow::Error>) {
-        //apply output if set
-        if let Some(output) = &mut self.output {
-            if output.format == FileFormat::Bam {
-                if output.output_hash_uncompressed {
-                    errors.push(anyhow!(
-                        "(output): Uncompressed hashing is not supported when format = 'bam'. Set output_hash_uncompressed = false (and presumably outptu_hash_compressed=true).",
-                    ));
-                }
-                if output.stdout {
-                    errors.push(anyhow!(
-                        "(output): format = 'bam' cannot be used together with stdout output.",
-                    ));
-                }
-                if output.compression != CompressionFormat::Uncompressed {
-                    errors.push(anyhow!(
-                        "(output): Compression cannot be specified when format = 'bam'. Remove the compression setting.",
-                    ));
-                }
-            }
-            if output.stdout {
-                if output.output.is_some() {
-                    errors.push(anyhow!(
-                        "(output): Cannot specify both 'stdout' and 'output' options together. You need to use 'interleave' to control which segments to output to stdout"
-                    ));
-                }
-                /* if output.format != FileFormat::Bam {
-                output.format = FileFormat::Fastq;
-                output.compression = CompressionFormat::Uncompressed; */
-                //}
-                if output.interleave.is_none() {
-                    output.interleave = Some(self.input.get_segment_order().clone());
-                }
-            } else if output.output.is_none() {
-                if output.interleave.is_some() {
-                    output.output = Some(Vec::new()); // no extra output by default
-                } else {
-                    //default to output all targets
-                    output.output = Some(self.input.get_segment_order().clone());
-                }
-            }
-            let valid_segments: HashSet<&String> = self.input.get_segment_order().iter().collect();
-
-            if let Some(output_segments) = output.output.as_ref() {
-                let mut seen_segments = HashSet::new();
-                for segment in output_segments {
-                    if !valid_segments.contains(segment) {
-                        errors.push(anyhow!(
-                            "(output.output): Segment '{segment}' not found in input segments: {valid_segments:?}",
-                        ));
-                    }
-                    if !seen_segments.insert(segment) {
-                        errors.push(anyhow!(
-                            "(output): Segment '{segment}' is duplicated in interleave order: {valid_segments:?}",
-                        ));
-                    }
-                }
-            }
-
-            if let Some(interleave_order) = output.interleave.as_ref() {
-                let mut seen_segments = HashSet::new();
-                for segment in interleave_order {
-                    if !valid_segments.contains(segment) {
-                        errors.push(anyhow!(
-                            "(output): Interleave segment '{segment}' not found in input segments: {valid_segments:?}",
-                        ));
-                    }
-                    if !seen_segments.insert(segment) {
-                        errors.push(anyhow!(
-                            "(output): Interleave segment '{segment}' is duplicated in interleave order: {valid_segments:?}",
-                        ));
-                    }
-                }
-                if interleave_order.len() < 2 && !output.stdout {
-                    errors.push(anyhow!(
-                        "(output): Interleave order must contain at least two segments to interleave. Got: {interleave_order:?}",
-                    ));
-                }
-                //make sure there's no overlap between interleave and output
-                if let Some(output_segments) = output.output.as_ref() {
-                    for segment in output_segments {
-                        if interleave_order.contains(segment) {
-                            errors.push(anyhow!(
-                                "(output): Segment '{segment}' cannot be both in 'interleave' and 'output' lists. Interleave: {interleave_order:?}, Output: {output_segments:?}",
-                            ));
-                        }
-                    }
-                }
-            }
-
-            // Validate compression level for output
-            // if let Err(e) =
-            //     validate_compression_level_u8(output.compression, output.compression_level)
-            // {
-            //     errors.push(anyhow!("(output): {e}"));
-            //}
-
-            if output.ix_separator.contains('/')
-                || output.ix_separator.contains('\\')
-                || output.ix_separator.contains(':')
-            {
-                errors.push(anyhow!(
-                    "(output): 'ix_separator' must not contain path separators such as '/' or '\\' or ':'."
-                ));
-            }
-            if output.ix_separator.is_empty() {
-                errors.push(anyhow!("(output): 'ix_separator' must not be empty."));
-            }
-            if let Some(chunk_size) = output.chunksize {
-                if chunk_size == 0 {
-                    errors.push(anyhow!(
-                        "(output): 'Chunksize' must be greater than zero when specified."
-                    ));
-                }
-                if output.stdout {
-                    errors.push(anyhow!(
-                        "(output): 'Chunksize' is not supported when writing to stdout."
-                    ));
-                }
-            }
-        }
-    }
     fn check_reports(&self, errors: &mut Vec<anyhow::Error>) {
         let report_html = self.output.as_ref().is_some_and(|o| o.report_html);
         let report_json = self.output.as_ref().is_some_and(|o| o.report_json);
         let is_benchmark = self.benchmark.as_ref().is_some_and(|b| b.enable);
-        let has_report_transforms = self
-            .transform
-            .iter()
-            .any(|t| {
-                matches!(
-                    t,
-                    Transformation::Report { .. } | Transformation::_InternalReadCount { .. }
-                )
-            });
+        let has_report_transforms = self.transform.iter().any(|t| {
+            matches!(
+                t,
+                Transformation::Report { .. } | Transformation::_InternalReadCount { .. }
+            )
+        });
 
         if has_report_transforms && !(report_html || report_json) && !is_benchmark {
             errors.push(anyhow!(

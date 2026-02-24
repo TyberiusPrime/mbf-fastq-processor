@@ -1045,10 +1045,7 @@ impl RunStage3 {
                     ); */
 
                     for set_of_output_files in &mut output_files.output_segments {
-                        if let Err(e) = set_of_output_files
-                            .1
-                            .finish()
-                        {
+                        if let Err(e) = set_of_output_files.1.finish() {
                             error_collector
                                 .lock()
                                 .expect("mutex lock should not be poisoned")

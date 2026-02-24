@@ -315,16 +315,12 @@ If you have paired end reads, name two 'virtual' segments, e.g. ['read1','read2'
                 self.segments.state = TomlValueState::Nested;
                 return Err(());
             }
-            if let Some(all_segment) = segments
-                .keys
-                .iter_mut()
-                .find(|tv| {
-                    tv.as_ref()
-                        .expect("Parent was ok")
-                        .to_ascii_lowercase()
-                        .starts_with("_internal_")
-                })
-            {
+            if let Some(all_segment) = segments.keys.iter_mut().find(|tv| {
+                tv.as_ref()
+                    .expect("Parent was ok")
+                    .to_ascii_lowercase()
+                    .starts_with("_internal_")
+            }) {
                 all_segment.state = TomlValueState::ValidationFailed {
                     message: "Reserved segment name".to_string(),
                 };
@@ -535,12 +531,6 @@ impl Input {
                 segment_order.iter().position(|s| s == segment_name)
             }
         }
-    }
-
-    pub fn init(&mut self) -> Result<()> {
-        //todo: this needs to move into verify
-
-        Ok(())
     }
 }
 

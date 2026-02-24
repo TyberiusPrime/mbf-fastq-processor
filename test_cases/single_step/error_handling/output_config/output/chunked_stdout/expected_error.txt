@@ -1,1 +1,9 @@
-Chunksize' is not supported when writing to stdout.
+  ╭─config.toml
+  ┆
+5 │ [output]
+6 │ chunk_size = 5000
+  ┆              ──┬─
+  ┆                │
+  ┆                ╰── Invalid when stdout = true
+──╯
+Hint: Either remove 'chunksize' or set 'stdout' to false

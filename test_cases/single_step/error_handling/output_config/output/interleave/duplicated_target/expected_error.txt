@@ -1,1 +1,11 @@
-Interleave segment 'read2' is duplicated in interleave order:
+Error 1/1
+  ╭─config.toml
+  ┆
+5 │ [output]
+6 │ interleave = [
+7 │     "read1",
+8 │     "read2",
+9 │     "read2",
+  ┆     ───┬───
+  ┆        │
+  ┆        ╰───── Segment is duplicated in interleave order

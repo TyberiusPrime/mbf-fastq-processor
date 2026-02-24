@@ -32,7 +32,7 @@ pub struct Kmers {
     pub min_count: usize,
 
     #[schemars(skip)]
-    #[tpd(skip, default)] 
+    #[tpd(skip, default)]
     pub resolved_kmer_db: Option<HashMap<Vec<u8>, usize>>,
 }
 

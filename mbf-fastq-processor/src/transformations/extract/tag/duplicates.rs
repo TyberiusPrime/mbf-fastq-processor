@@ -10,7 +10,6 @@ use crate::dna::TagValue;
 use crate::transformations::extract::extract_bool_tags_from_tag;
 use crate::transformations::{read_name_canonical_prefix, tag::calculate_filter_capacity};
 
-
 #[derive(Clone, JsonSchema)]
 #[tpd]
 #[derive(Debug)]
@@ -113,7 +112,10 @@ impl Step for Duplicates {
             );
             //dbg!(capacity);
 
-            let mut filters = self.filters.lock().expect("Should have been provided by VerifyIn");
+            let mut filters = self
+                .filters
+                .lock()
+                .expect("Should have been provided by VerifyIn");
             for tag in demultiplex_info.iter_tags() {
                 filters.insert(
                     tag,
@@ -124,11 +126,8 @@ impl Step for Duplicates {
 
         match &self.source {
             ResolvedSourceAll::Segment(segment_index_or_all) => {
-                let filters = RefCell::new(
-                    self.filters
-                        .lock()
-                        .expect("Failed to aquire filter lock") ,
-                );
+                let filters =
+                    RefCell::new(self.filters.lock().expect("Failed to aquire filter lock"));
                 extract_bool_tags_plus_all(
                     &mut block,
                     *segment_index_or_all,
@@ -154,11 +153,7 @@ impl Step for Duplicates {
                 );
             }
             ResolvedSourceAll::Tag(tag_name) => {
-                let mut filters = self
-                    .filters
-                    .lock()
-                    .expect("Failed to aquire filter lock")
-                    ;
+                let mut filters = self.filters.lock().expect("Failed to aquire filter lock");
                 extract_bool_tags_from_tag(
                     &mut block,
                     &self.out_label,
@@ -179,11 +174,8 @@ impl Step for Duplicates {
                 segment_index_or_all,
                 split_character,
             } => {
-                let filters = RefCell::new(
-                    self.filters
-                        .lock()
-                        .expect("Failed to aquire filter lock")
-                );
+                let filters =
+                    RefCell::new(self.filters.lock().expect("Failed to aquire filter lock"));
 
                 //todo: write a test case sthat tags duplicates in demultiplexd mode
                 extract_bool_tags_plus_all(
