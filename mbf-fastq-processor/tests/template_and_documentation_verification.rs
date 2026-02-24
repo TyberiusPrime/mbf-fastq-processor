@@ -20,22 +20,27 @@ fn get_all_transformations() -> Vec<String> {
     let mut transformations = Vec::new();
 
     // Navigate to the oneOf array in the schema
-    let one_ofs = schema
-        .get("oneOf")
-        .and_then(|o| o.as_array())
-        .expect("Schema does not contain oneOf array");
 
-    for variant in one_ofs {
-        if let Some(action_const) = variant
-            .get("properties")
-            .and_then(|p| p.get("action"))
-            .and_then(|a| a.get("const"))
-            .and_then(|c| c.as_str())
-        {
-            // Skip internal transformations (those starting with underscore)
-            if !action_const.starts_with('_') {
-                transformations.push(action_const.to_string());
-            }
+    let one_ofs = schema
+        .as_object()
+        .expect("schema_for! always produces an object")
+        .get("oneOf")
+        .expect("Transformation schema must have oneOf field");
+    dbg!(one_ofs);
+    for entry in one_ofs
+        .as_array()
+        .expect("oneOf field in schema must be an array")
+    {
+        let action_const = entry
+            .get("required")
+            .expect("Could not decode schema")
+            .get(0)
+            .expect("Could not decode schema - 2")
+            .as_str()
+            .expect("required field must be an array of strings");
+
+        if !action_const.starts_with('_') {
+            transformations.push(action_const.to_string());
         }
     }
 
@@ -1255,9 +1260,9 @@ fn test_llm_guide_toml_examples_parse() {
                 }
                 Err(e) => {
                     failed_examples.push(format!(
-                        "LLM guide TOML block {}, line_no {line_no} failed to parse: {:?}\nBlock:\n{}",
+                        "LLM guide TOML block {}, line_no {line_no} failed to parse: {}\nBlock:\n{}",
                         i + 1,
-                        e,
+                        e.pretty("template.toml"),
                         toml_block
                     ));
                 }
@@ -1277,9 +1282,9 @@ fn test_llm_guide_toml_examples_parse() {
                 }
                 Err(e) => {
                     failed_examples.push(format!(
-                        "LLM guide complete config block {}, line_no {line_no} failed to parse: {:?}\nBlock:\n{}",
+                        "LLM guide complete config block {}, line_no {line_no} failed to parse: {}\nBlock:\n{}",
                         i + 1,
-                        e,
+                        e.pretty("template.toml"),
                         toml_block
                     ));
                 }
@@ -1452,54 +1457,8 @@ fn test_readme_toml_examples_validate() {
     println!("\n✓ All README.md TOML examples are valid!");
 }
 
-#[test]
-fn test_all_transformations_are_deny_unknown_fields() {
-    let transformation_names = get_all_transformations();
-    let mut errors = Vec::new();
-    for transformation in &transformation_names {
-        let struct_file = find_struct_file_for_transformation(transformation).expect(&format!(
-            "Failed to find struct file for transformation {transformation}"
-        ));
-        let query = format!("pub struct {transformation}");
-        let transformation_without_prefix = transformation
-            .strip_prefix("Calc")
-            .or_else(|| transformation.strip_prefix("Convert"))
-            .or_else(|| transformation.strip_prefix("Extract"))
-            .or_else(|| transformation.strip_prefix("Filter"))
-            .or_else(|| transformation.strip_prefix("Quantify"))
-            .or_else(|| transformation.strip_prefix("Tag"))
-            .unwrap_or(transformation);
-        let alternative_query = format!("pub struct {transformation_without_prefix}");
-        let code = fs::read_to_string(&struct_file)
-            .expect(&format!("Failed to read struct file {transformation}"));
-        let lines = code.lines().collect::<Vec<&str>>();
-        let struct_line = lines
-            .iter()
-            .position(|line| line.contains(&query)).or_else(|| {
-                lines.iter().position(|line| line.contains(&alternative_query))
-            })
-            .expect(&format!(
-                "Failed to find struct definition line for {transformation} or {transformation_without_prefix}"
-            ));
-        let attribute_lines_before = lines[..struct_line]
-            .iter()
-            .rev()
-            .take_while(|line| line.trim().starts_with("#"))
-            .collect::<Vec<&&str>>();
-        if !attribute_lines_before
-            .iter()
-            .any(|line| **line == "#[serde(deny_unknown_fields)]")
-        {
-            errors.push(format!(
-                "{transformation} - {attribute_lines_before:?} - {struct_line}"
-            ));
-        }
-    }
-    //now all lines before
-    if !errors.is_empty() {
-        panic!(
-            "The following transformations are missing #[serde(deny_unknown_fields)]: {}",
-            errors.join(", ")
-        );
-    }
-}
+// #[test]
+// fn test_all_transformations_are_deny_unknown_fields() {
+//     // toml-pretty-deser is unknown fields by default
+//
+// }
