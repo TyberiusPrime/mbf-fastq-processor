@@ -64,7 +64,7 @@ impl VerifyIn<PartialConfig> for PartialBaseContent {
             Ok(())
         });
         self.bases_to_ignore.verify(|v| {
-            if !self.relative.as_ref().map(|x| *x).unwrap_or(false) {
+            if !self.relative.as_ref().is_some_and(|x| *x) {
                 return Err(ValidationFailure::new(
                     "Bases can only be ignored in relative=true mode",
                     Some("Either set relative=false or remove the bases_to_ignore field"),

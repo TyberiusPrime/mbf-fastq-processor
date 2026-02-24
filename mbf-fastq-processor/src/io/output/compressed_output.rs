@@ -367,7 +367,7 @@ impl<T: std::io::Write + Send + 'static> HashedAndCompressedWriterSingleCore<'_,
         hash_uncompressed: bool,
         hash_compressed: bool,
         compression_level: Option<u8>,
-        failure: Option<SimulatedWriteFailure>,
+        failure: Option<&SimulatedWriteFailure>,
     ) -> Result<Self> {
         let mut compressed_hasher = if hash_compressed {
             Some(sha2::Sha256::new())

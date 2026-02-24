@@ -31,7 +31,7 @@ impl VerifyIn<PartialConfig> for PartialValidateAllReadsSameLength {
         if let Some(MustAdapt::PostVerify(source)) = self.source.as_ref()
             && let Some(input_def) = parent.input.as_ref()
         {
-            self.source_name = Some(source.get_name(input_def.get_segment_order()))
+            self.source_name = Some(source.get_name(input_def.get_segment_order()));
         } else {
             self.source_name = Some("".to_string()); // just supress the error message.
         }
@@ -40,15 +40,14 @@ impl VerifyIn<PartialConfig> for PartialValidateAllReadsSameLength {
             self.source.help = Some(format!(
                 "Please provide a source, that is a <segment name>, a <name:segment_name> or tag name. Available segments: {}",
                 toml_pretty_deser::format_quoted_list(
-                    &(parent
-                        .input
-                        .as_ref()
-                        .map(|input_def| input_def
+                    &(parent.input.as_ref().map_or_else(
+                        || vec![""],
+                        |input_def| input_def
                             .get_segment_order()
                             .iter()
-                            .map(|x| x.as_str())
-                            .collect())
-                        .unwrap_or_else(|| vec![""]))
+                            .map(String::as_str)
+                            .collect()
+                    ))
                 )
             ));
         }

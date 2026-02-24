@@ -347,7 +347,7 @@ fn main() -> Result<()> {
         }
         Some(("validate", sub_matches)) => {
             let toml_path = handle_toml_arg(sub_matches.get_one::<String>("config"));
-            validate_config_file(toml_path);
+            validate_config_file(&toml_path);
         }
         Some(("verify", sub_matches)) => {
             let output_dir = sub_matches.get_one::<String>("output-dir");
@@ -361,7 +361,7 @@ fn main() -> Result<()> {
             let head = sub_matches.get_one::<u64>("head").copied();
             let sample = sub_matches.get_one::<u64>("sample").copied();
             let inspect = sub_matches.get_one::<u64>("inspect").copied();
-            run_interactive_mode(toml_path, head, sample, inspect);
+            run_interactive_mode(&toml_path, head, sample, inspect);
         }
         Some(("completions", sub_matches)) => {
             if let Some(shell) = sub_matches.get_one::<Shell>("shell") {
@@ -534,8 +534,8 @@ fn process_from_toml_file(toml_file: &Path, allow_overwrites: bool) {
     }
 }
 
-fn validate_config_file(toml_path: PathBuf) {
-    match mbf_fastq_processor::validate_config(&toml_path) {
+fn validate_config_file(toml_path: &Path) {
+    match mbf_fastq_processor::validate_config(toml_path) {
         Ok(warnings) => {
             if warnings.is_empty() {
                 println!("✓ Configuration is valid");
@@ -591,13 +591,13 @@ fn verify_config_file(toml_file: &Path, output_dir: Option<PathBuf>, unsafe_prep
 }
 
 fn run_interactive_mode(
-    toml_path: PathBuf,
+    toml_path: &Path,
     head: Option<u64>,
     sample: Option<u64>,
     inspect: Option<u64>,
 ) {
     if let Err(e) =
-        mbf_fastq_processor::interactive::run_interactive(&toml_path, head, sample, inspect)
+        mbf_fastq_processor::interactive::run_interactive(toml_path, head, sample, inspect)
     {
         eprintln!("Interactive mode error: {e:?}");
         std::process::exit(1);

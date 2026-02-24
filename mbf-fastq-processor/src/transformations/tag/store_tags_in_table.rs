@@ -56,7 +56,7 @@ impl VerifyIn<PartialConfig> for PartialStoreTagsInTable {
                     .map(|tv| {
                         tv.as_ref()
                             .expect("Parent was ok, child should be as well")
-                            .to_string()
+                            .clone()
                     })
                     .collect(),
             ))));

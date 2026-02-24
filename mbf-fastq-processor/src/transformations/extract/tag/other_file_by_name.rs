@@ -50,7 +50,9 @@ impl VerifyIn<PartialConfig> for PartialOtherFileByName {
     {
         self.segment.validate_segment(parent);
         if let Some(filename) = self.filename.as_ref() {
-            if filename.ends_with(".bam") || filename.ends_with(".sam") {
+            if Path::new(filename).extension().is_some_and(|ext| {
+                ext.eq_ignore_ascii_case("bam") || ext.eq_ignore_ascii_case("sam")
+            }) {
                 if self.include_unmapped.is_missing() {
                     return Err(ValidationFailure::new(
                         "Missing include_unmapped",
@@ -104,13 +106,10 @@ impl Step for OtherFileByName {
                 let their_char: BString = BString::new(vec![info.comment_separator]);
                 let our_char: BString = self
                     .fastq_readname_end_char
-                    .map(|x| BString::new(vec![x]))
-                    .unwrap_or(b"/".into());
+                    .map_or(b"/".into(), |x| BString::new(vec![x]));
                 if their_char != our_char {
                     return Err(anyhow::anyhow!(
-                        "OtherFileByName is configured to trim read names at character '{}' (by option fastq_readname_end_char), but an upstream StoreTagInComment step is inserting comments that start with character '{}' (option comment_separator). These must match.",
-                        our_char,
-                        their_char
+                        "OtherFileByName is configured to trim read names at character '{our_char}' (by option fastq_readname_end_char), but an upstream StoreTagInComment step is inserting comments that start with character '{their_char}' (option comment_separator). These must match.",
                     ));
                 }
             }
