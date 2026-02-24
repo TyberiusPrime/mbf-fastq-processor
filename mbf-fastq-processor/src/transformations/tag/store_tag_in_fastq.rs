@@ -177,7 +177,7 @@ impl Step for StoreTagInFastQ {
             self.format.default_suffix(),
             output_ix_separator,
             self.compression,
-            None,
+            self.compression_level,
             false,
             false,
             allow_overwrite,

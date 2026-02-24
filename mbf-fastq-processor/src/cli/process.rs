@@ -22,7 +22,7 @@ pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> 
                 bail!("Failed to parse config.toml and no pretty error available");
             }
             let pretty = improve_error_messages("config.toml", e);
-            bail!("{}", pretty);
+            bail!("{pretty}");
         }
     };
     let checked = parsed.check()?;
@@ -35,7 +35,7 @@ pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> 
     let marker = OutputRunMarker::create(&output_directory, &marker_prefix)?;
     let allow_overwrite = allow_overwrite || marker.was_preexisting();
 
-    let res = _run(
+    let res = inner_run(
         checked,
         output_directory.as_ref(),
         allow_overwrite,
@@ -56,7 +56,7 @@ pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> 
     }
 }
 
-fn _run(
+fn inner_run(
     mut parsed: CheckedConfig,
     output_directory: &Path,
     allow_overwrite: bool,

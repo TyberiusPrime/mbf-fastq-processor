@@ -1,7 +1,5 @@
 //use regex::Regex;
 
-use regex::Regex;
-
 use crate::config::PartialConfig;
 
 pub mod process;
@@ -20,7 +18,7 @@ pub(crate) fn improve_error_messages(
 
     match &mut err {
         toml_pretty_deser::DeserError::ParsingFailure(_, _) => {}
-        toml_pretty_deser::DeserError::DeserFailure(source, tv_partial) => {
+        toml_pretty_deser::DeserError::DeserFailure(_source, tv_partial) => {
             if let Some(partial) = tv_partial.value.as_mut() {
                 if let Some(Some(steps)) = partial.transform.value.as_mut() {
                     for tv_step in steps.iter_mut() {

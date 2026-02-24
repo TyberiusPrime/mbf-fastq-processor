@@ -1376,7 +1376,6 @@ fn test_every_transformation_has_benchmark() {
 #[test]
 fn test_readme_toml_examples_validate() {
     // This test extracts TOML code blocks from README.md and validates them
-    use mbf_fastq_processor::config::Config;
     use std::fs;
     use std::path::Path;
 

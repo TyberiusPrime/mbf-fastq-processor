@@ -1,5 +1,5 @@
 #![allow(clippy::struct_field_names)]
-use crate::config::PartialConfig;
+use crate::config::{PartialConfig, StructuredInput};
 // FailureOptions - eserde(?) interferes with clippy here.
 use crate::io::output::compressed_output::{SimulatedWriteError, SimulatedWriteFailure};
 use anyhow::{Context, Result};
@@ -118,8 +118,7 @@ impl VerifyIn<PartialConfig> for PartialOptions {
                 .input
                 .as_ref()
                 .and_then(|input_def| input_def.structured.as_ref())
-                .map(|x| x.is_interleaved())
-                .unwrap_or(false)
+                .is_some_and(StructuredInput::is_interleaved)
             {
                 if !v.is_multiple_of(2) {
                     return Err(ValidationFailure::new(
@@ -137,7 +136,7 @@ impl VerifyIn<PartialConfig> for PartialOptions {
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod tests {
-    use crate::config::{Config, PartialConfig};
+    use crate::config::Config;
 
     use super::*;
 

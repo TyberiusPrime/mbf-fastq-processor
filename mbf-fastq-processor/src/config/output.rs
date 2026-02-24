@@ -55,20 +55,19 @@ impl VerifyIn<super::PartialConfig> for PartialOutput {
         Self: Sized + toml_pretty_deser::Visitor,
     {
         self.ix_separator.or_with(default_ix_separator);
-        if let Some(Some(level)) = self.compression_level.value {
-            if !self
+        if let Some(Some(_level)) = self.compression_level.value {
+            if self
                 .compression
                 .as_ref()
-                .map(|c| c.is_compressed())
-                .unwrap_or(false)
+                .is_some_and(CompressionFormat::is_compressed)
             {
+                validate_compression_level_u8(&mut self.compression, &mut self.compression_level);
+            } else {
                 self.compression_level.state = TomlValueState::ValidationFailed {
                     message: "Invalid when compression='uncompressed'".to_string(),
                 };
                 self.compression_level.help = Some(
                 "Either remove the compression_lever parameter, or set the compression to 'Gzip'/'Zstd'".to_string());
-            } else {
-                validate_compression_level_u8(&mut self.compression, &mut self.compression_level);
             }
         }
         Ok(())

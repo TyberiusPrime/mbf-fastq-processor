@@ -1,7 +1,6 @@
 use std::collections::{BTreeMap, HashSet};
 
 use anyhow::Result;
-use flate2::Compress;
 use indexmap::IndexMap;
 use schemars::JsonSchema;
 use std::collections::HashMap;
@@ -194,10 +193,11 @@ impl PartialInput {
         }
         Ok(())
     }
+    #[allow(clippy::too_many_lines)] // I know, but it's two distingt if branches, 
     fn build_structured(&mut self) -> Result<(), ()> {
-        if let Err(_) = self.verify_segment_names() {
+        if let Err(()) = self.verify_segment_names() {
             self.segments.state = TomlValueState::Nested;
-        };
+        }
 
         //We need to make it not fail on unset structrude
         //todo: refactor, but the borrow checking is annoying.
@@ -391,7 +391,7 @@ impl VerifyIn<super::PartialConfig> for PartialInput {
 
         self.verify_same_number_of_input_segments();
 
-        if let Err(_) = self.build_structured()
+        if let Err(()) = self.build_structured()
         //errors go into the fields
         {}
 
@@ -491,6 +491,7 @@ pub enum StructuredInput {
 }
 
 impl StructuredInput {
+    #[must_use]
     pub fn is_interleaved(&self) -> bool {
         matches!(self, StructuredInput::Interleaved { .. })
     }
@@ -574,6 +575,7 @@ pub enum CompressionFormat {
 }
 
 impl CompressionFormat {
+    #[must_use]
     pub fn is_compressed(&self) -> bool {
         !matches!(self, CompressionFormat::Uncompressed)
     }
