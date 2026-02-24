@@ -124,7 +124,7 @@ impl VerifyIn<PartialConfig> for PartialOptions {
                 if !v.is_multiple_of(2) {
                     return Err(ValidationFailure::new(
                         "block_size must be a multiple of 2",
-                        None,
+                        Some("Either set an block_size, or remove interleaved"),
                     ));
                 }
             }

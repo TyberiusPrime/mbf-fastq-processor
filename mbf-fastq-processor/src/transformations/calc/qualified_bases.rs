@@ -13,23 +13,23 @@ use crate::{
 #[derive(Debug)]
 pub enum Operator {
     #[tpd(alias = ">")]
-    #[tpd(alias = "above")]
-    #[tpd(alias = "worse")]
+    #[tpd(alias = "Above")]
+    #[tpd(alias = "Worse")]
     #[tpd(alias = "gt")]
     Above,
     #[tpd(alias = "<")]
-    #[tpd(alias = "below")]
-    #[tpd(alias = "better")]
+    #[tpd(alias = "Below")]
+    #[tpd(alias = "Better")]
     #[tpd(alias = "lt")]
     Below,
     #[tpd(alias = ">=")]
-    #[tpd(alias = "worse_or_equal")]
-    #[tpd(alias = "above_or_equal")]
+    #[tpd(alias = "Worse_or_equal")]
+    #[tpd(alias = "Wbove_or_equal")]
     #[tpd(alias = "gte")]
     AboveOrEqual,
     #[tpd(alias = "<=")]
-    #[tpd(alias = "better_or_equal")]
-    #[tpd(alias = "below_or_equal")]
+    #[tpd(alias = "Better_or_equal")]
+    #[tpd(alias = "Below_or_equal")]
     #[tpd(alias = "lte")]
     BelowOrEqual,
 }

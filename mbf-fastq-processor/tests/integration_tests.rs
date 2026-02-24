@@ -596,7 +596,7 @@ prefix = 'output'
         "Expected validation failure message"
     );
     assert!(
-        stderr.contains("blocksize must be a multiple of 2"),
+        stderr.contains("block_size must be a multiple of 2"),
         "Expected error about invalid action: {stderr}"
     );
     assert!(
@@ -787,11 +787,12 @@ interleaved  = ['read1','read2']
 
     let stderr = std::str::from_utf8(&cmd.stderr).unwrap().to_string();
 
+    dbg!(&stderr);
     assert!(
         stderr.contains("Configuration validation failed") || stderr.contains("Could not parse"),
         "Expected error about malformed TOML: {stderr}"
     );
-    assert!(stderr.contains("Block size must be even for interleaved input"));
+    assert!(stderr.contains("block_size must be a multiple of 2"));
     assert!(
         !cmd.status.success(),
         "Exit code should be non-zero for this error"
@@ -2357,7 +2358,7 @@ fn test_only_list_one_case_variant_on_error() {
 [[step]]
     action= 'CalcQualifiedBases'
     out_label = 'qb'
-    op = 'nosuchop'
+    op = 'wrse'
     threshold = 5
 
 [output]
@@ -2373,9 +2374,8 @@ fn test_only_list_one_case_variant_on_error() {
     //let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
     let stderr = std::str::from_utf8(&cmd.stderr).unwrap().to_string();
     //assert!(stderr.contains("# # Cookbook 01: Basic Quality Report"));
-    assert!(stderr.contains("Worse,"));
-    assert!(!stderr.contains("worse,"));
-    assert!(!stderr.contains("worse\n"));
+    assert!(stderr.contains("Worse"));
+    assert!(!stderr.contains("worse"));
     assert!(!cmd.status.success());
 }
 
