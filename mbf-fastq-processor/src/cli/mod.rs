@@ -20,7 +20,7 @@ pub(crate) fn improve_error_messages(
         toml_pretty_deser::DeserError::ParsingFailure(_, _) => {}
         toml_pretty_deser::DeserError::DeserFailure(_source, tv_partial) => {
             if let Some(partial) = tv_partial.value.as_mut()
-                && let Some(Some(steps)) = partial.transform.value.as_mut()
+                && let Some(steps) = partial.transform.value.as_mut()
             {
                 for tv_step in steps.iter_mut() {
                     if tv_step.is_nested()
