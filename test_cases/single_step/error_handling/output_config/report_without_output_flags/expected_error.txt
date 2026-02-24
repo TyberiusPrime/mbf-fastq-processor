@@ -1,1 +1,12 @@
-(output): Report step configured, but neither output.report_json nor output.report_html is true. Enable at least one to write report files.
+  ╭─config.toml
+  ┆
+1 │ [input]
+  ┆ ┬
+  ┆ │
+  ┆ ╰──────── Report but no output.report_html | report_json
+6 │ prefix = "output"
+  ┆                  ┬
+  ┆                  │
+  ┆                  ╰─ Add report_json | report_html here?
+──╯
+Hint: Either remove the report, or enable it's output.
