@@ -1253,6 +1253,10 @@ Correct barcodes using Hamming distance.
     barcodes = 'my_barcodes'       # TYPE: string, REQUIRED
     max_hamming_distance = 1       # TYPE: usize, REQUIRED
     on_no_match = 'remove'         # TYPE: string, REQUIRED
+
+[barcodes.my_barcodes]  # hamming correct requires barcode section
+    'AAAAAAAA' = 'sample_1'
+    
 ```
 
 **on_no_match VALUES**:

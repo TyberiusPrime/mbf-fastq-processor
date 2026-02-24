@@ -13,7 +13,7 @@ use std::cell::RefCell;
 pub enum Algorithm {
     /// fastp algorithm: quality-score based mismatch resolution
     /// Uses hamming distance for overlap detection and chooses higher quality base for mismatches
-    //TODO #[tpd(alias="FastpSeemsWeird")]
+    #[tpd(alias="FastpSeemsWeird")]
     Fastp,
 }
 
