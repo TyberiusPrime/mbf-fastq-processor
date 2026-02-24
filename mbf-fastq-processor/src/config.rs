@@ -114,7 +114,7 @@ pub struct Config {
 
     #[tpd(alias = "step")]
     #[tpd(nested)]
-    pub transform: Option<Vec<Transformation>>,
+    pub transform: Vec<Transformation>,
 
     #[tpd(nested)]
     pub options: Options,
@@ -140,6 +140,7 @@ impl VerifyIn<TPDRoot> for PartialConfig {
     where
         Self: Sized,
     {
+        self.transform.or_default();
         self.options.or_with(|| PartialOptions {
             threads: TomlValue::new_ok(None, 0..0),
             max_blocks_in_flight: TomlValue::new_ok(None, 0..0),
@@ -255,8 +256,6 @@ impl Config {
 
         for t in self
             .transform
-            .take()
-            .expect(".transform has to be still valid in expand")
             .drain(..)
         {
             match t {
@@ -364,7 +363,7 @@ impl Config {
                 }
             }
         }
-        self.transform = Some(expanded_transforms.into_inner());
+        self.transform = expanded_transforms.into_inner();
         res_report_labels
     }
 
@@ -377,14 +376,10 @@ impl Config {
         }
         let has_validate_name = self
             .transform
-            .as_ref()
-            .expect(".transform has to be still valid in expand_spot_checks")
             .iter()
             .any(|step| matches!(step, Transformation::ValidateName(_)));
         let has_spot_check = self
             .transform
-            .as_ref()
-            .expect(".transform has to be still valid in expand_spot_checks")
             .iter()
             .any(|step| matches!(step, Transformation::SpotCheckReadPairing(_)));
         let is_benchmark = self.benchmark.as_ref().is_some_and(|b| b.enable);
@@ -403,30 +398,20 @@ impl Config {
 
     fn inner_check(mut self, check_input_files_exist: bool) -> Result<CheckedConfig> {
         let mut errors = Vec::new();
-        self.check_input_segment_definitions(&mut errors);
         let mut stages = None;
         let mut report_labels = None;
-        if self.transform.is_none() {
-            // configuring no transformations is fine.
-            // But since we're using an option to represent
-            // 'no more .transform after this point in the checking'
-            // we have to do this manual init
-            self.transform = Some(Vec::new());
-        }
         if errors.is_empty() {
             //no point in checking them if segment definition is broken
             self.check_output(&mut errors);
-            assert!(self.transform.is_some());
             self.check_reports(&mut errors);
-            assert!(self.transform.is_some());
             self.check_barcodes(&mut errors);
             self.check_transform_segments(&mut errors);
             report_labels = Some(self.expand_transformations(&mut errors));
             if errors.is_empty() {
                 let (tag_names, stages_) = self.check_transformations(&mut errors);
-                //self.transfrom is now None, the trafos have been expanded into stepsk.
+                //self.transfrom is now empty, the trafos have been expanded into stepsk.
                 let stages_ = stages_;
-                assert!(self.transform.is_none());
+                assert!(self.transform.is_empty());
                 self.check_name_collisions(&mut errors, &tag_names);
                 self.check_for_any_output(&stages_, &mut errors);
                 if check_input_files_exist {
@@ -516,13 +501,6 @@ impl Config {
             errors.push(anyhow!(
                 "input.options.build_rapidgzip_index and Head can not be used together (index would not be created). Set `input.options.build_rapidgzip_index` to false"
             ));
-        }
-    }
-
-    fn check_input_segment_definitions(&mut self, errors: &mut Vec<anyhow::Error>) {
-        // Initialize segments and handle backward compatibility
-        if let Err(e) = self.input.init() {
-            errors.push(e);
         }
     }
 
@@ -729,8 +707,6 @@ impl Config {
         // check each transformations (before & after expansion), validate labels
         for (step_no, t) in self
             .transform
-            .as_mut()
-            .expect(".transform has to be still valid in check_transform_segments")
             .iter_mut()
             .enumerate()
         {
@@ -750,17 +726,13 @@ impl Config {
 
         for (step_no, t) in self
             .transform
-            .as_ref()
-            .expect(".transform has to be still valid in check_transform_segments")
             .iter()
             .enumerate()
         {
             if let Err(e) = t.validate_others(
                 &self.input,
                 self.output.as_ref(),
-                self.transform
-                    .as_ref()
-                    .expect(".transform has to be still valid in check_transformations"),
+                &self.transform,
                 step_no,
             ) {
                 errors.push(e.context(format!("[Step {step_no} ({t})]:")));
@@ -858,10 +830,8 @@ impl Config {
                 tag_type = metadata.tag_type,
             ));
         }
-        let transforms = self.transform.take();
-        let stages: Vec<Stage> = transforms
-            .expect(".transform has to be still valid in check_transformations")
-            .into_iter()
+        let stages: Vec<Stage> = self.transform
+            .drain(..)
             .zip(allowed_tags_per_stage)
             .filter(|(t, _)| !matches!(t, Transformation::Report { .. }))
             .map(|(t, tags)| Stage {
@@ -1002,8 +972,6 @@ impl Config {
         let is_benchmark = self.benchmark.as_ref().is_some_and(|b| b.enable);
         let has_report_transforms = self
             .transform
-            .as_ref()
-            .expect(".transform has to be still valid in check_reports")
             .iter()
             .any(|t| {
                 matches!(
