@@ -1,2 +1,14 @@
-(from the 'template' command)
-    ==== CalcQualifiedBases ====:
+  ╭─config.toml
+  ┆
+7 │ [[step]]
+8 │ action = "CalcQualifiedBases"
+  ┆          ──────────┬─────────
+  ┆                    │
+  ┆                    ╰────────── Involving this enum variant.
+9 │ op = "nosuchop"
+  ┆      ─────┬────
+  ┆           │
+  ┆           ╰───── Invalid enum variant: 'nosuchop'
+──╯
+Hint: Did you mean: Below, Above, or '>' (='Above')?
+      See https://doc_url.example/version-stripped-from-test/docs/reference/CalcQualifiedBases

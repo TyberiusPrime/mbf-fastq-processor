@@ -729,6 +729,13 @@ impl ExpectedFailure {
         } else {
             Cow::Borrowed(stderr)
         };
+        //replace url and version from error help
+        let doc_url = format!(
+            "{}v{}/docs/reference/",
+            env!("CARGO_PKG_HOMEPAGE"),
+            env!("CARGO_PKG_VERSION")
+        );
+        let stderr = stderr.replace(&doc_url, "https://doc_url.example/version-stripped-from-test/docs/reference/");
 
         match self {
             ExpectedFailure::ExactText(expected_text) => {

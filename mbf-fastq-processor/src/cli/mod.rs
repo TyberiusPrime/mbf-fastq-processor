@@ -1,38 +1,52 @@
 //use regex::Regex;
 
+use regex::Regex;
+
+use crate::config::PartialConfig;
+
 pub mod process;
 pub mod validate;
 pub mod verify;
 
-// pub(crate) fn improve_error_messages(e: anyhow::Error, raw_toml: &str) -> anyhow::Error {
-//     let mut e = extend_with_step_annotation(e, raw_toml);
-//     let msg = format!("{e:?}");
-//     let barcode_regexp = Regex::new("barcodes.[^:]+: invalid type: sequence,")
-//         .expect("hardcoded regex pattern is valid");
-//     if barcode_regexp.is_match(&msg) {
-//         e = e.context("Use `[barcode.<name>]` instead of `[[barcode.<name>]]` in your config");
-//     }
-//     let options_search = "options[0]: invalid type: map, expected usize";
-//     if msg.contains(options_search) {
-//         e = e.context(
-//             "The 'options' field should be a table, not an array. Use [options], not [[options]]",
-//         );
-//     }
-//     let mistyped_input = "invalid type: sequence, expected struct __ImplEDeserializeForInput";
-//     if msg.contains(mistyped_input) {
-//         e = e.context("(input): The 'input' section should be a table, not an array. Use [input] instead of [[input]]");
-//     } else {
-//         let mistyped_input = "expected struct __ImplEDeserializeForInput";
-//         if msg.contains(mistyped_input) {
-//             e = e.context("(input): The 'input' section should be a table of segment = [filenames,...]. Example:\n[input]\nread1 = 'filename.fq'");
-//         }
-//     }
-//     let nested_input = "input: invalid type: map, expected string or list of strings";
-//     if msg.contains(nested_input) {
-//         e = e.context("x.y as key in TOML means 'a map below the current [section]. You are probably trying for a segment name with a dot (not allowed, remove dot), or tried [input] output.prefix, but you need [output]");
-//     }
-//     e
-// }
+pub(crate) fn improve_error_messages(
+    toml_filename: &str,
+    mut err: toml_pretty_deser::DeserError<PartialConfig>,
+) -> String {
+    let doc_url = format!(
+        "{}v{}/docs/reference/",
+        env!("CARGO_PKG_HOMEPAGE"),
+        env!("CARGO_PKG_VERSION")
+    );
+
+    match &mut err {
+        toml_pretty_deser::DeserError::ParsingFailure(_, _) => {}
+        toml_pretty_deser::DeserError::DeserFailure(source, tv_partial) => {
+            if let Some(partial) = tv_partial.value.as_mut() {
+                if let Some(Some(steps)) = partial.transform.value.as_mut() {
+                    for tv_step in steps.iter_mut() {
+                        if tv_step.is_nested()
+                            && let Some(step) = tv_step.value.as_ref()
+                        {
+                            let step_name = step.tpd_get_tag();
+                            tv_step.help = Some(format!("See {doc_url}{step_name}"));
+                        }
+                    }
+                }
+            }
+        }
+    }
+    let pretty = err.pretty(toml_filename);
+    pretty
+    //     let regex = Regex::new(r#"(?m)action\s=\s['"]([a-zA-Z09-]+)['"]\s*$"#)
+    //         .expect("hardcoded regex pattern is invalid");
+    //     regex
+    //         .replace_all(
+    //             pretty_str,
+    //             "$0
+    // #   See https://tyberiusprime.github.io/mbf-fastq-processor/main/docs/reference/$1",
+    //         )
+    //         .to_string()
+}
 
 // fn extend_with_step_annotation(e: anyhow::Error, raw_toml: &str) -> anyhow::Error {
 //     let msg = format!("{e:?}");
