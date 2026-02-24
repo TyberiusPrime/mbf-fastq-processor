@@ -101,14 +101,16 @@ impl Step for OtherFileByName {
         //bail
         for trafo in all_transforms[..this_transforms_index].iter().rev() {
             if let Transformation::StoreTagInComment(info) = trafo {
-                let their_char: Option<BString> = Some(BString::new(vec![info.comment_separator]));
-                let our_char: Option<BString> =
-                    self.fastq_readname_end_char.map(|x| BString::new(vec![x]));
+                let their_char: BString = BString::new(vec![info.comment_separator]);
+                let our_char: BString = self
+                    .fastq_readname_end_char
+                    .map(|x| BString::new(vec![x]))
+                    .unwrap_or(b"/".into());
                 if their_char != our_char {
                     return Err(anyhow::anyhow!(
                         "OtherFileByName is configured to trim read names at character '{}' (by option fastq_readname_end_char), but an upstream StoreTagInComment step is inserting comments that start with character '{}' (option comment_separator). These must match.",
-                        our_char.unwrap_or(b"/".into()),
-                        their_char.unwrap_or(b"/".into())
+                        our_char,
+                        their_char
                     ));
                 }
             }

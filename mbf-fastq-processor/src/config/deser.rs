@@ -815,7 +815,7 @@ impl TryFrom<&str> for TagLabel {
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match validate_tag_name(value) {
             Ok(()) => Ok(TagLabel(value.to_string())),
-            Err(e) => return Err(e.to_string()),
+            Err(e) => Err(e.to_string()),
         }
     }
 }

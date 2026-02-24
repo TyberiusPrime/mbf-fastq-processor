@@ -4,7 +4,7 @@ use super::common::PerReadReportData;
 use crate::io;
 
 #[derive(Default, Clone)]
-#[tpd]
+#[tpd(no_verify)]
 #[derive(Debug)]
 pub struct _ReportLengthDistribution {
     pub report_no: usize,

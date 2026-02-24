@@ -46,7 +46,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, SegmentIndex>> {
         {
             match must_adapt {
                 MustAdapt::PreVerify(str_segment) => {
-                    *self = if str_segment.to_ascii_lowercase() == "all" {
+                    *self = if str_segment.eq_ignore_ascii_case("all") {
                         TomlValue::new_validation_failed(
                             span,
                             "'all' segments not valid in this position".to_string(),
@@ -196,7 +196,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, SegmentOrNameIndex>> {
         {
             match must_adapt {
                 MustAdapt::PreVerify(str_segment) => {
-                    *self = if str_segment.to_ascii_lowercase() == "all" {
+                    *self = if str_segment.eq_ignore_ascii_case("all") {
                         TomlValue::new_validation_failed(
                             span,
                             "'all' segments not valid in this position".to_string(),
@@ -323,7 +323,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceNoAll>> {
         {
             match must_adapt {
                 MustAdapt::PreVerify(source) => {
-                    let resolved = if source.to_ascii_lowercase() == "all" {
+                    let resolved = if source.eq_ignore_ascii_case("all") {
                         Err(ValidationFailure::new(
                             "'all' segments not valid in this position".to_string(),
                             Some(suggest_alternatives("", segment_order)),

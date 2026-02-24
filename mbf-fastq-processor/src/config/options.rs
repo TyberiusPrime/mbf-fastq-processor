@@ -119,14 +119,14 @@ impl VerifyIn<PartialConfig> for PartialOptions {
                 .as_ref()
                 .and_then(|input_def| input_def.structured.as_ref())
                 .is_some_and(StructuredInput::is_interleaved)
+                && !v.is_multiple_of(2)
             {
-                if !v.is_multiple_of(2) {
-                    return Err(ValidationFailure::new(
-                        "block_size must be a multiple of 2",
-                        Some("Either set an block_size, or remove interleaved"),
-                    ));
-                }
+                return Err(ValidationFailure::new(
+                    "block_size must be a multiple of 2",
+                    Some("Either set an block_size, or remove interleaved"),
+                ));
             }
+
             Ok(())
         });
         Ok(())
@@ -159,12 +159,12 @@ mod tests {
         "#;
 
         let config_no_options =
-            Config::tpd_from_toml(&toml_no_options, FieldMatchMode::AnyCase, VecMode::SingleOk);
+            Config::tpd_from_toml(toml_no_options, FieldMatchMode::AnyCase, VecMode::SingleOk);
 
         dbg!(&config_no_options);
         let config_no_options = config_no_options.unwrap();
         let config_empty_options = Config::tpd_from_toml(
-            &toml_empty_options,
+            toml_empty_options,
             FieldMatchMode::AnyCase,
             VecMode::SingleOk,
         );

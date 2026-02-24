@@ -119,103 +119,100 @@ impl ChainedParser {
     #[allow(clippy::cast_precision_loss)]
     #[allow(clippy::cast_sign_loss)]
     pub fn parse(&mut self) -> Result<ChainParseResult> {
-        loop {
-            if !self.ensure_parser()? {
-                return Ok(ChainParseResult {
-                    fastq_block: FastQBlock {
-                        block: Vec::new(),
-                        entries: Vec::new(),
-                    },
-                    was_final: true,
-                    expected_read_count: self.expected_read_count,
-                });
-            }
+        if !self.ensure_parser()? {
+            return Ok(ChainParseResult {
+                fastq_block: FastQBlock {
+                    block: Vec::new(),
+                    entries: Vec::new(),
+                },
+                was_final: true,
+                expected_read_count: self.expected_read_count,
+            });
+        }
 
-            let mut res = self
-                .current
-                .as_mut()
-                .expect("parser must exist after ensure_parser")
-                .parse()?;
+        let mut res = self
+            .current
+            .as_mut()
+            .expect("parser must exist after ensure_parser")
+            .parse()?;
 
-            if !self.first_block_done {
-                //this is where we need to implement the exact expected read count.
-                //We have the first block, with an average read length,
-                //and from there and a basic assumption on compression,
-                //we can work out how many reads we expect in the rest of the files.
-                self.first_block_done = true;
-                match &self.bam_index_paths {
-                    Some(paths) => {
-                        let total: Option<usize> = paths
-                            .iter()
-                            .map(|path| {
-                                bam_read_count_from_index(
-                                    path,
-                                    self.options
-                                        .bam_include_mapped
-                                        .expect("must have been set by validation"),
-                                    self.options
-                                        .bam_include_unmapped
-                                        .expect("must have been set by validation"),
-                                )
-                            })
-                            .sum();
-                        let next_power_of_two = total.map(calc_next_power_of_two);
-                        self.expected_read_count = next_power_of_two;
-                    }
-                    None => {
-                        let reads_so_far = res.fastq_block.entries.len();
-                        if reads_so_far > 0 {
-                            //sheer paranoia, but downstream has to cope with this being
-                            //unknown anyway for non-file inputs
-                            if let Some(total_input_file_size) = self.total_input_file_size {
-                                let avg_read_length =
-                                    res.fastq_block
-                                        .entries
-                                        .iter()
-                                        .map(|e| e.seq.len())
-                                        .sum::<usize>() as f64
-                                        / reads_so_far as f64;
-                                let bytes_per_base = self
-                                    .current
-                                    .as_ref()
-                                    .expect("Current always set at this place")
-                                    .bytes_per_base();
-                                let expected_reads = total_input_file_size as f64
-                                    / (avg_read_length * bytes_per_base);
-                                let next_power_of_two =
-                                    calc_next_power_of_two(expected_reads as usize);
-                                self.expected_read_count = Some(next_power_of_two);
-                                /* dbg!(
-                                    avg_read_length,
-                                    bytes_per_base,
-                                    total_input_file_size,
-                                    expected_reads
-                                ); */
-                            }
+        if !self.first_block_done {
+            //this is where we need to implement the exact expected read count.
+            //We have the first block, with an average read length,
+            //and from there and a basic assumption on compression,
+            //we can work out how many reads we expect in the rest of the files.
+            self.first_block_done = true;
+            match &self.bam_index_paths {
+                Some(paths) => {
+                    let total: Option<usize> = paths
+                        .iter()
+                        .map(|path| {
+                            bam_read_count_from_index(
+                                path,
+                                self.options
+                                    .bam_include_mapped
+                                    .expect("must have been set by validation"),
+                                self.options
+                                    .bam_include_unmapped
+                                    .expect("must have been set by validation"),
+                            )
+                        })
+                        .sum();
+                    let next_power_of_two = total.map(calc_next_power_of_two);
+                    self.expected_read_count = next_power_of_two;
+                }
+                None => {
+                    let reads_so_far = res.fastq_block.entries.len();
+                    if reads_so_far > 0 {
+                        //sheer paranoia, but downstream has to cope with this being
+                        //unknown anyway for non-file inputs
+                        if let Some(total_input_file_size) = self.total_input_file_size {
+                            let avg_read_length =
+                                res.fastq_block
+                                    .entries
+                                    .iter()
+                                    .map(|e| e.seq.len())
+                                    .sum::<usize>() as f64
+                                    / reads_so_far as f64;
+                            let bytes_per_base = self
+                                .current
+                                .as_ref()
+                                .expect("Current always set at this place")
+                                .bytes_per_base();
+                            let expected_reads =
+                                total_input_file_size as f64 / (avg_read_length * bytes_per_base);
+                            let next_power_of_two = calc_next_power_of_two(expected_reads as usize);
+                            self.expected_read_count = Some(next_power_of_two);
+                            /* dbg!(
+                                avg_read_length,
+                                bytes_per_base,
+                                total_input_file_size,
+                                expected_reads
+                            ); */
                         }
                     }
                 }
             }
-
-            if res.was_final {
-                self.current = None; //so the next entry will load a new parser from pending.
-                if !self.pending.is_empty() {
-                    res.was_final = false;
-                }
-            }
-
-            if res.fastq_block.entries.is_empty() && !res.was_final {
-                // This happens when there's an empty file (which must have been  BAM)
-                // in the sequence (other file formats would be truly empty files
-                // and then niffler would complain because they are less than 5 bytes long
-                // or if for some reason (zst?)
-                // we check teh empty bam file thing in the bam parser
-            }
-            return Ok(ChainParseResult {
-                fastq_block: res.fastq_block,
-                was_final: res.was_final,
-                expected_read_count: self.expected_read_count,
-            });
         }
+
+        if res.was_final {
+            self.current = None; //so the next entry will load a new parser from pending.
+            if !self.pending.is_empty() {
+                res.was_final = false;
+            }
+        }
+
+        if res.fastq_block.entries.is_empty() && !res.was_final {
+            // This happens when there's an empty file (which must have been  BAM)
+            // in the sequence (other file formats would be truly empty files
+            // and then niffler would complain because they are less than 5 bytes long
+            // or if for some reason (zst?)
+            // we check teh empty bam file thing in the bam parser
+        }
+        Ok(ChainParseResult {
+            fastq_block: res.fastq_block,
+            was_final: res.was_final,
+            expected_read_count: self.expected_read_count,
+        })
     }
 }

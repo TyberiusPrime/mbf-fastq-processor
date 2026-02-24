@@ -331,7 +331,7 @@ pub enum Transformation {
     //
     ConvertRegionsToLength(convert::RegionsToLength),
     #[tpd(alias = "EvaluateExpression")]
-    EvalExpression(convert::EvalExpression),
+    EvalExpression(Box<convert::EvalExpression>),
     ExtractRegionsOfLowQuality(extract::RegionsOfLowQuality),
     ExtractLongestPolyX(extract::LongestPolyX),
     ExtractPolyTail(extract::PolyTail),

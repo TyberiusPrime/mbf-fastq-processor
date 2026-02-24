@@ -257,9 +257,9 @@ If you have paired end reads, name two 'virtual' segments, e.g. ['read1','read2'
                                 .map(|span| (span.clone(), "Duplicate value".to_string()))
                                 .collect(),
                         };
-                        segment_toml_value.help = Some(format!(
-                            "Use each segment only once in interleaved. If you really want to use the same reads twice, define multiple segments, set input.accept_duplicate_files = true."
-                        ));
+                        segment_toml_value.help = Some(
+                            "Use each segment only once in interleaved. If you really want to use the same reads twice, define multiple segments, set input.accept_duplicate_files = true.".to_string()
+                        );
                     }
                 }
             }
@@ -318,13 +318,12 @@ If you have paired end reads, name two 'virtual' segments, e.g. ['read1','read2'
             if let Some(all_segment) = segments
                 .keys
                 .iter_mut()
-                .filter(|tv| {
+                .find(|tv| {
                     tv.as_ref()
                         .expect("Parent was ok")
                         .to_ascii_lowercase()
                         .starts_with("_internal_")
                 })
-                .next()
             {
                 all_segment.state = TomlValueState::ValidationFailed {
                     message: "Reserved segment name".to_string(),

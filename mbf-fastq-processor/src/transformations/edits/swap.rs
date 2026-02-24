@@ -63,8 +63,16 @@ impl VerifyIn<PartialConfig> for PartialSwap {
             self.segment_b.validate_segment(parent);
             if self.segment_a.is_ok()
                 && self.segment_b.is_ok()
-                && self.segment_a.as_ref().unwrap().as_ref_post()
-                    == self.segment_b.as_ref().unwrap().as_ref_post()
+                && self
+                    .segment_a
+                    .as_ref()
+                    .expect("just checked is._ok")
+                    .as_ref_post()
+                    == self
+                        .segment_b
+                        .as_ref()
+                        .expect("just checked is._ok")
+                        .as_ref_post()
             {
                 let spans = vec![
                     (self.segment_a.span(), "Identical to segment_b".to_string()),

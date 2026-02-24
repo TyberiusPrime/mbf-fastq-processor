@@ -16,7 +16,7 @@ pub fn run_test(path: &std::path::Path, toml_name: &str, test_no_in_directory: u
 
     // Always use verify command - it handles both panic and non-panic tests
     let processor_path = find_processor();
-    let r = run_verify_test(&path, &processor_path, toml_name, test_no_in_directory);
+    let r = run_verify_test(path, &processor_path, toml_name, test_no_in_directory);
     if let Err(e) = r {
         panic!("Test failed {} {e:?}", path.display());
     } else {
