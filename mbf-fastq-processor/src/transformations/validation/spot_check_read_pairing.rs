@@ -25,7 +25,7 @@ pub struct SpotCheckReadPairing {
 }
 
 impl VerifyIn<PartialConfig> for PartialSpotCheckReadPairing {
-    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    fn verify(&mut self, _parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {

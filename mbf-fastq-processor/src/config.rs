@@ -237,6 +237,7 @@ fn expand_reports<F: FnMut(Transformation), G: FnMut(Transformation)>(
 impl Config {
     /// There are transformations that we need to expand right away,
     /// so we can accurately check the names
+    #[allow(clippy::too_many_lines)]
     fn expand_transformations(&mut self, errors: &mut Vec<anyhow::Error>) -> Vec<String> {
         let expanded_transforms = RefCell::new(Vec::new());
         let mut res_report_labels = Vec::new();
@@ -397,10 +398,10 @@ impl Config {
 
     #[allow(clippy::too_many_lines)]
     pub fn check(self) -> Result<CheckedConfig> {
-        self._check(true)
+        self.inner_check(true)
     }
 
-    fn _check(mut self, check_input_files_exist: bool) -> Result<CheckedConfig> {
+    fn inner_check(mut self, check_input_files_exist: bool) -> Result<CheckedConfig> {
         let mut errors = Vec::new();
         self.check_input_segment_definitions(&mut errors);
         let mut stages = None;
@@ -472,7 +473,7 @@ impl Config {
     /// Check configuration for validation mode (allows missing input files)
     #[allow(clippy::too_many_lines)]
     pub fn check_for_validation(self) -> Result<CheckedConfig> {
-        self._check(false)
+        self.inner_check(false)
     }
 
     fn check_name_collisions(&self, errors: &mut Vec<anyhow::Error>, tag_names: &[String]) {
@@ -872,6 +873,7 @@ impl Config {
         (tags_available.keys().cloned().collect(), stages)
     }
 
+    #[allow(clippy::too_many_lines)]
     fn check_output(&mut self, errors: &mut Vec<anyhow::Error>) {
         //apply output if set
         if let Some(output) = &mut self.output {

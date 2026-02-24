@@ -432,6 +432,7 @@ pub enum ResolvedSourceAll {
     },
 }
 impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceAll>> {
+    #[allow(clippy::too_many_lines)]
     fn validate_segment(&mut self, config: &PartialConfig) {
         let input_def = config
             .input
@@ -548,20 +549,19 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceAll>> {
                     }
                 }
             }
-            //still missing? error message
+            //still missing? Error message
             if self.is_missing() {
                 self.help = Some(format!(
                     "Please provide a source, that is a <segment name>, a <name:segment_name> or tag name. Use 'all' to refer to all <segment_name>s. Available segments: {}",
                     toml_pretty_deser::format_quoted_list(
-                        &(config
-                            .input
-                            .as_ref()
-                            .map(|input_def| input_def
+                        &(config.input.as_ref().map_or_else(
+                            || vec![""],
+                            |input_def| input_def
                                 .get_segment_order()
                                 .iter()
-                                .map(|x| x.as_str())
-                                .collect())
-                            .unwrap_or_else(|| vec![""]))
+                                .map(String::as_str)
+                                .collect()
+                        ))
                     )
                 ));
             }
@@ -570,6 +570,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceAll>> {
 }
 
 impl ResolvedSourceAll {
+    #[must_use]
     pub fn get_name(&self, segment_order: &[String]) -> String {
         match self {
             ResolvedSourceAll::Segment(SegmentIndexOrAll::Indexed(idx)) => {

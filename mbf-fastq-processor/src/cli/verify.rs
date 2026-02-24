@@ -6,6 +6,7 @@ use std::io::Write;
 use std::path::Path;
 use std::time::Duration;
 
+#[allow(clippy::too_many_lines)]
 pub fn verify_outputs(
     toml_file: &Path,
     output_dir: Option<&Path>,
@@ -49,7 +50,7 @@ pub fn verify_outputs(
         expected_validation_error.as_ref(),
         expected_runtime_error.as_ref(),
     ) {
-        (Some(x), None) => Some(x),
+        (Some(x), None) |
         (None, Some(x)) => Some(x),
         (None, None) => None,
         (Some(_), Some(_)) => unreachable!(),
@@ -668,6 +669,7 @@ pub fn decompress_file(path: &Path) -> Result<Vec<u8>> {
 }
 
 #[must_use]
+#[allow(clippy::cast_precision_loss)]
 pub fn calculate_size_difference_percent(len_a: u64, len_b: u64) -> f64 {
     if len_a > 0 {
         ((len_b as f64 - len_a as f64).abs() / len_a as f64) * 100.0
