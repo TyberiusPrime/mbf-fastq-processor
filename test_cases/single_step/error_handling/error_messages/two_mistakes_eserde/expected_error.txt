@@ -11,6 +11,7 @@ Error 1/2
   ┆          │
   ┆          ╰─ Missing required key: 'qual'.
 ──╯
+Hint: See https://doc_url.example/version-stripped-from-test/docs/reference/Prefix
 
 Error 2/2
    ╭─config.toml
@@ -25,3 +26,4 @@ Error 2/2
    ┆           │
    ┆           ╰─ Missing required key: 'seq'.
 ───╯
+Hint: See https://doc_url.example/version-stripped-from-test/docs/reference/Postfix

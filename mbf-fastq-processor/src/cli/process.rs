@@ -1,6 +1,7 @@
 use anyhow::{Context, Result, bail};
 use std::path::Path;
 
+use crate::cli::improve_error_messages;
 use crate::config::CheckedConfig;
 use crate::config::Config;
 use crate::output::OutputRunMarker;
@@ -20,6 +21,7 @@ pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> 
                 dbg!(&e);
                 bail!("Failed to parse config.toml and no pretty error available");
             }
+            let pretty = improve_error_messages("config.toml", e);
             bail!("{}", pretty);
         }
     };

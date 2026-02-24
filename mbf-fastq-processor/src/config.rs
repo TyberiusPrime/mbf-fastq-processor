@@ -111,7 +111,7 @@ pub struct Config {
     #[schemars(with = "BTreeMap<String, Barcodes>")]
     #[tpd(nested)]
     pub barcodes: Option<IndexMap<String, Barcodes>>,
-    
+
     #[tpd(alias = "step")]
     #[tpd(nested)]
     pub transform: Option<Vec<Transformation>>,

@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use ex::fs;
 use std::path::Path;
 
-use crate::config::Config;
+use crate::{cli::improve_error_messages, config::Config};
 use toml_pretty_deser::prelude::*;
 
 pub fn validate_config(toml_file: &Path) -> Result<Vec<String>> {
@@ -12,7 +12,10 @@ pub fn validate_config(toml_file: &Path) -> Result<Vec<String>> {
     let checked = match result {
         Ok(config) => config,
         Err(e) => {
-            return Err(anyhow::anyhow!("{}", e.pretty("config.toml")));
+            return Err(anyhow::anyhow!(
+                "{}",
+                improve_error_messages("config.toml", e)
+            ));
         }
     };
     let checked = checked.check_for_validation()?;
