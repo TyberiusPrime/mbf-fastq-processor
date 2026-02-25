@@ -1,3 +1,5 @@
+Error Details ==
+Error 1/1
    ╭─config.toml
    ┆
 12 │ [[step]]
@@ -5,9 +7,13 @@
    ┆          ────┬────
    ┆              │
    ┆              ╰───── Involving this enum variant.
+   ┆
+14 │ compression = "gzip"
 15 │ compression_level = 10
    ┆                     ─┬
    ┆                      │
    ┆                      ╰─ Invalid Value
 ───╯
 Hint: Valid range is 0-9 for gzip.
+      See https://doc_url.example/version-stripped-from-test/docs/reference/Inspect
+

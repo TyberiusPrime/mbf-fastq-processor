@@ -1,3 +1,4 @@
+Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
@@ -6,6 +7,8 @@ Error 1/1
    ┆          ─────┬────
    ┆               │
    ┆               ╰───── Involving this enum variant.
+   ┆
+ 9 │ n = 23
 10 │ segment = "read2"
    ┆           ───┬───
    ┆              │
@@ -13,3 +16,4 @@ Error 1/1
 ───╯
 Hint: Did you mean: read1?
       See https://doc_url.example/version-stripped-from-test/docs/reference/CutStart
+

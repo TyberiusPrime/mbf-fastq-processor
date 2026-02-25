@@ -1,3 +1,4 @@
+Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
@@ -6,13 +7,19 @@ Error 1/1
    ┆          ──────────┬─────────
    ┆                    │
    ┆                    ╰────────── Involving this enum variant.
+   ┆
+ 9 │ max_mismatches = 3
 10 │ min_length = 6
    ┆              ┬
    ┆              │
    ┆              ╰─ Too large, can not be longer than the search pattern
+   ┆
+11 │ out_label = "label"
 12 │ query = "agctc"
    ┆         ───┬───
    ┆            │
    ┆            ╰──── or this too short?
 ───╯
 Hint: min_length cannot be greater than the length of the search pattern
+      See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractIUPACSuffix
+

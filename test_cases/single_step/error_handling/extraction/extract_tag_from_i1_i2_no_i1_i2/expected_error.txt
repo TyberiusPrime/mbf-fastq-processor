@@ -1,3 +1,4 @@
+Error Details ==
 Error 1/2
    ╭─config.toml
    ┆
@@ -6,6 +7,11 @@ Error 1/2
    ┆          ───────┬──────
    ┆                 │
    ┆                 ╰─────── Involving this enum variant.
+   ┆
+10 │ anchor = "Left"
+11 │ max_mismatches = 0
+12 │ out_label = "test"
+13 │ search = "CTN"
 14 │ segment = "index1"
    ┆           ────┬───
    ┆               │
@@ -22,6 +28,11 @@ Error 2/2
    ┆          ───────┬──────
    ┆                 │
    ┆                 ╰─────── Involving this enum variant.
+   ┆
+18 │ anchor = "Left"
+19 │ max_mismatches = 0
+20 │ out_label = "test2"
+21 │ search = "CTN"
 22 │ segment = "index2"
    ┆           ────┬───
    ┆               │
@@ -29,3 +40,4 @@ Error 2/2
 ───╯
 Hint: Did you mean: read2 or read1?
       See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractIUPAC
+

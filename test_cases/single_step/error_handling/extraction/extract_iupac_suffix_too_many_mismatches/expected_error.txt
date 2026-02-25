@@ -1,13 +1,20 @@
-  ╭─config.toml
+Error Details ==
+Error 1/1
+   ╭─config.toml
    ┆
  7 │ [[step]]
  8 │ action = "ExtractIUPACSuffix"
    ┆          ──────────┬─────────
    ┆                    │
    ┆                    ╰────────── Involving this enum variant.
+   ┆
+ 9 │ max_mismatches = 6
+10 │ min_length = 5
 11 │ out_label = "..."
    ┆             ──┬──
    ┆               │
    ┆               ╰─── Invalid label
 ───╯
 Hint: Tag label must start with a letter or underscore (a-zA-Z_), got '.'
+      See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractIUPACSuffix
+

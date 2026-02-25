@@ -1,3 +1,5 @@
+Error Details ==
+Error 1/1
    ╭─config.toml
    ┆
  7 │ [[step]]
@@ -5,9 +7,14 @@
    ┆          ───────┬──────
    ┆                 │
    ┆                 ╰─────── Involving this enum variant.
+   ┆
+ 9 │ out_label = "er"
+10 │ search = "AGTC"
 11 │ source = "all"
    ┆          ──┬──
    ┆            │
    ┆            ╰─── 'all' segments not valid in this position
 ───╯
 Hint: Available are: read1
+      See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractRegex
+

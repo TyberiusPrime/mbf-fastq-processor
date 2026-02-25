@@ -1,3 +1,5 @@
+Error Details ==
+Error 1/1
    ╭─config.toml
    ┆
  7 │ [[step]]
@@ -5,9 +7,13 @@
    ┆          ─────┬─────
    ┆               │
    ┆               ╰────── Involving this enum variant.
+   ┆
+ 9 │ canonical = false
 10 │ files = 23
    ┆         ─┬
    ┆          │
    ┆          ╰─ Wrong type: expected string, found integer.
 ───╯
 Hint: This value has the wrong type.
+      See https://doc_url.example/version-stripped-from-test/docs/reference/CalcKmers
+
