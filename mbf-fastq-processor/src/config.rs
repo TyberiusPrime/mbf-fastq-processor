@@ -214,7 +214,6 @@ impl PartialConfig {
             report_transform.state = TomlValueState::Custom { spans };
             report_transform.help =
                 Some("Either remove the report, or enable it's output.".to_string());
-            self.transform.state = TomlValueState::Nested;
         } else if (report_html || report_json) && report_transform.is_none() {
             let mut spans = Vec::new();
             if let Some(tv_report_html) = self
