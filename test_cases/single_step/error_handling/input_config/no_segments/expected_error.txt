@@ -1,8 +1,10 @@
+Error Details ==
+Error 1/1
   ╭─config.toml
-  ┆
 1 │ [input]
   ┆ ┬
   ┆ │
   ┆ ╰──────── No segments defined in input.
 ──╯
 Hint: At least one segment must be defined. Example: read1 = ['filename.fq']
+

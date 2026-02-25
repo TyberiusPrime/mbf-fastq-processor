@@ -1,8 +1,10 @@
+Error Details ==
 Error 1/1
   ╭─config.toml
-  ┆
 1 │ [[input]]
   ┆ ────┬────
   ┆     │
   ┆     ╰───── Wrong type: expected table or inline table, found array of tables.
 ──╯
+Hint: This value has the wrong type.
+

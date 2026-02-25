@@ -1,3 +1,5 @@
+Error Details ==
+Error 1/1
    ╭─config.toml
    ┆
  7 │ [[step]]
@@ -5,9 +7,13 @@
    ┆          ────────┬────────
    ┆                  │
    ┆                  ╰───────── Involving this enum variant.
+   ┆
+ 9 │ bases_to_count = "G"
 10 │ bases_to_ignore = "N"
    ┆                   ─┬─
    ┆                    │
    ┆                    ╰── Bases can only be ignored in relative=true mode
 ───╯
 Hint: Either set relative=false or remove the bases_to_ignore field
+      See https://doc_url.example/version-stripped-from-test/docs/reference/CalcBaseContent
+

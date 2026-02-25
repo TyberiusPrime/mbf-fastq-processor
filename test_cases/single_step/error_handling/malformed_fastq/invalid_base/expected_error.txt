@@ -1,3 +1,4 @@
+Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
@@ -6,8 +7,12 @@ Error 1/1
    ┆          ────┬───
    ┆              │
    ┆              ╰──── Involving this enum variant.
+   ┆
+ 9 │ qual = "B"
 10 │ seq = "X"
    ┆       ─┬─
    ┆        │
    ┆        ╰── Invalid DNA base: '88'.
 ───╯
+Hint: See https://doc_url.example/version-stripped-from-test/docs/reference/Prefix
+

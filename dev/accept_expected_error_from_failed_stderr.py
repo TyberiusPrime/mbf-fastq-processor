@@ -22,7 +22,7 @@ def process_stderr_files(base_dir="test_cases"):
                 error_text = stderr_content[error_idx:]
 
                 # Go up one folder from stderr's directory
-                parent_dir = stderr_file.parent
+                parent_dir = stderr_file.parent.parent
                 expected_error_file = parent_dir / "expected_error.txt"
 
                 # If expected_error.txt exists, update its contents

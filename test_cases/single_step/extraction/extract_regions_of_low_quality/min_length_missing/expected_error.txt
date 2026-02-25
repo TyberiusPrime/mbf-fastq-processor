@@ -1,4 +1,5 @@
-rror 1/1
+Error Details ==
+Error 1/1
    ╭─config.toml
    ┆
  7 │ [[step]]
@@ -6,8 +7,12 @@ rror 1/1
    ┆          ──────────────┬─────────────
    ┆                        │
    ┆                        ╰────────────── Involving this enum variant.
+   ┆
+ 9 │ min_quality = 40
 10 │ out_label = "low_quality"
    ┆                          ┬
    ┆                          │
    ┆                          ╰─ Missing required key: 'min_length'.
 ───╯
+Hint: See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractRegionsOfLowQuality
+

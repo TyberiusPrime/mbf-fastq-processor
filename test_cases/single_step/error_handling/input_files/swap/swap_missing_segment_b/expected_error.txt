@@ -1,3 +1,5 @@
+Error Details ==
+Error 1/1
    ╭─config.toml
    ┆
 11 │ [[step]]
@@ -5,9 +7,13 @@
    ┆          ───┬──
    ┆             │
    ┆             ╰─── Involving this enum variant.
+   ┆
+13 │ segment_a = "read1"
 14 │ segment_b = "read2"
    ┆             ───┬───
    ┆                │
    ┆                ╰──── Segment not present in [input] section
 ───╯
 Hint: Did you mean: read1?
+      See https://doc_url.example/version-stripped-from-test/docs/reference/Swap
+

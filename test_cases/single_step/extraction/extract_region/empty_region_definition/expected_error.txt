@@ -1,3 +1,4 @@
+Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
@@ -6,8 +7,12 @@ Error 1/1
    ┆          ────────┬───────
    ┆                  │
    ┆                  ╰──────── Involving this enum variant.
+   ┆
+13 │ out_label = "umi"
 14 │ regions = []
    ┆           ─┬
    ┆            │
    ┆            ╰─ Must contain at least one region definition
 ───╯
+Hint: See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractRegions
+
