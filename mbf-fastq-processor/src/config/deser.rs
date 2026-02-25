@@ -784,8 +784,7 @@ pub fn validate_tag_name(tag_name: &str) -> anyhow::Result<()> {
     for (i, ch) in chars.enumerate() {
         if !ch.is_ascii_alphanumeric() && ch != '_' {
             bail!(
-                "Tag label must contain only letters, numbers, and underscores (a-zA-Z0-9_), found '{ch}' at position {}",
-                i + 1
+                "Tag label must contain only letters, numbers, and underscores (a-zA-Z0-9_), found '{ch}'.",
             );
         }
     }

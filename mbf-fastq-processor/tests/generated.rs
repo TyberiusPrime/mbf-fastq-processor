@@ -2301,6 +2301,20 @@ fn test_cases_x_single_step_x_error_handling_x_compression_x_invalid_compression
 }
 
 #[test]
+fn test_cases_x_single_step_x_error_handling_x_demultiplex_x_barcodes_x_bad_barcode_name() {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/demultiplex/barcodes/bad_barcode_name"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/error_handling/demultiplex/barcodes/bad_barcode_name",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_error_handling_x_demultiplex_x_barcodes_x_different_barcode_lengths()
 {
     println!(
@@ -2324,6 +2338,16 @@ fn test_cases_x_single_step_x_error_handling_x_demultiplex_x_barcodes_x_differen
         std::path::Path::new(
             "../test_cases/single_step/error_handling/demultiplex/barcodes/different_files",
         ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_demultiplex_x_barcodes_x_empty() {
+    println!("Test case is in: test_cases/single_step/error_handling/demultiplex/barcodes/empty");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/error_handling/demultiplex/barcodes/empty"),
         "input.toml",
         1,
     );
