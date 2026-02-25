@@ -122,33 +122,43 @@ impl VerifyIn<PartialConfig> for PartialMergeReads {
             ));
         }
 
+        self.min_overlap.verify(|v| {
+            if *v < 5 {
+                Err(ValidationFailure::new(
+                    "min_overlap must be >= 5",
+                    Some("Set a valid value"),
+                ))
+            } else {
+                Ok(())
+            }
+        });
+        self.max_mismatch_rate.verify(|v| {
+            if *v < 0.0 || *v >= 1.0 {
+                Err(ValidationFailure::new(
+                    "max_mismatch_rate must be in [0.0..1.0)",
+                    Some("Set a valid value >= 0 and < 1.0"),
+                ))
+            } else {
+                Ok(())
+            }
+        });
+        self.spacer_quality_char.verify(|opt_v| {
+            if let Some(v) = opt_v {
+                if !(33..=126).contains(v) {
+                    return Err(ValidationFailure::new(
+                        "spacer_quality_char must be in [33..126]",
+                        Some("Set a valid value"),
+                    ));
+                }
+            }
+            Ok(())
+        });
+
         Ok(())
     }
 }
 
 impl Step for MergeReads {
-    fn validate_others(
-        &self,
-        _input_def: &crate::config::Input,
-        _output_def: Option<&crate::config::Output>,
-        _all_transforms: &[Transformation],
-        _this_transforms_index: usize,
-    ) -> Result<()> {
-        //todo:report more tahn one?
-        if self.min_overlap < 5 {
-            bail!("min_overlap must be >= 5. Set a valid value.");
-        }
-        if self.max_mismatch_rate < 0.0 || self.max_mismatch_rate >= 1.0 {
-            bail!("max_mismatch_rate must be in [0.0..1.0). Set a valid value >= 0 and < 1.0.");
-        }
-        if let Some(space_quality_char) = self.spacer_quality_char
-            && (!(33..=126).contains(&space_quality_char))
-        {
-            bail!("spacer_quality_char must be in [33..126]. Set a valid value.");
-        }
-        Ok(())
-    }
-
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         self.out_label
             .as_ref()

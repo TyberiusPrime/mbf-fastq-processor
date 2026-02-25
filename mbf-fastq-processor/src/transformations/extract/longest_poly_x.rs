@@ -31,6 +31,26 @@ impl VerifyIn<PartialConfig> for PartialLongestPolyX {
         Self: Sized,
     {
         self.segment.validate_segment(parent);
+        self.min_length.verify(|v| {
+            if *v == 0 {
+                Err(ValidationFailure::new(
+                    "min_length must be > 0",
+                    Some("Set to a positive integer"),
+                ))
+            } else {
+                Ok(())
+            }
+        });
+        self.max_mismatch_rate.verify(|v| {
+            if *v < 0.0 || *v >= 1.0 {
+                Err(ValidationFailure::new(
+                    "max_mismatch_rate must be in [0.0..1.0)",
+                    Some("Set to a unit scale probability >= 0 and < 1.0"),
+                ))
+            } else {
+                Ok(())
+            }
+        });
         Ok(())
     }
 }
@@ -136,25 +156,6 @@ impl LongestPolyX {
 }
 
 impl Step for LongestPolyX {
-    fn validate_others(
-        &self,
-        _input_def: &crate::config::Input,
-        _output_def: Option<&crate::config::Output>,
-        _all_transforms: &[Transformation],
-        _this_transforms_index: usize,
-    ) -> Result<()> {
-        if self.min_length == 0 {
-            bail!("min_length must be > 0. Set to a positive integer.");
-        }
-        if self.max_mismatch_rate < 0.0 || self.max_mismatch_rate >= 1.0 {
-            bail!(
-                "max_mismatch_rate must be in [0.0..1.0). Set to a unit scale probability >= 0 and < 1.0"
-            );
-        }
-
-        Ok(())
-    }
-
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((
             self.out_label.clone(),

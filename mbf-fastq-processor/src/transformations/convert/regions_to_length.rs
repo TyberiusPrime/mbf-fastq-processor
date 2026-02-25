@@ -31,26 +31,25 @@ impl VerifyIn<PartialConfig> for PartialRegionsToLength {
                 Ok(())
             }
         });
+        if let Some(out) = self.out_label.as_ref()
+            && let Some(in_) = self.in_label.as_ref()
+            && out == in_
+        {
+            let spans = vec![
+                (self.out_label.span(), "Same as in_label".to_string()),
+                (self.in_label.span(), "Same as out_label".to_string()),
+            ];
+            self.out_label.state = TomlValueState::Custom { spans };
+            self.out_label.help = Some(
+                "'out_label' must differ from 'in_label' to avoid overwriting the source tag"
+                    .to_string(),
+            );
+        }
         Ok(())
     }
 }
 
 impl Step for RegionsToLength {
-    fn validate_others(
-        &self,
-        _input_def: &crate::config::Input,
-        _output_def: Option<&crate::config::Output>,
-        _all_transforms: &[Transformation],
-        _this_transforms_index: usize,
-    ) -> Result<()> {
-        if self.out_label == self.in_label {
-            bail!(
-                "ConvertRegionsToLength: 'label' must differ from 'region_label' to avoid overwriting the source tag"
-            );
-        }
-        Ok(())
-    }
-
     fn declares_tag_type(&self) -> Option<(String, TagValueType)> {
         Some((self.out_label.clone(), TagValueType::Numeric))
     }
