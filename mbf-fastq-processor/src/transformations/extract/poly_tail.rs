@@ -31,29 +31,31 @@ impl VerifyIn<PartialConfig> for PartialPolyTail {
         Self: Sized + toml_pretty_deser::Visitor,
     {
         self.segment.validate_segment(parent);
+        self.min_length.verify(|v| {
+            if *v < 2 {
+                Err(ValidationFailure::new(
+                    "min_length must be >= 2",
+                    Some("Change to a positive integer larger than 1"),
+                ))
+            } else {
+                Ok(())
+            }
+        });
+        self.max_mismatch_rate.verify(|v| {
+            if *v < 0.0 || *v >= 1.0 {
+                Err(ValidationFailure::new(
+                    "max_mismatch_rate must be in [0.0..1.0)",
+                    Some("Set a valid value >= 0 and < 1.0"),
+                ))
+            } else {
+                Ok(())
+            }
+        });
         Ok(())
     }
 }
 
 impl Step for PolyTail {
-    fn validate_others(
-        &self,
-        _input_def: &crate::config::Input,
-        _output_def: Option<&crate::config::Output>,
-        _all_transforms: &[Transformation],
-        _this_transforms_index: usize,
-    ) -> Result<()> {
-        if self.min_length < 2 {
-            bail!(
-                "min_length must be >= 2 in PolyTail. Change to a positive integer larger than 1."
-            );
-        }
-        if self.max_mismatch_rate < 0.0 || self.max_mismatch_rate >= 1.0 {
-            bail!("max_mismatch_rate must be in [0.0..1.0). Set a valid value >= 0 and < 1.0.");
-        }
-        Ok(())
-    }
-
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((
             self.out_label.clone(),

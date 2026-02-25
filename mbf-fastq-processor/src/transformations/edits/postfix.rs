@@ -31,6 +31,17 @@ impl VerifyIn<PartialConfig> for PartialPostfix {
         Self: Sized,
     {
         self.segment.validate_segment(parent);
+        if let Some(seq) = self.seq.as_ref()
+            && let Some(qual) = self.qual.as_ref()
+            && seq.len() != qual.len()
+        {
+            let spans = vec![
+                (self.seq.span(), format!("{} characters", seq.len())),
+                (self.qual.span(), format!("{} characters", qual.len())),
+            ];
+            self.seq.state = TomlValueState::Custom { spans };
+            self.seq.help = Some("'seq' and 'qual' must be the same length".to_string());
+        }
         Ok(())
     }
 }
@@ -51,23 +62,6 @@ impl Step for Postfix {
                 ][..],
             )]
         })
-    }
-
-    fn validate_others(
-        &self,
-        _input_def: &crate::config::Input,
-        _output_def: Option<&crate::config::Output>,
-        _all_transforms: &[Transformation],
-        _this_transforms_index: usize,
-    ) -> Result<()> {
-        if self.seq.len() != self.qual.len() {
-            bail!(
-                "Postfix: 'seq' and 'qual' must be the same length. Sequence has {} characters but quality string has {} characters. Please ensure they match.",
-                self.seq.len(),
-                self.qual.len()
-            );
-        }
-        Ok(())
     }
 
     fn apply(

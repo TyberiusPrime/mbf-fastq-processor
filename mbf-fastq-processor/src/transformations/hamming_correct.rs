@@ -154,16 +154,6 @@ impl Step for HammingCorrect {
         Some((self.out_label.clone(), TagValueType::Location))
     }
 
-    fn validate_others(
-        &self,
-        _input_def: &crate::config::Input,
-        _output_def: Option<&crate::config::Output>,
-        _all_transforms: &[crate::transformations::Transformation],
-        _this_transforms_index: usize,
-    ) -> Result<()> {
-        Ok(())
-    }
-
     fn uses_tags(
         &self,
         _tags_available: &IndexMap<String, TagMetadata>,

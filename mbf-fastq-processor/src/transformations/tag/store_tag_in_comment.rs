@@ -68,6 +68,33 @@ impl VerifyIn<PartialConfig> for PartialStoreTagInComment {
         self.region_separator.or_with(default_region_separator);
         self.comment_insert_char
             .or_with(default_comment_insert_char);
+
+        // Validate in_label doesn't contain reserved characters
+        if let Some(in_label) = self.in_label.as_ref() {
+            if in_label.bytes().any(|x| x == b'=') {
+                self.in_label.state = TomlValueState::ValidationFailed {
+                    message: "Tag labels cannot contain '='".to_string(),
+                };
+            } else {
+                let sep = self.comment_separator.as_ref().copied().unwrap_or(b'|');
+                let ins = self.comment_insert_char.as_ref().copied().unwrap_or(b' ');
+                if in_label.bytes().any(|x| x == sep) {
+                    self.in_label.state = TomlValueState::ValidationFailed {
+                        message: format!(
+                            "Tag labels cannot contain the comment separator '{}'",
+                            BString::new(vec![sep])
+                        ),
+                    };
+                } else if in_label.bytes().any(|x| x == ins) {
+                    self.in_label.state = TomlValueState::ValidationFailed {
+                        message: format!(
+                            "Tag labels cannot contain the comment insert char '{}'",
+                            BString::new(vec![ins])
+                        ),
+                    };
+                }
+            }
+        }
         Ok(())
     }
 }
@@ -110,25 +137,6 @@ impl Step for StoreTagInComment {
                 }
             }
         }
-        if self.in_label.bytes().any(|x| x == b'=') {
-            bail!(
-                "Tag labels cannot contain '='. Observed label: '{}'",
-                self.in_label
-            );
-        }
-        for (desc, k) in &[
-            ("comment separator", self.comment_separator),
-            ("comment insert char", self.comment_insert_char),
-        ] {
-            if self.in_label.bytes().any(|x| x == *k) {
-                bail!(
-                    "Tag labels cannot contain {desc}: '{}' Observed label: '{}'",
-                    BString::new(vec![*k]),
-                    self.in_label
-                );
-            }
-        }
-
         Ok(())
     }
 

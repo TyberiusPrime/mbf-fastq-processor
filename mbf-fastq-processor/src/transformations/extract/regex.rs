@@ -40,32 +40,25 @@ impl VerifyIn<PartialConfig> for PartialRegex {
     {
         self.source.validate_segment(parent);
         self.replacement.or_with(regex_replace_with_self);
+        self.replacement.verify(|replacement| {
+            let group_hunting_regexp =
+                regex::bytes::Regex::new("[$]\\d+_").expect("hardcoded regex must compile");
+            if group_hunting_regexp.is_match(replacement) {
+                Err(ValidationFailure::new(
+                    "Replacement string contains a '$1_' style group reference",
+                    Some(
+                        "This is a footgun: '$1_' is interpreted as group name '1_', not '$1' followed by '_'. Use '${1}_' instead.",
+                    ),
+                ))
+            } else {
+                Ok(())
+            }
+        });
         Ok(())
     }
 }
 
 impl Step for Regex {
-    fn validate_others(
-        &self,
-        _input_def: &crate::config::Input,
-        _output_def: Option<&crate::config::Output>,
-        _all_transforms: &[super::super::Transformation],
-        _this_transforms_index: usize,
-    ) -> anyhow::Result<()> {
-        // regex treats  $1_$2 as a group named '1_'
-        // and just silently omits it.
-        // Let's remove that foot gun. I'm pretty sure you can work around it if
-        // you have a group named '1_'...
-        let group_hunting_regexp =
-            regex::bytes::Regex::new("[$]\\d+_").expect("hardcoded regex must compile");
-        if group_hunting_regexp.is_match(&self.replacement) {
-            bail!(
-                "Replacement string for Regex contains a group reference like  '$1_'. This is a footgun, as it would be interpreted as a group name, not the expected $1 followed by '_' . Please change the replacement string to use ${{1}}_."
-            );
-        }
-        Ok(())
-    }
-
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((
             self.out_label.clone(),

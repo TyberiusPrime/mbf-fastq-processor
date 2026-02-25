@@ -163,6 +163,9 @@ impl VerifyIn<TPDRoot> for PartialConfig {
         });
         self.verify_reports();
         self.verify_barcodes();
+        self.verify_benchmark_molecule_count();
+        self.verify_head_rapidgzip_conflict();
+        self.verify_for_any_output();
         Ok(())
     }
 }
@@ -246,6 +249,119 @@ impl PartialConfig {
             self.output.state = TomlValueState::Custom { spans };
             self.output.help =
                 Some("No report step, but report output requested.\nRemove/disable report_html & report_json, or add in a report step.".to_string());
+        }
+    }
+
+    fn verify_benchmark_molecule_count(&mut self) {
+        if let Some(Some(benchmark)) = self.benchmark.as_mut() {
+            benchmark.molecule_count.verify(|v| {
+                if *v == 0 {
+                    Err(ValidationFailure::new(
+                        "molecule_count must be > 0",
+                        Some("Set to a positive integer"),
+                    ))
+                } else {
+                    Ok(())
+                }
+            });
+        }
+    }
+
+    fn verify_head_rapidgzip_conflict(&mut self) {
+        let build_rapidgzip_index = self
+            .input
+            .as_ref()
+            .and_then(|i| i.options.as_ref())
+            .and_then(|o| o.build_rapidgzip_index.as_ref())
+            .and_then(|x| x.as_ref())
+            .copied()
+            .unwrap_or(false);
+        if !build_rapidgzip_index {
+            return;
+        }
+        let rapidgzip_span = self
+            .input
+            .as_ref()
+            .and_then(|i| i.options.as_ref())
+            .map(|o| o.build_rapidgzip_index.span())
+            .unwrap_or_default();
+        let mut head_transform = self.transform.as_mut().and_then(|x| {
+            x.iter_mut()
+                .find(|t| matches!(t.as_ref(), Some(PartialTransformation::Head(..))))
+        });
+        if let Some(head_tv) = &mut head_transform {
+            let spans = vec![
+                (
+                    head_tv.span(),
+                    "This Head transform conflicts with build_rapidgzip_index".to_string(),
+                ),
+                (
+                    rapidgzip_span,
+                    "build_rapidgzip_index = true set here".to_string(),
+                ),
+            ];
+            head_tv.state = TomlValueState::Custom { spans };
+            head_tv.help = Some(
+                "build_rapidgzip_index and Head cannot be used together (index would not be created). Set build_rapidgzip_index to false.".to_string(),
+            );
+        }
+    }
+
+    fn verify_for_any_output(&mut self) {
+        let has_fastq_output = self
+            .output
+            .as_ref()
+            .and_then(|x| x.as_ref())
+            .map(|o| {
+                o.stdout.as_ref().copied().unwrap_or(false)
+                    || o.output
+                        .as_ref()
+                        .map(|inner| inner.as_ref().map_or(true, |v| !v.is_empty()))
+                        .unwrap_or(true)
+                    || o.interleave
+                        .as_ref()
+                        .and_then(|inner| inner.as_ref())
+                        .map(|v| !v.is_empty())
+                        .unwrap_or(false)
+            })
+            .unwrap_or(false);
+        let has_report_output = self
+            .output
+            .as_ref()
+            .and_then(|x| x.as_ref())
+            .map(|o| {
+                o.report_html.as_ref().copied().unwrap_or(false)
+                    || o.report_json.as_ref().copied().unwrap_or(false)
+            })
+            .unwrap_or(false);
+        let has_tag_output = self
+            .transform
+            .as_ref()
+            .map(|transforms| {
+                transforms.iter().any(|t| {
+                    matches!(
+                        t.as_ref(),
+                        Some(PartialTransformation::StoreTagInFastQ(..))
+                            | Some(PartialTransformation::StoreTagsInTable(..))
+                            | Some(PartialTransformation::Inspect(..))
+                    )
+                })
+            })
+            .unwrap_or(false);
+        let is_benchmark = self
+            .benchmark
+            .as_ref()
+            .and_then(|x| x.as_ref())
+            .and_then(|x| x.enable.as_ref())
+            .copied()
+            .unwrap_or(false);
+        if !has_fastq_output && !has_report_output && !has_tag_output && !is_benchmark {
+            self.output.state = TomlValueState::ValidationFailed {
+                message: "No output files and no reports requested. Nothing to do.".to_string(),
+            };
+            self.output.help = Some(
+                "Add an [output] section with output files or reports, or use a benchmark configuration.".to_string(),
+            );
         }
     }
 
@@ -552,14 +668,12 @@ impl Config {
             let stages_ = stages_;
             assert!(self.transform.is_empty());
             self.check_name_collisions(&mut errors, &tag_names);
-            self.check_for_any_output(&stages_, &mut errors);
             if check_input_files_exist {
                 let input_formats_observed = self.check_input_format(&mut errors);
                 self.configure_multithreading(&input_formats_observed);
             } else {
                 self.check_input_format_for_validation(&mut errors);
             }
-            self.check_head_rapidgzip_conflict(&stages_, &mut errors);
             if let Err(e) = self.configure_rapidgzip() {
                 errors.push(e);
             }
@@ -629,17 +743,6 @@ impl Config {
                     "Name collision: Tag label '{tag_name}' collides with an existing barcode name"
                 ));
             }
-        }
-    }
-
-    fn check_head_rapidgzip_conflict(&self, stages: &[Stage], errors: &mut Vec<anyhow::Error>) {
-        let has_head_transform = stages
-            .iter()
-            .any(|stage| matches!(stage.transformation, Transformation::Head { .. }));
-        if has_head_transform && self.input.options.build_rapidgzip_index == Some(true) {
-            errors.push(anyhow!(
-                "input.options.build_rapidgzip_index and Head can not be used together (index would not be created). Set `input.options.build_rapidgzip_index` to false"
-            ));
         }
     }
 
@@ -963,33 +1066,6 @@ impl Config {
         (tags_available.keys().cloned().collect(), stages)
     }
 
-    fn check_for_any_output(&self, stages: &[Stage], errors: &mut Vec<anyhow::Error>) {
-        let has_fastq_output = self.output.as_ref().is_some_and(|o| {
-            o.stdout
-                || o.output.as_ref().is_none_or(|o| !o.is_empty())
-                || o.interleave.as_ref().is_some_and(|i| !i.is_empty())
-        });
-        let has_report_output = self
-            .output
-            .as_ref()
-            .is_some_and(|o| o.report_html || o.report_json);
-        let has_tag_output = stages.iter().any(|stage| {
-            matches!(
-                stage.transformation,
-                Transformation::StoreTagInFastQ { .. }
-                    | Transformation::StoreTagsInTable { .. }
-                    | Transformation::Inspect { .. }
-            )
-        });
-        let is_benchmark = self.benchmark.as_ref().is_some_and(|b| b.enable);
-
-        if !has_fastq_output && !has_report_output && !has_tag_output && !is_benchmark {
-            errors.push(anyhow!(
-                "(output): No output files and no reports requested. Nothing to do."
-            ));
-        }
-    }
-
     /// Enable/disable rapidgzip. defaults to enabled if we can find the binary.
     fn configure_rapidgzip(&mut self) -> Result<()> {
         self.input.options.use_rapidgzip = match self.input.options.use_rapidgzip {
@@ -1050,11 +1126,6 @@ impl Config {
         if let Some(benchmark) = &self.benchmark
             && benchmark.enable
         {
-            if benchmark.molecule_count == 0 {
-                errors.push(anyhow!(
-                    "Benchmark needs a molecule_count > 0. Set to a positive integer."
-                ));
-            }
             // Disable output when benchmark mode is enabled
             self.output = Some(Output {
                 prefix: String::from("benchmark"),

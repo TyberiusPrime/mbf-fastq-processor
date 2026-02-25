@@ -38,11 +38,32 @@ pub struct Progress {
 }
 
 impl VerifyIn<PartialConfig> for PartialProgress {
-    fn verify(&mut self, _parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {
         self.n.or_with(default_progress_n);
+        let stdout = parent
+            .output
+            .as_ref()
+            .and_then(|x| x.as_ref())
+            .and_then(|o| o.stdout.as_ref())
+            .copied()
+            .unwrap_or(false);
+        let has_output_infix = self
+            .output_infix
+            .as_ref()
+            .and_then(|x| x.as_ref())
+            .is_some();
+        if stdout && !has_output_infix {
+            self.output_infix.state = TomlValueState::ValidationFailed {
+                message: "output_infix must be set when output writes to stdout to avoid conflict"
+                    .to_string(),
+            };
+            self.output_infix.help = Some(
+                "Supply an output_infix to write progress to a file instead of stdout".to_string(),
+            );
+        }
         Ok(())
     }
 }
@@ -68,25 +89,6 @@ impl Step for Progress {
     // fn needs_serial(&self) -> bool {
     //     false
     // }
-
-    fn validate_others(
-        &self,
-        _input_def: &crate::config::Input,
-        output_def: Option<&crate::config::Output>,
-        _all_transforms: &[Transformation],
-        _this_transforms_index: usize,
-    ) -> Result<()> {
-        if let Some(output) = output_def.as_ref()
-            && output.stdout
-            && self.output_infix.is_none()
-        {
-            bail!(
-                "Can't output to stdout and log progress to stdout. Supply an output_infix to Progress"
-            );
-        }
-
-        Ok(())
-    }
 
     fn init(
         &mut self,
