@@ -1122,7 +1122,7 @@ impl Config {
         }
     }
 
-    fn check_benchmark(&mut self, errors: &mut Vec<anyhow::Error>) {
+    fn check_benchmark(&mut self, _errors: &mut Vec<anyhow::Error>) {
         if let Some(benchmark) = &self.benchmark
             && benchmark.enable
         {
