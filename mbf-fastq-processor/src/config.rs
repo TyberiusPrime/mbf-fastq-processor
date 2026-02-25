@@ -388,16 +388,12 @@ impl Config {
     /// There are transformations that we need to expand right away,
     /// so we can accurately check the names
     #[allow(clippy::too_many_lines)]
-    fn expand_transformations(&mut self, errors: &mut Vec<anyhow::Error>) -> Vec<String> {
+    fn expand_transformations(&mut self) -> Vec<String> {
         let expanded_transforms = RefCell::new(Vec::new());
         let mut res_report_labels = Vec::new();
         let mut report_no = 0;
         let mut push_existing = |t: Transformation| expanded_transforms.borrow_mut().push(t);
-        let mut push_new = |mut t: Transformation| {
-            let step_no = expanded_transforms.borrow().len() + 1;
-            if let Err(e) = t.validate_segments(&self.input) {
-                errors.push(e.context(format!("[Step {step_no} (after expansion) ({t})]")));
-            }
+        let mut push_new = |t: Transformation| {
             expanded_transforms.borrow_mut().push(t);
         };
 
@@ -546,31 +542,30 @@ impl Config {
         let mut errors = Vec::new();
         let mut stages = None;
         let mut report_labels = None;
+
+        //no point in checking them if segment definition is broken
+        //self.check_output(&mut errors);
+        report_labels = Some(self.expand_transformations());
         if errors.is_empty() {
-            //no point in checking them if segment definition is broken
-            //self.check_output(&mut errors);
-            self.check_transform_segments(&mut errors);
-            report_labels = Some(self.expand_transformations(&mut errors));
-            if errors.is_empty() {
-                let (tag_names, stages_) = self.check_transformations(&mut errors);
-                //self.transfrom is now empty, the trafos have been expanded into stepsk.
-                let stages_ = stages_;
-                assert!(self.transform.is_empty());
-                self.check_name_collisions(&mut errors, &tag_names);
-                self.check_for_any_output(&stages_, &mut errors);
-                if check_input_files_exist {
-                    let input_formats_observed = self.check_input_format(&mut errors);
-                    self.configure_multithreading(&input_formats_observed);
-                } else {
-                    self.check_input_format_for_validation(&mut errors);
-                }
-                self.check_head_rapidgzip_conflict(&stages_, &mut errors);
-                if let Err(e) = self.configure_rapidgzip() {
-                    errors.push(e);
-                }
-                stages = Some(stages_);
+            let (tag_names, stages_) = self.check_transformations(&mut errors);
+            //self.transfrom is now empty, the trafos have been expanded into stepsk.
+            let stages_ = stages_;
+            assert!(self.transform.is_empty());
+            self.check_name_collisions(&mut errors, &tag_names);
+            self.check_for_any_output(&stages_, &mut errors);
+            if check_input_files_exist {
+                let input_formats_observed = self.check_input_format(&mut errors);
+                self.configure_multithreading(&input_formats_observed);
+            } else {
+                self.check_input_format_for_validation(&mut errors);
             }
+            self.check_head_rapidgzip_conflict(&stages_, &mut errors);
+            if let Err(e) = self.configure_rapidgzip() {
+                errors.push(e);
+            }
+            stages = Some(stages_);
         }
+
         self.check_benchmark(&mut errors);
 
         // Return collected errors if any
@@ -843,15 +838,6 @@ impl Config {
                         }
                     }
                 }
-            }
-        }
-    }
-
-    fn check_transform_segments(&mut self, errors: &mut Vec<anyhow::Error>) {
-        // check each transformations (before & after expansion), validate labels
-        for (step_no, t) in self.transform.iter_mut().enumerate() {
-            if let Err(e) = t.validate_segments(&self.input) {
-                errors.push(e.context(format!("[Step {step_no} ({t})]")));
             }
         }
     }

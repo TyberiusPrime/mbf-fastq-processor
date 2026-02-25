@@ -2143,6 +2143,20 @@ fn test_cases_x_single_step_x_error_handling_x_spotcheckreadpairing_x_not_paired
 }
 
 #[test]
+fn test_cases_x_single_step_x_error_handling_x_spotcheckreadpairing_x_sample_stride_0() {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/SpotCheckReadPairing/sample_stride_0"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/error_handling/SpotCheckReadPairing/sample_stride_0",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_error_handling_x_bam_x_bam_missing_input_settings_x_both_false() {
     println!(
         "Test case is in: test_cases/single_step/error_handling/bam/bam_missing_input_settings/both_false"

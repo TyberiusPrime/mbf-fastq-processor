@@ -781,7 +781,7 @@ pub fn validate_tag_name(tag_name: &str) -> anyhow::Result<()> {
         bail!("Tag label must start with a letter or underscore (a-zA-Z_), got '{first_char}'",);
     }
 
-    for (i, ch) in chars.enumerate() {
+    for ch in chars {
         if !ch.is_ascii_alphanumeric() && ch != '_' {
             bail!(
                 "Tag label must contain only letters, numbers, and underscores (a-zA-Z0-9_), found '{ch}'.",

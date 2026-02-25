@@ -1,1 +1,11 @@
-SpotCheckReadPairing requires at least two input segments (e.g., read1 and read2) to check read pairing. Found only 1 segment.
+  ╭─config.toml
+  ┆
+7 │ [[step]]
+8 │ action = "SpotCheckReadPairing"
+  ┆          ───────────┬──────────┬
+  ┆                     │          │
+  ┆                     ╰─────────── Involving this enum variant.
+  ┆                                │
+  ┆                                ╰─ SpotCheckReadPairing requires at least two input segments
+──╯
+Hint: Check your [input] section or remove the step

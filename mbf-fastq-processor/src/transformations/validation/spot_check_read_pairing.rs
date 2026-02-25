@@ -25,11 +25,26 @@ pub struct SpotCheckReadPairing {
 }
 
 impl VerifyIn<PartialConfig> for PartialSpotCheckReadPairing {
-    fn verify(&mut self, _parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {
         self.sample_stride.or_with(default_sample_stride);
+        if let Some(input_config) = parent.input.as_ref() {
+            if input_config.get_segment_order().len() < 2 {
+                return Err(ValidationFailure::new(
+                    "SpotCheckReadPairing requires at least two input segments",
+                    Some("Check your [input] section or remove the step"),
+                ));
+            }
+        }
+        self.sample_stride.verify(|v|
+            if *v == 0 {
+                Err(
+                    ValidationFailure::new(
+                    "Must be > 0", Some("sample_stride = n means every n-th read is checked, so choose a number > 0")))
+            } else {Ok(())}
+    );
         Ok(())
     }
 }
@@ -47,20 +62,6 @@ impl Default for SpotCheckReadPairing {
 impl Step for SpotCheckReadPairing {
     fn transmits_premature_termination(&self) -> bool {
         true
-    }
-
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        if input_def.segment_count() <= 1 {
-            bail!(
-                "SpotCheckReadPairing requires at least two input segments (e.g., read1 and read2) to check read pairing. Found only 1 segment.",
-            );
-        }
-        if self.sample_stride == 0 {
-            bail!(
-                "SpotCheckReadPairing: 'sample_stride' must be a positive integer (greater than 0). Please set sample_stride to a value like 1000."
-            );
-        }
-        Ok(())
     }
 
     fn apply(
