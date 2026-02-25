@@ -1,1 +1,30 @@
-Barcodes 'ATCG' and 'NNNN' have overlapping accepted sequences but lead to different outputs. Must be disjoint.
+Error 1/2
+  ╭─config.toml
+  ┆
+1 │ [barcodes.test_barcodes]
+2 │ ATCG = "specific"
+  ┆ ──┬─
+  ┆   │
+  ┆   ╰─────────────── Overlaps with NNNN
+3 │ NNNN = "universal"
+  ┆ ──┬─
+  ┆   │
+  ┆   ╰──────────────── Overlaps with ATCG
+──╯
+Hint: IUPAC patterns overlap, but lead to different barcodes.
+
+Error 2/2
+  ╭─config.toml
+  ┆
+1 │ [barcodes.test_barcodes]
+2 │ ATCG = "specific"
+3 │ NNNN = "universal"
+  ┆ ──┬─
+  ┆   │
+  ┆   ╰──────────────── Overlaps with RYRN
+4 │ RYRN = "ambiguous"
+  ┆ ──┬─
+  ┆   │
+  ┆   ╰──────────────── Overlaps with NNNN
+──╯
+Hint: IUPAC patterns overlap, but lead to different barcodes.

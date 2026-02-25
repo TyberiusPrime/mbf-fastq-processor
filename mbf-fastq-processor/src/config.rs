@@ -62,7 +62,7 @@ pub fn validate_segment_label(label: &str) -> Result<()> {
         }
         if !ch.is_ascii_alphanumeric() && ch != '_' {
             bail!(
-                "Segment label must contain only letters, numbers, and underscores (^[a-zA-Z0-9_]+$), found '{ch}' at position {i}",
+                "Segment label must contain only letters, numbers, and underscores (^[a-zA-Z0-9_]+$), found '{ch}'.",
             );
         }
     }
@@ -162,6 +162,7 @@ impl VerifyIn<TPDRoot> for PartialConfig {
             ),
         });
         self.verify_reports();
+        self.verify_barcodes();
         Ok(())
     }
 }
@@ -245,6 +246,70 @@ impl PartialConfig {
             self.output.state = TomlValueState::Custom { spans };
             self.output.help =
                 Some("No report step, but report output requested.\nRemove/disable report_html & report_json, or add in a report step.".to_string());
+        }
+    }
+
+    fn verify_barcodes(&mut self) {
+        // Check that barcode names are unique across all barcodes sections
+        if let Some(Some(barcodes)) = self.barcodes.as_mut() {
+            for tv_section_name in barcodes.keys.iter_mut() {
+                if let Some(section_name) = tv_section_name.as_ref()
+                    && let Err(e) = validate_tag_name(section_name)
+                {
+                    tv_section_name.state = TomlValueState::new_validation_failed("Invalid value");
+                    tv_section_name.help = Some(e.to_string());
+                }
+            }
+            for (_section_name, tv_barcodes) in barcodes.map.iter_mut() {
+                if let Some(barcodes) = tv_barcodes.as_mut()
+                    && let Some(barcodes) = barcodes.barcode_to_name.as_mut()
+                {
+                    for key in barcodes.keys.iter_mut() {
+                        if let Some(key_str) = key.as_ref() {
+                            if !crate::dna::all_iupac_or_underscore(key_str.as_bytes()) {
+                                key.state = TomlValueState::new_validation_failed("Invalid value");
+                                key.help = Some("Barcode contains non-IUPAC / spacer characters. Only A,C,G,T, IUPAC ambiguity codes and '_' are allowed.".to_string());
+                            }
+                        }
+                    }
+                    if barcodes.map.is_empty() {
+                        tv_barcodes.state = TomlValueState::new_validation_failed(
+                            "At least one barcode mapping must be provided",
+                        );
+                        tv_barcodes.help = Some(
+                            "Add at least one barcode mapping (DNA='name') under this section"
+                                .to_string(),
+                        );
+                        break;
+                    }
+                    // assert that barcodes have all the same length
+
+                    let mut lengths: HashSet<usize> = HashSet::new();
+                    for (iupac_key, barcode_name) in barcodes.map.iter_mut() {
+                        if let Some(barcode_name_str) = barcode_name.as_ref() {
+                            if barcode_name_str == "no-barcode" {
+                                barcode_name.state =
+                                    TomlValueState::new_validation_failed("Must not be no-barcode");
+                                barcode_name.help =
+                                    Some("Choose a different name for your barcode".to_string());
+                            }
+                            lengths.insert(iupac_key.len());
+                        }
+                    }
+                    if lengths.len() > 1 {
+                        tv_barcodes.state =
+                            TomlValueState::new_validation_failed("Barcodes of different lengths");
+                        let mut lengths: Vec<_> = lengths.into_iter().collect();
+                        lengths.sort();
+                        tv_barcodes.help = Some(format!(
+                            "All barcodes in one section must have the same length. Observed lengths: {lengths:?}"
+                        ));
+                        break;
+                    }
+                    // Check for overlapping IUPAC barcodes
+                    validate_barcode_disjointness(barcodes);
+                }
+            }
         }
     }
 }
@@ -484,7 +549,6 @@ impl Config {
         if errors.is_empty() {
             //no point in checking them if segment definition is broken
             //self.check_output(&mut errors);
-            self.check_barcodes(&mut errors);
             self.check_transform_segments(&mut errors);
             report_labels = Some(self.expand_transformations(&mut errors));
             if errors.is_empty() {
@@ -940,42 +1004,6 @@ impl Config {
         }
     }
 
-    fn check_barcodes(&self, errors: &mut Vec<anyhow::Error>) {
-        // Check that barcode names are unique across all barcodes sections
-        if let Some(barcodes) = self.barcodes.as_ref() {
-            for (section_name, barcodes) in barcodes {
-                if let Err(e) = validate_tag_name(section_name) {
-                    errors.push(e.context("Barcode names must be valid tag names"));
-                }
-                if barcodes.barcode_to_name.values().any(|x| x == "no-barcode") {
-                    errors.push(anyhow!(
-                        "[barcodes.{section_name}]: Barcode output infix must not be 'no-barcode'"
-                    ));
-                }
-
-                if barcodes.barcode_to_name.is_empty() {
-                    errors.push(anyhow!(
-                    "[barcodes.{section_name}]: Barcode section must contain at least one barcode mapping",
-                ));
-                }
-
-                // assert that barcodes have all the same length
-                let lengths: HashSet<usize> =
-                    barcodes.barcode_to_name.keys().map(|b| b.len()).collect();
-                if lengths.len() > 1 {
-                    errors.push(anyhow!(
-                    "[barcodes.{section_name}]: All barcodes in one section must have the same length. Observed: {lengths:?}.",
-                ));
-                }
-
-                // Check for overlapping IUPAC barcodes
-                if let Err(e) = validate_barcode_disjointness(&barcodes.barcode_to_name) {
-                    errors.push(anyhow!("[barcodes.{section_name}]: {e}"));
-                }
-            }
-        }
-    }
-
     /// Enable/disable rapidgzip. defaults to enabled if we can find the binary.
     fn configure_rapidgzip(&mut self) -> Result<()> {
         self.input.options.use_rapidgzip = match self.input.options.use_rapidgzip {
@@ -1161,25 +1189,32 @@ impl VerifyIn<PartialConfig> for PartialBarcodes {
 }
 //
 /// Validate that IUPAC barcodes are disjoint (don't overlap in their accepted sequences)
+
 #[allow(clippy::collapsible_if)]
 #[mutants::skip] // yeah, modifying to for j in (i * 1) will still 'work', just perform more checks
-fn validate_barcode_disjointness(barcodes: &IndexMap<BString, String>) -> Result<()> {
-    let barcode_patterns: Vec<_> = barcodes.iter().collect();
+fn validate_barcode_disjointness(barcodes: &mut MapAndKeys<BString, String>) {
+    let barcode_patterns = &mut barcodes.keys;
 
     for i in 0..barcode_patterns.len() {
         for j in (i + 1)..barcode_patterns.len() {
-            if crate::dna::iupac_overlapping(barcode_patterns[i].0, barcode_patterns[j].0) {
-                if barcode_patterns[i].1 != barcode_patterns[j].1 {
-                    bail!(
-                        "Barcodes '{}' and '{}' have overlapping accepted sequences but lead to different outputs. Must be disjoint.",
-                        String::from_utf8_lossy(barcode_patterns[i].0),
-                        String::from_utf8_lossy(barcode_patterns[j].0)
-                    );
-                }
+            if let Some(dna_a) = barcode_patterns[i].value.as_ref()  //exelicit .value, so we still
+            //fail with multiple...
+            && let Some(dna_b) = barcode_patterns[j].value.as_ref()
+            && let Some(barcode_name_a) = barcodes.map.get(bstr::BStr::new(dna_a)).and_then(|x| x.as_ref())
+            && let Some(barcode_name_b) = barcodes.map.get(bstr::BStr::new(dna_b)).and_then(|x| x.as_ref())
+            && barcode_name_a != barcode_name_b
+            && crate::dna::iupac_overlapping(dna_a.as_bytes(), dna_b.as_bytes())
+            {
+                let spans = vec![
+                    (barcode_patterns[i].span(), format!("Overlaps with {dna_b}")),
+                    (barcode_patterns[j].span(), format!("Overlaps with {dna_a}")),
+                ];
+                barcode_patterns[i].state = TomlValueState::Custom { spans };
+                barcode_patterns[i].help =
+                    Some("IUPAC patterns overlap, but lead to different barcodes.".to_string())
             }
         }
     }
-    Ok(())
 }
 
 #[cfg(test)]

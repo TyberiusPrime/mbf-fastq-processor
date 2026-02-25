@@ -1,1 +1,7 @@
-All barcodes in one section must have the same length.
+  ╭─config.toml
+1 │ [barcodes.test_barcodes]
+  ┆ ────────────┬───────────
+  ┆             │
+  ┆             ╰──────────── Barcodes of different lengths
+──╯
+Hint: All barcodes in one section must have the same length. Observed lengths: [4, 5]

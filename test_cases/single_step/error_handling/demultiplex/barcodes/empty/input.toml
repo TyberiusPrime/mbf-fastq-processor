@@ -1,0 +1,21 @@
+[input]
+    read1 = 'sample_data/ERR664392_1250.fq.gz'
+
+[output]
+    prefix = 'output'
+
+[[step]]
+    action = 'ExtractRegion'
+    anchor = "Left"
+	source = "read1"
+    start = 0
+    length = 4
+    out_label = 'barcode'
+
+[[step]]
+    action = 'Demultiplex'
+    in_label = 'barcode'
+    barcodes = 'test_barcodes'
+    output_unmatched = false
+
+[barcodes.test_barcodes]
