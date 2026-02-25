@@ -149,6 +149,8 @@ mod tests {
         let toml_no_options = r#"
             [input]
                 read1 = "test.fq"
+            [output]
+                prefix = 'out'
         "#;
 
         // Config with empty [options] section
@@ -156,6 +158,8 @@ mod tests {
             [input]
                 read1 = "test.fq"
             [options]
+            [output]
+                prefix = 'out'
         "#;
 
         let config_no_options =
