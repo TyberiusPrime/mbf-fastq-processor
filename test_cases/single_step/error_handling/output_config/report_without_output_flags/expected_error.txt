@@ -1,12 +1,22 @@
-  ╭─config.toml
-  ┆
-1 │ [input]
-  ┆ ┬
-  ┆ │
-  ┆ ╰──────── Report but no output.report_html | report_json
-6 │ prefix = "output"
-  ┆                  ┬
-  ┆                  │
-  ┆                  ╰─ Add report_json | report_html here?
-──╯
+   ╭─config.toml
+   ┆
+ 4 │ [output]
+ 5 │ format = "None"
+ 6 │ prefix = "output"
+   ┆                  ┬
+   ┆                  │
+   ┆                  ╰─ Add report_json | report_html here?
+   ┆
+ 8 │ [[step]]
+ 9 │ action = "Report"
+   ┆          ────┬───
+   ┆              │
+   ┆              ╰──── Involving this enum variant.
+   ┆
+10 │ count = true
+11 │ name = "report"
+   ┆                ┬
+   ┆                │
+   ┆                ╰─ Report but no output.report_html | report_json
+───╯
 Hint: Either remove the report, or enable it's output.

@@ -249,10 +249,11 @@ pub fn verify_outputs(
         if let Some(expected_warning) = expected_validation_warning {
             if warnings.is_empty() {
                 bail!("Expected validation warning, but none were produced.");
-            } else if !warnings
-                .iter()
-                .any(|w| expected_warning.validate_expected_failure(w).is_ok())
-            {
+            } else if !warnings.iter().any(|w| {
+                expected_warning
+                    .validate_expected_failure(w, &temp_toml_path)
+                    .is_ok()
+            }) {
                 bail!(
                     "Validation warnings did not match expected pattern.\nExpected: {}\nActual warnings:\n{}",
                     expected_warning,
@@ -320,7 +321,7 @@ pub fn verify_outputs(
 
         match (expected_failure.as_ref(), output.status.success()) {
             (Some(expected_failure_pattern), false) => {
-                expected_failure_pattern.validate_expected_failure(&stderr)?;
+                expected_failure_pattern.validate_expected_failure(&stderr, &temp_toml_path)?;
             }
             (Some(_), true) => {
                 if expected_validation_error.is_some() {
@@ -724,7 +725,7 @@ impl ExpectedFailure {
         }
     }
 
-    fn validate_expected_failure(&self, stderr: &str) -> Result<()> {
+    fn validate_expected_failure(&self, stderr: &str, temp_toml_path: &Path) -> Result<()> {
         let stderr = if std::env::var("RUST_BACKTRACE").is_ok() {
             strip_backtrace(stderr)
         } else {
@@ -740,6 +741,10 @@ impl ExpectedFailure {
             &doc_url,
             "https://doc_url.example/version-stripped-from-test/docs/reference/",
         );
+
+        //write to stderr file
+        std::fs::write(temp_toml_path.parent().unwrap().join("stderr"), &stderr)
+            .context("Failed to write actual stderr to file")?;
 
         match self {
             ExpectedFailure::ExactText(expected_text) => {
