@@ -178,10 +178,6 @@ pub struct InputInfo {
 
 #[enum_dispatch(Transformation)]
 pub trait Step {
-    /// validate just the segments. Needs mut to save their index.
-    fn validate_segments(&mut self, _input_def: &crate::config::Input) -> Result<()> {
-        Ok(())
-    }
 
     /// validates all other aspects of the step
     /// Needs to see all other transforms to check for conflicts

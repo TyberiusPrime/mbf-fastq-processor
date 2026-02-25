@@ -122,11 +122,6 @@ impl Step for OtherFileByName {
         self.progress_output = Some(progress.clone());
     }
 
-    #[allow(clippy::case_sensitive_file_extension_comparisons)] //sorry, but .BAM is wrong :).
-    fn validate_segments(&mut self, _input_def: &crate::config::Input) -> Result<()> {
-        Ok(())
-    }
-
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((
             self.out_label.clone(),

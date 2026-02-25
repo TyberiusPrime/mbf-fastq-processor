@@ -1,0 +1,11 @@
+[input]
+  se = 'read1'
+  pe = 'read2'
+
+
+[[step]]
+  action= 'SpotCheckReadPairing'
+  sample_stride=0
+
+[output]
+  prefix = 'se'

@@ -131,10 +131,6 @@ pub enum ResultType {
 }
 
 impl Step for Box<EvalExpression> {
-    fn validate_segments(&mut self, _input_def: &crate::config::Input) -> Result<()> {
-        Ok(())
-    }
-
     fn declares_tag_type(&self) -> Option<(String, TagValueType)> {
         let tag_type = match self.result_type {
             ResultType::Numeric => TagValueType::Numeric,

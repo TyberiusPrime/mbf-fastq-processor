@@ -11,19 +11,24 @@ pub struct ValidateName {
     pub readname_end_char: Option<u8>,
 }
 
-impl VerifyIn<PartialConfig> for PartialValidateName {}
-
-impl Step for ValidateName {
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        if input_def.segment_count() <= 1 {
-            bail!(
-                "ValidateName requires at least two input segments (e.g., read1 and read2) to compare read names. Found only {} segment(s).",
-                input_def.segment_count()
-            );
+impl VerifyIn<PartialConfig> for PartialValidateName {
+    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        if let Some(input_config) = parent.input.as_ref() {
+            if input_config.get_segment_order().len() < 2 {
+                return Err(ValidationFailure::new(
+                    "ValidateName requires at least two input segments",
+                    Some("Check your [input] section or remove the step"),
+                ));
+            }
         }
         Ok(())
     }
+}
 
+impl Step for ValidateName {
     fn apply(
         &self,
         _block: FastQBlocksCombined,
