@@ -1261,27 +1261,39 @@ impl VerifyIn<PartialConfig> for PartialBarcodes {
 #[allow(clippy::collapsible_if)]
 #[mutants::skip] // yeah, modifying to for j in (i * 1) will still 'work', just perform more checks
 fn validate_barcode_disjointness(barcodes: &mut MapAndKeys<BString, String>) {
-    let barcode_patterns = &mut barcodes.keys;
+    // First pass: collect all overlapping pairs without mutating anything.
+    // We must not assign while iterating because one barcode can overlap multiple others
+    // (e.g. NNNN overlaps both ATCG and RYRN); assigning in-loop would overwrite earlier results.
+    let mut overlapping_pairs: Vec<(usize, usize, Vec<(std::ops::Range<usize>, String)>)> =
+        Vec::new();
 
-    for i in 0..barcode_patterns.len() {
-        for j in (i + 1)..barcode_patterns.len() {
-            if let Some(dna_a) = barcode_patterns[i].value.as_ref()  //exelicit .value, so we still
-            //fail with multiple...
-            && let Some(dna_b) = barcode_patterns[j].value.as_ref()
+    for i in 0..barcodes.keys.len() {
+        for j in (i + 1)..barcodes.keys.len() {
+            if let Some(dna_a) = barcodes.keys[i].value.as_ref()
+            && let Some(dna_b) = barcodes.keys[j].value.as_ref()
             && let Some(barcode_name_a) = barcodes.map.get(bstr::BStr::new(dna_a)).and_then(|x| x.as_ref())
             && let Some(barcode_name_b) = barcodes.map.get(bstr::BStr::new(dna_b)).and_then(|x| x.as_ref())
             && barcode_name_a != barcode_name_b
             && crate::dna::iupac_overlapping(dna_a.as_bytes(), dna_b.as_bytes())
             {
                 let spans = vec![
-                    (barcode_patterns[i].span(), format!("Overlaps with {dna_b}")),
-                    (barcode_patterns[j].span(), format!("Overlaps with {dna_a}")),
+                    (barcodes.keys[i].span(), format!("Overlaps with {dna_b}")),
+                    (barcodes.keys[j].span(), format!("Overlaps with {dna_a}")),
                 ];
-                barcode_patterns[i].state = TomlValueState::Custom { spans };
-                barcode_patterns[i].help =
-                    Some("IUPAC patterns overlap, but lead to different barcodes.".to_string())
+                overlapping_pairs.push((i, j, spans));
             }
         }
+    }
+
+    // Second pass: assign each pair's error to the first barcode in the pair that hasn't
+    // already been used as an error anchor, so every overlap gets its own error entry.
+    let mut assigned: std::collections::HashSet<usize> = std::collections::HashSet::new();
+    for (i, j, spans) in overlapping_pairs {
+        let error_idx = if !assigned.contains(&i) { i } else { j };
+        barcodes.keys[error_idx].state = TomlValueState::Custom { spans };
+        barcodes.keys[error_idx].help =
+            Some("IUPAC patterns overlap, but lead to different barcodes.".to_string());
+        assigned.insert(error_idx);
     }
 }
 
