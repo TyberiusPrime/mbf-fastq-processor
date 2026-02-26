@@ -515,16 +515,16 @@ fn process_from_toml_file(toml_file: &Path, allow_overwrites: bool) {
     let current_dir = std::env::current_dir().expect("failed to get current directory");
     if let Err(e) = mbf_fastq_processor::run(toml_file, &current_dir, allow_overwrites) {
         eprintln!("Unfortunately, an error was detected and led to an early exit.\n");
-        let docs = docs_matching_error_message(&e);
-        if !docs.is_empty() {
-            let indented_docs = docs
-                .trim()
-                .lines()
-                .map(|line| format!("    {line}"))
-                .collect::<Vec<_>>()
-                .join("\n");
-            eprintln!("# == Documentation == \n(from the 'template' command)\n{indented_docs}\n",);
-        }
+        // let docs = docs_matching_error_message(&e);
+        // if !docs.is_empty() {
+        //     let indented_docs = docs
+        //         .trim()
+        //         .lines()
+        //         .map(|line| format!("    {line}"))
+        //         .collect::<Vec<_>>()
+        //         .join("\n");
+        //     eprintln!("# == Documentation == \n(from the 'template' command)\n{indented_docs}\n",);
+        // }
 
         eprintln!(
             "# == Error Details ==\n{}",

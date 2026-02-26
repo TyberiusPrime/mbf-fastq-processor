@@ -196,7 +196,7 @@ pub enum Transformation {
     CutStart(edits::CutStart),
     CutEnd(edits::CutEnd),
     #[serde(alias = "SpotCheckReadNames")]
-    SpotCheckReadPairing(validation::SpotCheckReadPairing),
+    ValidateReadPairing(validation::ValidateReadPairing),
     #[serde(skip)]
     _ChangeCase(edits::_ChangeCase),
     // ...
@@ -211,7 +211,7 @@ pub enum Transformation {
     CutStart(edits::CutStart),
     CutEnd(edits::CutEnd),
     #[tpd_alias(SpotCheckReadNames)]
-    SpotCheckReadPairing(validation::SpotCheckReadPairing),
+    ValidateReadPairing(validation::ValidateReadPairing),
     #[tpd_skip]  // Internal-only variant, not deserializable from TOML
     _ChangeCase(edits::_ChangeCase),
     // ...
@@ -431,7 +431,7 @@ Each file in `src/transformations/` subdirectories:
 - [ ] `by_numeric_tag.rs` - `ByNumericTag`
 
 **validation/**
-- [ ] `spot_check_read_pairing.rs` - `SpotCheckReadPairing`
+- [ ] `spot_check_read_pairing.rs` - `ValidateReadPairing`
 - [ ] `seq.rs` - `ValidateSeq`
 - [ ] `quality.rs` - `ValidateQuality`
 - [ ] `name.rs` - `ValidateName`

@@ -648,13 +648,6 @@ impl Config {
                     ));
                     push_new(t);
                 }
-                Transformation::ValidateName(step_config) => {
-                    let mut replacement =
-                        crate::transformations::validation::SpotCheckReadPairing::default();
-                    replacement.sample_stride = 1;
-                    replacement.readname_end_char = step_config.readname_end_char;
-                    push_new(Transformation::SpotCheckReadPairing(replacement));
-                }
                 Transformation::Lowercase(step_config) => {
                     push_new(Transformation::_ChangeCase(
                         crate::transformations::edits::_ChangeCase::new(
@@ -696,12 +689,12 @@ impl Config {
         let has_spot_check = self
             .transform
             .iter()
-            .any(|step| matches!(step, Transformation::SpotCheckReadPairing(_)));
+            .any(|step| matches!(step, Transformation::ValidateReadPairing(_)));
         let is_benchmark = self.benchmark.as_ref().is_some_and(|b| b.enable);
 
         if !has_validate_name && !has_spot_check && !is_benchmark {
-            push_new(Transformation::SpotCheckReadPairing(
-                crate::transformations::validation::SpotCheckReadPairing::default(),
+            push_new(Transformation::ValidateReadPairing(
+                crate::transformations::validation::ValidateReadPairing::default(),
             ));
         }
     }

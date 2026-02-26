@@ -741,11 +741,10 @@
 
 
 
-# ==== SpotCheckReadPairing ====
+# ==== ValidateReadPairing ====
 # [[step]]
-#     action = "SpotCheckReadPairing"
+#     action = "ValidateReadPairing"
 #     sample_stride = 1000 # Every nth fragment, default 1000. > 0
-#     readname_end_char = '/' # u8/byte-char, Defaults to '/' for Illumina.
 
 
 # # Verify that (a subset of ) read names in pairs match.
@@ -757,7 +756,7 @@
 
 ##  - more than one segment is defined
 ##  - and `options.spot_check_read_pairing` is set to `true` (the default)
-##  - and and no explicit `SpotCheckReadPairing` or `ValidateName` step is present.
+##  - and and no explicit `ValidateReadPairing` or `ValidateName` step is present.
 
 ## The automatic readname_end_char is configured for Illumina-style read names ending
 ## with /1 or /2, splitting on '/'.
@@ -770,6 +769,7 @@
 # [[step]]
 #    action = "ValidateName"
 #    readname_end_char = "_" # Optional single separator character; leave off for exact match
+#     sample_stride = 1000 # Every nth fragment, default 1000. > 0
 
 # ==== ValidateAllReadsSameLength ====
 # [[step]]
@@ -887,7 +887,7 @@
 
 # == Options ==
 # [options]
-#   spot_check_read_pairing = true #  Whether to spot check read pair names. See SpotCheckReadPairing step
+#   spot_check_read_pairing = true #  Whether to spot check read pair names. See ValidateReadPairing step
 #   thread_count = 4 # number of threads to use for our step workpool. For default, see full documentation
 #   block_size = 10000 # how many reads per block?
 #   buffer_size = 102400 # how many bytes of buffer. Will extend if we can't get block_size reads in there.

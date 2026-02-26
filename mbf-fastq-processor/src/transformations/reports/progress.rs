@@ -57,8 +57,7 @@ impl VerifyIn<PartialConfig> for PartialProgress {
             .is_some();
         if stdout && !has_output_infix {
             self.output_infix.state = TomlValueState::ValidationFailed {
-                message: "Missing output_infix"
-                    .to_string(),
+                message: "Missing output_infix".to_string(),
             };
             self.output_infix.help = Some(
                 "Supply an output_infix to write progress to a file instead of stdout (which is used by [output] already).".to_string(),

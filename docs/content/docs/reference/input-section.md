@@ -185,7 +185,7 @@ The automatism can be disabled with
 ```
 
 To influence the character that delimits the read name prefix, or the sampling rate,
-add an explicit [`SpotCheckReadPairing`]({{< relref "docs/reference/validation-steps/SpotCheckReadPairing.md" >}}) step.
+add an explicit [`ValidateReadPairing`]({{< relref "docs/reference/validation-steps/ValidateReadPairing.md" >}}) step.
 
 
 ## Named pipe input
@@ -218,10 +218,3 @@ spent the disk space. Note that you may not use [Head]({{< relref "docs/referenc
 and `build_rapidgzip_index` together, since Head closes the input early, leading to the index not being
 created. To prevent this, an error will be reported when using 
 [Head]({{<relref "docs/reference/modification-steps/Head.md" >}})
-
-
-
-
-
-
-

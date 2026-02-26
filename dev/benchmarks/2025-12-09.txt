@@ -274,7 +274,7 @@ step_benchmarks/pipeline/Skip
                         time:   [80.531 ms 85.614 ms 91.051 ms]
                         change: [-8.3069% -1.8870% +4.5309%] (p = 0.60 > 0.05)
                         No change in performance detected.
-Benchmarking step_benchmarks/pipeline/SpotCheckReadPairing: Collecting 10 samples in estimated 14.924 s (step_benchmarks/pipeline/SpotCheckReadPairing
+Benchmarking step_benchmarks/pipeline/ValidateReadPairing: Collecting 10 samples in estimated 14.924 s (step_benchmarks/pipeline/ValidateReadPairing
                         time:   [131.19 ms 134.72 ms 137.83 ms]
                         change: [-15.663% -10.284% -4.6651%] (p = 0.00 < 0.05)
                         Performance has improved.

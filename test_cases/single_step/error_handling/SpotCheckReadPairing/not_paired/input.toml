@@ -3,7 +3,7 @@
 
 
 [[step]]
-  action= 'SpotCheckReadPairing'
+  action= 'ValidateReadPairing'
 
 [output]
   prefix = 'se'

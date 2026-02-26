@@ -136,4 +136,4 @@ and do defaults when they're absolutely obvious
 - for example in [Swap]({{< relref "docs/reference/modification-steps/Swap.md" >}}), when there are only 2 segments defined 
 - or when we really really don't expect them to change.
 For example defaulting to ['outputting all segments']({{< relref "docs/reference/output-section.md" >}}), 
-or ([spot checking read name pairs]({{< relref "docs/reference/validation-steps/SpotCheckReadPairing.md" >}}))
+or ([spot checking read name pairs]({{< relref "docs/reference/validation-steps/ValidateReadPairing.md" >}}))

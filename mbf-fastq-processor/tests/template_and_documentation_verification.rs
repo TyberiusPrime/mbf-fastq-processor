@@ -807,13 +807,14 @@ fn test_every_step_has_a_template_section() {
             Ok(parsed) => {
                 if let Err(e) = parsed.check() {
                     errors.push(format!(
-                        "Error in parsing configuration for {section_name}, line_no {line_no}: {e:?}\n{config}"
+                        "Error in parsing configuration for {section_name}, line_no {line_no}: {e:?}\n{config}",
                     ));
                 }
             }
             Err(e) => {
                 errors.push(format!(
-                    "Could not parse section for {section_name}, line_no {line_no}: {e:?}.\n{config}"
+                    "Could not parse section for {section_name}, line_no {line_no}: {}.\n{config}",
+                    e.pretty("debug.toml")
                 ));
             }
         }

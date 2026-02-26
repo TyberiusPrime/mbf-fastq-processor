@@ -1,0 +1,8 @@
+Error in stage 0: ValidateNamew detected mismatched read names near read 1 (0-based, sampled every 1 reads).
+First segment (prefix): Beta,
+Other segment (prefix): Gamma
+First segment (full name): Beta_1,
+Other segment (full name): Gamma_2
+Fix your input, 
+    or adjust the read_name_end_char option on this step, 
+    or remove the ValidateName step.
