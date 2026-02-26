@@ -1,1 +1,16 @@
-(input): Repeated filename: "read1.fq" (in segment 'read2'). Probably not what you want. Set options.accept_duplicate_files = true to ignore.
+Error Details ==
+Error 1/1
+  ╭─config.toml
+  ┆
+1 │ [input]
+2 │     read1 = 'read1.fq'
+  ┆             ─────┬────
+  ┆                  │
+  ┆                  ╰───── This file is listed multiple times
+3 │     read2 = 'read1.fq'
+  ┆             ─────┬────
+  ┆                  │
+  ┆                  ╰───── This file is listed multiple times
+──╯
+Hint: The same input file is listed multiple times. If this is intentional, set options.accept_duplicate_files = true.
+

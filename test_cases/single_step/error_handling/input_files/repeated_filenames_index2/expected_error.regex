@@ -1,1 +1,0 @@
-Repeated filename: "(.+)/ten_reads2.fq" \(in segment 'read2'\). Probably not what you want. Set options.accept_duplicate_files = true to ignore.
