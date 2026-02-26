@@ -1,22 +1,18 @@
 Error Details ==
 Error 1/1
-   ╭─config.toml
-   ┆
- 7 │ [[step]]
- 8 │ action = "ExtractIUPACWithIndel"
-   ┆          ───────────┬───────────
-   ┆                     │
-   ┆                     ╰──────────── In this step
-   ┆
- 9 │ anchor = "Anywhere"
-10 │ max_indel_bases = 1
-11 │ max_mismatches = 0
-12 │ max_total_edits = 1
-13 │ out_label = "adapter"
-14 │ search = ""
-   ┆          ─┬
-   ┆           │
-   ┆           ╰─ Must contain at least one letter (base)
-───╯
+  ╭─config.toml
+  ┆
+4 │ [[step]]
+5 │     action = 'ExtractIUPACWithIndel'
+  ┆              ───────────┬───────────
+  ┆                         │
+  ┆                         ╰──────────── In this step
+  ┆
+6 │     out_label = 'adapter'
+7 │     search = ''
+  ┆              ─┬
+  ┆               │
+  ┆               ╰─ Must contain at least one letter (base)
+──╯
 Hint: See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractIUPACWithIndel
 

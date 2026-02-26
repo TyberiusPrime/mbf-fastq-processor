@@ -1,9 +1,12 @@
+Error Details ==
+Error 1/1
   ╭─config.toml
   ┆
-8 │ [input.options]
-9 │ fastq_readname_end_char = "|"
-  ┆ ───────────┬───────────
-  ┆            │
-  ┆            ╰────────────────── Unknown key.
+4 │ [input.options]
+5 │ 	fastq_readname_end_char = '|'
+  ┆  ───────────┬───────────
+  ┆             │
+  ┆             ╰────────────────── Unknown key.
 ──╯
 Hint: Did you mean: 'fasta_fake_quality', 'threads_per_segment', or 'read_comment_character'?
+

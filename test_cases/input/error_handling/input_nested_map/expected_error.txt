@@ -1,7 +1,7 @@
 Error Details ==
 Error 1/1
   ╭─config.toml
-1 │ [input.read23]
+2 │ [input.read23]
   ┆ ───────┬──────
   ┆        │
   ┆        ╰─────── Wrong type: expected array, found table.

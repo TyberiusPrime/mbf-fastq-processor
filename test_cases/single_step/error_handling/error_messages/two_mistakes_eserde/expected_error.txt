@@ -2,30 +2,30 @@ Error Details ==
 Error 1/2
   ╭─config.toml
   ┆
-7 │ [[step]]
-8 │ action = "Prefix"
-  ┆          ────┬───
-  ┆              │
-  ┆              ╰──── In this step
-9 │ seq = "A"
-  ┆          ┬
-  ┆          │
-  ┆          ╰─ Missing required key: 'qual'.
+4 │ [[step]]
+5 │     action = 'Prefix'
+  ┆              ────┬───
+  ┆                  │
+  ┆                  ╰──── In this step
+6 │     seq ='A'
+  ┆             ┬
+  ┆             │
+  ┆             ╰─ Missing required key: 'qual'.
 ──╯
 Hint: See https://doc_url.example/version-stripped-from-test/docs/reference/Prefix
 
 Error 2/2
    ╭─config.toml
    ┆
-11 │ [[step]]
-12 │ action = "Postfix"
-   ┆          ────┬────
-   ┆              │
-   ┆              ╰───── In this step
-13 │ qual = "B"
-   ┆           ┬
-   ┆           │
-   ┆           ╰─ Missing required key: 'seq'.
+ 8 │ [[step]]
+ 9 │     action = 'Postfix'
+   ┆              ────┬────
+   ┆                  │
+   ┆                  ╰───── In this step
+10 │     qual = 'B'
+   ┆               ┬
+   ┆               │
+   ┆               ╰─ Missing required key: 'seq'.
 ───╯
 Hint: See https://doc_url.example/version-stripped-from-test/docs/reference/Postfix
 

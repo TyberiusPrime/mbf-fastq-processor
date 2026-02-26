@@ -1,10 +1,13 @@
+Error Details ==
 Error 1/1
   ╭─config.toml
   ┆
 5 │ [output]
-6 │ interleave = ["read1"]
-  ┆              ────┬────
-  ┆                  │
-  ┆                  ╰───── Must contain at least two segments to interleave.
+6 │     prefix = 'output'
+7 │     interleave = ['read1']
+  ┆                  ────┬────
+  ┆                      │
+  ┆                      ╰───── Must contain at least two segments to interleave.
 ──╯
 Hint: Either add another segment to interleave, or remove interleave, or output to files in stead of stdout
+

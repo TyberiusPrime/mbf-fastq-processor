@@ -1,4 +1,22 @@
-3 │ read2 = true
-  ┆         ──┬─
-  ┆           │
-  ┆           ╰── Wrong type: expected string, found boolean
+Error Details ==
+Error 1/2
+  ╭─config.toml
+  ┆
+1 │ [input]
+2 │     read1 = 'read1.fq'
+3 │     read2 = true
+  ┆             ──┬─
+  ┆               │
+  ┆               ╰── Wrong type: expected string, found boolean.
+──╯
+Hint: This value has the wrong type.
+
+Error 2/2
+  ╭─config.toml
+1 │ [input]
+  ┆ ┬
+  ┆ │
+  ┆ ╰──────── No output files and no reports requested. Nothing to do.
+──╯
+Hint: Add an [output] section with output files or reports, or use a benchmark configuration.
+

@@ -2,15 +2,17 @@ Error Details ==
 Error 1/1
   ╭─config.toml
   ┆
-7 │ [[step]]
-8 │ action = "CalcBaseContent"
-  ┆          ────────┬────────
-  ┆                  │
-  ┆                  ╰───────── In this step
-9 │ bases_to_count = ""
-  ┆                  ─┬
-  ┆                   │
-  ┆                   ╰─ Must contain at least one letter (base)
+4 │ [[step]]
+5 │     action = 'CalcBaseContent'
+  ┆              ────────┬────────
+  ┆                      │
+  ┆                      ╰───────── In this step
+  ┆
+6 │     out_label = 'base'
+7 │     bases_to_count = ''
+  ┆                      ─┬
+  ┆                       │
+  ┆                       ╰─ Must contain at least one letter (base)
 ──╯
 Hint: See https://doc_url.example/version-stripped-from-test/docs/reference/CalcBaseContent
 

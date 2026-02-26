@@ -2,17 +2,20 @@ Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
-11 │ [[step]]
-12 │ action = "ExtractRegions"
-   ┆          ────────┬───────
-   ┆                  │
-   ┆                  ╰──────── In this step
+ 8 │ [[step]]
+ 9 │       action = 'ExtractRegions'
+   ┆                ────────┬───────
+   ┆                        │
+   ┆                        ╰──────── In this step
    ┆
-13 │ out_label = "umi"
-14 │ regions = []
-   ┆           ─┬
-   ┆            │
-   ┆            ╰─ Must contain at least one region definition
+10 │     out_label='umi'
+11 │       regions = [
+   ┆                 ▲
+   ┆ ╭───────────────╯
+12 │ │     ]
+   ┆ │     ▲
+   ┆ │     │
+   ┆ ╰─────┴─ Must contain at least one region definition
 ───╯
 Hint: See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractRegions
 

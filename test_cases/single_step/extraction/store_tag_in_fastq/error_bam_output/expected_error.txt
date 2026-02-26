@@ -2,17 +2,18 @@ Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
-14 │ [[step]]
-15 │ action = "StoreTagInFastQ"
-   ┆          ────────┬────────
-   ┆                  │
-   ┆                  ╰───────── In this step
+11 │ [[step]]
+12 │     action = 'StoreTagInFastQ'
+   ┆              ────────┬────────
+   ┆                      │
+   ┆                      ╰───────── In this step
    ┆
-16 │ comment_tags = ["barcode"]
-17 │ format = "BAM"
-   ┆          ──┬──
-   ┆            │
-   ┆            ╰─── StoreTagInFastQ supports only 'fastq' or 'fasta' formats
+13 │     in_label = 'barcode'
+14 │     comment_tags = ["barcode"]
+15 │   format = "BAM"
+   ┆            ──┬──
+   ┆              │
+   ┆              ╰─── StoreTagInFastQ supports only 'fastq' or 'fasta' formats
 ───╯
 Hint: See https://doc_url.example/version-stripped-from-test/docs/reference/StoreTagInFastQ
 

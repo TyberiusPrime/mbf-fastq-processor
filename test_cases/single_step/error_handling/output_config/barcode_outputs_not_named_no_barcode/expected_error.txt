@@ -1,11 +1,13 @@
+Error Details ==
 Error 1/1
-  ╭─config.toml
-  ┆
-1 │ [barcodes.key]
-2 │ CT = "aaaa"
-3 │ TT = "no-barcode"
-  ┆      ──────┬─────
-  ┆            │
-  ┆            ╰────── Must not be no-barcode
-──╯
+   ╭─config.toml
+   ┆
+23 │ [barcodes.key]
+24 │     CT = 'aaaa'
+25 │     TT = 'no-barcode'
+   ┆          ──────┬─────
+   ┆                │
+   ┆                ╰────── Must not be no-barcode
+───╯
 Hint: Choose a different name for your barcode
+

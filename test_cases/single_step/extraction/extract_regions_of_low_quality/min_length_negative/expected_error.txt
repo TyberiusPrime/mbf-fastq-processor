@@ -2,15 +2,18 @@ Error Details ==
 Error 1/1
   ╭─config.toml
   ┆
-7 │ [[step]]
-8 │ action = "ExtractRegionsOfLowQuality"
-  ┆          ──────────────┬─────────────
-  ┆                        │
-  ┆                        ╰────────────── In this step
-9 │ min_length = -5
-  ┆              ─┬
-  ┆               │
-  ┆               ╰─ integer (usize), must be positive
+4 │ [[step]]
+5 │     action = 'ExtractRegionsOfLowQuality'
+  ┆              ──────────────┬─────────────
+  ┆                            │
+  ┆                            ╰────────────── In this step
+  ┆
+6 │     out_label = 'low_quality'
+7 │     min_quality = 40
+8 │     min_length = -5
+  ┆                  ─┬
+  ┆                   │
+  ┆                   ╰─ integer (usize), must be positive
 ──╯
 Hint: Use a number between 0 and 9223372036854775807 inclusive.
       See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractRegionsOfLowQuality

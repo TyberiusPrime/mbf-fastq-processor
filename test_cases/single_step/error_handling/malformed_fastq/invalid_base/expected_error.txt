@@ -1,18 +1,16 @@
 Error Details ==
 Error 1/1
-   ╭─config.toml
-   ┆
- 7 │ [[step]]
- 8 │ action = "Prefix"
-   ┆          ────┬───
-   ┆              │
-   ┆              ╰──── In this step
-   ┆
- 9 │ qual = "B"
-10 │ seq = "X"
-   ┆       ─┬─
-   ┆        │
-   ┆        ╰── Invalid DNA base: '88'.
-───╯
+  ╭─config.toml
+  ┆
+3 │ [[step]]
+4 │     action = 'Prefix'
+  ┆              ────┬───
+  ┆                  │
+  ┆                  ╰──── In this step
+5 │     seq = 'X'
+  ┆           ─┬─
+  ┆            │
+  ┆            ╰── Invalid DNA base: '88'.
+──╯
 Hint: See https://doc_url.example/version-stripped-from-test/docs/reference/Prefix
 

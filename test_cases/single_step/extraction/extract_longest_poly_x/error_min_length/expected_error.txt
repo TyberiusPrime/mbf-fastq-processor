@@ -1,21 +1,20 @@
 Error Details ==
 Error 1/1
-   ╭─config.toml
-   ┆
- 7 │ [[step]]
- 8 │ action = "ExtractLongestPolyX"
-   ┆          ──────────┬──────────
-   ┆                    │
-   ┆                    ╰─────────── In this step
-   ┆
- 9 │ base = "A"
-10 │ max_consecutive_mismatches = 1
-11 │ max_mismatch_rate = 0.0
-12 │ min_length = 0
-   ┆              ┬
-   ┆              │
-   ┆              ╰─ min_length must be > 0
-───╯
+  ╭─config.toml
+  ┆
+4 │ [[step]]
+5 │     action = 'ExtractLongestPolyX'
+  ┆              ──────────┬──────────
+  ┆                        │
+  ┆                        ╰─────────── In this step
+  ┆
+6 │     out_label = 'poly_a'
+7 │     segment = 'read1'
+8 │     min_length = 0
+  ┆                  ┬
+  ┆                  │
+  ┆                  ╰─ min_length must be > 0
+──╯
 Hint: Set to a positive integer
       See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractLongestPolyX
 

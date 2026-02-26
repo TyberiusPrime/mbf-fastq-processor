@@ -1,16 +1,13 @@
+Error Details ==
+Error 1/1
   ╭─config.toml
   ┆
 1 │ [input]
-2 │   interleaved = [
-  ┆                 ▲
-  ┆ ╭───────────────╯
-3 │ │     "read1",
-  ┆ │
-4 │ │     "read2",
-  ┆ │
-5 │ │ ]
-  ┆ │ ▲
-  ┆ │ │
-  ┆ ╰─┴─ Invalid use of stdin magic value
+2 │     read1 = ['--stdin--', 'input_read1.fq.zst']
+3 │     interleaved = ['read1', 'read2']
+  ┆                   ─────────┬────────
+  ┆                            │
+  ┆                            ╰───────── Invalid use of stdin magic value
 ──╯
 Hint: When using '--stdin--' as an input file, it must be the only file listed in the interleaved segment's input. Found 2 times.
+

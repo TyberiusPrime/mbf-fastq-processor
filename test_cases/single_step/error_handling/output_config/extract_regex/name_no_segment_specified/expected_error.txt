@@ -2,18 +2,19 @@ Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
- 8 │ [[step]]
- 9 │ action = "ExtractRegex"
-   ┆          ───────┬──────
-   ┆                 │
-   ┆                 ╰─────── In this step
+ 5 │ [[step]]
+ 6 │     action = 'ExtractRegex'
+   ┆              ───────┬──────
+   ┆                     │
+   ┆                     ╰─────── In this step
    ┆
-10 │ out_label = "test"
-11 │ replacement = "$1"
-12 │ search = "ABC"
-   ┆               ┬
-   ┆               │
-   ┆               ╰─ Missing required key: 'source'.
+ 7 │     out_label = 'test'
+ 8 │     # segment not specified
+ 9 │     search = 'ABC'
+10 │     replacement = '$1'
+   ┆                       ┬
+   ┆                       │
+   ┆                       ╰─ Missing required key: 'source'.
 ───╯
 Hint: See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractRegex
 

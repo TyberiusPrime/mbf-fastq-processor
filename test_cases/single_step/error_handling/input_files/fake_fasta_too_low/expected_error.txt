@@ -1,9 +1,12 @@
+Error Details ==
+Error 1/1
   ╭─config.toml
   ┆
 4 │ [input.options]
-5 │ fasta_fake_quality = 12
-  ┆                      ─┬
-  ┆                       │
-  ┆                       ╰─ Out of PHRED range (33..126)
+5 │   fasta_fake_quality = 12
+  ┆                        ─┬
+  ┆                         │
+  ┆                         ╰─ Out of PHRED range (33..126)
 ──╯
 Hint: 'B' might be a good value
+

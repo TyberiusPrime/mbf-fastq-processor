@@ -1,17 +1,17 @@
 Error Details ==
 Error 1/1
-   ╭─config.toml
-   ┆
- 8 │ [[step]]
- 9 │ action = "ValidateSeq"
-   ┆          ──────┬──────
-   ┆                │
-   ┆                ╰─────── In this step
-10 │ allowed = "CGATN"
-   ┆                  ┬
-   ┆                  │
-   ┆                  ╰─ Segment not specified but multiple segments available
-───╯
+  ╭─config.toml
+  ┆
+5 │ [[step]]
+6 │     action = 'ValidateSeq'
+  ┆              ──────┬──────
+  ┆                    │
+  ┆                    ╰─────── In this step
+7 │     allowed = 'CGATN'
+  ┆                      ┬
+  ┆                      │
+  ┆                      ╰─ Segment not specified but multiple segments available
+──╯
 Hint: Available segments: read1, read2
       See https://doc_url.example/version-stripped-from-test/docs/reference/ValidateSeq
 

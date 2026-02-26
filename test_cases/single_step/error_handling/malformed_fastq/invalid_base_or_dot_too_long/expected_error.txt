@@ -2,15 +2,17 @@ Error Details ==
 Error 1/1
   ╭─config.toml
   ┆
-7 │ [[step]]
-8 │ action = "ExtractPolyTail"
-  ┆          ────────┬────────
-  ┆                  │
-  ┆                  ╰───────── In this step
-9 │ base = "AA"
-  ┆        ──┬─
-  ┆          │
-  ┆          ╰── Invalid DNA base
+3 │ [[step]]
+4 │     action = 'ExtractPolyTail'
+  ┆              ────────┬────────
+  ┆                      │
+  ┆                      ╰───────── In this step
+  ┆
+5 │ 	out_label = "ept"
+6 │     base = 'AA'
+  ┆            ──┬─
+  ┆              │
+  ┆              ╰── Invalid DNA base
 ──╯
 Hint: Must be a single character: A, C, G, T, N or '.'
       See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractPolyTail

@@ -1,11 +1,14 @@
+Error Details ==
+Error 1/1
   ╭─config.toml
   ┆
 4 │ [output]
-5 │ compression = "gz"
-6 │ output = [
-7 │     "no-such-segment",
-  ┆     ────────┬────────
-  ┆             │
-  ┆             ╰────────── Not found in input segments
+5 │ 	prefix = 'output'
+6 │ 	compression = 'gz'
+7 │     output = ['no-such-segment', 'read1']
+  ┆               ────────┬────────
+  ┆                       │
+  ┆                       ╰─────────────────── Not found in input segments
 ──╯
 Hint: All known keys have been used.
+

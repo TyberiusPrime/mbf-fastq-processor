@@ -3,16 +3,17 @@ Error 1/1
    ╭─config.toml
    ┆
  7 │ [[step]]
- 8 │ action = "CalcKmers"
-   ┆          ─────┬─────
-   ┆               │
-   ┆               ╰────── In this step
+ 8 │     action = 'CalcKmers'
+   ┆              ─────┬─────
+   ┆                   │
+   ┆                   ╰────── In this step
    ┆
- 9 │ canonical = false
-10 │ files = 23
-   ┆         ─┬
-   ┆          │
-   ┆          ╰─ Wrong type: expected string, found integer.
+ 9 │     out_label = 'kmer_count'
+10 │     segment = 'read1'
+11 │     files = 23
+   ┆             ─┬
+   ┆              │
+   ┆              ╰─ Wrong type: expected string, found integer.
 ───╯
 Hint: This value has the wrong type.
       See https://doc_url.example/version-stripped-from-test/docs/reference/CalcKmers

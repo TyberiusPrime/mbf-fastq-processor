@@ -1,21 +1,19 @@
 Error Details ==
 Error 1/1
-   ╭─config.toml
-   ┆
- 7 │ [[step]]
- 8 │ action = "ExtractRegex"
-   ┆          ───────┬──────
-   ┆                 │
-   ┆                 ╰─────── In this step
-   ┆
- 9 │ out_label = "test"
-10 │ replacement = "$1"
-11 │ search = "ABC"
-12 │ segment = "name:read2"
-   ┆           ──────┬─────
-   ┆                 │
-   ┆                 ╰────── Segment not present in [input] section
-───╯
+  ╭─config.toml
+  ┆
+4 │ [[step]]
+5 │     action = 'ExtractRegex'
+  ┆              ───────┬──────
+  ┆                     │
+  ┆                     ╰─────── In this step
+  ┆
+6 │     out_label = 'test'
+7 │     segment = 'name:read2'
+  ┆               ──────┬─────
+  ┆                     │
+  ┆                     ╰────── Segment not present in [input] section
+──╯
 Hint: Did you mean: read1?
       See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractRegex
 

@@ -1,11 +1,14 @@
+Error Details ==
 Error 1/1
   ╭─config.toml
   ┆
 4 │ [output]
-5 │ compression = "gzip"
-6 │ compression_level = 15
-  ┆                     ─┬
-  ┆                      │
-  ┆                      ╰─ Invalid Value
+5 │     prefix = 'output'
+6 │     compression = 'gzip'
+7 │     compression_level = 15
+  ┆                         ─┬
+  ┆                          │
+  ┆                          ╰─ Invalid Value
 ──╯
 Hint: Valid range is 0-9 for gzip.
+

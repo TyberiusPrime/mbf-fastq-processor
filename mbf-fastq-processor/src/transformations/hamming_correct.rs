@@ -76,8 +76,8 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
         self.max_hamming_distance.verify(|v| {
             if *v == 0 {
                 Err(ValidationFailure::new(
-                    "Must be greater than 0 to perform correction. Leave off the HammingCorrect step if no correction is desired.",
-                    None,
+                    "Must be greater than 0 to perform correction",
+                    Some("Leave off the HammingCorrect step if no correction is desired."),
                 ))
             } else {
                 Ok(())

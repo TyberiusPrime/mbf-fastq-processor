@@ -2,18 +2,21 @@ Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
-29 │ [[step]]
-30 │ action = "HammingCorrect"
-   ┆          ────────┬───────
-   ┆                  │
-   ┆                  ╰──────── In this step
+27 │ [[step]]
+28 │     action = 'HammingCorrect'
+   ┆              ────────┬───────
+   ┆                      │
+   ┆                      ╰──────── In this step
    ┆
-31 │ barcodes = "barcodes"
-32 │ in_label = "barcode_extracted"
-33 │ max_hamming_distance = 0
-   ┆                        ┬
-   ┆                        │
-   ┆                        ╰─ Must be greater than 0 to perform correction. Leave off the HammingCorrect step if no correction is desired.
+29 │ 	in_label = 'barcode_extracted'
+30 │ 	out_label = 'corrected'
+31 │ 	barcodes = 'barcodes'
+32 │ 	on_no_match = 'remove'
+33 │ 	max_hamming_distance=0
+   ┆                       ┬
+   ┆                       │
+   ┆                       ╰─ Must be greater than 0 to perform correction
 ───╯
-Hint: See https://doc_url.example/version-stripped-from-test/docs/reference/HammingCorrect
+Hint: Leave off the HammingCorrect step if no correction is desired.
+      See https://doc_url.example/version-stripped-from-test/docs/reference/HammingCorrect
 

@@ -2,19 +2,19 @@ Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
-15 │ [[step]]
-16 │ action = "ConvertRegionsToLength"
-   ┆          ────────────┬───────────
-   ┆                      │
-   ┆                      ╰──────────── In this step
-17 │ in_label = "mytag"
-   ┆            ───┬───
-   ┆               │
-   ┆               ╰──── Same as out_label
-18 │ out_label = "mytag"
-   ┆             ───┬───
-   ┆                │
-   ┆                ╰──── Same as in_label
+12 │ [[step]]
+13 │     action = 'ConvertRegionsToLength'
+   ┆              ────────────┬───────────
+   ┆                          │
+   ┆                          ╰──────────── In this step
+14 │     out_label = 'mytag'
+   ┆                 ───┬───
+   ┆                    │
+   ┆                    ╰──── Same as in_label
+15 │     in_label = 'mytag'
+   ┆                ───┬───
+   ┆                   │
+   ┆                   ╰──── Same as out_label
 ───╯
 Hint: 'out_label' must differ from 'in_label' to avoid overwriting the source tag.
       See https://doc_url.example/version-stripped-from-test/docs/reference/ConvertRegionsToLength
