@@ -1,1 +1,8 @@
-Segment 'read1' has no files specified.
+  ╭─config.toml
+  ┆
+1 │ [input]
+2 │     read1 = []
+  ┆             ─┬
+  ┆              │
+  ┆              ╰─ Segment has no files specified
+──╯

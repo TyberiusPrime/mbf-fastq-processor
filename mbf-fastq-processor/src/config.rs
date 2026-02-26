@@ -10,7 +10,7 @@ use bstr::BString;
 use indexmap::IndexMap;
 use schemars::JsonSchema;
 use std::cell::RefCell;
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use toml_pretty_deser::prelude::*;
@@ -159,12 +159,6 @@ impl VerifyIn<TPDRoot> for PartialConfig {
     where
         Self: Sized,
     {
-        if !self.input.is_ok() {
-            //we can't check transforms if the input def has failed,
-            //they'de all have not set their segments/sources
-            self.transform = TomlValue::new_ok(Vec::new(), 0..0);
-        }
-        self.transform.or_default();
         self.options.or_with(|| PartialOptions {
             threads: TomlValue::new_ok(None, 0..0),
             max_blocks_in_flight: TomlValue::new_ok(None, 0..0),
@@ -187,6 +181,13 @@ impl VerifyIn<TPDRoot> for PartialConfig {
             ),
             tpd_field_match_mode: parent.tpd_field_match_mode,
         });
+        if !self.input.is_ok() {
+            //we can't check transforms if the input def has failed,
+            //they'de all have not set their segments/sources
+            self.transform = TomlValue::new_ok(Vec::new(), 0..0);
+        }
+        self.verify_no_duplicate_files_no_empty_segments();
+        self.transform.or_default();
         self.verify_reports();
         self.verify_barcodes();
         self.verify_benchmark_molecule_count();
@@ -199,6 +200,53 @@ impl VerifyIn<TPDRoot> for PartialConfig {
 }
 
 impl PartialConfig {
+    fn verify_no_duplicate_files_no_empty_segments(&mut self) {
+        let mut seen_files: HashMap<String, Vec<std::ops::Range<usize>>> = HashMap::new();
+        if let Some(input) = self.input.as_mut()
+            && let Some(segments) = input.segments.as_mut()
+            && let Some(false) = self
+                .options
+                .as_ref()
+                .and_then(|options| options.accept_duplicate_files.as_ref())
+        {
+            //should always be true
+            for tv_files in segments.map.values_mut() {
+                if let Some(files) = tv_files.as_ref() {
+                    if files.is_empty() {
+                        tv_files.state = TomlValueState::ValidationFailed {
+                            message: "Segment has no files specified".to_string(),
+                        };
+                    } else {
+                        for tv_file in files {
+                            if let Some(str_file) = tv_file.as_ref() {
+                                match seen_files.entry(str_file.clone()) {
+                                    std::collections::hash_map::Entry::Occupied(occupied_entry) => {
+                                        occupied_entry.into_mut().push(tv_file.span());
+                                    }
+                                    std::collections::hash_map::Entry::Vacant(vacant_entry) => {
+                                        vacant_entry.insert(vec![tv_file.span()]);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            for (_filename, spans) in seen_files.into_iter() {
+                if spans.len() > 1 {
+                    let spans = spans
+                        .into_iter()
+                        .map(|span| (span, "This file is listed multiple times".to_string()))
+                        .collect();
+                    self.input.state = TomlValueState::Custom { spans };
+                    self.input.help = Some(
+                        "The same input file is listed multiple times. If this is intentional, set options.accept_duplicate_files = true.".to_string(),
+                    );
+                }
+            }
+        }
+    }
+
     fn verify_reports(&mut self) {
         let report_html = self
             .output
@@ -748,7 +796,6 @@ impl Config {
                 let input_formats_observed = self.check_input_format(&mut errors);
                 self.configure_multithreading(&input_formats_observed);
             } else {
-                self.check_input_format_for_validation(&mut errors);
             }
             stages = Some(stages_);
         }
@@ -822,8 +869,6 @@ impl Config {
     #[mutants::skip] // saw_gzip is only necessary for multi threading, and that's not being
     // observed
     fn check_input_format(&mut self, errors: &mut Vec<anyhow::Error>) -> InputFormatsObserved {
-        self.check_input_duplicate_files(errors);
-
         let mut saw_fasta = false;
         let mut saw_bam = false;
         let mut saw_fastq = false;
@@ -951,51 +996,6 @@ impl Config {
             fasta: saw_fasta,
             bam: saw_bam,
             gzip: saw_gzip,
-        }
-    }
-
-    /// Check input format for validation mode (skips file existence checks)
-    fn check_input_format_for_validation(&mut self, errors: &mut Vec<anyhow::Error>) {
-        self.check_input_duplicate_files(errors);
-    }
-
-    fn check_input_duplicate_files(&mut self, errors: &mut Vec<anyhow::Error>) {
-        let mut seen = HashSet::new();
-        if !self.options.accept_duplicate_files {
-            // Check for duplicate files across all segments
-            match &self.input.structured {
-                StructuredInput::Interleaved { files, .. } => {
-                    for f in files {
-                        if !seen.insert(f.clone()) {
-                            errors.push(anyhow!(
-                                "(input): Repeated filename: \"{f}\" (in interleaved input). Probably not what you want. Set options.accept_duplicate_files = true to ignore.",
-                            ));
-                        }
-                    }
-                }
-                StructuredInput::Segmented {
-                    segment_files,
-                    segment_order,
-                } => {
-                    for segment_name in segment_order {
-                        let files = segment_files
-                            .get(segment_name)
-                            .expect("segment_order keys must exist in segment_files");
-                        if files.is_empty() {
-                            errors.push(anyhow!(
-                                "(input): Segment '{segment_name}' has no files specified.",
-                            ));
-                        }
-                        for f in files {
-                            if !seen.insert(f.clone()) {
-                                errors.push(anyhow!(
-                                    "(input): Repeated filename: \"{f}\" (in segment '{segment_name}'). Probably not what you want. Set options.accept_duplicate_files = true to ignore.",
-                                ));
-                            }
-                        }
-                    }
-                }
-            }
         }
     }
 

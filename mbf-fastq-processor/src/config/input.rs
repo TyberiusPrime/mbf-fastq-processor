@@ -34,7 +34,7 @@ pub struct Input {
     #[schemars(with = "BTreeMap<String, Vec<String>>")]
     #[tpd(absorb_remaining)]
     #[serde(flatten)]
-    segments: IndexMap<String, Vec<String>>,
+    pub segments: IndexMap<String, Vec<String>>,
 
     #[tpd(nested)]
     #[serde(skip_serializing_if = "is_default")]

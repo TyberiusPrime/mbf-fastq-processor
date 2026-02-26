@@ -1,1 +1,14 @@
-Repeated filename
+Error Details ==
+Error 1/1
+  ╭─config.toml
+  ┆
+1 │ [input]
+2 │     read1 = ['read1.fq', 'read1.fq']
+  ┆              ─────┬────  ─────┬────
+  ┆                   │           │
+  ┆                   ╰────────────────── This file is listed multiple times
+  ┆                               │
+  ┆                               ╰────── This file is listed multiple times
+──╯
+Hint: The same input file is listed multiple times. If this is intentional, set options.accept_duplicate_files = true.
+
