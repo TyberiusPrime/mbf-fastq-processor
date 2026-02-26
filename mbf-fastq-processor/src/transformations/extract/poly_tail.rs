@@ -34,8 +34,8 @@ impl VerifyIn<PartialConfig> for PartialPolyTail {
         self.min_length.verify(|v| {
             if *v < 2 {
                 Err(ValidationFailure::new(
-                    "min_length must be >= 2",
-                    Some("Change to a positive integer larger than 1"),
+                    "Invalid value. Must be >= 2",
+                    Some("Change to a positive integer larger than 1."),
                 ))
             } else {
                 Ok(())
@@ -44,8 +44,8 @@ impl VerifyIn<PartialConfig> for PartialPolyTail {
         self.max_mismatch_rate.verify(|v| {
             if *v < 0.0 || *v >= 1.0 {
                 Err(ValidationFailure::new(
-                    "max_mismatch_rate must be in [0.0..1.0)",
-                    Some("Set a valid value >= 0 and < 1.0"),
+                    "Invalid value. Must be in [0.0..1.0)",
+                    Some("Set a valid value >= 0 and < 1.0."),
                 ))
             } else {
                 Ok(())

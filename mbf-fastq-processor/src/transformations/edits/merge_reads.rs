@@ -125,8 +125,8 @@ impl VerifyIn<PartialConfig> for PartialMergeReads {
         self.min_overlap.verify(|v| {
             if *v < 5 {
                 Err(ValidationFailure::new(
-                    "min_overlap must be >= 5",
-                    Some("Set a valid value"),
+                    "Invalid value. Must be >= 5",
+                    Some("Set a valid value."),
                 ))
             } else {
                 Ok(())
@@ -135,8 +135,8 @@ impl VerifyIn<PartialConfig> for PartialMergeReads {
         self.max_mismatch_rate.verify(|v| {
             if *v < 0.0 || *v >= 1.0 {
                 Err(ValidationFailure::new(
-                    "max_mismatch_rate must be in [0.0..1.0)",
-                    Some("Set a valid value >= 0 and < 1.0"),
+                    "Invalid value. Must be in [0.0..1.0)",
+                    Some("Set a valid value >= 0 and < 1.0."),
                 ))
             } else {
                 Ok(())
@@ -146,8 +146,8 @@ impl VerifyIn<PartialConfig> for PartialMergeReads {
             if let Some(v) = opt_v {
                 if !(33..=126).contains(v) {
                     return Err(ValidationFailure::new(
-                        "spacer_quality_char must be in [33..126]",
-                        Some("Set a valid value"),
+                        "Invalid value. Must be in [33..126]",
+                        Some("Set a valid value."),
                     ));
                 }
             }

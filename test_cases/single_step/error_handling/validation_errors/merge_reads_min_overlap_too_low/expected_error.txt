@@ -1,1 +1,21 @@
-min_overlap must be >= 5. Set a valid value
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+ 8 │ [[step]]
+ 9 │ action = "MergeReads"
+   ┆          ──────┬─────
+   ┆                │
+   ┆                ╰────── In this step
+   ┆
+10 │ algorithm = "Fastp"
+11 │ max_mismatch_count = 1000
+12 │ max_mismatch_rate = 0.2
+13 │ min_overlap = 4
+   ┆               ┬
+   ┆               │
+   ┆               ╰─ Invalid value. Must be >= 5
+───╯
+Hint: Set a valid value.
+      See https://doc_url.example/version-stripped-from-test/docs/reference/MergeReads
+

@@ -1,5 +1,7 @@
 //use regex::Regex;
 
+use toml_pretty_deser::TomlValueState;
+
 use crate::config::PartialConfig;
 
 pub mod process;
@@ -28,6 +30,10 @@ pub(crate) fn improve_error_messages(
                     {
                         let step_name = step.tpd_get_tag();
                         tv_step.help = Some(format!("See {doc_url}{step_name}"));
+                        if let Some(context) = tv_step.context.as_mut() {
+                            context.1 = "In this step".to_string();
+                        }
+                        //todo: replace 'Involving this enum once toml-pretty-deser can do that"
                     }
                 }
             }

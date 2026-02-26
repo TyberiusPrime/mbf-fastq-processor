@@ -1,3 +1,4 @@
+Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
@@ -5,7 +6,7 @@ Error 1/1
  9 │ action = "SpotCheckReadPairing"
    ┆          ───────────┬──────────
    ┆                     │
-   ┆                     ╰─────────── Involving this enum variant.
+   ┆                     ╰─────────── In this step
 10 │ sample_stride = 0
    ┆                 ┬
    ┆                 │
@@ -13,3 +14,4 @@ Error 1/1
 ───╯
 Hint: sample_stride = n means every n-th read is checked, so choose a number > 0
       See https://doc_url.example/version-stripped-from-test/docs/reference/SpotCheckReadPairing
+

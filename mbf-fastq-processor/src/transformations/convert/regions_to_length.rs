@@ -41,7 +41,7 @@ impl VerifyIn<PartialConfig> for PartialRegionsToLength {
             ];
             self.out_label.state = TomlValueState::Custom { spans };
             self.out_label.help = Some(
-                "'out_label' must differ from 'in_label' to avoid overwriting the source tag"
+                "'out_label' must differ from 'in_label' to avoid overwriting the source tag."
                     .to_string(),
             );
         }

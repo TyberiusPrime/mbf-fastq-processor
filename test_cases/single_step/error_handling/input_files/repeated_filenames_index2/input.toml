@@ -3,3 +3,6 @@
     read2 = 'sample_data/ten_reads2.fq'
     index1 = 'sample_data/ten_reads2.fq'
 
+
+[output]
+  prefix = 'out'

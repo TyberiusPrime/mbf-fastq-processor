@@ -258,7 +258,7 @@ impl PartialConfig {
                 if *v == 0 {
                     Err(ValidationFailure::new(
                         "molecule_count must be > 0",
-                        Some("Set to a positive integer"),
+                        Some("Set to a positive integer."),
                     ))
                 } else {
                     Ok(())
@@ -355,7 +355,9 @@ impl PartialConfig {
             .and_then(|x| x.enable.as_ref())
             .copied()
             .unwrap_or(false);
-        if !has_fastq_output && !has_report_output && !has_tag_output && !is_benchmark {
+        let output_ok = self.output.is_ok();
+        if !has_fastq_output && !has_report_output && !has_tag_output && !is_benchmark && output_ok
+        {
             self.output.state = TomlValueState::ValidationFailed {
                 message: "No output files and no reports requested. Nothing to do.".to_string(),
             };

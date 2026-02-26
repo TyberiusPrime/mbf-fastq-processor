@@ -1,11 +1,17 @@
+Error Details ==
+Error 1/1
+  ╭─config.toml
+  ┆
 7 │ [[step]]
 8 │ action = "Swap"
   ┆          ───┬──
   ┆             │
-  ┆             ╰─── Involving this enum variant.
+  ┆             ╰─── In this step
 9 │ segment_a = "all"
   ┆             ──┬──
   ┆               │
   ┆               ╰─── 'all' segments not valid in this position
 ──╯
 Hint: Available are: read1
+      See https://doc_url.example/version-stripped-from-test/docs/reference/Swap
+

@@ -1589,7 +1589,12 @@ molecule_count = 0
         "Did not expect success message, got: {stdout}\n:stderr: {stderr}"
     );
     assert!(
-        stderr.contains("Benchmark needs a molecule_count > 0. Set to a positive integer."),
+        stderr.contains("molecule_count must be > 0"),
+        "Expected error message, got {stderr}"
+    );
+
+    assert!(
+        stderr.contains("Set to a positive integer."),
         "Expected error message, got {stderr}"
     );
     assert!(!cmd.status.success(), "Exit code should not be 0");

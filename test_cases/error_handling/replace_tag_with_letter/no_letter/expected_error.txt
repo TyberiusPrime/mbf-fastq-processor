@@ -1,12 +1,16 @@
+Error Details ==
+Error 1/1
    ╭─config.toml
    ┆
 14 │ [[step]]
 15 │ action = "ReplaceTagWithLetter"
    ┆          ───────────┬──────────
    ┆                     │
-   ┆                     ╰─────────── Involving this enum variant.
+   ┆                     ╰─────────── In this step
 16 │ in_label = "low_quality"
    ┆                         ┬
    ┆                         │
    ┆                         ╰─ Missing required key: 'letter'.
 ───╯
+Hint: See https://doc_url.example/version-stripped-from-test/docs/reference/ReplaceTagWithLetter
+

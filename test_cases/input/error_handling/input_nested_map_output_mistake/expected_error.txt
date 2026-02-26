@@ -1,5 +1,5 @@
 Error Details ==
-Error 1/1
+Error 1/2
   ╭─config.toml
 4 │ [input.output]
   ┆ ───────┬──────
@@ -7,4 +7,13 @@ Error 1/1
   ┆        ╰─────── Wrong type: expected array, found table.
 ──╯
 Hint: This value has the wrong type.
+
+Error 2/2
+  ╭─config.toml
+1 │ [input]
+  ┆ ┬
+  ┆ │
+  ┆ ╰──────── No output files and no reports requested. Nothing to do.
+──╯
+Hint: Add an [output] section with output files or reports, or use a benchmark configuration.
 

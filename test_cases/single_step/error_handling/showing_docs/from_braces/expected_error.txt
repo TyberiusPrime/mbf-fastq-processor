@@ -6,7 +6,7 @@ Error 1/1
  8 │ action = "CutStart"
    ┆          ─────┬────
    ┆               │
-   ┆               ╰───── Involving this enum variant.
+   ┆               ╰───── In this step
    ┆
  9 │ n = 23
 10 │ segment = "read2"

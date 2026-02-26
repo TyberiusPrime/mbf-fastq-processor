@@ -1,13 +1,17 @@
- ╭─config.toml
+Error Details ==
+Error 1/1
+  ╭─config.toml
   ┆
 7 │ [[step]]
 8 │ action = "ExtractPolyTail"
   ┆          ────────┬────────
   ┆                  │
-  ┆                  ╰───────── Involving this enum variant.
+  ┆                  ╰───────── In this step
 9 │ base = "x"
   ┆        ─┬─
   ┆         │
   ┆         ╰── Invalid DNA base
 ──╯
 Hint: Must be a single character: A, C, G, T, N or '.'
+      See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractPolyTail
+
