@@ -164,8 +164,10 @@ impl VerifyIn<TPDRoot> for PartialConfig {
         self.verify_reports();
         self.verify_barcodes();
         self.verify_benchmark_molecule_count();
-        self.verify_head_rapidgzip_conflict();
+        self.disable_output_on_benchmark();
         self.verify_for_any_output();
+        self.configure_rapid_gzip();
+        self.verify_head_rapidgzip_conflict();
         Ok(())
     }
 }
@@ -430,6 +432,59 @@ impl PartialConfig {
             }
         }
     }
+
+    fn disable_output_on_benchmark(&mut self) {
+        if let Some(Some(benchmark)) = &self.benchmark.as_ref()
+            && let Some(true) = benchmark.enable.as_ref()
+        {
+            // Disable output when benchmark mode is enabled
+            self.output = TomlValue::new_ok(
+                Some(PartialOutput {
+                    prefix: TomlValue::new_ok(String::from("benchmark"), 0..0),
+                    suffix: TomlValue::new_ok(None, 0..0),
+                    format: TomlValue::new_ok(FileFormat::default(), 0..0),
+                    compression: TomlValue::new_ok(CompressionFormat::default(), 0..0),
+                    compression_level: TomlValue::new_ok(None, 0..0),
+                    compression_threads: TomlValue::new_ok(None, 0..0),
+                    report_html: TomlValue::new_ok(false, 0..0),
+                    report_json: TomlValue::new_ok(false, 0..0),
+                    report_timing: TomlValue::new_ok(false, 0..0),
+                    stdout: TomlValue::new_ok(false, 0..0),
+                    interleave: TomlValue::new_ok(None, 0..0),
+                    output: TomlValue::new_ok(Some(Vec::new()), 0..0),
+                    output_hash_uncompressed: TomlValue::new_ok(false, 0..0),
+                    output_hash_compressed: TomlValue::new_ok(false, 0..0),
+                    ix_separator: TomlValue::new_ok(output::default_ix_separator(), 0..0),
+                    chunksize: TomlValue::new_ok(None, 0..0),
+                }),
+                0..0,
+            );
+        }
+    }
+
+    /// Enable/disable rapidgzip. defaults to enabled if we can find the binary.
+    fn configure_rapid_gzip(&mut self) {
+        if let Some(input) = self.input.as_mut()
+            && let Some(options) = input.options.as_mut()
+        {
+            options.use_rapidgzip.value = match options.use_rapidgzip.as_ref() {
+                Some(Some(true)) => {
+                    if crate::io::input::find_rapidgzip_in_path().is_none() {
+                        options.use_rapidgzip.state = TomlValueState::ValidationFailed {
+                            message: "rapidgzip requested but not found in PATH".to_string(),
+                        };
+                        options.use_rapidgzip.help = Some(
+                            "Make sure you have a rapidgzip binary on your path, or set use_rapidgzip to false (or leave off for auto-detect).".to_string(),
+                        );
+                    }
+                    Some(Some(true))
+                }
+                Some(Some(false)) => Some(Some(false)),
+                Some(None) => Some(Some(crate::io::input::find_rapidgzip_in_path().is_some())),
+                None => None, //other error
+            }
+        }
+    }
 }
 
 #[allow(clippy::used_underscore_items)]
@@ -659,11 +714,10 @@ impl Config {
     fn inner_check(mut self, check_input_files_exist: bool) -> Result<CheckedConfig> {
         let mut errors = Vec::new();
         let mut stages = None;
-        let mut report_labels = None;
 
         //no point in checking them if segment definition is broken
         //self.check_output(&mut errors);
-        report_labels = Some(self.expand_transformations());
+        let report_labels = Some(self.expand_transformations());
         if errors.is_empty() {
             let (tag_names, stages_) = self.check_transformations(&mut errors);
             //self.transfrom is now empty, the trafos have been expanded into stepsk.
@@ -676,13 +730,8 @@ impl Config {
             } else {
                 self.check_input_format_for_validation(&mut errors);
             }
-            if let Err(e) = self.configure_rapidgzip() {
-                errors.push(e);
-            }
             stages = Some(stages_);
         }
-
-        self.check_benchmark(&mut errors);
 
         // Return collected errors if any
         if !errors.is_empty() {
@@ -877,7 +926,6 @@ impl Config {
             }
         }
 
-        self.check_blocksize(errors);
         InputFormatsObserved {
             fastq: saw_fastq,
             fasta: saw_fasta,
@@ -886,25 +934,9 @@ impl Config {
         }
     }
 
-    fn check_blocksize(&self, errors: &mut Vec<anyhow::Error>) {
-        if self.options.block_size == 0 {
-            errors.push(anyhow!(
-                "[options]: Block size must be > 0. Set to a positive integer."
-            ));
-        }
-        if self.options.block_size % 2 == 1 && self.input.is_interleaved() {
-            errors.push(anyhow!(
-                "[options]: Block size must be even for interleaved input."
-            ));
-        }
-    }
     /// Check input format for validation mode (skips file existence checks)
     fn check_input_format_for_validation(&mut self, errors: &mut Vec<anyhow::Error>) {
         self.check_input_duplicate_files(errors);
-
-        // In validation mode, we skip format detection since files might not exist
-        // Just check the block size constraint
-        self.check_blocksize(errors);
     }
 
     fn check_input_duplicate_files(&mut self, errors: &mut Vec<anyhow::Error>) {
@@ -1068,23 +1100,6 @@ impl Config {
         (tags_available.keys().cloned().collect(), stages)
     }
 
-    /// Enable/disable rapidgzip. defaults to enabled if we can find the binary.
-    fn configure_rapidgzip(&mut self) -> Result<()> {
-        self.input.options.use_rapidgzip = match self.input.options.use_rapidgzip {
-            Some(true) => {
-                if crate::io::input::find_rapidgzip_in_path().is_none() {
-                    bail!(
-                        "Warning: rapidgzip requested but not found in PATH. Make sure you have a rapidgzip binary on your path."
-                    );
-                }
-                Some(true)
-            }
-            Some(false) => Some(false),
-            None => Some(crate::io::input::find_rapidgzip_in_path().is_some()),
-        };
-        Ok(())
-    }
-
     #[mutants::skip] // yeah, no rapidgzip doesn't change the result
     fn configure_multithreading(&mut self, input_formats_observed: &InputFormatsObserved) {
         let segment_count = self.input.parser_count();
@@ -1121,32 +1136,6 @@ impl Config {
         {
             // otherwise, we can fall back
             self.input.options.use_rapidgzip = Some(false);
-        }
-    }
-
-    fn check_benchmark(&mut self, _errors: &mut Vec<anyhow::Error>) {
-        if let Some(benchmark) = &self.benchmark
-            && benchmark.enable
-        {
-            // Disable output when benchmark mode is enabled
-            self.output = Some(Output {
-                prefix: String::from("benchmark"),
-                suffix: None,
-                format: FileFormat::default(),
-                compression: CompressionFormat::default(),
-                compression_level: None,
-                compression_threads: None,
-                report_html: false,
-                report_json: false,
-                report_timing: false,
-                stdout: false, // Default to false when creating new output config
-                interleave: None,
-                output: Some(Vec::new()),
-                output_hash_uncompressed: false,
-                output_hash_compressed: false,
-                ix_separator: output::default_ix_separator(),
-                chunksize: None,
-            });
         }
     }
 }
