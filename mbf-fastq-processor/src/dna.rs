@@ -3,7 +3,7 @@ use bio::alignment::{
     AlignmentOperation,
     pairwise::{Aligner, MIN_SCORE, Scoring},
 };
-use bstr::BString;
+use bstr::{BString, ByteVec};
 use schemars::JsonSchema;
 
 use toml_pretty_deser::prelude::*;
@@ -69,6 +69,23 @@ impl TagValue {
     pub fn as_sequence_mut(&mut self) -> Option<&mut Hits> {
         match self {
             TagValue::Location(h) => Some(h),
+            _ => None,
+        }
+    }
+
+    pub fn as_str(&self, separator: &[u8]) -> Option<BString> {
+        match self {
+            TagValue::String(s) => Some(s.clone()),
+            TagValue::Location(hits) => {
+                let mut out = BString::default();
+                for section in hits.0.iter() {
+                    if !out.is_empty() {
+                        out.push_str(separator);
+                    }
+                    out.push_str(&section.sequence)
+                }
+                Some(out)
+            }
             _ => None,
         }
     }

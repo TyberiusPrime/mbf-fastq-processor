@@ -1,16 +1,17 @@
 [input]
     read1 = 'input_read1.fq.zst'
+  options.read_comment_character = ' '
 
 [[step]]
-    action = 'TagOtherFileByName'
+    action = 'TagOtherFile'
+    source = 'name:read1'
 	out_label = 'tag'
     filename = 'input_ERR12828869_250_aligned_250_unaligned.bam'
     include_mapped = true
     include_unmapped = true
     false_positive_rate = 0
     seed  = 42
-    fastq_readname_end_char = ' '
-    reference_readname_end_char = ' '
+    other_readname_end_char = ' '
 
 [[step]]
 	action = "FilterByTag"

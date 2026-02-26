@@ -334,8 +334,7 @@ pub enum Transformation {
     ExtractLowQualityEnd(extract::LowQualityEnd),
     // // bool tags
     TagDuplicates(extract::tag::Duplicates),
-    TagOtherFileByName(extract::tag::OtherFileByName),
-    TagOtherFileBySequence(extract::tag::OtherFileBySequence),
+    TagOtherFile(extract::tag::OtherFile),
     //
     // //edit
     StoreTagInSequence(tag::StoreTagInSequence),

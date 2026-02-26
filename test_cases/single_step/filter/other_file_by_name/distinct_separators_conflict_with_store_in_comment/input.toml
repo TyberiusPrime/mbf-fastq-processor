@@ -1,5 +1,6 @@
 [input]
     read1 = 'input_read1.fq'
+    options.read_comment_character = ' '
 
 [[step]]
   action = "CalcLength"
@@ -13,14 +14,13 @@
 
 
 [[step]]
-    action = 'TagOtherFileByName'
+    action = 'TagOtherFile'
+    segment = 'name:read1'
     out_label = 'present'
-    segment = 'read1'
     filename = 'input_reference.fq'
     false_positive_rate = 0
     seed = 42
-    fastq_readname_end_char = '/'
-    reference_readname_end_char = ' '
+    other_readname_end_char = ' '
 
 [[step]]
     action = 'FilterByTag'

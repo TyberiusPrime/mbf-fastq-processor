@@ -908,27 +908,10 @@ fn benchmark_key_steps(c: &mut Criterion) {
             thread_count,
         ),
         BenchmarkConfig::new(
-            "TagOtherFileByName",
+            "TagOtherFile",
             &format!(
                 r#"[[step]]
-    action = "TagOtherFileByName"
-    filename = "{str_kmer_file}"
-    out_label = "in_other"
-    seed = 43
-    false_positive_rate = 0.01
-
-
-[[step]]
-    action = "ForgetAllTags""#
-            ),
-            molecule_count,
-            thread_count,
-        ),
-        BenchmarkConfig::new(
-            "TagOtherFileBySequence",
-            &format!(
-                r#"[[step]]
-    action = "TagOtherFileBySequence"
+    action = "TagOtherFile"
     filename = "{str_kmer_file}"
     out_label = "seq_in_other"
     segment = "read1"

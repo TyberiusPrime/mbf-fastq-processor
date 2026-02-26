@@ -323,33 +323,18 @@
                             # This is typically auto detected if the input is files (not pipes)
 
 
-# ==== TagOtherFileByName ====
-## Marks reads based on names present in another file
-## With false_positive_rate > 0, uses a cuckoo filter, otherwise an exact hash set.
-# [[step]]
-#    action = "TagOtherFileByName"
-#    out_label = "present_in_other" # which tag to store the result in
-#    segment = "read1" # which name to use
-#    filename = "names.fastq" # Can read FASTQ (also compressed), or sam/bam files.
-#    false_positive_rate = 0.01 # false positive rate (0..1)
-#    seed = 42 # seed for randomness
-#    include_mapped = true # in case of BAM/SAM, whether to include aligned reads
-#    include_unmapped = true # in case of BAM/SAM, whether to include unaligned reads
-#    fastq_readname_end_char = " " # (optional) char (byte value) at which to cut FASTQ read names before comparing.
-#    reference_readname_end_char = "/" # (optional) char (byte value) at which to cut reference read names before storing.
-##                                         Leave either unset to keep the original names intact.
-
-# ==== TagOtherFileBySequence ====
+# ==== TagOtherFile ====
 ## Filter reads based on sequences present in another file
 # [[step]]
-#    action = "TagOtherFileBySequence"
+#    action = "TagOtherFile"
 #    out_label = "present_in_other" # which tag to store the result in
+#    source = "read1" # <segment_name>, name:<segment_name> or tag:<tag_name>
 #    filename = "sequences.fastq" # fastq (also compressed), or sam/bam files.
-#    segment = "read1" # Any of your input segments
 #    false_positive_rate = 0.01 # false positive rate (0..1)
 #    seed = 42 # seed for randomness
 #    include_mapped = true # in case of BAM/SAM, whether to include aligned reads
 #    include_unmapped = true # in case of BAM/SAM, whether to include unaligned reads
+ #    other_read_name_end_character # if set, truncate names in other file at this character
 
 
 

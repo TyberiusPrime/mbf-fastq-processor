@@ -6,7 +6,8 @@ compression = "zst"
 prefix = "output"
 
 [[step]]
-action = "TagOtherFileByName"
+action = "TagOtherFile"
+source = 'read1'
 false_positive_rate = 1.0
 filename = "other.fq"
 out_label = "tag"

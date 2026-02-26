@@ -1,1 +1,5 @@
-OtherFileByName is configured to trim read names at character
+    OtherFile using names is configured to trim read names at character ' '
+    (by `input.options.read_comment_character`), 
+    but an upstream StoreTagInComment step is inserting comments that start with character '!'
+    (option comment_separator).
+    These must match.

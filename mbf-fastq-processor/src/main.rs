@@ -5,7 +5,7 @@ use clap_complete::{Generator, Shell, generate};
 use human_panic::{Metadata, setup_panic};
 use regex::Regex;
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     io,
     path::{Path, PathBuf},
 };
@@ -388,34 +388,34 @@ fn print_version_and_exit() {
     std::process::exit(0);
 }
 
-fn docs_matching_error_message(e: &anyhow::Error) -> String {
-    use std::fmt::Write;
-    let mut docs = String::new();
-    let str_error = format!("{e:?}");
-    let re = regex::Regex::new(r"[(]([^)]+)[)]").expect("hardcoded regex pattern is valid");
-    let mut seen = HashSet::new();
-    for cap in re.captures_iter(&str_error) {
-        let step = cap[1].to_string();
-        seen.insert(step);
-    }
-    let re =
-        regex::Regex::new(r"action = ([A-Za-z0-9]+)").expect("hardcoded regex pattern is valid");
-    for cap in re.captures_iter(&str_error) {
-        let step = cap[1].to_string();
-        seen.insert(step);
-    }
-
-    let mut todo = seen.into_iter().collect::<Vec<_>>();
-    todo.sort();
-    for step in todo {
-        let template = mbf_fastq_processor::documentation::get_template(Some(&step));
-        if let Some(template) = template {
-            write!(docs, "\n\n ==== {step} ====:\n{template}\n")
-                .expect("writing to String never fails");
-        }
-    }
-    docs
-}
+// fn docs_matching_error_message(e: &anyhow::Error) -> String {
+//     use std::fmt::Write;
+//     let mut docs = String::new();
+//     let str_error = format!("{e:?}");
+//     let re = regex::Regex::new(r"[(]([^)]+)[)]").expect("hardcoded regex pattern is valid");
+//     let mut seen = HashSet::new();
+//     for cap in re.captures_iter(&str_error) {
+//         let step = cap[1].to_string();
+//         seen.insert(step);
+//     }
+//     let re =
+//         regex::Regex::new(r"action = ([A-Za-z0-9]+)").expect("hardcoded regex pattern is valid");
+//     for cap in re.captures_iter(&str_error) {
+//         let step = cap[1].to_string();
+//         seen.insert(step);
+//     }
+//
+//     let mut todo = seen.into_iter().collect::<Vec<_>>();
+//     todo.sort();
+//     for step in todo {
+//         let template = mbf_fastq_processor::documentation::get_template(Some(&step));
+//         if let Some(template) = template {
+//             write!(docs, "\n\n ==== {step} ====:\n{template}\n")
+//                 .expect("writing to String never fails");
+//         }
+//     }
+//     docs
+// }
 
 /// We can't fight all aliases, but at least remove those that are
 /// just capitalization variants of each other.
@@ -550,18 +550,18 @@ fn validate_config_file(toml_path: &Path) {
         }
         Err(e) => {
             eprintln!("Configuration validation failed:\n");
-            let docs = docs_matching_error_message(&e);
-            if !docs.is_empty() {
-                let indented_docs = docs
-                    .trim()
-                    .lines()
-                    .map(|line| format!("    {line}"))
-                    .collect::<Vec<_>>()
-                    .join("\n");
-                eprintln!(
-                    "# == Documentation == \n(from the 'template' command)\n{indented_docs}\n",
-                );
-            }
+            // let docs = docs_matching_error_message(&e);
+            // if !docs.is_empty() {
+            //     let indented_docs = docs
+            //         .trim()
+            //         .lines()
+            //         .map(|line| format!("    {line}"))
+            //         .collect::<Vec<_>>()
+            //         .join("\n");
+            //     eprintln!(
+            //         "# == Documentation == \n(from the 'template' command)\n{indented_docs}\n",
+            //     );
+            // }
 
             eprintln!(
                 "# == Error Details ==\n{}",
