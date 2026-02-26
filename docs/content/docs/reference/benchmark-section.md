@@ -101,7 +101,7 @@ On Ryzen AI Max+ 395 using benchmark mode, 12 threads, 10 million (10k repeated)
 | 207.28 | ValidateSeq |
 | 196.47 | ExtractLowQualityStart |
 | 190.81 | Postfix |
-| 172.78 | SpotCheckReadPairing |
+| 172.78 | ValidateReadPairing |
 | 172.69 | Swap |
 | 166.42 | Prefix |
 | 158.80 | ConvertQuality |
@@ -132,4 +132,3 @@ On Ryzen AI Max+ 395 using benchmark mode, 12 threads, 10 million (10k repeated)
 | 96.69 | CutEnd |
 | 91.84 | FilterByNumericTag |
 | 26.11 | Head |
-

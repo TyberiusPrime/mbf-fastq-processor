@@ -56,7 +56,7 @@ Paired-End Processing
 
 12. Paired-End Quality Validation
 
-    Demonstrate ValidateName and SpotCheckReadPairing
+    Demonstrate ValidateName and ValidateReadPairing
     Catch mismatched pair files early
 
 Single-Cell & Barcode Processing
@@ -181,4 +181,3 @@ These would provide broad coverage of common bioinformatics workflows while show
 
 
 - fastp default invocation
-

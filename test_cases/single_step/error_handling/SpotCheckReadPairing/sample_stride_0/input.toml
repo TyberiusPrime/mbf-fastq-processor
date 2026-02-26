@@ -4,7 +4,7 @@
 
 
 [[step]]
-  action= 'SpotCheckReadPairing'
+  action= 'ValidateReadPairing'
   sample_stride=0
 
 [output]

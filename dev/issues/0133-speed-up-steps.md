@@ -106,7 +106,7 @@ f 209.48ms ExtractLowQualityEnd
 f 207.28ms ValidateSeq
 f 196.47ms ExtractLowQualityStart
 f 190.81ms Postfix
-f 172.78ms SpotCheckReadPairing
+f 172.78ms ValidateReadPairing
 f 172.69ms Swap
 f 166.42ms Prefix
 f 158.80ms ConvertQuality
@@ -137,4 +137,3 @@ f 98.83ms Truncate
 f 96.69ms CutEnd
 f 91.84ms FilterByNumericTag
 t 26.11ms Head (but absolutely must be serial)
-

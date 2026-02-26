@@ -9,7 +9,7 @@ src/output.rs:1061:5: replace write_interleaved_blocks_to_bam -> Result<()> with
 src/interactive.rs:20:5: replace get_local_time -> String with String::new()
 src/io/output.rs:38:26: replace + with * in write_read_to_bam
 src/transformations/extract/low_quality_end.rs:60:36: replace - with + in <impl Step for LowQualityEnd>::apply
-src/transformations/validation/spot_check_read_pairing.rs:109:30: replace += with *= in <impl Step for SpotCheckReadPairing>::apply
+src/transformations/validation/spot_check_read_pairing.rs:109:30: replace += with *= in <impl Step for ValidateReadPairing>::apply
 src/config/deser.rs:130:13: replace string_or_seq::<impl de::Visitor<'de> for StringOrVec>::expecting -> fmt::Result with Ok(Default::default())
 src/interactive.rs:28:20: replace % with + in get_local_time
 src/output.rs:116:21: replace match guard with true
@@ -342,5 +342,5 @@ src/transformations/extract/tag/duplicates.rs:187:13: delete match arm
 src/transformations/calc/complexity.rs:77:54: replace - with + in <impl Step for Complexity>::apply
 src/main.rs:482:5: replace run_interactive_mode with ()
 src/io/output.rs:36:19: replace |= with ^= in write_read_to_bam
-src/transformations/validation/spot_check_read_pairing.rs:40:9: replace <impl Step for SpotCheckReadPairing>::validate_segments -> Result<()> with Ok(())
+src/transformations/validation/spot_check_read_pairing.rs:40:9: replace <impl Step for ValidateReadPairing>::validate_segments -> Result<()> with Ok(())
 src/interactive.rs:30:25: replace % with + in get_local_time

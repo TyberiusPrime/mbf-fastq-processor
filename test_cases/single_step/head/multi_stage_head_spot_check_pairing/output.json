@@ -24,7 +24,7 @@
   },
   "run_info": {
     "program_version": "0.8.1",
-    "input_toml": "[input]\n    read1 = 'input_read1.fq.zst'\n    read2 = 'input_read1.fq.zst'\n\n[options]\n    block_size = 15\n    accept_duplicate_files = true\n\n[[step]]\n    action = '_InternalReadCount'\n    out_label = 'top'\n\n[[step]]\n  action = \"SpotCheckReadPairing\"\n\n[[step]]\n    action ='Head'\n    n = 10\n\n[[step]]\n    action = '_InternalReadCount'\n    out_label = 'middle'\n\n[[step]]\n    action ='Head'\n    n = 1\n\n[[step]]\n    action = '_InternalReadCount'\n    out_label = 'bottom'\n\n[output]\n    prefix = 'output'\n    report_json = true\n",
+    "input_toml": "[input]\n    read1 = 'input_read1.fq.zst'\n    read2 = 'input_read1.fq.zst'\n\n[options]\n    block_size = 15\n    accept_duplicate_files = true\n\n[[step]]\n    action = '_InternalReadCount'\n    out_label = 'top'\n\n[[step]]\n  action = \"ValidateReadPairing\"\n\n[[step]]\n    action ='Head'\n    n = 10\n\n[[step]]\n    action = '_InternalReadCount'\n    out_label = 'middle'\n\n[[step]]\n    action ='Head'\n    n = 1\n\n[[step]]\n    action = '_InternalReadCount'\n    out_label = 'bottom'\n\n[output]\n    prefix = 'output'\n    report_json = true\n",
     "working_directory": "/home/user/single_step"
   },
   "report_order": [

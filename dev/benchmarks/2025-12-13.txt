@@ -173,7 +173,7 @@ Found 2 outliers among 10 measurements (20.00%)
   2 (20.00%) high mild
 step_benchmarks/pipeline/Skip
                         time:   [75.052 ms 82.469 ms 91.853 ms]
-step_benchmarks/pipeline/SpotCheckReadPairing
+step_benchmarks/pipeline/ValidateReadPairing
                         time:   [143.96 ms 150.38 ms 158.42 ms]
 Found 1 outliers among 10 measurements (10.00%)
   1 (10.00%) high mild

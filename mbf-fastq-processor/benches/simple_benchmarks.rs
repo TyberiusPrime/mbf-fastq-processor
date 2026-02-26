@@ -783,9 +783,9 @@ fn benchmark_key_steps(c: &mut Criterion) {
             thread_count,
         ),
         BenchmarkConfig::new(
-            "SpotCheckReadPairing",
+            "ValidateReadPairing",
             r#"[[step]]
-    action = "SpotCheckReadPairing"
+    action = "ValidateReadPairing"
     sample_stride = 1000
     "#,
             molecule_count,

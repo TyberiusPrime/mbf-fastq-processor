@@ -1330,19 +1330,19 @@ Check read names match across segments.
 [[step]]
     action = 'ValidateName'
     readname_end_char = '/'        # TYPE: char, OPTIONAL (omit for exact match)
+    sample_stride = 1000           # TYPE: usize, DEFAULT: 1000
 ```
 
 **readname_end_char**: If set, only compares prefix before this character
 
-### SpotCheckReadPairing
+### ValidateReadPairing
 
 Sample-based read name validation (less strict than ValidateName).
 
 ```toml
 [[step]]
-    action = 'SpotCheckReadPairing'
+    action = 'ValidateReadPairing'
     sample_stride = 1000           # TYPE: usize, DEFAULT: 1000
-    readname_end_char = '/'        # TYPE: char, DEFAULT: '/'
 ```
 
 **AUTO-INJECTED**: Automatically added when multiple segments present and `options.spot_check_read_pairing = true` (default)

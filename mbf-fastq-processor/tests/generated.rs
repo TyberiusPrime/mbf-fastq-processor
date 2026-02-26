@@ -7398,6 +7398,20 @@ fn test_cases_x_single_step_x_validation_x_spot_check_read_pairing_x_fail() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_validation_x_spot_check_read_pairing_x_illumina_2026() {
+    println!(
+        "Test case is in: test_cases/single_step/validation/spot_check_read_pairing/illumina_2026"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/validation/spot_check_read_pairing/illumina_2026",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_validation_x_spot_check_read_pairing_x_not_sampled_no_error() {
     println!(
         "Test case is in: test_cases/single_step/validation/spot_check_read_pairing/not_sampled_no_error"
@@ -7587,11 +7601,43 @@ fn test_cases_x_single_step_x_validation_x_validate_name_x_validate_name_custom_
 }
 
 #[test]
-fn test_cases_x_single_step_x_validation_x_validate_name_x_validate_name_fail() {
-    println!("Test case is in: test_cases/single_step/validation/validate_name/validate_name_fail");
+fn test_cases_x_single_step_x_validation_x_validate_name_x_validate_name_fail_x_bad_prefix() {
+    println!(
+        "Test case is in: test_cases/single_step/validation/validate_name/validate_name_fail/bad_prefix"
+    );
     run_test(
         std::path::Path::new(
-            "../test_cases/single_step/validation/validate_name/validate_name_fail",
+            "../test_cases/single_step/validation/validate_name/validate_name_fail/bad_prefix",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_validation_x_validate_name_x_validate_name_fail_x_missing_end_char_in_seq1()
+ {
+    println!(
+        "Test case is in: test_cases/single_step/validation/validate_name/validate_name_fail/missing_end_char_in_seq1"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/validation/validate_name/validate_name_fail/missing_end_char_in_seq1",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_validation_x_validate_name_x_validate_name_fail_x_missing_end_char_in_seq2()
+ {
+    println!(
+        "Test case is in: test_cases/single_step/validation/validate_name/validate_name_fail/missing_end_char_in_seq2"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/validation/validate_name/validate_name_fail/missing_end_char_in_seq2",
         ),
         "input.toml",
         1,

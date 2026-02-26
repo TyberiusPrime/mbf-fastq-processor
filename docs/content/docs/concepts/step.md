@@ -56,7 +56,7 @@ Report steps are non-destructive and can be placed at multiple points in the pip
 
 Assert correctness and detect data quality issues:
 - Format validation (e.g., `ValidateSeq`, `ValidateQuality`, `ValidateName`)
-- Pairing verification (e.g., `SpotCheckReadPairing`)
+- Pairing verification (e.g., `ValidateReadPairing`)
 - Length consistency (e.g., `ValidateAllReadsSameLength`)
 
 Validation steps halt execution with detailed error messages when assertions fail, making them invaluable for debugging and quality control.

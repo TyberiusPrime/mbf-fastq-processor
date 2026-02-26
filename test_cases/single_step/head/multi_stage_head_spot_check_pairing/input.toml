@@ -11,7 +11,7 @@
     out_label = 'top'
 
 [[step]]
-  action = "SpotCheckReadPairing"
+  action = "ValidateReadPairing"
 
 [[step]]
     action ='Head'

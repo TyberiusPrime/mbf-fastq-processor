@@ -61,7 +61,7 @@ Note that these end up in the output file names as well.
 
 ## Segment Synchronization
 
-**Critical:** All segments must contain the same number of reads, in the same order. The processor validates this during execution by [spot checking the read names]({{< relref "docs/reference/validation-steps/SpotCheckReadPairing.md" >}}).
+**Critical:** All segments must contain the same number of reads, in the same order. The processor validates this during execution by [spot checking the read names]({{< relref "docs/reference/validation-steps/ValidateReadPairing.md" >}}).
 
 When a [step]({{< relref "docs/concepts/step.md" >}}) filters a molecule, **all segments** for that fragment are removed together, maintaining synchronization.
 

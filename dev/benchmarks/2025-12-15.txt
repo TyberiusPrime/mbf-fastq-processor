@@ -261,9 +261,9 @@ step_benchmarks/pipeline/Skip
                         time:   [104.76 ms 108.80 ms 114.20 ms]
                         change: [+4.0758% +16.048% +27.786%] (p = 0.01 < 0.05)
                         Performance has regressed.
-Benchmarking step_benchmarks/pipeline/SpotCheckReadPairing: Warming up for 2.0000 s
+Benchmarking step_benchmarks/pipeline/ValidateReadPairing: Warming up for 2.0000 s
 Warning: Unable to complete 10 samples in 10.0s. You may wish to increase target time to 10.1s or enable flat sampling.
-step_benchmarks/pipeline/SpotCheckReadPairing
+step_benchmarks/pipeline/ValidateReadPairing
                         time:   [169.12 ms 172.78 ms 176.30 ms]
                         change: [-10.657% -3.3000% +4.7790%] (p = 0.46 > 0.05)
                         No change in performance detected.

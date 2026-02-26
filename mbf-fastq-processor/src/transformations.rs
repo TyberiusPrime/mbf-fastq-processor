@@ -302,7 +302,7 @@ pub enum Transformation {
     // //
     // //Validation
     #[tpd(alias = "SpotCheckReadNames")]
-    SpotCheckReadPairing(validation::SpotCheckReadPairing),
+    ValidateReadPairing(validation::ValidateReadPairing),
     ValidateSeq(validation::ValidateSeq),
     ValidateQuality(validation::ValidateQuality),
     ValidateName(validation::ValidateName),
@@ -614,6 +614,21 @@ pub fn read_name_canonical_prefix(name: &[u8], readname_end_char: Option<u8>) ->
         }
     } else {
         name
+    }
+}
+
+pub fn read_name_canonical_prefix_strict(
+    name: &[u8],
+    readname_end_char: Option<u8>,
+) -> Option<&[u8]> {
+    if let Some(separator) = readname_end_char {
+        if let Some(position) = memchr::memchr(separator, name) {
+            Some(&name[..position])
+        } else {
+            None
+        }
+    } else {
+        Some(name)
     }
 }
 
