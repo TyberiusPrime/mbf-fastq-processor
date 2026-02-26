@@ -48,10 +48,8 @@ If this turns out to be necessary / requested, we'll have to rework the parser.
 ## Cuckoo Filtering
 
 All steps that involve set-membership tests (
-such as [TagDuplicates]({{< relref "docs/reference/tag-steps/tag/TagDuplicates.md" >}}),
-[TagOtherFileByName]({{< relref "docs/reference/tag-steps/tag/TagOtherFileByName.md" >}}),
-[TagOtherFileBySequence]({{< relref "docs/reference/tag-steps/tag/TagOtherFileBySequence.md" >}})
-)
+such as [TagDuplicates]({{< relref "docs/reference/tag-steps/tag/TagDuplicates.md" >}})
+and [TagOtherFile]({{< relref "docs/reference/tag-steps/tag/TagOtherFile.md" >}}),
 offer to use either an exact data structure (HashSet)
 that uses a lot of RAM, or a probabilistic data (scalable Cuckoo filtering) structure which offers greatly reduced RAM 
 usage, but has a (configurable) false positive rate.

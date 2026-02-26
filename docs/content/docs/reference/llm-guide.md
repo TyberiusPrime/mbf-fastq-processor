@@ -840,38 +840,23 @@ Mark duplicate reads (2nd and further duplicates).
 - `0.0`: Exact hash (high memory)
 - `> 0.0`: Cuckoo filter (approximate, lower memory)
 
-### TagOtherFileByName
 
-Mark reads whose names appear in another file.
 
-```toml
-[[step]]
-    action = 'TagOtherFileByName'
-    segment = 'read1'              # TYPE: segment name, REQUIRED
-    filename = 'names.fastq'       # TYPE: file path, REQUIRED
-    false_positive_rate = 0.01     # TYPE: float (0.0-1.0), REQUIRED
-    seed = 42                      # TYPE: u64, REQUIRED
-    out_label = 'in_reference'     # TYPE: string, REQUIRED
-    include_mapped = true # in case of BAM/SAM, whether to include aligned reads
-    include_unmapped = true # in case of BAM/SAM, whether to include unaligned reads
-    fastq_readname_end_char = ' '  # TYPE: char, OPTIONAL
-    reference_readname_end_char = '/' # TYPE: char, OPTIONAL
-```
+### TagOtherFile
 
-### TagOtherFileBySequence
-
-Mark reads whose sequences appear in another file.
+Mark reads whose sequences/names/tags appear in another file.
 
 ```toml
 [[step]]
-    action = 'TagOtherFileBySequence'
-    segment = 'read1'              # TYPE: segment name, REQUIRED
+    action = 'TagOtherFile'
+    source = 'read1'              # TYPE: source, REQUIRED
     filename = 'sequences.fastq'   # TYPE: file path, REQUIRED
     false_positive_rate = 0.01     # TYPE: float (0.0-1.0), REQUIRED
     seed = 42                      # TYPE: u64, REQUIRED
     out_label = 'contaminant'      # TYPE: string, REQUIRED
     include_mapped = true # in case of BAM/SAM, whether to include aligned reads
     include_unmapped = true # in case of BAM/SAM, whether to include unaligned reads
+    other_readname_end_char = '/' # TYPE: char, OPTIONAL
 ```
 
 ## Filtering Steps
@@ -1629,7 +1614,7 @@ ExtractRegion/ExtractIUPAC → HammingCorrect → Demultiplex
 
 **By sequence matching**:
 ```
-TagOtherFileBySequence → FilterByTag (keep_or_remove='Remove')
+TagOtherFile (source=<segment> → FilterByTag (keep_or_remove='Remove')
 ```
 
 **By k-mer matching**:

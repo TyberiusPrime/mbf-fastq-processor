@@ -2,7 +2,7 @@
     read1 = 'input_read1.fq'
 
 [input.options]
-  read_comment_character = '|'
+	fastq_readname_end_char = '|'
 
 [output]
     prefix = 'output'

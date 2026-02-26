@@ -49,7 +49,10 @@ pub fn config_from_string(toml: &str) -> Result<Config, DeserError<PartialConfig
 
 /// Validates that a segment label conforms to the pattern [a-zA-Z0-9_]+
 /// (one or more alphanumeric characters or underscores)
-pub fn validate_segment_label(label: &str) -> Result<()> {
+pub fn validate_segment_label(
+    label: &str,
+    match_mode: toml_pretty_deser::prelude::FieldMatchMode,
+) -> Result<()> {
     if label.is_empty() {
         bail!(
             "Segment name may not be empty or just whitespace. Please provide a segment name containing only letters, numbers, and underscores."
@@ -63,6 +66,22 @@ pub fn validate_segment_label(label: &str) -> Result<()> {
         if !ch.is_ascii_alphanumeric() && ch != '_' {
             bail!(
                 "Segment label must contain only letters, numbers, and underscores (^[a-zA-Z0-9_]+$), found '{ch}'.",
+            );
+        }
+    }
+    for prohibited in &[
+        "fasta_fake_quality",
+        "bam_include_mapped",
+        "bam_include_unmapped",
+        "read_comment_character",
+        "use_rapidgzip",
+        "build_rapidgzip_index",
+        "threads_per_segment",
+        "tpd_field_match_mode",
+    ] {
+        if match_mode.matches(label, *prohibited) {
+            bail!(
+                "'{prohibited}' is not allowed as a segment label, as it could be confused with an existing option name or an internal. Please choose a different segment name, or prefix in with 'options.' if you meant the option."
             );
         }
     }
@@ -136,10 +155,15 @@ pub struct CheckedConfig {
 }
 
 impl VerifyIn<TPDRoot> for PartialConfig {
-    fn verify(&mut self, _parent: &TPDRoot) -> std::result::Result<(), ValidationFailure>
+    fn verify(&mut self, parent: &TPDRoot) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized,
     {
+        if !self.input.is_ok() {
+            //we can't check transforms if the input def has failed,
+            //they'de all have not set their segments/sources
+            self.transform = TomlValue::new_ok(Vec::new(), 0..0);
+        }
         self.transform.or_default();
         self.options.or_with(|| PartialOptions {
             threads: TomlValue::new_ok(None, 0..0),
@@ -157,9 +181,11 @@ impl VerifyIn<TPDRoot> for PartialConfig {
                     fail_output_after_bytes: TomlValue::new_ok(None, 0..0),
                     fail_output_error: TomlValue::new_ok(None, 0..0),
                     fail_output_raw_os_code: TomlValue::new_ok(None, 0..0),
+                    tpd_field_match_mode: parent.tpd_field_match_mode,
                 },
                 0..0,
             ),
+            tpd_field_match_mode: parent.tpd_field_match_mode,
         });
         self.verify_reports();
         self.verify_barcodes();
@@ -456,6 +482,7 @@ impl PartialConfig {
                     output_hash_compressed: TomlValue::new_ok(false, 0..0),
                     ix_separator: TomlValue::new_ok(output::default_ix_separator(), 0..0),
                     chunksize: TomlValue::new_ok(None, 0..0),
+                    tpd_field_match_mode: self.tpd_field_match_mode,
                 }),
                 0..0,
             );
@@ -1301,34 +1328,47 @@ mod tests {
     #[test]
     fn test_validate_segment_label_valid() {
         // Valid segment labels
-        assert!(validate_segment_label("a").is_ok());
-        assert!(validate_segment_label("A").is_ok());
-        assert!(validate_segment_label("_").is_ok());
-        assert!(validate_segment_label("abc").is_ok());
-        assert!(validate_segment_label("ABC").is_ok());
-        assert!(validate_segment_label("123").is_err());
-        assert!(validate_segment_label("a123").is_ok());
-        assert!(validate_segment_label("A123").is_ok());
-        assert!(validate_segment_label("123abc").is_err());
-        assert!(validate_segment_label("read1").is_ok());
-        assert!(validate_segment_label("READ1").is_ok());
-        assert!(validate_segment_label("segment_name").is_ok());
-        assert!(validate_segment_label("segment123").is_ok());
-        assert!(validate_segment_label("_internal").is_ok());
+        let f = toml_pretty_deser::FieldMatchMode::Exact;
+        assert!(validate_segment_label("a",f).is_ok());
+        assert!(validate_segment_label("A",f).is_ok());
+        assert!(validate_segment_label("_",f).is_ok());
+        assert!(validate_segment_label("abc",f).is_ok());
+        assert!(validate_segment_label("ABC",f).is_ok());
+        assert!(validate_segment_label("123",f).is_err());
+        assert!(validate_segment_label("a123",f).is_ok());
+        assert!(validate_segment_label("A123",f).is_ok());
+        assert!(validate_segment_label("123abc",f).is_err());
+        assert!(validate_segment_label("read1",f).is_ok());
+        assert!(validate_segment_label("READ1",f).is_ok());
+        assert!(validate_segment_label("segment_name",f).is_ok());
+        assert!(validate_segment_label("segment123",f).is_ok());
+        assert!(validate_segment_label("_internal",f).is_ok());
     }
 
     #[test]
     fn test_validate_segment_label_invalid() {
         // Invalid segment labels
-        assert!(validate_segment_label("").is_err());
-        assert!(validate_segment_label("1").is_err());
-        assert!(validate_segment_label("segment-name").is_err());
-        assert!(validate_segment_label("segment.name").is_err());
-        assert!(validate_segment_label("segment name").is_err());
-        assert!(validate_segment_label("segment@name").is_err());
-        assert!(validate_segment_label("segment/name").is_err());
-        assert!(validate_segment_label("segment\\name").is_err());
-        assert!(validate_segment_label("segment:name").is_err());
+        let f = toml_pretty_deser::FieldMatchMode::Exact;
+        assert!(validate_segment_label("",f).is_err());
+        assert!(validate_segment_label("1",f).is_err());
+        assert!(validate_segment_label("segment-name",f).is_err());
+        assert!(validate_segment_label("segment.name",f).is_err());
+        assert!(validate_segment_label("segment name",f).is_err());
+        assert!(validate_segment_label("segment@name",f).is_err());
+        assert!(validate_segment_label("segment/name",f).is_err());
+        assert!(validate_segment_label("segment\\name",f).is_err());
+        assert!(validate_segment_label("segment:name",f).is_err());
+        assert!(validate_segment_label("fasta_fake_quality",f).is_err());
+        assert!(validate_segment_label("bam_include_mapped",f).is_err());
+        assert!(validate_segment_label("bam_include_unmapped",f).is_err());
+        assert!(validate_segment_label("read_comment_character",f).is_err());
+        assert!(validate_segment_label("use_rapidgzip",f).is_err());
+        assert!(validate_segment_label("build_rapidgzip_index",f).is_err());
+        assert!(validate_segment_label("threads_per_segment",f).is_err());
+        assert!(validate_segment_label("tpd_field_match_mode",f).is_err());
+
+        let f = toml_pretty_deser::FieldMatchMode::AnyCase;
+        assert!(validate_segment_label("FaSTA___FAKE-QUALITY",f).is_err());
     }
 
     #[test]

@@ -35,7 +35,7 @@ reading & decompression (without rapidgzip / parallel BAM processing the largest
 runtime parts), and focus on the steps. The drawback here is that your pipeline
 sees the same reads over and over, which of course will lead to a different
 'hit' profile for set based tests such as duplication counting, 
-[TagOtherFileByName]({{< relref "docs/reference/tag-steps/tag/TagOtherFileByName.md" >}}),  
+[TagOtherFile]({{< relref "docs/reference/tag-steps/tag/TagOtherFile.md" >}}),  
 and [Demultiplex]({{< relref "docs/reference/Demultiplex.md" >}})  
 
 

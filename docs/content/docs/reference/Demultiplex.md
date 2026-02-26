@@ -36,8 +36,8 @@ AAAAAA_CCCCCC = "sample-1" # output files are named prefix{ix_separator}barcode_
 
 ```toml
 [[step]]
-    segment = "read1"
-    action = "TagOtherFileByName"
+    action = "TagOtherFile"
+    source = "name:read1"
     out_label = "a_bool_tag"
     filename = "path/to/boolean_tags.tsv"
     false_positive_rate = 0

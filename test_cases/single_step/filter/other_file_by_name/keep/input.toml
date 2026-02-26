@@ -1,11 +1,14 @@
 [input]
     read1 = 'input_read1.fq.zst'
+     options.read_comment_character = ' '
 
 [[step]]
-    action = 'TagOtherFileByName'
+    action = 'TagOtherFile'
+    source = 'name:read1'
 	out_label = 'tag'
     filename = 'input_ERR12828869_10k_1.head_500.fq'
     false_positive_rate = 0
+    other_readname_end_char =' '
     seed  = 42
 
 [[step]]

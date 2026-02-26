@@ -80,12 +80,12 @@ impl PartialInput {
         }
     }
 
-    fn verify_segment_names(&mut self) -> Result<(), ()> {
+    fn verify_segment_names(&mut self, match_mode: toml_pretty_deser::FieldMatchMode) -> Result<(), ()> {
         let mut error = false;
         if let Some(segments) = self.segments.as_mut() {
             for key in &mut segments.keys {
                 let segment_name = key.as_ref().expect("parent was ok");
-                match validate_segment_label(segment_name) {
+                match validate_segment_label(segment_name, match_mode) {
                     Ok(()) => {}
 
                     Err(help) => {
@@ -194,8 +194,8 @@ impl PartialInput {
         Ok(())
     }
     #[allow(clippy::too_many_lines)] // I know, but it's two distingt if branches, 
-    fn build_structured(&mut self) -> Result<(), ()> {
-        if let Err(()) = self.verify_segment_names() {
+    fn build_structured(&mut self, match_mode: FieldMatchMode) -> Result<(), ()> {
+        if let Err(()) = self.verify_segment_names(match_mode) {
             self.segments.state = TomlValueState::Nested;
         }
 
@@ -365,7 +365,7 @@ If you have paired end reads, name two 'virtual' segments, e.g. ['read1','read2'
 impl VerifyIn<super::PartialConfig> for PartialInput {
     fn verify(
         &mut self,
-        _parent: &super::PartialConfig,
+        parent: &super::PartialConfig,
     ) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized + toml_pretty_deser::Visitor,
@@ -381,12 +381,13 @@ impl VerifyIn<super::PartialConfig> for PartialInput {
                 use_rapidgzip: TomlValue::new_ok(default.use_rapidgzip, 0..0),
                 build_rapidgzip_index: TomlValue::new_ok(default.build_rapidgzip_index, 0..0),
                 threads_per_segment: TomlValue::new_ok(default.threads_per_segment, 0..0),
+                tpd_field_match_mode: parent.tpd_field_match_mode
             }
         });
 
         self.verify_same_number_of_input_segments();
 
-        if let Err(()) = self.build_structured()
+        if let Err(()) = self.build_structured(parent.tpd_field_match_mode)
         //errors go into the fields
         {}
 

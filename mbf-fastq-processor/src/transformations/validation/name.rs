@@ -5,7 +5,7 @@ use std::sync::atomic::Ordering;
 use crate::config::deser::tpd_adapt_u8_from_byte_or_char;
 use crate::transformations::{prelude::*, read_name_canonical_prefix_strict};
 
-use crate::transformations::validation::spot_check_read_pairing::default_sample_stride;
+use crate::transformations::validation::read_pairing::default_sample_stride;
 
 /// Validate that read names between segments match
 #[derive(JsonSchema)]

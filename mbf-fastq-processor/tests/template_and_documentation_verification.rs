@@ -26,7 +26,6 @@ fn get_all_transformations() -> Vec<String> {
         .expect("schema_for! always produces an object")
         .get("oneOf")
         .expect("Transformation schema must have oneOf field");
-    dbg!(one_ofs);
     for entry in one_ofs
         .as_array()
         .expect("oneOf field in schema must be an array")
@@ -698,10 +697,8 @@ fn find_struct_file_for_transformation(transformation: &str) -> Option<PathBuf> 
                         PathBuf::from("src/transformations/hamming_correct.rs")
                     } else if struct_name == "Duplicates" {
                         PathBuf::from("src/transformations/extract/tag/duplicates.rs")
-                    } else if struct_name == "OtherFileByName" {
-                        PathBuf::from("src/transformations/extract/tag/other_file_by_name.rs")
-                    } else if struct_name == "OtherFileBySequence" {
-                        PathBuf::from("src/transformations/extract/tag/other_file_by_sequence.rs")
+                    } else if struct_name == "OtherFile" {
+                        PathBuf::from("src/transformations/extract/tag/other_file.rs")
                     } else if struct_name == "ValidateAllReadsSameLength" {
                         PathBuf::from("src/transformations/validation/all_reads_same_length.rs")
                     } else if struct_name == "EvalExpression>" {
@@ -1105,10 +1102,10 @@ fn test_documentation_toml_examples_parse() {
                         }
                         Err(e) => {
                             failed_files.push(format!(
-                                "{}: TOML block {}, line: {start_line_no} failed to parse: {:?}",
+                                "{}: TOML block {}, line: {start_line_no} failed to parse: {}",
                                 doc_file.display(),
                                 i + 1,
-                                e
+                                e.pretty("debug.toml")
                             ));
                         }
                     }

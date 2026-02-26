@@ -73,8 +73,7 @@ Store true/false flags indicating fragment properties.
 **Created by:**
 - [EvalExpression]({{< relref "docs/reference/tag-steps/convert/EvalExpression.md" >}})
 - [TagDuplicates]({{< relref "docs/reference/tag-steps/tag/TagDuplicates.md" >}})
-- [TagOtherFileByName]({{< relref "docs/reference/tag-steps/tag/TagOtherFileByName.md" >}})
-- [TagOtherFileBySequence]({{< relref "docs/reference/tag-steps/tag/TagOtherFileBySequence.md" >}})
+- [TagOtherFile]({{< relref "docs/reference/tag-steps/tag/TagOtherFile.md" >}})
 
 
 **Used by:**
