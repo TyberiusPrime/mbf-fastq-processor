@@ -2,20 +2,19 @@ Error Details ==
 Error 1/2
    ╭─config.toml
    ┆
- 8 │ [[step]]
- 9 │ action = "ExtractIUPAC"
-   ┆          ───────┬──────
-   ┆                 │
-   ┆                 ╰─────── In this step
+ 5 │ [[step]]
+ 6 │     action = 'ExtractIUPAC'
+   ┆              ───────┬──────
+   ┆                     │
+   ┆                     ╰─────── In this step
    ┆
-10 │ anchor = "Left"
-11 │ max_mismatches = 0
-12 │ out_label = "test"
-13 │ search = "CTN"
-14 │ segment = "index1"
-   ┆           ────┬───
-   ┆               │
-   ┆               ╰──── Segment not present in [input] section
+ 7 │     out_label = 'test'
+ 8 │     anchor = 'Left'
+ 9 │     search = 'CTN'
+10 │     segment = 'index1'
+   ┆               ────┬───
+   ┆                   │
+   ┆                   ╰──── Segment not present in [input] section
 ───╯
 Hint: Did you mean: read1 or read2?
       See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractIUPAC
@@ -23,20 +22,19 @@ Hint: Did you mean: read1 or read2?
 Error 2/2
    ╭─config.toml
    ┆
-16 │ [[step]]
-17 │ action = "ExtractIUPAC"
-   ┆          ───────┬──────
-   ┆                 │
-   ┆                 ╰─────── In this step
+13 │ [[step]]
+14 │     action = 'ExtractIUPAC'
+   ┆              ───────┬──────
+   ┆                     │
+   ┆                     ╰─────── In this step
    ┆
-18 │ anchor = "Left"
-19 │ max_mismatches = 0
-20 │ out_label = "test2"
-21 │ search = "CTN"
-22 │ segment = "index2"
-   ┆           ────┬───
-   ┆               │
-   ┆               ╰──── Segment not present in [input] section
+15 │     out_label = 'test2'
+16 │     anchor = 'Left'
+17 │     search = 'CTN'
+18 │     segment = 'index2'
+   ┆               ────┬───
+   ┆                   │
+   ┆                   ╰──── Segment not present in [input] section
 ───╯
 Hint: Did you mean: read2 or read1?
       See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractIUPAC

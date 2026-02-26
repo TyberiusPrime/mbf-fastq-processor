@@ -2,18 +2,19 @@ Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
-12 │ [[step]]
-13 │ action = "ExtractPolyTail"
-   ┆          ────────┬────────
-   ┆                  │
-   ┆                  ╰───────── In this step
-   ┆
-14 │ base = "N"
-15 │ max_consecutive_mismatches = 3
-16 │ max_mismatch_rate = 1.0
-   ┆                     ─┬─
+ 9 │ [[step]]
+10 │     action = 'ExtractPolyTail'
+   ┆              ────────┬────────
    ┆                      │
-   ┆                      ╰── Invalid value. Must be in [0.0..1.0)
+   ┆                      ╰───────── In this step
+   ┆
+11 │ 	out_label = 'ept'
+12 │     min_length = 5
+13 │     base = 'N'
+14 │     max_mismatch_rate = 1.0
+   ┆                         ─┬─
+   ┆                          │
+   ┆                          ╰── Invalid value. Must be in [0.0..1.0)
 ───╯
 Hint: Set a valid value >= 0 and < 1.0.
       See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractPolyTail

@@ -1,9 +1,15 @@
+Error Details ==
+Error 1/1
   ╭─config.toml
   ┆
 5 │ [output]
-6 │ chunk_size = 5000
-  ┆              ──┬─
-  ┆                │
-  ┆                ╰── Invalid when stdout = true
+6 │     prefix = 'output'
+7 │     interleave = ['read1','read2']
+8 │ 	stdout = true
+9 │ 	chunk_size = 5000
+  ┆               ──┬─
+  ┆                 │
+  ┆                 ╰── Invalid when stdout = true
 ──╯
 Hint: Either remove 'chunksize' or set 'stdout' to false
+

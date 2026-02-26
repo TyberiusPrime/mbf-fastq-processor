@@ -2,15 +2,15 @@ Error Details ==
 Error 1/1
   ╭─config.toml
   ┆
-7 │ [[step]]
-8 │ action = "Swap"
-  ┆          ───┬──
-  ┆             │
-  ┆             ╰─── In this step
-9 │ segment_a = "all"
-  ┆             ──┬──
+4 │ [[step]]
+5 │   action = 'Swap'
+  ┆            ───┬──
   ┆               │
-  ┆               ╰─── 'all' segments not valid in this position
+  ┆               ╰─── In this step
+6 │   segment_a = 'all'
+  ┆               ──┬──
+  ┆                 │
+  ┆                 ╰─── 'all' segments not valid in this position
 ──╯
 Hint: Available are: read1
       See https://doc_url.example/version-stripped-from-test/docs/reference/Swap

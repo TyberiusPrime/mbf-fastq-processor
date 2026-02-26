@@ -1,7 +1,13 @@
-  ╭─config.toml
-1 │ [barcodes.test_barcodes]
-  ┆ ────────────┬───────────
-  ┆             │
-  ┆             ╰──────────── Barcodes of different lengths
-──╯
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+21 │ [barcodes.test_barcodes]
+22 │     ATCG = 'specific'
+23 │     RYRNY = 'ambiguous'
+   ┆                        ┬
+   ┆                        │
+   ┆                        ╰─ Barcodes of different lengths
+───╯
 Hint: All barcodes in one section must have the same length. Observed lengths: [4, 5]
+

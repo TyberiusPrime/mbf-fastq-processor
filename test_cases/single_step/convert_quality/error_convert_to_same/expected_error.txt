@@ -1,21 +1,21 @@
 Error Details ==
 Error 1/1
-   ╭─config.toml
-   ┆
- 7 │ [[step]]
- 8 │ action = "ConvertQuality"
-   ┆          ────────┬───────
-   ┆                  │
-   ┆                  ╰──────── In this step
- 9 │ from = "illumina1.3"
-   ┆        ──────┬──────
-   ┆              │
-   ┆              ╰─────── Identical to to
-10 │ to = "illumina1.3"
-   ┆      ──────┬──────
-   ┆            │
-   ┆            ╰─────── Identical to from
-───╯
+  ╭─config.toml
+  ┆
+4 │ [[step]]
+5 │     action = 'ConvertQuality'
+  ┆              ────────┬───────
+  ┆                      │
+  ┆                      ╰──────── In this step
+6 │ 	from = 'illumina1.3'
+  ┆         ──────┬──────
+  ┆               │
+  ┆               ╰─────── Identical to to
+7 │ 	to = 'illumina1.3'
+  ┆       ──────┬──────
+  ┆             │
+  ┆             ╰─────── Identical to from
+──╯
 Hint: Conversion unnecessary? Please specify different encodings or remove this step.
       See https://doc_url.example/version-stripped-from-test/docs/reference/ConvertQuality
 

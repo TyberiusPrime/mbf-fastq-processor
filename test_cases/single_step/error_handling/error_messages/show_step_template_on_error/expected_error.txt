@@ -1,17 +1,17 @@
 Error Details ==
 Error 1/1
-   ╭─config.toml
-   ┆
- 8 │ [[step]]
- 9 │ action = "Progress"
-   ┆          ─────┬────
-   ┆               │
-   ┆               ╰───── In this step
-10 │ n = 10000
-   ┆          ┬
-   ┆          │
-   ┆          ╰─ Missing output_infix
-───╯
+  ╭─config.toml
+  ┆
+4 │ [[step]]
+5 │     action = 'Progress'
+  ┆              ─────┬────
+  ┆                   │
+  ┆                   ╰───── In this step
+6 │     n = 10000
+  ┆              ┬
+  ┆              │
+  ┆              ╰─ Missing output_infix
+──╯
 Hint: Supply an output_infix to write progress to a file instead of stdout (which is used by [output] already).
       See https://doc_url.example/version-stripped-from-test/docs/reference/Progress
 

@@ -1,7 +1,10 @@
-  ╭─config.toml
-1 │ [barcodes.test_barcodes]
-  ┆ ────────────┬───────────
-  ┆             │
-  ┆             ╰──────────── At least one barcode mapping must be provided
-──╯
+Error Details ==
+Error 1/1
+   ╭─config.toml
+21 │ [barcodes.test_barcodes]
+   ┆                         ┬
+   ┆                         │
+   ┆                         ╰─ At least one barcode mapping must be provided
+───╯
 Hint: Add at least one barcode mapping (DNA='name') under this section
+

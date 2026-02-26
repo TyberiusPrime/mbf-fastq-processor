@@ -2,15 +2,15 @@ Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
-14 │ [[step]]
-15 │ action = "ReplaceTagWithLetter"
-   ┆          ───────────┬──────────
-   ┆                     │
-   ┆                     ╰─────────── In this step
-16 │ in_label = "low_quality"
-   ┆                         ┬
+10 │ [[step]]
+11 │     action = 'ReplaceTagWithLetter'
+   ┆              ───────────┬──────────
    ┆                         │
-   ┆                         ╰─ Missing required key: 'letter'.
+   ┆                         ╰─────────── In this step
+12 │     in_label = 'low_quality'
+   ┆                             ┬
+   ┆                             │
+   ┆                             ╰─ Missing required key: 'letter'.
 ───╯
 Hint: See https://doc_url.example/version-stripped-from-test/docs/reference/ReplaceTagWithLetter
 

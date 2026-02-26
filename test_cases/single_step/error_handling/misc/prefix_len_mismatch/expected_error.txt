@@ -1,21 +1,21 @@
 Error Details ==
 Error 1/1
-   ╭─config.toml
-   ┆
- 7 │ [[step]]
- 8 │ action = "Prefix"
-   ┆          ────┬───
-   ┆              │
-   ┆              ╰──── In this step
- 9 │ qual = "BB"
-   ┆        ──┬─
-   ┆          │
-   ┆          ╰── 2 characters
-10 │ seq = "A"
-   ┆       ─┬─
-   ┆        │
-   ┆        ╰── 1 characters
-───╯
+  ╭─config.toml
+  ┆
+3 │ [[step]]
+4 │     action = 'Prefix'
+  ┆              ────┬───
+  ┆                  │
+  ┆                  ╰──── In this step
+5 │     seq ='A'
+  ┆          ─┬─
+  ┆           │
+  ┆           ╰── 1 characters
+6 │     qual = 'BB'
+  ┆            ──┬─
+  ┆              │
+  ┆              ╰── 2 characters
+──╯
 Hint: 'seq' and 'qual' must be the same length
       See https://doc_url.example/version-stripped-from-test/docs/reference/Prefix
 

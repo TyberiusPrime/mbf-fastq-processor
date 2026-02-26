@@ -1,6 +1,20 @@
-10 │ bases_to_ignore = "N1"
-   ┆                   ──┬─
-   ┆                     │
-   ┆                     ╰── Only ASCII letters are allowed as bases
-───╯
+Error Details ==
+Error 1/1
+  ╭─config.toml
+  ┆
+4 │ [[step]]
+5 │     action = 'CalcBaseContent'
+  ┆              ────────┬────────
+  ┆                      │
+  ┆                      ╰───────── In this step
+  ┆
+6 │     out_label = 'base'
+7 │     bases_to_count = 'GC'
+8 │     bases_to_ignore = 'N1'
+  ┆                       ──┬─
+  ┆                         │
+  ┆                         ╰── Only ASCII letters are allowed as bases
+──╯
 Hint: Invalid character: '1'
+      See https://doc_url.example/version-stripped-from-test/docs/reference/CalcBaseContent
+

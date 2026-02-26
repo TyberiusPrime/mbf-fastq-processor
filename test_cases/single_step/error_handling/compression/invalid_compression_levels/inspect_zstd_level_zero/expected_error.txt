@@ -2,17 +2,19 @@ Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
-12 │ [[step]]
-13 │ action = "Inspect"
-   ┆          ────┬────
-   ┆              │
-   ┆              ╰───── In this step
+ 8 │ [[step]]
+ 9 │     action = 'Inspect'
+   ┆              ────┬────
+   ┆                  │
+   ┆                  ╰───── In this step
    ┆
-14 │ compression = "zstd"
-15 │ compression_level = 0
-   ┆                     ┬
-   ┆                     │
-   ┆                     ╰─ Invalid Value
+10 │     infix = 'test'
+11 │     n = 2
+12 │     compression = 'zstd'
+13 │     compression_level = 0
+   ┆                         ┬
+   ┆                         │
+   ┆                         ╰─ Invalid Value
 ───╯
 Hint: Valid range is 1-22 for zstd.
       See https://doc_url.example/version-stripped-from-test/docs/reference/Inspect

@@ -2,15 +2,18 @@ Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
-29 │ [[step]]
-30 │ action = "StoreTagsInTable"
-   ┆          ─────────┬────────
-   ┆                   │
-   ┆                   ╰───────── In this step
-31 │ compression = "shu"
-   ┆               ──┬──
-   ┆                 │
-   ┆                 ╰─── Invalid enum variant: 'shu'
+21 │ [[step]]
+22 │     action = 'StoreTagsInTable'
+   ┆              ─────────┬────────
+   ┆                       │
+   ┆                       ╰───────── In this step
+   ┆
+23 │     infix = 'tags'
+24 │ 	#format = 'JSON'
+25 │ 	compression = 'shu'
+   ┆                ──┬──
+   ┆                  │
+   ┆                  ╰─── Invalid enum variant: 'shu'
 ───╯
 Hint: Did you mean: Zstd, Gzip, or 'gz' (='Gzip')?
       See https://doc_url.example/version-stripped-from-test/docs/reference/StoreTagsInTable

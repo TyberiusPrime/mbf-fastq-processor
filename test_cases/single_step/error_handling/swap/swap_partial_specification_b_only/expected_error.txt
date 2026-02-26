@@ -1,17 +1,17 @@
 Error Details ==
 Error 1/1
-   ╭─config.toml
-   ┆
- 8 │ [[step]]
- 9 │ action = "Swap"
-   ┆          ───┬──
-   ┆             │
-   ┆             ╰─── In this step
-10 │ segment_b = "read1"
-   ┆                    ┬
-   ┆                    │
-   ┆                    ╰─ Insuffient swap definition
-───╯
+  ╭─config.toml
+  ┆
+5 │ [[step]]
+6 │     action = 'Swap'
+  ┆              ───┬──
+  ┆                 │
+  ┆                 ╰─── In this step
+7 │     segment_b = 'read1'
+  ┆                        ┬
+  ┆                        │
+  ┆                        ╰─ Insuffient swap definition
+──╯
 Hint: Please either specify both segment_a and segment_b, or omit both for auto-detection.
       See https://doc_url.example/version-stripped-from-test/docs/reference/Swap
 

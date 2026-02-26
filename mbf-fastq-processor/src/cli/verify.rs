@@ -32,7 +32,11 @@ pub fn verify_outputs(
     let post_script = toml_dir.join("post.sh");
     let test_script = toml_dir.join("test.sh");
 
-    let do_copy_input_files = toml_dir.join("copy_input").exists() || test_script.exists();
+    // Copy (not symlink) when scripts may run in the temp dir and could follow symlinks to
+    // mutate the original files (e.g. via chmod/touch on what appears to be a local file).
+    let do_copy_input_files = toml_dir.join("copy_input").exists()
+        || test_script.exists()
+        || prep_script.exists();
 
     let expected_validation_error = ExpectedFailure::new(&toml_dir, "error")?;
     let expected_validation_warning = ExpectedFailure::new(&toml_dir, "validation_warning")?;
@@ -106,26 +110,34 @@ pub fn verify_outputs(
         temp_dir.path().to_owned()
     };
 
-    let mut toml_value: toml::Value =
-        toml::from_str(&raw_config).context("Failed to parse TOML for modification")?;
+    let temp_toml_path = temp_path.join("config.toml");
+    
+    // Copy the original TOML without modification
+    ex::fs::copy(toml_file, &temp_toml_path)
+        .context("Failed to copy TOML to temp directory")?;
+
+    // Set up input files in the temp dir. When prep/test scripts will run (do_copy_input_files),
+    // we must copy files so those scripts cannot mutate the originals (e.g. via chmod).
+    // Otherwise, symlinks suffice — the TOML is kept verbatim so relative paths still resolve.
+    let toml_value: toml::Value =
+        toml::from_str(&raw_config).context("Failed to parse TOML for file setup")?;
 
     if do_copy_input_files {
-        if let Some(input_table) = toml_value.get_mut("input").and_then(|v| v.as_table_mut()) {
-            let field_names: Vec<String> = input_table.keys().cloned().collect();
-            for field_name in &field_names {
+        if let Some(input_table) = toml_value.get("input").and_then(|v| v.as_table()) {
+            for field_name in input_table.keys() {
                 if field_name == "interleaved" || field_name == "options" {
                     continue;
                 }
-                if let Some(value) = input_table.get_mut(field_name) {
+                if let Some(value) = input_table.get(field_name) {
                     copy_input_file(value, &toml_dir, &temp_path)?;
                 }
             }
         }
-        if let Some(steps) = toml_value.get_mut("step").and_then(|v| v.as_array_mut()) {
+        if let Some(steps) = toml_value.get("step").and_then(|v| v.as_array()) {
             for step in steps {
-                if let Some(step_table) = step.as_table_mut() {
+                if let Some(step_table) = step.as_table() {
                     for filename_key in ["filename", "filenames", "files"] {
-                        if let Some(value) = step_table.get_mut(filename_key) {
+                        if let Some(value) = step_table.get(filename_key) {
                             copy_input_file(value, &toml_dir, &temp_path)?;
                         }
                     }
@@ -142,42 +154,35 @@ pub fn verify_outputs(
                 if file_name_str.starts_with("input") && file_name_str != "input.toml" {
                     let dst_path = temp_path.join(file_name);
                     if !dst_path.exists() {
-                        fs::copy(&src_path, &dst_path)?;
+                        ex::fs::copy(&src_path, &dst_path)?;
                     }
                 }
             }
         }
     } else {
-        if let Some(input_table) = toml_value.get_mut("input").and_then(|v| v.as_table_mut()) {
-            let field_names: Vec<String> = input_table.keys().cloned().collect();
-            for field_name in &field_names {
+        // No prep/test scripts — safe to use symlinks so the TOML stays verbatim
+        if let Some(input_table) = toml_value.get("input").and_then(|v| v.as_table()) {
+            for field_name in input_table.keys() {
                 if field_name == "interleaved" || field_name == "options" {
                     continue;
                 }
-                if let Some(value) = input_table.get_mut(field_name) {
-                    make_toml_path_absolute(value, &toml_dir);
+                if let Some(value) = input_table.get(field_name) {
+                    create_symlinks_for_files(value, &toml_dir, &temp_path)?;
                 }
             }
         }
-
-        if let Some(steps) = toml_value.get_mut("step").and_then(|v| v.as_array_mut()) {
+        if let Some(steps) = toml_value.get("step").and_then(|v| v.as_array()) {
             for step in steps {
-                if let Some(step_table) = step.as_table_mut() {
+                if let Some(step_table) = step.as_table() {
                     for filename_key in ["filename", "filenames", "files"] {
-                        if let Some(value) = step_table.get_mut(filename_key) {
-                            make_toml_path_absolute(value, &toml_dir);
+                        if let Some(value) = step_table.get(filename_key) {
+                            create_symlinks_for_files(value, &toml_dir, &temp_path)?;
                         }
                     }
                 }
             }
         }
     }
-
-    let temp_toml_path = temp_path.join("config.toml");
-    let modified_toml =
-        toml::to_string_pretty(&toml_value).context("Failed to serialize modified TOML")?;
-    ex::fs::write(&temp_toml_path, modified_toml)
-        .context("Failed to write modified TOML to temp directory")?;
 
     if unsafe_prep {
         if prep_script.exists() {
@@ -853,7 +858,84 @@ fn run_command_with_timeout(cmd: &mut std::process::Command) -> Result<std::proc
     }
 }
 
-fn copy_input_file(value: &mut toml::Value, source_dir: &Path, target_dir: &Path) -> Result<()> {
+fn create_symlinks_for_files(value: &toml::Value, source_dir: &Path, target_dir: &Path) -> Result<()> {
+    if let Some(path_str) = value.as_str() {
+        if path_str != crate::config::STDIN_MAGIC_PATH {
+            let source_path = source_dir.join(path_str);
+            let target_path = target_dir.join(path_str);
+            
+            // Create parent directories if they don't exist
+            if let Some(parent) = target_path.parent() {
+                std::fs::create_dir_all(parent).with_context(|| {
+                    format!("Failed to create parent directories for {}", target_path.display())
+                })?;
+            }
+            
+            create_symlink(&source_path, &target_path)?;
+        }
+    } else if let Some(paths) = value.as_array() {
+        for v in paths {
+            if let Some(path_str) = v.as_str() {
+                if path_str != crate::config::STDIN_MAGIC_PATH {
+                    let source_path = source_dir.join(path_str);
+                    let target_path = target_dir.join(path_str);
+                    
+                    // Create parent directories if they don't exist
+                    if let Some(parent) = target_path.parent() {
+                        std::fs::create_dir_all(parent).with_context(|| {
+                            format!("Failed to create parent directories for {}", target_path.display())
+                        })?;
+                    }
+                    
+                    create_symlink(&source_path, &target_path)?;
+                }
+            } else {
+                bail!("Invalid toml value in file array");
+            }
+        }
+    }
+    Ok(())
+}
+
+#[cfg(unix)]
+fn create_symlink(source: &Path, target: &Path) -> Result<()> {
+    if !target.exists() {
+        std::os::unix::fs::symlink(source, target).with_context(|| {
+            format!(
+                "Failed to create symlink from {} to {}",
+                source.display(),
+                target.display()
+            )
+        })?;
+    }
+    Ok(())
+}
+
+#[cfg(windows)]
+fn create_symlink(source: &Path, target: &Path) -> Result<()> {
+    if !target.exists() {
+        if source.is_dir() {
+            std::os::windows::fs::symlink_dir(source, target).with_context(|| {
+                format!(
+                    "Failed to create directory symlink from {} to {}",
+                    source.display(),
+                    target.display()
+                )
+            })?;
+        } else {
+            std::os::windows::fs::symlink_file(source, target).with_context(|| {
+                format!(
+                    "Failed to create file symlink from {} to {}",
+                    source.display(),
+                    target.display()
+                )
+            })?;
+        }
+    }
+    Ok(())
+}
+
+fn copy_input_file(value: &toml::Value, source_dir: &Path, target_dir: &Path) -> Result<()> {
     if let Some(path_str) = value.as_str() {
         if path_str != crate::config::STDIN_MAGIC_PATH {
             let out_path = target_dir.join(path_str);
@@ -894,32 +976,6 @@ fn copy_input_file(value: &mut toml::Value, source_dir: &Path, target_dir: &Path
         new_paths?;
     }
     Ok(())
-}
-
-fn make_toml_path_absolute(value: &mut toml::Value, toml_dir: &Path) {
-    if let Some(path_str) = value.as_str() {
-        if path_str != crate::config::STDIN_MAGIC_PATH {
-            let abs_path = toml_dir.join(path_str);
-            *value = toml::Value::String(abs_path.to_string_lossy().to_string());
-        }
-    } else if let Some(paths) = value.as_array() {
-        let new_paths: Vec<toml::Value> = paths
-            .iter()
-            .map(|v| {
-                if let Some(path_str) = v.as_str() {
-                    if path_str == crate::config::STDIN_MAGIC_PATH {
-                        v.clone()
-                    } else {
-                        let abs_path = toml_dir.join(path_str);
-                        toml::Value::String(abs_path.to_string_lossy().to_string())
-                    }
-                } else {
-                    v.clone()
-                }
-            })
-            .collect();
-        *value = toml::Value::Array(new_paths);
-    }
 }
 
 #[cfg(test)]

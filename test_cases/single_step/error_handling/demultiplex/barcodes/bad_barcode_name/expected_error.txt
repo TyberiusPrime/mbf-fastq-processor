@@ -1,8 +1,10 @@
+Error Details ==
 Error 1/1
-  ╭─config.toml
-1 │ [barcodes."I have spaces"]
-  ┆           ───────┬───────
-  ┆                  │
-  ┆                  ╰───────── Invalid value
-──╯
+   ╭─config.toml
+21 │ [barcodes.'I have spaces']
+   ┆           ───────┬───────
+   ┆                  │
+   ┆                  ╰───────── Invalid value
+───╯
 Hint: Tag label must contain only letters, numbers, and underscores (a-zA-Z0-9_), found ' '.
+

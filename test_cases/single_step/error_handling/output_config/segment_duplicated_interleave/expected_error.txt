@@ -1,11 +1,15 @@
-3 │ interleaved = [
-4 │     "any",
-  ┆     ──┬──
-  ┆       │
-  ┆       ╰──── Duplicate value
-5 │     "any",
-  ┆     ──┬──
-  ┆       │
-  ┆       ╰──── Duplicate value
+Error Details ==
+Error 1/1
+  ╭─config.toml
+  ┆
+4 │ [input]
+5 │ "any" = 'input_read1.fq'
+6 │ interleaved = ["any", "any"]
+  ┆                ──┬──  ──┬──
+  ┆                  │      │
+  ┆                  ╰─────────── Duplicate value
+  ┆                         │
+  ┆                         ╰──── Duplicate value
 ──╯
 Hint: Use each segment only once in interleaved. If you really want to use the same reads twice, define multiple segments, set input.accept_duplicate_files = true.
+

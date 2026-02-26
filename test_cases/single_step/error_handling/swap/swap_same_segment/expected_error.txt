@@ -2,19 +2,19 @@ Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
-11 │ [[step]]
-12 │ action = "Swap"
-   ┆          ───┬──
-   ┆             │
-   ┆             ╰─── In this step
-13 │ segment_a = "read1"
-   ┆             ───┬───
-   ┆                │
-   ┆                ╰──── Identical to segment_b
-14 │ segment_b = "read1"
-   ┆             ───┬───
-   ┆                │
-   ┆                ╰──── Identical to segment_a
+ 8 │ [[step]]
+ 9 │     action = 'Swap'
+   ┆              ───┬──
+   ┆                 │
+   ┆                 ╰─── In this step
+10 │ 	segment_a = 'read1'
+   ┆              ───┬───
+   ┆                 │
+   ┆                 ╰──── Identical to segment_b
+11 │ 	segment_b = 'read1'
+   ┆              ───┬───
+   ┆                 │
+   ┆                 ╰──── Identical to segment_a
 ───╯
 Hint: Please specify two different segments to swap.
       See https://doc_url.example/version-stripped-from-test/docs/reference/Swap

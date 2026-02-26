@@ -2,15 +2,15 @@ Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
-11 │ [[step]]
-12 │ action = "Swap"
-   ┆          ───┬──
-   ┆             │
-   ┆             ╰─── In this step
-13 │ segment_a = "readx"
-   ┆             ───┬───
-   ┆                │
-   ┆                ╰──── Segment not present in [input] section
+ 8 │ [[step]]
+ 9 │     action = 'Swap'
+   ┆              ───┬──
+   ┆                 │
+   ┆                 ╰─── In this step
+10 │ 	segment_a = 'readx'
+   ┆              ───┬───
+   ┆                 │
+   ┆                 ╰──── Segment not present in [input] section
 ───╯
 Hint: Did you mean: read1?
       See https://doc_url.example/version-stripped-from-test/docs/reference/Swap

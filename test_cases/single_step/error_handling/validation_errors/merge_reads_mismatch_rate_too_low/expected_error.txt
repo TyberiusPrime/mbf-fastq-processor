@@ -2,18 +2,21 @@ Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
- 8 │ [[step]]
- 9 │ action = "MergeReads"
-   ┆          ──────┬─────
-   ┆                │
-   ┆                ╰────── In this step
+ 5 │ [[step]]
+ 6 │     action = 'MergeReads'
+   ┆              ──────┬─────
+   ┆                    │
+   ┆                    ╰────── In this step
    ┆
-10 │ algorithm = "Fastp"
-11 │ max_mismatch_count = 1000
-12 │ max_mismatch_rate = -0.1
-   ┆                     ──┬─
-   ┆                       │
-   ┆                       ╰── Invalid value. Must be in [0.0..1.0)
+ 7 │     reverse_complement_segment2 = true
+ 8 │     segment1 = 'read1'
+ 9 │     segment2 = 'read2'
+10 │     algorithm = 'Fastp'
+11 │     min_overlap = 5
+12 │     max_mismatch_rate = -0.1
+   ┆                         ──┬─
+   ┆                           │
+   ┆                           ╰── Invalid value. Must be in [0.0..1.0)
 ───╯
 Hint: Set a valid value >= 0 and < 1.0.
       See https://doc_url.example/version-stripped-from-test/docs/reference/MergeReads

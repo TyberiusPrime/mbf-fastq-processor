@@ -1,11 +1,13 @@
+Error Details ==
+Error 1/1
   ╭─config.toml
   ┆
 5 │ [output]
-6 │ interleave = [
-7 │     "read1",
-8 │     "read3",
-  ┆     ───┬───
-  ┆        │
-  ┆        ╰───── Not found in input segments
+6 │     prefix = 'output'
+7 │     interleave = ['read1','read3']
+  ┆                           ───┬───
+  ┆                              │
+  ┆                              ╰───── Not found in input segments
 ──╯
 Hint: Did you mean: read2?
+

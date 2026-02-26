@@ -1,13 +1,14 @@
+Error Details ==
 Error 1/1
   ╭─config.toml
   ┆
 4 │ [output]
-5 │ compression = "gz"
-6 │ output = [
-7 │     "read1",
-8 │     "read1",
-  ┆     ───┬───
-  ┆        │
-  ┆        ╰───── Segment is duplicated in output segments
+5 │ 	prefix = 'output'
+6 │ 	compression = 'gz'
+7 │     output = ['read1', 'read1']
+  ┆                        ───┬───
+  ┆                           │
+  ┆                           ╰───── Segment is duplicated in output segments
 ──╯
 Hint: Remove all but one 'read1'
+

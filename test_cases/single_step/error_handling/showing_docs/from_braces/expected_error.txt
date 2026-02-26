@@ -1,19 +1,17 @@
 Error Details ==
 Error 1/1
-   ╭─config.toml
-   ┆
- 7 │ [[step]]
- 8 │ action = "CutStart"
-   ┆          ─────┬────
-   ┆               │
-   ┆               ╰───── In this step
-   ┆
- 9 │ n = 23
-10 │ segment = "read2"
-   ┆           ───┬───
-   ┆              │
-   ┆              ╰──── Segment not present in [input] section
-───╯
+  ╭─config.toml
+  ┆
+4 │ [[step]]
+5 │     action= 'CutStart'
+  ┆             ─────┬────
+  ┆                  │
+  ┆                  ╰───── In this step
+6 │     segment = "read2"
+  ┆               ───┬───
+  ┆                  │
+  ┆                  ╰──── Segment not present in [input] section
+──╯
 Hint: Did you mean: read1?
       See https://doc_url.example/version-stripped-from-test/docs/reference/CutStart
 
