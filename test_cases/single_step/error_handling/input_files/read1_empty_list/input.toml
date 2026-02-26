@@ -1,2 +1,5 @@
 [input]
     read1 = []
+
+[output]
+  prefix='out'

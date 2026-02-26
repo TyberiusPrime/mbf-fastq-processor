@@ -6,7 +6,7 @@ Error 1/2
  9 │ action = "ExtractIUPAC"
    ┆          ───────┬──────
    ┆                 │
-   ┆                 ╰─────── Involving this enum variant.
+   ┆                 ╰─────── In this step
    ┆
 10 │ anchor = "Left"
 11 │ max_mismatches = 0
@@ -27,7 +27,7 @@ Error 2/2
 17 │ action = "ExtractIUPAC"
    ┆          ───────┬──────
    ┆                 │
-   ┆                 ╰─────── Involving this enum variant.
+   ┆                 ╰─────── In this step
    ┆
 18 │ anchor = "Left"
 19 │ max_mismatches = 0

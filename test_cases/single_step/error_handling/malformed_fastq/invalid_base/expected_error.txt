@@ -6,7 +6,7 @@ Error 1/1
  8 │ action = "Prefix"
    ┆          ────┬───
    ┆              │
-   ┆              ╰──── Involving this enum variant.
+   ┆              ╰──── In this step
    ┆
  9 │ qual = "B"
 10 │ seq = "X"

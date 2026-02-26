@@ -1,1 +1,19 @@
-Replacement string for Regex contains a group reference like
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+ 7 │ [[step]]
+ 8 │ action = "ExtractRegex"
+   ┆          ───────┬──────
+   ┆                 │
+   ┆                 ╰─────── In this step
+   ┆
+ 9 │ out_label = "test"
+10 │ replacement = "$1_$3::$0"
+   ┆               ─────┬─────
+   ┆                    │
+   ┆                    ╰────── Replacement string contains a '$1_' style group reference
+───╯
+Hint: This is a footgun: '$1_' is interpreted as group name '1_', not '$1' followed by '_'. Use '${1}_' instead.
+      See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractRegex
+

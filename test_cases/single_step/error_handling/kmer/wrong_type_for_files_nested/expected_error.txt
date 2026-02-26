@@ -6,7 +6,7 @@ Error 1/1
  8 │ action = "CalcKmers"
    ┆          ─────┬─────
    ┆               │
-   ┆               ╰────── Involving this enum variant.
+   ┆               ╰────── In this step
    ┆
  9 │ canonical = false
 10 │ files = [

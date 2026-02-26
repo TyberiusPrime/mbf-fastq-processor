@@ -1,1 +1,18 @@
-Tag labels cannot contain comment separator: ',' Observed label: 'my,tag'
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+20 │ [[step]]
+21 │ action = "StoreTagInComment"
+   ┆          ─────────┬─────────
+   ┆                   │
+   ┆                   ╰────────── In this step
+   ┆
+22 │ comment_separator = ","
+23 │ in_label = "my,tag"
+   ┆            ────┬───
+   ┆                │
+   ┆                ╰──── Tag labels cannot contain the comment_separator ','
+───╯
+Hint: See https://doc_url.example/version-stripped-from-test/docs/reference/StoreTagInComment
+

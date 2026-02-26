@@ -81,14 +81,14 @@ impl VerifyIn<PartialConfig> for PartialStoreTagInComment {
                 if in_label.bytes().any(|x| x == sep) {
                     self.in_label.state = TomlValueState::ValidationFailed {
                         message: format!(
-                            "Tag labels cannot contain the comment separator '{}'",
+                            "Tag labels cannot contain the comment_separator '{}'",
                             BString::new(vec![sep])
                         ),
                     };
                 } else if in_label.bytes().any(|x| x == ins) {
                     self.in_label.state = TomlValueState::ValidationFailed {
                         message: format!(
-                            "Tag labels cannot contain the comment insert char '{}'",
+                            "Tag labels cannot contain the comment_insert_char '{}'",
                             BString::new(vec![ins])
                         ),
                     };

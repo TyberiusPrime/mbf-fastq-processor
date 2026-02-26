@@ -1,11 +1,15 @@
+Error Details ==
+Error 1/1
   ╭─config.toml
   ┆
 7 │ [[step]]
 8 │ action = "SpotCheckReadPairing"
   ┆          ───────────┬──────────┬
   ┆                     │          │
-  ┆                     ╰─────────── Involving this enum variant.
+  ┆                     ╰─────────── In this step
   ┆                                │
   ┆                                ╰─ SpotCheckReadPairing requires at least two input segments
 ──╯
 Hint: Check your [input] section or remove the step
+      See https://doc_url.example/version-stripped-from-test/docs/reference/SpotCheckReadPairing
+

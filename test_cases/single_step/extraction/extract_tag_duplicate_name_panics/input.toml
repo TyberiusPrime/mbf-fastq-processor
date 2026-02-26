@@ -14,3 +14,6 @@
     anchor = 'Left'
     search = 'GCN'
     max_mismatches = 0
+
+[output]
+  prefix = 'out'

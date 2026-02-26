@@ -1,12 +1,16 @@
+Error Details ==
+Error 1/1
   ╭─config.toml
   ┆
 7 │ [[step]]
 8 │ action = "CalcBaseContent"
   ┆          ────────┬────────
   ┆                  │
-  ┆                  ╰───────── Involving this enum variant.
+  ┆                  ╰───────── In this step
 9 │ bases_to_count = ""
   ┆                  ─┬
   ┆                   │
   ┆                   ╰─ Must contain at least one letter (base)
 ──╯
+Hint: See https://doc_url.example/version-stripped-from-test/docs/reference/CalcBaseContent
+

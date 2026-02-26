@@ -6,7 +6,7 @@ Error 1/1
  8 │ action = "ExtractIUPACSuffix"
    ┆          ──────────┬─────────
    ┆                    │
-   ┆                    ╰────────── Involving this enum variant.
+   ┆                    ╰────────── In this step
    ┆
  9 │ max_mismatches = 6
 10 │ min_length = 5

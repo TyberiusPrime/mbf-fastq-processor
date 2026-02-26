@@ -6,7 +6,7 @@ Error 1/1
 12 │ action = "ExtractRegions"
    ┆          ────────┬───────
    ┆                  │
-   ┆                  ╰──────── Involving this enum variant.
+   ┆                  ╰──────── In this step
    ┆
 13 │ out_label = "umi"
 14 │ regions = []

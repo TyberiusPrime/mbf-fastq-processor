@@ -1,3 +1,4 @@
+Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
@@ -5,7 +6,7 @@ Error 1/1
  8 │ action = "ConvertQuality"
    ┆          ────────┬───────
    ┆                  │
-   ┆                  ╰──────── Involving this enum variant.
+   ┆                  ╰──────── In this step
  9 │ from = "illumina1.3"
    ┆        ──────┬──────
    ┆              │
@@ -16,3 +17,5 @@ Error 1/1
    ┆            ╰─────── Identical to from
 ───╯
 Hint: Conversion unnecessary? Please specify different encodings or remove this step.
+      See https://doc_url.example/version-stripped-from-test/docs/reference/ConvertQuality
+

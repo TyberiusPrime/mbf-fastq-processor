@@ -8,6 +8,7 @@
 4. Keys: [a] accept (update expected_error.txt)  [s/Enter] skip  [q] quit
 """
 
+import difflib
 import re
 import shutil
 import subprocess
@@ -97,31 +98,77 @@ def print_block(label: str, colour: str, text: str, max_lines: int = 60):
             print(f"  {colour}{line}{RESET}")
 
 
-def review(stderr_file: Path, expected_file: Path, test_dir: Path,
-           idx: int, total: int) -> str:
-    """Display one test and return the key pressed."""
-    expected_content = expected_file.read_text(encoding="utf-8")
-    stderr_content = stderr_file.read_text(encoding="utf-8")
-    new_content = extract_error_text(stderr_content)
+def print_diff(expected: str, actual: str, max_lines: int = 80):
+    """Print a unified diff between expected and actual."""
+    exp_lines = expected.rstrip().splitlines(keepends=True)
+    act_lines = actual.rstrip().splitlines(keepends=True)
+    diff = list(difflib.unified_diff(
+        exp_lines, act_lines,
+        fromfile="expected_error.txt",
+        tofile="stderr",
+    ))
+    print(f"\n{BOLD}── DIFF (expected → actual) ──{RESET}")
+    if not diff:
+        print(f"  {DIM}(no differences){RESET}")
+        return
+    shown = 0
+    for line in diff:
+        if shown >= max_lines:
+            print(f"  {DIM}... output truncated{RESET}")
+            break
+        line = line.rstrip("\n")
+        if line.startswith("---") or line.startswith("+++"):
+            print(f"  {BOLD}{line}{RESET}")
+        elif line.startswith("@@"):
+            print(f"  {CYAN}{line}{RESET}")
+        elif line.startswith("-"):
+            print(f"  {RED}{line}{RESET}")
+        elif line.startswith("+"):
+            print(f"  {GREEN}{line}{RESET}")
+        else:
+            print(f"  {DIM}{line}{RESET}")
+        shown += 1
 
+
+def render(expected_content: str, new_content: str,
+           test_dir: Path, idx: int, total: int, diff_mode: bool):
+    """Clear screen and render the current test."""
     sep = "─" * 72
     print(f"\n{BOLD}{sep}{RESET}")
-    print(f"{BOLD}[{idx}/{total}]{RESET}  {CYAN}{test_dir}{RESET}")
+    mode_tag = f"{CYAN}[diff]{RESET}" if diff_mode else f"{DIM}[side-by-side]{RESET}"
+    print(f"{BOLD}[{idx}/{total}]{RESET}  {CYAN}{test_dir}{RESET}  {mode_tag}")
     print(sep)
-
-    print_block("── EXPECTED (expected_error.txt) ──", YELLOW, expected_content)
-    print_block("── ACTUAL   (stderr)              ──", GREEN, new_content)
-
+    if diff_mode:
+        print_diff(expected_content, new_content)
+    else:
+        print_block("── EXPECTED (expected_error.txt) ──", YELLOW, expected_content)
+        print_block("── ACTUAL   (stderr)              ──", GREEN, new_content)
     print(
         f"\n  {BOLD}[a]{RESET} accept  "
         f"{BOLD}[s/Enter]{RESET} skip  "
+        f"{BOLD}[d]{RESET} toggle diff  "
+        f"{BOLD}[r]{RESET} restart  "
         f"{BOLD}[q]{RESET} quit"
         "  → ",
         end="", flush=True,
     )
-    key = get_single_key()
-    print(key)
-    return key
+
+
+def review(stderr_file: Path, expected_file: Path, test_dir: Path,
+           idx: int, total: int, diff_mode: bool) -> tuple[str, bool]:
+    """Display one test, handling 'd' to toggle diff. Returns (key, diff_mode)."""
+    expected_content = expected_file.read_text(encoding="utf-8")
+    stderr_content = stderr_file.read_text(encoding="utf-8")
+    new_content = extract_error_text(stderr_content)
+
+    while True:
+        render(expected_content, new_content, test_dir, idx, total, diff_mode)
+        key = get_single_key()
+        print(key)
+        if key in ("d", "D"):
+            diff_mode = not diff_mode
+        else:
+            return key, diff_mode
 
 
 def main():
@@ -142,22 +189,50 @@ def main():
     print(f"\n{BOLD}{len(failed)} failed error test(s) to review.{RESET}")
 
     accepted = skipped = 0
-    for idx, (stderr_file, expected_file, test_dir) in enumerate(failed, 1):
-        key = review(stderr_file, expected_file, test_dir, idx, len(failed))
+    diff_mode = False
+    while True:
+        i = 0
+        while i < len(failed):
+            stderr_file, expected_file, test_dir = failed[i]
+            key, diff_mode = review(stderr_file, expected_file, test_dir, i + 1, len(failed), diff_mode)
 
-        if key in ("a", "A"):
-            content = stderr_file.read_text(encoding="utf-8")
-            expected_file.write_text(extract_error_text(content), encoding="utf-8")
-            print(f"  {GREEN}✓ Updated:{RESET} {expected_file}")
-            accepted += 1
-        elif key in ("q", "Q", "\x03", "\x04"):   # q / Ctrl-C / Ctrl-D
-            print(f"  {YELLOW}Quitting.{RESET}")
-            break
+            if key in ("a", "A"):
+                content = stderr_file.read_text(encoding="utf-8")
+                expected_file.write_text(extract_error_text(content), encoding="utf-8")
+                print(f"  {GREEN}✓ Updated:{RESET} {expected_file}")
+                accepted += 1
+                i += 1
+            elif key in ("r", "R"):
+                print(f"  {CYAN}Restarting: removing actuals and re-running cargo test...{RESET}")
+                remove_actual_folders(base_dir)
+                run_cargo_test()
+                failed = find_failed_error_tests(base_dir)
+                if not failed:
+                    print(f"\n{GREEN}All tests pass now.{RESET}")
+                    break
+                print(f"\n{BOLD}{len(failed)} failed error test(s) remaining.{RESET}")
+                break  # break inner loop; outer loop restarts from i=0
+            elif key in ("q", "Q", "\x03", "\x04"):   # q / Ctrl-C / Ctrl-D
+                print(f"  {YELLOW}Quitting.{RESET}")
+                remaining = len(failed) - i
+                print(
+                    f"\n{BOLD}Done.{RESET}  "
+                    f"Accepted: {GREEN}{accepted}{RESET}  "
+                    f"Skipped: {skipped}  "
+                    f"Remaining: {remaining}"
+                )
+                return
+            else:
+                print(f"  {DIM}Skipped.{RESET}")
+                skipped += 1
+                i += 1
         else:
-            print(f"  {DIM}Skipped.{RESET}")
-            skipped += 1
+            # inner while finished normally (no break) — all tests reviewed
+            break
+        if not failed:
+            break  # restart found no failures
 
-    remaining = len(failed) - accepted - skipped
+    remaining = len(failed) - skipped
     print(
         f"\n{BOLD}Done.{RESET}  "
         f"Accepted: {GREEN}{accepted}{RESET}  "

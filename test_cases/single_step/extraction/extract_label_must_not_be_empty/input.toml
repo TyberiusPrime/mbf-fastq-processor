@@ -4,3 +4,7 @@
     action = 'ExtractRegions'
     out_label = ''
     regions = [{source = 'read1', start = 0, length = 6, anchor="left"}]
+
+
+[output]
+  prefix = 'out'

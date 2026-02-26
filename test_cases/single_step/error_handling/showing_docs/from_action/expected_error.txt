@@ -1,10 +1,12 @@
+Error Details ==
+Error 1/1
   ╭─config.toml
   ┆
 7 │ [[step]]
 8 │ action = "CalcQualifiedBases"
   ┆          ──────────┬─────────
   ┆                    │
-  ┆                    ╰────────── Involving this enum variant.
+  ┆                    ╰────────── In this step
 9 │ op = "nosuchop"
   ┆      ─────┬────
   ┆           │
@@ -12,3 +14,4 @@
 ──╯
 Hint: Did you mean: Below, Above, or '>' (='Above')?
       See https://doc_url.example/version-stripped-from-test/docs/reference/CalcQualifiedBases
+

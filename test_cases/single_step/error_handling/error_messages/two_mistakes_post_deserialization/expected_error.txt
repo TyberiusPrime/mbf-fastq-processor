@@ -1,11 +1,41 @@
-[Step 0 (Prefix)]:
+Error Details ==
+Error 1/2
+   ╭─config.toml
+   ┆
+ 7 │ [[step]]
+ 8 │ action = "Prefix"
+   ┆          ────┬───
+   ┆              │
+   ┆              ╰──── In this step
+ 9 │ qual = "AB"
+   ┆        ──┬─
+   ┆          │
+   ┆          ╰── 2 characters
+10 │ seq = "A"
+   ┆       ─┬─
+   ┆        │
+   ┆        ╰── 1 characters
+───╯
+Hint: 'seq' and 'qual' must be the same length
+      See https://doc_url.example/version-stripped-from-test/docs/reference/Prefix
 
-Caused by:
-    Prefix: 'seq' and 'qual' must be the same length. Sequence has 1 characters but quality string has 2 characters. Please ensure they match.
+Error 2/2
+   ╭─config.toml
+   ┆
+12 │ [[step]]
+13 │ action = "Postfix"
+   ┆          ────┬────
+   ┆              │
+   ┆              ╰───── In this step
+14 │ qual = "B"
+   ┆        ─┬─
+   ┆         │
+   ┆         ╰── 1 characters
+15 │ seq = "AA"
+   ┆       ──┬─
+   ┆         │
+   ┆         ╰── 2 characters
+───╯
+Hint: 'seq' and 'qual' must be the same length
+      See https://doc_url.example/version-stripped-from-test/docs/reference/Postfix
 
----------
-
-[Step 1 (Postfix)]:
-
-Caused by:
-    Postfix: 'seq' and 'qual' must be the same length. Sequence has 2 characters but quality string has 1 characters. Please ensure they match.

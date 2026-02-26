@@ -1,3 +1,4 @@
+Error Details ==
 Error 1/2
   ╭─config.toml
   ┆
@@ -5,7 +6,7 @@ Error 1/2
 8 │ action = "Prefix"
   ┆          ────┬───
   ┆              │
-  ┆              ╰──── Involving this enum variant.
+  ┆              ╰──── In this step
 9 │ seq = "A"
   ┆          ┬
   ┆          │
@@ -20,10 +21,11 @@ Error 2/2
 12 │ action = "Postfix"
    ┆          ────┬────
    ┆              │
-   ┆              ╰───── Involving this enum variant.
+   ┆              ╰───── In this step
 13 │ qual = "B"
    ┆           ┬
    ┆           │
    ┆           ╰─ Missing required key: 'seq'.
 ───╯
 Hint: See https://doc_url.example/version-stripped-from-test/docs/reference/Postfix
+

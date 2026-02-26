@@ -6,7 +6,7 @@ Error 1/1
  8 │ action = "ExtractRegionsOfLowQuality"
    ┆          ──────────────┬─────────────
    ┆                        │
-   ┆                        ╰────────────── Involving this enum variant.
+   ┆                        ╰────────────── In this step
    ┆
  9 │ min_quality = 40
 10 │ out_label = "low_quality"

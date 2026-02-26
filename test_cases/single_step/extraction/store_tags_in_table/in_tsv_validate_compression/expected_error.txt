@@ -1,3 +1,4 @@
+Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
@@ -5,10 +6,12 @@ Error 1/1
 30 │ action = "StoreTagsInTable"
    ┆          ─────────┬────────
    ┆                   │
-   ┆                   ╰───────── Involving this enum variant.
+   ┆                   ╰───────── In this step
 31 │ compression = "shu"
    ┆               ──┬──
    ┆                 │
    ┆                 ╰─── Invalid enum variant: 'shu'
 ───╯
 Hint: Did you mean: Zstd, Gzip, or 'gz' (='Gzip')?
+      See https://doc_url.example/version-stripped-from-test/docs/reference/StoreTagsInTable
+

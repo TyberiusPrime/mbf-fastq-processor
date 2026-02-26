@@ -6,7 +6,7 @@ Error 1/1
 30 │ action = "HammingCorrect"
    ┆          ────────┬───────
    ┆                  │
-   ┆                  ╰──────── Involving this enum variant.
+   ┆                  ╰──────── In this step
    ┆
 31 │ barcodes = "barcodes"
 32 │ in_label = "barcode_extracted"

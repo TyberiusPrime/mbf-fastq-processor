@@ -6,7 +6,7 @@ Error 1/1
  8 │ action = "ExtractIUPACWithIndel"
    ┆          ───────────┬───────────
    ┆                     │
-   ┆                     ╰──────────── Involving this enum variant.
+   ┆                     ╰──────────── In this step
    ┆
  9 │ anchor = "Anywhere"
 10 │ max_indel_bases = 1

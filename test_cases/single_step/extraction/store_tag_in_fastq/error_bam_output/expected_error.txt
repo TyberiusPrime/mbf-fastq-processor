@@ -6,7 +6,7 @@ Error 1/1
 15 │ action = "StoreTagInFastQ"
    ┆          ────────┬────────
    ┆                  │
-   ┆                  ╰───────── Involving this enum variant.
+   ┆                  ╰───────── In this step
    ┆
 16 │ comment_tags = ["barcode"]
 17 │ format = "BAM"
