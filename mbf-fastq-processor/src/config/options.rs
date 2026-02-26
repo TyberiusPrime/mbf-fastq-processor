@@ -114,6 +114,12 @@ impl VerifyIn<PartialConfig> for PartialOptions {
         });
 
         self.block_size.verify(|v| {
+            if *v == 0 {
+                return Err(ValidationFailure::new(
+                    "Must be > 0",
+                    Some("Set to a positive integer."),
+                ));
+            }
             if parent
                 .input
                 .as_ref()

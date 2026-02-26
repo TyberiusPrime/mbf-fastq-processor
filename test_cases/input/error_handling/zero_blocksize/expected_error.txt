@@ -1,1 +1,12 @@
-[options]: Block size must be > 0. Set to a positive integer.
+Error Details ==
+Error 1/1
+  ╭─config.toml
+  ┆
+4 │ [options]
+5 │ block_size = 0
+  ┆              ┬
+  ┆              │
+  ┆              ╰─ Must be > 0
+──╯
+Hint: Set to a positive integer.
+
