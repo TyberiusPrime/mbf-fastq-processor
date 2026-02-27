@@ -28,7 +28,7 @@ pub struct Input {
     /// whether you have input files with interleaved reads, or one file per segment
     /// If interleaved, define the name of the segments here.
     #[tpd(default)] // todo, with="tpd_adapt_trim_string")]
-    interleaved: Option<Vec<String>>,
+    pub interleaved: Option<Vec<String>>,
 
     /// Your segments. Define just one with any name for interlaveed input.
     #[schemars(with = "BTreeMap<String, Vec<String>>")]

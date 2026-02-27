@@ -1,1 +1,13 @@
-Barcode name 'read1' collides with an existing segment label
+  ╭─config.toml
+  ┆
+1 │ [input]
+2 │     read1 = 'sample_data/ten_reads.fq'
+  ┆     ──┬──
+  ┆       │
+  ┆       ╰──────────────────────────────── Segment with the same name defined here
+4 │ [barcodes.read1]
+  ┆           ──┬──
+  ┆             │
+  ┆             ╰──── This barcode name collides with a segment name
+──╯
+Hint: Barcode names must not collide with segment names. Please choose a different name for this barcode.

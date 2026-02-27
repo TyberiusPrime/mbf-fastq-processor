@@ -190,6 +190,7 @@ impl VerifyIn<TPDRoot> for PartialConfig {
         self.transform.or_default();
         self.verify_reports();
         self.verify_barcodes();
+        self.verify_barcodes_and_segment_names_disjoint();
         self.verify_benchmark_molecule_count();
         self.disable_output_on_benchmark();
         self.verify_for_any_output();
@@ -560,6 +561,60 @@ impl PartialConfig {
             }
         }
     }
+
+    fn verify_barcodes_and_segment_names_disjoint(&mut self) {
+        let mut segment_names = HashMap::new();
+
+        if let Some(input) = self.input.as_mut()
+            && let Some(structured) = input.structured.as_mut()
+            && let Some(Some(barcodes)) = self.barcodes.as_mut()
+        {
+            match structured {
+                StructuredInput::Interleaved { .. } => {
+                    if let Some(tv_interleaved) = input.interleaved.as_mut()
+                        && let Some(interleaved) = tv_interleaved.as_mut()
+                    {
+                        for tv_segment in interleaved.iter_mut() {
+                            if let Some(segment) = tv_segment.as_mut() {
+                                segment_names.insert(segment.clone(), tv_segment);
+                            }
+                        }
+                    }
+                }
+                StructuredInput::Segmented { .. } => {
+                    if let Some(segments) = input.segments.as_mut() {
+                        for tv_segment in segments.keys.iter_mut() {
+                            if let Some(segment) = tv_segment.as_mut() {
+                                segment_names.insert(segment.clone(), tv_segment);
+                            }
+                        }
+                    }
+                }
+            }
+
+            for tv_barcode_name in barcodes.keys.iter_mut() {
+                if let Some(barcode_name) = tv_barcode_name.as_ref() {
+                    if let Some(tv_segment) = segment_names.get(barcode_name) {
+                        tv_barcode_name.state = TomlValueState::Custom {
+                            spans: vec![
+                                (
+                                    tv_barcode_name.span(),
+                                    "This barcode name collides with a segment name".to_string(),
+                                ),
+                                (
+                                    tv_segment.span(),
+                                    "Segment with the same name defined here".to_string(),
+                                ),
+                            ],
+                        };
+                        tv_barcode_name.help = Some(
+                            "Barcode names must not collide with segment names. Please choose a different name for this barcode.".to_string(),
+                        );
+                    }
+                }
+            }
+        }
+    }
 }
 
 #[allow(clippy::used_underscore_items)]
@@ -845,9 +900,7 @@ impl Config {
         if let Some(barcodes) = self.barcodes.as_ref() {
             for barcode_name in barcodes.keys() {
                 barcode_names_used.insert(barcode_name.clone());
-                if segment_names_used.contains(barcode_name) {
-                    errors.push(anyhow!("Name collision: Barcode name '{barcode_name}' collides with an existing segment label"));
-                }
+                //barcode -> segment is in VerifyIn.
             }
         }
         for tag_name in tag_names {
