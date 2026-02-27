@@ -1,0 +1,1 @@
+(input): Repeated filename: "read1.fq" (in segment 'read2'). Probably not what you want. Set options.accept_duplicate_files = true to ignore.

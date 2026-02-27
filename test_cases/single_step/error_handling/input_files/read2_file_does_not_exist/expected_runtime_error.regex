@@ -1,1 +1,1 @@
-Could not open file ".+nosuchfile.fq"
+Could not open file ".*nosuchfile.fq"

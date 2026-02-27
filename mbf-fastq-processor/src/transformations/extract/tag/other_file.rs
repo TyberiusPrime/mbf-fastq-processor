@@ -21,7 +21,10 @@ pub struct OtherFile {
     #[tpd(adapt_in_verify(String), alias = "segment")]
     source: ResolvedSourceNoAll,
 
-    #[tpd(with = "tpd_adapt_u8_from_byte_or_char", alias="other_read_name_end_char")]
+    #[tpd(
+        with = "tpd_adapt_u8_from_byte_or_char",
+        alias = "other_read_name_end_char"
+    )]
     pub other_readname_end_character: Option<u8>,
 
     pub out_label: String,
@@ -117,7 +120,8 @@ impl Step for OtherFile {
             for trafo in all_transforms[..this_transforms_index].iter().rev() {
                 if let Transformation::StoreTagInComment(info) = trafo {
                     let their_char: BString = BString::new(vec![info.comment_separator]);
-                    let our_char: BString = BString::new(vec![input_def.options.read_comment_character]);
+                    let our_char: BString =
+                        BString::new(vec![input_def.options.read_comment_character]);
                     if their_char != our_char {
                         return Err(anyhow::anyhow!(
                             "OtherFile using names is configured to trim read names at character '{our_char}'
@@ -203,8 +207,10 @@ These must match.",
                 crate::io::apply_to_read_names(
                     &self.filename,
                     &mut |read_name| {
-                        let trimmed =
-                            read_name_canonical_prefix(read_name, self.other_readname_end_character);
+                        let trimmed = read_name_canonical_prefix(
+                            read_name,
+                            self.other_readname_end_character,
+                        );
 
                         if !filter.contains(&FragmentEntry(&[trimmed])) {
                             filter.insert(&FragmentEntry(&[trimmed]));

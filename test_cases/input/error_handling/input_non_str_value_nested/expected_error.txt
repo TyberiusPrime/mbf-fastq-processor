@@ -1,4 +1,4 @@
-│ read23 = [23]
-  ┆           ─┬
-  ┆            │
-  ┆            ╰── Wrong type: expected string, found integer
+│   read23 = [23]
+  ┆             ─┬
+  ┆              │
+  ┆              ╰── Wrong type: expected string, found integer.

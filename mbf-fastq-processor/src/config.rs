@@ -1270,11 +1270,17 @@ fn validate_barcode_disjointness(barcodes: &mut MapAndKeys<BString, String>) {
     for i in 0..barcodes.keys.len() {
         for j in (i + 1)..barcodes.keys.len() {
             if let Some(dna_a) = barcodes.keys[i].value.as_ref()
-            && let Some(dna_b) = barcodes.keys[j].value.as_ref()
-            && let Some(barcode_name_a) = barcodes.map.get(bstr::BStr::new(dna_a)).and_then(|x| x.as_ref())
-            && let Some(barcode_name_b) = barcodes.map.get(bstr::BStr::new(dna_b)).and_then(|x| x.as_ref())
-            && barcode_name_a != barcode_name_b
-            && crate::dna::iupac_overlapping(dna_a.as_bytes(), dna_b.as_bytes())
+                && let Some(dna_b) = barcodes.keys[j].value.as_ref()
+                && let Some(barcode_name_a) = barcodes
+                    .map
+                    .get(bstr::BStr::new(dna_a))
+                    .and_then(|x| x.as_ref())
+                && let Some(barcode_name_b) = barcodes
+                    .map
+                    .get(bstr::BStr::new(dna_b))
+                    .and_then(|x| x.as_ref())
+                && barcode_name_a != barcode_name_b
+                && crate::dna::iupac_overlapping(dna_a.as_bytes(), dna_b.as_bytes())
             {
                 let spans = vec![
                     (barcodes.keys[i].span(), format!("Overlaps with {dna_b}")),
@@ -1341,46 +1347,46 @@ mod tests {
     fn test_validate_segment_label_valid() {
         // Valid segment labels
         let f = toml_pretty_deser::FieldMatchMode::Exact;
-        assert!(validate_segment_label("a",f).is_ok());
-        assert!(validate_segment_label("A",f).is_ok());
-        assert!(validate_segment_label("_",f).is_ok());
-        assert!(validate_segment_label("abc",f).is_ok());
-        assert!(validate_segment_label("ABC",f).is_ok());
-        assert!(validate_segment_label("123",f).is_err());
-        assert!(validate_segment_label("a123",f).is_ok());
-        assert!(validate_segment_label("A123",f).is_ok());
-        assert!(validate_segment_label("123abc",f).is_err());
-        assert!(validate_segment_label("read1",f).is_ok());
-        assert!(validate_segment_label("READ1",f).is_ok());
-        assert!(validate_segment_label("segment_name",f).is_ok());
-        assert!(validate_segment_label("segment123",f).is_ok());
-        assert!(validate_segment_label("_internal",f).is_ok());
+        assert!(validate_segment_label("a", f).is_ok());
+        assert!(validate_segment_label("A", f).is_ok());
+        assert!(validate_segment_label("_", f).is_ok());
+        assert!(validate_segment_label("abc", f).is_ok());
+        assert!(validate_segment_label("ABC", f).is_ok());
+        assert!(validate_segment_label("123", f).is_err());
+        assert!(validate_segment_label("a123", f).is_ok());
+        assert!(validate_segment_label("A123", f).is_ok());
+        assert!(validate_segment_label("123abc", f).is_err());
+        assert!(validate_segment_label("read1", f).is_ok());
+        assert!(validate_segment_label("READ1", f).is_ok());
+        assert!(validate_segment_label("segment_name", f).is_ok());
+        assert!(validate_segment_label("segment123", f).is_ok());
+        assert!(validate_segment_label("_internal", f).is_ok());
     }
 
     #[test]
     fn test_validate_segment_label_invalid() {
         // Invalid segment labels
         let f = toml_pretty_deser::FieldMatchMode::Exact;
-        assert!(validate_segment_label("",f).is_err());
-        assert!(validate_segment_label("1",f).is_err());
-        assert!(validate_segment_label("segment-name",f).is_err());
-        assert!(validate_segment_label("segment.name",f).is_err());
-        assert!(validate_segment_label("segment name",f).is_err());
-        assert!(validate_segment_label("segment@name",f).is_err());
-        assert!(validate_segment_label("segment/name",f).is_err());
-        assert!(validate_segment_label("segment\\name",f).is_err());
-        assert!(validate_segment_label("segment:name",f).is_err());
-        assert!(validate_segment_label("fasta_fake_quality",f).is_err());
-        assert!(validate_segment_label("bam_include_mapped",f).is_err());
-        assert!(validate_segment_label("bam_include_unmapped",f).is_err());
-        assert!(validate_segment_label("read_comment_character",f).is_err());
-        assert!(validate_segment_label("use_rapidgzip",f).is_err());
-        assert!(validate_segment_label("build_rapidgzip_index",f).is_err());
-        assert!(validate_segment_label("threads_per_segment",f).is_err());
-        assert!(validate_segment_label("tpd_field_match_mode",f).is_err());
+        assert!(validate_segment_label("", f).is_err());
+        assert!(validate_segment_label("1", f).is_err());
+        assert!(validate_segment_label("segment-name", f).is_err());
+        assert!(validate_segment_label("segment.name", f).is_err());
+        assert!(validate_segment_label("segment name", f).is_err());
+        assert!(validate_segment_label("segment@name", f).is_err());
+        assert!(validate_segment_label("segment/name", f).is_err());
+        assert!(validate_segment_label("segment\\name", f).is_err());
+        assert!(validate_segment_label("segment:name", f).is_err());
+        assert!(validate_segment_label("fasta_fake_quality", f).is_err());
+        assert!(validate_segment_label("bam_include_mapped", f).is_err());
+        assert!(validate_segment_label("bam_include_unmapped", f).is_err());
+        assert!(validate_segment_label("read_comment_character", f).is_err());
+        assert!(validate_segment_label("use_rapidgzip", f).is_err());
+        assert!(validate_segment_label("build_rapidgzip_index", f).is_err());
+        assert!(validate_segment_label("threads_per_segment", f).is_err());
+        assert!(validate_segment_label("tpd_field_match_mode", f).is_err());
 
         let f = toml_pretty_deser::FieldMatchMode::AnyCase;
-        assert!(validate_segment_label("FaSTA___FAKE-QUALITY",f).is_err());
+        assert!(validate_segment_label("FaSTA___FAKE-QUALITY", f).is_err());
     }
 
     #[test]

@@ -34,9 +34,8 @@ pub fn verify_outputs(
 
     // Copy (not symlink) when scripts may run in the temp dir and could follow symlinks to
     // mutate the original files (e.g. via chmod/touch on what appears to be a local file).
-    let do_copy_input_files = toml_dir.join("copy_input").exists()
-        || test_script.exists()
-        || prep_script.exists();
+    let do_copy_input_files =
+        toml_dir.join("copy_input").exists() || test_script.exists() || prep_script.exists();
 
     let expected_validation_error = ExpectedFailure::new(&toml_dir, "error")?;
     let expected_validation_warning = ExpectedFailure::new(&toml_dir, "validation_warning")?;
@@ -111,10 +110,9 @@ pub fn verify_outputs(
     };
 
     let temp_toml_path = temp_path.join("config.toml");
-    
+
     // Copy the original TOML without modification
-    ex::fs::copy(toml_file, &temp_toml_path)
-        .context("Failed to copy TOML to temp directory")?;
+    ex::fs::copy(toml_file, &temp_toml_path).context("Failed to copy TOML to temp directory")?;
 
     // Set up input files in the temp dir. When prep/test scripts will run (do_copy_input_files),
     // we must copy files so those scripts cannot mutate the originals (e.g. via chmod).
@@ -178,6 +176,23 @@ pub fn verify_outputs(
                         if let Some(value) = step_table.get(filename_key) {
                             create_symlinks_for_files(value, &toml_dir, &temp_path)?;
                         }
+                    }
+                }
+            }
+        }
+        // Also symlink any ancillary input files (e.g. .bai index alongside .bam)
+        // that aren't explicitly named in the TOML but live next to the inputs.
+        for entry in fs::read_dir(&toml_dir)? {
+            let entry = entry?;
+            let src_path = entry.path();
+            if src_path.is_file()
+                && let Some(file_name) = src_path.file_name()
+            {
+                let file_name_str = file_name.to_string_lossy();
+                if file_name_str.starts_with("input") && file_name_str != "input.toml" {
+                    let dst_path = temp_path.join(file_name);
+                    if std::fs::symlink_metadata(&dst_path).is_err() {
+                        create_symlink(&src_path, &dst_path)?;
                     }
                 }
             }
@@ -611,9 +626,14 @@ pub fn normalize_progress_content(content: &str) -> String {
     let int_re = Regex::new(r"\b\d+\b").expect("invalid int regex");
     let normalized = int_re.replace_all(&normalized, "_IGNORED_").into_owned();
 
+    // Strip absolute paths, preserving any separator character that precedes them.
+    // e.g. "from /tmp/abc/foo.fq" -> "from foo.fq" (space preserved).
     let file_re =
-        Regex::new("(?:^|[^A-Za-z0-9._-])(/(?:[^/\\s]+/)*([^/\\s]+))").expect("invalid file regex");
-    file_re.replace_all(&normalized, "$2").into_owned()
+        Regex::new("(?:^|(?P<sep>[^A-Za-z0-9._-]))(/(?:[^/\\s]+/)*(?P<filename>[^/\\s]+))")
+            .expect("invalid file regex");
+    file_re
+        .replace_all(&normalized, "${sep}${filename}")
+        .into_owned()
 }
 
 fn find_output_files(dir: &Path, prefix: &str) -> Result<Vec<std::path::PathBuf>> {
@@ -858,19 +878,26 @@ fn run_command_with_timeout(cmd: &mut std::process::Command) -> Result<std::proc
     }
 }
 
-fn create_symlinks_for_files(value: &toml::Value, source_dir: &Path, target_dir: &Path) -> Result<()> {
+fn create_symlinks_for_files(
+    value: &toml::Value,
+    source_dir: &Path,
+    target_dir: &Path,
+) -> Result<()> {
     if let Some(path_str) = value.as_str() {
         if path_str != crate::config::STDIN_MAGIC_PATH {
             let source_path = source_dir.join(path_str);
             let target_path = target_dir.join(path_str);
-            
+
             // Create parent directories if they don't exist
             if let Some(parent) = target_path.parent() {
                 std::fs::create_dir_all(parent).with_context(|| {
-                    format!("Failed to create parent directories for {}", target_path.display())
+                    format!(
+                        "Failed to create parent directories for {}",
+                        target_path.display()
+                    )
                 })?;
             }
-            
+
             create_symlink(&source_path, &target_path)?;
         }
     } else if let Some(paths) = value.as_array() {
@@ -879,18 +906,21 @@ fn create_symlinks_for_files(value: &toml::Value, source_dir: &Path, target_dir:
                 if path_str != crate::config::STDIN_MAGIC_PATH {
                     let source_path = source_dir.join(path_str);
                     let target_path = target_dir.join(path_str);
-                    
+
                     // Create parent directories if they don't exist
                     if let Some(parent) = target_path.parent() {
                         std::fs::create_dir_all(parent).with_context(|| {
-                            format!("Failed to create parent directories for {}", target_path.display())
+                            format!(
+                                "Failed to create parent directories for {}",
+                                target_path.display()
+                            )
                         })?;
                     }
-                    
+
                     create_symlink(&source_path, &target_path)?;
                 }
-            } else {
-                bail!("Invalid toml value in file array");
+                // else: non-string value (e.g. integer) — skip silently; the
+                // processor will report the type error during config validation.
             }
         }
     }
@@ -899,7 +929,9 @@ fn create_symlinks_for_files(value: &toml::Value, source_dir: &Path, target_dir:
 
 #[cfg(unix)]
 fn create_symlink(source: &Path, target: &Path) -> Result<()> {
-    if !target.exists() {
+    // Use symlink_metadata (does NOT follow symlinks) so dangling symlinks are
+    // detected as already existing and we don't attempt to recreate them.
+    if std::fs::symlink_metadata(target).is_err() {
         std::os::unix::fs::symlink(source, target).with_context(|| {
             format!(
                 "Failed to create symlink from {} to {}",
@@ -913,7 +945,7 @@ fn create_symlink(source: &Path, target: &Path) -> Result<()> {
 
 #[cfg(windows)]
 fn create_symlink(source: &Path, target: &Path) -> Result<()> {
-    if !target.exists() {
+    if std::fs::symlink_metadata(target).is_err() {
         if source.is_dir() {
             std::os::windows::fs::symlink_dir(source, target).with_context(|| {
                 format!(
