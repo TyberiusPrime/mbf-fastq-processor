@@ -3,7 +3,7 @@ use crate::transformations::prelude::*;
 use serde_json::json;
 
 #[derive(Default, Clone, JsonSchema)]
-#[tpd]
+#[tpd(no_verify)]
 #[derive(Debug)]
 pub struct _ReportCount {
     pub report_no: usize,
@@ -13,11 +13,11 @@ pub struct _ReportCount {
     pub data: Arc<Mutex<DemultiplexedData<usize>>>,
 }
 
-impl _ReportCount {
+impl Partial_ReportCount {
     pub fn new(report_no: usize) -> Self {
         Self {
-            report_no,
-            data: Arc::new(Mutex::new(DemultiplexedData::default())),
+            report_no: TomlValue::new_ok_unplaced(report_no),
+            data: Some(Default::default()),
         }
     }
 }

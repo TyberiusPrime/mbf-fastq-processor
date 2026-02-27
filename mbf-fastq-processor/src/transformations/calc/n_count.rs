@@ -1,5 +1,4 @@
 //#![allow(clippy::unnecessary_wraps)]
-use super::BaseContent;
 use crate::transformations::prelude::*;
 
 /// Count the number of N. See `CalcBaseContent` for general case
@@ -14,17 +13,16 @@ pub struct NCount {
 }
 
 impl VerifyIn<PartialConfig> for PartialNCount {
-    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    fn verify(
+        &mut self,
+        parent: &PartialConfig,
+        _options: &VerifyOptions,
+    ) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {
         self.segment.validate_segment(parent);
         Ok(())
-    }
-}
-impl NCount {
-    pub(crate) fn into_base_content(self) -> BaseContent {
-        BaseContent::for_n_count(self.out_label, self.segment)
     }
 }
 

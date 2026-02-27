@@ -39,7 +39,7 @@ impl Into<serde_json::Value> for BaseStatisticsPart2 {
 }
 
 #[derive(Default, Clone)]
-#[tpd]
+#[tpd(no_verify)]
 #[derive(Debug)]
 pub struct _ReportBaseStatisticsPart2 {
     pub report_no: usize,
@@ -47,11 +47,11 @@ pub struct _ReportBaseStatisticsPart2 {
     pub data: Arc<Mutex<DemultiplexedData<PerReadReportData<BaseStatisticsPart2>>>>,
 }
 
-impl _ReportBaseStatisticsPart2 {
+impl Partial_ReportBaseStatisticsPart2 {
     pub fn new(report_no: usize) -> Self {
         Self {
-            report_no,
-            data: Arc::new(Mutex::new(DemultiplexedData::default())),
+            report_no: TomlValue::new_ok_unplaced(report_no),
+            data: Some(Default::default()),
         }
     }
 }

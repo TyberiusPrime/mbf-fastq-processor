@@ -58,7 +58,11 @@ pub struct RegionDefinition {
 }
 
 impl<R> VerifyIn<R> for PartialRegionDefinition {
-    fn verify(&mut self, _parent: &R) -> std::result::Result<(), ValidationFailure>
+    fn verify(
+        &mut self,
+        _parent: &R,
+        _options: &VerifyOptions,
+    ) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {

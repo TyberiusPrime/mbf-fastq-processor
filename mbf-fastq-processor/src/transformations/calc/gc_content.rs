@@ -1,6 +1,5 @@
 #![allow(clippy::unnecessary_wraps)]
 
-use super::BaseContent;
 use crate::transformations::prelude::*;
 
 /// Calculate (relative) GC content. See `CalcBaseContent`
@@ -15,18 +14,16 @@ pub struct GCContent {
 }
 
 impl VerifyIn<PartialConfig> for PartialGCContent {
-    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    fn verify(
+        &mut self,
+        parent: &PartialConfig,
+        _options: &VerifyOptions,
+    ) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {
         self.segment.validate_segment(parent);
         Ok(())
-    }
-}
-
-impl GCContent {
-    pub(crate) fn into_base_content(self) -> BaseContent {
-        BaseContent::for_gc_replacement(self.out_label, self.segment)
     }
 }
 

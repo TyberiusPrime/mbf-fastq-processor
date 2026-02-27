@@ -4,9 +4,10 @@ use super::super::validate_dna;
 use std::collections::HashSet;
 
 use super::super::tag::default_segment_all;
+use crate::config::deser::NonAmbigousDNA;
 
 /// Include a report at this position
-#[derive(Clone, JsonSchema)]
+#[derive(JsonSchema)]
 #[tpd]
 #[derive(Debug)]
 #[allow(clippy::struct_excessive_bools)]
@@ -26,7 +27,8 @@ pub struct Report {
     #[tpd(default)]
     pub debug_reproducibility: bool,
 
-    pub count_oligos: Option<Vec<String>>,
+    #[schemars(with = "Option<Vec<String>>")]
+    pub count_oligos: Option<Vec<NonAmbigousDNA>>,
 
     #[tpd(adapt_in_verify(String))]
     #[schemars(with = "String")]
@@ -37,8 +39,29 @@ pub struct Report {
     pub tag_histograms: Option<Vec<String>>,
 }
 
+impl Clone for PartialReport {
+    fn clone(&self) -> Self {
+        Self {
+            name: self.name.clone(),
+            count: self.count.clone(),
+            base_statistics: self.base_statistics.clone(),
+            length_distribution: self.length_distribution.clone(),
+            duplicate_count_per_read: self.duplicate_count_per_read.clone(),
+            duplicate_count_per_fragment: self.duplicate_count_per_fragment.clone(),
+            debug_reproducibility: self.debug_reproducibility.clone(),
+            count_oligos: self.count_oligos.clone(),
+            count_oligos_segment: self.count_oligos_segment.clone(),
+            tag_histograms: self.tag_histograms.clone(),
+        }
+    }
+}
+
 impl VerifyIn<PartialConfig> for PartialReport {
-    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    fn verify(
+        &mut self,
+        parent: &PartialConfig,
+        _options: &VerifyOptions,
+    ) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {
@@ -52,6 +75,7 @@ impl VerifyIn<PartialConfig> for PartialReport {
         self.count.or(true);
         self.count_oligos_segment.or(SegmentIndexOrAll::All);
         self.count_oligos_segment.validate_segment(parent);
+
         Ok(())
     }
 }
@@ -93,15 +117,6 @@ impl Step for Report {
                             "Report labels must be distinct. Duplicated: \"{}\"",
                             self.name
                         )
-                    }
-                    if let Some(count_oligos) = c.count_oligos.as_ref() {
-                        for oligo in count_oligos {
-                            if oligo.is_empty() {
-                                bail!("Oligo cannot be empty")
-                            }
-                            validate_dna(oligo.as_bytes())
-                                .with_context(|| format!("validating oligo '{oligo}'"))?;
-                        }
                     }
                 }
                 _ => unreachable!(),

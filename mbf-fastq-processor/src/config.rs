@@ -13,7 +13,7 @@ use std::cell::RefCell;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
-use toml_pretty_deser::prelude::*;
+use toml_pretty_deser::{Visitor, prelude::*};
 
 pub mod deser;
 mod input;
@@ -140,6 +140,9 @@ pub struct Config {
 
     #[tpd(nested)]
     pub benchmark: Option<Benchmark>,
+
+    #[tpd(skip)]
+    pub report_labels: Vec<String>,
 }
 
 #[derive(Debug)]
@@ -150,12 +153,15 @@ pub struct CheckedConfig {
     pub options: Options,
     pub barcodes: IndexMap<String, Barcodes>,
     pub benchmark: Option<Benchmark>,
-
     pub report_labels: Vec<String>,
 }
 
 impl VerifyIn<TPDRoot> for PartialConfig {
-    fn verify(&mut self, parent: &TPDRoot) -> std::result::Result<(), ValidationFailure>
+    fn verify(
+        &mut self,
+        parent: &TPDRoot,
+        _options: &VerifyOptions,
+    ) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized,
     {
@@ -175,11 +181,9 @@ impl VerifyIn<TPDRoot> for PartialConfig {
                     fail_output_after_bytes: TomlValue::new_ok(None, 0..0),
                     fail_output_error: TomlValue::new_ok(None, 0..0),
                     fail_output_raw_os_code: TomlValue::new_ok(None, 0..0),
-                    tpd_field_match_mode: parent.tpd_field_match_mode,
                 },
                 0..0,
             ),
-            tpd_field_match_mode: parent.tpd_field_match_mode,
         });
         if !self.input.is_ok() {
             //we can't check transforms if the input def has failed,
@@ -196,6 +200,8 @@ impl VerifyIn<TPDRoot> for PartialConfig {
         self.verify_for_any_output();
         self.configure_rapid_gzip();
         self.verify_head_rapidgzip_conflict();
+        self.expand_transformations();
+
         Ok(())
     }
 }
@@ -267,6 +273,8 @@ impl PartialConfig {
             .and_then(|x| x.as_ref())
             .and_then(|x| x.enable.as_ref())
             .is_some_and(|o| *o);
+        self.transform.sync_nested_state();
+        let transforms_ok = self.transform.is_ok();
         let mut report_transform = self.transform.as_mut().and_then(|x| {
             x.iter_mut().find(|t| {
                 matches!(
@@ -295,7 +303,7 @@ impl PartialConfig {
             report_transform.state = TomlValueState::Custom { spans };
             report_transform.help =
                 Some("Either remove the report, or enable it's output.".to_string());
-        } else if (report_html || report_json) && report_transform.is_none() {
+        } else if (report_html || report_json) && report_transform.is_none() && transforms_ok {
             let mut spans = Vec::new();
             if let Some(tv_report_html) = self
                 .output
@@ -326,6 +334,56 @@ impl PartialConfig {
             self.output.state = TomlValueState::Custom { spans };
             self.output.help =
                 Some("No report step, but report output requested.\nRemove/disable report_html & report_json, or add in a report step.".to_string());
+        } else {
+            let mut report_names_to_spans: HashMap<
+                String,
+                Vec<&mut TomlValue<PartialTransformation>>,
+            > = HashMap::new();
+            if let Some(transform) = self.transform.as_mut() {
+                for tv_transform in transform.iter_mut() {
+                    if let Some(transform) = tv_transform.as_ref() {
+                        let name = if let PartialTransformation::Report(config, _) = transform {
+                            config
+                                .as_ref()
+                                .and_then(|x| x.name.as_ref())
+                                .map(|x| x.to_string())
+                        } else if let PartialTransformation::_InternalReadCount(config, _) =
+                            transform
+                        {
+                            config
+                                .as_ref()
+                                .and_then(|x| x.out_label.as_ref())
+                                .map(|x| x.to_string())
+                        } else {
+                            None
+                        };
+                        if let Some(name) = name {
+                            match report_names_to_spans.entry(name) {
+                                std::collections::hash_map::Entry::Occupied(occupied_entry) => {
+                                    occupied_entry.into_mut().push(tv_transform);
+                                }
+                                std::collections::hash_map::Entry::Vacant(vacant_entry) => {
+                                    vacant_entry.insert(vec![tv_transform]);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            for (report_name, mut transforms) in report_names_to_spans.into_iter() {
+                if transforms.len() > 1 {
+                    let spans = transforms
+                        .iter()
+                        .map(|tv_transform| {
+                            (tv_transform.span(), "Report name not unique".to_string())
+                        })
+                        .collect();
+                    transforms[0].state = TomlValueState::Custom { spans };
+                    transforms[0].help = Some(format!(
+                        "Multiple reports with the same name '{report_name}' found. Please ensure all reports have unique names."
+                    ));
+                }
+            }
         }
     }
 
@@ -379,7 +437,7 @@ impl PartialConfig {
             ];
             head_tv.state = TomlValueState::Custom { spans };
             head_tv.help = Some(
-                "build_rapidgzip_index and Head cannot be used together (index would not be created). Set build_rapidgzip_index to false.".to_string(),
+                "build_rapidgzip_index and Head cannot be used together (index would not be created).\nSet build_rapidgzip_index to false.".to_string(),
             );
         }
     }
@@ -531,7 +589,6 @@ impl PartialConfig {
                     output_hash_compressed: TomlValue::new_ok(false, 0..0),
                     ix_separator: TomlValue::new_ok(output::default_ix_separator(), 0..0),
                     chunksize: TomlValue::new_ok(None, 0..0),
-                    tpd_field_match_mode: self.tpd_field_match_mode,
                 }),
                 0..0,
             );
@@ -615,219 +672,373 @@ impl PartialConfig {
             }
         }
     }
-}
 
-#[allow(clippy::used_underscore_items)]
-fn expand_reports<F: FnMut(Transformation), G: FnMut(Transformation)>(
-    mut push_new: F,
-    mut push_existing: G,
-    res_report_labels: &mut Vec<String>,
-    report_no: &mut usize,
-    config: crate::transformations::reports::Report,
-) {
-    use crate::transformations::prelude::DemultiplexedData;
-    use crate::transformations::reports;
-    push_existing(Transformation::Report(config.clone())); // for validation. 
-    // We remove it again later on. Transformation::Expand
-    res_report_labels.push(config.name);
-    if config.count {
-        push_new(Transformation::_ReportCount(Box::new(
-            reports::_ReportCount::new(*report_no),
-        )));
-    }
-    if config.length_distribution {
-        push_new(Transformation::_ReportLengthDistribution(Box::new(
-            reports::_ReportLengthDistribution::new(*report_no),
-        )));
-    }
-    if config.duplicate_count_per_read {
-        push_new(Transformation::_ReportDuplicateCount(Box::new(
-            reports::_ReportDuplicateCount {
-                report_no: *report_no,
-                data_per_segment: Arc::new(Mutex::new(DemultiplexedData::default())),
-                debug_reproducibility: config.debug_reproducibility,
-                initial_filter_capacity: Arc::new(Mutex::new(None)),
-                actual_filter_capacity: None,
-            },
-        )));
-    }
-    if config.duplicate_count_per_fragment {
-        push_new(Transformation::_ReportDuplicateFragmentCount(Box::new(
-            reports::_ReportDuplicateFragmentCount {
-                report_no: *report_no,
-                data: Arc::new(Mutex::new(DemultiplexedData::default())),
-                debug_reproducibility: config.debug_reproducibility,
-                initial_filter_capacity: Arc::new(Mutex::new(None)),
-                actual_filter_capacity: None,
-            },
-        )));
-    }
-    if config.base_statistics {
-        use crate::transformations::reports;
-        push_new(Transformation::_ReportBaseStatisticsPart1(Box::new(
-            reports::_ReportBaseStatisticsPart1::new(*report_no),
-        )));
-        push_new(Transformation::_ReportBaseStatisticsPart2(Box::new(
-            reports::_ReportBaseStatisticsPart2::new(*report_no),
-        )));
-    }
+    pub fn expand_transformations(&mut self) {
+        self.transform.sync_nested_state(); // since we normally would only update this once
+        // verify is done, but we need accurate info
+        if self.transform.is_ok() {
+            let transform_span = self.transform.span();
+            if let Some(mut transforms) = self.transform.take().into_inner() {
+                //which also means all childs are ok.
 
-    if let Some(count_oligos) = config.count_oligos.as_ref() {
-        push_new(Transformation::_ReportCountOligos(Box::new(
-            reports::_ReportCountOligos::new(*report_no, count_oligos, config.count_oligos_segment),
-        )));
-    }
-    if let Some(tag_histograms) = config.tag_histograms.as_ref() {
-        for tag_name in tag_histograms {
-            push_new(Transformation::_ReportTagHistogram(Box::new(
-                reports::_ReportTagHistogram::new(*report_no, tag_name.clone()),
-            )));
+                let expanded_transforms: RefCell<Vec<TomlValue<PartialTransformation>>> =
+                    RefCell::new(Vec::new());
+                let mut res_report_labels = Vec::new();
+                let mut report_no = 0;
+                let mut push_existing =
+                    |t: TomlValue<PartialTransformation>| expanded_transforms.borrow_mut().push(t);
+                let mut push_new = |t: PartialTransformation| {
+                    expanded_transforms
+                        .borrow_mut()
+                        .push(TomlValue::new_ok(t, 0..0));
+                };
+
+                self.expand_spot_checks(&mut push_new, &transforms);
+
+                for mut t in transforms.drain(..) {
+                    match t.as_mut().expect("parent was ok") {
+                        PartialTransformation::ExtractRegion(step_config, tag_span) => {
+                            let step_config =
+                                step_config.take().into_inner().expect("Parent was ok?");
+                            let regions = TomlValue::new_ok(
+                                vec![TomlValue::new_ok(
+                                    crate::transformations::PartialRegionDefinition {
+                                        source: step_config.source,
+                                        start: step_config.start,
+                                        length: step_config.len,
+                                        anchor: step_config.anchor,
+                                    },
+                                    0..0,
+                                )],
+                                0..0,
+                            );
+                            push_new(PartialTransformation::ExtractRegions(
+                                TomlValue::new_ok_unplaced(
+                                    crate::transformations::extract::PartialRegions {
+                                        out_label: step_config.out_label,
+                                        regions,
+                                        // region_separator: None,
+                                        output_tag_type: Some(std::sync::OnceLock::new()),
+                                    },
+                                ),
+                                tag_span.clone(),
+                            ));
+                        }
+                        PartialTransformation::Report(report_config, tag_span) => {
+                            Self::expand_reports(
+                                &mut push_new,
+                                &mut push_existing,
+                                &mut res_report_labels,
+                                &mut report_no,
+                                report_config,
+                                tag_span.clone(),
+                            );
+                        }
+
+                        PartialTransformation::_InternalReadCount(step_config, tag_span) => {
+                            if let Some(step_config) = step_config.take().into_inner() {
+                                res_report_labels.push(
+                                    step_config
+                                        .out_label
+                                        .as_ref()
+                                        .expect("parent was ok")
+                                        .clone(),
+                                );
+                                let step_config: Box<_> =
+                                    Box::new(crate::transformations::Partial_InternalReadCount {
+                                        out_label: step_config.out_label,
+                                        report_no: Some(report_no),
+                                        count: Some(Default::default()),
+                                    });
+                                report_no += 1;
+                                push_new(PartialTransformation::_InternalReadCount(
+                                    TomlValue::new_ok_unplaced(step_config),
+                                    tag_span.clone(),
+                                ));
+                            }
+                        }
+                        PartialTransformation::CalcGCContent(step_config, tag_span) => {
+                            if let Some(step_config) = step_config.take().into_inner() {
+                                push_new(PartialTransformation::CalcBaseContent(
+                                    TomlValue::new_ok_unplaced(
+                                        crate::transformations::calc::PartialBaseContent::new(
+                                            step_config.out_label,
+                                            step_config.segment,
+                                            true,
+                                            BString::from("GC"),
+                                            BString::from("N"),
+                                        ),
+                                    ),
+                                    tag_span.clone(),
+                                ));
+                            }
+                        }
+                        PartialTransformation::CalcNCount(step_config, tag_span) => {
+                            if let Some(step_config) = step_config.take().into_inner() {
+                                push_new(PartialTransformation::CalcBaseContent(
+                                    TomlValue::new_ok_unplaced(
+                                        crate::transformations::calc::PartialBaseContent::new(
+                                            step_config.out_label,
+                                            step_config.segment,
+                                            false,
+                                            BString::from("N"),
+                                            BString::default(),
+                                        ),
+                                    ),
+                                    tag_span.clone(),
+                                ));
+                            }
+                        }
+                        PartialTransformation::FilterEmpty(step_config, tag_span) => {
+                            if let Some(step_config) = step_config.take().into_inner() {
+                                // Replace FilterEmpty with CalcLength + FilterByNumericTag
+                                let length_tag_label = format!(
+                                    "_internal_length_{}",
+                                    expanded_transforms.borrow().len()
+                                );
+                                push_new(PartialTransformation::CalcLength(
+                                    TomlValue::new_ok_unplaced(
+                                        crate::transformations::calc::PartialLength {
+                                            out_label: TomlValue::new_ok_unplaced(
+                                                length_tag_label.clone(),
+                                            ),
+                                            segment: step_config.segment,
+                                        },
+                                    ),
+                                    tag_span.clone(),
+                                ));
+                                push_new(PartialTransformation::FilterByNumericTag(
+                                    TomlValue::new_ok_unplaced(
+                                        crate::transformations::filters::PartialByNumericTag {
+                                            in_label: TomlValue::new_ok_unplaced(length_tag_label),
+                                            min_value: TomlValue::new_ok_unplaced(Some(1.0)), // Non-empty means length >= 1
+                                            max_value: TomlValue::new_ok_unplaced(None),
+                                            keep_or_remove: TomlValue::new_ok_unplaced(
+                                                crate::transformations::KeepOrRemove::Keep,
+                                            ),
+                                        },
+                                    ),
+                                    tag_span.clone(),
+                                ));
+                            }
+                        }
+                        PartialTransformation::ConvertQuality(step_config, tag_span) => {
+                            if let Some(step_config) = step_config.as_ref() {
+                                //implies a check beforehand
+                                push_new(PartialTransformation::ValidateQuality(
+                                TomlValue::new_ok_unplaced(
+                                    crate::transformations::validation::PartialValidateQuality {
+                                        encoding: TomlValue::new_ok(
+                                            *step_config.from.as_ref().expect("parent was ok"),
+                                            step_config.from.span(),
+                                        ),
+                                        segment: TomlValue::new_ok_unplaced(MustAdapt::PostVerify(
+                                            SegmentIndexOrAll::All,
+                                        )),
+                                    },
+                                ),
+                                tag_span.clone(),
+                            ));
+                                push_existing(t);
+                            }
+                        }
+                        PartialTransformation::Lowercase(step_config, tag_span) => {
+                            if let Some(step_config) = step_config.take().into_inner() {
+                                push_new(PartialTransformation::_ChangeCase(
+                                    TomlValue::new_ok_unplaced(
+                                        crate::transformations::edits::Partial_ChangeCase::new(
+                                            step_config.target.into_inner().expect("parent was ok"),
+                                            crate::transformations::edits::CaseType::Lower,
+                                            step_config.if_tag.into_inner().expect("parent was ok"),
+                                        ),
+                                    ),
+                                    tag_span.clone(),
+                                ));
+                            }
+                        }
+                        PartialTransformation::Uppercase(step_config, tag_span) => {
+                            if let Some(step_config) = step_config.take().into_inner() {
+                                push_new(PartialTransformation::_ChangeCase(
+                                    TomlValue::new_ok_unplaced(
+                                        crate::transformations::edits::Partial_ChangeCase::new(
+                                            step_config.target.into_inner().expect("parent was ok"),
+                                            crate::transformations::edits::CaseType::Upper,
+                                            step_config.if_tag.into_inner().expect("parent was ok"),
+                                        ),
+                                    ),
+                                    tag_span.clone(),
+                                ));
+                            }
+                        }
+
+                        _ => {
+                            push_existing(t);
+                        }
+                    }
+                }
+                self.transform =
+                    TomlValue::new_ok(expanded_transforms.into_inner(), transform_span);
+                self.report_labels = Some(res_report_labels);
+            } else {
+                unreachable!()
+            }
         }
     }
-    *report_no += 1;
+
+    fn expand_spot_checks<F: FnMut(PartialTransformation)>(
+        &self,
+        mut push_new: F,
+        transforms: &Vec<TomlValue<PartialTransformation>>,
+    ) {
+        if let Some(options) = self.options.as_ref()
+            && let Some(spot_check_read_pairing) = options.spot_check_read_pairing.as_ref()
+            && !spot_check_read_pairing
+        {
+            return;
+        }
+        if let Some(input) = self.input.as_ref()
+            && input.segment_count() <= 1
+        {
+            return;
+        }
+        let has_validate_name = transforms.iter().any(|step| {
+            matches!(
+                step.as_ref(),
+                Some(PartialTransformation::ValidateName(_, _))
+            )
+        });
+        let has_spot_check = transforms.iter().any(|step| {
+            matches!(
+                step.as_ref(),
+                Some(PartialTransformation::ValidateReadPairing(_, _))
+            )
+        });
+        let is_benchmark = self
+            .benchmark
+            .as_ref()
+            .and_then(|x| x.as_ref())
+            .and_then(|x| x.enable.as_ref())
+            .copied()
+            .unwrap_or(false);
+
+        if !has_validate_name && !has_spot_check && !is_benchmark {
+            push_new(PartialTransformation::ValidateReadPairing(
+                TomlValue::new_ok_unplaced(
+                    crate::transformations::validation::PartialValidateReadPairing::new(None),
+                ),
+                0..0,
+            ));
+        }
+    }
+
+    #[allow(clippy::used_underscore_items)]
+    fn expand_reports<
+        F: FnMut(PartialTransformation),
+        G: FnMut(TomlValue<PartialTransformation>),
+    >(
+        mut push_new: F,
+        mut push_existing: G,
+        res_report_labels: &mut Vec<String>,
+        report_no: &mut usize,
+        tv_config: &mut TomlValue<crate::transformations::reports::PartialReport>,
+        enum_tag_span: std::ops::Range<usize>,
+    ) {
+        use crate::transformations::reports;
+        if let Some(config) = tv_config.as_ref() {
+            // it already has been validated...
+            // push_existing(PartialTransformation::Report(
+            //     tv_config.clone(),
+            //     enum_tag_span,
+            // )); // for validation.
+            // // We remove it again later on. Transformation::Expand
+            res_report_labels.push(config.name.as_ref().expect("parent was ok").clone());
+        }
+        if let Some(config) = tv_config.as_mut() {
+            if let Some(true) = config.count.as_ref() {
+                push_new(PartialTransformation::_ReportCount(
+                    TomlValue::new_ok_unplaced(Box::new(reports::Partial_ReportCount::new(
+                        *report_no,
+                    ))),
+                    0..0,
+                ));
+            }
+            if let Some(true) = config.length_distribution.as_ref() {
+                push_new(PartialTransformation::_ReportLengthDistribution(
+                    TomlValue::new_ok_unplaced(Box::new(
+                        reports::Partial_ReportLengthDistribution::new(*report_no),
+                    )),
+                    0..0,
+                ));
+            }
+            if let Some(true) = config.duplicate_count_per_read.as_ref() {
+                push_new(PartialTransformation::_ReportDuplicateCount(
+                    TomlValue::new_ok_unplaced(Box::new(
+                        reports::Partial_ReportDuplicateCount::new(
+                            *report_no,
+                            config.debug_reproducibility.clone(),
+                        ),
+                    )),
+                    0..0,
+                ));
+            }
+
+            if let Some(true) = config.duplicate_count_per_fragment.as_ref() {
+                push_new(PartialTransformation::_ReportDuplicateFragmentCount(
+                    TomlValue::new_ok_unplaced(Box::new(
+                        reports::Partial_ReportDuplicateFragmentCount::new(
+                            *report_no,
+                            config.debug_reproducibility.clone(),
+                        ),
+                    )),
+                    0..0,
+                ));
+            }
+            if let Some(true) = config.base_statistics.as_ref() {
+                push_new(PartialTransformation::_ReportBaseStatisticsPart1(
+                    TomlValue::new_ok_unplaced(Box::new(
+                        reports::Partial_ReportBaseStatisticsPart1::new(*report_no),
+                    )),
+                    0..0,
+                ));
+                push_new(PartialTransformation::_ReportBaseStatisticsPart2(
+                    TomlValue::new_ok_unplaced(Box::new(
+                        reports::Partial_ReportBaseStatisticsPart2::new(*report_no),
+                    )),
+                    0..0,
+                ));
+            }
+            if let Some(Some(count_oligos)) = config.count_oligos.take().into_inner() {
+                push_new(PartialTransformation::_ReportCountOligos(
+                    TomlValue::new_ok_unplaced(Box::new(reports::Partial_ReportCountOligos::new(
+                        *report_no,
+                        count_oligos
+                            .into_iter()
+                            .filter_map(|x| x.into_inner())
+                            .map(|x| x.0)
+                            .collect(),
+                        config.count_oligos_segment.clone(),
+                    ))),
+                    0..0,
+                ));
+            }
+            if let Some(Some(tag_histograms)) = config.tag_histograms.as_ref() {
+                for tag_name in tag_histograms {
+                    push_new(PartialTransformation::_ReportTagHistogram(
+                        TomlValue::new_ok_unplaced(Box::new(
+                            reports::Partial_ReportTagHistogram::new(*report_no, tag_name.clone()),
+                        )),
+                        0..0,
+                    ));
+                }
+            }
+            *report_no += 1;
+        }
+    }
 }
 
 impl Config {
     /// There are transformations that we need to expand right away,
     /// so we can accurately check the names
-    #[allow(clippy::too_many_lines)]
-    fn expand_transformations(&mut self) -> Vec<String> {
-        let expanded_transforms = RefCell::new(Vec::new());
-        let mut res_report_labels = Vec::new();
-        let mut report_no = 0;
-        let mut push_existing = |t: Transformation| expanded_transforms.borrow_mut().push(t);
-        let mut push_new = |t: Transformation| {
-            expanded_transforms.borrow_mut().push(t);
-        };
-
-        self.expand_spot_checks(&mut push_new);
-
-        for t in self.transform.drain(..) {
-            match t {
-                Transformation::ExtractRegion(step_config) => {
-                    let regions = vec![crate::transformations::RegionDefinition {
-                        source: step_config.source,
-                        start: step_config.start,
-                        length: step_config.len,
-                        anchor: step_config.anchor,
-                    }];
-                    push_new(Transformation::ExtractRegions(
-                        crate::transformations::extract::Regions {
-                            out_label: step_config.out_label,
-                            regions,
-                            // region_separator: None,
-                            output_tag_type: std::sync::OnceLock::new(),
-                        },
-                    ));
-                }
-
-                Transformation::Report(report_config) => {
-                    expand_reports(
-                        &mut push_new,
-                        &mut push_existing,
-                        &mut res_report_labels,
-                        &mut report_no,
-                        report_config,
-                    );
-                }
-
-                Transformation::_InternalReadCount(step_config) => {
-                    res_report_labels.push(step_config.out_label.clone());
-                    let step_config: Box<_> =
-                        Box::new(crate::transformations::_InternalReadCount::new(
-                            step_config.out_label,
-                            report_no,
-                        ));
-                    report_no += 1;
-                    push_new(Transformation::_InternalReadCount(step_config));
-                }
-                Transformation::CalcGCContent(step_config) => {
-                    push_new(Transformation::CalcBaseContent(
-                        step_config.into_base_content(),
-                    ));
-                }
-                Transformation::CalcNCount(config) => {
-                    push_new(Transformation::CalcBaseContent(config.into_base_content()));
-                }
-                Transformation::FilterEmpty(step_config) => {
-                    // Replace FilterEmpty with CalcLength + FilterByNumericTag
-                    let length_tag_label =
-                        format!("_internal_length_{}", expanded_transforms.borrow().len());
-                    push_new(Transformation::CalcLength(
-                        crate::transformations::calc::Length {
-                            out_label: length_tag_label.clone(),
-                            segment: step_config.segment,
-                        },
-                    ));
-                    push_new(Transformation::FilterByNumericTag(
-                        crate::transformations::filters::ByNumericTag {
-                            in_label: length_tag_label,
-                            min_value: Some(1.0), // Non-empty means length >= 1
-                            max_value: None,
-                            keep_or_remove: crate::transformations::KeepOrRemove::Keep,
-                        },
-                    ));
-                }
-                Transformation::ConvertQuality(ref step_config) => {
-                    //implies a check beforehand
-                    push_new(Transformation::ValidateQuality(
-                        crate::transformations::validation::ValidateQuality {
-                            encoding: step_config.from,
-                            segment: SegmentIndexOrAll::All,
-                        },
-                    ));
-                    push_new(t);
-                }
-                Transformation::Lowercase(step_config) => {
-                    push_new(Transformation::_ChangeCase(
-                        crate::transformations::edits::_ChangeCase::new(
-                            step_config.target,
-                            crate::transformations::edits::CaseType::Lower,
-                            step_config.if_tag,
-                        ),
-                    ));
-                }
-                Transformation::Uppercase(step_config) => {
-                    push_new(Transformation::_ChangeCase(
-                        crate::transformations::edits::_ChangeCase::new(
-                            step_config.target,
-                            crate::transformations::edits::CaseType::Upper,
-                            step_config.if_tag,
-                        ),
-                    ));
-                }
-                other => {
-                    push_existing(other);
-                }
-            }
-        }
-        self.transform = expanded_transforms.into_inner();
-        res_report_labels
-    }
-
-    fn expand_spot_checks<F: FnMut(Transformation)>(&self, mut push_new: F) {
-        if !self.options.spot_check_read_pairing {
-            return;
-        }
-        if self.input.segment_count() <= 1 {
-            return;
-        }
-        let has_validate_name = self
-            .transform
-            .iter()
-            .any(|step| matches!(step, Transformation::ValidateName(_)));
-        let has_spot_check = self
-            .transform
-            .iter()
-            .any(|step| matches!(step, Transformation::ValidateReadPairing(_)));
-        let is_benchmark = self.benchmark.as_ref().is_some_and(|b| b.enable);
-
-        if !has_validate_name && !has_spot_check && !is_benchmark {
-            push_new(Transformation::ValidateReadPairing(
-                crate::transformations::validation::ValidateReadPairing::default(),
-            ));
-        }
-    }
 
     #[allow(clippy::too_many_lines)]
     pub fn check(self) -> Result<CheckedConfig> {
@@ -840,7 +1051,6 @@ impl Config {
 
         //no point in checking them if segment definition is broken
         //self.check_output(&mut errors);
-        let report_labels = Some(self.expand_transformations());
         if errors.is_empty() {
             let (tag_names, stages_) = self.check_transformations(&mut errors);
             //self.transfrom is now empty, the trafos have been expanded into stepsk.
@@ -877,7 +1087,7 @@ impl Config {
             options: self.options,
             barcodes: self.barcodes.unwrap_or_default(),
             benchmark: self.benchmark,
-            report_labels: report_labels.expect("Set above"),
+            report_labels: self.report_labels,
         })
     }
 
@@ -1201,7 +1411,7 @@ impl Config {
         }
 
         //rapidgzip single core is slower than regular gzip
-        if self.input.options.threads_per_segment.expect("Set before") == 1 
+        if self.input.options.threads_per_segment.expect("Set before") == 1
             // if user requests an index, run rapidgzip anyway
             && !self.input.options.build_rapidgzip_index.unwrap_or(false)
             // if the user explicitly requested rapidgzip, then do don't disable it.
@@ -1292,7 +1502,11 @@ pub struct Barcodes {
 }
 
 impl VerifyIn<PartialConfig> for PartialBarcodes {
-    fn verify(&mut self, _parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    fn verify(
+        &mut self,
+        _parent: &PartialConfig,
+        _options: &VerifyOptions,
+    ) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized,
     {

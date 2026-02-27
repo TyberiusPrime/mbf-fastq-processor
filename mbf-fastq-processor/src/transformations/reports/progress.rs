@@ -38,7 +38,11 @@ pub struct Progress {
 }
 
 impl VerifyIn<PartialConfig> for PartialProgress {
-    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    fn verify(
+        &mut self,
+        parent: &PartialConfig,
+        _options: &VerifyOptions,
+    ) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {

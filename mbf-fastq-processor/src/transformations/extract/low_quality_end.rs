@@ -20,7 +20,11 @@ pub struct LowQualityEnd {
 }
 
 impl VerifyIn<PartialConfig> for PartialLowQualityEnd {
-    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    fn verify(
+        &mut self,
+        parent: &PartialConfig,
+        options: &VerifyOptions,
+    ) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {

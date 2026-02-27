@@ -13,7 +13,11 @@ pub struct RegionsToLength {
 }
 
 impl VerifyIn<PartialConfig> for PartialRegionsToLength {
-    fn verify(&mut self, _parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    fn verify(
+        &mut self,
+        _parent: &PartialConfig,
+        _options: &VerifyOptions,
+    ) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {

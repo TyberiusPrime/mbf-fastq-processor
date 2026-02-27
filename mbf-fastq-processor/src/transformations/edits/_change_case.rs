@@ -30,8 +30,26 @@ pub struct _ChangeCase {
     pub if_tag: Option<String>,
 }
 
+impl Partial_ChangeCase {
+    pub fn new(
+        target: MustAdapt<String, ResolvedSourceAll>,
+        case_type: CaseType,
+        if_tag: Option<String>,
+    ) -> Self {
+        Self {
+            target: TomlValue::new_ok_unplaced(target),
+            case_type: TomlValue::new_ok_unplaced(case_type),
+            if_tag: TomlValue::new_ok_unplaced(if_tag),
+        }
+    }
+}
+
 impl VerifyIn<PartialConfig> for Partial_ChangeCase {
-    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    fn verify(
+        &mut self,
+        parent: &PartialConfig,
+        _options: &VerifyOptions,
+    ) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {

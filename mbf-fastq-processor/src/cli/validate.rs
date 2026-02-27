@@ -12,6 +12,7 @@ pub fn validate_config(toml_file: &Path) -> Result<Vec<String>> {
     let checked = match result {
         Ok(config) => config,
         Err(e) => {
+            //dbg!(&e);
             return Err(anyhow::anyhow!(
                 "{}",
                 improve_error_messages("config.toml", e)

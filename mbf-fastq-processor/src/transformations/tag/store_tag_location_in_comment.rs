@@ -33,7 +33,11 @@ pub struct StoreTagLocationInComment {
 }
 
 impl VerifyIn<PartialConfig> for PartialStoreTagLocationInComment {
-    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    fn verify(
+        &mut self,
+        parent: &PartialConfig,
+        options: &VerifyOptions,
+    ) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {

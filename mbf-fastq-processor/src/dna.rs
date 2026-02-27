@@ -379,6 +379,13 @@ pub fn contains_iupac_ambigous(input: &[u8]) -> bool {
         )
     })
 }
+//
+//check the complet string is valid dna, upper case only
+pub fn all_dna(input: &[u8]) -> bool {
+    input
+        .iter()
+        .all(|&char| matches!(char, b'A' | b'C' | b'T' | b'G'))
+}
 
 //check the complet string is valid dna + iupac, upper case only
 pub fn all_iupac(input: &[u8]) -> bool {
