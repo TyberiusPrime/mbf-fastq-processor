@@ -12,11 +12,11 @@ pub struct _ReportLengthDistribution {
     pub data: Arc<Mutex<DemultiplexedData<PerReadReportData<Vec<usize>>>>>,
 }
 
-impl _ReportLengthDistribution {
+impl Partial_ReportLengthDistribution {
     pub fn new(report_no: usize) -> Self {
         Self {
-            report_no,
-            data: Arc::new(Mutex::new(DemultiplexedData::default())),
+            report_no: TomlValue::new_ok_unplaced(report_no),
+            data: Some(Default::default()),
         }
     }
 }

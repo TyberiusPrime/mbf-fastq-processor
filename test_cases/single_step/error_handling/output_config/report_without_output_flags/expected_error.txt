@@ -6,7 +6,7 @@ Error 1/1
  5 │     action = 'Report'
    ┆              ────┬───
    ┆                  │
-   ┆                  ╰──── Involving this enum variant.
+   ┆                  ╰──── In this step
    ┆
  6 │     name = 'report'
  7 │     count = true
@@ -22,4 +22,5 @@ Error 1/1
    ┆                    ╰─ Add report_json | report_html here?
 ───╯
 Hint: Either remove the report, or enable it's output.
+      See https://doc_url.example/version-stripped-from-test/docs/reference/Report
 

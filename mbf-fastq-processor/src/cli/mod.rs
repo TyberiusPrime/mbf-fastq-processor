@@ -21,11 +21,14 @@ pub(crate) fn improve_error_messages(
                 && let Some(steps) = partial.transform.value.as_mut()
             {
                 for tv_step in steps.iter_mut() {
-                    if tv_step.is_nested()
+                    if !tv_step.is_ok()
                         && let Some(step) = tv_step.value.as_ref()
                     {
                         let step_name = step.tpd_get_tag();
-                        tv_step.help = Some(format!("See {doc_url}{step_name}"));
+                        tv_step.help = match tv_step.help.as_ref() {
+                            Some(old_help) => Some(format!("{old_help}\nSee {doc_url}{step_name}")),
+                            None => Some(format!("See {doc_url}{step_name}")),
+                        };
                         if let Some(context) = tv_step.context.as_mut() {
                             context.1 = "In this step".to_string();
                         }

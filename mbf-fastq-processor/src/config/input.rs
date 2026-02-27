@@ -198,6 +198,8 @@ impl PartialInput {
     }
     #[allow(clippy::too_many_lines)] // I know, but it's two distingt if branches, 
     fn build_structured(&mut self, match_mode: FieldMatchMode) -> Result<(), ()> {
+        //todo: remove
+        //Result
         if let Err(()) = self.verify_segment_names(match_mode) {
             self.segments.state = TomlValueState::Nested;
         }
@@ -369,6 +371,7 @@ impl VerifyIn<super::PartialConfig> for PartialInput {
     fn verify(
         &mut self,
         parent: &super::PartialConfig,
+        options: &VerifyOptions,
     ) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized + toml_pretty_deser::Visitor,
@@ -384,13 +387,12 @@ impl VerifyIn<super::PartialConfig> for PartialInput {
                 use_rapidgzip: TomlValue::new_ok(default.use_rapidgzip, 0..0),
                 build_rapidgzip_index: TomlValue::new_ok(default.build_rapidgzip_index, 0..0),
                 threads_per_segment: TomlValue::new_ok(default.threads_per_segment, 0..0),
-                tpd_field_match_mode: parent.tpd_field_match_mode,
             }
         });
 
         self.verify_same_number_of_input_segments();
 
-        if let Err(()) = self.build_structured(parent.tpd_field_match_mode)
+        if let Err(()) = self.build_structured(options.field_match_mode)
         //errors go into the fields
         {}
 
@@ -427,7 +429,11 @@ pub struct InputOptions {
 }
 
 impl VerifyIn<PartialInput> for PartialInputOptions {
-    fn verify(&mut self, _parent: &PartialInput) -> std::result::Result<(), ValidationFailure>
+    fn verify(
+        &mut self,
+        _parent: &PartialInput,
+        _options: &VerifyOptions,
+    ) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {
@@ -539,6 +545,17 @@ impl Input {
 }
 
 impl PartialInput {
+    #[must_use]
+    pub fn segment_count(&self) -> usize {
+        match self
+            .structured
+            .as_ref()
+            .expect("structured input must be set after config parsing")
+        {
+            StructuredInput::Interleaved { segment_order, .. }
+            | StructuredInput::Segmented { segment_order, .. } => segment_order.len(),
+        }
+    }
     #[must_use]
     pub fn get_segment_order(&self) -> &Vec<String> {
         match self

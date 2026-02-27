@@ -9,7 +9,7 @@ pub struct DuplicateFragmentCountData {
 }
 
 #[derive(Default, Clone)]
-#[tpd]
+#[tpd(no_verify)]
 #[derive(Debug)]
 pub struct _ReportDuplicateFragmentCount {
     pub report_no: usize,
@@ -19,9 +19,21 @@ pub struct _ReportDuplicateFragmentCount {
     pub debug_reproducibility: bool,
     #[tpd(skip)]
     pub initial_filter_capacity: Arc<Mutex<Option<usize>>>,
+    #[tpd(skip)]
     pub actual_filter_capacity: Option<usize>,
 }
-//todo: FromTomlTable itself -> panic
+
+impl Partial_ReportDuplicateFragmentCount {
+    pub fn new(report_no: usize, debug_reproducibility: TomlValue<bool>) -> Self {
+        Self {
+            report_no: TomlValue::new_ok_unplaced(report_no),
+            debug_reproducibility,
+            data: Some(Default::default()),
+            initial_filter_capacity: Some(Default::default()),
+            actual_filter_capacity: Some(None),
+        }
+    }
+}
 
 impl Step for Box<_ReportDuplicateFragmentCount> {
     fn transmits_premature_termination(&self) -> bool {

@@ -46,7 +46,11 @@ fn build_lookup(bases: &BString) -> Vec<bool> {
 }
 
 impl VerifyIn<PartialConfig> for PartialBaseContent {
-    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    fn verify(
+        &mut self,
+        parent: &PartialConfig,
+        _options: &VerifyOptions,
+    ) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {
@@ -91,6 +95,26 @@ impl VerifyIn<PartialConfig> for PartialBaseContent {
             self.bases_to_ignore_lookup = Some(build_lookup(bases_to_ignore));
         }
         Ok(())
+    }
+}
+
+impl PartialBaseContent {
+    pub fn new(
+        out_label: TomlValue<String>,
+        segment: TomlValue<MustAdapt<String, SegmentIndexOrAll>>,
+        relative: bool,
+        bases_to_count: BString,
+        bases_to_ignore: BString,
+    ) -> PartialBaseContent {
+        Self {
+            out_label,
+            segment,
+            relative: TomlValue::new_ok_unplaced(relative),
+            bases_to_count_lookup: Some(build_lookup(&bases_to_count)),
+            bases_to_ignore_lookup: Some(build_lookup(&bases_to_ignore)),
+            bases_to_count: TomlValue::new_ok_unplaced(bases_to_count),
+            bases_to_ignore: TomlValue::new_ok_unplaced(bases_to_ignore),
+        }
     }
 }
 
@@ -147,26 +171,6 @@ impl BaseContent {
                 (counted as f64 / considered as f64) * 100.0
             }
         }
-    }
-
-    pub(crate) fn for_gc_replacement(out_label: String, segment: SegmentIndexOrAll) -> Self {
-        Self::new(
-            out_label,
-            segment,
-            true,
-            BString::from("GC"),
-            BString::from("N"),
-        )
-    }
-
-    pub(crate) fn for_n_count(out_label: String, segment: SegmentIndexOrAll) -> Self {
-        Self::new(
-            out_label,
-            segment,
-            false,
-            BString::from("N"),
-            BString::default(),
-        )
     }
 }
 

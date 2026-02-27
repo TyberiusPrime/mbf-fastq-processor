@@ -86,7 +86,7 @@ impl From<HistogramData> for serde_json::Value {
 }
 
 #[derive(Clone)]
-#[tpd]
+#[tpd(no_verify)]
 #[derive(Debug)]
 pub struct _ReportTagHistogram {
     pub report_no: usize,
@@ -97,13 +97,13 @@ pub struct _ReportTagHistogram {
     pub data: Arc<Mutex<DemultiplexedData<HistogramData>>>,
 }
 
-impl _ReportTagHistogram {
-    pub fn new(report_no: usize, tag_name: String) -> Self {
+impl Partial_ReportTagHistogram {
+    pub fn new(report_no: usize, tag_name: TomlValue<String>) -> Self {
         Self {
-            report_no,
+            report_no: TomlValue::new_ok_unplaced(report_no),
             tag_name,
-            tag_type: OnceLock::new(),
-            data: Arc::new(Mutex::new(DemultiplexedData::default())),
+            tag_type: Some(OnceLock::new()),
+            data: Some(Default::default()),
         }
     }
 }

@@ -1,11 +1,24 @@
-[Step 0 (Report)]:
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+ 4 │ [[step]]
+ 5 │     action = 'Report'
+   ┆              ────┬───
+   ┆                  │
+   ┆                  ╰──── In this step
+ 6 │     name = 'report'
+   ┆                    ┬
+   ┆                    │
+   ┆                    ╰─ Report name not unique
+   ┆
+ 8 │ [[step]]
+ 9 │     action = 'Report'
+10 │     name = 'report'
+   ┆                    ┬
+   ┆                    │
+   ┆                    ╰─ Report name not unique
+───╯
+Hint: Multiple reports with the same name 'report' found. Please ensure all reports have unique names.
+      See https://doc_url.example/version-stripped-from-test/docs/reference/Report
 
-Caused by:
-    Report labels must be distinct. Duplicated: "report"
-
----------
-
-[Step 2 (Report)]:
-
-Caused by:
-    Report labels must be distinct. Duplicated: "report"

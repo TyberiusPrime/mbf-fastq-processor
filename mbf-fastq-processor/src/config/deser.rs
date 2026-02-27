@@ -820,3 +820,25 @@ impl TryFrom<&str> for TagLabel {
 }
 
 toml_pretty_deser::impl_visitor_for_try_from_str!(TagLabel, "Invalid label");
+
+#[derive(Debug, Clone)]
+pub struct NonAmbigousDNA(pub BString);
+
+impl TryFrom<&str> for NonAmbigousDNA {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        if value.is_empty() {
+            return Err("DNA sequence cannot be empty".to_string());
+        }
+        let s = value.to_uppercase();
+        for c in s.chars() {
+            if !matches!(c, 'A' | 'C' | 'G' | 'T') {
+                return Err(format!("Invalid DNA base: {c}"));
+            }
+        }
+        Ok(NonAmbigousDNA(s.as_bytes().into()))
+    }
+}
+
+toml_pretty_deser::impl_visitor_for_try_from_str!(NonAmbigousDNA, "Invalid DNA sequence");

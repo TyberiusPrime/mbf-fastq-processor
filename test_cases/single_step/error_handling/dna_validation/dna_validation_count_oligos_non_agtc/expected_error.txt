@@ -1,1 +1,21 @@
-Invalid base in DNA sequence
+Error 1/1
+   ╭─config.toml
+   ┆
+ 5 │ [[step]]
+ 6 │     action = 'Report'
+   ┆              ────┬───
+   ┆                  │
+   ┆                  ╰──── In this step
+   ┆
+ 7 │     name = 'xyz'
+ 8 │     count = false
+ 9 │     base_statistics = false
+10 │     duplicate_count_per_read = false
+11 │     duplicate_count_per_fragment = false
+12 │     length_distribution = false
+13 │     count_oligos = ['NA', 'TGG']
+   ┆                     ──┬─
+   ┆                       │
+   ┆                       ╰────────── Invalid DNA sequence
+───╯
+Hint: Invalid DNA base: N

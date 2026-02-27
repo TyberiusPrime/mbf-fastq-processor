@@ -19,8 +19,24 @@ pub struct ValidateReadPairing {
     processed_reads: std::sync::atomic::AtomicU64,
 }
 
+impl PartialValidateReadPairing {
+    pub fn new(sample_stride: Option<u64>) -> Self {
+        Self {
+            sample_stride: TomlValue::new_ok(
+                sample_stride.unwrap_or_else(default_sample_stride),
+                0..0,
+            ),
+            processed_reads: Some(Default::default()),
+        }
+    }
+}
+
 impl VerifyIn<PartialConfig> for PartialValidateReadPairing {
-    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    fn verify(
+        &mut self,
+        parent: &PartialConfig,
+        _options: &VerifyOptions,
+    ) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {

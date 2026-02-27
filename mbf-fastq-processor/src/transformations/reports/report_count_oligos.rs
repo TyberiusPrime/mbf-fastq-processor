@@ -7,7 +7,9 @@ use serde_json::{Map, Value};
 #[derive(Debug)]
 pub struct _ReportCountOligos {
     pub report_no: usize,
-    pub oligos: Vec<String>,
+    #[schemars(with = "Vec<String>")]
+    #[tpd(skip)]
+    pub oligos: Vec<BString>,
     #[tpd(skip)]
     #[schemars(skip)]
     pub counts: Arc<Mutex<DemultiplexedData<Vec<usize>>>>,
@@ -18,7 +20,11 @@ pub struct _ReportCountOligos {
 }
 
 impl VerifyIn<PartialConfig> for Partial_ReportCountOligos {
-    fn verify(&mut self, parent: &PartialConfig) -> std::result::Result<(), ValidationFailure>
+    fn verify(
+        &mut self,
+        parent: &PartialConfig,
+        _options: &VerifyOptions,
+    ) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {
@@ -27,13 +33,16 @@ impl VerifyIn<PartialConfig> for Partial_ReportCountOligos {
     }
 }
 
-impl _ReportCountOligos {
-    pub fn new(report_no: usize, oligos: &[String], segment: SegmentIndexOrAll) -> Self {
-        let oligos = oligos.to_vec();
+impl Partial_ReportCountOligos {
+    pub fn new(
+        report_no: usize,
+        oligos: Vec<BString>,
+        segment: TomlValue<MustAdapt<String, SegmentIndexOrAll>>,
+    ) -> Self {
         Self {
-            report_no,
-            oligos,
-            counts: Arc::new(Mutex::new(DemultiplexedData::default())),
+            report_no: TomlValue::new_ok_unplaced(report_no),
+            oligos: Some(oligos),
+            counts: Some(Default::default()),
             segment,
         }
     }
@@ -93,7 +102,7 @@ impl Step for Box<_ReportCountOligos> {
 
                 // Optimized search using memchr for faster substring matching
                 for (ii, oligo) in self.oligos.iter().enumerate() {
-                    if memmem::find(seq, oligo.as_bytes()).is_some() {
+                    if memmem::find(seq, oligo).is_some() {
                         counts
                             .get_mut(&demultiplex_tag)
                             .expect("demultiplex tag must exist in counts")[ii] += 1;
@@ -123,7 +132,7 @@ impl Step for Box<_ReportCountOligos> {
             OptDemultiplex::No => {
                 for (ii, oligo) in self.oligos.iter().enumerate() {
                     contents.insert(
-                        oligo.clone(),
+                        oligo.to_string(),
                         counts.get(&0).expect("default tag 0 must exist in counts")[ii].into(),
                     );
                 }
@@ -135,7 +144,7 @@ impl Step for Box<_ReportCountOligos> {
                         let mut local = Map::new();
                         for (ii, oligo) in self.oligos.iter().enumerate() {
                             local.insert(
-                                oligo.clone(),
+                                oligo.to_string(),
                                 counts.get(tag).expect("tag must exist in counts")[ii].into(),
                             );
                         }
