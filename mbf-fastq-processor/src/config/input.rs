@@ -80,7 +80,10 @@ impl PartialInput {
         }
     }
 
-    fn verify_segment_names(&mut self, match_mode: toml_pretty_deser::FieldMatchMode) -> Result<(), ()> {
+    fn verify_segment_names(
+        &mut self,
+        match_mode: toml_pretty_deser::FieldMatchMode,
+    ) -> Result<(), ()> {
         let mut error = false;
         if let Some(segments) = self.segments.as_mut() {
             for key in &mut segments.keys {
@@ -381,7 +384,7 @@ impl VerifyIn<super::PartialConfig> for PartialInput {
                 use_rapidgzip: TomlValue::new_ok(default.use_rapidgzip, 0..0),
                 build_rapidgzip_index: TomlValue::new_ok(default.build_rapidgzip_index, 0..0),
                 threads_per_segment: TomlValue::new_ok(default.threads_per_segment, 0..0),
-                tpd_field_match_mode: parent.tpd_field_match_mode
+                tpd_field_match_mode: parent.tpd_field_match_mode,
             }
         });
 

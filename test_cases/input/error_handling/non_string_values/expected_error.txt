@@ -2,9 +2,9 @@ Error 1/1
   ╭─config.toml
   ┆
 1 │ [input]
-2 │ read1 = [23]
-  ┆          ─┬
-  ┆           │
-  ┆           ╰── Wrong type: expected string, found integer.
+2 │     read1 = [23]
+  ┆              ─┬
+  ┆               │
+  ┆               ╰── Wrong type: expected string, found integer.
 ──╯
 Hint: This value has the wrong type.

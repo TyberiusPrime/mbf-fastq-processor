@@ -1,1 +1,1 @@
-Input file not found in segment 'read2': .+nosuchfile.fq
+Input file not found in segment 'read2': .*nosuchfile.fq
