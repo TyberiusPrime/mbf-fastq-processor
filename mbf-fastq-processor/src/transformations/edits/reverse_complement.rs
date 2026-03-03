@@ -30,6 +30,8 @@ impl VerifyIn<PartialConfig> for PartialReverseComplement {
     }
 }
 
+impl TagUser for PartialTaggedVariant<PartialReverseComplement> {}
+
 impl Step for ReverseComplement {
     fn uses_tags(
         &self,

@@ -108,6 +108,8 @@ impl VerifyIn<PartialConfig> for PartialOtherFile {
     }
 }
 
+impl TagUser for PartialTaggedVariant<PartialOtherFile> {}
+
 impl Step for OtherFile {
     #[allow(clippy::case_sensitive_file_extension_comparisons)]
     fn validate_others(

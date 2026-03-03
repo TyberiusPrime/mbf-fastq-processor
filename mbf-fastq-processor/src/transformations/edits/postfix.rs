@@ -50,6 +50,8 @@ impl VerifyIn<PartialConfig> for PartialPostfix {
     }
 }
 
+impl TagUser for PartialTaggedVariant<PartialPostfix> {}
+
 impl Step for Postfix {
     fn uses_tags(
         &self,

@@ -44,6 +44,8 @@ impl VerifyIn<PartialConfig> for PartialTrimAtTag {
     }
 }
 
+impl TagUser for PartialTaggedVariant<PartialTrimAtTag> {}
+
 impl Step for TrimAtTag {
     fn validate_others(
         &self,

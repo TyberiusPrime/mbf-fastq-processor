@@ -65,6 +65,8 @@ impl VerifyIn<PartialConfig> for PartialQualifiedBases {
     }
 }
 
+impl TagUser for PartialTaggedVariant<PartialQualifiedBases> {}
+
 impl Step for QualifiedBases {
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((

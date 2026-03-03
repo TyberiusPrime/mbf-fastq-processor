@@ -36,6 +36,8 @@ impl VerifyIn<PartialConfig> for PartialStoreTagInSequence {
     }
 }
 
+impl TagUser for PartialTaggedVariant<PartialStoreTagInSequence> {}
+
 impl Step for StoreTagInSequence {
     fn uses_tags(
         &self,

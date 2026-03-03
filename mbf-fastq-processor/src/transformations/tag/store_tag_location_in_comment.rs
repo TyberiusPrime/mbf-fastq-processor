@@ -53,6 +53,23 @@ impl VerifyIn<PartialConfig> for PartialStoreTagLocationInComment {
     }
 }
 
+impl TagUser for PartialTaggedVariant<PartialStoreTagLocationInComment> {
+    fn get_tag_usage(&mut self) -> TagUsageInfo<'_> {
+        let inner = self
+            .toml_value
+            .as_mut()
+            .expect("get_tag_usage should only be called after successful verification");
+        TagUsageInfo {
+            used_tags: UsedTags::Some(vec![(
+                inner.in_label.as_ref().expect("parent was ok?").clone(),
+                vec![TagValueType::Location],
+                &mut inner.in_label,
+            )]),
+            removed_tags: RemovedTags::None,
+            declared_tag: None,
+        }
+    }
+}
 impl Step for StoreTagLocationInComment {
     fn uses_tags(
         &self,

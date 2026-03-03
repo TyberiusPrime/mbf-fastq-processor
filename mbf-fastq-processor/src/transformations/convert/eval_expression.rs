@@ -134,6 +134,8 @@ pub enum ResultType {
     Bool,
 }
 
+impl TagUser for PartialTaggedVariant<Box<PartialEvalExpression>> {}
+
 impl Step for Box<EvalExpression> {
     fn declares_tag_type(&self) -> Option<(String, TagValueType)> {
         let tag_type = match self.result_type {

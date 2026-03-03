@@ -370,7 +370,7 @@ If you have paired end reads, name two 'virtual' segments, e.g. ['read1','read2'
 impl VerifyIn<super::PartialConfig> for PartialInput {
     fn verify(
         &mut self,
-        parent: &super::PartialConfig,
+        _parent: &super::PartialConfig,
         options: &VerifyOptions,
     ) -> std::result::Result<(), ValidationFailure>
     where

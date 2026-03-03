@@ -31,6 +31,8 @@ impl VerifyIn<PartialConfig> for PartialLowercase {
     }
 }
 
+impl TagUser for PartialTaggedVariant<PartialLowercase> {}
+
 impl Step for Lowercase {
     fn apply(
         &self,

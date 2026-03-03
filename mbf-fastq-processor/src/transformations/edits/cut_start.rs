@@ -41,6 +41,8 @@ impl VerifyIn<PartialConfig> for PartialCutStart {
     }
 }
 
+impl TagUser for PartialTaggedVariant<PartialCutStart> {}
+
 impl Step for CutStart {
     fn uses_tags(
         &self,

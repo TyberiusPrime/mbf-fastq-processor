@@ -104,6 +104,8 @@ impl VerifyIn<PartialConfig> for PartialConcatTags {
     }
 }
 
+impl TagUser for PartialTaggedVariant<PartialConcatTags> {}
+
 impl Step for ConcatTags {
     fn validate_others(
         &self,

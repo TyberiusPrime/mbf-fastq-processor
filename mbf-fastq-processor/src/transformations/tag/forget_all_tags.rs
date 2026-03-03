@@ -11,6 +11,8 @@ pub struct ForgetAllTags {
     ignored: Option<u8>, //tdp dislikes empty structs
 }
 
+impl TagUser for PartialTaggedVariant<PartialForgetAllTags> {}
+
 impl Step for ForgetAllTags {
     fn removes_all_tags(&self) -> bool {
         true

@@ -31,6 +31,8 @@ impl VerifyIn<PartialConfig> for PartialByTag {
     }
 }
 
+impl TagUser for PartialTaggedVariant<PartialByTag> {}
+
 impl Step for ByTag {
     fn must_see_all_tags(&self) -> bool {
         true

@@ -51,6 +51,8 @@ impl VerifyIn<PartialConfig> for PartialValidateName {
     }
 }
 
+impl TagUser for PartialTaggedVariant<PartialValidateName> {}
+
 impl Step for ValidateName {
     fn apply(
         &self,

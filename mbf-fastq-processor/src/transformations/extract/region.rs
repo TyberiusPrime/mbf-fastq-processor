@@ -37,6 +37,8 @@ impl VerifyIn<PartialConfig> for PartialRegion {
     }
 }
 
+impl TagUser for PartialTaggedVariant<PartialRegion> {}
+
 impl Step for Region {
     fn apply(
         &self,

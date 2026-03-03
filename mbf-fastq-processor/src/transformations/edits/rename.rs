@@ -53,6 +53,8 @@ impl VerifyIn<PartialConfig> for PartialRename {
     }
 }
 
+impl TagUser for PartialTaggedVariant<PartialRename> {}
+
 impl Step for Rename {
     fn apply(
         &self,

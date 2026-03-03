@@ -31,6 +31,8 @@ impl VerifyIn<PartialConfig> for PartialValidateSeq {
     }
 }
 
+impl TagUser for PartialTaggedVariant<PartialValidateSeq> {}
+
 impl Step for ValidateSeq {
     fn apply(
         &self,

@@ -34,6 +34,7 @@ impl Partial_ReportDuplicateFragmentCount {
         }
     }
 }
+impl TagUser for PartialTaggedVariant<Box<Partial_ReportDuplicateFragmentCount>> {}
 
 impl Step for Box<_ReportDuplicateFragmentCount> {
     fn transmits_premature_termination(&self) -> bool {

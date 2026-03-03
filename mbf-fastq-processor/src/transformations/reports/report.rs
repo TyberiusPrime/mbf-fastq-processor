@@ -96,6 +96,8 @@ impl Default for Report {
     }
 }
 
+impl TagUser for PartialTaggedVariant<PartialReport> {}
+
 impl Step for Report {
     fn validate_others(
         &self,

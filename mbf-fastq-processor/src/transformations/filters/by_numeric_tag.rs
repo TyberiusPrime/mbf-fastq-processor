@@ -44,6 +44,8 @@ impl VerifyIn<PartialConfig> for PartialByNumericTag {
     }
 }
 
+impl TagUser for PartialTaggedVariant<PartialByNumericTag> {}
+
 impl Step for ByNumericTag {
     fn must_see_all_tags(&self) -> bool {
         true

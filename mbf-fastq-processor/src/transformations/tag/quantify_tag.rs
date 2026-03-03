@@ -45,6 +45,8 @@ impl VerifyIn<PartialConfig> for PartialQuantifyTag {
     }
 }
 
+impl TagUser for PartialTaggedVariant<PartialQuantifyTag> {}
+
 impl Step for QuantifyTag {
     fn transmits_premature_termination(&self) -> bool {
         false

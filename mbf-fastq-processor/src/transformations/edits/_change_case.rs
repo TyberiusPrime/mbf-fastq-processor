@@ -68,6 +68,8 @@ impl _ChangeCase {
     }
 }
 
+impl TagUser for PartialTaggedVariant<Partial_ChangeCase> {}
+
 impl Step for _ChangeCase {
     fn uses_tags(
         &self,

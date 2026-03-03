@@ -162,6 +162,8 @@ impl VerifyIn<PartialConfig> for PartialMergeReads {
     }
 }
 
+impl TagUser for PartialTaggedVariant<PartialMergeReads> {}
+
 impl Step for MergeReads {
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         self.out_label

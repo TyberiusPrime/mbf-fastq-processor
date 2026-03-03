@@ -13,6 +13,7 @@ use std::thread;
 pub struct _InternalDelay {
     ignored: Option<u8>, //tpd does not like empty structs
 }
+impl TagUser for PartialTaggedVariant<Box<Partial_InternalDelay>> {}
 
 impl Step for Box<_InternalDelay> {
     fn apply(
@@ -58,6 +59,7 @@ impl _InternalReadCount {
         }
     }
 }
+impl TagUser for PartialTaggedVariant<Box<Partial_InternalReadCount>> {}
 
 impl Step for Box<_InternalReadCount> {
     // can run in prallel, since it's atomic.
@@ -100,6 +102,8 @@ impl Step for Box<_InternalReadCount> {
 pub struct _InduceFailure {
     msg: String,
 }
+
+impl TagUser for PartialTaggedVariant<Box<Partial_InduceFailure>> {}
 
 impl Step for Box<_InduceFailure> {
     fn needs_serial(&self) -> bool {

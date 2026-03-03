@@ -69,6 +69,8 @@ impl Default for ValidateReadPairing {
     }
 }
 
+impl TagUser for PartialTaggedVariant<PartialValidateReadPairing> {}
+
 impl Step for ValidateReadPairing {
     fn transmits_premature_termination(&self) -> bool {
         true

@@ -129,6 +129,8 @@ impl std::fmt::Debug for StoreTagInFastQ {
     }
 } */
 
+impl TagUser for PartialTaggedVariant<PartialStoreTagInFastQ> {}
+
 impl Step for StoreTagInFastQ {
     fn needs_serial(&self) -> bool {
         true

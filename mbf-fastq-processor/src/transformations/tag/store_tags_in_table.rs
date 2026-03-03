@@ -82,6 +82,8 @@ impl VerifyIn<PartialConfig> for PartialStoreTagsInTable {
     }
 } */
 
+impl TagUser for PartialTaggedVariant<PartialStoreTagsInTable> {}
+
 impl Step for StoreTagsInTable {
     fn validate_others(
         &self,

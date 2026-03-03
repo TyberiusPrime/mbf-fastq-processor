@@ -100,6 +100,8 @@ impl VerifyIn<PartialConfig> for PartialSwap {
     }
 }
 
+impl TagUser for PartialTaggedVariant<PartialSwap> {}
+
 impl Step for Swap {
     fn uses_tags(
         &self,

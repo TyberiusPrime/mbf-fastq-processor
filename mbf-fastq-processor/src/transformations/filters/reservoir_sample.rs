@@ -48,6 +48,8 @@ impl VerifyIn<PartialConfig> for PartialReservoirSample {
     }
 }
 
+impl TagUser for PartialTaggedVariant<PartialReservoirSample> {}
+
 impl Step for ReservoirSample {
     fn must_see_all_tags(&self) -> bool {
         true

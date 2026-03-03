@@ -26,6 +26,8 @@ impl VerifyIn<PartialConfig> for PartialNCount {
     }
 }
 
+impl TagUser for PartialTaggedVariant<PartialNCount> {}
+
 impl Step for NCount {
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((

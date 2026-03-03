@@ -87,6 +87,8 @@ impl Progress {
     }
 }
 
+impl TagUser for PartialTaggedVariant<PartialProgress> {}
+
 impl Step for Progress {
     // it actually doesn't. Since we're using a lock interneally.
     // fn needs_serial(&self) -> bool {

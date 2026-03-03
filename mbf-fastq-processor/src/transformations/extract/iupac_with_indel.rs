@@ -56,6 +56,8 @@ impl VerifyIn<PartialConfig> for PartialIUPACWithIndel {
     }
 }
 
+impl TagUser for PartialTaggedVariant<PartialIUPACWithIndel> {}
+
 impl Step for IUPACWithIndel {
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((

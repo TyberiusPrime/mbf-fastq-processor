@@ -54,6 +54,8 @@ enum StringOrVecString {
     Vec(Vec<String>),
 }
 
+impl TagUser for PartialTaggedVariant<PartialIUPAC> {}
+
 impl Step for IUPAC {
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((

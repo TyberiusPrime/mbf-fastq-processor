@@ -30,6 +30,8 @@ impl VerifyIn<PartialConfig> for PartialUppercase {
     }
 }
 
+impl TagUser for PartialTaggedVariant<PartialUppercase> {}
+
 impl Step for Uppercase {
     fn apply(
         &self,
