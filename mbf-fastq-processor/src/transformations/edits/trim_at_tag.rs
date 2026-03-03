@@ -44,7 +44,22 @@ impl VerifyIn<PartialConfig> for PartialTrimAtTag {
     }
 }
 
-impl TagUser for PartialTaggedVariant<PartialTrimAtTag> {}
+impl TagUser for PartialTaggedVariant<PartialTrimAtTag> {
+    fn get_tag_usage(&mut self) -> TagUsageInfo<'_> {
+        let inner = self
+            .toml_value
+            .as_mut()
+            .expect("get_tag_usage should only be called after successful verification");
+        TagUsageInfo {
+            used_tags: vec![UsedTags {
+                name: inner.in_label.as_ref().expect("parent was ok?").clone(),
+                accepted_tag_types: vec![TagValueType::Location],
+                toml_source: Rc::new(RefCell::new(&mut inner.in_label)),
+            }],
+            ..Default::default()
+        }
+    }
+}
 
 impl Step for TrimAtTag {
     fn validate_others(
@@ -73,6 +88,11 @@ impl Step for TrimAtTag {
         _tags_available: &IndexMap<String, TagMetadata>,
     ) -> Option<Vec<(String, &[TagValueType])>> {
         Some(vec![(self.in_label.clone(), &[TagValueType::Location])])
+    }
+
+    //to cut location tags
+    fn must_see_all_tags(&self) -> bool {
+        true
     }
 
     #[allow(clippy::too_many_lines)]
@@ -205,8 +225,4 @@ impl Step for TrimAtTag {
         Ok((block, true))
     }
     //
-    //to cut location tags
-    fn must_see_all_tags(&self) -> bool {
-        true
-    }
 }

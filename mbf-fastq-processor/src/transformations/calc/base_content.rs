@@ -174,12 +174,24 @@ impl BaseContent {
     }
 }
 
-impl TagUser for PartialTaggedVariant<PartialBaseContent> {}
+impl TagUser for PartialTaggedVariant<PartialBaseContent> {
+    fn get_tag_usage(&mut self) -> TagUsageInfo<'_> {
+        let inner = self
+            .toml_value
+            .as_mut()
+            .expect("get_tag_usage should only be called after successful verification");
+        TagUsageInfo {
+            declared_tag: Some((
+                inner.out_label.as_ref().expect("parent was ok?").clone(),
+                TagValueType::Numeric,
+                &mut inner.out_label,
+            )),
+            ..Default::default()
+        }
+    }
+}
 
 impl Step for BaseContent {
-    fn declares_tag_type(&self) -> Option<(String, TagValueType)> {
-        Some((self.out_label.clone(), TagValueType::Numeric))
-    }
 
     #[allow(clippy::cast_precision_loss)]
     fn apply(
