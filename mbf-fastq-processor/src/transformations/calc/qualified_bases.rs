@@ -65,7 +65,22 @@ impl VerifyIn<PartialConfig> for PartialQualifiedBases {
     }
 }
 
-impl TagUser for PartialTaggedVariant<PartialQualifiedBases> {}
+impl TagUser for PartialTaggedVariant<PartialQualifiedBases> {
+    fn get_tag_usage(&mut self) -> TagUsageInfo<'_> {
+        let inner = self
+            .toml_value
+            .as_mut()
+            .expect("get_tag_usage should only be called after successful verification");
+        TagUsageInfo {
+            declared_tag: Some((
+                inner.out_label.as_ref().expect("parent was ok?").clone(),
+                TagValueType::Numeric,
+                &mut inner.out_label,
+            )),
+            ..Default::default()
+        }
+    }
+}
 
 impl Step for QualifiedBases {
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {

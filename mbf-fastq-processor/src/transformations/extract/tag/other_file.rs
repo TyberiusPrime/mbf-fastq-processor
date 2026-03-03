@@ -108,7 +108,22 @@ impl VerifyIn<PartialConfig> for PartialOtherFile {
     }
 }
 
-impl TagUser for PartialTaggedVariant<PartialOtherFile> {}
+impl TagUser for PartialTaggedVariant<PartialOtherFile> {
+    fn get_tag_usage(&mut self) -> TagUsageInfo<'_> {
+        let inner = self
+            .toml_value
+            .as_mut()
+            .expect("get_tag_usage should only be called after successful verification");
+        TagUsageInfo {
+            declared_tag: Some((
+                inner.out_label.as_ref().expect("parent was ok?").clone(),
+                TagValueType::Bool,
+                &mut inner.out_label,
+            )),
+            ..Default::default()
+        }
+    }
+}
 
 impl Step for OtherFile {
     #[allow(clippy::case_sensitive_file_extension_comparisons)]

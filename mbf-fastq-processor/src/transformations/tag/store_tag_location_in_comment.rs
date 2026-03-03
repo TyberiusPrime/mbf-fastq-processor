@@ -59,24 +59,21 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagLocationInComment> {
             .toml_value
             .as_mut()
             .expect("get_tag_usage should only be called after successful verification");
+        
         TagUsageInfo {
-            used_tags: UsedTags::Some(vec![(
-                inner.in_label.as_ref().expect("parent was ok?").clone(),
-                vec![TagValueType::Location],
-                &mut inner.in_label,
-            )]),
-            removed_tags: RemovedTags::None,
-            declared_tag: None,
+            used_tags: vec![UsedTags {
+                name: inner.in_label.as_ref().expect("parent was ok?").clone(),
+                accepted_tag_types: vec![
+                    TagValueType::Location,
+                ],
+                toml_source: Rc::new(RefCell::new(&mut inner.in_label)),
+            }],
+            ..Default::default()
         }
+
     }
 }
 impl Step for StoreTagLocationInComment {
-    fn uses_tags(
-        &self,
-        _tags_available: &IndexMap<String, TagMetadata>,
-    ) -> Option<Vec<(String, &[TagValueType])>> {
-        Some(vec![(self.in_label.clone(), &[TagValueType::Location])])
-    }
 
     fn apply(
         &self,

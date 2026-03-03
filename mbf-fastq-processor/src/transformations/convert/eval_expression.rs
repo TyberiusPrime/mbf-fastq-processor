@@ -134,55 +134,61 @@ pub enum ResultType {
     Bool,
 }
 
-impl TagUser for PartialTaggedVariant<Box<PartialEvalExpression>> {}
-
-impl Step for Box<EvalExpression> {
-    fn declares_tag_type(&self) -> Option<(String, TagValueType)> {
-        let tag_type = match self.result_type {
-            ResultType::Numeric => TagValueType::Numeric,
-            ResultType::Bool => TagValueType::Bool,
-        };
-        Some((self.out_label.clone(), tag_type))
-    }
-
-    fn uses_tags(
-        &self,
-        _tags_available: &IndexMap<String, TagMetadata>,
-    ) -> Option<Vec<(String, &[TagValueType])>> {
+impl TagUser for PartialTaggedVariant<Box<PartialEvalExpression>> {
+    fn get_tag_usage(&mut self) -> TagUsageInfo<'_> {
+        let inner = self
+            .toml_value
+            .as_mut()
+            .expect("get_tag_usage should only be called after successful verification");
         // Extract variable names and declare them as numeric tags
         // Since we support both numeric and bool tags in expressions,
         // we use TagValueType::Any for flexibility
-        let var_names = &self.compiled.var_names;
-        if var_names.is_empty() {
-            None
-        } else {
+        let var_names = &inner.compiled.as_ref().expect("expected ok").var_names;
+        let used_tags = {
             let mut out = Vec::new();
+            let toml_source = Rc::new(RefCell::new(&mut inner.expression));
             for name in var_names {
                 if let Some(suffix) = name.strip_prefix("len_") {
-                    if !self.segment_names.iter().any(|x| x == suffix) {
-                        out.push((
-                            suffix.to_string(),
-                            &[TagValueType::String, TagValueType::Location][..],
-                        ));
-                    }
+                    todo!();
+                    // if !self.segment_names.iter().any(|x| x == suffix) {
+                    //     out.push((
+                    //         suffix.to_string(),
+                    //         &[TagValueType::String, TagValueType::Location][..],
+                    //     ));
+                    // }
                 } else if name == "read_no" {
                     // read_no is virtual, no tag needed
                 } else {
-                    out.push((
-                        name.clone(),
-                        &[
+                    out.push(UsedTags {
+                        name: name.clone(),
+                        accepted_tag_types: vec![
                             TagValueType::Bool,
                             TagValueType::Numeric,
                             TagValueType::String,
                             TagValueType::Location,
-                        ][..],
-                    ));
+                        ],
+                        toml_source: toml_source.clone(),
+                    });
                 }
             }
-            Some(out)
+            out
+        };
+        TagUsageInfo {
+            used_tags,
+            removed_tags: RemovedTags::None,
+            declared_tag: Some((
+                inner.out_label.as_ref().expect("parent was ok?").clone(),
+                match inner.result_type.as_ref().expect("parent was ok?") {
+                    ResultType::Numeric => TagValueType::Numeric,
+                    ResultType::Bool => TagValueType::Bool,
+                },
+                &mut inner.out_label,
+            )),
         }
     }
+}
 
+impl Step for Box<EvalExpression> {
     #[allow(clippy::too_many_lines)]
     #[allow(clippy::cast_precision_loss)]
     fn apply(

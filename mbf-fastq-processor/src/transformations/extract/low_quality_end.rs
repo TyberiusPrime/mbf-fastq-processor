@@ -40,13 +40,12 @@ impl TagUser for PartialTaggedVariant<PartialLowQualityEnd> {
             .as_mut()
             .expect("get_tag_usage should only be called after successful verification");
         TagUsageInfo {
-            used_tags: UsedTags::None,
-            removed_tags: RemovedTags::None,
             declared_tag: Some((
                 inner.out_label.as_ref().expect("parent was ok?").clone(),
                 TagValueType::Location,
                 &mut inner.out_label,
             )),
+            ..Default::default()
         }
     }
 }

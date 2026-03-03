@@ -8,7 +8,7 @@ use prelude::TagMetadata;
 use schemars::JsonSchema;
 use toml_pretty_deser::prelude::*;
 
-use std::path::Path;
+use std::{cell::RefCell, path::Path, rc::Rc};
 
 use anyhow::{Result, bail};
 
@@ -180,12 +180,11 @@ pub struct InputInfo {
     pub initial_filter_capacity: Option<usize>,
 }
 
-#[derive(Default, Debug)]
-pub enum UsedTags<'a> {
-    #[default]
-    None,
-    All,
-    Some(Vec<(String, Vec<TagValueType>, &'a mut TomlValue<String>)>),
+#[derive(Debug)]
+pub struct UsedTags<'a> {
+    pub name: String,
+    pub accepted_tag_types: Vec<TagValueType>,
+    pub toml_source: Rc<RefCell<&'a mut TomlValue<String>>>,
 }
 
 #[derive(Default, Debug)]
@@ -198,7 +197,7 @@ pub enum RemovedTags<'a> {
 
 #[derive(Default, Debug)]
 pub struct TagUsageInfo<'a> {
-    pub used_tags: UsedTags<'a>,
+    pub used_tags: Vec<UsedTags<'a>>,
     pub removed_tags: RemovedTags<'a>,
     pub declared_tag: Option<(String, TagValueType, &'a mut TomlValue<String>)>,
 }
@@ -206,11 +205,7 @@ pub struct TagUsageInfo<'a> {
 #[enum_dispatch(PartialTransformation)]
 pub trait TagUser {
     fn get_tag_usage(&mut self) -> TagUsageInfo<'_> {
-        TagUsageInfo {
-            used_tags: UsedTags::None,
-            removed_tags: RemovedTags::None,
-            declared_tag: None,
-        }
+        TagUsageInfo::default()
     }
 }
 
