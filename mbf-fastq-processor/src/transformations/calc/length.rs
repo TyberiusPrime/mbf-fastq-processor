@@ -1,4 +1,6 @@
 #![allow(clippy::unnecessary_wraps)]
+use toml_pretty_deser::PartialTaggedVariant;
+
 use crate::transformations::prelude::*;
 
 use super::extract_numeric_tags_plus_all;
@@ -26,6 +28,16 @@ impl VerifyIn<PartialConfig> for PartialLength {
     {
         self.segment.validate_segment(parent);
         Ok(())
+    }
+}
+
+impl TagUser for PartialTaggedVariant<PartialLength> {
+    fn get_tag_usage(&self) -> TagUsageInfo {
+        TagUsageInfo {
+            uses_tags: UsedTags::None,
+            removes_tags: RemovedTags::None,
+            declared_tag: None,
+        }
     }
 }
 
