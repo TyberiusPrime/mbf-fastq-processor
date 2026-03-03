@@ -18,6 +18,8 @@ pub struct ReplaceTagWithLetter {
 
 impl VerifyIn<PartialConfig> for PartialReplaceTagWithLetter {}
 
+impl TagUser for PartialTaggedVariant<PartialReplaceTagWithLetter> {}
+
 impl Step for ReplaceTagWithLetter {
     fn uses_tags(
         &self,

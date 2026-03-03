@@ -38,6 +38,8 @@ impl VerifyIn<PartialConfig> for PartialCutEnd {
     }
 }
 
+impl TagUser for PartialTaggedVariant<PartialCutEnd> {}
+
 impl Step for CutEnd {
     fn uses_tags(
         &self,

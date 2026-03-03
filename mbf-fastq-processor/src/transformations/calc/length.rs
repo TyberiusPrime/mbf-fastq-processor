@@ -32,18 +32,18 @@ impl VerifyIn<PartialConfig> for PartialLength {
 }
 
 impl TagUser for PartialTaggedVariant<PartialLength> {
-    fn get_tag_usage(&self) -> TagUsageInfo {
+    fn get_tag_usage(&mut self) -> TagUsageInfo {
         let inner = self
             .toml_value
-            .as_ref()
+            .as_mut()
             .expect("get_tag_usage should only be called after successful verification");
         TagUsageInfo {
-            uses_tags: UsedTags::None,
-            removes_tags: RemovedTags::None,
             declared_tag: Some((
                 inner.out_label.as_ref().expect("parent was ok?").clone(),
                 TagValueType::Numeric,
+                &mut inner.out_label,
             )),
+            ..Default::default()
         }
     }
 }

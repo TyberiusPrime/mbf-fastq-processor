@@ -103,6 +103,29 @@ impl VerifyIn<PartialConfig> for PartialStoreTagInComment {
     }
 }
 
+impl TagUser for PartialTaggedVariant<PartialStoreTagInComment> {
+    fn get_tag_usage(&mut self) -> TagUsageInfo<'_> {
+        let inner = self
+            .toml_value
+            .as_mut()
+            .expect("get_tag_usage should only be called after successful verification");
+        TagUsageInfo {
+            used_tags: UsedTags::Some(vec![(
+                inner.in_label.as_ref().expect("parent was ok?").clone(),
+                vec![
+                    TagValueType::String,
+                    TagValueType::Location,
+                    TagValueType::Bool,
+                    TagValueType::Numeric,
+                ],
+                &mut inner.in_label,
+            )]),
+            removed_tags: RemovedTags::None,
+            declared_tag: None,
+        }
+    }
+}
+
 impl Step for StoreTagInComment {
     fn validate_others(
         &self,

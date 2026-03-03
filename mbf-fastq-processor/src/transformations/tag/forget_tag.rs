@@ -10,6 +10,8 @@ pub struct ForgetTag {
     in_label: String,
 }
 
+impl TagUser for PartialTaggedVariant<PartialForgetTag> {}
+
 impl Step for ForgetTag {
     fn removes_tags(&self) -> Vec<String> {
         vec![self.in_label.clone()]

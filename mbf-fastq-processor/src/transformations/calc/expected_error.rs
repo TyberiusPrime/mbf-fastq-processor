@@ -45,6 +45,8 @@ impl VerifyIn<PartialConfig> for PartialExpectedError {
     }
 }
 
+impl TagUser for PartialTaggedVariant<PartialExpectedError> {}
+
 impl Step for ExpectedError {
     fn declares_tag_type(&self) -> Option<(String, TagValueType)> {
         Some((self.out_label.clone(), TagValueType::Numeric))

@@ -40,6 +40,8 @@ impl VerifyIn<PartialConfig> for PartialSample {
     }
 }
 
+impl TagUser for PartialTaggedVariant<PartialSample> {}
+
 impl Step for Sample {
     fn must_see_all_tags(&self) -> bool {
         true

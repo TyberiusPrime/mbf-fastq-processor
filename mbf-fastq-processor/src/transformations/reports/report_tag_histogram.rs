@@ -108,6 +108,8 @@ impl Partial_ReportTagHistogram {
     }
 }
 
+impl TagUser for PartialTaggedVariant<Box<Partial_ReportTagHistogram>> {}
+
 impl Step for Box<_ReportTagHistogram> {
     fn transmits_premature_termination(&self) -> bool {
         false

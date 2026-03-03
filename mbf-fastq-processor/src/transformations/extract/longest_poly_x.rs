@@ -159,6 +159,8 @@ impl LongestPolyX {
     }
 }
 
+impl TagUser for PartialTaggedVariant<PartialLongestPolyX> {}
+
 impl Step for LongestPolyX {
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((

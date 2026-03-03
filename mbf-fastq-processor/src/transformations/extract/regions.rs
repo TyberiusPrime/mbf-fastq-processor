@@ -68,6 +68,8 @@ impl VerifyIn<PartialConfig> for PartialRegions {
     }
 }
 
+impl TagUser for PartialTaggedVariant<PartialRegions> {}
+
 impl Step for Regions {
     fn declares_tag_type(&self) -> Option<(String, TagValueType)> {
         Some((

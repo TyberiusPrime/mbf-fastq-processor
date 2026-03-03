@@ -34,6 +34,8 @@ impl VerifyIn<PartialConfig> for PartialLowQualityStart {
     }
 }
 
+impl TagUser for PartialTaggedVariant<PartialLowQualityStart> {}
+
 impl Step for LowQualityStart {
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((

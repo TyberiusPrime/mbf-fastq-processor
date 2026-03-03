@@ -153,6 +153,8 @@ pub enum OnNoMatch {
     Keep,
 }
 
+impl TagUser for PartialTaggedVariant<PartialHammingCorrect> {}
+
 impl Step for HammingCorrect {
     fn declares_tag_type(&self) -> Option<(String, TagValueType)> {
         Some((self.out_label.clone(), TagValueType::Location))

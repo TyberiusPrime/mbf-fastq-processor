@@ -78,6 +78,8 @@ impl VerifyIn<PartialConfig> for PartialKmers {
     }
 }
 
+impl TagUser for PartialTaggedVariant<PartialKmers> {}
+
 impl Step for Kmers {
     fn init(
         &mut self,

@@ -22,6 +22,8 @@ impl Partial_ReportCount {
     }
 }
 
+impl TagUser for PartialTaggedVariant<Box<Partial_ReportCount>> {}
+
 impl Step for Box<_ReportCount> {
     fn transmits_premature_termination(&self) -> bool {
         false

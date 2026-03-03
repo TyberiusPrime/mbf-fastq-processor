@@ -27,6 +27,8 @@ impl VerifyIn<PartialConfig> for PartialGCContent {
     }
 }
 
+impl TagUser for PartialTaggedVariant<PartialGCContent> {}
+
 impl Step for GCContent {
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((

@@ -29,6 +29,8 @@ impl VerifyIn<PartialConfig> for PartialComplexity {
     }
 }
 
+impl TagUser for PartialTaggedVariant<PartialComplexity> {}
+
 impl Step for Complexity {
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((

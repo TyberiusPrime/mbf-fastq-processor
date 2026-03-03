@@ -35,6 +35,7 @@ impl Partial_ReportBaseStatisticsPart1 {
         }
     }
 }
+impl TagUser for PartialTaggedVariant<Box<Partial_ReportBaseStatisticsPart1>> {}
 
 impl Step for Box<_ReportBaseStatisticsPart1> {
     fn transmits_premature_termination(&self) -> bool {

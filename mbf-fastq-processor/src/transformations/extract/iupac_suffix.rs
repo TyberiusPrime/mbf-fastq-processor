@@ -99,6 +99,8 @@ impl IUPACSuffix {
     }
 }
 
+impl TagUser for PartialTaggedVariant<PartialIUPACSuffix> {}
+
 impl Step for IUPACSuffix {
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((

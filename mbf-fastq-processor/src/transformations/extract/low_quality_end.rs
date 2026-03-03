@@ -33,6 +33,24 @@ impl VerifyIn<PartialConfig> for PartialLowQualityEnd {
     }
 }
 
+impl TagUser for PartialTaggedVariant<PartialLowQualityEnd> {
+    fn get_tag_usage(&mut self) -> TagUsageInfo<'_> {
+        let inner = self
+            .toml_value
+            .as_mut()
+            .expect("get_tag_usage should only be called after successful verification");
+        TagUsageInfo {
+            used_tags: UsedTags::None,
+            removed_tags: RemovedTags::None,
+            declared_tag: Some((
+                inner.out_label.as_ref().expect("parent was ok?").clone(),
+                TagValueType::Location,
+                &mut inner.out_label,
+            )),
+        }
+    }
+}
+
 impl Step for LowQualityEnd {
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((

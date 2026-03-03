@@ -45,6 +45,8 @@ impl VerifyIn<PartialConfig> for PartialDemultiplex {
     }
 }
 
+impl TagUser for PartialTaggedVariant<PartialDemultiplex> {}
+
 impl Step for Demultiplex {
     // fn needs_serial(&self) -> bool {
     //     true

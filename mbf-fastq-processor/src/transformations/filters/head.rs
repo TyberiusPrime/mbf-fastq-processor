@@ -14,6 +14,8 @@ pub struct Head {
 
 impl VerifyIn<PartialConfig> for PartialHead {}
 
+impl TagUser for PartialTaggedVariant<PartialHead> {}
+
 impl Step for Head {
     fn must_see_all_tags(&self) -> bool {
         true

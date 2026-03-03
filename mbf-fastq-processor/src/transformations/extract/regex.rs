@@ -62,6 +62,8 @@ impl VerifyIn<PartialConfig> for PartialRegex {
     }
 }
 
+impl TagUser for PartialTaggedVariant<PartialRegex> {}
+
 impl Step for Regex {
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((

@@ -32,6 +32,7 @@ impl VerifyIn<PartialConfig> for Partial_ReportCountOligos {
         Ok(())
     }
 }
+impl TagUser for PartialTaggedVariant<Box<Partial_ReportCountOligos>> {}
 
 impl Partial_ReportCountOligos {
     pub fn new(

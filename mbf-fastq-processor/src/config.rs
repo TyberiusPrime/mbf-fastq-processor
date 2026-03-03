@@ -1,4 +1,9 @@
-#![allow(clippy::unnecessary_wraps)] //eserde false positives
+#![allow(dead_code)] //TODO
+#![allow(unused_imports)] //TODO
+#![allow(unused_mut)] //TODO
+#![allow(unused_variables)] //TODO
+//
+#![allow(clippy::unnecessary_wraps)] //eserde false positives TODO
 #![allow(clippy::struct_excessive_bools)]
 use crate::config::options::default_block_size;
 // output false positive, directly on struct doesn't work
@@ -13,7 +18,7 @@ use std::cell::RefCell;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
-use toml_pretty_deser::{PartialTaggedVariant, Visitor, prelude::*};
+use toml_pretty_deser::{PartialTaggedVariant, Visitor, prelude::*, suggest_alternatives};
 
 pub mod deser;
 mod input;
@@ -38,8 +43,6 @@ pub use segments::{
 #[derive(Debug)]
 pub struct TagMetadata {
     pub used: bool,
-    pub declared_at_step: usize,
-    pub declared_by: String,
     pub tag_type: TagValueType,
 }
 
@@ -143,6 +146,9 @@ pub struct Config {
 
     #[tpd(skip)]
     pub report_labels: Vec<String>,
+
+    #[tpd(skip)]
+    pub allowed_tags_per_transformation: Vec<Vec<String>>,
 }
 
 #[derive(Debug)]
@@ -159,7 +165,7 @@ pub struct CheckedConfig {
 impl VerifyIn<TPDRoot> for PartialConfig {
     fn verify(
         &mut self,
-        parent: &TPDRoot,
+        _parent: &TPDRoot,
         _options: &VerifyOptions,
     ) -> std::result::Result<(), ValidationFailure>
     where
@@ -201,6 +207,8 @@ impl VerifyIn<TPDRoot> for PartialConfig {
         self.configure_rapid_gzip();
         self.verify_head_rapidgzip_conflict();
         self.expand_transformations();
+        self.verify_transformation_labels();
+        //todo: verify labels, barcodes, segment_names disjoint
 
         Ok(())
     }
@@ -1095,6 +1103,139 @@ impl PartialConfig {
             *report_no += 1;
         }
     }
+
+    pub fn verify_transformation_labels(&mut self) {
+        use crate::transformations::TagUser;
+        let mut allowed_tags_per_stage: Vec<Vec<String>> = Vec::new();
+        let mut tags_available: IndexMap<String, (TagMetadata, std::ops::Range<usize>)> =
+            IndexMap::new();
+        if let Some(transformations) = self.transform.as_mut() {
+            let mut just_trafos = transformations
+                .iter_mut()
+                .map(|t| t.as_mut().expect("parent was ok"))
+                .collect::<Vec<_>>();
+            let mut all_tags_ever = HashSet::new();
+            for trafo in just_trafos.iter_mut() {
+                //     if let err(e) =
+                //         t.validate_others(&self.input, self.output.as_ref(), &self.transform, step_no)
+                //     {
+                //         errors.push(e.context(format!("[step {step_no} ({t})]:")));
+                //         continue; // skip further processing of this transform if validation failed
+                //     }
+                let tag_info = trafo.get_tag_usage();
+                match tag_info.removed_tags {
+                    crate::transformations::RemovedTags::None => {}
+                    crate::transformations::RemovedTags::All => {
+                        for (metadata, _) in tags_available.values_mut() {
+                            metadata.used = true;
+                        }
+                        tags_available.clear();
+                    }
+                    crate::transformations::RemovedTags::Some(tags) => {
+                        for (tag_name, toml_source) in tags {
+                            //no need to check if empty, empty will never be present
+                            if let Some((metadata, _span)) = tags_available.get_mut(&tag_name) {
+                                metadata.used = true;
+                            } else {
+                                toml_source.state =
+                                    TomlValueState::new_validation_failed("No such tag");
+                                toml_source.help = Some(suggest_alternatives(
+                                    &tag_name,
+                                    &tags_available.keys().collect::<Vec<_>>(),
+                                ));
+                                continue; //no point on doing anything else with this tag
+                            }
+                            tags_available.shift_remove(&tag_name);
+                        }
+                    }
+                }
+
+                let tags_used_here: Vec<String> = match tag_info.used_tags {
+                    crate::transformations::UsedTags::None => vec![],
+                    crate::transformations::UsedTags::All => {
+                        tags_available.keys().cloned().collect()
+                    }
+                    crate::transformations::UsedTags::Some(mut items) => {
+                        let mut tags_used_here = Vec::new();
+                        for (tag_name, tag_types, toml_source) in &mut items {
+                            //no need to check if empty, empty will never be present
+                            let entry = tags_available.get_mut(tag_name);
+                            match entry {
+                                Some((metadata, _span)) => {
+                                    metadata.used = true;
+                                    if !tag_types
+                                        .iter()
+                                        .any(|tag_type| tag_type.compatible(metadata.tag_type))
+                                    {
+                                        toml_source.state = TomlValueState::new_validation_failed(
+                                            "Incompatible tag type",
+                                        );
+                                        toml_source.help = Some(format!(
+                                            "This transform requires tag '{label}' to be one of the following types: {supposed_tag_types:?}, but it is actually of type '{actual_tag_type}'.",
+                                            label = tag_name,
+                                            supposed_tag_types = tag_types,
+                                            actual_tag_type = metadata.tag_type
+                                        ));
+                                    } else {
+                                        tags_used_here.push(tag_name.clone());
+                                    }
+                                }
+                                None => {
+                                    toml_source.state =
+                                        TomlValueState::new_validation_failed("No such tag");
+                                    if all_tags_ever.contains(tag_name) {
+                                        toml_source.help = Some(format!(
+                                            "Tag '{tag_name}' was generated by a previous step, but it is not available at this point.\nThis likely means that it was removed by an intermediate step.\n{}",
+                                            suggest_alternatives(
+                                                &tag_name,
+                                                &tags_available.keys().collect::<Vec<_>>()
+                                            )
+                                        ));
+                                    } else {
+                                        toml_source.help = Some(suggest_alternatives(
+                                            &tag_name,
+                                            &tags_available.keys().collect::<Vec<_>>(),
+                                        ));
+                                    }
+                                }
+                            }
+                        }
+                        tags_used_here
+                    }
+                };
+                allowed_tags_per_stage.push(tags_used_here);
+
+                if let Some((declared_name, declared_type, toml_source)) = tag_info.declared_tag {
+                    if let Err(e) = validate_tag_name(&declared_name) {
+                        toml_source.state =
+                            TomlValueState::new_validation_failed("Invalid tag name");
+                        toml_source.help =
+                            Some("Valid tag names conform to [a-zA-Z_][a-zA-Z0-9_]*".to_string());
+                    } else if let Some((_meta, span)) = tags_available.get(&declared_name) {
+                        toml_source.state =
+                            TomlValueState::new_validation_failed("Duplicate tag name");
+                        toml_source.help = Some(
+                            "Rename either tag, or add a ForgetTag step inbetween".to_string(),
+                        );
+                        toml_source.context = Some((span.clone(), "Other use".to_string()));
+                    } else {
+                        all_tags_ever.insert(declared_name.clone());
+                        tags_available.insert(
+                            declared_name.clone(),
+                            (
+                                TagMetadata {
+                                    used: false,
+                                    tag_type: declared_type,
+                                },
+                                toml_source.span(),
+                            ),
+                        );
+                    }
+                }
+            }
+            self.allowed_tags_per_transformation = Some(allowed_tags_per_stage);
+        }
+    }
 }
 
 impl Config {
@@ -1329,107 +1470,107 @@ impl Config {
         errors: &mut Vec<anyhow::Error>,
     ) -> (Vec<String>, Vec<Stage>) {
         let mut tags_available: IndexMap<String, TagMetadata> = IndexMap::new();
-        let mut allowed_tags_per_stage = Vec::new();
+        let mut allowed_tags_per_stage = self.allowed_tags_per_transformation.clone();
 
-        for (step_no, t) in self.transform.iter().enumerate() {
-            if let Err(e) =
-                t.validate_others(&self.input, self.output.as_ref(), &self.transform, step_no)
-            {
-                errors.push(e.context(format!("[Step {step_no} ({t})]:")));
-                continue; // Skip further processing of this transform if validation failed
-            }
-
-            for tag_name in t.removes_tags() {
-                //no need to check if empty, empty will never be present
-                if let Some(metadata) = tags_available.get_mut(&tag_name) {
-                    metadata.used = true;
-                } else {
-                    errors.push(anyhow!(
-                        "[Step {step_no} ({t})]: Can't remove tag {tag_name}, not present. Available at this point: {tags_available:?}. Transform: {t}"
-                    ));
-                    continue;
-                }
-                tags_available.shift_remove(&tag_name);
-            }
-
-            if t.removes_all_tags() {
-                for metadata in tags_available.values_mut() {
-                    metadata.used = true;
-                }
-                tags_available.clear();
-            }
-
-            let tags_here: Vec<String> = if let Some(tag_names_and_types) =
-                t.uses_tags(&tags_available)
-            {
-                for (tag_name, tag_types) in &tag_names_and_types {
-                    //no need to check if empty, empty will never be present
-                    let entry = tags_available.get_mut(tag_name);
-                    match entry {
-                        Some(metadata) => {
-                            metadata.used = true;
-                            if !tag_types
-                                .iter()
-                                .any(|tag_type| tag_type.compatible(metadata.tag_type))
-                            {
-                                errors.push(anyhow!  (
-                            "[Step {step_no} ({t})]: Tag '{label}' does not provide any of the required tag types {supposed_tag_types:?}. It provides '{actual_tag_type}'.", supposed_tag_types=tag_types, label=tag_name, actual_tag_type=metadata.tag_type ));
-                            }
-                        }
-                        None => {
-                            errors.push(anyhow!(
-                                "[Step {step_no} ({t})]: No step generating label '{tag_name}' (or removed previously). Available at this point: {{{}}}.", tags_available.keys().cloned().collect::<Vec<_>>().join(", ")
-                            ));
-                        }
-                    }
-                }
-                if t.must_see_all_tags() {
-                    tags_available.keys().cloned().collect()
-                } else {
-                    tag_names_and_types
-                        .into_iter()
-                        .map(|(name, _)| name)
-                        .collect()
-                }
-            } else if t.must_see_all_tags() {
-                tags_available.keys().cloned().collect()
-            } else {
-                Vec::new()
-            };
-
-            if let Some((tag_name, tag_type)) = t.declares_tag_type() {
-                if let Err(e) = validate_tag_name(&tag_name) {
-                    errors.push(anyhow!("[Step {step_no} ({t})]: {e}"));
-                    continue;
-                }
-
-                if tags_available.contains_key(&tag_name) {
-                    errors.push(anyhow!(
-                        "[Step {step_no} ([{t})]: Duplicate label: {tag_name}. Each tag must be unique",
-                    ));
-                    continue;
-                }
-                tags_available.insert(
-                    tag_name.clone(),
-                    TagMetadata {
-                        used: false,
-                        declared_at_step: step_no,
-                        declared_by: t.to_string(),
-                        tag_type,
-                    },
-                );
-            }
-            allowed_tags_per_stage.push(tags_here);
-        }
-        for (tag_name, metadata) in tags_available.iter().filter(|(_, meta)| !meta.used) {
-            errors.push(anyhow!(
-                "[Step {declared_at_step} ({declared_by})]: Extract label '{tag_name}' (type {tag_type}) is never used downstream.",
-                declared_at_step = metadata.declared_at_step,
-                tag_name = tag_name,
-                declared_by = metadata.declared_by,
-                tag_type = metadata.tag_type,
-            ));
-        }
+        // for (step_no, t) in self.transform.iter().enumerate() {
+        //     if let err(e) =
+        //         t.validate_others(&self.input, self.output.as_ref(), &self.transform, step_no)
+        //     {
+        //         errors.push(e.context(format!("[step {step_no} ({t})]:")));
+        //         continue; // skip further processing of this transform if validation failed
+        //     }
+        //
+        //     for tag_name in t.removes_tags() {
+        //         //no need to check if empty, empty will never be present
+        //         if let some(metadata) = tags_available.get_mut(&tag_name) {
+        //             metadata.used = true;
+        //         } else {
+        //             errors.push(anyhow!(
+        //                 "[step {step_no} ({t})]: can't remove tag {tag_name}, not present. available at this point: {tags_available:?}. transform: {t}"
+        //             ));
+        //             continue;
+        //         }
+        //         tags_available.shift_remove(&tag_name);
+        //     }
+        //
+        //     if t.removes_all_tags() {
+        //         for metadata in tags_available.values_mut() {
+        //             metadata.used = true;
+        //         }
+        //         tags_available.clear();
+        //     }
+        //
+        //     let tags_here: vec<string> = if let some(tag_names_and_types) =
+        //         t.uses_tags(&tags_available)
+        //     {
+        //         for (tag_name, tag_types) in &tag_names_and_types {
+        //             //no need to check if empty, empty will never be present
+        //             let entry = tags_available.get_mut(tag_name);
+        //             match entry {
+        //                 some(metadata) => {
+        //                     metadata.used = true;
+        //                     if !tag_types
+        //                         .iter()
+        //                         .any(|tag_type| tag_type.compatible(metadata.tag_type))
+        //                     {
+        //                         errors.push(anyhow!  (
+        //                     "[step {step_no} ({t})]: tag '{label}' does not provide any of the required tag types {supposed_tag_types:?}. it provides '{actual_tag_type}'.", supposed_tag_types=tag_types, label=tag_name, actual_tag_type=metadata.tag_type ));
+        //                     }
+        //                 }
+        //                 none => {
+        //                     errors.push(anyhow!(
+        //                         "[step {step_no} ({t})]: no step generating label '{tag_name}' (or removed previously). available at this point: {{{}}}.", tags_available.keys().cloned().collect::<vec<_>>().join(", ")
+        //                     ));
+        //                 }
+        //             }
+        //         }
+        //         if t.must_see_all_tags() {
+        //             tags_available.keys().cloned().collect()
+        //         } else {
+        //             tag_names_and_types
+        //                 .into_iter()
+        //                 .map(|(name, _)| name)
+        //                 .collect()
+        //         }
+        //     } else if t.must_see_all_tags() {
+        //         tags_available.keys().cloned().collect()
+        //     } else {
+        //         vec::new()
+        //     };
+        //
+        //     if let some((tag_name, tag_type)) = t.declares_tag_type() {
+        //         if let err(e) = validate_tag_name(&tag_name) {
+        //             errors.push(anyhow!("[step {step_no} ({t})]: {e}"));
+        //             continue;
+        //         }
+        //
+        //         if tags_available.contains_key(&tag_name) {
+        //             errors.push(anyhow!(
+        //                 "[step {step_no} ([{t})]: duplicate label: {tag_name}. each tag must be unique",
+        //             ));
+        //             continue;
+        //         }
+        //         tags_available.insert(
+        //             tag_name.clone(),
+        //             tagmetadata {
+        //                 used: false,
+        //                 declared_at_step: step_no,
+        //                 declared_by: t.to_string(),
+        //                 tag_type,
+        //             },
+        //         );
+        //     }
+        //     allowed_tags_per_stage.push(tags_here);
+        // }
+        // for (tag_name, metadata) in tags_available.iter().filter(|(_, meta)| !meta.used) {
+        //     errors.push(anyhow!(
+        //         "[Step {declared_at_step} ({declared_by})]: Extract label '{tag_name}' (type {tag_type}) is never used downstream.",
+        //         declared_at_step = metadata.declared_at_step,
+        //         tag_name = tag_name,
+        //         declared_by = metadata.declared_by,
+        //         tag_type = metadata.tag_type,
+        //     ));
+        // }
         let stages: Vec<Stage> = self
             .transform
             .drain(..)

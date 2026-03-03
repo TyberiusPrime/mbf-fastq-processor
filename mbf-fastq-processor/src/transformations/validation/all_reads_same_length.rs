@@ -60,6 +60,8 @@ impl VerifyIn<PartialConfig> for PartialValidateAllReadsSameLength {
     }
 }
 
+impl TagUser for PartialTaggedVariant<PartialValidateAllReadsSameLength> {}
+
 impl Step for ValidateAllReadsSameLength {
     fn uses_tags(
         &self,

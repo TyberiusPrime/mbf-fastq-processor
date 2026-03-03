@@ -56,6 +56,8 @@ impl VerifyIn<PartialConfig> for PartialPrefix {
     }
 }
 
+impl TagUser for PartialTaggedVariant<PartialPrefix> {}
+
 impl Step for Prefix {
     fn uses_tags(
         &self,

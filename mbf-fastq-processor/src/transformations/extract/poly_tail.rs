@@ -59,6 +59,8 @@ impl VerifyIn<PartialConfig> for PartialPolyTail {
     }
 }
 
+impl TagUser for PartialTaggedVariant<PartialPolyTail> {}
+
 impl Step for PolyTail {
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((

@@ -40,6 +40,8 @@ impl VerifyIn<PartialConfig> for PartialTruncate {
     }
 }
 
+impl TagUser for PartialTaggedVariant<PartialTruncate> {}
+
 impl Step for Truncate {
     fn uses_tags(
         &self,

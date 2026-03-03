@@ -20,6 +20,7 @@ impl Partial_ReportLengthDistribution {
         }
     }
 }
+impl TagUser for PartialTaggedVariant<Box<Partial_ReportLengthDistribution>> {}
 
 impl Step for Box<_ReportLengthDistribution> {
     fn transmits_premature_termination(&self) -> bool {

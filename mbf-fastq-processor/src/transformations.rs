@@ -180,31 +180,35 @@ pub struct InputInfo {
     pub initial_filter_capacity: Option<usize>,
 }
 
-
-pub enum UsedTags {
+#[derive(Default, Debug)]
+pub enum UsedTags<'a> {
+    #[default]
     None,
     All,
-    Some(Vec<String>, Vec<TagValueType>)
+    Some(Vec<(String, Vec<TagValueType>, &'a mut TomlValue<String>)>),
 }
 
-pub enum RemovedTags {
+#[derive(Default, Debug)]
+pub enum RemovedTags<'a> {
+    #[default]
     None,
     All,
-    Some(Vec<String>)
+    Some(Vec<(String, &'a mut TomlValue<String>)>),
 }
 
-pub struct TagUsageInfo {
-    uses_tags: UsedTags,
-    removes_tags: RemovedTags,
-    declared_tag: Option<(String, TagValueType)>,
+#[derive(Default, Debug)]
+pub struct TagUsageInfo<'a> {
+    pub used_tags: UsedTags<'a>,
+    pub removed_tags: RemovedTags<'a>,
+    pub declared_tag: Option<(String, TagValueType, &'a mut TomlValue<String>)>,
 }
 
 #[enum_dispatch(PartialTransformation)]
 pub trait TagUser {
-    fn get_tag_usage(&self) -> TagUsageInfo {
+    fn get_tag_usage(&mut self) -> TagUsageInfo<'_> {
         TagUsageInfo {
-            uses_tags: UsedTags::None,
-            removes_tags: RemovedTags::None,
+            used_tags: UsedTags::None,
+            removed_tags: RemovedTags::None,
             declared_tag: None,
         }
     }
@@ -303,7 +307,7 @@ pub trait Step {
 
 //#[serde(tag = "action")]
 #[enum_dispatch]
-#[tpd(tag = "action")]//, further_attr="enum_dispatch")]
+#[tpd(tag = "action", further_attr = "enum_dispatch")]
 #[derive(Debug, strum_macros::Display, JsonSchema)]
 pub enum Transformation {
     //Edits
