@@ -29,7 +29,7 @@ impl VerifyIn<PartialConfig> for PartialLongestPolyX {
     fn verify(
         &mut self,
         parent: &PartialConfig,
-        options: &VerifyOptions,
+        _options: &VerifyOptions,
     ) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized,
