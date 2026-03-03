@@ -180,6 +180,36 @@ pub struct InputInfo {
     pub initial_filter_capacity: Option<usize>,
 }
 
+
+pub enum UsedTags {
+    None,
+    All,
+    Some(Vec<String>, Vec<TagValueType>)
+}
+
+pub enum RemovedTags {
+    None,
+    All,
+    Some(Vec<String>)
+}
+
+pub struct TagUsageInfo {
+    uses_tags: UsedTags,
+    removes_tags: RemovedTags,
+    declared_tag: Option<(String, TagValueType)>,
+}
+
+#[enum_dispatch(PartialTransformation)]
+pub trait TagUser {
+    fn get_tag_usage(&self) -> TagUsageInfo {
+        TagUsageInfo {
+            uses_tags: UsedTags::None,
+            removes_tags: RemovedTags::None,
+            declared_tag: None,
+        }
+    }
+}
+
 #[enum_dispatch(Transformation)]
 pub trait Step {
     /// validates all other aspects of the step
@@ -273,7 +303,7 @@ pub trait Step {
 
 //#[serde(tag = "action")]
 #[enum_dispatch]
-#[tpd(tag = "action")]
+#[tpd(tag = "action")]//, further_attr="enum_dispatch")]
 #[derive(Debug, strum_macros::Display, JsonSchema)]
 pub enum Transformation {
     //Edits

@@ -13,7 +13,7 @@ use std::cell::RefCell;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
-use toml_pretty_deser::{Visitor, prelude::*};
+use toml_pretty_deser::{PartialTaggedVariant, Visitor, prelude::*};
 
 pub mod deser;
 mod input;
@@ -342,15 +342,16 @@ impl PartialConfig {
             if let Some(transform) = self.transform.as_mut() {
                 for tv_transform in transform.iter_mut() {
                     if let Some(transform) = tv_transform.as_ref() {
-                        let name = if let PartialTransformation::Report(config, _) = transform {
+                        let name = if let PartialTransformation::Report(config) = transform {
                             config
+                                .toml_value
                                 .as_ref()
                                 .and_then(|x| x.name.as_ref())
                                 .map(|x| x.to_string())
-                        } else if let PartialTransformation::_InternalReadCount(config, _) =
-                            transform
+                        } else if let PartialTransformation::_InternalReadCount(config) = transform
                         {
                             config
+                                .toml_value
                                 .as_ref()
                                 .and_then(|x| x.out_label.as_ref())
                                 .map(|x| x.to_string())
@@ -697,9 +698,13 @@ impl PartialConfig {
 
                 for mut t in transforms.drain(..) {
                     match t.as_mut().expect("parent was ok") {
-                        PartialTransformation::ExtractRegion(step_config, tag_span) => {
-                            let step_config =
-                                step_config.take().into_inner().expect("Parent was ok?");
+                        PartialTransformation::ExtractRegion(step_config) => {
+                            let tag_span = step_config.tag_span.clone();
+                            let step_config = step_config
+                                .toml_value
+                                .take()
+                                .into_inner()
+                                .expect("Parent was ok?");
                             let regions = TomlValue::new_ok(
                                 vec![TomlValue::new_ok(
                                     crate::transformations::PartialRegionDefinition {
@@ -713,30 +718,33 @@ impl PartialConfig {
                                 0..0,
                             );
                             push_new(PartialTransformation::ExtractRegions(
-                                TomlValue::new_ok_unplaced(
-                                    crate::transformations::extract::PartialRegions {
-                                        out_label: step_config.out_label,
-                                        regions,
-                                        // region_separator: None,
-                                        output_tag_type: Some(std::sync::OnceLock::new()),
-                                    },
-                                ),
-                                tag_span.clone(),
+                                PartialTaggedVariant {
+                                    toml_value: TomlValue::new_ok_unplaced(
+                                        crate::transformations::extract::PartialRegions {
+                                            out_label: step_config.out_label,
+                                            regions,
+                                            // region_separator: None,
+                                            output_tag_type: Some(std::sync::OnceLock::new()),
+                                        },
+                                    ),
+                                    tag_span: tag_span.clone(),
+                                },
                             ));
                         }
-                        PartialTransformation::Report(report_config, tag_span) => {
+                        PartialTransformation::Report(report_config) => {
                             Self::expand_reports(
                                 &mut push_new,
                                 &mut push_existing,
                                 &mut res_report_labels,
                                 &mut report_no,
-                                report_config,
-                                tag_span.clone(),
+                                &mut report_config.toml_value,
+                                report_config.tag_span.clone(),
                             );
                         }
 
-                        PartialTransformation::_InternalReadCount(step_config, tag_span) => {
-                            if let Some(step_config) = step_config.take().into_inner() {
+                        PartialTransformation::_InternalReadCount(step_config) => {
+                            let tag_span = step_config.tag_span.clone();
+                            if let Some(step_config) = step_config.toml_value.take().into_inner() {
                                 res_report_labels.push(
                                     step_config
                                         .out_label
@@ -752,52 +760,61 @@ impl PartialConfig {
                                     });
                                 report_no += 1;
                                 push_new(PartialTransformation::_InternalReadCount(
-                                    TomlValue::new_ok_unplaced(step_config),
-                                    tag_span.clone(),
+                                    PartialTaggedVariant {
+                                        toml_value: TomlValue::new_ok_unplaced(step_config),
+                                        tag_span,
+                                    },
                                 ));
                             }
                         }
-                        PartialTransformation::CalcGCContent(step_config, tag_span) => {
-                            if let Some(step_config) = step_config.take().into_inner() {
+                        PartialTransformation::CalcGCContent(step_config) => {
+                            let tag_span = step_config.tag_span.clone();
+                            if let Some(step_config) = step_config.toml_value.take().into_inner() {
                                 push_new(PartialTransformation::CalcBaseContent(
-                                    TomlValue::new_ok_unplaced(
-                                        crate::transformations::calc::PartialBaseContent::new(
-                                            step_config.out_label,
-                                            step_config.segment,
-                                            true,
-                                            BString::from("GC"),
-                                            BString::from("N"),
+                                    PartialTaggedVariant {
+                                        toml_value: TomlValue::new_ok_unplaced(
+                                            crate::transformations::calc::PartialBaseContent::new(
+                                                step_config.out_label,
+                                                step_config.segment,
+                                                true,
+                                                BString::from("GC"),
+                                                BString::from("N"),
+                                            ),
                                         ),
-                                    ),
-                                    tag_span.clone(),
+                                        tag_span,
+                                    },
                                 ));
                             }
                         }
-                        PartialTransformation::CalcNCount(step_config, tag_span) => {
-                            if let Some(step_config) = step_config.take().into_inner() {
+                        PartialTransformation::CalcNCount(step_config) => {
+                            let tag_span = step_config.tag_span.clone();
+                            if let Some(step_config) = step_config.toml_value.take().into_inner() {
                                 push_new(PartialTransformation::CalcBaseContent(
-                                    TomlValue::new_ok_unplaced(
-                                        crate::transformations::calc::PartialBaseContent::new(
-                                            step_config.out_label,
-                                            step_config.segment,
-                                            false,
-                                            BString::from("N"),
-                                            BString::default(),
+                                    PartialTaggedVariant {
+                                        toml_value: TomlValue::new_ok_unplaced(
+                                            crate::transformations::calc::PartialBaseContent::new(
+                                                step_config.out_label,
+                                                step_config.segment,
+                                                false,
+                                                BString::from("N"),
+                                                BString::default(),
+                                            ),
                                         ),
-                                    ),
-                                    tag_span.clone(),
+                                        tag_span,
+                                    },
                                 ));
                             }
                         }
-                        PartialTransformation::FilterEmpty(step_config, tag_span) => {
-                            if let Some(step_config) = step_config.take().into_inner() {
+                        PartialTransformation::FilterEmpty(step_config) => {
+                            let tag_span = step_config.tag_span.clone();
+                            if let Some(step_config) = step_config.toml_value.take().into_inner() {
                                 // Replace FilterEmpty with CalcLength + FilterByNumericTag
                                 let length_tag_label = format!(
                                     "_internal_length_{}",
                                     expanded_transforms.borrow().len()
                                 );
-                                push_new(PartialTransformation::CalcLength(
-                                    TomlValue::new_ok_unplaced(
+                                push_new(PartialTransformation::CalcLength(PartialTaggedVariant {
+                                    toml_value: TomlValue::new_ok_unplaced(
                                         crate::transformations::calc::PartialLength {
                                             out_label: TomlValue::new_ok_unplaced(
                                                 length_tag_label.clone(),
@@ -805,27 +822,34 @@ impl PartialConfig {
                                             segment: step_config.segment,
                                         },
                                     ),
-                                    tag_span.clone(),
-                                ));
+                                    tag_span: tag_span.clone(),
+                                }));
                                 push_new(PartialTransformation::FilterByNumericTag(
-                                    TomlValue::new_ok_unplaced(
-                                        crate::transformations::filters::PartialByNumericTag {
-                                            in_label: TomlValue::new_ok_unplaced(length_tag_label),
-                                            min_value: TomlValue::new_ok_unplaced(Some(1.0)), // Non-empty means length >= 1
-                                            max_value: TomlValue::new_ok_unplaced(None),
-                                            keep_or_remove: TomlValue::new_ok_unplaced(
-                                                crate::transformations::KeepOrRemove::Keep,
-                                            ),
-                                        },
-                                    ),
-                                    tag_span.clone(),
+                                    PartialTaggedVariant {
+                                        toml_value: TomlValue::new_ok_unplaced(
+                                            crate::transformations::filters::PartialByNumericTag {
+                                                in_label: TomlValue::new_ok_unplaced(
+                                                    length_tag_label,
+                                                ),
+                                                min_value: TomlValue::new_ok_unplaced(Some(1.0)), // Non-empty means length >= 1
+                                                max_value: TomlValue::new_ok_unplaced(None),
+                                                keep_or_remove: TomlValue::new_ok_unplaced(
+                                                    crate::transformations::KeepOrRemove::Keep,
+                                                ),
+                                            },
+                                        ),
+                                        tag_span,
+                                    },
                                 ));
                             }
                         }
-                        PartialTransformation::ConvertQuality(step_config, tag_span) => {
-                            if let Some(step_config) = step_config.as_ref() {
+                        PartialTransformation::ConvertQuality(step_config) => {
+                            let tag_span = step_config.tag_span.clone();
+                            if let Some(step_config) = step_config.toml_value.as_ref() {
                                 //implies a check beforehand
                                 push_new(PartialTransformation::ValidateQuality(
+                                    PartialTaggedVariant {
+                                        toml_value:
                                 TomlValue::new_ok_unplaced(
                                     crate::transformations::validation::PartialValidateQuality {
                                         encoding: TomlValue::new_ok(
@@ -837,36 +861,55 @@ impl PartialConfig {
                                         )),
                                     },
                                 ),
-                                tag_span.clone(),
+                                tag_span,
+                                    }
                             ));
                                 push_existing(t);
                             }
                         }
-                        PartialTransformation::Lowercase(step_config, tag_span) => {
-                            if let Some(step_config) = step_config.take().into_inner() {
+                        PartialTransformation::Lowercase(step_config) => {
+                            let tag_span = step_config.tag_span.clone();
+                            if let Some(step_config) = step_config.toml_value.take().into_inner() {
                                 push_new(PartialTransformation::_ChangeCase(
-                                    TomlValue::new_ok_unplaced(
-                                        crate::transformations::edits::Partial_ChangeCase::new(
-                                            step_config.target.into_inner().expect("parent was ok"),
-                                            crate::transformations::edits::CaseType::Lower,
-                                            step_config.if_tag.into_inner().expect("parent was ok"),
+                                    PartialTaggedVariant {
+                                        toml_value: TomlValue::new_ok_unplaced(
+                                            crate::transformations::edits::Partial_ChangeCase::new(
+                                                step_config
+                                                    .target
+                                                    .into_inner()
+                                                    .expect("parent was ok"),
+                                                crate::transformations::edits::CaseType::Lower,
+                                                step_config
+                                                    .if_tag
+                                                    .into_inner()
+                                                    .expect("parent was ok"),
+                                            ),
                                         ),
-                                    ),
-                                    tag_span.clone(),
+                                        tag_span,
+                                    },
                                 ));
                             }
                         }
-                        PartialTransformation::Uppercase(step_config, tag_span) => {
-                            if let Some(step_config) = step_config.take().into_inner() {
+                        PartialTransformation::Uppercase(step_config) => {
+                            let tag_span = step_config.tag_span.clone();
+                            if let Some(step_config) = step_config.toml_value.take().into_inner() {
                                 push_new(PartialTransformation::_ChangeCase(
-                                    TomlValue::new_ok_unplaced(
-                                        crate::transformations::edits::Partial_ChangeCase::new(
-                                            step_config.target.into_inner().expect("parent was ok"),
-                                            crate::transformations::edits::CaseType::Upper,
-                                            step_config.if_tag.into_inner().expect("parent was ok"),
+                                    PartialTaggedVariant {
+                                        toml_value: TomlValue::new_ok_unplaced(
+                                            crate::transformations::edits::Partial_ChangeCase::new(
+                                                step_config
+                                                    .target
+                                                    .into_inner()
+                                                    .expect("parent was ok"),
+                                                crate::transformations::edits::CaseType::Upper,
+                                                step_config
+                                                    .if_tag
+                                                    .into_inner()
+                                                    .expect("parent was ok"),
+                                            ),
                                         ),
-                                    ),
-                                    tag_span.clone(),
+                                        tag_span,
+                                    },
                                 ));
                             }
                         }
@@ -901,16 +944,13 @@ impl PartialConfig {
         {
             return;
         }
-        let has_validate_name = transforms.iter().any(|step| {
-            matches!(
-                step.as_ref(),
-                Some(PartialTransformation::ValidateName(_, _))
-            )
-        });
+        let has_validate_name = transforms
+            .iter()
+            .any(|step| matches!(step.as_ref(), Some(PartialTransformation::ValidateName(_))));
         let has_spot_check = transforms.iter().any(|step| {
             matches!(
                 step.as_ref(),
-                Some(PartialTransformation::ValidateReadPairing(_, _))
+                Some(PartialTransformation::ValidateReadPairing(_))
             )
         });
         let is_benchmark = self
@@ -923,10 +963,12 @@ impl PartialConfig {
 
         if !has_validate_name && !has_spot_check && !is_benchmark {
             push_new(PartialTransformation::ValidateReadPairing(
-                TomlValue::new_ok_unplaced(
-                    crate::transformations::validation::PartialValidateReadPairing::new(None),
-                ),
-                0..0,
+                PartialTaggedVariant {
+                    toml_value: TomlValue::new_ok_unplaced(
+                        crate::transformations::validation::PartialValidateReadPairing::new(None),
+                    ),
+                    tag_span: 0..0,
+                },
             ));
         }
     }
@@ -955,79 +997,98 @@ impl PartialConfig {
         }
         if let Some(config) = tv_config.as_mut() {
             if let Some(true) = config.count.as_ref() {
-                push_new(PartialTransformation::_ReportCount(
-                    TomlValue::new_ok_unplaced(Box::new(reports::Partial_ReportCount::new(
-                        *report_no,
-                    ))),
-                    0..0,
-                ));
+                push_new(PartialTransformation::_ReportCount(PartialTaggedVariant {
+                    toml_value: TomlValue::new_ok_unplaced(Box::new(
+                        reports::Partial_ReportCount::new(*report_no),
+                    )),
+                    tag_span: 0..0,
+                }));
             }
             if let Some(true) = config.length_distribution.as_ref() {
                 push_new(PartialTransformation::_ReportLengthDistribution(
-                    TomlValue::new_ok_unplaced(Box::new(
-                        reports::Partial_ReportLengthDistribution::new(*report_no),
-                    )),
-                    0..0,
+                    PartialTaggedVariant {
+                        toml_value: TomlValue::new_ok_unplaced(Box::new(
+                            reports::Partial_ReportLengthDistribution::new(*report_no),
+                        )),
+                        tag_span: 0..0,
+                    },
                 ));
             }
             if let Some(true) = config.duplicate_count_per_read.as_ref() {
                 push_new(PartialTransformation::_ReportDuplicateCount(
-                    TomlValue::new_ok_unplaced(Box::new(
-                        reports::Partial_ReportDuplicateCount::new(
-                            *report_no,
-                            config.debug_reproducibility.clone(),
-                        ),
-                    )),
-                    0..0,
+                    PartialTaggedVariant {
+                        toml_value: TomlValue::new_ok_unplaced(Box::new(
+                            reports::Partial_ReportDuplicateCount::new(
+                                *report_no,
+                                config.debug_reproducibility.clone(),
+                            ),
+                        )),
+                        tag_span: 0..0,
+                    },
                 ));
             }
 
             if let Some(true) = config.duplicate_count_per_fragment.as_ref() {
                 push_new(PartialTransformation::_ReportDuplicateFragmentCount(
-                    TomlValue::new_ok_unplaced(Box::new(
-                        reports::Partial_ReportDuplicateFragmentCount::new(
-                            *report_no,
-                            config.debug_reproducibility.clone(),
-                        ),
-                    )),
-                    0..0,
+                    PartialTaggedVariant {
+                        toml_value: TomlValue::new_ok_unplaced(Box::new(
+                            reports::Partial_ReportDuplicateFragmentCount::new(
+                                *report_no,
+                                config.debug_reproducibility.clone(),
+                            ),
+                        )),
+                        tag_span: 0..0,
+                    },
                 ));
             }
             if let Some(true) = config.base_statistics.as_ref() {
                 push_new(PartialTransformation::_ReportBaseStatisticsPart1(
-                    TomlValue::new_ok_unplaced(Box::new(
-                        reports::Partial_ReportBaseStatisticsPart1::new(*report_no),
-                    )),
-                    0..0,
+                    PartialTaggedVariant {
+                        toml_value: TomlValue::new_ok_unplaced(Box::new(
+                            reports::Partial_ReportBaseStatisticsPart1::new(*report_no),
+                        )),
+                        tag_span: 0..0,
+                    },
                 ));
                 push_new(PartialTransformation::_ReportBaseStatisticsPart2(
-                    TomlValue::new_ok_unplaced(Box::new(
-                        reports::Partial_ReportBaseStatisticsPart2::new(*report_no),
-                    )),
-                    0..0,
+                    PartialTaggedVariant {
+                        toml_value: TomlValue::new_ok_unplaced(Box::new(
+                            reports::Partial_ReportBaseStatisticsPart2::new(*report_no),
+                        )),
+                        tag_span: 0..0,
+                    },
                 ));
             }
             if let Some(Some(count_oligos)) = config.count_oligos.take().into_inner() {
                 push_new(PartialTransformation::_ReportCountOligos(
-                    TomlValue::new_ok_unplaced(Box::new(reports::Partial_ReportCountOligos::new(
-                        *report_no,
-                        count_oligos
-                            .into_iter()
-                            .filter_map(|x| x.into_inner())
-                            .map(|x| x.0)
-                            .collect(),
-                        config.count_oligos_segment.clone(),
-                    ))),
-                    0..0,
+                    PartialTaggedVariant {
+                        toml_value: TomlValue::new_ok_unplaced(Box::new(
+                            reports::Partial_ReportCountOligos::new(
+                                *report_no,
+                                count_oligos
+                                    .into_iter()
+                                    .filter_map(|x| x.into_inner())
+                                    .map(|x| x.0)
+                                    .collect(),
+                                config.count_oligos_segment.clone(),
+                            ),
+                        )),
+                        tag_span: 0..0,
+                    },
                 ));
             }
             if let Some(Some(tag_histograms)) = config.tag_histograms.as_ref() {
                 for tag_name in tag_histograms {
                     push_new(PartialTransformation::_ReportTagHistogram(
-                        TomlValue::new_ok_unplaced(Box::new(
-                            reports::Partial_ReportTagHistogram::new(*report_no, tag_name.clone()),
-                        )),
-                        0..0,
+                        PartialTaggedVariant {
+                            toml_value: TomlValue::new_ok_unplaced(Box::new(
+                                reports::Partial_ReportTagHistogram::new(
+                                    *report_no,
+                                    tag_name.clone(),
+                                ),
+                            )),
+                            tag_span: 0..0,
+                        },
                     ));
                 }
             }

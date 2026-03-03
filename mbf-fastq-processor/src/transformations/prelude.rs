@@ -1,6 +1,6 @@
 pub(crate) use super::{
     ConditionalTag, FinalizeReportResult, FragmentEntry, FragmentEntryForCuckooFilter, InputInfo,
-    OurCuckCooFilter, Step, TagValueType, Transformation, edits::get_bool_vec_from_tag,
+    OurCuckCooFilter, Step, TagUser, TagUsageInfo, TagValueType, Transformation, edits::get_bool_vec_from_tag,
     reproducible_cuckoofilter,
 };
 pub(crate) use crate::config::{
