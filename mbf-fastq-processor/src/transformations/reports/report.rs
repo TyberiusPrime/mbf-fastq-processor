@@ -1,6 +1,5 @@
 use crate::transformations::prelude::*;
 
-use super::super::validate_dna;
 use std::collections::HashSet;
 
 use super::super::tag::default_segment_all;

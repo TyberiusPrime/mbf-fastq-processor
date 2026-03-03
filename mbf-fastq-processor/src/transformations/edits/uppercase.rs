@@ -20,7 +20,7 @@ impl VerifyIn<PartialConfig> for PartialUppercase {
     fn verify(
         &mut self,
         parent: &PartialConfig,
-        options: &VerifyOptions,
+        _options: &VerifyOptions,
     ) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized + toml_pretty_deser::Visitor,
