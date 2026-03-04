@@ -10,7 +10,21 @@ pub struct ForgetTag {
     in_label: String,
 }
 
-impl TagUser for PartialTaggedVariant<PartialForgetTag> {}
+impl TagUser for PartialTaggedVariant<PartialForgetTag> {
+    fn get_tag_usage(&mut self) -> TagUsageInfo<'_> {
+        let inner = self
+            .toml_value
+            .as_mut()
+            .expect("get_tag_usage should only be called after successful verification");
+        TagUsageInfo {
+            removed_tags: RemovedTags::Some(vec![(
+                inner.in_label.as_ref().expect("parent was ok").clone(),
+                &mut inner.in_label,
+            )]),
+            ..Default::default()
+        }
+    }
+}
 
 impl Step for ForgetTag {
     fn removes_tags(&self) -> Vec<String> {

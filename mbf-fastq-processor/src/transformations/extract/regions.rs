@@ -68,7 +68,20 @@ impl VerifyIn<PartialConfig> for PartialRegions {
     }
 }
 
-impl TagUser for PartialTaggedVariant<PartialRegions> {}
+impl TagUser for PartialTaggedVariant<PartialRegions> {
+    fn get_tag_usage(&mut self) -> TagUsageInfo<'_> {
+        let inner = self
+            .toml_value
+            .as_mut()
+            .expect("get_tag_usage should only be called after successful verification");
+        let used_tags = todo!();
+        TagUsageInfo {
+            declared_tag: inner.out_label.to_declared_tag(TagValueType::Location),
+            used_tags: used_tags,
+            ..Default::default()
+        }
+    }
+}
 
 impl Step for Regions {
     fn declares_tag_type(&self) -> Option<(String, TagValueType)> {
