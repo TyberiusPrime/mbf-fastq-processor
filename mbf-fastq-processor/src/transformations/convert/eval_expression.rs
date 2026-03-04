@@ -2,8 +2,7 @@ use crate::transformations::prelude::*;
 
 use fasteval::{Compiler, Evaler, Parser, Slab};
 use std::{
-    collections::{BTreeMap, BTreeSet},
-    sync::atomic::Ordering,
+    cell::RefCell, collections::{BTreeMap, BTreeSet}, rc::Rc, sync::atomic::Ordering
 };
 
 use crate::{dna::TagValue, io};
@@ -146,7 +145,10 @@ impl TagUser for PartialTaggedVariant<Box<PartialEvalExpression>> {
         let var_names = &inner.compiled.as_ref().expect("expected ok").var_names;
         let used_tags = {
             let mut out = Vec::new();
-            let toml_source = Rc::new(RefCell::new(&mut inner.expression));
+            let toml_source = Rc::new(RefCell::new((
+                &mut inner.expression.state,
+                &mut inner.expression.help,
+            )));
             for name in var_names {
                 if let Some(suffix) = name.strip_prefix("len_") {
                     todo!();
@@ -159,31 +161,27 @@ impl TagUser for PartialTaggedVariant<Box<PartialEvalExpression>> {
                 } else if name == "read_no" {
                     // read_no is virtual, no tag needed
                 } else {
-                    out.push(UsedTags {
+                    out.push(Some(UsedTag {
                         name: name.clone(),
-                        accepted_tag_types: vec![
+                        accepted_tag_types: &[
                             TagValueType::Bool,
                             TagValueType::Numeric,
                             TagValueType::String,
                             TagValueType::Location,
-                        ],
+                        ][..],
                         toml_source: toml_source.clone(),
-                    });
+                    }));
                 }
             }
             out
         };
         TagUsageInfo {
             used_tags,
-            removed_tags: RemovedTags::None,
-            declared_tag: Some((
-                inner.out_label.as_ref().expect("parent was ok?").clone(),
-                match inner.result_type.as_ref().expect("parent was ok?") {
+            declared_tag: inner.out_label.to_declared_tag(match inner.result_type.as_ref().expect("parent was ok?") {
                     ResultType::Numeric => TagValueType::Numeric,
                     ResultType::Bool => TagValueType::Bool,
-                },
-                &mut inner.out_label,
-            )),
+                }),
+            ..Default::default()
         }
     }
 }

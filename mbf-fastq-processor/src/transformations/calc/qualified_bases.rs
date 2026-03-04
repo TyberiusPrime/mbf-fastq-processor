@@ -72,11 +72,7 @@ impl TagUser for PartialTaggedVariant<PartialQualifiedBases> {
             .as_mut()
             .expect("get_tag_usage should only be called after successful verification");
         TagUsageInfo {
-            declared_tag: Some((
-                inner.out_label.as_ref().expect("parent was ok?").clone(),
-                TagValueType::Numeric,
-                &mut inner.out_label,
-            )),
+            declared_tag: inner.out_label.to_declared_tag(TagValueType::Numeric),
             ..Default::default()
         }
     }

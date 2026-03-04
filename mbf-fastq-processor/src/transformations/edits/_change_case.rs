@@ -68,7 +68,28 @@ impl _ChangeCase {
     }
 }
 
-impl TagUser for PartialTaggedVariant<Partial_ChangeCase> {}
+impl TagUser for PartialTaggedVariant<Partial_ChangeCase> {
+    fn get_tag_usage(&mut self) -> TagUsageInfo<'_> {
+        let inner = self
+            .toml_value
+            .as_mut()
+            .expect("get_tag_usage should only be called after successful verification");
+        let mut used_tags = vec![inner.if_tag.to_used_tag(
+                &[
+                    TagValueType::Bool,
+                    TagValueType::String,
+                    TagValueType::Location,
+                ][..],
+            )];
+        used_tags.extend(inner.target.to_used_tags());
+
+        TagUsageInfo {
+            used_tags,
+            ..Default::default()
+        }
+    }
+
+}
 
 impl Step for _ChangeCase {
     fn uses_tags(

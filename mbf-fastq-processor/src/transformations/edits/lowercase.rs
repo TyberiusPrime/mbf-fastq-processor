@@ -31,7 +31,11 @@ impl VerifyIn<PartialConfig> for PartialLowercase {
     }
 }
 
-impl TagUser for PartialTaggedVariant<PartialLowercase> {}
+impl TagUser for PartialTaggedVariant<PartialLowercase> {
+    fn get_tag_usage(&mut self) -> TagUsageInfo<'_> {
+        unreachable!("Should have been transformed before");
+    }
+}
 
 impl Step for Lowercase {
     fn apply(
