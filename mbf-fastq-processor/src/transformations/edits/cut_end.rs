@@ -38,26 +38,25 @@ impl VerifyIn<PartialConfig> for PartialCutEnd {
     }
 }
 
-impl TagUser for PartialTaggedVariant<PartialCutEnd> {}
+impl TagUser for PartialTaggedVariant<PartialCutEnd> {
+    fn get_tag_usage(&mut self) -> TagUsageInfo<'_> {
+        let inner = self
+            .toml_value
+            .as_mut()
+            .expect("get_tag_usage should only be called after successful verification");
+
+        TagUsageInfo {
+            used_tags: vec![inner.if_tag.to_used_tag(
+                &[TagValueType::Bool, TagValueType::String, TagValueType::Location][..],
+            )],
+            must_see_all_tags: true,
+            ..Default::default()
+        }
+    }
+}
 
 impl Step for CutEnd {
-    fn uses_tags(
-        &self,
-        _tags_available: &IndexMap<String, TagMetadata>,
-    ) -> Option<Vec<(String, &[TagValueType])>> {
-        self.if_tag.as_ref().map(|tag_str| {
-            let cond_tag = ConditionalTag::from_string(tag_str.clone());
-            vec![(
-                cond_tag.tag.clone(),
-                &[
-                    TagValueType::Bool,
-                    TagValueType::String,
-                    TagValueType::Location,
-                ][..],
-            )]
-        })
-    }
-
+   
     fn apply(
         &self,
         mut block: FastQBlocksCombined,

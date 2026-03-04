@@ -36,15 +36,20 @@ impl VerifyIn<PartialConfig> for PartialStoreTagInSequence {
     }
 }
 
-impl TagUser for PartialTaggedVariant<PartialStoreTagInSequence> {}
+impl TagUser for PartialTaggedVariant<PartialStoreTagInSequence> {
+    fn get_tag_usage(&mut self) -> TagUsageInfo<'_> {
+        let inner = self
+            .toml_value
+            .as_mut()
+            .expect("get_tag_usage should only be called after successful verification");
+        TagUsageInfo {
+            used_tags: vec![inner.in_label.to_used_tag(&[TagValueType::Location][..])],
+            ..Default::default()
+        }
+    }
+}
 
 impl Step for StoreTagInSequence {
-    fn uses_tags(
-        &self,
-        _tags_available: &IndexMap<String, TagMetadata>,
-    ) -> Option<Vec<(String, &[TagValueType])>> {
-        Some(vec![(self.in_label.clone(), &[TagValueType::Location])])
-    }
 
     #[allow(clippy::cast_precision_loss)]
     #[allow(clippy::cast_possible_truncation)]

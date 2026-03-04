@@ -82,6 +82,7 @@ pub enum RegionAnchor {
 
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
 pub enum TagValueType {
+    //Todo: should this be a struct with 4 bools?
     Location, // string + in-sequence-location
     String,   // just a piece of text
     Numeric,
@@ -181,10 +182,80 @@ pub struct InputInfo {
 }
 
 #[derive(Debug)]
-pub struct UsedTags<'a> {
+pub struct UsedTag<'a> {
     pub name: String,
-    pub accepted_tag_types: Vec<TagValueType>,
-    pub toml_source: Rc<RefCell<&'a mut TomlValue<String>>>,
+    pub accepted_tag_types: &'a [TagValueType],
+    pub toml_source: Rc<RefCell<(&'a mut TomlValueState, &'a mut Option<String>)>>,
+}
+
+pub trait ToUsedTag {
+    fn to_used_tag<'a>(&'a mut self, accepted_tag_types: &'a [TagValueType])
+    -> Option<UsedTag<'a>>;
+}
+
+impl ToUsedTag for TomlValue<String> {
+    fn to_used_tag<'a>(
+        &'a mut self,
+        accepted_tag_types: &'a [TagValueType],
+    ) -> Option<UsedTag<'a>> {
+        Some(UsedTag {
+            name: self.as_ref().expect("parent was ok?").clone(),
+            accepted_tag_types,
+            toml_source: Rc::new(RefCell::new((&mut self.state, &mut self.help))),
+        })
+    }
+}
+
+impl ToUsedTag for TomlValue<Option<String>> {
+    fn to_used_tag<'a>(
+        &'a mut self,
+        accepted_tag_types: &'a [TagValueType],
+    ) -> Option<UsedTag<'a>> {
+        let name = self.as_ref().expect("parent was ok?").as_ref();
+        if let Some(name) = name {
+            Some(UsedTag {
+                name: name.clone(),
+                accepted_tag_types,
+                toml_source: Rc::new(RefCell::new((&mut self.state, &mut self.help))),
+            })
+        } else {
+            None
+        }
+    }
+}
+pub trait ToUsedTags {
+    fn to_used_tags<'a>(&'a mut self) -> Vec<Option<UsedTag<'a>>>;
+}
+
+#[derive(Debug)]
+pub(crate) struct DeclaredTag<'a> {
+    pub(crate) name: String,
+    pub(crate) tag_type: TagValueType,
+    pub(crate) toml_source_state: &'a mut TomlValueState,
+    pub(crate) toml_source_help: &'a mut Option<String>,
+    pub(crate) toml_source_context: &'a mut Option<(std::ops::Range<usize>, String)>,
+    pub(crate) toml_source_span: std::ops::Range<usize>,
+}
+pub trait ToDeclaredTag {
+    fn to_declared_tag<'a>(&'a mut self, tag_type: TagValueType) -> Option<DeclaredTag<'a>>;
+}
+impl ToDeclaredTag for TomlValue<String> {
+    fn to_declared_tag<'a>(&'a mut self, tag_type: TagValueType) -> Option<DeclaredTag<'a>> {
+        if self.as_ref().is_some() {
+            let name = self.as_ref().expect("just checked").clone();
+            let span = self.span();
+            Some(DeclaredTag {
+                name: name,
+                tag_type,
+                toml_source_state: &mut self.state,
+                toml_source_help: &mut self.help,
+                toml_source_context: &mut self.context,
+                toml_source_span: span,
+            })
+        } else {
+            None
+        }
+    }
 }
 
 #[derive(Default, Debug)]
@@ -197,9 +268,10 @@ pub enum RemovedTags<'a> {
 
 #[derive(Default, Debug)]
 pub struct TagUsageInfo<'a> {
-    pub used_tags: Vec<UsedTags<'a>>,
+    pub used_tags: Vec<Option<UsedTag<'a>>>,
     pub removed_tags: RemovedTags<'a>,
-    pub declared_tag: Option<(String, TagValueType, &'a mut TomlValue<String>)>,
+    pub declared_tag: Option<DeclaredTag<'a>>,
+    pub must_see_all_tags: bool,
 }
 
 #[enum_dispatch(PartialTransformation)]

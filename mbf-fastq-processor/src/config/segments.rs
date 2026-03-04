@@ -1,7 +1,12 @@
+use std::{cell::RefCell, rc::Rc};
+
 use schemars::JsonSchema;
 use toml_pretty_deser::{prelude::*, suggest_alternatives};
 
-use crate::config::PartialConfig;
+use crate::{
+    config::PartialConfig,
+    transformations::{TagValueType, ToUsedTags, UsedTag},
+};
 
 // #[derive(Clone, Eq, PartialEq, JsonSchema)]
 // #[tpd]
@@ -421,7 +426,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceNoAll>> {
 impl ResolvedSourceNoAll {
     //that's the ones we're going to use
     #[must_use]
-    pub fn get_tags(&self) -> Option<Vec<(String, &[crate::transformations::TagValueType])>> {
+    pub fn get_tags(&self) -> Option<Vec<(String, &'static [crate::transformations::TagValueType])>> {
         match &self {
             ResolvedSourceNoAll::Tag(tag_name) => Some(vec![(
                 tag_name.clone(),
@@ -432,6 +437,27 @@ impl ResolvedSourceNoAll {
             )]),
             _ => None,
         }
+    }
+}
+impl ToUsedTags for TomlValue<MustAdapt<String, ResolvedSourceNoAll>> {
+    fn to_used_tags<'a>(&'a mut self) -> Vec<Option<UsedTag<'a>>> {
+        let resolved = self
+            .as_ref()
+            .expect("Called on non-ok value")
+            .as_ref_post()
+            .expect("called on a non-transformed resource");
+        let mut res = Vec::new();
+        if let Some(tags) = resolved.get_tags() {
+            let toml_source = Rc::new(RefCell::new((&mut self.state, &mut self.help)));
+            for (tag_name, accepted_tag_types) in tags {
+                res.push(Some(UsedTag {
+                    name: tag_name,
+                    accepted_tag_types,
+                    toml_source: toml_source.clone(),
+                }))
+            }
+        }
+        res
     }
 }
 
@@ -654,7 +680,9 @@ impl ResolvedSourceAll {
 
     //that's the ones we're going to use
     #[must_use]
-    pub fn get_tags(&self) -> Option<Vec<(String, &[crate::transformations::TagValueType])>> {
+    pub fn get_tags(
+        &self,
+    ) -> Option<Vec<(String, &'static [crate::transformations::TagValueType])>> {
         match &self {
             ResolvedSourceAll::Tag(tag_name) => Some(vec![(
                 tag_name.clone(),
@@ -665,5 +693,27 @@ impl ResolvedSourceAll {
             )]),
             _ => None,
         }
+    }
+}
+
+impl ToUsedTags for TomlValue<MustAdapt<String, ResolvedSourceAll>> {
+    fn to_used_tags<'a>(&'a mut self) -> Vec<Option<UsedTag<'a>>> {
+        let resolved = self
+            .as_ref()
+            .expect("Called on non-ok value")
+            .as_ref_post()
+            .expect("called on a non-transformed resource");
+        let mut res = Vec::new();
+        if let Some(tags) = resolved.get_tags() {
+            let toml_source = Rc::new(RefCell::new((&mut self.state, &mut self.help)));
+            for (tag_name, accepted_tag_types) in tags {
+                res.push(Some(UsedTag {
+                    name: tag_name,
+                    accepted_tag_types,
+                    toml_source: toml_source.clone(),
+                }))
+            }
+        }
+        res
     }
 }

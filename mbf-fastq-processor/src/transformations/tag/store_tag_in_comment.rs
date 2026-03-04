@@ -110,16 +110,12 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagInComment> {
             .as_mut()
             .expect("get_tag_usage should only be called after successful verification");
         TagUsageInfo {
-            used_tags: vec![UsedTags {
-                name: inner.in_label.as_ref().expect("parent was ok?").clone(),
-                accepted_tag_types: vec![
+            used_tags: vec![inner.in_label.to_used_tag(&[
                     TagValueType::Bool,
                     TagValueType::String,
                     TagValueType::Location,
                     TagValueType::Numeric,
-                ],
-                toml_source: Rc::new(RefCell::new(&mut inner.in_label)),
-            }],
+                ][..])],
             ..Default::default()
         }
     }
