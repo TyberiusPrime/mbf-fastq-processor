@@ -31,7 +31,10 @@ impl VerifyIn<PartialConfig> for PartialUppercase {
 }
 
 impl TagUser for PartialTaggedVariant<PartialUppercase> {
-    fn get_tag_usage(&mut self) -> TagUsageInfo<'_>{
+    fn get_tag_usage(&mut self,
+        _tags_available: &IndexMap<String, TagMetadata>,
+        _segment_order: &[String],
+    ) -> TagUsageInfo<'_>{
         unreachable!("Should have been transformed before");
     }
 }

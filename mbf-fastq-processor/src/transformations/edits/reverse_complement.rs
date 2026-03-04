@@ -30,7 +30,30 @@ impl VerifyIn<PartialConfig> for PartialReverseComplement {
     }
 }
 
-impl TagUser for PartialTaggedVariant<PartialReverseComplement> {}
+impl TagUser for PartialTaggedVariant<PartialReverseComplement> {
+    fn get_tag_usage(
+        &mut self,
+        _tags_available: &IndexMap<String, TagMetadata>,
+        _segment_order: &[String],
+    ) -> TagUsageInfo<'_> {
+        let inner = self
+            .toml_value
+            .as_mut()
+            .expect("get_tag_usage should only be called after successful verification");
+
+        TagUsageInfo {
+            used_tags: vec![inner.if_tag.to_used_tag(
+                &[
+                    TagValueType::Bool,
+                    TagValueType::String,
+                    TagValueType::Location,
+                ][..],
+            )],
+            must_see_all_tags: true,
+            ..Default::default()
+        }
+    }
+}
 
 impl Step for ReverseComplement {
     fn uses_tags(

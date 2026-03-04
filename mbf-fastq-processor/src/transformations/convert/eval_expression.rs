@@ -2,7 +2,10 @@ use crate::transformations::prelude::*;
 
 use fasteval::{Compiler, Evaler, Parser, Slab};
 use std::{
-    cell::RefCell, collections::{BTreeMap, BTreeSet}, rc::Rc, sync::atomic::Ordering
+    cell::RefCell,
+    collections::{BTreeMap, BTreeSet},
+    rc::Rc,
+    sync::atomic::Ordering,
 };
 
 use crate::{dna::TagValue, io};
@@ -134,7 +137,11 @@ pub enum ResultType {
 }
 
 impl TagUser for PartialTaggedVariant<Box<PartialEvalExpression>> {
-    fn get_tag_usage(&mut self) -> TagUsageInfo<'_> {
+    fn get_tag_usage(
+        &mut self,
+        _tags_available: &IndexMap<String, TagMetadata>,
+        segment_order: &[String],
+    ) -> TagUsageInfo<'_> {
         let inner = self
             .toml_value
             .as_mut()
@@ -144,24 +151,24 @@ impl TagUser for PartialTaggedVariant<Box<PartialEvalExpression>> {
         // we use TagValueType::Any for flexibility
         let var_names = &inner.compiled.as_ref().expect("expected ok").var_names;
         let used_tags = {
-            let mut out = Vec::new();
+            let mut used_tags = Vec::new();
             let toml_source = Rc::new(RefCell::new((
                 &mut inner.expression.state,
                 &mut inner.expression.help,
             )));
             for name in var_names {
                 if let Some(suffix) = name.strip_prefix("len_") {
-                    todo!();
-                    // if !self.segment_names.iter().any(|x| x == suffix) {
-                    //     out.push((
-                    //         suffix.to_string(),
-                    //         &[TagValueType::String, TagValueType::Location][..],
-                    //     ));
-                    // }
+                    if !segment_order.iter().any(|x| x == suffix) {
+                        used_tags.push(Some(UsedTag {
+                            name: suffix.to_string(),
+                            accepted_tag_types: &[TagValueType::String, TagValueType::Location][..],
+                            toml_source: toml_source.clone(),
+                        }));
+                    }
                 } else if name == "read_no" {
                     // read_no is virtual, no tag needed
                 } else {
-                    out.push(Some(UsedTag {
+                    used_tags.push(Some(UsedTag {
                         name: name.clone(),
                         accepted_tag_types: &[
                             TagValueType::Bool,
@@ -173,14 +180,16 @@ impl TagUser for PartialTaggedVariant<Box<PartialEvalExpression>> {
                     }));
                 }
             }
-            out
+            used_tags
         };
         TagUsageInfo {
             used_tags,
-            declared_tag: inner.out_label.to_declared_tag(match inner.result_type.as_ref().expect("parent was ok?") {
+            declared_tag: inner.out_label.to_declared_tag(
+                match inner.result_type.as_ref().expect("parent was ok?") {
                     ResultType::Numeric => TagValueType::Numeric,
                     ResultType::Bool => TagValueType::Bool,
-                }),
+                },
+            ),
             ..Default::default()
         }
     }

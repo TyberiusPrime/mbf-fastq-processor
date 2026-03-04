@@ -32,7 +32,10 @@ impl VerifyIn<PartialConfig> for PartialLength {
 }
 
 impl TagUser for PartialTaggedVariant<PartialLength> {
-    fn get_tag_usage(&mut self) -> TagUsageInfo {
+    fn get_tag_usage(&mut self,
+        _tags_available: &IndexMap<String, TagMetadata>,
+        _segment_order: &[String],
+    ) -> TagUsageInfo {
         let inner = self
             .toml_value
             .as_mut()

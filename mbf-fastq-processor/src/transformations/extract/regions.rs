@@ -1,5 +1,5 @@
 #![allow(clippy::unnecessary_wraps)]
-use std::{collections::HashSet, sync::OnceLock};
+use std::{cell::RefCell, collections::HashSet, rc::Rc, sync::OnceLock};
 
 //eserde false positives
 //
@@ -27,9 +27,9 @@ pub struct Regions {
     #[schemars(with = "Option<String>")]
     #[serde(default)]
     pub region_separator: Option<BString>, */
-    #[tpd(skip, default)]
+    #[tpd(skip)]
     #[schemars(skip)]
-    pub output_tag_type: OnceLock<TagValueType>,
+    pub output_tag_type: TagValueType,
 }
 
 impl VerifyIn<PartialConfig> for PartialRegions {
@@ -69,42 +69,37 @@ impl VerifyIn<PartialConfig> for PartialRegions {
 }
 
 impl TagUser for PartialTaggedVariant<PartialRegions> {
-    fn get_tag_usage(&mut self) -> TagUsageInfo<'_> {
+    fn get_tag_usage(
+        &mut self,
+        tags_available: &IndexMap<String, TagMetadata>,
+        _segment_order: &[String],
+    ) -> TagUsageInfo<'_> {
         let inner = self
             .toml_value
             .as_mut()
             .expect("get_tag_usage should only be called after successful verification");
-        let used_tags = todo!();
-        TagUsageInfo {
-            declared_tag: inner.out_label.to_declared_tag(TagValueType::Location),
-            used_tags: used_tags,
-            ..Default::default()
-        }
-    }
-}
-
-impl Step for Regions {
-    fn declares_tag_type(&self) -> Option<(String, TagValueType)> {
-        Some((
-            self.out_label.clone(),
-            *self
-                .output_tag_type
-                .get()
-                .expect("Expect tag type to be set at this point"),
-        ))
-    }
-
-    fn uses_tags(
-        &self,
-        tags_available: &IndexMap<String, TagMetadata>,
-    ) -> Option<Vec<(String, &[TagValueType])>> {
-        let mut tags = Vec::new();
+        let mut used_tags = vec![];
         let mut seen = HashSet::new();
         let mut all_location = true;
         let mut any_tags = false;
-        for region in &self.regions {
-            if let Some(source_tags) = region.source.get_tags() {
-                any_tags = true;
+        let regions = inner.regions.as_mut().expect("Parent was ok?");
+        let mut all_segments = true;
+        for tv_region in regions.iter_mut() {
+            let region = tv_region.as_ref().expect("Parent was ok?");
+            let source = region
+                .source
+                .as_ref()
+                .expect("parent was ok")
+                .as_ref_post()
+                .expect("Not PostVerify");
+
+            if !matches!(source, crate::config::ResolvedSourceNoAll::Segment(_)) {
+                all_segments = false;
+            }
+            any_tags = true;
+            if let Some(source_tags) = source.get_tags() {
+                let toml_source =
+                    Rc::new(RefCell::new((&mut tv_region.state, &mut tv_region.help)));
                 for entry in source_tags {
                     if seen.insert(entry.0.clone()) {
                         //only add unseen tags
@@ -115,27 +110,73 @@ impl Step for Regions {
                         } else {
                             all_location = false;
                         }
-                        tags.push(entry);
+                        used_tags.push(Some(UsedTag {
+                            name: entry.0,
+                            accepted_tag_types: entry.1,
+                            toml_source: toml_source.clone(),
+                        }))
                     }
                 }
             }
         }
-        let all_segments = self
-            .regions
-            .iter()
-            .all(|x| matches!(x.source, crate::config::ResolvedSourceNoAll::Segment(_)));
-        if (any_tags && all_location) || all_segments {
-            self.output_tag_type
-                .set(TagValueType::Location)
-                .expect("can't have been set yet");
+        let output_tag_type = if (any_tags && all_location) || all_segments {
+            TagValueType::Location
         } else {
-            self.output_tag_type
-                .set(TagValueType::String)
-                .expect("can't have been set yet");
-        }
+            TagValueType::String
+        };
+        inner.output_tag_type = Some(output_tag_type);
 
-        if tags.is_empty() { None } else { Some(tags) }
+        TagUsageInfo {
+            declared_tag: inner.out_label.to_declared_tag(output_tag_type),
+            used_tags: used_tags,
+            ..Default::default()
+        }
     }
+}
+
+impl Step for Regions {
+    // fn uses_tags(
+    //     &self,
+    //     tags_available: &IndexMap<String, TagMetadata>,
+    // ) -> Option<Vec<(String, &[TagValueType])>> {
+    //     let mut tags = Vec::new();
+    //     let mut seen = HashSet::new();
+    //     let mut all_location = true;
+    //     let mut any_tags = false;
+    //     for region in &self.regions {
+    //         if let Some(source_tags) = region.source.get_tags() {
+    //             any_tags = true;
+    //             for entry in source_tags {
+    //                 if seen.insert(entry.0.clone()) {
+    //                     //only add unseen tags
+    //                     if let Some(provided_tag_types) = tags_available.get(&entry.0) {
+    //                         if !matches!(provided_tag_types.tag_type, TagValueType::Location) {
+    //                             all_location = false;
+    //                         }
+    //                     } else {
+    //                         all_location = false;
+    //                     }
+    //                     tags.push(entry);
+    //                 }
+    //             }
+    //         }
+    //     }
+    //     let all_segments = self
+    //         .regions
+    //         .iter()
+    //         .all(|x| matches!(x.source, crate::config::ResolvedSourceNoAll::Segment(_)));
+    //     if (any_tags && all_location) || all_segments {
+    //         self.output_tag_type
+    //             .set(TagValueType::Location)
+    //             .expect("can't have been set yet");
+    //     } else {
+    //         self.output_tag_type
+    //             .set(TagValueType::String)
+    //             .expect("can't have been set yet");
+    //     }
+    //
+    //     if tags.is_empty() { None } else { Some(tags) }
+    // }
 
     fn apply(
         &self,
@@ -154,10 +195,7 @@ impl Step for Regions {
             }
             //all segments -> Location.
             if matches!(
-                self.output_tag_type
-                    .get()
-                    .as_ref()
-                    .expect("tag type not defined?!",),
+                self.output_tag_type,
                 crate::transformations::TagValueType::Location
             ) {
                 let mut h: Vec<Hit> = Vec::new();
