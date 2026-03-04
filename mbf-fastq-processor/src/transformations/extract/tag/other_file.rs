@@ -54,6 +54,7 @@ impl VerifyIn<PartialConfig> for PartialOtherFile {
         Self: Sized + toml_pretty_deser::Visitor,
     {
         self.source.validate_segment(parent);
+        crate::transformations::tag::validate_seed(&mut self.seed, &mut self.false_positive_rate);
         //todo: refactor with OtherFileByName to avoid code duplication.
         if let Some(filename) = self.filename.as_ref()
             && Path::new(filename)
@@ -109,7 +110,10 @@ impl VerifyIn<PartialConfig> for PartialOtherFile {
 }
 
 impl TagUser for PartialTaggedVariant<PartialOtherFile> {
-    fn get_tag_usage(&mut self) -> TagUsageInfo<'_> {
+    fn get_tag_usage(&mut self,
+        _tags_available: &IndexMap<String, TagMetadata>,
+        _segment_order: &[String],
+    ) -> TagUsageInfo<'_> {
         let inner = self
             .toml_value
             .as_mut()
@@ -151,7 +155,7 @@ These must match.",
                 }
             }
         }
-        crate::transformations::tag::validate_seed(self.seed, self.false_positive_rate)
+        Ok(())
     }
 
     fn store_progress_output(&mut self, progress: &crate::transformations::reports::Progress) {

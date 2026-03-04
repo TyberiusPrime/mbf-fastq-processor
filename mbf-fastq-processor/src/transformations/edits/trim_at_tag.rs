@@ -45,13 +45,17 @@ impl VerifyIn<PartialConfig> for PartialTrimAtTag {
 }
 
 impl TagUser for PartialTaggedVariant<PartialTrimAtTag> {
-    fn get_tag_usage(&mut self) -> TagUsageInfo<'_> {
+    fn get_tag_usage(&mut self,
+        _tags_available: &IndexMap<String, TagMetadata>,
+        _segment_order: &[String],
+    ) -> TagUsageInfo<'_> {
         let inner = self
             .toml_value
             .as_mut()
             .expect("get_tag_usage should only be called after successful verification");
         TagUsageInfo {
             used_tags: vec![inner.in_label.to_used_tag(&[TagValueType::Location][..])],
+            must_see_all_tags: true, // for cutting them down
             ..Default::default()
         }
     }

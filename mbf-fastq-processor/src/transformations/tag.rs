@@ -27,6 +27,7 @@ pub use store_tag_location_in_comment::{
     PartialStoreTagLocationInComment, StoreTagLocationInComment,
 };
 pub use store_tags_in_table::{PartialStoreTagsInTable, StoreTagsInTable};
+use toml_pretty_deser::{TomlValue, TomlValueState};
 
 use crate::{config::SegmentIndexOrAll, dna::TagValue, io};
 
@@ -173,15 +174,31 @@ pub(crate) fn store_tag_in_comment(
     Ok(new_name)
 }
 
-pub fn validate_seed(seed: Option<u64>, false_positive_rate: f64) -> Result<()> {
-    if false_positive_rate < 0.0 {
-        bail!("False positive rate must be >= 0. Change `false_positive_rate` to a valid value.")
-    } else if false_positive_rate >= 1.0 {
-        bail!("False positive rate must be < 1.0 Change `false_positive_rate` to a valid value.")
-    } else if false_positive_rate > 0.0 && seed.is_none() {
-        bail!(
-            "seed is required when false_positive_rate > 0.0 (approximate filtering). Set `seed` to 42 for example."
-        );
+pub fn validate_seed(
+    tv_seed: &mut TomlValue<Option<u64>>,
+    tv_false_positive_rate: &mut TomlValue<f64>,
+) {
+    if let Some(seed) = tv_seed.as_ref()
+        && let Some(false_positive_rate) = tv_false_positive_rate.as_ref()
+    {
+        if *false_positive_rate < 0.0 {
+            tv_false_positive_rate.state = TomlValueState::new_validation_failed("Too low");
+            tv_false_positive_rate.help = Some(
+                "False positive rate must be >= 0. Change `false_positive_rate` to a valid value."
+                    .to_string(),
+            );
+        } else if *false_positive_rate >= 1.0 {
+            tv_false_positive_rate.state = TomlValueState::new_validation_failed("Too high");
+            tv_false_positive_rate.help = Some(
+                "False positive rate must be < 1.0 Change `false_positive_rate` to a valid value."
+                    .to_string(),
+            )
+        } else if *false_positive_rate > 0.0 && seed.is_none() {
+            tv_seed.state =
+                TomlValueState::new_validation_failed("Seed required for approximate filtering");
+            tv_seed.help = Some(
+                "Seed is required when false_positive_rate > 0.0 (approximate filtering). Set `seed` to 42 for example.".to_string(),
+            );
+        }
     }
-    Ok(())
 }

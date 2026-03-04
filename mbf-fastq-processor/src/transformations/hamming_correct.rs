@@ -154,21 +154,28 @@ pub enum OnNoMatch {
 }
 
 impl TagUser for PartialTaggedVariant<PartialHammingCorrect> {
-    fn get_tag_usage(&mut self) -> TagUsageInfo<'_> {
+    fn get_tag_usage(
+        &mut self,
+        _tags_available: &IndexMap<String, TagMetadata>,
+        _segment_order: &[String],
+    ) -> TagUsageInfo<'_> {
         let inner = self
             .toml_value
             .as_mut()
             .expect("get_tag_usage should only be called after successful verification");
         TagUsageInfo {
             declared_tag: inner.out_label.to_declared_tag(TagValueType::Location),
-            used_tags: vec![inner.in_label.to_used_tag(&[TagValueType::String][..])],
+            used_tags: vec![
+                inner
+                    .in_label
+                    .to_used_tag(&[TagValueType::String, TagValueType::Location][..]),
+            ],
             ..Default::default()
         }
     }
 }
 
 impl Step for HammingCorrect {
-
     fn apply(
         &self,
         mut block: FastQBlocksCombined,

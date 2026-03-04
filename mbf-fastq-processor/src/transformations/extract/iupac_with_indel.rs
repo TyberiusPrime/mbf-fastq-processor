@@ -56,15 +56,23 @@ impl VerifyIn<PartialConfig> for PartialIUPACWithIndel {
     }
 }
 
-impl TagUser for PartialTaggedVariant<PartialIUPACWithIndel> {}
+impl TagUser for PartialTaggedVariant<PartialIUPACWithIndel> {
+    fn get_tag_usage(&mut self,
+        _tags_available: &IndexMap<String, TagMetadata>,
+        _segment_order: &[String],
+    ) -> TagUsageInfo<'_> {
+        let inner = self
+            .toml_value
+            .as_mut()
+            .expect("get_tag_usage should only be called after successful verification");
+        TagUsageInfo {
+            declared_tag: inner.out_label.to_declared_tag(TagValueType::Location),
+            ..Default::default()
+        }
+    }
+}
 
 impl Step for IUPACWithIndel {
-    fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
-        Some((
-            self.out_label.clone(),
-            crate::transformations::TagValueType::Location,
-        ))
-    }
 
     fn apply(
         &self,

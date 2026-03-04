@@ -44,6 +44,7 @@ pub use segments::{
 pub struct TagMetadata {
     pub used: bool,
     pub tag_type: TagValueType,
+    pub span: std::ops::Range<usize>,
 }
 
 pub fn config_from_string(toml: &str) -> Result<Config, DeserError<PartialConfig>> {
@@ -732,7 +733,7 @@ impl PartialConfig {
                                             out_label: step_config.out_label,
                                             regions,
                                             // region_separator: None,
-                                            output_tag_type: Some(std::sync::OnceLock::new()),
+                                            output_tag_type: None,
                                         },
                                     ),
                                     tag_span: tag_span.clone(),
@@ -1107,133 +1108,138 @@ impl PartialConfig {
     pub fn verify_transformation_labels(&mut self) {
         use crate::transformations::TagUser;
         let mut allowed_tags_per_stage: Vec<Vec<String>> = Vec::new();
-        let mut tags_available: IndexMap<String, (TagMetadata, std::ops::Range<usize>)> =
-            IndexMap::new();
+        let mut tags_available: IndexMap<String, TagMetadata> = IndexMap::new();
         if let Some(transformations) = self.transform.as_mut() {
-            let mut just_trafos = transformations
-                .iter_mut()
-                .map(|t| t.as_mut().expect("parent was ok"))
-                .collect::<Vec<_>>();
-            let mut all_tags_ever = HashSet::new();
-            for trafo in just_trafos.iter_mut() {
-                //     if let err(e) =
-                //         t.validate_others(&self.input, self.output.as_ref(), &self.transform, step_no)
-                //     {
-                //         errors.push(e.context(format!("[step {step_no} ({t})]:")));
-                //         continue; // skip further processing of this transform if validation failed
-                //     }
-                let tag_info = trafo.get_tag_usage();
-                match tag_info.removed_tags {
-                    crate::transformations::RemovedTags::None => {}
-                    crate::transformations::RemovedTags::All => {
-                        for (metadata, _) in tags_available.values_mut() {
-                            metadata.used = true;
-                        }
-                        tags_available.clear();
-                    }
-                    crate::transformations::RemovedTags::Some(tags) => {
-                        for (tag_name, toml_source) in tags {
-                            //no need to check if empty, empty will never be present
-                            if let Some((metadata, _span)) = tags_available.get_mut(&tag_name) {
+            if let Some(input) = self.input.as_ref() {
+                let mut just_trafos = transformations
+                    .iter_mut()
+                    .map(|t| t.as_mut().expect("parent was ok"))
+                    .collect::<Vec<_>>();
+                let mut all_tags_ever = HashSet::new();
+                let segment_order = input.get_segment_order();
+                for trafo in just_trafos.iter_mut() {
+                    //     if let err(e) =
+                    //         t.validate_others(&self.input, self.output.as_ref(), &self.transform, step_no)
+                    //     {
+                    //         errors.push(e.context(format!("[step {step_no} ({t})]:")));
+                    //         continue; // skip further processing of this transform if validation failed
+                    //     }
+                    let tag_info = trafo.get_tag_usage(&tags_available, segment_order);
+                    match tag_info.removed_tags {
+                        crate::transformations::RemovedTags::None => {}
+                        crate::transformations::RemovedTags::All => {
+                            for metadata in tags_available.values_mut() {
                                 metadata.used = true;
-                            } else {
-                                toml_source.state =
-                                    TomlValueState::new_validation_failed("No such tag");
-                                toml_source.help = Some(suggest_alternatives(
-                                    &tag_name,
-                                    &tags_available.keys().collect::<Vec<_>>(),
-                                ));
-                                continue; //no point on doing anything else with this tag
                             }
-                            tags_available.shift_remove(&tag_name);
+                            tags_available.clear();
                         }
-                    }
-                }
-
-                let mut tags_used_here = Vec::new();
-                if tag_info.must_see_all_tags {
-                    tags_used_here.extend(tags_available.keys().map(ToString::to_string));
-                }
-                for used_tag_info in tag_info.used_tags.iter().filter_map(|x| x.as_ref()) {
-                    let tag_name = &used_tag_info.name;
-                    let tag_types = &used_tag_info.accepted_tag_types;
-                    let toml_source = &used_tag_info.toml_source;
-                    //no need to check if empty, empty will never be present
-                    let entry = tags_available.get_mut(tag_name);
-                    match entry {
-                        Some((metadata, _span)) => {
-                            metadata.used = true;
-                            if !tag_types
-                                .iter()
-                                .any(|tag_type| tag_type.compatible(metadata.tag_type))
-                            {
-                                *toml_source.borrow_mut().0 =
-                                    TomlValueState::new_validation_failed("Incompatible tag type");
-                                *toml_source.borrow_mut().1 = Some(format!(
-                                    "This transform requires tag '{label}' to be one of the following types: {supposed_tag_types:?}, but it is actually of type '{actual_tag_type}'.",
-                                    label = tag_name,
-                                    supposed_tag_types = tag_types,
-                                    actual_tag_type = metadata.tag_type
-                                ));
-                            } else {
-                                if !tag_info.must_see_all_tags && tags_used_here.contains(tag_name)
-                                {
-                                    panic!("tag declared twice {tag_name}");
-                                }
-                                tags_used_here.push(tag_name.clone());
-                            }
-                        }
-                        None => {
-                            *toml_source.borrow_mut().0 =
-                                TomlValueState::new_validation_failed("No such tag");
-                            if all_tags_ever.contains(tag_name) {
-                                *toml_source.borrow_mut().1 = Some(format!(
-                                    "Tag '{tag_name}' was generated by a previous step, but it is not available at this point.\nThis likely means that it was removed by an intermediate step.\n{}",
-                                    suggest_alternatives(
+                        crate::transformations::RemovedTags::Some(tags) => {
+                            for (tag_name, toml_source) in tags {
+                                //no need to check if empty, empty will never be present
+                                if let Some(metadata) = tags_available.get_mut(&tag_name) {
+                                    metadata.used = true;
+                                } else {
+                                    toml_source.state =
+                                        TomlValueState::new_validation_failed("No such tag");
+                                    toml_source.help = Some(suggest_alternatives(
                                         &tag_name,
-                                        &tags_available.keys().collect::<Vec<_>>()
-                                    )
-                                ));
-                            } else {
-                                *toml_source.borrow_mut().1 = Some(suggest_alternatives(
-                                    &tag_name,
-                                    &tags_available.keys().collect::<Vec<_>>(),
-                                ));
+                                        &tags_available.keys().collect::<Vec<_>>(),
+                                    ));
+                                    continue; //no point on doing anything else with this tag
+                                }
+                                tags_available.shift_remove(&tag_name);
                             }
                         }
                     }
-                }
-                allowed_tags_per_stage.push(tags_used_here);
 
-                if let Some(mut dt) = tag_info.declared_tag {
-                    if let Err(e) = validate_tag_name(&dt.name) {
-                        *dt.toml_source_state =
-                            TomlValueState::new_validation_failed("Invalid tag name");
-                        *dt.toml_source_help =
-                            Some("Valid tag names conform to [a-zA-Z_][a-zA-Z0-9_]*".to_string());
-                    } else if let Some((_meta, span)) = tags_available.get(&dt.name) {
-                        *dt.toml_source_state =
-                            TomlValueState::new_validation_failed("Duplicate tag name");
-                        *dt.toml_source_help = Some(
-                            "Rename either tag, or add a ForgetTag step inbetween".to_string(),
-                        );
-                        *dt.toml_source_context = Some((span.clone(), "Other use".to_string()));
-                    } else {
-                        all_tags_ever.insert(dt.name.clone());
-                        tags_available.insert(
-                            dt.name.clone(),
-                            (
+                    let mut tags_used_here = Vec::new();
+                    if tag_info.must_see_all_tags {
+                        tags_used_here.extend(tags_available.keys().map(ToString::to_string));
+                    }
+                    for used_tag_info in tag_info.used_tags.iter().filter_map(|x| x.as_ref()) {
+                        let tag_name = &used_tag_info.name;
+                        let tag_types = &used_tag_info.accepted_tag_types;
+                        let toml_source = &used_tag_info.toml_source;
+                        //no need to check if empty, empty will never be present
+                        let entry = tags_available.get_mut(tag_name);
+                        match entry {
+                            Some(metadata) => {
+                                metadata.used = true;
+                                if !tag_types
+                                    .iter()
+                                    .any(|tag_type| tag_type.compatible(metadata.tag_type))
+                                {
+                                    *toml_source.borrow_mut().0 =
+                                        TomlValueState::new_validation_failed(
+                                            "Incompatible tag type",
+                                        );
+                                    *toml_source.borrow_mut().1 = Some(format!(
+                                        "This transform requires tag '{label}' to be one of the following types: {supposed_tag_types:?}, but it is actually of type '{actual_tag_type}'.",
+                                        label = tag_name,
+                                        supposed_tag_types = tag_types,
+                                        actual_tag_type = metadata.tag_type
+                                    ));
+                                } else {
+                                    if !tag_info.must_see_all_tags
+                                        && tags_used_here.contains(tag_name)
+                                    {
+                                        panic!("tag declared twice {tag_name}");
+                                    }
+                                    tags_used_here.push(tag_name.clone());
+                                }
+                            }
+                            None => {
+                                *toml_source.borrow_mut().0 =
+                                    TomlValueState::new_validation_failed("No such tag");
+                                if all_tags_ever.contains(tag_name) {
+                                    *toml_source.borrow_mut().1 = Some(format!(
+                                        "Tag '{tag_name}' was generated by a previous step, but it is not available at this point.\nThis likely means that it was removed by an intermediate step.\n{}",
+                                        suggest_alternatives(
+                                            &tag_name,
+                                            &tags_available.keys().collect::<Vec<_>>()
+                                        )
+                                    ));
+                                } else {
+                                    *toml_source.borrow_mut().1 = Some(suggest_alternatives(
+                                        &tag_name,
+                                        &tags_available.keys().collect::<Vec<_>>(),
+                                    ));
+                                }
+                            }
+                        }
+                    }
+                    allowed_tags_per_stage.push(tags_used_here);
+
+                    if let Some(mut dt) = tag_info.declared_tag {
+                        if let Err(e) = validate_tag_name(&dt.name) {
+                            *dt.toml_source_state =
+                                TomlValueState::new_validation_failed("Invalid tag name");
+                            *dt.toml_source_help = Some(
+                                "Valid tag names conform to [a-zA-Z_][a-zA-Z0-9_]*".to_string(),
+                            );
+                        } else if let Some(meta) = tags_available.get(&dt.name) {
+                            *dt.toml_source_state =
+                                TomlValueState::new_validation_failed("Duplicate tag name");
+                            *dt.toml_source_help = Some(
+                                "Rename either tag, or add a ForgetTag step inbetween".to_string(),
+                            );
+                            *dt.toml_source_context =
+                                Some((meta.span.clone(), "Other use".to_string()));
+                        } else {
+                            all_tags_ever.insert(dt.name.clone());
+                            tags_available.insert(
+                                dt.name.clone(),
                                 TagMetadata {
                                     used: false,
                                     tag_type: dt.tag_type,
+                                    span: dt.toml_source_span,
                                 },
-                                dt.toml_source_span,
-                            ),
-                        );
+                            );
+                        }
                     }
                 }
+                self.allowed_tags_per_transformation = Some(allowed_tags_per_stage);
             }
-            self.allowed_tags_per_transformation = Some(allowed_tags_per_stage);
         }
     }
 }

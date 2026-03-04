@@ -41,12 +41,16 @@ impl VerifyIn<PartialConfig> for PartialDuplicates {
         Self: Sized + toml_pretty_deser::Visitor,
     {
         self.source.validate_segment(parent);
+        crate::transformations::tag::validate_seed(&mut self.seed, &mut self.false_positive_rate);
         Ok(())
     }
 }
 
 impl TagUser for PartialTaggedVariant<PartialDuplicates> {
-    fn get_tag_usage(&mut self) -> TagUsageInfo<'_> {
+    fn get_tag_usage(&mut self,
+        _tags_available: &IndexMap<String, TagMetadata>,
+        _segment_order: &[String],
+    ) -> TagUsageInfo<'_> {
         let inner = self
             .toml_value
             .as_mut()
@@ -67,17 +71,6 @@ impl Step for Duplicates {
     // multiple step-threads
     fn needs_serial(&self) -> bool {
         true
-    }
-
-    fn validate_others(
-        &self,
-        _input_def: &crate::config::Input,
-        _output_def: Option<&crate::config::Output>,
-        _all_transforms: &[crate::transformations::Transformation],
-        _this_transforms_index: usize,
-    ) -> Result<()> {
-        // Validate seed requirement based on false_positive_rate
-        crate::transformations::tag::validate_seed(self.seed, self.false_positive_rate)
     }
 
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {

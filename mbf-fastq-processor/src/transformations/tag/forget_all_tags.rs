@@ -11,7 +11,18 @@ pub struct ForgetAllTags {
     ignored: Option<u8>, //tdp dislikes empty structs
 }
 
-impl TagUser for PartialTaggedVariant<PartialForgetAllTags> {}
+impl TagUser for PartialTaggedVariant<PartialForgetAllTags> {
+    fn get_tag_usage(
+        &mut self,
+        _tags_available: &IndexMap<String, TagMetadata>,
+        _segment_order: &[String],
+    ) -> TagUsageInfo<'_> {
+        TagUsageInfo {
+            removed_tags: RemovedTags::All,
+            ..Default::default()
+        }
+    }
+}
 
 impl Step for ForgetAllTags {
     fn removes_all_tags(&self) -> bool {

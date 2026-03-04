@@ -40,7 +40,30 @@ impl VerifyIn<PartialConfig> for PartialTruncate {
     }
 }
 
-impl TagUser for PartialTaggedVariant<PartialTruncate> {}
+impl TagUser for PartialTaggedVariant<PartialTruncate> {
+    fn get_tag_usage(
+        &mut self,
+        _tags_available: &IndexMap<String, TagMetadata>,
+        _segment_order: &[String],
+    ) -> TagUsageInfo<'_> {
+        let inner = self
+            .toml_value
+            .as_mut()
+            .expect("get_tag_usage should only be called after successful verification");
+
+        TagUsageInfo {
+            used_tags: vec![inner.if_tag.to_used_tag(
+                &[
+                    TagValueType::Bool,
+                    TagValueType::String,
+                    TagValueType::Location,
+                ][..],
+            )],
+            must_see_all_tags: true,
+            ..Default::default()
+        }
+    }
+}
 
 impl Step for Truncate {
     fn uses_tags(

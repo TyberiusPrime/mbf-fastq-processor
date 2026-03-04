@@ -1,4 +1,7 @@
 #![allow(clippy::unnecessary_wraps)]
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use crate::transformations::prelude::*;
 
 use crate::{config::CompressionFormat, config::deser::tpd_adapt_bstring, dna::TagValue};
@@ -71,50 +74,47 @@ impl VerifyIn<PartialConfig> for PartialStoreTagsInTable {
     }
 }
 
-/* impl std::fmt::Debug for StoreTagsInTable {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("StoreTagsInTable")
-            .field("infix", &self.infix)
-            .field("compression", &self.compression)
-            .field("region_separator", &self.region_separator)
-            .field("tags", &self.tags)
-            .finish_non_exhaustive()
-    }
-} */
+impl TagUser for PartialTaggedVariant<PartialStoreTagsInTable> {
+    fn get_tag_usage(
+        &mut self,
+        tags_available: &IndexMap<String, TagMetadata>,
+        _segment_order: &[String],
+    ) -> TagUsageInfo<'_> {
+        if tags_available.is_empty() {
+            self.toml_value.state = TomlValueState::ValidationFailed {
+                message: "StoreTagsInTable needs at least one tag to be set before it in the transformation chain.".to_string(),
+            };
+            return TagUsageInfo {
+                ..Default::default()
+            };
+        }
 
-impl TagUser for PartialTaggedVariant<PartialStoreTagsInTable> {}
+        let inner = self
+            .toml_value
+            .as_mut()
+            .expect("get_tag_usage should only be called after successful verification");
+        let toml_source = Rc::new(RefCell::new((
+            &mut self.toml_value.state,
+            &mut self.toml_value.help,
+        )));
+        TagUsageInfo {
+            must_see_all_tags: true,
+            // used_tags: tags_available
+            //     .iter()
+            //     .map(|(tag, _metadata)| {
+            //         Some(UsedTag {
+            //             name: tag.clone(),
+            //             accepted_tag_types: ANY_TAG_TYPE,
+            //             toml_source: toml_source.clone(),
+            //         })
+            //     })
+            //     .collect(),
+            ..Default::default()
+        }
+    }
+}
 
 impl Step for StoreTagsInTable {
-    fn validate_others(
-        &self,
-        _input_def: &crate::config::Input,
-        _output_def: Option<&crate::config::Output>,
-        all_transforms: &[Transformation],
-        this_transform_index: usize,
-    ) -> Result<()> {
-        let any_before = all_transforms[..this_transform_index]
-            .iter()
-            .any(|trafo| trafo.declares_tag_type().is_some());
-        if !any_before {
-            bail!(
-                "StoreTagsInTable needs at least one tag to be set before it in the transformation chain."
-            );
-        }
-        Ok(())
-    }
-
-    fn uses_tags(
-        &self,
-        tags_available: &IndexMap<String, TagMetadata>,
-    ) -> Option<Vec<(String, &[TagValueType])>> {
-        Some(
-            tags_available
-                .keys()
-                .map(|tag| (tag.clone(), ANY_TAG_TYPE)) //we don't care about the
-                //actual type
-                .collect(),
-        )
-    }
 
     fn init(
         &mut self,
