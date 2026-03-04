@@ -60,15 +60,23 @@ impl VerifyIn<PartialConfig> for PartialValidateAllReadsSameLength {
     }
 }
 
-impl TagUser for PartialTaggedVariant<PartialValidateAllReadsSameLength> {}
+impl TagUser for PartialTaggedVariant<PartialValidateAllReadsSameLength> {
+    fn get_tag_usage(&mut self) -> TagUsageInfo<'_> {
+        let inner = self
+            .toml_value
+            .as_mut()
+            .expect("get_tag_usage should only be called after successful verification");
+        let mut used_tags = vec![];
+        used_tags.extend(inner.source.to_used_tags());
+
+        TagUsageInfo {
+            used_tags,
+            ..Default::default()
+        }
+    }
+}
 
 impl Step for ValidateAllReadsSameLength {
-    fn uses_tags(
-        &self,
-        _tags_available: &IndexMap<String, TagMetadata>,
-    ) -> Option<Vec<(String, &[TagValueType])>> {
-        self.source.get_tags()
-    }
 
     fn apply(
         &self,

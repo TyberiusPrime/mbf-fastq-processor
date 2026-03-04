@@ -45,12 +45,20 @@ impl VerifyIn<PartialConfig> for PartialExpectedError {
     }
 }
 
-impl TagUser for PartialTaggedVariant<PartialExpectedError> {}
+impl TagUser for PartialTaggedVariant<PartialExpectedError> {
+    fn get_tag_usage(&mut self) -> TagUsageInfo {
+        let inner = self
+            .toml_value
+            .as_mut()
+            .expect("get_tag_usage should only be called after successful verification");
+        TagUsageInfo {
+            declared_tag: inner.out_label.to_declared_tag(TagValueType::Numeric),
+            ..Default::default()
+        }
+    }
+}
 
 impl Step for ExpectedError {
-    fn declares_tag_type(&self) -> Option<(String, TagValueType)> {
-        Some((self.out_label.clone(), TagValueType::Numeric))
-    }
 
     fn apply(
         &self,

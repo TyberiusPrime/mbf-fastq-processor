@@ -34,7 +34,18 @@ impl VerifyIn<PartialConfig> for PartialLowQualityStart {
     }
 }
 
-impl TagUser for PartialTaggedVariant<PartialLowQualityStart> {}
+impl TagUser for PartialTaggedVariant<PartialLowQualityStart> {
+    fn get_tag_usage(&mut self) -> TagUsageInfo<'_> {
+        let inner = self
+            .toml_value
+            .as_mut()
+            .expect("get_tag_usage should only be called after successful verification");
+        TagUsageInfo {
+            declared_tag: inner.out_label.to_declared_tag(TagValueType::Location),
+            ..Default::default()
+        }
+    }
+}
 
 impl Step for LowQualityStart {
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {

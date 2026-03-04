@@ -62,20 +62,33 @@ impl VerifyIn<PartialConfig> for PartialRegex {
     }
 }
 
-impl TagUser for PartialTaggedVariant<PartialRegex> {}
+impl TagUser for PartialTaggedVariant<PartialRegex> {
+    fn get_tag_usage(&mut self) -> TagUsageInfo<'_> {
+        let inner = self
+            .toml_value
+            .as_mut()
+            .expect("get_tag_usage should only be called after successful verification");
+        TagUsageInfo {
+            declared_tag: inner.out_label.to_declared_tag(
+                if inner
+                    .source
+                    .as_ref()
+                    .expect("parent was ok")
+                    .as_ref_post()
+                    .expect("not in PostVerify")
+                    .is_name()
+                {
+                    crate::transformations::TagValueType::String
+                } else {
+                    crate::transformations::TagValueType::Location
+                },
+            ),
+            ..Default::default()
+        }
+    }
+}
 
 impl Step for Regex {
-    fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
-        Some((
-            self.out_label.clone(),
-            if self.source.is_name() {
-                crate::transformations::TagValueType::String
-            } else {
-                crate::transformations::TagValueType::Location
-            },
-        ))
-    }
-
     fn apply(
         &self,
         mut block: FastQBlocksCombined,

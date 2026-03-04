@@ -45,7 +45,22 @@ impl VerifyIn<PartialConfig> for PartialDuplicates {
     }
 }
 
-impl TagUser for PartialTaggedVariant<PartialDuplicates> {}
+impl TagUser for PartialTaggedVariant<PartialDuplicates> {
+    fn get_tag_usage(&mut self) -> TagUsageInfo<'_> {
+        let inner = self
+            .toml_value
+            .as_mut()
+            .expect("get_tag_usage should only be called after successful verification");
+        let mut used_tags = vec![];
+        used_tags.extend(inner.source.to_used_tags());
+
+        TagUsageInfo {
+            used_tags,
+            declared_tag: inner.out_label.to_declared_tag(TagValueType::Bool),
+            ..Default::default()
+        }
+    }
+}
 
 impl Step for Duplicates {
     #[mutants::skip] // technically unecessary, since we have our own arc. But no point in blocking

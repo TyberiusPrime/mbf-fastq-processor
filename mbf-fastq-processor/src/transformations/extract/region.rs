@@ -37,7 +37,11 @@ impl VerifyIn<PartialConfig> for PartialRegion {
     }
 }
 
-impl TagUser for PartialTaggedVariant<PartialRegion> {}
+impl TagUser for PartialTaggedVariant<PartialRegion> {
+    fn get_tag_usage(&mut self) -> TagUsageInfo<'_>{
+        unreachable!("Should have been turned into Regions already")
+    }
+}
 
 impl Step for Region {
     fn apply(
