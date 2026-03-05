@@ -25,7 +25,6 @@ impl TagUser for PartialTaggedVariant<PartialForgetAllTags> {
 }
 
 impl Step for ForgetAllTags {
-
     fn apply(
         &self,
         mut block: FastQBlocksCombined,

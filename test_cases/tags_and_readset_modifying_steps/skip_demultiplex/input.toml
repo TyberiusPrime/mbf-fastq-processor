@@ -1,0 +1,36 @@
+[input]
+  read1 ="input_read1.fq"
+
+
+[[step]]
+  action ="ExtractRegion"
+  out_label = "reg1"
+  start = 0
+  length = 1 
+  anchor = "lefT"
+  source = 'read1'
+
+[[step]]
+  action ="CalcLength"
+  out_label ="len1"
+
+[[step]]
+  action = "EvalExpression"
+  expression = "read_no % 2 != 0"
+  out_label = "even"
+  result_type = "bool"
+
+[[step]]
+  action = "Demultiplex"
+  in_label = "even"
+
+[[step]]
+  action ="Skip"
+  n = 3
+
+
+[[step]]
+  action = "StoreTagsInTable"
+
+[output]
+  prefix = "out"

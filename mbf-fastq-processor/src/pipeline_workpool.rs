@@ -510,6 +510,7 @@ fn process_work_item(
     input_info: &transformations::InputInfo,
     demultiplex_infos: &[(usize, OptDemultiplex)],
 ) -> WorkResult {
+    use itertools::Itertools;
     let stage_index = work_item.stage_index;
 
     // Find appropriate demultiplex info
@@ -560,6 +561,25 @@ fn process_work_item(
     match result {
         Ok((mut result_block, stage_continue)) => {
             result_block.tags.extend(unused_tags);
+            //make sure all tags have the same length
+            let all_tag_lengths_equal = result_block.tags.values().map(|x| x.len()).all_equal();
+            if !all_tag_lengths_equal {
+                panic!(
+                    "Unequal tag lengths after stage {:?}:. Tags: {:?}. This is a bug!. \n\
+                    Best case it needs to declare must_see_all_tags=true in TagUser::get_tag_usage()",
+                    stage.transformation, result_block.tags
+                );
+            }
+            if let Some(tag_len) = result_block.tags.values().next().map(|v| v.len()) {
+                if result_block.len() != tag_len {
+                    panic!(
+                        "Tag lengths don't match block length after stage {:?}:. Block len: {}. Tag len: {tag_len} This is a bug!. \n\
+                        Best case it needs to declare must_see_all_tags=true in TagUser::get_tag_usage()",
+                        stage.transformation,
+                        result_block.len(),
+                    );
+                }
+            }
             WorkResult {
                 work_item: WorkItem {
                     block_no,

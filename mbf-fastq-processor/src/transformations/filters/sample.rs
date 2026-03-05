@@ -47,14 +47,13 @@ impl TagUser for PartialTaggedVariant<PartialSample> {
         _segment_order: &[String],
     ) -> TagUsageInfo<'_> {
         TagUsageInfo {
-            must_see_all_tags: false, //true TODO test case!
+            must_see_all_tags: true,
             ..Default::default()
         }
     }
 }
 
 impl Step for Sample {
-
     fn init(
         &mut self,
         _input_info: &InputInfo,

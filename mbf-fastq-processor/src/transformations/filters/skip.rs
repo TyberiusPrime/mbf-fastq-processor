@@ -33,14 +33,13 @@ impl TagUser for PartialTaggedVariant<PartialSkip> {
         _segment_order: &[String],
     ) -> TagUsageInfo<'_> {
         TagUsageInfo {
-            must_see_all_tags: false, //true TODO test case!
+            must_see_all_tags: true,
             ..Default::default()
         }
     }
 }
 
 impl Step for Skip {
-
     fn init(
         &mut self,
         _input_info: &InputInfo,
@@ -72,6 +71,7 @@ impl Step for Skip {
             .lock()
             .expect("mutex poisoned");
         if remaining.len() == 1 {
+            //no demultiplex
             let remaining = remaining
                 .get_mut(&DemultiplexTag::default())
                 .expect("default tag must exist in remaining");
@@ -84,6 +84,9 @@ impl Step for Skip {
                 let here = (*remaining).min(block.len());
                 *remaining -= here;
                 block.drain(0..here);
+                for (_key, tag_values) in block.tags.iter_mut() {
+                    tag_values.drain(0..here);
+                }
                 Ok((block, true))
             }
         } else {

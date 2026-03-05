@@ -79,5 +79,4 @@ impl Step for CutEnd {
 
         Ok((block, true))
     }
-
 }

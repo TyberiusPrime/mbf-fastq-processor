@@ -7733,6 +7733,80 @@ fn test_cases_x_single_step_x_validation_x_validate_seq_fail() {
 }
 
 #[test]
+fn test_cases_x_tags_and_readset_modifying_steps_x_head() {
+    println!("Test case is in: test_cases/tags_and_readset_modifying_steps/head");
+    run_test(
+        std::path::Path::new("../test_cases/tags_and_readset_modifying_steps/head"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_tags_and_readset_modifying_steps_x_head_demultiplex() {
+    println!("Test case is in: test_cases/tags_and_readset_modifying_steps/head_demultiplex");
+    run_test(
+        std::path::Path::new("../test_cases/tags_and_readset_modifying_steps/head_demultiplex"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_tags_and_readset_modifying_steps_x_reservoir_sample() {
+    println!("Test case is in: test_cases/tags_and_readset_modifying_steps/reservoir_sample");
+    run_test(
+        std::path::Path::new("../test_cases/tags_and_readset_modifying_steps/reservoir_sample"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_tags_and_readset_modifying_steps_x_reservoir_sample_demultiplex() {
+    println!(
+        "Test case is in: test_cases/tags_and_readset_modifying_steps/reservoir_sample_demultiplex"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/tags_and_readset_modifying_steps/reservoir_sample_demultiplex",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_tags_and_readset_modifying_steps_x_sample() {
+    println!("Test case is in: test_cases/tags_and_readset_modifying_steps/sample");
+    run_test(
+        std::path::Path::new("../test_cases/tags_and_readset_modifying_steps/sample"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_tags_and_readset_modifying_steps_x_skip() {
+    println!("Test case is in: test_cases/tags_and_readset_modifying_steps/skip");
+    run_test(
+        std::path::Path::new("../test_cases/tags_and_readset_modifying_steps/skip"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_tags_and_readset_modifying_steps_x_skip_demultiplex() {
+    println!("Test case is in: test_cases/tags_and_readset_modifying_steps/skip_demultiplex");
+    run_test(
+        std::path::Path::new("../test_cases/tags_and_readset_modifying_steps/skip_demultiplex"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_transform_x_prefix_and_postfix() {
     println!("Test case is in: test_cases/transform/prefix_and_postfix");
     run_test(

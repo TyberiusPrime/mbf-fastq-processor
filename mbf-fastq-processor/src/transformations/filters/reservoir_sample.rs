@@ -55,7 +55,7 @@ impl TagUser for PartialTaggedVariant<PartialReservoirSample> {
         _segment_order: &[String],
     ) -> TagUsageInfo<'_> {
         TagUsageInfo {
-            must_see_all_tags: false, //true TODO test case!
+            must_see_all_tags: true,
             ..Default::default()
         }
     }

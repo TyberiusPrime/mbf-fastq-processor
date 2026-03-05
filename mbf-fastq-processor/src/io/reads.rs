@@ -1267,6 +1267,11 @@ impl FastQBlocksCombined {
                 panic!("Read amplification not expected. Can't resize to larger")
             });
         }
+        for tags in self.tags.values_mut() {
+            tags.resize_with(len, || {
+                panic!("Read amplification not expected. Can't resize to larger")
+            });
+        }
     }
 
     pub fn drain(&mut self, range: Range<usize>) {
