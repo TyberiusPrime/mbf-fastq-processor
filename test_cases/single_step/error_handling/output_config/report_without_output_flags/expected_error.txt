@@ -17,9 +17,9 @@ Error 1/1
  9 │ [output]
 10 │     prefix = 'output'
 11 │     format = 'None'
-   ┆                    ┬
-   ┆                    │
-   ┆                    ╰─ Add report_json | report_html here?
+   ┆                   ┬
+   ┆                   │
+   ┆                   ╰─ Add report_json | report_html here?
 ───╯
 Hint: Either remove the report, or enable it's output.
       See https://doc_url.example/version-stripped-from-test/docs/reference/Report

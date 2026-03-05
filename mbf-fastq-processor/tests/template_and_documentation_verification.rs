@@ -229,7 +229,8 @@ report_html = false
     let actions = collect_actions(extracted_section);
     let needs_numeric_tag = actions
         .iter()
-        .any(|a| a == "FilterByNumericTag" || a == "EvalExpression");
+        .any(|a| a == "FilterByNumericTag" || a == "EvalExpression")
+        | has_report_step;
     let if_tag_present =
         extracted_section.contains("if_tag =") && !extracted_section.contains("#if_tag =");
     let needs_bool_tag = actions.iter().any(|a| {

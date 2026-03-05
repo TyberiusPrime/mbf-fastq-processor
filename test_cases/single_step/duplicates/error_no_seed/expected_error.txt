@@ -11,10 +11,10 @@ Error 1/1
  8 │ 	out_label = 'dups'
  9 │     false_positive_rate = 0.001
 10 │     source = 'read1'
-11 │ 	initial_filter_capacity = 100_000_000 # to keep same output we had before
-   ┆                                       ┬
-   ┆                                       │
-   ┆                                       ╰───────────────────────────────────── Seed required for approximate filtering
+11 │     initial_filter_capacity = 100_000_000 # to keep same output we had before
+   ┆                                          ┬
+   ┆                                          │
+   ┆                                          ╰──────────────────────────────────── Seed required for approximate filtering
 ───╯
 Hint: Seed is required when false_positive_rate > 0.0 (approximate filtering). Add `seed=42` for example.
       See https://doc_url.example/version-stripped-from-test/docs/reference/TagDuplicates

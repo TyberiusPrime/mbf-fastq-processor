@@ -7,14 +7,14 @@ Error 1/1
   ┆              ────────┬───────
   ┆                      │
   ┆                      ╰──────── In this step
-6 │ 	from = 'illumina1.3'
-  ┆         ──────┬──────
-  ┆               │
-  ┆               ╰─────── Identical to to
-7 │ 	to = 'illumina1.3'
-  ┆       ──────┬──────
-  ┆             │
-  ┆             ╰─────── Identical to from
+6 │     from = 'illumina1.3'
+  ┆            ──────┬──────
+  ┆                  │
+  ┆                  ╰─────── Identical to to
+7 │     to = 'illumina1.3'
+  ┆          ──────┬──────
+  ┆                │
+  ┆                ╰─────── Identical to from
 ──╯
 Hint: Conversion unnecessary? Please specify different encodings or remove this step.
       See https://doc_url.example/version-stripped-from-test/docs/reference/ConvertQuality

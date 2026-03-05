@@ -1,7 +1,8 @@
 pub(crate) use super::{
     FinalizeReportResult, FragmentEntry, FragmentEntryForCuckooFilter, InputInfo, OurCuckCooFilter,
-    RemovedTags, Step, TagUsageInfo, TagUser, TagValueType, ToDeclaredTag, ToUsedTag, ToUsedTags,
-    Transformation, UsedTag, edits::get_bool_vec_from_tag, reproducible_cuckoofilter,
+    PartialTransformation, RemovedTags, Step, TagUsageInfo, TagUser, TagValueType, ToDeclaredTag,
+    ToUsedTag, ToUsedTags, Transformation, UsedTag, edits::get_bool_vec_from_tag,
+    reproducible_cuckoofilter,
 };
 pub(crate) use crate::config::{
     PartialConfig, ResolvedSourceAll, ResolvedSourceNoAll, SegmentIndex, SegmentIndexOrAll,

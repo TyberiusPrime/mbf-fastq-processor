@@ -107,7 +107,7 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagsInTable> {
                         name: tag.clone(),
                         accepted_tag_types: ANY_TAG_TYPE,
                         toml_source: toml_source.clone(),
-                        further_help: None
+                        further_help: None,
                     })
                 })
                 .collect(),

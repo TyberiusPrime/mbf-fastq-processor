@@ -1,5 +1,28 @@
-    OtherFile using names is configured to trim read names at character ' '
-    (by `input.options.read_comment_character`), 
-    but an upstream StoreTagInComment step is inserting comments that start with character '!'
-    (option comment_separator).
-    These must match.
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+ 1 │ [input]
+ 2 │     read1 = 'input_read1.fq'
+ 3 │     options.read_comment_character = ' '
+   ┆                                      ─┬─
+   ┆                                       │
+   ┆                                       ╰── Must match with StoreTagInComment step's comment_separator
+   ┆
+10 │ [[step]]
+11 │   action = "StoreTagInComment"
+12 │   in_label="len"
+13 │   comment_separator = '!'
+   ┆                       ─┬─
+   ┆                        │
+   ┆                        ╰── Must match to options.read_comment_character
+   ┆
+16 │ [[step]]
+17 │     action = 'TagOtherFile'
+   ┆              ───────┬──────
+   ┆                     │
+   ┆                     ╰─────── In this step
+───╯
+Hint: Adjust them to be identical.
+      See https://doc_url.example/version-stripped-from-test/docs/reference/TagOtherFile
+

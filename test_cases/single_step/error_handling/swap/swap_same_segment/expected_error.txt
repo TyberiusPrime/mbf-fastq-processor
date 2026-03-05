@@ -7,14 +7,14 @@ Error 1/1
    ┆              ───┬──
    ┆                 │
    ┆                 ╰─── In this step
-10 │ 	segment_a = 'read1'
-   ┆              ───┬───
-   ┆                 │
-   ┆                 ╰──── Identical to segment_b
-11 │ 	segment_b = 'read1'
-   ┆              ───┬───
-   ┆                 │
-   ┆                 ╰──── Identical to segment_a
+10 │     segment_a = 'read1'
+   ┆                 ───┬───
+   ┆                    │
+   ┆                    ╰──── Identical to segment_b
+11 │     segment_b = 'read1'
+   ┆                 ───┬───
+   ┆                    │
+   ┆                    ╰──── Identical to segment_a
 ───╯
 Hint: Please specify two different segments to swap.
       See https://doc_url.example/version-stripped-from-test/docs/reference/Swap

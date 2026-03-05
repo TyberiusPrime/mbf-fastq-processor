@@ -3,16 +3,16 @@ Error 1/1
    ╭─config.toml
    ┆
  9 │ [[step]]
-10 │ 	action = "EvalExpression"
-   ┆           ────────┬───────
-   ┆                   │
-   ┆                   ╰──────── In this step
+10 │     action = "EvalExpression"
+   ┆              ────────┬───────
+   ┆                      │
+   ┆                      ╰──────── In this step
    ┆
 11 │ 	out_label = "out_tag"
-12 │ 	expression = "len_not_a_location_tag > 5"
-   ┆               ──────────────┬─────────────
-   ┆                             │
-   ┆                             ╰────────────── Incompatible tag type
+12 │     expression = "len_not_a_location_tag > 5"
+   ┆                  ──────────────┬─────────────
+   ┆                                │
+   ┆                                ╰────────────── Incompatible tag type
 ───╯
 Hint: This transform requires tag 'not_a_location_tag' to be one of the following types: [String, Location],
       but it is actually of type 'Numeric'.

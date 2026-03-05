@@ -124,41 +124,59 @@ impl TagUser for PartialTaggedVariant<PartialOtherFile> {
             ..Default::default()
         }
     }
-}
-
-impl Step for OtherFile {
-    #[allow(clippy::case_sensitive_file_extension_comparisons)]
-    fn validate_others(
-        &self,
-        input_def: &crate::config::Input,
-        _output_def: Option<&crate::config::Output>,
-        all_transforms: &[Transformation],
-        this_transforms_index: usize,
-    ) -> Result<()> {
-        if let ResolvedSourceNoAll::Name { .. } = &self.source {
+    fn verify_others(
+        &mut self,
+        input_def: Option<&crate::config::PartialInput>,
+        _output_def: Option<&crate::config::PartialOutput>,
+        transformations_before_this_one: &[TomlValue<PartialTransformation>],
+    ) {
+        let inner = self
+            .toml_value
+            .as_mut()
+            .expect("get_tag_usage should only be called after successful verification");
+        if let Some(ResolvedSourceNoAll::Name { .. }) =
+            &inner.source.as_ref().and_then(|x| x.as_ref_post())
+            && let Some(input_def) = input_def.as_ref()
+        {
             //if there's a StoreTagInComment before us
             //and our fastq_readname_end_char is != their comment_insert_char
-            //bail
-            for trafo in all_transforms[..this_transforms_index].iter().rev() {
-                if let Transformation::StoreTagInComment(info) = trafo {
-                    let their_char: BString = BString::new(vec![info.comment_separator]);
-                    let our_char: BString =
-                        BString::new(vec![input_def.options.read_comment_character]);
-                    if their_char != our_char {
-                        return Err(anyhow::anyhow!(
-                            "OtherFile using names is configured to trim read names at character '{our_char}'
-(by `input.options.read_comment_character`), 
-but an upstream StoreTagInComment step is inserting comments that start with character '{their_char}'
-(option comment_separator).
-These must match.",
-                        ));
+            for trafo in transformations_before_this_one.iter().rev() {
+                if let Some(PartialTransformation::StoreTagInComment(info)) = trafo.as_ref() {
+                    if let Some(info) = info.toml_value.as_ref()
+                        && let Some(info_comment_char) = info.comment_separator.as_ref()
+                        && let Some(read_comment_character) = input_def
+                            .options
+                            .as_ref()
+                            .and_then(|x| x.read_comment_character.as_ref())
+                    {
+                        if *info_comment_char != *read_comment_character {
+                            let spans = vec![
+                                (
+                                    info.comment_separator.span(),
+                                    "Must match to options.read_comment_character".to_string(),
+                                ),
+                                (
+                                    input_def
+                                        .options
+                                        .as_ref()
+                                        .map(|x| x.read_comment_character.span())
+                                        .unwrap_or(0..0),
+                                    "Must match with StoreTagInComment step's comment_separator"
+                                        .to_string(),
+                                ),
+                            ];
+                            self.toml_value.state = TomlValueState::Custom { spans };
+                            self.toml_value.help = Some("Adjust them to be identical.".to_string());
+                            return;
+                        }
                     }
                 }
             }
         }
-        Ok(())
     }
+}
 
+impl Step for OtherFile {
     fn store_progress_output(&mut self, progress: &crate::transformations::reports::Progress) {
         self.progress_output = Some(progress.clone());
     }

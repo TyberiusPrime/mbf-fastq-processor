@@ -3,14 +3,14 @@ Error 1/1
    ╭─config.toml
    ┆
 13 │ [[step]]
-14 │ 	action = 'StoreTagLocationInComment'
-   ┆           ─────────────┬─────────────
-   ┆                        │
-   ┆                        ╰────────────── In this step
-15 │ 	in_label = 'barcode'
-   ┆             ────┬────
-   ┆                 │
-   ┆                 ╰───── Incompatible tag type
+14 │     action = 'StoreTagLocationInComment'
+   ┆              ─────────────┬─────────────
+   ┆                           │
+   ┆                           ╰────────────── In this step
+15 │     in_label = 'barcode'
+   ┆                ────┬────
+   ┆                    │
+   ┆                    ╰───── Incompatible tag type
 ───╯
 Hint: This transform requires tag 'barcode' to be one of the following types: [Location],
       but it is actually of type 'String'.

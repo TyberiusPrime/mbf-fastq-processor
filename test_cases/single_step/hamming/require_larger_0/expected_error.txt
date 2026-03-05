@@ -12,10 +12,10 @@ Error 1/1
 30 │ 	out_label = 'corrected'
 31 │ 	barcodes = 'barcodes'
 32 │ 	on_no_match = 'remove'
-33 │ 	max_hamming_distance=0
-   ┆                       ┬
-   ┆                       │
-   ┆                       ╰─ Must be greater than 0 to perform correction
+33 │     max_hamming_distance=0
+   ┆                          ┬
+   ┆                          │
+   ┆                          ╰─ Must be greater than 0 to perform correction
 ───╯
 Hint: Leave off the HammingCorrect step if no correction is desired.
       See https://doc_url.example/version-stripped-from-test/docs/reference/HammingCorrect

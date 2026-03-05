@@ -9,10 +9,10 @@ Error 1/1
    ┆                 ╰─── In this step
    ┆
 10 │ 	segment_a = 'read1'
-11 │ 	segment_b = 'read2'
-   ┆              ───┬───
-   ┆                 │
-   ┆                 ╰──── Segment not present in [input] section
+11 │     segment_b = 'read2'
+   ┆                 ───┬───
+   ┆                    │
+   ┆                    ╰──── Segment not present in [input] section
 ───╯
 Hint: Did you mean: 'read1'?
       See https://doc_url.example/version-stripped-from-test/docs/reference/Swap

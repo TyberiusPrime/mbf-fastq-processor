@@ -1,0 +1,33 @@
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+ 5 │ [[step]]
+ 6 │     action = 'Report'
+   ┆              ────┬───
+   ┆                  │
+   ┆                  ╰──── In this step
+   ┆
+ 7 │     name = 'xyz'
+ 8 │     count = true
+ 9 │     base_statistics = true
+10 │     duplicate_count_per_read = true
+11 │     length_distribution = true
+   ┆                               ┬
+   ┆                               │
+   ┆                               ╰─ Report name not unique
+   ┆
+13 │ [[step]]
+14 │     action = 'Report'
+15 │     name = 'xyz'
+16 │     count = false
+17 │     base_statistics = true
+18 │     duplicate_count_per_read = true
+19 │     length_distribution = true
+   ┆                              ┬
+   ┆                              │
+   ┆                              ╰─ Report name not unique
+───╯
+Hint: Multiple reports with the same name 'xyz' found. Please ensure all reports have unique names.
+      See https://doc_url.example/version-stripped-from-test/docs/reference/Report
+

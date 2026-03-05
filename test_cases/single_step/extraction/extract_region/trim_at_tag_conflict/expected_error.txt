@@ -1,1 +1,32 @@
-ExtractRegions and TrimAtTag only work together on single-entry regions.
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+13 │ [[step]]
+14 │     action = 'ExtractRegions'
+15 │     out_label = 'UMI'
+16 │       regions = [{segment = 'read1', start = 0, length = 6, anchor="Start"},
+   ┆                 ▲
+   ┆ ╭───────────────╯
+17 │ │                {segment = 'read2', start = 0, length = 6, anchor="Start"}]
+   ┆ │                                                                          ▲
+   ┆ │                                                                          │
+   ┆ ╰──────────────────────────────────────────────────────────────────────────┴─ The regions were generated here
+   ┆
+19 │ [[step]]
+20 │       action = 'TrimAtTag'
+   ┆                ─────┬─────
+   ┆                     │
+   ┆                     ╰────── In this step
+   ┆
+21 │     in_label = 'UMI'
+22 │     direction = 'Start'
+23 │       keep_tag = false
+   ┆                       ┬
+   ┆                       │
+   ┆                       ╰─ TrimAtTag does not support multiple regions.
+───╯
+Hint: Adjust your regions to cover only one span on the reads
+      This is an implementation limitation, not a design one, PR welcome.
+      See https://doc_url.example/version-stripped-from-test/docs/reference/TrimAtTag
+

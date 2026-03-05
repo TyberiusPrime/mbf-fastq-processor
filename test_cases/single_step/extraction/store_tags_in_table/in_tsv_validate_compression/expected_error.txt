@@ -10,10 +10,10 @@ Error 1/1
    ┆
 23 │     infix = 'tags'
 24 │ 	#format = 'JSON'
-25 │ 	compression = 'shu'
-   ┆                ──┬──
-   ┆                  │
-   ┆                  ╰─── Invalid enum variant: 'shu'
+25 │     compression = 'shu'
+   ┆                   ──┬──
+   ┆                     │
+   ┆                     ╰─── Invalid enum variant: 'shu'
 ───╯
 Hint: Did you mean: Zstd, Gzip, or 'gz' (='Gzip')?
       See https://doc_url.example/version-stripped-from-test/docs/reference/StoreTagsInTable

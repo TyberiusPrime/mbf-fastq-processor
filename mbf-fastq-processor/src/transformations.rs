@@ -245,6 +245,16 @@ pub trait TagUser {
     ) -> TagUsageInfo<'_> {
         TagUsageInfo::default()
     }
+
+    // we can not do this in the regular verify,
+    // for at that point, .transform is still NotSet
+    fn verify_others(
+        &mut self,
+        _input_def: Option<&crate::config::PartialInput>,
+        _output_def: Option<&crate::config::PartialOutput>,
+        _transformations_before_this_one: &[TomlValue<PartialTransformation>],
+    ) {
+    }
 }
 
 #[enum_dispatch(Transformation)]

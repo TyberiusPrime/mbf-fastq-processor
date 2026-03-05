@@ -9,10 +9,10 @@ Error 1/1
    ┆                    ╰─────── In this step
    ┆
 31 │     in_label = 'demult'
-32 │ 	barcodes = 'demultiplex'
-   ┆                          ┬
-   ┆                          │
-   ┆                          ╰─ output_unmatched must be set when using barcodes for demultiplex.
+32 │     barcodes = 'demultiplex'
+   ┆                             ┬
+   ┆                             │
+   ┆                             ╰─ output_unmatched must be set when using barcodes for demultiplex.
 ───╯
 Hint: Add output_unmatched=true (or false)
       See https://doc_url.example/version-stripped-from-test/docs/reference/Demultiplex
