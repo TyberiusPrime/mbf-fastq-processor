@@ -547,7 +547,7 @@ fn process_work_item(
             if len_before != len_after {
                 assert!(
                     stage.allowed_tags.len() == block_tag_count,
-                    "A filtering stage forgot to declare must_see_all_tags=true: {}. Declared {} tags, block had {} tags",
+                    "A filtering stage forgot to declare must_see_all_tags=true: {:?}. Declared {} tags, block had {} tags",
                     stage.transformation,
                     stage.allowed_tags.len(),
                     block_tag_count

@@ -341,7 +341,7 @@ pub trait Step {
 //#[serde(tag = "action")]
 #[enum_dispatch]
 #[tpd(tag = "action", further_attr = "enum_dispatch")]
-#[derive(Debug, strum_macros::Display, JsonSchema)]
+#[derive(Debug, JsonSchema)]
 pub enum Transformation {
     //Edits
     CutStart(edits::CutStart),
