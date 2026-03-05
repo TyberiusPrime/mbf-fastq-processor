@@ -14,13 +14,20 @@ pub struct Head {
 
 impl VerifyIn<PartialConfig> for PartialHead {}
 
-impl TagUser for PartialTaggedVariant<PartialHead> {}
+impl TagUser for PartialTaggedVariant<PartialHead> {
+    fn get_tag_usage(
+        &mut self,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
+        _segment_order: &[String],
+    ) -> TagUsageInfo<'_> {
+        TagUsageInfo {
+            must_see_all_tags: false, //true TODO test case!
+            ..Default::default()
+        }
+    }
+}
 
 impl Step for Head {
-    fn must_see_all_tags(&self) -> bool {
-        true
-    }
-
     fn init(
         &mut self,
         _input_info: &InputInfo,

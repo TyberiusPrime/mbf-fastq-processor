@@ -89,10 +89,6 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagsInTable> {
             };
         }
 
-        let inner = self
-            .toml_value
-            .as_mut()
-            .expect("get_tag_usage should only be called after successful verification");
         let toml_source = Rc::new(RefCell::new((
             &mut self.toml_value.state,
             &mut self.toml_value.help,

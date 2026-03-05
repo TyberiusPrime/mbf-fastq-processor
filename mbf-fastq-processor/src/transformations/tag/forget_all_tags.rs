@@ -25,9 +25,6 @@ impl TagUser for PartialTaggedVariant<PartialForgetAllTags> {
 }
 
 impl Step for ForgetAllTags {
-    fn removes_all_tags(&self) -> bool {
-        true
-    }
 
     fn apply(
         &self,

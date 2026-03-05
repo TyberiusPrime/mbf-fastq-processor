@@ -10,7 +10,7 @@ use toml_pretty_deser::prelude::*;
 
 use std::{cell::RefCell, path::Path, rc::Rc};
 
-use anyhow::{Result, bail};
+use anyhow::{Result};
 
 use crate::{
     config::{ResolvedSourceNoAll, SegmentIndex, deser::TagLabel},
@@ -259,50 +259,8 @@ pub trait TagUser {
 
 #[enum_dispatch(Transformation)]
 pub trait Step {
-    /// validates all other aspects of the step
-    /// Needs to see all other transforms to check for conflicts
-    /// therefore can't be mut
-    /// happens before expansion
-    fn validate_others(
-        &self,
-        _input_def: &crate::config::Input,
-        _output_def: Option<&crate::config::Output>,
-        _all_transforms: &[Transformation],
-        _this_transforms_index: usize,
-    ) -> Result<()> {
-        Ok(())
-    }
-
     fn store_progress_output(&mut self, _progress: &crate::transformations::reports::Progress) {
         //default does nothing
-    }
-
-    // if this step sets a tag, what type of tag does it declare?
-    fn declares_tag_type(&self) -> Option<(String, TagValueType)> {
-        None
-    }
-
-    // if it's a tag removing step, what tag does it remove?
-    fn removes_tags(&self) -> Vec<String> {
-        vec![]
-    }
-
-    /// Indicates that this step removes every tag currently available.
-    fn removes_all_tags(&self) -> bool {
-        false
-    }
-
-    // what tags does this step use? What types are acceptable
-    fn uses_tags(
-        &self,
-        _tags_available: &IndexMap<TagLabel, TagMetadata>,
-    ) -> Option<Vec<(String, &[TagValueType])>> {
-        None
-    }
-
-    /// does this step do something to all tags, even if it's not 'using' them in the user sense?
-    fn must_see_all_tags(&self) -> bool {
-        false
     }
 
     fn init(
@@ -470,15 +428,6 @@ pub enum Transformation {
     //
     #[schemars(skip)]
     _InduceFailure(Box<_InduceFailure>),
-}
-
-pub(crate) fn validate_dna(dna: &[u8]) -> Result<()> {
-    for &base in dna {
-        if !matches!(base, b'A' | b'T' | b'C' | b'G') {
-            bail!("Invalid base in DNA sequence: {}", base as char);
-        }
-    }
-    Ok(())
 }
 
 #[derive(Debug)]

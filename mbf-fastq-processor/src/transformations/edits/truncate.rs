@@ -80,9 +80,4 @@ impl Step for Truncate {
         block.filter_tag_locations_beyond_read_length(self.segment);
         Ok((block, true))
     }
-    //
-    //to cut location tags
-    fn must_see_all_tags(&self) -> bool {
-        true
-    }
 }
