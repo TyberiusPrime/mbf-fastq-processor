@@ -134,7 +134,7 @@ dependencies = [
  "serde_derive",
  "statrs",
  "strum",
- "strum_macros 0.26.4",
+ "strum_macros",
  "thiserror 2.0.17",
  "triple_accel",
  "vec_map",
@@ -149,7 +149,7 @@ dependencies = [
  "derive-new",
  "lazy_static",
  "regex",
- "strum_macros 0.26.4",
+ "strum_macros",
  "thiserror 1.0.69",
 ]
 
@@ -1135,7 +1135,6 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
- "strum_macros 0.27.2",
  "tempfile",
  "toml 0.9.8",
  "toml-pretty-deser",
@@ -2153,18 +2152,6 @@ dependencies = [
  "proc-macro2 1.0.103",
  "quote 1.0.42",
  "rustversion",
- "syn 2.0.110",
-]
-
-[[package]]
-name = "strum_macros"
-version = "0.27.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7695ce3845ea4b33927c055a39dc438a45b059f7c1b3d91d38d10355fb8cbca7"
-dependencies = [
- "heck",
- "proc-macro2 1.0.103",
- "quote 1.0.42",
  "syn 2.0.110",
 ]
 

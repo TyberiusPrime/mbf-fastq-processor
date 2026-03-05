@@ -64,7 +64,6 @@
 	serde = { version = "1.0.228", default-features = false }
 	serde_json = "1.0.132"
 	sha2 = { version = "0.10.8", default-features = false }
-	strum_macros = "0.27.1"
 	tempfile = { version = "3.13.0", default-features = false }
 	toml = { version = "0.9.5", features = ["parse"], default-features = false }
 	toml_edit = "0.24"
