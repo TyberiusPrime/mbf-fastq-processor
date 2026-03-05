@@ -73,12 +73,13 @@ impl TagUser for PartialTaggedVariant<PartialDemultiplex> {
             self.toml_value.state = TomlValueState::new_validation_failed(
                 "output_unmatched must be set when using barcodes for demultiplex.",
             );
-            self.toml_value.help = Some("Add output_unmatched = true (or false)".to_string())
+            self.toml_value.help = Some("Add output_unmatched=true (or false)".to_string())
         }
         let inner = self
             .toml_value
+            .value
             .as_mut()
-            .expect("get_tag_usage should only be called after successful verification");
+            .expect("Was ok before, now might not be ok, but should be still set");
 
         TagUsageInfo {
             used_tags: vec![inner.in_label.to_used_tag(

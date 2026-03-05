@@ -31,7 +31,7 @@ The goal is to unify these into a single `Lowercase` step that uses a `source` p
       resolved_target: Option<ResolvedSource>,
 
       #[serde(default)]
-      if_tag: Option<TagLabel>,  // Conditional execution (from LowercaseSequence)
+      if_tag: Option<ConditionalTagLabel>,  // Conditional execution (from LowercaseSequence)
   }
   ```
 - Implement `Step` trait:

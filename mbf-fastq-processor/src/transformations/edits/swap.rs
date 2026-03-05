@@ -11,7 +11,7 @@ use crate::dna::HitRegion;
 #[derive(Debug)]
 pub struct Swap {
     #[tpd(default)]
-    if_tag: Option<TagLabel>,
+    if_tag: Option<ConditionalTagLabel>,
 
     #[schemars(with = "String")]
     #[tpd(adapt_in_verify(String))]
@@ -112,13 +112,7 @@ impl TagUser for PartialTaggedVariant<PartialSwap> {
             .expect("get_tag_usage should only be called after successful verification");
 
         TagUsageInfo {
-            used_tags: vec![inner.if_tag.to_used_tag(
-                &[
-                    TagValueType::Bool,
-                    TagValueType::String,
-                    TagValueType::Location,
-                ][..],
-            )],
+            used_tags: vec![inner.if_tag.to_used_tag(&[][..])],
             must_see_all_tags: true,
             ..Default::default()
         }
@@ -158,11 +152,10 @@ impl Step for Swap {
         }
 
         // Conditional swap logic
-        let cond_tag = ConditionalTag::from_tag_label(
-            self.if_tag
-                .as_ref()
-                .expect("if_tag must be set when conditional swap is used"),
-        );
+        let cond_tag = self
+            .if_tag
+            .as_ref()
+            .expect("if_tag must be set when conditional swap is used");
         let tag_values = get_bool_vec_from_tag(&block, &cond_tag);
 
         // Count how many swaps are needed

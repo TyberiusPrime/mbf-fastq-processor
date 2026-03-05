@@ -834,6 +834,57 @@ impl ToUsedTag for TomlValue<Option<TagLabel>> {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, JsonSchema)]
+#[schemars(with = "String")]
+pub struct ConditionalTagLabel {
+    pub tag: TagLabel,
+    pub invert: bool,
+}
+impl TryFrom<&str> for ConditionalTagLabel {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        if let Some(tag) = value.strip_prefix('!') {
+            Ok(ConditionalTagLabel {
+                tag: TagLabel::try_from(tag)?,
+                invert: true,
+            })
+        } else {
+            Ok(ConditionalTagLabel {
+                tag: TagLabel::try_from(value)?,
+                invert: false,
+            })
+        }
+    }
+}
+impl ToUsedTag for TomlValue<Option<ConditionalTagLabel>> {
+    #[track_caller]
+    fn to_used_tag<'a>(
+        &'a mut self,
+        accepted_tag_types: &'a [TagValueType],
+    ) -> Option<UsedTag<'a>> {
+        assert!(
+            accepted_tag_types.is_empty(),
+            "accepted_tag_types not used for ConditionalTagLabel"
+        );
+        let ct = self.as_ref().expect("parent was ok?").as_ref();
+        if let Some(ct) = ct {
+            Some(UsedTag {
+                name: ct.tag.clone(),
+                accepted_tag_types: &[
+                    TagValueType::Bool,
+                    TagValueType::Location,
+                    TagValueType::String,
+                ],
+                toml_source: Rc::new(RefCell::new((&mut self.state, &mut self.help))),
+                further_help: None,
+            })
+        } else {
+            None
+        }
+    }
+}
+
 pub fn offer_alternatives<T: AsRef<str>>(current: &str, available: &[T]) -> String {
     let available: Vec<_> = available
         .iter()
@@ -900,6 +951,10 @@ impl TryFrom<&str> for TagLabel {
 }
 
 toml_pretty_deser::impl_visitor_for_try_from_str!(TagLabel, "Invalid label");
+toml_pretty_deser::impl_visitor_for_try_from_str!(
+    ConditionalTagLabel,
+    "Invalid (conditional) label"
+);
 
 #[derive(Debug, Clone)]
 pub struct NonAmbigousDNA(pub BString);

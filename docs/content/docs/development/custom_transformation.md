@@ -504,7 +504,7 @@ pub struct FunkyCase {
     segment_index: Option<SegmentIndexOrAll>, // the internal representation after validation
 
     #[serde(default)]
-    if_tag: Option<TagLabel>, // defaults to 'None' if omitted
+    if_tag: Option<ConditionalTagLabel>, // defaults to 'None' if omitted
 }
 
 impl Step for FunkyCase {

@@ -1,1 +1,24 @@
- Duplicate label: barcode. Each tag must be unique
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+ 4 │ [[step]]
+ 5 │     action = 'ExtractIUPAC'
+ 6 │     out_label = 'barcode'
+   ┆                 ────┬────
+   ┆                     │
+   ┆                     ╰───── Tag declared here
+   ┆
+12 │ [[step]]
+13 │     action = 'ExtractIUPAC'
+   ┆              ───────┬──────
+   ┆                     │
+   ┆                     ╰─────── In this step
+14 │     out_label = 'barcode'
+   ┆                 ────┬────
+   ┆                     │
+   ┆                     ╰───── Tag also declared here
+───╯
+Hint: Rename either tag, or add a ForgetTag step inbetween.
+      See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractIUPAC
+

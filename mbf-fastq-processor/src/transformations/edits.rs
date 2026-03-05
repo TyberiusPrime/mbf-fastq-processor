@@ -31,13 +31,13 @@ pub use trim_at_tag::{PartialTrimAtTag, TrimAtTag};
 pub use truncate::{PartialTruncate, Truncate};
 pub use uppercase::{PartialUppercase, Uppercase};
 
-use crate::{io::FastQBlocksCombined, transformations::ConditionalTag};
+use crate::{config::deser::ConditionalTagLabel, io::FastQBlocksCombined};
 
 /// Helper function to extract a boolean Vec from tags
 /// Converts any tag value to its truthy representation, with optional inversion
 pub(crate) fn get_bool_vec_from_tag(
     block: &FastQBlocksCombined,
-    cond_tag: &ConditionalTag,
+    cond_tag: &ConditionalTagLabel,
 ) -> Vec<bool> {
     block
         .tags
