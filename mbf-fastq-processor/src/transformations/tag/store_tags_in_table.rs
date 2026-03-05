@@ -10,7 +10,7 @@ use super::super::tag::default_region_separator;
 
 //otherwise clippy won't shut up, because we can't allow it for the derived serde / eserde fields
 type OutputHandles = Arc<Mutex<DemultiplexedData<Option<csv::Writer<Box<OutputWriter>>>>>>;
-type InLabels = Arc<Mutex<Option<Vec<String>>>>;
+type InLabels = Arc<Mutex<Option<Vec<TagLabel>>>>;
 
 /// Store all currently defined tags in a TSV
 #[derive(JsonSchema, Clone)]
@@ -31,7 +31,7 @@ pub struct StoreTagsInTable {
     output_handles: Option<OutputHandles>,
 
     #[allow(dead_code)] //only used in deser
-    in_labels: Option<Vec<String>>,
+    in_labels: Option<Vec<TagLabel>>,
 
     #[tpd(skip)]
     #[schemars(skip)]
@@ -77,7 +77,7 @@ impl VerifyIn<PartialConfig> for PartialStoreTagsInTable {
 impl TagUser for PartialTaggedVariant<PartialStoreTagsInTable> {
     fn get_tag_usage(
         &mut self,
-        tags_available: &IndexMap<String, TagMetadata>,
+        tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> TagUsageInfo<'_> {
         if tags_available.is_empty() {
@@ -181,13 +181,13 @@ impl Step for StoreTagsInTable {
         if in_label_lock.is_none() {
             // Sort tags for consistent column order
 
-            let mut tag_list = block.tags.keys().cloned().collect::<Vec<String>>();
+            let mut tag_list: Vec<_> = block.tags.keys().cloned().collect();
             tag_list.sort();
             // Write header
             {
                 let mut header = vec!["ReadName"];
                 for tag in &tag_list {
-                    header.push(tag);
+                    header.push(&tag.0);
                 }
 
                 for (_demultiplex_tag, writer) in self

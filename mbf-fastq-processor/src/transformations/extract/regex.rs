@@ -26,7 +26,7 @@ pub struct Regex {
     #[tpd(with = "tpd_adapt_bstring")]
     #[schemars(with = "String")]
     pub replacement: BString,
-    out_label: String,
+    out_label: TagLabel,
 
     #[tpd(adapt_in_verify(String), alias = "segment")]
     #[schemars(with = "String")]
@@ -64,7 +64,7 @@ impl VerifyIn<PartialConfig> for PartialRegex {
 
 impl TagUser for PartialTaggedVariant<PartialRegex> {
     fn get_tag_usage(&mut self,
-        _tags_available: &IndexMap<String, TagMetadata>,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> TagUsageInfo<'_> {
         let inner = self

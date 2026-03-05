@@ -25,7 +25,9 @@ impl VerifyIn<PartialConfig> for PartialEmpty {
     }
 }
 
-impl TagUser for PartialTaggedVariant<PartialEmpty> {}
+impl TagUser for PartialTaggedVariant<PartialEmpty> {
+    //default is ok, no tags
+}
 
 impl Step for Empty {
     fn apply(

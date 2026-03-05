@@ -27,14 +27,14 @@ pub struct _ChangeCase {
     #[schemars(skip)]
     case_type: CaseType,
 
-    pub if_tag: Option<String>,
+    pub if_tag: Option<TagLabel>,
 }
 
 impl Partial_ChangeCase {
     pub fn new(
         target: MustAdapt<String, ResolvedSourceAll>,
         case_type: CaseType,
-        if_tag: Option<String>,
+        if_tag: Option<TagLabel>,
     ) -> Self {
         Self {
             target: TomlValue::new_ok_unplaced(target),
@@ -59,7 +59,7 @@ impl VerifyIn<PartialConfig> for Partial_ChangeCase {
 }
 
 impl _ChangeCase {
-    pub fn new(target: ResolvedSourceAll, case_type: CaseType, if_tag: Option<String>) -> Self {
+    pub fn new(target: ResolvedSourceAll, case_type: CaseType, if_tag: Option<TagLabel>) -> Self {
         Self {
             target,
             case_type,
@@ -69,8 +69,9 @@ impl _ChangeCase {
 }
 
 impl TagUser for PartialTaggedVariant<Partial_ChangeCase> {
-    fn get_tag_usage(&mut self,
-        _tags_available: &IndexMap<String, TagMetadata>,
+    fn get_tag_usage(
+        &mut self,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> TagUsageInfo<'_> {
         let inner = self
@@ -78,12 +79,12 @@ impl TagUser for PartialTaggedVariant<Partial_ChangeCase> {
             .as_mut()
             .expect("get_tag_usage should only be called after successful verification");
         let mut used_tags = vec![inner.if_tag.to_used_tag(
-                &[
-                    TagValueType::Bool,
-                    TagValueType::String,
-                    TagValueType::Location,
-                ][..],
-            )];
+            &[
+                TagValueType::Bool,
+                TagValueType::String,
+                TagValueType::Location,
+            ][..],
+        )];
         used_tags.extend(inner.target.to_used_tags());
 
         TagUsageInfo {
@@ -94,31 +95,6 @@ impl TagUser for PartialTaggedVariant<Partial_ChangeCase> {
 }
 
 impl Step for _ChangeCase {
-    fn uses_tags(
-        &self,
-        _tags_available: &IndexMap<String, TagMetadata>,
-    ) -> Option<Vec<(String, &[TagValueType])>> {
-        let mut tags = Vec::new();
-
-        if let Some(resolved_tags) = self.target.get_tags() {
-            tags.extend(resolved_tags);
-        }
-
-        if let Some(ref tag_str) = self.if_tag {
-            let cond_tag = ConditionalTag::from_string(tag_str.clone());
-            tags.push((
-                cond_tag.tag.clone(),
-                &[
-                    TagValueType::Bool,
-                    TagValueType::String,
-                    TagValueType::Location,
-                ][..],
-            ));
-        }
-
-        if tags.is_empty() { None } else { Some(tags) }
-    }
-
     fn apply(
         &self,
         mut block: FastQBlocksCombined,
@@ -126,8 +102,8 @@ impl Step for _ChangeCase {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let condition = self.if_tag.as_ref().map(|tag_str| {
-            let cond_tag = ConditionalTag::from_string(tag_str.clone());
+        let condition = self.if_tag.as_ref().map(|tag| {
+            let cond_tag = ConditionalTag::from_tag_label(tag);
             get_bool_vec_from_tag(&block, &cond_tag)
         });
 

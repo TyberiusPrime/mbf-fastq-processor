@@ -21,7 +21,7 @@ pub enum ExpectedErrorAggregate {
 #[tpd]
 #[derive(Debug)]
 pub struct ExpectedError {
-    pub out_label: String,
+    pub out_label: TagLabel,
 
     #[schemars(with = "String")]
     #[tpd(adapt_in_verify(String))]
@@ -47,7 +47,7 @@ impl VerifyIn<PartialConfig> for PartialExpectedError {
 
 impl TagUser for PartialTaggedVariant<PartialExpectedError> {
     fn get_tag_usage(&mut self,
-        _tags_available: &IndexMap<String, TagMetadata>,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> TagUsageInfo {
         let inner = self

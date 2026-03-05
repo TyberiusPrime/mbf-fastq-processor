@@ -10,7 +10,7 @@ use crate::config::deser::tpd_adapt_u8_from_byte_or_char;
 #[tpd]
 #[derive(Debug)]
 pub struct ReplaceTagWithLetter {
-    pub in_label: String,
+    pub in_label: TagLabel,
     #[tpd(with = "tpd_adapt_u8_from_byte_or_char")]
     /// Provide the replacement letter as a single character (e.g., 'N') or its ASCII numeric value (e.g., 78 for 'N').
     pub letter: u8,
@@ -18,16 +18,24 @@ pub struct ReplaceTagWithLetter {
 
 impl VerifyIn<PartialConfig> for PartialReplaceTagWithLetter {}
 
-impl TagUser for PartialTaggedVariant<PartialReplaceTagWithLetter> {}
+impl TagUser for PartialTaggedVariant<PartialReplaceTagWithLetter> {
+    fn get_tag_usage(
+        &mut self,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
+        _segment_order: &[String],
+    ) -> TagUsageInfo<'_> {
+        let inner = self
+            .toml_value
+            .as_mut()
+            .expect("get_tag_usage should only be called after successful verification");
+        TagUsageInfo {
+            used_tags: vec![inner.in_label.to_used_tag(&[TagValueType::Location][..])],
+            ..Default::default()
+        }
+    }
+}
 
 impl Step for ReplaceTagWithLetter {
-    fn uses_tags(
-        &self,
-        _tags_available: &IndexMap<String, TagMetadata>,
-    ) -> Option<Vec<(String, &[TagValueType])>> {
-        Some(vec![(self.in_label.clone(), &[TagValueType::Location])])
-    }
-
     fn apply(
         &self,
         mut block: FastQBlocksCombined,

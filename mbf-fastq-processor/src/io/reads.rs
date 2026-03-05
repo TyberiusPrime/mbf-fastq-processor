@@ -1,4 +1,5 @@
 use crate::config::SegmentIndexOrAll;
+use crate::config::deser::TagLabel;
 use crate::dna::HitRegion;
 use crate::transformations::prelude::DemultiplexTag;
 use crate::{
@@ -557,8 +558,8 @@ impl FastQBlock {
 
     pub fn apply_mut_with_tag(
         &mut self,
-        tags: &HashMap<String, Vec<TagValue>>,
-        label: &str,
+        tags: &HashMap<TagLabel, Vec<TagValue>>,
+        label: &TagLabel,
         f: impl Fn(&mut WrappedFastQReadMut, &TagValue),
     ) {
         let tags = tags
@@ -1210,7 +1211,7 @@ pub struct SegmentsCombined<T> {
 pub struct FastQBlocksCombined {
     pub segments: Vec<FastQBlock>,
     pub output_tags: Option<Vec<crate::demultiplex::Tag>>, // used by Demultiplex
-    pub tags: HashMap<String, Vec<TagValue>>,
+    pub tags: HashMap<TagLabel, Vec<TagValue>>,
     pub is_final: bool,
 }
 
@@ -1292,11 +1293,11 @@ impl FastQBlocksCombined {
     }
 
     #[allow(clippy::needless_range_loop)] // it's not needless..
-    pub fn apply_mut_with_tag<F>(&mut self, label: &str, mut f: F)
+    pub fn apply_mut_with_tag<F>(&mut self, label: &TagLabel, mut f: F)
     where
         F: for<'a> FnMut(&mut [WrappedFastQReadMut<'a>], &TagValue),
     {
-        let tags = self.tags.get(label).expect("Tag must be present, bug");
+        let tags = self.tags.get(&label).expect("Tag must be present, bug");
 
         for ii in 0..self.segments[0].entries.len() {
             let mut reads: Vec<WrappedFastQReadMut> = Vec::new();

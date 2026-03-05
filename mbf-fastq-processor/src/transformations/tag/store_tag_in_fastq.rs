@@ -26,15 +26,15 @@ use super::{
 #[tpd]
 #[derive(Debug)]
 pub struct StoreTagInFastQ {
-    in_label: String,
+    in_label: TagLabel,
 
     // Optional read name comment fields (like StoreTagInComment)
     #[tpd(default)]
-    comment_tags: Vec<String>,
+    comment_tags: Vec<TagLabel>,
     //
     // Optional location tags to add to read names
     //#[tpd(default)]
-    comment_location_tags: Vec<String>,
+    comment_location_tags: Vec<TagLabel>,
 
     #[tpd(with = "tpd_adapt_u8_from_byte_or_char")]
     comment_separator: u8,
@@ -132,7 +132,7 @@ impl std::fmt::Debug for StoreTagInFastQ {
 impl TagUser for PartialTaggedVariant<PartialStoreTagInFastQ> {
     fn get_tag_usage(
         &mut self,
-        _tags_available: &IndexMap<String, TagMetadata>,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> TagUsageInfo<'_> {
         let inner = self
@@ -194,33 +194,6 @@ impl Step for StoreTagInFastQ {
         false // since we want to dump all the reads even if later on there's a Head
     }
 
-    fn uses_tags(
-        &self,
-        _tags_available: &IndexMap<String, TagMetadata>,
-    ) -> Option<Vec<(String, &[TagValueType])>> {
-        let mut tags: Vec<(String, &[TagValueType])> =
-            vec![(self.in_label.clone(), &[TagValueType::Location])];
-        tags.extend(self.comment_tags.iter().map(|x| {
-            (
-                x.clone(),
-                &[
-                    TagValueType::String,
-                    TagValueType::Location,
-                    TagValueType::Bool,
-                    TagValueType::Numeric,
-                ][..],
-            )
-        }));
-
-        // Add location tags (deduplicated) - defaults to main label if not specified
-        for tag in &self.comment_location_tags {
-            if !tags.iter().any(|(name, _)| name == tag) {
-                //prevent duplicates
-                tags.push((tag.clone(), &[TagValueType::Location]));
-            }
-        }
-        Some(tags)
-    }
 
     fn init(
         &mut self,
@@ -323,7 +296,7 @@ impl Step for StoreTagInFastQ {
                                 };
                                 let new_name = store_tag_in_comment(
                                     &name,
-                                    tag.as_bytes(),
+                                    tag.0.as_bytes(),
                                     &tag_bytes,
                                     self.comment_separator,
                                     self.comment_insert_char,

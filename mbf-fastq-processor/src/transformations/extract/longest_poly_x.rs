@@ -17,7 +17,7 @@ pub struct LongestPolyX {
     #[schemars(with = "String")]
     segment: SegmentIndex,
 
-    pub out_label: String,
+    pub out_label: TagLabel,
     pub min_length: usize,
     #[tpd(with = "tpd_adapt_extract_base_or_dot")]
     pub base: u8,
@@ -162,7 +162,7 @@ impl LongestPolyX {
 impl TagUser for PartialTaggedVariant<PartialLongestPolyX> {
     fn get_tag_usage(
         &mut self,
-        _tags_available: &IndexMap<String, TagMetadata>,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> TagUsageInfo {
         let inner = self

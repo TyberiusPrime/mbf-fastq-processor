@@ -24,7 +24,7 @@ pub struct IUPACWithIndel {
     segment: SegmentIndex,
 
     anchor: Anchor,
-    out_label: String,
+    out_label: TagLabel,
     #[tpd(default)]
     max_mismatches: usize,
     #[tpd(default)]
@@ -58,7 +58,7 @@ impl VerifyIn<PartialConfig> for PartialIUPACWithIndel {
 
 impl TagUser for PartialTaggedVariant<PartialIUPACWithIndel> {
     fn get_tag_usage(&mut self,
-        _tags_available: &IndexMap<String, TagMetadata>,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> TagUsageInfo<'_> {
         let inner = self

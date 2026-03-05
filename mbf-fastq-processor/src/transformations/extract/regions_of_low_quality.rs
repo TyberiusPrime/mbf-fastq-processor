@@ -20,7 +20,7 @@ pub struct RegionsOfLowQuality {
     #[tpd(with = "tpd_adapt_u8_from_byte_or_char")]
     pub min_quality: u8,
     pub min_length: usize,
-    pub out_label: String,
+    pub out_label: TagLabel,
 }
 
 impl VerifyIn<PartialConfig> for PartialRegionsOfLowQuality {
@@ -51,7 +51,7 @@ impl VerifyIn<PartialConfig> for PartialRegionsOfLowQuality {
 impl TagUser for PartialTaggedVariant<PartialRegionsOfLowQuality> {
     fn get_tag_usage(
         &mut self,
-        _tags_available: &IndexMap<String, TagMetadata>,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> TagUsageInfo<'_> {
         let inner = self

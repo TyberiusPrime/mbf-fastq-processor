@@ -8,8 +8,8 @@ use crate::{dna::TagValue, io};
 #[tpd]
 #[derive(Debug)]
 pub struct RegionsToLength {
-    pub out_label: String,
-    pub in_label: String,
+    pub out_label: TagLabel,
+    pub in_label: TagLabel,
 }
 
 impl VerifyIn<PartialConfig> for PartialRegionsToLength {
@@ -22,14 +22,14 @@ impl VerifyIn<PartialConfig> for PartialRegionsToLength {
         Self: Sized + toml_pretty_deser::Visitor,
     {
         self.out_label.verify(|v| {
-            if v.is_empty() {
+            if v.0.is_empty() {
                 Err(ValidationFailure::new("Must not be empty", None))
             } else {
                 Ok(())
             }
         });
         self.in_label.verify(|v| {
-            if v.is_empty() {
+            if v.0.is_empty() {
                 Err(ValidationFailure::new("Must not be empty", None))
             } else {
                 Ok(())
@@ -56,16 +56,6 @@ impl VerifyIn<PartialConfig> for PartialRegionsToLength {
 impl TagUser for PartialTaggedVariant<PartialRegionsToLength> {}
 
 impl Step for RegionsToLength {
-    fn declares_tag_type(&self) -> Option<(String, TagValueType)> {
-        Some((self.out_label.clone(), TagValueType::Numeric))
-    }
-
-    fn uses_tags(
-        &self,
-        _tags_available: &IndexMap<String, TagMetadata>,
-    ) -> Option<Vec<(String, &[TagValueType])>> {
-        Some(vec![(self.in_label.clone(), &[TagValueType::Location])])
-    }
 
     fn apply(
         &self,

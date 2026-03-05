@@ -25,7 +25,7 @@ pub use regions::{PartialRegions, Regions};
 pub use regions_of_low_quality::{PartialRegionsOfLowQuality, RegionsOfLowQuality};
 
 use crate::{
-    config::{SegmentIndex, SegmentIndexOrAll},
+    config::{SegmentIndex, SegmentIndexOrAll, deser::TagLabel},
     dna::TagValue,
     io,
 };
@@ -35,7 +35,7 @@ use super::prelude::DemultiplexTag;
 pub(crate) fn extract_region_tags(
     block: &mut io::FastQBlocksCombined,
     segment: SegmentIndex,
-    label: &str,
+    label: &TagLabel,
     f: impl Fn(&mut io::WrappedFastQRead) -> Option<crate::dna::Hits>,
 ) {
     let mut out = Vec::new();
@@ -48,13 +48,13 @@ pub(crate) fn extract_region_tags(
     };
     block.segments[segment.get_index()].apply(f2);
 
-    block.tags.insert(label.to_string(), out);
+    block.tags.insert(label.clone(), out);
 }
 
 pub(crate) fn extract_string_tags(
     block: &mut io::FastQBlocksCombined,
     segment: SegmentIndex,
-    label: &str,
+    label: &TagLabel,
     f: impl Fn(&mut io::WrappedFastQRead) -> Option<BString>,
 ) {
     let mut out = Vec::new();
@@ -67,13 +67,13 @@ pub(crate) fn extract_string_tags(
     };
     block.segments[segment.get_index()].apply(f2);
 
-    block.tags.insert(label.to_string(), out);
+    block.tags.insert(label.clone(), out);
 }
 
 pub(crate) fn extract_bool_tags<F>(
     block: &mut io::FastQBlocksCombined,
     segment: SegmentIndex,
-    label: &str,
+    label: &TagLabel,
     mut extractor: F,
 ) where
     F: FnMut(&io::WrappedFastQRead, DemultiplexTag) -> bool,
@@ -84,13 +84,13 @@ pub(crate) fn extract_bool_tags<F>(
     };
     block.segments[segment.get_index()].apply_with_demultiplex_tag(f, block.output_tags.as_ref());
 
-    block.tags.insert(label.to_string(), values);
+    block.tags.insert(label.clone(), values);
 }
 
 pub(crate) fn extract_bool_tags_plus_all<F, G>(
     block: &mut io::FastQBlocksCombined,
     segment: SegmentIndexOrAll,
-    label: &str,
+    label: &TagLabel,
     extractor_single: F,
     mut extractor_all: G,
 ) where
@@ -116,14 +116,14 @@ pub(crate) fn extract_bool_tags_plus_all<F, G>(
             let value = extractor_all(&molecule.segments, output_tag);
             values.push(TagValue::Bool(value));
         }
-        block.tags.insert(label.to_string(), values);
+        block.tags.insert(label.clone(), values);
     }
 }
 
 pub(crate) fn extract_bool_tags_from_tag<F>(
     block: &mut io::FastQBlocksCombined,
-    label: &str,
-    input_label: &str,
+    label: &TagLabel,
+    input_label: &TagLabel,
     mut extractor: F,
 ) where
     F: FnMut(&TagValue, DemultiplexTag) -> bool,
@@ -143,5 +143,5 @@ pub(crate) fn extract_bool_tags_from_tag<F>(
         values.push(TagValue::Bool(extractor(tag_value, output_tag)));
     }
 
-    block.tags.insert(label.to_string(), values);
+    block.tags.insert(label.clone(), values);
 }

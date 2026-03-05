@@ -9,7 +9,7 @@ mod qualified_bases;
 mod gc_content;
 
 use crate::{
-    config::{SegmentIndex, SegmentIndexOrAll},
+    config::{SegmentIndex, SegmentIndexOrAll, deser::TagLabel},
     dna::TagValue,
     io,
 };
@@ -25,7 +25,7 @@ pub use qualified_bases::{PartialQualifiedBases, QualifiedBases};
 
 pub(crate) fn extract_numeric_tags<F>(
     segment: SegmentIndex,
-    label: &str,
+    label: &TagLabel,
     mut extractor: F,
     block: &mut io::FastQBlocksCombined,
 ) where
@@ -38,12 +38,12 @@ pub(crate) fn extract_numeric_tags<F>(
     };
 
     block.segments[segment.get_index()].apply(f);
-    block.tags.insert(label.to_string(), values);
+    block.tags.insert(label.clone(), values);
 }
 
 pub(crate) fn extract_numeric_tags_plus_all<F>(
     segment: SegmentIndexOrAll,
-    label: &str,
+    label: &TagLabel,
     extractor_single: F,
     mut extractor_all: impl FnMut(&Vec<io::WrappedFastQRead>) -> f64,
     block: &mut io::FastQBlocksCombined,
@@ -61,6 +61,6 @@ pub(crate) fn extract_numeric_tags_plus_all<F>(
             let value = extractor_all(&molecule.segments);
             values.push(TagValue::Numeric(value));
         }
-        block.tags.insert(label.to_string(), values);
+        block.tags.insert(label.clone(), values);
     }
 }

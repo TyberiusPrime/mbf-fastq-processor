@@ -50,7 +50,9 @@ fn solexa_to_phred(q_solexa: i16) -> i16 {
     (10.0 * ((10f64.powf(f64::from(q_solexa) / 10.0) + 1.0).log10())).round() as i16
 }
 
-impl TagUser for PartialTaggedVariant<PartialConvertQuality> {}
+impl TagUser for PartialTaggedVariant<PartialConvertQuality> {
+    //empty is ok
+}
 
 impl Step for ConvertQuality {
     fn apply(

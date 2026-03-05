@@ -7,7 +7,7 @@ use crate::{dna::TagValue, transformations::prelude::*};
 #[tpd]
 #[derive(Debug)]
 pub struct ByTag {
-    in_label: String,
+    in_label: TagLabel,
     keep_or_remove: super::super::KeepOrRemove,
 }
 
@@ -33,7 +33,7 @@ impl VerifyIn<PartialConfig> for PartialByTag {
 
 impl TagUser for PartialTaggedVariant<PartialByTag> {
     fn get_tag_usage(&mut self,
-        _tags_available: &IndexMap<String, TagMetadata>,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> TagUsageInfo<'_> {
         let inner = self
@@ -48,29 +48,14 @@ impl TagUser for PartialTaggedVariant<PartialByTag> {
                     TagValueType::Location,
                 ][..],
             )],
+            must_see_all_tags: true, // for filtering them down
             ..Default::default()
         }
     }
 }
 
 impl Step for ByTag {
-    fn must_see_all_tags(&self) -> bool {
-        true
-    }
 
-    fn uses_tags(
-        &self,
-        _tags_available: &IndexMap<String, TagMetadata>,
-    ) -> Option<Vec<(String, &[TagValueType])>> {
-        Some(vec![(
-            self.in_label.clone(),
-            &[
-                TagValueType::Location,
-                TagValueType::String,
-                TagValueType::Bool,
-            ],
-        )])
-    }
 
     fn apply(
         &self,

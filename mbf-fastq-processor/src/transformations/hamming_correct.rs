@@ -16,9 +16,9 @@ use crate::dna::{Hits, TagValue};
 #[derive(Debug)]
 pub struct HammingCorrect {
     /// Input tag to correct
-    pub in_label: String,
+    pub in_label: TagLabel,
     /// Output tag to store corrected result
-    pub out_label: String,
+    pub out_label: TagLabel,
     /// Reference to barcodes section
     pub barcodes: String,
     /// Maximum hamming distance for correction
@@ -156,7 +156,7 @@ pub enum OnNoMatch {
 impl TagUser for PartialTaggedVariant<PartialHammingCorrect> {
     fn get_tag_usage(
         &mut self,
-        _tags_available: &IndexMap<String, TagMetadata>,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> TagUsageInfo<'_> {
         let inner = self

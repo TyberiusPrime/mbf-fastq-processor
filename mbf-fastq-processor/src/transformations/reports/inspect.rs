@@ -115,7 +115,9 @@ impl std::fmt::Debug for Inspect {
     }
 }
 
-impl TagUser for PartialTaggedVariant<PartialInspect> {}
+impl TagUser for PartialTaggedVariant<PartialInspect> {
+    //default is ok, no tags
+}
 
 impl Step for Inspect {
     fn needs_serial(&self) -> bool {

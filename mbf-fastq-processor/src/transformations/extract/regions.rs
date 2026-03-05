@@ -1,5 +1,5 @@
 #![allow(clippy::unnecessary_wraps)]
-use std::{cell::RefCell, collections::HashSet, rc::Rc, sync::OnceLock};
+use std::{cell::RefCell, collections::HashSet, rc::Rc};
 
 //eserde false positives
 //
@@ -21,7 +21,7 @@ pub struct Regions {
     #[tpd(nested)]
     pub regions: Vec<RegionDefinition>, //validated to be non_empty in transformations::validate_regions
 
-    pub out_label: String,
+    pub out_label: TagLabel,
 
     /* #[serde(deserialize_with = "crate::config::deser::option_bstring_from_string")]
     #[schemars(with = "Option<String>")]
@@ -71,7 +71,7 @@ impl VerifyIn<PartialConfig> for PartialRegions {
 impl TagUser for PartialTaggedVariant<PartialRegions> {
     fn get_tag_usage(
         &mut self,
-        tags_available: &IndexMap<String, TagMetadata>,
+        tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> TagUsageInfo<'_> {
         let inner = self
@@ -137,7 +137,7 @@ impl TagUser for PartialTaggedVariant<PartialRegions> {
 impl Step for Regions {
     // fn uses_tags(
     //     &self,
-    //     tags_available: &IndexMap<String, TagMetadata>,
+    //     tags_available: &IndexMap<TagLabel, TagMetadata>,
     // ) -> Option<Vec<(String, &[TagValueType])>> {
     //     let mut tags = Vec::new();
     //     let mut seen = HashSet::new();

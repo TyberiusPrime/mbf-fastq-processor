@@ -20,7 +20,7 @@ pub struct Region {
     /// Is the region from the `Start` or the `End` of the source?
     pub anchor: RegionAnchor,
 
-    pub out_label: String,
+    pub out_label: TagLabel,
 }
 
 impl VerifyIn<PartialConfig> for PartialRegion {
@@ -39,7 +39,7 @@ impl VerifyIn<PartialConfig> for PartialRegion {
 
 impl TagUser for PartialTaggedVariant<PartialRegion> {
     fn get_tag_usage(&mut self,
-        _tags_available: &IndexMap<String, TagMetadata>,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> TagUsageInfo<'_>{
         unreachable!("Should have been turned into Regions already")

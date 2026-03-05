@@ -8,7 +8,7 @@ use crate::transformations::prelude::*;
 #[tpd]
 #[derive(Debug)]
 pub struct Complexity {
-    pub out_label: String,
+    pub out_label: TagLabel,
 
     #[schemars(with = "String")]
     #[tpd(adapt_in_verify(String))]
@@ -29,15 +29,24 @@ impl VerifyIn<PartialConfig> for PartialComplexity {
     }
 }
 
-impl TagUser for PartialTaggedVariant<PartialComplexity> {}
+impl TagUser for PartialTaggedVariant<PartialComplexity> {
+    fn get_tag_usage(
+        &mut self,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
+        _segment_order: &[String],
+    ) -> TagUsageInfo<'_> {
+        let inner = self
+            .toml_value
+            .as_mut()
+            .expect("get_tag_usage should only be called after successful verification");
+        TagUsageInfo {
+            declared_tag: inner.out_label.to_declared_tag(TagValueType::Numeric),
+            ..Default::default()
+        }
+    }
+}
 
 impl Step for Complexity {
-    fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
-        Some((
-            self.out_label.clone(),
-            crate::transformations::TagValueType::Numeric,
-        ))
-    }
 
     #[allow(
         clippy::cast_sign_loss,

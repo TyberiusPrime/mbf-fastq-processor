@@ -11,7 +11,7 @@ use crate::dna::HitRegion;
 #[derive(Debug)]
 pub struct Swap {
     #[tpd(default)]
-    if_tag: Option<String>,
+    if_tag: Option<TagLabel>,
 
     #[schemars(with = "String")]
     #[tpd(adapt_in_verify(String))]
@@ -100,29 +100,32 @@ impl VerifyIn<PartialConfig> for PartialSwap {
     }
 }
 
-impl TagUser for PartialTaggedVariant<PartialSwap> {}
+impl TagUser for PartialTaggedVariant<PartialSwap> {
+    fn get_tag_usage(
+        &mut self,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
+        _segment_order: &[String],
+    ) -> TagUsageInfo<'_> {
+        let inner = self
+            .toml_value
+            .as_mut()
+            .expect("get_tag_usage should only be called after successful verification");
 
-impl Step for Swap {
-    fn uses_tags(
-        &self,
-        _tags_available: &IndexMap<String, TagMetadata>,
-    ) -> Option<Vec<(String, &[TagValueType])>> {
-        self.if_tag.as_ref().map(|tag_str| {
-            let cond_tag = ConditionalTag::from_string(tag_str.clone());
-            vec![(
-                cond_tag.tag.clone(),
+        TagUsageInfo {
+            used_tags: vec![inner.if_tag.to_used_tag(
                 &[
                     TagValueType::Bool,
                     TagValueType::String,
                     TagValueType::Location,
                 ][..],
-            )]
-        })
+            )],
+            must_see_all_tags: true,
+            ..Default::default()
+        }
     }
+}
 
-    fn must_see_all_tags(&self) -> bool {
-        true
-    }
+impl Step for Swap {
 
     fn apply(
         &self,
@@ -156,11 +159,10 @@ impl Step for Swap {
         }
 
         // Conditional swap logic
-        let cond_tag = ConditionalTag::from_string(
+        let cond_tag = ConditionalTag::from_tag_label(
             self.if_tag
                 .as_ref()
                 .expect("if_tag must be set when conditional swap is used")
-                .clone(),
         );
         let tag_values = get_bool_vec_from_tag(&block, &cond_tag);
 

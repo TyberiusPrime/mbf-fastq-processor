@@ -50,7 +50,7 @@ pub struct MergeReads {
 
     /// Tag label to store merge status (suggested: "merged")
     /// Tag will be true if reads were merged, false otherwise
-    pub out_label: Option<String>,
+    pub out_label: Option<TagLabel>,
 
     /// Spacer sequence to use when concatenating (required if `no_overlap_strategy` = 'concatenate')
     pub concatenate_spacer: Option<String>,
@@ -162,14 +162,12 @@ impl VerifyIn<PartialConfig> for PartialMergeReads {
     }
 }
 
-impl TagUser for PartialTaggedVariant<PartialMergeReads> {}
+impl TagUser for PartialTaggedVariant<PartialMergeReads> {
+    //default is ok, no tags
+
+}
 
 impl Step for MergeReads {
-    fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
-        self.out_label
-            .as_ref()
-            .map(|label| (label.clone(), crate::transformations::TagValueType::Bool))
-    }
 
     fn apply(
         &self,

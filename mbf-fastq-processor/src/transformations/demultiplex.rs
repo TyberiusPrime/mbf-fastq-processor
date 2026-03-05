@@ -10,7 +10,7 @@ use crate::transformations::prelude::*;
 #[tpd]
 #[derive(Debug)]
 pub struct Demultiplex {
-    pub in_label: String,
+    pub in_label: TagLabel,
     pub output_unmatched: Option<bool>,
 
     /// reference to shared barcodes section (optional for boolean tag mode)
@@ -35,7 +35,7 @@ impl VerifyIn<PartialConfig> for PartialDemultiplex {
         Self: Sized + toml_pretty_deser::Visitor,
     {
         self.in_label.verify(|v| {
-            if v.is_empty() {
+            if v.0.is_empty() {
                 Err(ValidationFailure::new("Must not be empty", None))
             } else {
                 Ok(())
@@ -45,7 +45,53 @@ impl VerifyIn<PartialConfig> for PartialDemultiplex {
     }
 }
 
-impl TagUser for PartialTaggedVariant<PartialDemultiplex> {}
+impl TagUser for PartialTaggedVariant<PartialDemultiplex> {
+    fn get_tag_usage(
+        &mut self,
+        tags_available: &IndexMap<TagLabel, TagMetadata>,
+        _segment_order: &[String],
+    ) -> TagUsageInfo<'_> {
+        let inner = self
+            .toml_value
+            .as_ref()
+            .expect("get_tag_usage should only be called after successful verification");
+
+        // Multiple demultiplex steps are now supported
+        // Each demultiplex step defines a bit region for its variants
+        // When demultiplexing, they are combined with OR logic
+        let upstream_label_type = tags_available
+            .get(inner.in_label.as_ref().expect("parent was ok"))
+            .map(|meta| &meta.tag_type);
+        let upstream_label_is_bool = matches!(upstream_label_type, Some(TagValueType::Bool));
+        if !upstream_label_is_bool
+            && inner
+                .output_unmatched
+                .as_ref()
+                .expect("parent was ok")
+                .is_none()
+        {
+            self.toml_value.state = TomlValueState::new_validation_failed(
+                "output_unmatched must be set when using barcodes for demultiplex.",
+            );
+            self.toml_value.help = Some("Add output_unmatched = true (or false)".to_string())
+        }
+        let inner = self
+            .toml_value
+            .as_mut()
+            .expect("get_tag_usage should only be called after successful verification");
+
+        TagUsageInfo {
+            used_tags: vec![inner.in_label.to_used_tag(
+                &[
+                    TagValueType::Bool,
+                    TagValueType::String,
+                    TagValueType::Location,
+                ][..],
+            )],
+            ..Default::default()
+        }
+    }
+}
 
 impl Step for Demultiplex {
     // fn needs_serial(&self) -> bool {
@@ -59,39 +105,7 @@ impl Step for Demultiplex {
         all_transforms: &[Transformation],
         this_transforms_index: usize,
     ) -> Result<()> {
-        // Multiple demultiplex steps are now supported
-        // Each demultiplex step defines a bit region for its variants
-        // When demultiplexing, they are combined with OR logic
-        let mut upstream_label_type = None;
-        for trafo in all_transforms[..this_transforms_index].iter().rev() {
-            if let Some((tag_label, tag_type)) = trafo.declares_tag_type()
-                && tag_label == self.in_label
-            {
-                upstream_label_type = Some(tag_type);
-                break;
-            }
-        }
-        let upstream_label_is_bool = matches!(upstream_label_type, Some(TagValueType::Bool));
-        if !upstream_label_is_bool && self.output_unmatched.is_none() {
-            bail!(
-                "output_unmatched must be set when using barcodes for demultiplex. Set it to true or false as needed."
-            );
-        }
         Ok(())
-    }
-
-    fn uses_tags(
-        &self,
-        _tags_available: &IndexMap<String, TagMetadata>,
-    ) -> Option<Vec<(String, &[TagValueType])>> {
-        Some(vec![(
-            self.in_label.clone(),
-            &[
-                TagValueType::Location,
-                TagValueType::String,
-                TagValueType::Bool,
-            ],
-        )])
     }
 
     fn init(

@@ -16,7 +16,7 @@ type QuantifyTagCollector = Arc<Mutex<DemultiplexedData<BTreeMap<Vec<u8>, usize>
 #[derive(Debug)]
 pub struct QuantifyTag {
     pub infix: String,
-    pub in_label: String,
+    pub in_label: TagLabel,
 
     #[schemars(with = "String")]
     #[tpd(with = "tpd_adapt_bstring")]
@@ -45,7 +45,22 @@ impl VerifyIn<PartialConfig> for PartialQuantifyTag {
     }
 }
 
-impl TagUser for PartialTaggedVariant<PartialQuantifyTag> {}
+impl TagUser for PartialTaggedVariant<PartialQuantifyTag> {
+    fn get_tag_usage(
+        &mut self,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
+        _segment_order: &[String],
+    ) -> TagUsageInfo<'_> {
+        let inner = self
+            .toml_value
+            .as_mut()
+            .expect("get_tag_usage should only be called after successful verification");
+        TagUsageInfo {
+            used_tags: vec![inner.in_label.to_used_tag(&[TagValueType::Location][..])],
+            ..Default::default()
+        }
+    }
+}
 
 impl Step for QuantifyTag {
     fn transmits_premature_termination(&self) -> bool {
@@ -53,13 +68,6 @@ impl Step for QuantifyTag {
     }
     fn needs_serial(&self) -> bool {
         true
-    }
-
-    fn uses_tags(
-        &self,
-        _tags_available: &IndexMap<String, TagMetadata>,
-    ) -> Option<Vec<(String, &[TagValueType])>> {
-        Some(vec![(self.in_label.clone(), &[TagValueType::Location])])
     }
 
     fn init(
