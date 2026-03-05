@@ -1,4 +1,4 @@
-ReadName
-Read1
-Read3
-Read7
+ReadName	even	len1	reg1
+Read1	0	51	C
+Read3	0	51	G
+Read7	0	51	C
