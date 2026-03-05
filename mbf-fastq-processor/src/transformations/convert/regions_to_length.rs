@@ -56,7 +56,6 @@ impl VerifyIn<PartialConfig> for PartialRegionsToLength {
 impl TagUser for PartialTaggedVariant<PartialRegionsToLength> {}
 
 impl Step for RegionsToLength {
-
     fn apply(
         &self,
         mut block: io::FastQBlocksCombined,

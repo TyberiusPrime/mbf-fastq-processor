@@ -2,8 +2,6 @@ use crate::dna::TagValue;
 use crate::transformations::prelude::*;
 use std::collections::BTreeMap;
 
-use std::sync::OnceLock;
-
 /// Histogram data structure that can handle both String and Numeric tags
 #[derive(Debug, Clone)]
 pub enum HistogramData {
@@ -92,7 +90,7 @@ pub struct _ReportTagHistogram {
     pub report_no: usize,
     pub tag_name: TagLabel,
     #[tpd(skip)]
-    pub tag_type: OnceLock<TagValueType>,
+    pub tag_type: TagValueType,
     #[tpd(skip)]
     pub data: Arc<Mutex<DemultiplexedData<HistogramData>>>,
 }
@@ -102,13 +100,42 @@ impl Partial_ReportTagHistogram {
         Self {
             report_no: TomlValue::new_ok_unplaced(report_no),
             tag_name,
-            tag_type: Some(OnceLock::new()),
+            tag_type: None,
             data: Some(Default::default()),
         }
     }
 }
 
-impl TagUser for PartialTaggedVariant<Box<Partial_ReportTagHistogram>> {}
+impl TagUser for PartialTaggedVariant<Box<Partial_ReportTagHistogram>> {
+    fn get_tag_usage(
+        &mut self,
+        tags_available: &IndexMap<TagLabel, TagMetadata>,
+        _segment_order: &[String],
+    ) -> TagUsageInfo<'_> {
+        let inner = self
+            .toml_value
+            .as_mut()
+            .expect("get_tag_usage should only be called after successful verification");
+        if let Some(tag_meta) = tags_available.get(inner.tag_name.as_ref().expect("parent was ok?"))
+        {
+            inner.tag_type = Some(tag_meta.tag_type);
+        } else {
+            //no need to set it, missing tag will fail before the 'tag_type not set in verify'
+            //if that's happening at all for our dynamically generated one.
+        }
+        TagUsageInfo {
+            used_tags: vec![inner.tag_name.to_used_tag(
+                &[
+                    TagValueType::String,
+                    TagValueType::Numeric,
+                    TagValueType::Bool,
+                    TagValueType::Location,
+                ][..],
+            )],
+            ..Default::default()
+        }
+    }
+}
 
 impl Step for Box<_ReportTagHistogram> {
     fn transmits_premature_termination(&self) -> bool {
@@ -132,11 +159,7 @@ impl Step for Box<_ReportTagHistogram> {
         for valid_tag in demultiplex_info.iter_tags() {
             data.insert(
                 valid_tag,
-                match self
-                    .tag_type
-                    .get()
-                    .expect("Tag type must be set at this point")
-                {
+                match self.tag_type {
                     TagValueType::Location | TagValueType::String => {
                         HistogramData::String(BTreeMap::new())
                     }
@@ -230,4 +253,3 @@ impl Step for Box<_ReportTagHistogram> {
         }))
     }
 }
-

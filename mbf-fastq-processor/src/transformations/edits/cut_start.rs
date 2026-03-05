@@ -42,7 +42,8 @@ impl VerifyIn<PartialConfig> for PartialCutStart {
 }
 
 impl TagUser for PartialTaggedVariant<PartialCutStart> {
-    fn get_tag_usage(&mut self,
+    fn get_tag_usage(
+        &mut self,
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> TagUsageInfo<'_> {
@@ -53,7 +54,11 @@ impl TagUser for PartialTaggedVariant<PartialCutStart> {
 
         TagUsageInfo {
             used_tags: vec![inner.if_tag.to_used_tag(
-                &[TagValueType::Bool, TagValueType::String, TagValueType::Location][..],
+                &[
+                    TagValueType::Bool,
+                    TagValueType::String,
+                    TagValueType::Location,
+                ][..],
             )],
             must_see_all_tags: true,
             ..Default::default()
@@ -62,7 +67,6 @@ impl TagUser for PartialTaggedVariant<PartialCutStart> {
 }
 
 impl Step for CutStart {
-
     fn apply(
         &self,
         mut block: FastQBlocksCombined,

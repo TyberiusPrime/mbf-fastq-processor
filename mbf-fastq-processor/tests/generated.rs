@@ -7150,10 +7150,24 @@ fn test_cases_x_single_step_x_reports_x_report_pe() {
 }
 
 #[test]
-fn test_cases_x_single_step_x_reports_x_report_tag_histogram() {
-    println!("Test case is in: test_cases/single_step/reports/report_tag_histogram");
+fn test_cases_x_single_step_x_reports_x_report_tag_histogram_x_basic() {
+    println!("Test case is in: test_cases/single_step/reports/report_tag_histogram/basic");
     run_test(
-        std::path::Path::new("../test_cases/single_step/reports/report_tag_histogram"),
+        std::path::Path::new("../test_cases/single_step/reports/report_tag_histogram/basic"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_reports_x_report_tag_histogram_x_tag_not_defined() {
+    println!(
+        "Test case is in: test_cases/single_step/reports/report_tag_histogram/tag_not_defined"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/reports/report_tag_histogram/tag_not_defined",
+        ),
         "input.toml",
         1,
     );

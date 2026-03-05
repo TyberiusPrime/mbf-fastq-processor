@@ -164,11 +164,9 @@ impl VerifyIn<PartialConfig> for PartialMergeReads {
 
 impl TagUser for PartialTaggedVariant<PartialMergeReads> {
     //default is ok, no tags
-
 }
 
 impl Step for MergeReads {
-
     fn apply(
         &self,
         mut block: FastQBlocksCombined,

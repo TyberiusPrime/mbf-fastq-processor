@@ -126,7 +126,6 @@ impl TagUser for PartialTaggedVariant<PartialSwap> {
 }
 
 impl Step for Swap {
-
     fn apply(
         &self,
         mut block: FastQBlocksCombined,
@@ -162,7 +161,7 @@ impl Step for Swap {
         let cond_tag = ConditionalTag::from_tag_label(
             self.if_tag
                 .as_ref()
-                .expect("if_tag must be set when conditional swap is used")
+                .expect("if_tag must be set when conditional swap is used"),
         );
         let tag_values = get_bool_vec_from_tag(&block, &cond_tag);
 

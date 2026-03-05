@@ -12,6 +12,6 @@ Error 1/1
   ┆                 │
   ┆                 ╰─── 'all' segments not valid in this position
 ──╯
-Hint: Available are: read1
+Hint: Available are: 'read1'
       See https://doc_url.example/version-stripped-from-test/docs/reference/Swap
 

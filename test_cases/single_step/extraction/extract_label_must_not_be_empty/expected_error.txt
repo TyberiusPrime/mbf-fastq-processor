@@ -1,1 +1,17 @@
-[Step 0 (ExtractRegions)]: Tag label cannot be empty
+Error Details ==
+Error 1/1
+  ╭─config.toml
+  ┆
+3 │ [[step]]
+4 │     action = 'ExtractRegions'
+  ┆              ────────┬───────
+  ┆                      │
+  ┆                      ╰──────── In this step
+5 │     out_label = ''
+  ┆                 ─┬
+  ┆                  │
+  ┆                  ╰─ Invalid label
+──╯
+Hint: Tag label cannot be empty. Please provide a non-empty tag name that starts with a letter or underscore.
+      See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractRegions
+

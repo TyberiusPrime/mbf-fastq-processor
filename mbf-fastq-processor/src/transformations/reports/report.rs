@@ -97,8 +97,14 @@ impl Default for Report {
 }
 
 impl TagUser for PartialTaggedVariant<PartialReport> {
-    fn get_tag_usage(&mut self,_tags_available: &IndexMap<TagLabel,TagMetadata>,_segment_order: &[String],) -> TagUsageInfo<'_>{
-        unreachable!("Report should not be used as a tagged variant - should be expanded into individual parts before");
+    fn get_tag_usage(
+        &mut self,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
+        _segment_order: &[String],
+    ) -> TagUsageInfo<'_> {
+        unreachable!(
+            "Report should not be used as a tagged variant - should be expanded into individual parts before"
+        );
     }
 }
 

@@ -197,7 +197,7 @@ pub fn validate_seed(
             tv_seed.state =
                 TomlValueState::new_validation_failed("Seed required for approximate filtering");
             tv_seed.help = Some(
-                "Seed is required when false_positive_rate > 0.0 (approximate filtering). Set `seed` to 42 for example.".to_string(),
+                "Seed is required when false_positive_rate > 0.0 (approximate filtering). Add `seed=42` for example.".to_string(),
             );
         }
     }

@@ -47,7 +47,6 @@ impl TagUser for PartialTaggedVariant<PartialComplexity> {
 }
 
 impl Step for Complexity {
-
     #[allow(
         clippy::cast_sign_loss,
         clippy::cast_possible_truncation,

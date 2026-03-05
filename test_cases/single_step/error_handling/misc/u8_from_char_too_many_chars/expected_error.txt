@@ -1,5 +1,21 @@
 Error Details ==
-Error 1/1
+Error 1/2
+  ╭─config.toml
+  ┆
+3 │ [[step]]
+4 │     action = 'ExtractLowQualityStart'
+  ┆              ────────────┬───────────
+  ┆                          │
+  ┆                          ╰──────────── In this step
+5 │ 	out_label = '.'
+  ┆              ─┬─
+  ┆               │
+  ┆               ╰── Invalid label
+──╯
+Hint: Tag label must start with a letter or underscore (a-zA-Z_), got '.'
+      See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractLowQualityStart
+
+Error 2/2
   ╭─config.toml
   ┆
 3 │ [[step]]

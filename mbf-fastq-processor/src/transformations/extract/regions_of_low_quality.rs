@@ -66,7 +66,6 @@ impl TagUser for PartialTaggedVariant<PartialRegionsOfLowQuality> {
 }
 
 impl Step for RegionsOfLowQuality {
-
     fn apply(
         &self,
         mut block: FastQBlocksCombined,

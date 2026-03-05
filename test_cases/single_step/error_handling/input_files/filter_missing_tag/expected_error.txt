@@ -1,1 +1,19 @@
-No step generating label 'nonexistent_tag' (or removed previously). Available at this point: {}.
+Error Details ==
+Error 1/1
+  ╭─config.toml
+  ┆
+4 │ [[step]]
+5 │     action = 'FilterByNumericTag'
+  ┆              ──────────┬─────────
+  ┆                        │
+  ┆                        ╰────────── In this step
+  ┆
+6 │     keep_or_remove = 'Keep'
+7 │     in_label = 'nonexistent_tag'
+  ┆                ────────┬────────
+  ┆                        │
+  ┆                        ╰───────── No such tag
+──╯
+Hint: All known accepted values have been used.
+      See https://doc_url.example/version-stripped-from-test/docs/reference/FilterByNumericTag
+

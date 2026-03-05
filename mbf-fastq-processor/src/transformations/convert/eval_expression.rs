@@ -163,6 +163,7 @@ impl TagUser for PartialTaggedVariant<Box<PartialEvalExpression>> {
                             name: TagLabel(suffix.to_string()),
                             accepted_tag_types: &[TagValueType::String, TagValueType::Location][..],
                             toml_source: toml_source.clone(),
+                            further_help: None,
                         }));
                     }
                 } else if name == "read_no" {
@@ -177,6 +178,7 @@ impl TagUser for PartialTaggedVariant<Box<PartialEvalExpression>> {
                             TagValueType::Location,
                         ][..],
                         toml_source: toml_source.clone(),
+                        further_help: None,
                     }));
                 }
             }
@@ -226,11 +228,15 @@ impl Step for Box<EvalExpression> {
         for var_name in var_names {
             if var_name.starts_with("len_") {
                 let mut tag_values = Vec::new();
-                let suffix = TagLabel(var_name
-                    .split_once('_')
-                    .expect("var_name must have underscore separator")
-                    .1.to_string());
-                if let Some(segment_index) = self.segment_names.iter().position(|x| *x == suffix.0) {
+                let suffix = TagLabel(
+                    var_name
+                        .split_once('_')
+                        .expect("var_name must have underscore separator")
+                        .1
+                        .to_string(),
+                );
+                if let Some(segment_index) = self.segment_names.iter().position(|x| *x == suffix.0)
+                {
                     #[allow(clippy::cast_precision_loss)]
                     for read in &block.segments[segment_index].entries {
                         tag_values.push(TagValue::Numeric(read.seq.len() as f64));

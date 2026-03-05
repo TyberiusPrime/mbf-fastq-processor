@@ -34,7 +34,8 @@ impl VerifyIn<PartialConfig> for PartialLowQualityEnd {
 }
 
 impl TagUser for PartialTaggedVariant<PartialLowQualityEnd> {
-    fn get_tag_usage(&mut self,
+    fn get_tag_usage(
+        &mut self,
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> TagUsageInfo<'_> {
@@ -50,7 +51,6 @@ impl TagUser for PartialTaggedVariant<PartialLowQualityEnd> {
 }
 
 impl Step for LowQualityEnd {
-
     fn apply(
         &self,
         mut block: FastQBlocksCombined,

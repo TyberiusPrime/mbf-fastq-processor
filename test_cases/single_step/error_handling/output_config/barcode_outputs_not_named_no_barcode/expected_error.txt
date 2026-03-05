@@ -1,5 +1,5 @@
 Error Details ==
-Error 1/1
+Error 1/3
    ╭─config.toml
    ┆
 23 │ [barcodes.key]
@@ -7,7 +7,44 @@ Error 1/1
 25 │     TT = 'no-barcode'
    ┆          ──────┬─────
    ┆                │
-   ┆                ╰────── Must not be no-barcode
+   ┆                ╰────── Must not be 'no-barcode'
 ───╯
-Hint: Choose a different name for your barcode
+Hint: Choose a different name for your barcode, this one is reserved for internal use.
+
+Error 2/3
+   ╭─config.toml
+   ┆
+ 9 │ [[step]]
+10 │     action = 'ExtractRegion'
+   ┆              ───────┬───────
+   ┆                     │
+   ┆                     ╰──────── In this step
+   ┆
+11 │     source = "read1"
+12 │ 	anchor = "Start"
+13 │     start = 0
+14 │     length = 2
+15 │     out_label = '12'
+   ┆                 ──┬─
+   ┆                   │
+   ┆                   ╰── Invalid label
+───╯
+Hint: Tag label must start with a letter or underscore (a-zA-Z_), got '1'
+      See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractRegion
+
+Error 3/3
+   ╭─config.toml
+   ┆
+17 │ [[step]]
+18 │     action = 'Demultiplex'
+   ┆              ──────┬──────
+   ┆                    │
+   ┆                    ╰─────── In this step
+19 │     in_label = '12'
+   ┆                ──┬─
+   ┆                  │
+   ┆                  ╰── Invalid label
+───╯
+Hint: Tag label must start with a letter or underscore (a-zA-Z_), got '1'
+      See https://doc_url.example/version-stripped-from-test/docs/reference/Demultiplex
 

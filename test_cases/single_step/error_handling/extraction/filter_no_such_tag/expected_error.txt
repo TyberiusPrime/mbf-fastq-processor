@@ -1,2 +1,19 @@
-No step generating label 'test' (or removed previously).
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+18 │ [[step]]
+19 │     action = 'FilterByTag'
+   ┆              ──────┬──────
+   ┆                    │
+   ┆                    ╰─────── In this step
+   ┆
+20 │     keep_or_remove = 'Keep'
+21 │     in_label = 'test'
+   ┆                ───┬──
+   ┆                   │
+   ┆                   ╰─── No such tag
+───╯
+Hint: Did you mean: 'other' or 'something'?
+      See https://doc_url.example/version-stripped-from-test/docs/reference/FilterByTag
 

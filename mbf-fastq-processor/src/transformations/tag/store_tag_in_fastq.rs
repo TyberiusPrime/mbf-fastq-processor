@@ -142,7 +142,8 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagInFastQ> {
         let in_label = inner
             .in_label
             .as_ref()
-            .expect("in_label should have been set in verification").clone();
+            .expect("in_label should have been set in verification")
+            .clone();
         let mut used_tags = vec![inner.in_label.to_used_tag(&[TagValueType::Location][..])];
         used_tags.extend(
             inner
@@ -193,7 +194,6 @@ impl Step for StoreTagInFastQ {
     fn transmits_premature_termination(&self) -> bool {
         false // since we want to dump all the reads even if later on there's a Head
     }
-
 
     fn init(
         &mut self,

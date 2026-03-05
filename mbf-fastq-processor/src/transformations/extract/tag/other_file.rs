@@ -110,7 +110,8 @@ impl VerifyIn<PartialConfig> for PartialOtherFile {
 }
 
 impl TagUser for PartialTaggedVariant<PartialOtherFile> {
-    fn get_tag_usage(&mut self,
+    fn get_tag_usage(
+        &mut self,
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> TagUsageInfo<'_> {
@@ -161,8 +162,6 @@ These must match.",
     fn store_progress_output(&mut self, progress: &crate::transformations::reports::Progress) {
         self.progress_output = Some(progress.clone());
     }
-
-
 
     fn init(
         &mut self,

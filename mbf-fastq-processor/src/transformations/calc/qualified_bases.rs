@@ -66,7 +66,8 @@ impl VerifyIn<PartialConfig> for PartialQualifiedBases {
 }
 
 impl TagUser for PartialTaggedVariant<PartialQualifiedBases> {
-    fn get_tag_usage(&mut self,
+    fn get_tag_usage(
+        &mut self,
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> TagUsageInfo<'_> {
@@ -82,7 +83,6 @@ impl TagUser for PartialTaggedVariant<PartialQualifiedBases> {
 }
 
 impl Step for QualifiedBases {
-
     #[allow(
         clippy::cast_sign_loss,
         clippy::cast_possible_truncation,

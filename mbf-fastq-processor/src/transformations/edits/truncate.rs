@@ -66,7 +66,6 @@ impl TagUser for PartialTaggedVariant<PartialTruncate> {
 }
 
 impl Step for Truncate {
-
     fn apply(
         &self,
         mut block: FastQBlocksCombined,

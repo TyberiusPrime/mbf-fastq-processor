@@ -1,1 +1,21 @@
-seed is required when false_positive_rate > 0.0 (approximate filtering). Set `seed` to 42 for example.
+Error Details ==
+Error 1/1
+  ╭─config.toml
+  ┆
+4 │ [[step]]
+5 │     action = 'TagOtherFile'
+  ┆              ───────┬──────
+  ┆                     │
+  ┆                     ╰─────── In this step
+  ┆
+6 │     source = 'read1'
+7 │ 	out_label = "tag"
+8 │     filename = 'input_ERR12828869_10k_1.head_500.fq'
+9 │     false_positive_rate = 0.001
+  ┆                                ┬
+  ┆                                │
+  ┆                                ╰─ Seed required for approximate filtering
+──╯
+Hint: Seed is required when false_positive_rate > 0.0 (approximate filtering). Add `seed=42` for example.
+      See https://doc_url.example/version-stripped-from-test/docs/reference/TagOtherFile
+

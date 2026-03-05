@@ -1,1 +1,18 @@
-[Step 1 (TrimAtTag)]: Tag 'barcode' does not provide any of the required tag types [Location]. It provides 'String'.
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+12 │ [[step]]
+13 │ 	action = 'TrimAtTag'
+   ┆           ─────┬─────
+   ┆                │
+   ┆                ╰────── In this step
+14 │ 	in_label = 'barcode'
+   ┆             ────┬────
+   ┆                 │
+   ┆                 ╰───── Incompatible tag type
+───╯
+Hint: This transform requires tag 'barcode' to be one of the following types: [Location],
+      but it is actually of type 'String'.
+      See https://doc_url.example/version-stripped-from-test/docs/reference/TrimAtTag
+

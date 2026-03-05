@@ -55,7 +55,16 @@ impl TagUser for PartialTaggedVariant<PartialByNumericTag> {
             .as_mut()
             .expect("get_tag_usage should only be called after successful verification");
         TagUsageInfo {
-            used_tags: vec![inner.in_label.to_used_tag(&[TagValueType::Numeric][..])],
+            used_tags: vec![
+                inner
+                    .in_label
+                    .to_used_tag(&[TagValueType::Numeric][..])
+                    .map(|used_tag| {
+                        used_tag.add_help(
+                            "Either switch to FilterByTag, or change the tag you are filtering on.",
+                        )
+                    }),
+            ],
             must_see_all_tags: true, // for filtering them down
             ..Default::default()
         }

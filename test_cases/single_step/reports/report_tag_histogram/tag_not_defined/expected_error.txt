@@ -1,0 +1,31 @@
+Error Details ==
+Error 1/2
+   ╭─config.toml
+   ┆
+44 │ [[step]]
+45 │     action = 'Report'
+46 │     name = 'test_histogram'
+47 │     count = false
+48 │     tag_histograms = ['prefix_7', 'gc_content', 'read_length__', 'regex', 'read_no_lt_4', 'string_value']
+   ┆                       ─────┬────
+   ┆                            │
+   ┆                            ╰────────────────────────────────────────────────────────────────────────────── No such tag
+───╯
+Hint: Did you mean: 'prefix_5', 'regex', or 'read_length'?
+      See https://doc_url.example/version-stripped-from-test/docs/reference/_ReportTagHistogram
+
+Error 2/2
+   ╭─config.toml
+   ┆
+44 │ [[step]]
+45 │     action = 'Report'
+46 │     name = 'test_histogram'
+47 │     count = false
+48 │     tag_histograms = ['prefix_7', 'gc_content', 'read_length__', 'regex', 'read_no_lt_4', 'string_value']
+   ┆                                                 ───────┬───────
+   ┆                                                        │
+   ┆                                                        ╰────────────────────────────────────────────────── No such tag
+───╯
+Hint: Did you mean: 'read_length', 'read_no_lt_4', or 'regex'?
+      See https://doc_url.example/version-stripped-from-test/docs/reference/_ReportTagHistogram
+

@@ -115,7 +115,6 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagsInTable> {
 }
 
 impl Step for StoreTagsInTable {
-
     fn init(
         &mut self,
         _input_info: &InputInfo,

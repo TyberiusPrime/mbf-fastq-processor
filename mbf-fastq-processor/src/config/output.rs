@@ -1,7 +1,8 @@
 use std::collections::HashSet;
 
 use schemars::JsonSchema;
-use toml_pretty_deser::{prelude::*, suggest_alternatives};
+use toml_pretty_deser::{prelude::*};
+use crate::config::deser::offer_alternatives;
 
 use super::{CompressionFormat, FileFormat};
 
@@ -218,7 +219,7 @@ impl PartialOutput {
                                     }
                                 })
                                 .collect();
-                            segment.help = Some(toml_pretty_deser::suggest_alternatives(
+                            segment.help = Some(offer_alternatives(
                                 &segment_str,
                                 &available,
                             ));
@@ -263,7 +264,7 @@ impl PartialOutput {
                                     }
                                 })
                                 .collect();
-                            segment.help = Some(suggest_alternatives(segment_str, &available));
+                            segment.help = Some(offer_alternatives(segment_str, &available));
                             segment.state = TomlValueState::new_validation_failed(
                                 "Not found in input segments",
                             );
