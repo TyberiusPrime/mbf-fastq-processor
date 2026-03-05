@@ -552,8 +552,9 @@ impl PartialConfig {
                     for (iupac_key, barcode_name) in barcodes.map.iter_mut() {
                         if let Some(barcode_name_str) = barcode_name.as_ref() {
                             if barcode_name_str == "no-barcode" {
-                                barcode_name.state =
-                                    TomlValueState::new_validation_failed("Must not be 'no-barcode'");
+                                barcode_name.state = TomlValueState::new_validation_failed(
+                                    "Must not be 'no-barcode'",
+                                );
                                 barcode_name.help =
                                     Some("Choose a different name for your barcode, this one is reserved for internal use.".to_string());
                             }
@@ -1183,7 +1184,8 @@ impl PartialConfig {
                                         supposed_tag_types = tag_types,
                                         actual_tag_type = metadata.tag_type
                                     );
-                                    if let Some(further_help) = used_tag_info.further_help.as_ref() {
+                                    if let Some(further_help) = used_tag_info.further_help.as_ref()
+                                    {
                                         help_str.push_str(&format!("\n{further_help}"));
                                     }
 
@@ -1227,13 +1229,14 @@ impl PartialConfig {
 
                     if let Some(mut dt) = tag_info.declared_tag {
                         if let Some(meta) = tags_available.get(&dt.name) {
-                            *dt.toml_source_state =
-                                TomlValueState::new_validation_failed("Duplicate tag name");
+                            let spans = vec![
+                                (dt.toml_source_span.clone(), "Tag also declared here".to_string()),
+                                (meta.span.clone(), "Tag declared here ".to_string()),
+                            ];
+                            *dt.toml_source_state = TomlValueState::Custom { spans };
                             *dt.toml_source_help = Some(
-                                "Rename either tag, or add a ForgetTag step inbetween".to_string(),
+                                "Rename either tag, or add a ForgetTag step inbetween.".to_string(),
                             );
-                            *dt.toml_source_context =
-                                Some((meta.span.clone(), "Other use".to_string()));
                         } else {
                             all_tags_ever.insert(dt.name.clone());
                             tags_available.insert(

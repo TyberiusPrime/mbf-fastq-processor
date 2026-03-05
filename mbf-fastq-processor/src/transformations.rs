@@ -22,7 +22,6 @@ use rand::SeedableRng;
 use scalable_cuckoo_filter::ScalableCuckooFilter;
 
 pub(crate) mod calc;
-mod conditional_tag;
 pub(crate) mod convert;
 pub(crate) mod demultiplex;
 pub(crate) mod edits;
@@ -34,7 +33,6 @@ pub(crate) mod prelude;
 pub(crate) mod reports;
 pub(crate) mod tag;
 pub(crate) mod validation;
-pub use conditional_tag::ConditionalTag;
 pub use internal_steps::{
     _InduceFailure, _InternalDelay, _InternalReadCount, Partial_InduceFailure,
     Partial_InternalDelay, Partial_InternalReadCount,

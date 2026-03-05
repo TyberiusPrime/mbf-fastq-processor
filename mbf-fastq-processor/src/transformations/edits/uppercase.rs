@@ -13,7 +13,7 @@ pub struct Uppercase {
     #[tpd(adapt_in_verify(String))]
     pub target: ResolvedSourceAll,
 
-    pub if_tag: Option<TagLabel>,
+    pub if_tag: Option<ConditionalTagLabel>,
 }
 
 impl VerifyIn<PartialConfig> for PartialUppercase {

@@ -180,7 +180,6 @@ impl TagUser for PartialTaggedVariant<PartialConcatTags> {
 }
 
 impl Step for ConcatTags {
-
     #[allow(clippy::too_many_lines)]
     fn apply(
         &self,

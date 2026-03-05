@@ -14,7 +14,7 @@ pub struct CutStart {
     #[tpd(adapt_in_verify(String))]
     segment: SegmentIndex,
     #[tpd(default)]
-    if_tag: Option<TagLabel>,
+    if_tag: Option<ConditionalTagLabel>,
 }
 
 impl VerifyIn<PartialConfig> for PartialCutStart {
@@ -53,13 +53,7 @@ impl TagUser for PartialTaggedVariant<PartialCutStart> {
             .expect("get_tag_usage should only be called after successful verification");
 
         TagUsageInfo {
-            used_tags: vec![inner.if_tag.to_used_tag(
-                &[
-                    TagValueType::Bool,
-                    TagValueType::String,
-                    TagValueType::Location,
-                ][..],
-            )],
+            used_tags: vec![inner.if_tag.to_used_tag(&[][..])],
             must_see_all_tags: true,
             ..Default::default()
         }
@@ -74,10 +68,10 @@ impl Step for CutStart {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let condition = self.if_tag.as_ref().map(|tag| {
-            let cond_tag = ConditionalTag::from_tag_label(tag);
-            get_bool_vec_from_tag(&block, &cond_tag)
-        });
+        let condition = self
+            .if_tag
+            .as_ref()
+            .map(|tag| get_bool_vec_from_tag(&block, tag));
 
         block.apply_in_place(
             self.segment,

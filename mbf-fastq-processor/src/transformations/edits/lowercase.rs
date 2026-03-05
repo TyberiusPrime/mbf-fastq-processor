@@ -14,7 +14,7 @@ pub struct Lowercase {
     pub target: ResolvedSourceAll,
 
     #[serde(default)]
-    pub if_tag: Option<TagLabel>,
+    pub if_tag: Option<ConditionalTagLabel>,
 }
 
 impl VerifyIn<PartialConfig> for PartialLowercase {

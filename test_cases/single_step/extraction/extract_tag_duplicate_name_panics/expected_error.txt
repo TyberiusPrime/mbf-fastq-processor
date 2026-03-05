@@ -1,1 +1,24 @@
- Duplicate label: test. Each tag must be unique
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+ 4 │ [[step]]
+ 5 │     action = 'ExtractIUPAC'
+ 6 │     out_label = 'test'
+   ┆                 ───┬──
+   ┆                    │
+   ┆                    ╰─── Tag declared here
+   ┆
+11 │ [[step]]
+12 │     action = 'ExtractIUPAC'
+   ┆              ───────┬──────
+   ┆                     │
+   ┆                     ╰─────── In this step
+13 │     out_label = 'test'
+   ┆                 ───┬──
+   ┆                    │
+   ┆                    ╰─── Tag also declared here
+───╯
+Hint: Rename either tag, or add a ForgetTag step inbetween.
+      See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractIUPAC
+
