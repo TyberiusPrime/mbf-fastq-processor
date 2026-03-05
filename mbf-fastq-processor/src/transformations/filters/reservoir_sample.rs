@@ -4,7 +4,13 @@ use crate::dna::TagValue;
 use crate::io::FastQBlock;
 use crate::transformations::{extend_seed, prelude::*};
 use rand::Rng;
-use std::collections::HashMap;
+
+#[derive(Clone, Debug, Default)]
+struct ReservoirBuffer {
+    segments: Vec<FastQBlock>,
+    count: usize,
+    tags: IndexMap<TagLabel, Vec<TagValue>>,
+}
 
 /// Fairly sample reads (expensive!)
 #[derive(Clone, JsonSchema)]
@@ -13,18 +19,9 @@ use std::collections::HashMap;
 pub struct ReservoirSample {
     pub n: usize,
     pub seed: u64,
-    //Todo: refactor these into one member 'runtime_data'
-    #[tpd(skip, default)] //
-    #[schemars(skip)]
-    pub buffers: Option<Arc<Mutex<DemultiplexedData<Vec<FastQBlock>>>>>,
-
-    #[tpd(skip, default)] // eserde compatibility
-    #[schemars(skip)]
-    pub counts: Option<Arc<Mutex<DemultiplexedData<usize>>>>,
-
     #[tpd(skip, default)]
     #[schemars(skip)]
-    pub tag_buffers: Option<Arc<Mutex<DemultiplexedData<HashMap<TagLabel, Vec<TagValue>>>>>>,
+    runtime_data: Option<Arc<Mutex<DemultiplexedData<ReservoirBuffer>>>>,
 
     #[tpd(skip, default)]
     #[schemars(skip)]
@@ -82,11 +79,10 @@ impl Step for ReservoirSample {
         self.rng = Some(Arc::new(Mutex::new(Some(
             rand_chacha::ChaChaRng::from_seed(extended_seed),
         ))));
-        self.buffers = Some(Arc::new(Mutex::new(DemultiplexedData::new())));
-        self.counts = Some(Arc::new(Mutex::new(DemultiplexedData::new())));
-        self.tag_buffers = Some(Arc::new(Mutex::new(DemultiplexedData::new())));
+        self.runtime_data = Some(Arc::new(Mutex::new(DemultiplexedData::new())));
         Ok(None)
     }
+
     fn apply(
         &self,
         block: FastQBlocksCombined,
@@ -101,59 +97,41 @@ impl Step for ReservoirSample {
             .as_mut()
             .expect("rng must be initialized before process()");
 
-        let mut buffer_lock = self
-            .buffers
+        let mut data_lock = self
+            .runtime_data
             .as_ref()
-            .expect("Counts not set in init?")
+            .expect("runtime_data not set in init")
             .lock();
-        let buffers = buffer_lock.as_mut().expect("buffers mutex poisoned");
-
-        let mut counts_lock = self
-            .counts
-            .as_ref()
-            .expect("Counts not set in init?")
-            .lock();
-        let counts = counts_lock.as_mut().expect("counts mutex poisoned");
-
-        let mut tag_buffer_lock = self
-            .tag_buffers
-            .as_ref()
-            .expect("tag_buffers not set in init?")
-            .lock();
-        let tag_buffers = tag_buffer_lock
-            .as_mut()
-            .expect("tag_buffers mutex poisoned");
+        let data = data_lock.as_mut().expect("runtime_data mutex poisoned");
 
         let block_len = block.len();
         for pos in 0..block_len {
             let demultiplex_tag = block.output_tags.as_ref().map_or(0, |tags| tags[pos]);
-            let out = buffers.entry(demultiplex_tag).or_default();
-            let tag_out = tag_buffers.entry(demultiplex_tag).or_default();
-            let i = counts.entry(demultiplex_tag).or_insert(0);
-            *i += 1;
+            let buf = data.entry(demultiplex_tag).or_default();
+            buf.count += 1;
 
-            if out.is_empty() || out[0].len() < self.n {
+            if buf.segments.is_empty() || buf.segments[0].len() < self.n {
                 for (segment_no, segment) in block.segments.iter().enumerate() {
-                    if out.len() <= segment_no {
-                        out.push(FastQBlock::empty());
+                    if buf.segments.len() <= segment_no {
+                        buf.segments.push(FastQBlock::empty());
                     }
-                    out[segment_no].append_read(&segment.get(pos));
+                    buf.segments[segment_no].append_read(&segment.get(pos));
                 }
                 for (label, values) in &block.tags {
-                    tag_out
+                    buf.tags
                         .entry(label.clone())
                         .or_default()
                         .push(values[pos].clone());
                 }
             } else {
                 //algorithm R
-                let j = rng.random_range(1..=*i);
+                let j = rng.random_range(1..=buf.count);
                 if j <= self.n {
                     for (ii, segment) in block.segments.iter().enumerate() {
-                        out[ii].replace_read(j - 1, &segment.get(pos));
+                        buf.segments[ii].replace_read(j - 1, &segment.get(pos));
                     }
                     for (label, values) in &block.tags {
-                        if let Some(tag_buf) = tag_out.get_mut(label) {
+                        if let Some(tag_buf) = buf.tags.get_mut(label) {
                             tag_buf[j - 1] = values[pos].clone();
                         }
                     }
@@ -165,27 +143,24 @@ impl Step for ReservoirSample {
             //we gotta copy it all back together, so no easy just hand out our internal
             //storage, I suppose.
             let mut output = block.empty();
-            let buffers = buffers.replace(DemultiplexedData::new());
-            let tag_bufs = tag_buffers.replace(DemultiplexedData::new());
-            for (demultiplex_tag, reads) in buffers {
+            let all_data = data.replace(DemultiplexedData::new());
+            for (demultiplex_tag, buf) in all_data {
                 if let Some(demultiplex_tags) = output.output_tags.as_mut() {
-                    for _ in 0..reads[0].len() {
+                    for _ in 0..buf.segments[0].len() {
                         demultiplex_tags.push(demultiplex_tag);
                     }
                 }
-                for (segment_no, molecule) in reads.iter().enumerate() {
+                for (segment_no, molecule) in buf.segments.iter().enumerate() {
                     for read_idx in 0..molecule.entries.len() {
                         output.segments[segment_no].append_read(&molecule.get(read_idx));
                     }
                 }
-                if let Some(tag_map) = tag_bufs.get(&demultiplex_tag) {
-                    for (label, values) in tag_map {
-                        output
-                            .tags
-                            .entry(label.clone())
-                            .or_default()
-                            .extend(values.iter().cloned());
-                    }
+                for (label, values) in &buf.tags {
+                    output
+                        .tags
+                        .entry(label.clone())
+                        .or_default()
+                        .extend(values.iter().cloned());
                 }
             }
             Ok((output, true))
