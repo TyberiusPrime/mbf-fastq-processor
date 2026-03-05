@@ -1,1 +1,17 @@
-Tag label 'bc1' collides with an existing barcode name
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+ 4 │ [[step]]
+ 5 │     action = 'CalcBaseContent'
+ 6 │     out_label = 'bc1'
+   ┆                 ──┬──
+   ┆                   │
+   ┆                   ╰─── Tag with the same name as a barcode defined here
+11 │ [barcodes.bc1]
+   ┆           ─┬─
+   ┆            │
+   ┆            ╰───── Barcode with the same name as a tag defined here
+───╯
+Hint: Barcode names must not collide with tag names. Please choose a different name for this barcode.
+

@@ -212,7 +212,6 @@ pub(crate) struct DeclaredTag<'a> {
     pub(crate) tag_type: TagValueType,
     pub(crate) toml_source_state: &'a mut TomlValueState,
     pub(crate) toml_source_help: &'a mut Option<String>,
-    pub(crate) toml_source_context: &'a mut Option<(std::ops::Range<usize>, String)>,
     pub(crate) toml_source_span: std::ops::Range<usize>,
 }
 

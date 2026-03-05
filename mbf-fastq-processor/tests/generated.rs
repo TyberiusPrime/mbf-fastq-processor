@@ -2840,13 +2840,27 @@ fn test_cases_x_single_step_x_error_handling_x_extraction_x_trim_tag_multi_locat
 }
 
 #[test]
-fn test_cases_x_single_step_x_error_handling_x_extraction_x_unused_extract_tag() {
+fn test_cases_x_single_step_x_error_handling_x_extraction_x_unused_extract_tag_x_one_unused_tag() {
     println!(
-        "Test case is in: test_cases/single_step/error_handling/extraction/unused_extract_tag"
+        "Test case is in: test_cases/single_step/error_handling/extraction/unused_extract_tag/one_unused_tag"
     );
     run_test(
         std::path::Path::new(
-            "../test_cases/single_step/error_handling/extraction/unused_extract_tag",
+            "../test_cases/single_step/error_handling/extraction/unused_extract_tag/one_unused_tag",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_extraction_x_unused_extract_tag_x_two_unused_tags() {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/extraction/unused_extract_tag/two_unused_tags"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/error_handling/extraction/unused_extract_tag/two_unused_tags",
         ),
         "input.toml",
         1,

@@ -1,1 +1,19 @@
-Tag label 'read1' collides with an existing segment label
+Error Details ==
+Error 1/1
+  ╭─config.toml
+  ┆
+1 │ [input]
+2 │     read1 = 'sample_data/ten_reads.fq'
+  ┆     ──┬──
+  ┆       │
+  ┆       ╰──────────────────────────────── Segment with the same name as a tag defined here
+  ┆
+4 │ [[step]]
+5 │     action = 'CalcBaseContent'
+6 │     out_label = 'read1'
+  ┆                 ───┬───
+  ┆                    │
+  ┆                    ╰──── Tag with the same name as a segment defined here
+──╯
+Hint: Segment names must not collide with tag names. Please choose a different name for this tag (or segment).
+

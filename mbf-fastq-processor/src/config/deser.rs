@@ -792,7 +792,22 @@ impl ToDeclaredTag for TomlValue<TagLabel> {
                 tag_type,
                 toml_source_state: &mut self.state,
                 toml_source_help: &mut self.help,
-                toml_source_context: &mut self.context,
+                toml_source_span: span,
+            })
+        } else {
+            None
+        }
+    }
+}
+impl ToDeclaredTag for TomlValue<Option<TagLabel>> {
+    fn to_declared_tag<'a>(&'a mut self, tag_type: TagValueType) -> Option<DeclaredTag<'a>> {
+        if let Some(name) = self.as_ref().and_then(|x| x.as_ref()) {
+            let span = self.span();
+            Some(DeclaredTag {
+                name: name.clone(),
+                tag_type,
+                toml_source_state: &mut self.state,
+                toml_source_help: &mut self.help,
                 toml_source_span: span,
             })
         } else {

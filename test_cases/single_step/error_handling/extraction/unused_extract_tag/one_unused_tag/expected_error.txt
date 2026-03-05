@@ -1,0 +1,13 @@
+Error Details ==
+Error 1/1
+  ╭─config.toml
+  ┆
+4 │ [[step]]
+5 │     action = 'ExtractIUPAC'
+6 │     out_label = 'unused'
+  ┆                 ────┬───
+  ┆                     │
+  ┆                     ╰──── Unused tag
+──╯
+Hint: Make sure to either use, or forget (using ForgetTag) all your tags.
+
