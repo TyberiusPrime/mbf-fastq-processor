@@ -1,10 +1,13 @@
 use crate::dna;
+use crate::transformations::{DeclaredTag, TagValueType, ToDeclaredTag, ToUsedTag, UsedTag};
 use bstr::BString;
 use schemars::JsonSchema;
 /// all our serde deserializers in one place.
 ///
 use serde::{Deserialize, Deserializer, de};
+use std::cell::RefCell;
 use std::collections::BTreeMap;
+use std::rc::Rc;
 use std::{fmt, marker::PhantomData};
 use toml_pretty_deser::{TomlValue, ValidationFailure};
 
@@ -758,9 +761,77 @@ mod tests {
     }
 }
 
-#[derive(Clone, Debug, JsonSchema)]
+#[derive(Clone, Debug, JsonSchema, PartialEq, Eq, Hash, Ord, PartialOrd)]
 #[schemars(with = "String")]
 pub struct TagLabel(pub String);
+
+impl TagLabel {
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+}
+
+impl std::fmt::Display for TagLabel {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+// impl std::borrow::Borrow<str> for TagLabel {
+//     fn borrow(&self) -> &str {
+//         &self.0
+//     }
+
+
+impl ToDeclaredTag for TomlValue<TagLabel> {
+    fn to_declared_tag<'a>(&'a mut self, tag_type: TagValueType) -> Option<DeclaredTag<'a>> {
+        if self.as_ref().is_some() {
+            let name = self.as_ref().expect("just checked").clone();
+            let span = self.span();
+            Some(DeclaredTag {
+                name,
+                tag_type,
+                toml_source_state: &mut self.state,
+                toml_source_help: &mut self.help,
+                toml_source_context: &mut self.context,
+                toml_source_span: span,
+            })
+        } else {
+            None
+        }
+    }
+}
+
+impl ToUsedTag for TomlValue<TagLabel> {
+    fn to_used_tag<'a>(
+        &'a mut self,
+        accepted_tag_types: &'a [TagValueType],
+    ) -> Option<UsedTag<'a>> {
+        Some(UsedTag {
+            name: self.as_ref().expect("parent was ok?").clone(),
+            accepted_tag_types,
+            toml_source: Rc::new(RefCell::new((&mut self.state, &mut self.help))),
+        })
+    }
+}
+
+impl ToUsedTag for TomlValue<Option<TagLabel>> {
+    fn to_used_tag<'a>(
+        &'a mut self,
+        accepted_tag_types: &'a [TagValueType],
+    ) -> Option<UsedTag<'a>> {
+        let name = self.as_ref().expect("parent was ok?").as_ref();
+        if let Some(name) = name {
+            Some(UsedTag {
+                name: name.clone(),
+                accepted_tag_types,
+                toml_source: Rc::new(RefCell::new((&mut self.state, &mut self.help))),
+            })
+        } else {
+            None
+        }
+    }
+}
 
 /// Validates that a tag name conforms to the pattern [a-zA-Z_][a-zA-Z0-9_]*
 /// (starts with a letter or underscore, followed by zero or more alphanumeric characters or underscores)

@@ -39,7 +39,7 @@ pub enum Operator {
 #[tpd]
 #[derive(Debug)]
 pub struct QualifiedBases {
-    pub out_label: String,
+    pub out_label: TagLabel,
     #[tpd(with = "tpd_adapt_u8_from_byte_or_char")]
     pub threshold: u8,
 
@@ -67,7 +67,7 @@ impl VerifyIn<PartialConfig> for PartialQualifiedBases {
 
 impl TagUser for PartialTaggedVariant<PartialQualifiedBases> {
     fn get_tag_usage(&mut self,
-        _tags_available: &IndexMap<String, TagMetadata>,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> TagUsageInfo<'_> {
         let inner = self
@@ -82,12 +82,6 @@ impl TagUser for PartialTaggedVariant<PartialQualifiedBases> {
 }
 
 impl Step for QualifiedBases {
-    fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
-        Some((
-            self.out_label.clone(),
-            crate::transformations::TagValueType::Numeric,
-        ))
-    }
 
     #[allow(
         clippy::cast_sign_loss,

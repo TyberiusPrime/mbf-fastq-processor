@@ -33,7 +33,7 @@ use crate::{config::SegmentIndexOrAll, dna::TagValue, io};
 
 pub(crate) fn apply_in_place_wrapped_with_tag(
     segment_index: &SegmentIndexOrAll,
-    label: &str,
+    label: &TagLabel,
     block: &mut io::FastQBlocksCombined,
     f: impl Fn(&mut io::WrappedFastQReadMut, &TagValue),
 ) {
@@ -62,7 +62,7 @@ pub(crate) fn default_comment_separator() -> u8 {
     b'|'
 }
 
-use crate::config::deser::default_comment_insert_char;
+use crate::config::deser::{TagLabel, default_comment_insert_char};
 
 pub const DEFAULT_INITIAL_FILTER_CAPACITY: usize = 134_217_728; // 2^27. Scaleable cuckoo filters
 // always need a power of 2, and we want to be north of a 'typical' danaset with 100 million reads

@@ -23,7 +23,7 @@ struct CompiledExpression {
 #[tpd]
 pub struct EvalExpression {
     /// The tag label to store the result
-    pub out_label: String,
+    pub out_label: TagLabel,
     /// The arithmetic expression to evaluate
     /// Variables in the expression should match existing numeric tag names
     #[tpd(alias = "expr")]
@@ -55,7 +55,7 @@ impl VerifyIn<PartialConfig> for PartialEvalExpression {
         Self: Sized + toml_pretty_deser::Visitor,
     {
         self.out_label.verify(|v| {
-            if v.trim().is_empty() {
+            if v.0.trim().is_empty() {
                 return Err(ValidationFailure::new(
                     "out_label cannot be empty",
                     Some("Provide a label to store the result under"),
@@ -139,7 +139,7 @@ pub enum ResultType {
 impl TagUser for PartialTaggedVariant<Box<PartialEvalExpression>> {
     fn get_tag_usage(
         &mut self,
-        _tags_available: &IndexMap<String, TagMetadata>,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
         segment_order: &[String],
     ) -> TagUsageInfo<'_> {
         let inner = self
@@ -160,7 +160,7 @@ impl TagUser for PartialTaggedVariant<Box<PartialEvalExpression>> {
                 if let Some(suffix) = name.strip_prefix("len_") {
                     if !segment_order.iter().any(|x| x == suffix) {
                         used_tags.push(Some(UsedTag {
-                            name: suffix.to_string(),
+                            name: TagLabel(suffix.to_string()),
                             accepted_tag_types: &[TagValueType::String, TagValueType::Location][..],
                             toml_source: toml_source.clone(),
                         }));
@@ -169,7 +169,7 @@ impl TagUser for PartialTaggedVariant<Box<PartialEvalExpression>> {
                     // read_no is virtual, no tag needed
                 } else {
                     used_tags.push(Some(UsedTag {
-                        name: name.clone(),
+                        name: TagLabel(name.clone()),
                         accepted_tag_types: &[
                             TagValueType::Bool,
                             TagValueType::Numeric,
@@ -226,17 +226,17 @@ impl Step for Box<EvalExpression> {
         for var_name in var_names {
             if var_name.starts_with("len_") {
                 let mut tag_values = Vec::new();
-                let suffix = var_name
+                let suffix = TagLabel(var_name
                     .split_once('_')
                     .expect("var_name must have underscore separator")
-                    .1;
-                if let Some(segment_index) = self.segment_names.iter().position(|x| x == suffix) {
+                    .1.to_string());
+                if let Some(segment_index) = self.segment_names.iter().position(|x| *x == suffix.0) {
                     #[allow(clippy::cast_precision_loss)]
                     for read in &block.segments[segment_index].entries {
                         tag_values.push(TagValue::Numeric(read.seq.len() as f64));
                     }
                 } else {
-                    let str_tag_values = block.tags.get(suffix).expect(
+                    let str_tag_values = block.tags.get(&suffix).expect(
                         "Named tag requested but not found. should have been caught earlier. Bug",
                     );
                     #[allow(clippy::cast_precision_loss)]
@@ -259,7 +259,7 @@ impl Step for Box<EvalExpression> {
                     tag_values.push(TagValue::Numeric((base_index + read_idx as u64) as f64));
                 }
                 virtual_tags.push((var_name.as_str(), tag_values));
-            } else if let Some(tag_values) = block.tags.get(var_name.as_str()) {
+            } else if let Some(tag_values) = block.tags.get(&TagLabel(var_name.to_string())) {
                 tag_data.push((var_name.as_str(), tag_values));
             } else {
                 panic!(

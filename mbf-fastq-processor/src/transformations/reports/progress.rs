@@ -87,7 +87,9 @@ impl Progress {
     }
 }
 
-impl TagUser for PartialTaggedVariant<PartialProgress> {}
+impl TagUser for PartialTaggedVariant<PartialProgress> {
+    //default is ok, no tags
+}
 
 impl Step for Progress {
     // it actually doesn't. Since we're using a lock interneally.

@@ -13,7 +13,7 @@ use std::{cell::RefCell, path::Path, rc::Rc};
 use anyhow::{Result, bail};
 
 use crate::{
-    config::{ResolvedSourceNoAll, SegmentIndex},
+    config::{ResolvedSourceNoAll, SegmentIndex, deser::TagLabel},
     demultiplex::{DemultiplexBarcodes, OptDemultiplex},
     dna::TagValue,
     io,
@@ -183,7 +183,7 @@ pub struct InputInfo {
 
 #[derive(Debug)]
 pub struct UsedTag<'a> {
-    pub name: String,
+    pub name: TagLabel,
     pub accepted_tag_types: &'a [TagValueType],
     pub toml_source: Rc<RefCell<(&'a mut TomlValueState, &'a mut Option<String>)>>,
 }
@@ -193,77 +193,32 @@ pub trait ToUsedTag {
     -> Option<UsedTag<'a>>;
 }
 
-impl ToUsedTag for TomlValue<String> {
-    fn to_used_tag<'a>(
-        &'a mut self,
-        accepted_tag_types: &'a [TagValueType],
-    ) -> Option<UsedTag<'a>> {
-        Some(UsedTag {
-            name: self.as_ref().expect("parent was ok?").clone(),
-            accepted_tag_types,
-            toml_source: Rc::new(RefCell::new((&mut self.state, &mut self.help))),
-        })
-    }
-}
 
-impl ToUsedTag for TomlValue<Option<String>> {
-    fn to_used_tag<'a>(
-        &'a mut self,
-        accepted_tag_types: &'a [TagValueType],
-    ) -> Option<UsedTag<'a>> {
-        let name = self.as_ref().expect("parent was ok?").as_ref();
-        if let Some(name) = name {
-            Some(UsedTag {
-                name: name.clone(),
-                accepted_tag_types,
-                toml_source: Rc::new(RefCell::new((&mut self.state, &mut self.help))),
-            })
-        } else {
-            None
-        }
-    }
-}
 pub trait ToUsedTags {
     fn to_used_tags<'a>(&'a mut self) -> Vec<Option<UsedTag<'a>>>;
 }
 
 #[derive(Debug)]
 pub(crate) struct DeclaredTag<'a> {
-    pub(crate) name: String,
+    pub(crate) name: TagLabel,
     pub(crate) tag_type: TagValueType,
     pub(crate) toml_source_state: &'a mut TomlValueState,
     pub(crate) toml_source_help: &'a mut Option<String>,
     pub(crate) toml_source_context: &'a mut Option<(std::ops::Range<usize>, String)>,
     pub(crate) toml_source_span: std::ops::Range<usize>,
 }
+
 pub trait ToDeclaredTag {
     fn to_declared_tag<'a>(&'a mut self, tag_type: TagValueType) -> Option<DeclaredTag<'a>>;
 }
-impl ToDeclaredTag for TomlValue<String> {
-    fn to_declared_tag<'a>(&'a mut self, tag_type: TagValueType) -> Option<DeclaredTag<'a>> {
-        if self.as_ref().is_some() {
-            let name = self.as_ref().expect("just checked").clone();
-            let span = self.span();
-            Some(DeclaredTag {
-                name: name,
-                tag_type,
-                toml_source_state: &mut self.state,
-                toml_source_help: &mut self.help,
-                toml_source_context: &mut self.context,
-                toml_source_span: span,
-            })
-        } else {
-            None
-        }
-    }
-}
+//see deser for impl
 
 #[derive(Default, Debug)]
 pub enum RemovedTags<'a> {
     #[default]
     None,
     All,
-    Some(Vec<(String, &'a mut TomlValue<String>)>),
+    Some(Vec<(TagLabel, &'a mut TomlValue<TagLabel>)>),
 }
 
 #[derive(Default, Debug)]
@@ -277,7 +232,7 @@ pub struct TagUsageInfo<'a> {
 #[enum_dispatch(PartialTransformation)]
 pub trait TagUser {
     fn get_tag_usage(&mut self,
-        _tags_available: &IndexMap<String, TagMetadata>,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> TagUsageInfo<'_> {
         TagUsageInfo::default()
@@ -322,7 +277,7 @@ pub trait Step {
     // what tags does this step use? What types are acceptable
     fn uses_tags(
         &self,
-        _tags_available: &IndexMap<String, TagMetadata>,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
     ) -> Option<Vec<(String, &[TagValueType])>> {
         None
     }

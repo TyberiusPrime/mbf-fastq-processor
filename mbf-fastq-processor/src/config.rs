@@ -5,6 +5,7 @@
 //
 #![allow(clippy::unnecessary_wraps)] //eserde false positives TODO
 #![allow(clippy::struct_excessive_bools)]
+use crate::config::deser::TagLabel;
 use crate::config::options::default_block_size;
 // output false positive, directly on struct doesn't work
 //
@@ -117,7 +118,7 @@ struct InputFormatsObserved {
 #[derive(Debug)]
 pub struct Stage {
     pub transformation: Transformation,
-    pub allowed_tags: Vec<String>,
+    pub allowed_tags: Vec<TagLabel>,
 }
 
 #[derive(JsonSchema)]
@@ -149,7 +150,7 @@ pub struct Config {
     pub report_labels: Vec<String>,
 
     #[tpd(skip)]
-    pub allowed_tags_per_transformation: Vec<Vec<String>>,
+    pub allowed_tags_per_transformation: Vec<Vec<TagLabel>>,
 }
 
 #[derive(Debug)]
@@ -759,6 +760,7 @@ impl PartialConfig {
                                         .out_label
                                         .as_ref()
                                         .expect("parent was ok")
+                                        .0
                                         .clone(),
                                 );
                                 let step_config: Box<_> =
@@ -818,10 +820,10 @@ impl PartialConfig {
                             let tag_span = step_config.tag_span.clone();
                             if let Some(step_config) = step_config.toml_value.take().into_inner() {
                                 // Replace FilterEmpty with CalcLength + FilterByNumericTag
-                                let length_tag_label = format!(
+                                let length_tag_label = TagLabel(format!(
                                     "_internal_length_{}",
                                     expanded_transforms.borrow().len()
-                                );
+                                ));
                                 push_new(PartialTransformation::CalcLength(PartialTaggedVariant {
                                     toml_value: TomlValue::new_ok_unplaced(
                                         crate::transformations::calc::PartialLength {
@@ -1107,15 +1109,15 @@ impl PartialConfig {
 
     pub fn verify_transformation_labels(&mut self) {
         use crate::transformations::TagUser;
-        let mut allowed_tags_per_stage: Vec<Vec<String>> = Vec::new();
-        let mut tags_available: IndexMap<String, TagMetadata> = IndexMap::new();
+        let mut allowed_tags_per_stage: Vec<Vec<TagLabel>> = Vec::new();
+        let mut tags_available: IndexMap<TagLabel, TagMetadata> = IndexMap::new();
         if let Some(transformations) = self.transform.as_mut() {
             if let Some(input) = self.input.as_ref() {
                 let mut just_trafos = transformations
                     .iter_mut()
                     .map(|t| t.as_mut().expect("parent was ok"))
                     .collect::<Vec<_>>();
-                let mut all_tags_ever = HashSet::new();
+                let mut all_tags_ever: HashSet<TagLabel> = HashSet::new();
                 let segment_order = input.get_segment_order();
                 for trafo in just_trafos.iter_mut() {
                     //     if let err(e) =
@@ -1142,8 +1144,8 @@ impl PartialConfig {
                                     toml_source.state =
                                         TomlValueState::new_validation_failed("No such tag");
                                     toml_source.help = Some(suggest_alternatives(
-                                        &tag_name,
-                                        &tags_available.keys().collect::<Vec<_>>(),
+                                        &tag_name.0,
+                                        &tags_available.keys().map(|x| &x.0).collect::<Vec<_>>(),
                                     ));
                                     continue; //no point on doing anything else with this tag
                                 }
@@ -1152,9 +1154,9 @@ impl PartialConfig {
                         }
                     }
 
-                    let mut tags_used_here = Vec::new();
+                    let mut tags_used_here: Vec<TagLabel> = Vec::new();
                     if tag_info.must_see_all_tags {
-                        tags_used_here.extend(tags_available.keys().map(ToString::to_string));
+                        tags_used_here.extend(tags_available.keys().cloned());
                     }
                     for used_tag_info in tag_info.used_tags.iter().filter_map(|x| x.as_ref()) {
                         let tag_name = &used_tag_info.name;
@@ -1180,12 +1182,14 @@ impl PartialConfig {
                                         actual_tag_type = metadata.tag_type
                                     ));
                                 } else {
-                                    if !tag_info.must_see_all_tags
-                                        && tags_used_here.contains(tag_name)
-                                    {
-                                        panic!("tag declared twice {tag_name}");
+                                    if !tag_info.must_see_all_tags {
+                                        //otherwise, we already have the tag in the list.
+                                        if tags_used_here.contains(tag_name) {
+                                            panic!("tag declared twice {tag_name}");
+                                        } else {
+                                            tags_used_here.push(tag_name.clone());
+                                        }
                                     }
-                                    tags_used_here.push(tag_name.clone());
                                 }
                             }
                             None => {
@@ -1195,14 +1199,17 @@ impl PartialConfig {
                                     *toml_source.borrow_mut().1 = Some(format!(
                                         "Tag '{tag_name}' was generated by a previous step, but it is not available at this point.\nThis likely means that it was removed by an intermediate step.\n{}",
                                         suggest_alternatives(
-                                            &tag_name,
-                                            &tags_available.keys().collect::<Vec<_>>()
+                                            &tag_name.0,
+                                            &tags_available
+                                                .keys()
+                                                .map(|x| &x.0)
+                                                .collect::<Vec<_>>()
                                         )
                                     ));
                                 } else {
                                     *toml_source.borrow_mut().1 = Some(suggest_alternatives(
-                                        &tag_name,
-                                        &tags_available.keys().collect::<Vec<_>>(),
+                                        &tag_name.0,
+                                        &tags_available.keys().map(|x| &x.0).collect::<Vec<_>>(),
                                     ));
                                 }
                             }
@@ -1211,13 +1218,7 @@ impl PartialConfig {
                     allowed_tags_per_stage.push(tags_used_here);
 
                     if let Some(mut dt) = tag_info.declared_tag {
-                        if let Err(e) = validate_tag_name(&dt.name) {
-                            *dt.toml_source_state =
-                                TomlValueState::new_validation_failed("Invalid tag name");
-                            *dt.toml_source_help = Some(
-                                "Valid tag names conform to [a-zA-Z_][a-zA-Z0-9_]*".to_string(),
-                            );
-                        } else if let Some(meta) = tags_available.get(&dt.name) {
+                        if let Some(meta) = tags_available.get(&dt.name) {
                             *dt.toml_source_state =
                                 TomlValueState::new_validation_failed("Duplicate tag name");
                             *dt.toml_source_help = Some(
@@ -1584,7 +1585,7 @@ impl Config {
             .filter(|(t, _)| !matches!(t, Transformation::Report { .. }))
             .map(|(t, tags)| Stage {
                 transformation: t,
-                allowed_tags: tags,
+                allowed_tags: tags.into_iter().collect(),
             })
             .collect();
 

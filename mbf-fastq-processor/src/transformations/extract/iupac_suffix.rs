@@ -99,16 +99,24 @@ impl IUPACSuffix {
     }
 }
 
-impl TagUser for PartialTaggedVariant<PartialIUPACSuffix> {}
+impl TagUser for PartialTaggedVariant<PartialIUPACSuffix> {
+    fn get_tag_usage(
+        &mut self,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
+        _segment_order: &[String],
+    ) -> TagUsageInfo {
+        let inner = self
+            .toml_value
+            .as_mut()
+            .expect("get_tag_usage should only be called after successful verification");
+        TagUsageInfo {
+            declared_tag: inner.out_label.to_declared_tag(TagValueType::Location),
+            ..Default::default()
+        }
+    }
+}
 
 impl Step for IUPACSuffix {
-    fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
-        Some((
-            self.out_label.0.clone(),
-            crate::transformations::TagValueType::Location,
-        ))
-    }
-
     fn apply(
         &self,
         mut block: FastQBlocksCombined,
@@ -116,7 +124,7 @@ impl Step for IUPACSuffix {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        extract_region_tags(&mut block, self.segment, &self.out_label.0, |read| {
+        extract_region_tags(&mut block, self.segment, &self.out_label, |read| {
             let seq = read.seq();
 
             //cheap empty range if read length too short no need for explicit check

@@ -19,7 +19,7 @@ pub struct Duplicates {
     #[schemars(with = "String")]
     source: ResolvedSourceAll,
 
-    pub out_label: String,
+    pub out_label: TagLabel,
     pub false_positive_rate: f64,
 
     pub seed: Option<u64>,
@@ -48,7 +48,7 @@ impl VerifyIn<PartialConfig> for PartialDuplicates {
 
 impl TagUser for PartialTaggedVariant<PartialDuplicates> {
     fn get_tag_usage(&mut self,
-        _tags_available: &IndexMap<String, TagMetadata>,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> TagUsageInfo<'_> {
         let inner = self
@@ -71,20 +71,6 @@ impl Step for Duplicates {
     // multiple step-threads
     fn needs_serial(&self) -> bool {
         true
-    }
-
-    fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
-        Some((
-            self.out_label.clone(),
-            crate::transformations::TagValueType::Bool,
-        ))
-    }
-
-    fn uses_tags(
-        &self,
-        _tags_available: &IndexMap<String, TagMetadata>,
-    ) -> Option<Vec<(String, &[crate::transformations::TagValueType])>> {
-        self.source.get_tags()
     }
 
     fn init(

@@ -14,7 +14,7 @@ pub struct PolyTail {
     #[schemars(with = "String")]
     segment: SegmentIndex,
 
-    pub out_label: String,
+    pub out_label: TagLabel,
     //#[validate(minimum = 1)] todo
     pub min_length: usize,
     #[tpd(with = "tpd_adapt_extract_base_or_dot")]
@@ -61,7 +61,7 @@ impl VerifyIn<PartialConfig> for PartialPolyTail {
 
 impl TagUser for PartialTaggedVariant<PartialPolyTail> {
     fn get_tag_usage(&mut self,
-        _tags_available: &IndexMap<String, TagMetadata>,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> TagUsageInfo<'_> {
         let inner = self

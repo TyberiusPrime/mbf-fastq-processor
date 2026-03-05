@@ -26,7 +26,9 @@ impl VerifyIn<PartialConfig> for PartialSkip {
     }
 }
 
-impl TagUser for PartialTaggedVariant<PartialSkip> {}
+impl TagUser for PartialTaggedVariant<PartialSkip> {
+    //default is ok, no tags
+}
 
 impl Step for Skip {
     fn must_see_all_tags(&self) -> bool {

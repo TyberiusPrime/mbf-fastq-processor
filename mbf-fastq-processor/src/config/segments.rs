@@ -4,7 +4,7 @@ use schemars::JsonSchema;
 use toml_pretty_deser::{prelude::*, suggest_alternatives};
 
 use crate::{
-    config::PartialConfig,
+    config::{PartialConfig, deser::TagLabel},
     transformations::{TagValueType, ToUsedTags, UsedTag},
 };
 
@@ -307,7 +307,7 @@ impl SegmentOrNameIndex {
 #[derive(Debug, Clone)]
 pub enum ResolvedSourceNoAll {
     Segment(SegmentIndex),
-    Tag(String),
+    Tag(TagLabel),
     Name {
         segment_index: SegmentIndex,
         split_character: u8,
@@ -341,7 +341,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceNoAll>> {
                                     Some("Please provide a name after 'tag:'."),
                                 ))
                             } else {
-                                Ok(ResolvedSourceNoAll::Tag(trimmed.to_string()))
+                                Ok(ResolvedSourceNoAll::Tag(TagLabel(trimmed.to_string())))
                             }
                         } else if let Some(segment_name) = source.strip_prefix("name:") {
                             let trimmed = segment_name.trim();
@@ -426,7 +426,9 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceNoAll>> {
 impl ResolvedSourceNoAll {
     //that's the ones we're going to use
     #[must_use]
-    pub fn get_tags(&self) -> Option<Vec<(String, &'static [crate::transformations::TagValueType])>> {
+    pub fn get_tags(
+        &self,
+    ) -> Option<Vec<(TagLabel, &'static [crate::transformations::TagValueType])>> {
         match &self {
             ResolvedSourceNoAll::Tag(tag_name) => Some(vec![(
                 tag_name.clone(),
@@ -464,7 +466,7 @@ impl ToUsedTags for TomlValue<MustAdapt<String, ResolvedSourceNoAll>> {
 #[derive(Debug, Clone)]
 pub enum ResolvedSourceAll {
     Segment(SegmentIndexOrAll),
-    Tag(String),
+    Tag(TagLabel),
     Name {
         segment_index_or_all: SegmentIndexOrAll,
         split_character: u8,
@@ -493,7 +495,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceAll>> {
                                     Some("Please provide a name after 'tag:'."),
                                 ))
                             } else {
-                                Ok(ResolvedSourceAll::Tag(trimmed.to_string()))
+                                Ok(ResolvedSourceAll::Tag(TagLabel(trimmed.to_string())))
                             }
                         } else if let Some(segment_name) = source.strip_prefix("name:") {
                             let trimmed = segment_name.trim();
@@ -682,7 +684,7 @@ impl ResolvedSourceAll {
     #[must_use]
     pub fn get_tags(
         &self,
-    ) -> Option<Vec<(String, &'static [crate::transformations::TagValueType])>> {
+    ) -> Option<Vec<(TagLabel, &'static [crate::transformations::TagValueType])>> {
         match &self {
             ResolvedSourceAll::Tag(tag_name) => Some(vec![(
                 tag_name.clone(),

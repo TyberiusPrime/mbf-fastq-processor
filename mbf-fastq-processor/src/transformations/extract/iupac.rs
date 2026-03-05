@@ -27,7 +27,7 @@ pub struct IUPAC {
     segment: SegmentIndex,
 
     anchor: Anchor,
-    out_label: String,
+    out_label: TagLabel,
     max_mismatches: u8,
 }
 
@@ -56,7 +56,7 @@ enum StringOrVecString {
 
 impl TagUser for PartialTaggedVariant<PartialIUPAC> {
     fn get_tag_usage(&mut self,
-        _tags_available: &IndexMap<String, TagMetadata>,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> TagUsageInfo<'_> {
         let inner = self

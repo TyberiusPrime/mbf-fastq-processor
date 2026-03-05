@@ -22,7 +22,7 @@ pub struct Postfix {
     #[tpd(with = "tpd_adapt_bstring")] //TODO: actually verify quality range
     pub qual: BString,
 
-    if_tag: Option<String>,
+    if_tag: Option<TagLabel>,
 }
 
 impl VerifyIn<PartialConfig> for PartialPostfix {
@@ -50,25 +50,32 @@ impl VerifyIn<PartialConfig> for PartialPostfix {
     }
 }
 
-impl TagUser for PartialTaggedVariant<PartialPostfix> {}
+impl TagUser for PartialTaggedVariant<PartialPostfix> {
+    fn get_tag_usage(
+        &mut self,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
+        _segment_order: &[String],
+    ) -> TagUsageInfo<'_> {
+        let inner = self
+            .toml_value
+            .as_mut()
+            .expect("get_tag_usage should only be called after successful verification");
 
-impl Step for Postfix {
-    fn uses_tags(
-        &self,
-        _tags_available: &IndexMap<String, TagMetadata>,
-    ) -> Option<Vec<(String, &[TagValueType])>> {
-        self.if_tag.as_ref().map(|tag_str| {
-            let cond_tag = ConditionalTag::from_string(tag_str.clone());
-            vec![(
-                cond_tag.tag.clone(),
+        TagUsageInfo {
+            used_tags: vec![inner.if_tag.to_used_tag(
                 &[
                     TagValueType::Bool,
                     TagValueType::String,
                     TagValueType::Location,
                 ][..],
-            )]
-        })
+            )],
+            must_see_all_tags: true,
+            ..Default::default()
+        }
     }
+}
+
+impl Step for Postfix {
 
     fn apply(
         &self,
@@ -77,8 +84,8 @@ impl Step for Postfix {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let condition = self.if_tag.as_ref().map(|tag_str| {
-            let cond_tag = ConditionalTag::from_string(tag_str.clone());
+        let condition = self.if_tag.as_ref().map(|tag| {
+            let cond_tag = ConditionalTag::from_tag_label(tag);
             get_bool_vec_from_tag(&block, &cond_tag)
         });
 

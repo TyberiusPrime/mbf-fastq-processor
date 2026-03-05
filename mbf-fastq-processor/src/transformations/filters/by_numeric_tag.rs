@@ -9,7 +9,7 @@ use super::super::KeepOrRemove;
 #[tpd]
 #[derive(Debug)]
 pub struct ByNumericTag {
-    pub in_label: String,
+    pub in_label: TagLabel,
     pub min_value: Option<f64>,
     pub max_value: Option<f64>,
     pub keep_or_remove: KeepOrRemove,
@@ -25,7 +25,7 @@ impl VerifyIn<PartialConfig> for PartialByNumericTag {
         Self: Sized + toml_pretty_deser::Visitor,
     {
         self.in_label.verify(|v| {
-            if v.is_empty() {
+            if v.0.is_empty() {
                 Err(ValidationFailure::new("Must not be empty", None))
             } else {
                 Ok(())
@@ -45,8 +45,9 @@ impl VerifyIn<PartialConfig> for PartialByNumericTag {
 }
 
 impl TagUser for PartialTaggedVariant<PartialByNumericTag> {
-    fn get_tag_usage(&mut self,
-        _tags_available: &IndexMap<String, TagMetadata>,
+    fn get_tag_usage(
+        &mut self,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> TagUsageInfo<'_> {
         let inner = self
@@ -55,23 +56,13 @@ impl TagUser for PartialTaggedVariant<PartialByNumericTag> {
             .expect("get_tag_usage should only be called after successful verification");
         TagUsageInfo {
             used_tags: vec![inner.in_label.to_used_tag(&[TagValueType::Numeric][..])],
+            must_see_all_tags: true, // for filtering them down
             ..Default::default()
         }
     }
 }
 
 impl Step for ByNumericTag {
-    fn must_see_all_tags(&self) -> bool {
-        true
-    }
-
-    fn uses_tags(
-        &self,
-        _tags_available: &IndexMap<String, TagMetadata>,
-    ) -> Option<Vec<(String, &[TagValueType])>> {
-        Some(vec![(self.in_label.clone(), &[TagValueType::Numeric])])
-    }
-
     fn apply(
         &self,
         mut block: FastQBlocksCombined,

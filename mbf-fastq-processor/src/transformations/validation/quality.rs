@@ -27,7 +27,9 @@ impl VerifyIn<PartialConfig> for PartialValidateQuality {
     }
 }
 
-impl TagUser for PartialTaggedVariant<PartialValidateQuality> {}
+impl TagUser for PartialTaggedVariant<PartialValidateQuality> {
+    //default is ok, no tags
+}
 
 impl Step for ValidateQuality {
     fn apply(

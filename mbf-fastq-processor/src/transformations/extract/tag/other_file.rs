@@ -27,7 +27,7 @@ pub struct OtherFile {
     )]
     pub other_readname_end_character: Option<u8>,
 
-    pub out_label: String,
+    pub out_label: TagLabel,
 
     pub seed: Option<u64>,
     pub false_positive_rate: f64,
@@ -111,7 +111,7 @@ impl VerifyIn<PartialConfig> for PartialOtherFile {
 
 impl TagUser for PartialTaggedVariant<PartialOtherFile> {
     fn get_tag_usage(&mut self,
-        _tags_available: &IndexMap<String, TagMetadata>,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> TagUsageInfo<'_> {
         let inner = self
@@ -162,26 +162,7 @@ These must match.",
         self.progress_output = Some(progress.clone());
     }
 
-    fn uses_tags(
-        &self,
-        _tags_available: &IndexMap<String, TagMetadata>,
-    ) -> Option<Vec<(String, &[TagValueType])>> {
-        if let ResolvedSourceNoAll::Tag(tag) = &self.source {
-            Some(vec![(
-                tag.clone(),
-                &[TagValueType::String, TagValueType::Location],
-            )])
-        } else {
-            None
-        }
-    }
 
-    fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
-        Some((
-            self.out_label.clone(),
-            crate::transformations::TagValueType::Bool,
-        ))
-    }
 
     fn init(
         &mut self,

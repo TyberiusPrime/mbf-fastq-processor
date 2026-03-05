@@ -13,7 +13,7 @@ fn default_min_count() -> usize {
 #[tpd]
 #[derive(Debug)]
 pub struct Kmers {
-    pub out_label: String,
+    pub out_label: TagLabel,
 
     #[schemars(with = "String")]
     #[tpd(adapt_in_verify(String))]
@@ -78,7 +78,22 @@ impl VerifyIn<PartialConfig> for PartialKmers {
     }
 }
 
-impl TagUser for PartialTaggedVariant<PartialKmers> {}
+impl TagUser for PartialTaggedVariant<PartialKmers> {
+    fn get_tag_usage(
+        &mut self,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
+        _segment_order: &[String],
+    ) -> TagUsageInfo<'_> {
+        let inner = self
+            .toml_value
+            .as_mut()
+            .expect("get_tag_usage should only be called after successful verification");
+        TagUsageInfo {
+            declared_tag: inner.out_label.to_declared_tag(TagValueType::Numeric),
+            ..Default::default()
+        }
+    }
+}
 
 impl Step for Kmers {
     fn init(
@@ -99,13 +114,6 @@ impl Step for Kmers {
         self.resolved_kmer_db = Some(db);
 
         Ok(None)
-    }
-
-    fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
-        Some((
-            self.out_label.clone(),
-            crate::transformations::TagValueType::Numeric,
-        ))
     }
 
     fn apply(

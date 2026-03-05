@@ -36,7 +36,7 @@ use super::{
 #[tpd]
 #[derive(Debug)]
 pub struct StoreTagInComment {
-    in_label: String,
+    in_label: TagLabel,
     #[tpd(adapt_in_verify(String))]
     #[schemars(with = "String")]
     segment: SegmentIndexOrAll,
@@ -75,28 +75,26 @@ impl VerifyIn<PartialConfig> for PartialStoreTagInComment {
 
         // Validate in_label doesn't contain reserved characters
         if let Some(in_label) = self.in_label.as_ref() {
-            if in_label.bytes().any(|x| x == b'=') {
+            //truly paranoia, tag labels are a-zA-Z0-9_, but the user might have set the
+            //separators/insert chars to one of them, I suppose
+            if let Some(sep) = self.comment_separator.as_ref().copied()
+                && in_label.0.bytes().any(|x| x == sep)
+            {
                 self.in_label.state = TomlValueState::ValidationFailed {
-                    message: "Tag labels cannot contain '='".to_string(),
+                    message: format!(
+                        "Tag labels cannot contain the comment_separator '{}'",
+                        BString::new(vec![sep])
+                    ),
                 };
-            } else {
-                let sep = self.comment_separator.as_ref().copied().unwrap_or(b'|');
-                let ins = self.comment_insert_char.as_ref().copied().unwrap_or(b' ');
-                if in_label.bytes().any(|x| x == sep) {
-                    self.in_label.state = TomlValueState::ValidationFailed {
-                        message: format!(
-                            "Tag labels cannot contain the comment_separator '{}'",
-                            BString::new(vec![sep])
-                        ),
-                    };
-                } else if in_label.bytes().any(|x| x == ins) {
-                    self.in_label.state = TomlValueState::ValidationFailed {
-                        message: format!(
-                            "Tag labels cannot contain the comment_insert_char '{}'",
-                            BString::new(vec![ins])
-                        ),
-                    };
-                }
+            } else if let Some(ins) = self.comment_insert_char.as_ref().copied()
+                && in_label.0.bytes().any(|x| x == ins)
+            {
+                self.in_label.state = TomlValueState::ValidationFailed {
+                    message: format!(
+                        "Tag labels cannot contain the comment_insert_char '{}'",
+                        BString::new(vec![ins])
+                    ),
+                };
             }
         }
         Ok(())
@@ -104,8 +102,9 @@ impl VerifyIn<PartialConfig> for PartialStoreTagInComment {
 }
 
 impl TagUser for PartialTaggedVariant<PartialStoreTagInComment> {
-    fn get_tag_usage(&mut self,
-        _tags_available: &IndexMap<String, TagMetadata>,
+    fn get_tag_usage(
+        &mut self,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> TagUsageInfo<'_> {
         let inner = self
@@ -113,12 +112,14 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagInComment> {
             .as_mut()
             .expect("get_tag_usage should only be called after successful verification");
         TagUsageInfo {
-            used_tags: vec![inner.in_label.to_used_tag(&[
+            used_tags: vec![inner.in_label.to_used_tag(
+                &[
                     TagValueType::Bool,
                     TagValueType::String,
                     TagValueType::Location,
                     TagValueType::Numeric,
-                ][..])],
+                ][..],
+            )],
             ..Default::default()
         }
     }
@@ -165,20 +166,6 @@ impl Step for StoreTagInComment {
         Ok(())
     }
 
-    fn uses_tags(
-        &self,
-        _tags_available: &IndexMap<String, TagMetadata>,
-    ) -> Option<Vec<(String, &[TagValueType])>> {
-        Some(vec![(
-            self.in_label.clone(),
-            &[
-                TagValueType::String,
-                TagValueType::Location,
-                TagValueType::Bool,
-                TagValueType::Numeric,
-            ],
-        )])
-    }
 
     fn apply(
         &self,
@@ -209,7 +196,7 @@ impl Step for StoreTagInComment {
 
                 let new_name = store_tag_in_comment(
                     read.name(),
-                    self.in_label.as_bytes(),
+                    self.in_label.0.as_bytes(),
                     &tag_value,
                     self.comment_separator,
                     self.comment_insert_char,
@@ -231,3 +218,4 @@ impl Step for StoreTagInComment {
         Ok((block, true))
     }
 }
+

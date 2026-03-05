@@ -7,13 +7,13 @@ use crate::dna::TagValue;
 #[derive(eserde::Deserialize, Debug, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct UppercaseTag {
-    in_label: String,
+    in_label: TagLabel,
 }
 
 impl Step for UppercaseTag {
     fn uses_tags(
         &self,
-        _tags_available: &IndexMap<String, TagMetadata>,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
     ) -> Option<Vec<(String, &[TagValueType])>> {
         Some(vec![(self.in_label.clone(), &[TagValueType::Location])])
     }

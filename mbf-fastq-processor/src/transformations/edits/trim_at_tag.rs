@@ -19,7 +19,7 @@ pub enum Direction {
 #[tpd]
 #[derive(Debug)]
 pub struct TrimAtTag {
-    in_label: String,
+    in_label: TagLabel,
     direction: Direction,
     keep_tag: bool,
 }
@@ -34,7 +34,7 @@ impl VerifyIn<PartialConfig> for PartialTrimAtTag {
         Self: Sized + toml_pretty_deser::Visitor,
     {
         self.in_label.verify(|v| {
-            if v.is_empty() {
+            if v.0.is_empty() {
                 Err(ValidationFailure::new("Must not be empty", None))
             } else {
                 Ok(())
@@ -46,7 +46,7 @@ impl VerifyIn<PartialConfig> for PartialTrimAtTag {
 
 impl TagUser for PartialTaggedVariant<PartialTrimAtTag> {
     fn get_tag_usage(&mut self,
-        _tags_available: &IndexMap<String, TagMetadata>,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> TagUsageInfo<'_> {
         let inner = self
@@ -83,13 +83,6 @@ impl Step for TrimAtTag {
         Ok(())
     }
 
-    fn uses_tags(
-        &self,
-        _tags_available: &IndexMap<String, TagMetadata>,
-    ) -> Option<Vec<(String, &[TagValueType])>> {
-        Some(vec![(self.in_label.clone(), &[TagValueType::Location])])
-    }
-
     //to cut location tags
     fn must_see_all_tags(&self) -> bool {
         true
@@ -105,7 +98,7 @@ impl Step for TrimAtTag {
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let error_encountered = std::cell::RefCell::new(Option::<String>::None);
         block.apply_mut_with_tag(
-            self.in_label.as_str(),
+            &self.in_label,
             |reads, tag_hit| {
                 if let Some(hit) = tag_hit.as_sequence() {
                     if hit.0.len() > 1 {

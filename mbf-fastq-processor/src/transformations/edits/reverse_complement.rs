@@ -13,7 +13,7 @@ pub struct ReverseComplement {
     #[tpd(adapt_in_verify(String))]
     segment: SegmentIndex,
 
-    if_tag: Option<String>,
+    if_tag: Option<TagLabel>,
 }
 
 impl VerifyIn<PartialConfig> for PartialReverseComplement {
@@ -33,7 +33,7 @@ impl VerifyIn<PartialConfig> for PartialReverseComplement {
 impl TagUser for PartialTaggedVariant<PartialReverseComplement> {
     fn get_tag_usage(
         &mut self,
-        _tags_available: &IndexMap<String, TagMetadata>,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> TagUsageInfo<'_> {
         let inner = self
@@ -56,26 +56,6 @@ impl TagUser for PartialTaggedVariant<PartialReverseComplement> {
 }
 
 impl Step for ReverseComplement {
-    fn uses_tags(
-        &self,
-        _tags_available: &IndexMap<String, TagMetadata>,
-    ) -> Option<Vec<(String, &[TagValueType])>> {
-        self.if_tag.as_ref().map(|tag_str| {
-            let cond_tag = ConditionalTag::from_string(tag_str.clone());
-            vec![(
-                cond_tag.tag.clone(),
-                &[
-                    TagValueType::Bool,
-                    TagValueType::String,
-                    TagValueType::Location,
-                ][..],
-            )]
-        })
-    }
-    //to modify location tags
-    fn must_see_all_tags(&self) -> bool {
-        true
-    }
 
     #[allow(clippy::redundant_closure_for_method_calls)] // otherwise the FnOnce is not general
     // enough
@@ -86,8 +66,8 @@ impl Step for ReverseComplement {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let condition = self.if_tag.as_ref().map(|tag_str| {
-            let cond_tag = ConditionalTag::from_string(tag_str.clone());
+        let condition = self.if_tag.as_ref().map(|tag| {
+            let cond_tag = ConditionalTag::from_tag_label(tag);
             get_bool_vec_from_tag(&block, &cond_tag)
         });
 

@@ -11,7 +11,7 @@ use crate::transformations::prelude::*;
 #[tpd]
 #[derive(Debug)]
 pub struct StoreTagInSequence {
-    in_label: String,
+    in_label: TagLabel,
     #[tpd(default)]
     ignore_missing: bool,
 }
@@ -38,7 +38,7 @@ impl VerifyIn<PartialConfig> for PartialStoreTagInSequence {
 
 impl TagUser for PartialTaggedVariant<PartialStoreTagInSequence> {
     fn get_tag_usage(&mut self,
-        _tags_available: &IndexMap<String, TagMetadata>,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> TagUsageInfo<'_> {
         let inner = self

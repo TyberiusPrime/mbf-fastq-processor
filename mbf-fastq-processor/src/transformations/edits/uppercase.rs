@@ -13,7 +13,7 @@ pub struct Uppercase {
     #[tpd(adapt_in_verify(String))]
     pub target: ResolvedSourceAll,
 
-    pub if_tag: Option<String>,
+    pub if_tag: Option<TagLabel>,
 }
 
 impl VerifyIn<PartialConfig> for PartialUppercase {
@@ -32,7 +32,7 @@ impl VerifyIn<PartialConfig> for PartialUppercase {
 
 impl TagUser for PartialTaggedVariant<PartialUppercase> {
     fn get_tag_usage(&mut self,
-        _tags_available: &IndexMap<String, TagMetadata>,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> TagUsageInfo<'_>{
         unreachable!("Should have been transformed before");

@@ -40,10 +40,10 @@ pub enum OnMissing {
 pub struct ConcatTags {
     /// Input tag labels to concatenate (must have at least 2)
     //#[validate(min_items = 2)] //TODO
-    in_labels: Vec<String>,
+    in_labels: Vec<TagLabel>,
 
     /// Output tag label for the concatenated result
-    out_label: String,
+    out_label: TagLabel,
 
     #[tpd(skip, default)]
     #[schemars(skip)]
@@ -104,7 +104,66 @@ impl VerifyIn<PartialConfig> for PartialConcatTags {
     }
 }
 
-impl TagUser for PartialTaggedVariant<PartialConcatTags> {}
+impl TagUser for PartialTaggedVariant<PartialConcatTags> {
+    fn get_tag_usage(
+        &mut self,
+        tags_available: &IndexMap<TagLabel, TagMetadata>,
+        _segment_order: &[String],
+    ) -> TagUsageInfo<'_> {
+        let inner = self
+            .toml_value
+            .as_mut()
+            .expect("get_tag_usage should only be called after successful verification");
+
+        let in_labels: Vec<TagLabel> = {
+            let tv_in_labels = inner.in_labels.as_ref().expect("Parent was ok?");
+            tv_in_labels
+                .iter()
+                .filter_map(|v| v.value.as_ref())
+                .cloned()
+                .collect()
+        };
+        if in_labels.len() < 2 {
+            let mut available: Vec<String> = tags_available
+                .iter()
+                .filter_map(|(tag_name, tag_meta)| {
+                    if !in_labels.contains(tag_name)
+                        && matches!(
+                            tag_meta.tag_type,
+                            TagValueType::Location | TagValueType::String
+                        )
+                    {
+                        Some(tag_name.to_string())
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+            available.sort_unstable();
+
+            inner.in_labels.state = TomlValueState::ValidationFailed {
+                message: "Must have at least two input labels".to_string(),
+            };
+            inner.in_labels.help = Some(format!(
+                "Provide at least two tags to concatenate. Available: {}",
+                available.join(", ")
+            ));
+            TagUsageInfo::default()
+        } else {
+            let tv_in_labels = inner.in_labels.as_mut().expect("Parent was ok?");
+            let used_tags: Vec<_> = tv_in_labels
+                .iter_mut()
+                .map(|x| x.to_used_tag(&[TagValueType::Location, TagValueType::String]))
+                .collect();
+
+            TagUsageInfo {
+                used_tags,
+                must_see_all_tags: true,
+                ..Default::default()
+            }
+        }
+    }
+}
 
 impl Step for ConcatTags {
     fn validate_others(
@@ -114,91 +173,65 @@ impl Step for ConcatTags {
         all_transforms: &[Transformation],
         this_transforms_index: usize,
     ) -> Result<()> {
-        if self.in_labels.len() < 2 {
-            bail!(
-                "ConcatTags requires at least 2 input tags, got {}",
-                self.in_labels.len()
-            );
-        }
+        todo!();
+        // if self.in_labels.len() < 2 {
+        //     bail!(
+        //         "ConcatTags requires at least 2 input tags, got {}",
+        //         self.in_labels.len()
+        //     );
+        // }
+        //
+        // // Check for duplicate input labels
+        // let mut seen = std::collections::HashSet::new();
+        // for label in &self.in_labels {
+        //     if !seen.insert(label) {
+        //         bail!("ConcatTags has duplicate input label: {label}");
+        //     }
+        // }
+        //
+        // // Validate that all input tags exist before this step
+        // let mut all_location = true;
+        // for label in &self.in_labels {
+        //     let mut found = false;
+        //     for (idx, transform) in all_transforms.iter().enumerate() {
+        //         if idx >= this_transforms_index {
+        //             break;
+        //         }
+        //         if let Some((tag_name, tag_type)) = transform.declares_tag_type()
+        //             && tag_name == *label
+        //         {
+        //             found = true;
+        //             match tag_type {
+        //                 TagValueType::Location => {}
+        //                 TagValueType::String => {
+        //                     all_location = false;
+        //                 }
+        //                 _ => {
+        //                     continue; // check for invalid type is done in uses_tags, don't want
+        //                     // separate error messages
+        //                 }
+        //             }
+        //             break;
+        //         }
+        //     }
+        //     if !found {
+        //         bail!("ConcatTags requires tag '{label}' but it is not declared before this step",);
+        //     }
+        // }
+        // if all_location {
+        //     self.output_tag_type
+        //         .set(TagValueType::Location)
+        //         .expect("Trying to set output_tag_type twice");
+        // } else {
+        //     self.output_tag_type
+        //         .set(TagValueType::String)
+        //         .expect("Trying to set output_tag_type twice");
+        // }
 
-        // Check for duplicate input labels
-        let mut seen = std::collections::HashSet::new();
-        for label in &self.in_labels {
-            if !seen.insert(label) {
-                bail!("ConcatTags has duplicate input label: {label}");
-            }
-        }
-
-        // Validate that all input tags exist before this step
-        let mut all_location = true;
-        for label in &self.in_labels {
-            let mut found = false;
-            for (idx, transform) in all_transforms.iter().enumerate() {
-                if idx >= this_transforms_index {
-                    break;
-                }
-                if let Some((tag_name, tag_type)) = transform.declares_tag_type()
-                    && tag_name == *label
-                {
-                    found = true;
-                    match tag_type {
-                        TagValueType::Location => {}
-                        TagValueType::String => {
-                            all_location = false;
-                        }
-                        _ => {
-                            continue; // check for invalid type is done in uses_tags, don't want
-                            // separate error messages
-                        }
-                    }
-                    break;
-                }
-            }
-            if !found {
-                bail!("ConcatTags requires tag '{label}' but it is not declared before this step",);
-            }
-        }
-        if all_location {
-            self.output_tag_type
-                .set(TagValueType::Location)
-                .expect("Trying to set output_tag_type twice");
-        } else {
-            self.output_tag_type
-                .set(TagValueType::String)
-                .expect("Trying to set output_tag_type twice");
-        }
-
-        Ok(())
+        // Ok(())
     }
 
-    fn uses_tags(
-        &self,
-        _tags_available: &IndexMap<String, TagMetadata>,
-    ) -> Option<Vec<(String, &[TagValueType])>> {
-        Some(
-            self.in_labels
-                .iter()
-                .map(|label| {
-                    (
-                        label.clone(),
-                        &[TagValueType::Location, TagValueType::String][..],
-                    )
-                })
-                .collect(),
-        )
-    }
 
-    fn declares_tag_type(&self) -> Option<(String, TagValueType)> {
-        // We'll determine the output type dynamically based on input types
-        // The actual type will be set during init based on input tags at runtime
-        Some((
-            self.out_label.clone(),
-            self.output_tag_type
-                .get()
-                .copied()
-                .expect("output_tag_type should be set during validation"),
-        ))
-    }
 
     #[allow(clippy::too_many_lines)]
     fn apply(

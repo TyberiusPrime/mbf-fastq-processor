@@ -11,7 +11,7 @@ use super::extract_numeric_tags_plus_all;
 #[tpd]
 #[derive(Debug)]
 pub struct Length {
-    pub out_label: String,
+    pub out_label: TagLabel,
     #[schemars(with = "String")]
     #[tpd(adapt_in_verify(String))]
     pub segment: SegmentIndexOrAll,
@@ -33,7 +33,7 @@ impl VerifyIn<PartialConfig> for PartialLength {
 
 impl TagUser for PartialTaggedVariant<PartialLength> {
     fn get_tag_usage(&mut self,
-        _tags_available: &IndexMap<String, TagMetadata>,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> TagUsageInfo {
         let inner = self
@@ -48,12 +48,6 @@ impl TagUser for PartialTaggedVariant<PartialLength> {
 }
 
 impl Step for Length {
-    fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
-        Some((
-            self.out_label.clone(),
-            crate::transformations::TagValueType::Numeric,
-        ))
-    }
 
     fn apply(
         &self,

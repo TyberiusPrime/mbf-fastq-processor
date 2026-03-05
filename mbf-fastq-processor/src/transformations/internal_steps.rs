@@ -43,7 +43,7 @@ impl Step for Box<_InternalDelay> {
 #[tpd(no_verify)]
 #[derive(Debug)]
 pub struct _InternalReadCount {
-    pub out_label: String,
+    pub out_label: TagLabel,
     #[tpd(skip, default)]
     pub report_no: usize,
     #[tpd(skip, default)]
@@ -51,7 +51,7 @@ pub struct _InternalReadCount {
 }
 
 impl _InternalReadCount {
-    pub fn new(out_label: String, report_no: usize) -> Self {
+    pub fn new(out_label: TagLabel, report_no: usize) -> Self {
         Self {
             out_label,
             report_no,

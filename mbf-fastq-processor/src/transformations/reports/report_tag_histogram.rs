@@ -90,7 +90,7 @@ impl From<HistogramData> for serde_json::Value {
 #[derive(Debug)]
 pub struct _ReportTagHistogram {
     pub report_no: usize,
-    pub tag_name: String,
+    pub tag_name: TagLabel,
     #[tpd(skip)]
     pub tag_type: OnceLock<TagValueType>,
     #[tpd(skip)]
@@ -98,7 +98,7 @@ pub struct _ReportTagHistogram {
 }
 
 impl Partial_ReportTagHistogram {
-    pub fn new(report_no: usize, tag_name: TomlValue<String>) -> Self {
+    pub fn new(report_no: usize, tag_name: TomlValue<TagLabel>) -> Self {
         Self {
             report_no: TomlValue::new_ok_unplaced(report_no),
             tag_name,
@@ -117,26 +117,6 @@ impl Step for Box<_ReportTagHistogram> {
 
     fn needs_serial(&self) -> bool {
         true
-    }
-
-    fn uses_tags(
-        &self,
-        tags_available: &IndexMap<String, TagMetadata>,
-    ) -> Option<Vec<(String, &[TagValueType])>> {
-        if let Some(actual_type) = tags_available.get(&self.tag_name).map(|meta| meta.tag_type) {
-            self.tag_type.set(actual_type).expect("Tag type set twice");
-        } else {
-            return None;
-        }
-        Some(vec![(
-            self.tag_name.clone(),
-            &[
-                TagValueType::String,
-                TagValueType::Bool,
-                TagValueType::Numeric,
-                TagValueType::Location,
-            ],
-        )])
     }
 
     fn init(
@@ -219,7 +199,7 @@ impl Step for Box<_ReportTagHistogram> {
         match demultiplex_info {
             OptDemultiplex::No => {
                 let histogram = data.get(&0).expect("no multiplex data found, but expected");
-                histogram_contents.insert(histogram_key, histogram.clone().into());
+                histogram_contents.insert(histogram_key.0, histogram.clone().into());
             }
 
             OptDemultiplex::Yes(demultiplex_info) => {
@@ -230,7 +210,7 @@ impl Step for Box<_ReportTagHistogram> {
                         .get(tag)
                         .expect("no multiplex data found, but expected");
                     local_histogram_contents
-                        .insert(histogram_key.clone(), histogram.clone().into());
+                        .insert(histogram_key.0.clone(), histogram.clone().into());
                     histogram_contents.insert(
                         barcode_key.to_string(),
                         serde_json::Value::Object(local_histogram_contents),
@@ -250,3 +230,4 @@ impl Step for Box<_ReportTagHistogram> {
         }))
     }
 }
+

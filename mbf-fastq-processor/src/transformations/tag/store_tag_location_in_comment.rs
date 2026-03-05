@@ -19,7 +19,7 @@ use super::{
 #[tpd]
 #[derive(Debug)]
 pub struct StoreTagLocationInComment {
-    in_label: String,
+    in_label: TagLabel,
 
     #[schemars(with = "String")]
     #[tpd(adapt_in_verify(String))]
@@ -55,7 +55,7 @@ impl VerifyIn<PartialConfig> for PartialStoreTagLocationInComment {
 
 impl TagUser for PartialTaggedVariant<PartialStoreTagLocationInComment> {
     fn get_tag_usage(&mut self,
-        _tags_available: &IndexMap<String, TagMetadata>,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> TagUsageInfo<'_> {
         let inner = self

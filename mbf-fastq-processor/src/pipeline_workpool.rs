@@ -536,6 +536,7 @@ fn process_work_item(
 
         let len_before = work_item.block.len();
 
+        let block_tag_count = work_item.block.tags.len();
         let result =
             stage
                 .transformation
@@ -545,9 +546,11 @@ fn process_work_item(
             let len_after = result.0.len();
             if len_before != len_after {
                 assert!(
-                    stage.transformation.must_see_all_tags(),
-                    "A filtering stage forgot to declare must_all_tags=true: {}",
-                    stage.transformation
+                    stage.allowed_tags.len() == block_tag_count,
+                    "A filtering stage forgot to declare must_see_all_tags=true: {}. Declared {} tags, block had {} tags",
+                    stage.transformation,
+                    stage.allowed_tags.len(),
+                    block_tag_count
                 );
             }
         }

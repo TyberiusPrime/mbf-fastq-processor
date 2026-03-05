@@ -7,7 +7,7 @@ use crate::transformations::prelude::*;
 #[tpd]
 #[derive(Debug)]
 pub struct GCContent {
-    pub out_label: String,
+    pub out_label: TagLabel,
     #[schemars(with = "String")]
     #[tpd(adapt_in_verify(String))]
     pub segment: SegmentIndexOrAll,
@@ -27,15 +27,13 @@ impl VerifyIn<PartialConfig> for PartialGCContent {
     }
 }
 
-impl TagUser for PartialTaggedVariant<PartialGCContent> {}
+impl TagUser for PartialTaggedVariant<PartialGCContent> {
+    fn get_tag_usage(&mut self,_tags_available: &IndexMap<TagLabel,TagMetadata>,_segment_order: &[String],) -> TagUsageInfo<'_>{
+        unreachable!("Should have been swapped in expansion")
+    }
+}
 
 impl Step for GCContent {
-    fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
-        Some((
-            self.out_label.clone(),
-            crate::transformations::TagValueType::Numeric,
-        ))
-    }
 
     fn apply(
         &self,
