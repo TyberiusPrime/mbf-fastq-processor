@@ -27,13 +27,16 @@ impl VerifyIn<PartialConfig> for PartialNCount {
 }
 
 impl TagUser for PartialTaggedVariant<PartialNCount> {
-    fn get_tag_usage(&mut self,_tags_available: &IndexMap<TagLabel,TagMetadata>,_segment_order: &[String],) -> TagUsageInfo<'_>{
+    fn get_tag_usage(
+        &mut self,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
+        _segment_order: &[String],
+    ) -> TagUsageInfo<'_> {
         unreachable!("Should have been swapped for BaseCount in expansion");
     }
 }
 
 impl Step for NCount {
-
     fn apply(
         &self,
         _block: FastQBlocksCombined,

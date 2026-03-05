@@ -45,7 +45,8 @@ impl VerifyIn<PartialConfig> for PartialTrimAtTag {
 }
 
 impl TagUser for PartialTaggedVariant<PartialTrimAtTag> {
-    fn get_tag_usage(&mut self,
+    fn get_tag_usage(
+        &mut self,
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> TagUsageInfo<'_> {

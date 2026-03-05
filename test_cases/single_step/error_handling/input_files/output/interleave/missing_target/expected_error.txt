@@ -9,5 +9,5 @@ Error 1/1
   ┆                              │
   ┆                              ╰───── Not found in input segments
 ──╯
-Hint: Did you mean: read2?
+Hint: Did you mean: 'read2'?
 

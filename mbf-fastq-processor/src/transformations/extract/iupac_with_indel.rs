@@ -57,7 +57,8 @@ impl VerifyIn<PartialConfig> for PartialIUPACWithIndel {
 }
 
 impl TagUser for PartialTaggedVariant<PartialIUPACWithIndel> {
-    fn get_tag_usage(&mut self,
+    fn get_tag_usage(
+        &mut self,
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> TagUsageInfo<'_> {
@@ -73,7 +74,6 @@ impl TagUser for PartialTaggedVariant<PartialIUPACWithIndel> {
 }
 
 impl Step for IUPACWithIndel {
-
     fn apply(
         &self,
         mut block: FastQBlocksCombined,

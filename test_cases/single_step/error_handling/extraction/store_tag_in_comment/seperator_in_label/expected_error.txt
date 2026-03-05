@@ -1,5 +1,26 @@
 Error Details ==
-Error 1/1
+Error 1/2
+   ╭─config.toml
+   ┆
+ 8 │ [[step]]
+ 9 │ 	action = "ExtractRegion"
+   ┆           ───────┬───────
+   ┆                  │
+   ┆                  ╰──────── In this step
+   ┆
+10 │     anchor = "Left"
+11 │ 	source = "read1"
+12 │ 	start = 0
+13 │ 	len = 4
+14 │ 	out_label = "my,tag"
+   ┆              ────┬───
+   ┆                  │
+   ┆                  ╰──── Invalid label
+───╯
+Hint: Tag label must contain only letters, numbers, and underscores (a-zA-Z0-9_), found ','.
+      See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractRegion
+
+Error 2/2
    ╭─config.toml
    ┆
 16 │ [[step]]
@@ -10,7 +31,8 @@ Error 1/1
 18 │ 	in_label = "my,tag"
    ┆             ────┬───
    ┆                 │
-   ┆                 ╰──── Tag labels cannot contain the comment_separator ','
+   ┆                 ╰──── Invalid label
 ───╯
-Hint: See https://doc_url.example/version-stripped-from-test/docs/reference/StoreTagInComment
+Hint: Tag label must contain only letters, numbers, and underscores (a-zA-Z0-9_), found ','.
+      See https://doc_url.example/version-stripped-from-test/docs/reference/StoreTagInComment
 

@@ -177,7 +177,6 @@ impl TagUser for PartialTaggedVariant<PartialLongestPolyX> {
 }
 
 impl Step for LongestPolyX {
-
     fn apply(
         &self,
         mut block: FastQBlocksCombined,

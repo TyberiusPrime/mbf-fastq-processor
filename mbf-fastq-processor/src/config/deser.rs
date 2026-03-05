@@ -782,7 +782,6 @@ impl std::fmt::Display for TagLabel {
 //         &self.0
 //     }
 
-
 impl ToDeclaredTag for TomlValue<TagLabel> {
     fn to_declared_tag<'a>(&'a mut self, tag_type: TagValueType) -> Option<DeclaredTag<'a>> {
         if self.as_ref().is_some() {
@@ -811,6 +810,7 @@ impl ToUsedTag for TomlValue<TagLabel> {
             name: self.as_ref().expect("parent was ok?").clone(),
             accepted_tag_types,
             toml_source: Rc::new(RefCell::new((&mut self.state, &mut self.help))),
+            further_help: None,
         })
     }
 }
@@ -826,11 +826,20 @@ impl ToUsedTag for TomlValue<Option<TagLabel>> {
                 name: name.clone(),
                 accepted_tag_types,
                 toml_source: Rc::new(RefCell::new((&mut self.state, &mut self.help))),
+                further_help: None,
             })
         } else {
             None
         }
     }
+}
+
+pub fn offer_alternatives<T: AsRef<str>>(current: &str, available: &[T]) -> String {
+    let available: Vec<_> = available
+        .iter()
+        .map(|s| format!("'{}'", s.as_ref()))
+        .collect();
+    toml_pretty_deser::suggest_alternatives(current, &available)
 }
 
 /// Validates that a tag name conforms to the pattern [a-zA-Z_][a-zA-Z0-9_]*

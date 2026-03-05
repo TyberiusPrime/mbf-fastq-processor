@@ -76,7 +76,6 @@ impl TagUser for PartialTaggedVariant<PartialPostfix> {
 }
 
 impl Step for Postfix {
-
     fn apply(
         &self,
         mut block: FastQBlocksCombined,

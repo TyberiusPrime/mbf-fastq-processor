@@ -1,8 +1,8 @@
 #![allow(clippy::unnecessary_wraps)]
 use indexmap::IndexMap;
-use toml_pretty_deser::suggest_alternatives;
 
 use crate::{
+    config::deser::offer_alternatives,
     dna::{hamming, iupac_hamming_distance},
     transformations::prelude::*,
 };
@@ -120,7 +120,7 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
                     self.resolved_barcodes = Some(barcodes_section);
                 }
                 None => {
-                    self.barcodes.help = Some(suggest_alternatives(
+                    self.barcodes.help = Some(offer_alternatives(
                         barcodes_to_use,
                         &barcodes_data.map.keys().collect::<Vec<_>>(),
                     ));

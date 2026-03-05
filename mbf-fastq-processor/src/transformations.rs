@@ -186,13 +186,23 @@ pub struct UsedTag<'a> {
     pub name: TagLabel,
     pub accepted_tag_types: &'a [TagValueType],
     pub toml_source: Rc<RefCell<(&'a mut TomlValueState, &'a mut Option<String>)>>,
+    pub further_help: Option<String>,
+}
+
+impl UsedTag<'_> {
+    fn add_help(mut self, line: impl AsRef<str>) -> Self {
+        self.further_help = match self.further_help.take() {
+            Some(existing) => Some(format!("{}\n{}", existing, line.as_ref())),
+            None => Some(line.as_ref().to_string()),
+        };
+        self
+    }
 }
 
 pub trait ToUsedTag {
     fn to_used_tag<'a>(&'a mut self, accepted_tag_types: &'a [TagValueType])
     -> Option<UsedTag<'a>>;
 }
-
 
 pub trait ToUsedTags {
     fn to_used_tags<'a>(&'a mut self) -> Vec<Option<UsedTag<'a>>>;
@@ -231,7 +241,8 @@ pub struct TagUsageInfo<'a> {
 
 #[enum_dispatch(PartialTransformation)]
 pub trait TagUser {
-    fn get_tag_usage(&mut self,
+    fn get_tag_usage(
+        &mut self,
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> TagUsageInfo<'_> {

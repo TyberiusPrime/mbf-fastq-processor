@@ -1,3 +1,4 @@
+Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
@@ -9,6 +10,8 @@ Error 1/1
 13 │     in_label = 'nonexistent_tag'
    ┆                ────────┬────────
    ┆                        │
-   ┆                        ╰───────── No such tag
+   ┆                        ╰───────── No such tag: 'nonexistent_tag'
 ───╯
-Hint: Did you mean: real_tag?
+Hint: Did you mean: 'real_tag'?
+      See https://doc_url.example/version-stripped-from-test/docs/reference/ForgetTag
+

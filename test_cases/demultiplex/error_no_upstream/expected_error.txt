@@ -1,1 +1,17 @@
- No step generating label 'in_other_file' (or removed previously).
+Error Details ==
+Error 1/1
+  ╭─config.toml
+  ┆
+7 │ [[step]]
+8 │     action = 'Demultiplex'
+  ┆              ──────┬──────
+  ┆                    │
+  ┆                    ╰─────── In this step
+9 │     in_label = 'in_other_file'
+  ┆                ───────┬───────
+  ┆                       │
+  ┆                       ╰──────── No such tag
+──╯
+Hint: All known accepted values have been used.
+      See https://doc_url.example/version-stripped-from-test/docs/reference/Demultiplex
+

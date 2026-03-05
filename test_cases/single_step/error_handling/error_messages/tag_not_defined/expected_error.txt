@@ -1,1 +1,19 @@
-No step generating label 'whatever' (or removed previously). Available at this point: {}.
+Error Details ==
+Error 1/1
+  ╭─config.toml
+  ┆
+4 │ [[step]]
+5 │     action = 'EvalExpression'
+  ┆              ────────┬───────
+  ┆                      │
+  ┆                      ╰──────── In this step
+  ┆
+6 │ 	out_label = 'eval_result'
+7 │ 	expression = '5 * whatever'
+  ┆               ───────┬──────
+  ┆                      │
+  ┆                      ╰─────── No such tag
+──╯
+Hint: All known accepted values have been used.
+      See https://doc_url.example/version-stripped-from-test/docs/reference/EvalExpression
+

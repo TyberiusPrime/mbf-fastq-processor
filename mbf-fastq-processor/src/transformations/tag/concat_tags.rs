@@ -68,12 +68,9 @@ impl VerifyIn<PartialConfig> for PartialConcatTags {
         Self: Sized + toml_pretty_deser::Visitor,
     {
         self.in_labels.verify_mut(|v| {
-            if v.len() < 2 {
-                return Err(ValidationFailure::new(
-                    "Must have at least two input labels",
-                    None,
-                ));
-            }
+            // if v.len() < 2 {
+            // don't check here, check  in get_tag_usage, so we can make suggestions
+            // }
             let mut seen = std::collections::HashSet::new();
             for label in v.iter_mut() {
                 let lv = label.value.as_ref().expect("Parent was ok?");
@@ -124,6 +121,7 @@ impl TagUser for PartialTaggedVariant<PartialConcatTags> {
                 .collect()
         };
         if in_labels.len() < 2 {
+            //we do this here so we can make suggestions.
             let mut available: Vec<String> = tags_available
                 .iter()
                 .filter_map(|(tag_name, tag_meta)| {
@@ -151,6 +149,21 @@ impl TagUser for PartialTaggedVariant<PartialConcatTags> {
             TagUsageInfo::default()
         } else {
             let tv_in_labels = inner.in_labels.as_mut().expect("Parent was ok?");
+            let all_location = tv_in_labels.iter().all(|v| {
+                if let Some(lv) = v.value.as_ref() {
+                    matches!(
+                        tags_available.get(lv).map(|meta| &meta.tag_type),
+                        Some(TagValueType::Location)
+                    )
+                } else {
+                    true // skip invalid labels, they will be caught in validation
+                }
+            });
+            let output_type = if all_location {
+                TagValueType::Location
+            } else {
+                TagValueType::String
+            };
             let used_tags: Vec<_> = tv_in_labels
                 .iter_mut()
                 .map(|x| x.to_used_tag(&[TagValueType::Location, TagValueType::String]))
@@ -158,6 +171,7 @@ impl TagUser for PartialTaggedVariant<PartialConcatTags> {
 
             TagUsageInfo {
                 used_tags,
+                declared_tag: inner.out_label.to_declared_tag(output_type),
                 must_see_all_tags: true,
                 ..Default::default()
             }
@@ -166,72 +180,6 @@ impl TagUser for PartialTaggedVariant<PartialConcatTags> {
 }
 
 impl Step for ConcatTags {
-    fn validate_others(
-        &self,
-        _input_def: &crate::config::Input,
-        _output_def: Option<&crate::config::Output>,
-        all_transforms: &[Transformation],
-        this_transforms_index: usize,
-    ) -> Result<()> {
-        todo!();
-        // if self.in_labels.len() < 2 {
-        //     bail!(
-        //         "ConcatTags requires at least 2 input tags, got {}",
-        //         self.in_labels.len()
-        //     );
-        // }
-        //
-        // // Check for duplicate input labels
-        // let mut seen = std::collections::HashSet::new();
-        // for label in &self.in_labels {
-        //     if !seen.insert(label) {
-        //         bail!("ConcatTags has duplicate input label: {label}");
-        //     }
-        // }
-        //
-        // // Validate that all input tags exist before this step
-        // let mut all_location = true;
-        // for label in &self.in_labels {
-        //     let mut found = false;
-        //     for (idx, transform) in all_transforms.iter().enumerate() {
-        //         if idx >= this_transforms_index {
-        //             break;
-        //         }
-        //         if let Some((tag_name, tag_type)) = transform.declares_tag_type()
-        //             && tag_name == *label
-        //         {
-        //             found = true;
-        //             match tag_type {
-        //                 TagValueType::Location => {}
-        //                 TagValueType::String => {
-        //                     all_location = false;
-        //                 }
-        //                 _ => {
-        //                     continue; // check for invalid type is done in uses_tags, don't want
-        //                     // separate error messages
-        //                 }
-        //             }
-        //             break;
-        //         }
-        //     }
-        //     if !found {
-        //         bail!("ConcatTags requires tag '{label}' but it is not declared before this step",);
-        //     }
-        // }
-        // if all_location {
-        //     self.output_tag_type
-        //         .set(TagValueType::Location)
-        //         .expect("Trying to set output_tag_type twice");
-        // } else {
-        //     self.output_tag_type
-        //         .set(TagValueType::String)
-        //         .expect("Trying to set output_tag_type twice");
-        // }
-
-        // Ok(())
-    }
-
-
 
     #[allow(clippy::too_many_lines)]
     fn apply(

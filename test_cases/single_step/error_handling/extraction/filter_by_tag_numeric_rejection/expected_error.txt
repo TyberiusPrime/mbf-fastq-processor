@@ -1,1 +1,20 @@
-Tag 'gc_content' does not provide any of the required tag types [Location, String, Bool]. It provides 'Numeric'.
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+ 8 │ [[step]]
+ 9 │     action = 'FilterByTag'
+   ┆              ──────┬──────
+   ┆                    │
+   ┆                    ╰─────── In this step
+   ┆
+10 │     keep_or_remove = 'Keep'
+11 │     in_label = 'gc_content'
+   ┆                ──────┬─────
+   ┆                      │
+   ┆                      ╰────── Incompatible tag type
+───╯
+Hint: This transform requires tag 'gc_content' to be one of the following types: [Bool, String, Location],
+      but it is actually of type 'Numeric'.
+      See https://doc_url.example/version-stripped-from-test/docs/reference/FilterByTag
+

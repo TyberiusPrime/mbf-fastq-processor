@@ -114,6 +114,7 @@ impl TagUser for PartialTaggedVariant<PartialRegions> {
                             name: entry.0,
                             accepted_tag_types: entry.1,
                             toml_source: toml_source.clone(),
+                            further_help: None,
                         }))
                     }
                 }

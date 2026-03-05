@@ -1,1 +1,21 @@
-Tag 'is_duplicate' does not provide any of the required tag types [Numeric]. It provides 'Boolean'.
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+10 │ [[step]]
+11 │     action = 'FilterByNumericTag'
+   ┆              ──────────┬─────────
+   ┆                        │
+   ┆                        ╰────────── In this step
+   ┆
+12 │     keep_or_remove = 'Keep'
+13 │     in_label = 'is_duplicate'
+   ┆                ───────┬──────
+   ┆                       │
+   ┆                       ╰─────── Incompatible tag type
+───╯
+Hint: This transform requires tag 'is_duplicate' to be one of the following types: [Numeric],
+      but it is actually of type 'Boolean'.
+      Either switch to FilterByTag, or change the tag you are filtering on.
+      See https://doc_url.example/version-stripped-from-test/docs/reference/FilterByNumericTag
+

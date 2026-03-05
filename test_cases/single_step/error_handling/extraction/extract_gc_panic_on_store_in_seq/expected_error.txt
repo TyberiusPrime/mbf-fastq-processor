@@ -1,1 +1,18 @@
-Tag 'gc_content' does not provide any of the required tag types [Location]. It provides 'Numeric'.
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+ 9 │ [[step]]
+10 │     action = 'StoreTagInSequence'
+   ┆              ──────────┬─────────
+   ┆                        │
+   ┆                        ╰────────── In this step
+11 │     in_label = 'gc_content'
+   ┆                ──────┬─────
+   ┆                      │
+   ┆                      ╰────── Incompatible tag type
+───╯
+Hint: This transform requires tag 'gc_content' to be one of the following types: [Location],
+      but it is actually of type 'Numeric'.
+      See https://doc_url.example/version-stripped-from-test/docs/reference/StoreTagInSequence
+

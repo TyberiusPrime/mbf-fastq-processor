@@ -37,7 +37,8 @@ impl VerifyIn<PartialConfig> for PartialStoreTagInSequence {
 }
 
 impl TagUser for PartialTaggedVariant<PartialStoreTagInSequence> {
-    fn get_tag_usage(&mut self,
+    fn get_tag_usage(
+        &mut self,
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> TagUsageInfo<'_> {
@@ -53,7 +54,6 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagInSequence> {
 }
 
 impl Step for StoreTagInSequence {
-
     #[allow(clippy::cast_precision_loss)]
     #[allow(clippy::cast_possible_truncation)]
     #[allow(clippy::cast_sign_loss)]

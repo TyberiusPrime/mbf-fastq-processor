@@ -1,0 +1,53 @@
+[input]
+    read1 = 'input_read1.fq'
+
+# Extract first 5 bases and store as tag
+[[step]]
+    action = 'ExtractRegion'
+    segment = 'read1'
+    start = 0
+    length = 5
+    out_label = 'prefix_5'
+    anchor = 'start'
+
+[[step]]
+    action = 'ExtractRegex'
+    segment = 'read1'
+    search = "CCTG"
+    out_label = 'regex'
+
+[[step]]
+    action = 'ExtractRegex'
+    segment = 'name:read1'
+    search = "[0-9]+"
+    out_label = 'string_value'
+# Calculate GC content for each read
+[[step]]
+    action = 'CalcGCContent'
+    segment = 'read1'
+    out_label= 'gc_content'
+
+# Create boolean tag based on length
+[[step]]
+    action = 'CalcLength'
+    segment = 'read1'
+    out_label = 'read_length'
+
+
+[[step]] 
+  action = "EvalExpression"
+  expression = "read_no < 4"
+  out_label = "read_no_lt_4"
+  result_type = "bool"
+
+# Create histogram reports
+[[step]]
+    action = 'Report'
+    name = 'test_histogram'
+    count = false
+    tag_histograms = ['prefix_7', 'gc_content', 'read_length__', 'regex', 'read_no_lt_4', 'string_value']
+
+[output]
+    prefix = 'output'
+    report_json = true
+    report_html = true

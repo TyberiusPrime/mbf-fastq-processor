@@ -32,7 +32,8 @@ impl VerifyIn<PartialConfig> for PartialByTag {
 }
 
 impl TagUser for PartialTaggedVariant<PartialByTag> {
-    fn get_tag_usage(&mut self,
+    fn get_tag_usage(
+        &mut self,
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> TagUsageInfo<'_> {
@@ -55,8 +56,6 @@ impl TagUser for PartialTaggedVariant<PartialByTag> {
 }
 
 impl Step for ByTag {
-
-
     fn apply(
         &self,
         mut block: FastQBlocksCombined,

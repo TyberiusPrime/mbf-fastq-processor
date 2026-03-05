@@ -61,7 +61,8 @@ impl VerifyIn<PartialConfig> for PartialValidateAllReadsSameLength {
 }
 
 impl TagUser for PartialTaggedVariant<PartialValidateAllReadsSameLength> {
-    fn get_tag_usage(&mut self,
+    fn get_tag_usage(
+        &mut self,
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> TagUsageInfo<'_> {
@@ -80,7 +81,6 @@ impl TagUser for PartialTaggedVariant<PartialValidateAllReadsSameLength> {
 }
 
 impl Step for ValidateAllReadsSameLength {
-
     fn apply(
         &self,
         block: FastQBlocksCombined,

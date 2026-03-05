@@ -1,1 +1,18 @@
-(StoreTagLocationInComment)]: Tag 'combined' does not provide any of the required tag types [Location]. It provides 'String'.
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+27 │ [[step]]
+28 │     action = 'StoreTagLocationInComment'
+   ┆              ─────────────┬─────────────
+   ┆                           │
+   ┆                           ╰────────────── In this step
+29 │     in_label = 'combined'
+   ┆                ─────┬────
+   ┆                     │
+   ┆                     ╰───── Incompatible tag type
+───╯
+Hint: This transform requires tag 'combined' to be one of the following types: [Location],
+      but it is actually of type 'String'.
+      See https://doc_url.example/version-stripped-from-test/docs/reference/StoreTagLocationInComment
+

@@ -166,7 +166,6 @@ impl Step for StoreTagInComment {
         Ok(())
     }
 
-
     fn apply(
         &self,
         mut block: FastQBlocksCombined,
@@ -218,4 +217,3 @@ impl Step for StoreTagInComment {
         Ok((block, true))
     }
 }
-

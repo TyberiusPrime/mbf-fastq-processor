@@ -1,10 +1,13 @@
 use std::{cell::RefCell, rc::Rc};
 
 use schemars::JsonSchema;
-use toml_pretty_deser::{prelude::*, suggest_alternatives};
+use toml_pretty_deser::prelude::*;
 
 use crate::{
-    config::{PartialConfig, deser::TagLabel},
+    config::{
+        PartialConfig,
+        deser::{TagLabel, offer_alternatives},
+    },
     transformations::{TagValueType, ToUsedTags, UsedTag},
 };
 
@@ -53,7 +56,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, SegmentIndex>> {
                             TomlValue::new_validation_failed(
                                 span,
                                 "'all' segments not valid in this position".to_string(),
-                                Some(suggest_alternatives("", segment_order)),
+                                Some(offer_alternatives("", segment_order)),
                             )
                         } else {
                             let segment_index = segment_order.iter().position(|x| x == str_segment);
@@ -65,7 +68,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, SegmentIndex>> {
                                 None => TomlValue::new_validation_failed(
                                     span,
                                     "Segment not present in [input] section".to_string(),
-                                    Some(suggest_alternatives(str_segment, segment_order)),
+                                    Some(offer_alternatives(str_segment, segment_order)),
                                 ),
                             }
                         }
@@ -125,7 +128,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, SegmentIndexOrAll>> {
                                 None => TomlValue::new_validation_failed(
                                     span,
                                     "Segment not present in [input] section".to_string(),
-                                    Some(suggest_alternatives(str_segment, segment_order)),
+                                    Some(offer_alternatives(str_segment, segment_order)),
                                 ),
                             }
                         }
@@ -207,7 +210,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, SegmentOrNameIndex>> {
                         TomlValue::new_validation_failed(
                             span,
                             "'all' segments not valid in this position".to_string(),
-                            Some(suggest_alternatives("", segment_order)),
+                            Some(offer_alternatives("", segment_order)),
                         )
                     } else if let Some(query) = str_segment.strip_prefix("name:") {
                         let segment_index = segment_order.iter().position(|x| x == query);
@@ -219,7 +222,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, SegmentOrNameIndex>> {
                             None => TomlValue::new_validation_failed(
                                 span,
                                 "Segment not present in [input] section".to_string(),
-                                Some(suggest_alternatives(str_segment, segment_order)),
+                                Some(offer_alternatives(str_segment, segment_order)),
                             ),
                         }
                     } else {
@@ -234,7 +237,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, SegmentOrNameIndex>> {
                             None => TomlValue::new_validation_failed(
                                 span,
                                 "Segment not present in [input] section".to_string(),
-                                Some(suggest_alternatives(str_segment, segment_order)),
+                                Some(offer_alternatives(str_segment, segment_order)),
                             ),
                         }
                     }
@@ -331,7 +334,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceNoAll>> {
                         let resolved = if source.eq_ignore_ascii_case("all") {
                             Err(ValidationFailure::new(
                                 "'all' segments not valid in this position".to_string(),
-                                Some(suggest_alternatives("", segment_order)),
+                                Some(offer_alternatives("", segment_order)),
                             ))
                         } else if let Some(tag_name) = source.strip_prefix("tag:") {
                             let trimmed = tag_name.trim();
@@ -456,6 +459,7 @@ impl ToUsedTags for TomlValue<MustAdapt<String, ResolvedSourceNoAll>> {
                     name: tag_name,
                     accepted_tag_types,
                     toml_source: toml_source.clone(),
+                    further_help: None,
                 }))
             }
         }
@@ -713,6 +717,7 @@ impl ToUsedTags for TomlValue<MustAdapt<String, ResolvedSourceAll>> {
                     name: tag_name,
                     accepted_tag_types,
                     toml_source: toml_source.clone(),
+                    further_help: None,
                 }))
             }
         }
