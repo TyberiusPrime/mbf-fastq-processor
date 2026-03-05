@@ -1,0 +1,6 @@
+ReadName	len1	reg1
+Read1	51	CTC
+Read4	51	GGA
+Read6	51	GCT
+Read7	51	CGG
+Read10	51	ATG

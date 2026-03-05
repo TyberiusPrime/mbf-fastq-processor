@@ -119,7 +119,6 @@ impl PartialBaseContent {
 }
 
 impl BaseContent {
-
     fn sequence_totals(
         sequence: &[u8],
         bases_to_count: &[bool],

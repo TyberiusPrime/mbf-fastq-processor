@@ -10,7 +10,7 @@ use toml_pretty_deser::prelude::*;
 
 use std::{cell::RefCell, path::Path, rc::Rc};
 
-use anyhow::{Result};
+use anyhow::Result;
 
 use crate::{
     config::{ResolvedSourceNoAll, SegmentIndex, deser::TagLabel},
@@ -336,7 +336,9 @@ pub enum Transformation {
     Head(filters::Head),
     Skip(filters::Skip),
     FilterEmpty(filters::Empty),
+    #[tpd(alias = "sample")]
     FilterSample(filters::Sample),
+    #[tpd(alias = "reservoirsample")]
     FilterReservoirSample(filters::ReservoirSample),
     // //
     // //Validation

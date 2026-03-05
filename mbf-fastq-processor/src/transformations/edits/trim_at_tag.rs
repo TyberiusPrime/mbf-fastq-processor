@@ -104,7 +104,6 @@ impl TagUser for PartialTaggedVariant<PartialTrimAtTag> {
 }
 
 impl Step for TrimAtTag {
-
     #[allow(clippy::too_many_lines)]
     fn apply(
         &self,
