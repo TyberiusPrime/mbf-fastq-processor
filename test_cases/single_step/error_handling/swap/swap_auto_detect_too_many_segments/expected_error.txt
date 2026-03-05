@@ -6,7 +6,7 @@ Error 1/1
 7 │     action = 'Swap'
   ┆              ───┬──┬
   ┆                 │  │
-  ┆                 ╰─── In this step
+  ┆                 ╰──── In this step
   ┆                    │
   ┆                    ╰─ Insuffient swap definition
 ──╯

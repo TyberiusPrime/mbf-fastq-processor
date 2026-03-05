@@ -1,7 +1,5 @@
 use crate::transformations::prelude::*;
 
-use std::collections::HashSet;
-
 use super::super::tag::default_segment_all;
 use crate::config::deser::NonAmbigousDNA;
 
@@ -106,36 +104,11 @@ impl TagUser for PartialTaggedVariant<PartialReport> {
             "Report should not be used as a tagged variant - should be expanded into individual parts before"
         );
     }
+
+    //report name dupliaction is being done in config verify_reports
 }
 
 impl Step for Report {
-    fn validate_others(
-        &self,
-        _input_def: &crate::config::Input,
-        _output_def: Option<&crate::config::Output>,
-        all_transforms: &[Transformation],
-        _this_transforms_index: usize,
-    ) -> Result<()> {
-        let mut seen = HashSet::new();
-        for t in all_transforms
-            .iter()
-            .filter(|t| matches!(t, Transformation::Report(_)))
-        {
-            match t {
-                Transformation::Report(c) => {
-                    if !seen.insert(c.name.clone()) {
-                        bail!(
-                            "Report labels must be distinct. Duplicated: \"{}\"",
-                            self.name
-                        )
-                    }
-                }
-                _ => unreachable!(),
-            }
-        }
-        Ok(())
-    }
-
     fn init(
         &mut self,
         _input_info: &InputInfo,

@@ -123,49 +123,55 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagInComment> {
             ..Default::default()
         }
     }
+
+    fn verify_others(
+        &mut self,
+        input_def: Option<&crate::config::PartialInput>,
+        output_def: Option<&crate::config::PartialOutput>,
+        _transformations_before_this_one: &[TomlValue<PartialTransformation>],
+    ) {
+        let inner = self
+            .toml_value
+            .as_mut()
+            .expect("get_tag_usage should only be called after successful verification");
+        match inner.segment.as_ref().and_then(MustAdapt::as_ref_post) {
+            Some(SegmentIndexOrAll::Indexed(idx)) => {
+                if let Some(input_def) = input_def.as_ref() {
+                    let name = &input_def.get_segment_order()[*idx];
+                    let available_output_segments = {
+                        if let Some(output_def) = output_def.as_ref() {
+                            let mut res = Vec::new();
+                            if let Some(Some(interleaved)) = output_def.interleave.as_ref() {
+                                res.extend(interleaved.iter().filter_map(|x| x.as_ref()).cloned());
+                            }
+                            if let Some(Some(output)) = &output_def.output.as_ref() {
+                                res.extend(output.iter().filter_map(|x| x.as_ref()).cloned());
+                            }
+                            res
+                        } else {
+                            //bail!("Using StoreTagInComment when not outputting anything is pointless"
+                            //actually, the only time this will happen is in a report only run.
+                            //and if the user requests it (maybe commented out the output?)
+                            //who are we to complain
+                            vec![name.clone()]
+                            //todo: Think hard and long if this is the right behaviour
+                        }
+                    };
+                    if !available_output_segments.contains(name) {
+                        inner.segment.state =
+                            TomlValueState::new_validation_failed("Invalid output segment");
+                        inner.segment.help = Some(format!(
+                            "StoreTagInComment is configured to write comments to '{name}', but the output does not contain '{name}'. Available: {available_output_segments:?}",
+                        ));
+                    }
+                }
+            }
+            Some(SegmentIndexOrAll::All) | None => {}
+        }
+    }
 }
 
 impl Step for StoreTagInComment {
-    fn validate_others(
-        &self,
-        input_def: &crate::config::Input,
-        output_def: Option<&crate::config::Output>,
-        _all_transforms: &[super::super::Transformation],
-        _this_transforms_index: usize,
-    ) -> anyhow::Result<()> {
-        match &self.segment {
-            SegmentIndexOrAll::All => {}
-            SegmentIndexOrAll::Indexed(idx) => {
-                let name = &input_def.get_segment_order()[*idx];
-                let available_output_segments = {
-                    if let Some(output_def) = output_def {
-                        let mut res = Vec::new();
-                        if let Some(interleaved) = &output_def.interleave {
-                            res.extend(interleaved.iter().cloned());
-                        }
-                        if let Some(output) = &output_def.output {
-                            res.extend(output.iter().cloned());
-                        }
-                        res
-                    } else {
-                        //bail!("Using StoreTagInComment when not outputting anything is pointless"
-                        //actually, the only time this will happen is in a report only run.
-                        //and if the user requests it (maybe commented out the output?)
-                        //who are we to complain
-                        vec![name.clone()]
-                        //todo: Think hard and long if this is the right behaviour
-                    }
-                };
-                if !available_output_segments.contains(name) {
-                    bail!(
-                        "StoreTagInComment is configured to write comments to '{name}', but the output does not contain '{name}'. Available: {available_output_segments:?}",
-                    );
-                }
-            }
-        }
-        Ok(())
-    }
-
     fn apply(
         &self,
         mut block: FastQBlocksCombined,

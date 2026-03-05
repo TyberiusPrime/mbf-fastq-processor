@@ -7082,31 +7082,31 @@ fn test_cases_x_single_step_x_reports_x_read_length_reporting() {
 }
 
 #[test]
-fn test_cases_x_single_step_x_reports_x_report() {
-    println!("Test case is in: test_cases/single_step/reports/report");
+fn test_cases_x_single_step_x_reports_x_report_x_bam() {
+    println!("Test case is in: test_cases/single_step/reports/report/bam");
     run_test(
-        std::path::Path::new("../test_cases/single_step/reports/report"),
+        std::path::Path::new("../test_cases/single_step/reports/report/bam"),
         "input.toml",
         1,
     );
 }
 
 #[test]
-fn test_cases_x_single_step_x_reports_x_report_bam() {
-    println!("Test case is in: test_cases/single_step/reports/report_bam");
+fn test_cases_x_single_step_x_reports_x_report_x_basic() {
+    println!("Test case is in: test_cases/single_step/reports/report/basic");
     run_test(
-        std::path::Path::new("../test_cases/single_step/reports/report_bam"),
+        std::path::Path::new("../test_cases/single_step/reports/report/basic"),
         "input.toml",
         1,
     );
 }
 
 #[test]
-fn test_cases_x_single_step_x_reports_x_report_depduplication_per_fragment() {
-    println!("Test case is in: test_cases/single_step/reports/report_depduplication_per_fragment");
+fn test_cases_x_single_step_x_reports_x_report_x_depduplication_per_fragment() {
+    println!("Test case is in: test_cases/single_step/reports/report/depduplication_per_fragment");
     run_test(
         std::path::Path::new(
-            "../test_cases/single_step/reports/report_depduplication_per_fragment",
+            "../test_cases/single_step/reports/report/depduplication_per_fragment",
         ),
         "input.toml",
         1,
@@ -7114,73 +7114,83 @@ fn test_cases_x_single_step_x_reports_x_report_depduplication_per_fragment() {
 }
 
 #[test]
-fn test_cases_x_single_step_x_reports_x_report_fasta() {
-    println!("Test case is in: test_cases/single_step/reports/report_fasta");
+fn test_cases_x_single_step_x_reports_x_report_x_duplicate_label() {
+    println!("Test case is in: test_cases/single_step/reports/report/duplicate_label");
     run_test(
-        std::path::Path::new("../test_cases/single_step/reports/report_fasta"),
+        std::path::Path::new("../test_cases/single_step/reports/report/duplicate_label"),
         "input.toml",
         1,
     );
 }
 
 #[test]
-fn test_cases_x_single_step_x_reports_x_report_fasta_more_than_one_block() {
-    println!("Test case is in: test_cases/single_step/reports/report_fasta_more_than_one_block");
+fn test_cases_x_single_step_x_reports_x_report_x_fasta() {
+    println!("Test case is in: test_cases/single_step/reports/report/fasta");
     run_test(
-        std::path::Path::new("../test_cases/single_step/reports/report_fasta_more_than_one_block"),
+        std::path::Path::new("../test_cases/single_step/reports/report/fasta"),
         "input.toml",
         1,
     );
 }
 
 #[test]
-fn test_cases_x_single_step_x_reports_x_report_no_output() {
-    println!("Test case is in: test_cases/single_step/reports/report_no_output");
+fn test_cases_x_single_step_x_reports_x_report_x_fasta_more_than_one_block() {
+    println!("Test case is in: test_cases/single_step/reports/report/fasta_more_than_one_block");
     run_test(
-        std::path::Path::new("../test_cases/single_step/reports/report_no_output"),
+        std::path::Path::new("../test_cases/single_step/reports/report/fasta_more_than_one_block"),
         "input.toml",
         1,
     );
 }
 
 #[test]
-fn test_cases_x_single_step_x_reports_x_report_ordering() {
-    println!("Test case is in: test_cases/single_step/reports/report_ordering");
+fn test_cases_x_single_step_x_reports_x_report_x_no_output() {
+    println!("Test case is in: test_cases/single_step/reports/report/no_output");
     run_test(
-        std::path::Path::new("../test_cases/single_step/reports/report_ordering"),
+        std::path::Path::new("../test_cases/single_step/reports/report/no_output"),
         "input.toml",
         1,
     );
 }
 
 #[test]
-fn test_cases_x_single_step_x_reports_x_report_pe() {
-    println!("Test case is in: test_cases/single_step/reports/report_pe");
+fn test_cases_x_single_step_x_reports_x_report_x_ordering() {
+    println!("Test case is in: test_cases/single_step/reports/report/ordering");
     run_test(
-        std::path::Path::new("../test_cases/single_step/reports/report_pe"),
+        std::path::Path::new("../test_cases/single_step/reports/report/ordering"),
         "input.toml",
         1,
     );
 }
 
 #[test]
-fn test_cases_x_single_step_x_reports_x_report_tag_histogram_x_basic() {
-    println!("Test case is in: test_cases/single_step/reports/report_tag_histogram/basic");
+fn test_cases_x_single_step_x_reports_x_report_x_pe() {
+    println!("Test case is in: test_cases/single_step/reports/report/pe");
     run_test(
-        std::path::Path::new("../test_cases/single_step/reports/report_tag_histogram/basic"),
+        std::path::Path::new("../test_cases/single_step/reports/report/pe"),
         "input.toml",
         1,
     );
 }
 
 #[test]
-fn test_cases_x_single_step_x_reports_x_report_tag_histogram_x_tag_not_defined() {
+fn test_cases_x_single_step_x_reports_x_report_x_tag_histogram_x_basic() {
+    println!("Test case is in: test_cases/single_step/reports/report/tag_histogram/basic");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/reports/report/tag_histogram/basic"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_reports_x_report_x_tag_histogram_x_tag_not_defined() {
     println!(
-        "Test case is in: test_cases/single_step/reports/report_tag_histogram/tag_not_defined"
+        "Test case is in: test_cases/single_step/reports/report/tag_histogram/tag_not_defined"
     );
     run_test(
         std::path::Path::new(
-            "../test_cases/single_step/reports/report_tag_histogram/tag_not_defined",
+            "../test_cases/single_step/reports/report/tag_histogram/tag_not_defined",
         ),
         "input.toml",
         1,

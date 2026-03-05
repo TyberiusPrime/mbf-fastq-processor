@@ -1352,6 +1352,20 @@ impl PartialConfig {
                                 .to_string(),
                         );
                     }
+
+                    //now let's go and run the inter-transformation checks
+                    if let Some(trafos) = self.transform.as_mut() {
+                        for idx in 0..trafos.len() {
+                            let (before, rest) = trafos.split_at_mut(idx);
+                            if let Some(trafo) = rest[0].as_mut() {
+                                trafo.verify_others(
+                                    self.input.as_ref(),
+                                    self.output.as_ref().and_then(|o| o.as_ref()),
+                                    before,
+                                );
+                            }
+                        }
+                    }
                 }
             }
         }

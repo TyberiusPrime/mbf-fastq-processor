@@ -3,14 +3,14 @@ Error 1/1
    ╭─config.toml
    ┆
 12 │ [[step]]
-13 │ 	action = 'TrimAtTag'
-   ┆           ─────┬─────
-   ┆                │
-   ┆                ╰────── In this step
-14 │ 	in_label = 'barcode'
-   ┆             ────┬────
-   ┆                 │
-   ┆                 ╰───── Incompatible tag type
+13 │     action = 'TrimAtTag'
+   ┆              ─────┬─────
+   ┆                   │
+   ┆                   ╰────── In this step
+14 │     in_label = 'barcode'
+   ┆                ────┬────
+   ┆                    │
+   ┆                    ╰───── Incompatible tag type
 ───╯
 Hint: This transform requires tag 'barcode' to be one of the following types: [Location],
       but it is actually of type 'String'.

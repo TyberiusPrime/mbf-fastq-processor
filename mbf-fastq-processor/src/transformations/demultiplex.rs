@@ -99,16 +99,6 @@ impl Step for Demultiplex {
     //     true
     // }
 
-    fn validate_others(
-        &self,
-        _input_def: &crate::config::Input,
-        _output_def: Option<&crate::config::Output>,
-        all_transforms: &[Transformation],
-        this_transforms_index: usize,
-    ) -> Result<()> {
-        Ok(())
-    }
-
     fn init(
         &mut self,
         input_info: &InputInfo,

@@ -60,6 +60,47 @@ impl TagUser for PartialTaggedVariant<PartialTrimAtTag> {
             ..Default::default()
         }
     }
+
+    fn verify_others(
+        &mut self,
+        _input_def: Option<&crate::config::PartialInput>,
+        _output_def: Option<&crate::config::PartialOutput>,
+        transformations_before_this_one: &[TomlValue<PartialTransformation>],
+    ) {
+        let inner = self
+            .toml_value
+            .as_mut()
+            .expect("get_tag_usage should only be called after successful verification");
+        for trafo in transformations_before_this_one.iter() {
+            if let Some(PartialTransformation::ExtractRegions(tv_extract_region_config)) =
+                trafo.as_ref()
+                && let Some(extract_region_config) = tv_extract_region_config.toml_value.as_ref()
+                && let Some(region_out_label) = extract_region_config.out_label.as_ref()
+                && let Some(regions) = &&extract_region_config.regions.as_ref()
+                && regions.len() != 1
+                && let Some(in_label) = inner.in_label.as_ref()
+                && region_out_label == in_label
+            {
+                let spans = vec![
+                    (
+                        self.toml_value.span(),
+                        "TrimAtTag does not support multiple regions.".to_string(),
+                    ),
+                    (
+                        extract_region_config.regions.span(),
+                        "The regions were generated here".to_string(),
+                    ),
+                ];
+                self.toml_value.state = TomlValueState::Custom { spans };
+                self.toml_value.help = Some(
+                    "Adjust your regions to cover only one span on the reads\n\
+                        This is an implementation limitation, not a design one, PR welcome."
+                        .to_string(),
+                );
+                return;
+            }
+        }
+    }
 }
 
 impl Step for TrimAtTag {

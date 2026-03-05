@@ -6,7 +6,7 @@ Error 1/1
 6 │   action= 'ValidateReadPairing'
   ┆           ──────────┬──────────┬
   ┆                     │          │
-  ┆                     ╰─────────── In this step
+  ┆                     ╰──────────── In this step
   ┆                                │
   ┆                                ╰─ ValidateReadPairing requires at least two input segments
 ──╯

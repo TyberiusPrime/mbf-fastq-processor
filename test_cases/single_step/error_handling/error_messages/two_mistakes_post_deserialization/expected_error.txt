@@ -11,10 +11,10 @@ Error 1/2
   ┆          ─┬─
   ┆           │
   ┆           ╰── 1 characters
-7 │ 	qual = "AB"
-  ┆         ──┬─
-  ┆           │
-  ┆           ╰── 2 characters
+7 │     qual = "AB"
+  ┆            ──┬─
+  ┆              │
+  ┆              ╰── 2 characters
 ──╯
 Hint: 'seq' and 'qual' must be the same length
       See https://doc_url.example/version-stripped-from-test/docs/reference/Prefix
@@ -27,10 +27,10 @@ Error 2/2
    ┆              ────┬────
    ┆                  │
    ┆                  ╰───── In this step
-11 │ 	seq = "AA"
-   ┆        ──┬─
-   ┆          │
-   ┆          ╰── 2 characters
+11 │     seq = "AA"
+   ┆           ──┬─
+   ┆             │
+   ┆             ╰── 2 characters
 12 │     qual = 'B'
    ┆            ─┬─
    ┆             │
