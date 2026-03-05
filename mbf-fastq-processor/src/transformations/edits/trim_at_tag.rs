@@ -104,31 +104,6 @@ impl TagUser for PartialTaggedVariant<PartialTrimAtTag> {
 }
 
 impl Step for TrimAtTag {
-    fn validate_others(
-        &self,
-        _input_def: &crate::config::Input,
-        _output_def: Option<&crate::config::Output>,
-        all_transforms: &[Transformation],
-        _this_transforms_index: usize,
-    ) -> Result<()> {
-        for transformation in all_transforms {
-            if let Transformation::ExtractRegions(extract_region_config) = transformation
-                && extract_region_config.out_label == self.in_label
-                && extract_region_config.regions.len() != 1
-            {
-                bail!(
-                    "ExtractRegions and TrimAtTag only work together on single-entry regions. Label involved: {}",
-                    self.in_label
-                );
-            }
-        }
-        Ok(())
-    }
-
-    //to cut location tags
-    fn must_see_all_tags(&self) -> bool {
-        true
-    }
 
     #[allow(clippy::too_many_lines)]
     fn apply(

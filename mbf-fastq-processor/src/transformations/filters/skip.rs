@@ -27,13 +27,19 @@ impl VerifyIn<PartialConfig> for PartialSkip {
 }
 
 impl TagUser for PartialTaggedVariant<PartialSkip> {
-    //default is ok, no tags
+    fn get_tag_usage(
+        &mut self,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
+        _segment_order: &[String],
+    ) -> TagUsageInfo<'_> {
+        TagUsageInfo {
+            must_see_all_tags: false, //true TODO test case!
+            ..Default::default()
+        }
+    }
 }
 
 impl Step for Skip {
-    fn must_see_all_tags(&self) -> bool {
-        true
-    }
 
     fn init(
         &mut self,

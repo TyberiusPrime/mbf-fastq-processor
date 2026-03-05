@@ -1,5 +1,4 @@
 #![allow(clippy::unnecessary_wraps)]
-use std::sync::OnceLock;
 
 //eserde false positives
 use crate::transformations::prelude::*;
@@ -44,10 +43,6 @@ pub struct ConcatTags {
 
     /// Output tag label for the concatenated result
     out_label: TagLabel,
-
-    #[tpd(skip, default)]
-    #[schemars(skip)]
-    output_tag_type: OnceLock<TagValueType>,
 
     /// Separator to use when concatenating strings (optional, defaults to empty)
     separator: Option<String>,

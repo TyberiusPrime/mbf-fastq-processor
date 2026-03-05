@@ -50,7 +50,7 @@ impl TagUser for PartialTaggedVariant<PartialExpectedError> {
         &mut self,
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
-    ) -> TagUsageInfo {
+    ) -> TagUsageInfo<'_> {
         let inner = self
             .toml_value
             .as_mut()

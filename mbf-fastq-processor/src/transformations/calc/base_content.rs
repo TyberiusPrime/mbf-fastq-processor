@@ -119,26 +119,6 @@ impl PartialBaseContent {
 }
 
 impl BaseContent {
-    fn new(
-        out_label: TagLabel,
-        segment: SegmentIndexOrAll,
-        relative: bool,
-        bases_to_count: BString,
-        bases_to_ignore: BString,
-    ) -> Self {
-        let bases_to_count_lookup = build_lookup(&bases_to_count);
-        let bases_to_ignore_lookup = build_lookup(&bases_to_ignore);
-
-        Self {
-            out_label,
-            segment,
-            relative,
-            bases_to_count,
-            bases_to_ignore,
-            bases_to_count_lookup,
-            bases_to_ignore_lookup,
-        }
-    }
 
     fn sequence_totals(
         sequence: &[u8],
