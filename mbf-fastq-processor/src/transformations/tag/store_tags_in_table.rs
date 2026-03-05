@@ -98,17 +98,19 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagsInTable> {
             &mut self.toml_value.help,
         )));
         TagUsageInfo {
-            must_see_all_tags: true,
-            // used_tags: tags_available
-            //     .iter()
-            //     .map(|(tag, _metadata)| {
-            //         Some(UsedTag {
-            //             name: tag.clone(),
-            //             accepted_tag_types: ANY_TAG_TYPE,
-            //             toml_source: toml_source.clone(),
-            //         })
-            //     })
-            //     .collect(),
+            must_see_all_tags: true, // while this means the apply() sees them all, it does not
+            // register them as 'used tags'
+            used_tags: tags_available //we still need to name them, so they don't appear unused
+                .iter()
+                .map(|(tag, _metadata)| {
+                    Some(UsedTag {
+                        name: tag.clone(),
+                        accepted_tag_types: ANY_TAG_TYPE,
+                        toml_source: toml_source.clone(),
+                        further_help: None
+                    })
+                })
+                .collect(),
             ..Default::default()
         }
     }

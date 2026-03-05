@@ -96,8 +96,8 @@ impl TagUser for PartialTaggedVariant<PartialRegions> {
             if !matches!(source, crate::config::ResolvedSourceNoAll::Segment(_)) {
                 all_segments = false;
             }
-            any_tags = true;
             if let Some(source_tags) = source.get_tags() {
+                any_tags = true;
                 let toml_source =
                     Rc::new(RefCell::new((&mut tv_region.state, &mut tv_region.help)));
                 for entry in source_tags {
