@@ -1,4 +1,4 @@
-ReadName
-Read10
-Read8
-Read6
+ReadName	even	len1	reg1
+Read10	1	51	A
+Read8	1	51	G
+Read6	1	51	G

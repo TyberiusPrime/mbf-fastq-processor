@@ -1,8 +1,10 @@
 #![allow(clippy::unnecessary_wraps)]
 //eserde false positives
+use crate::dna::TagValue;
 use crate::io::FastQBlock;
 use crate::transformations::{extend_seed, prelude::*};
 use rand::Rng;
+use std::collections::HashMap;
 
 /// Fairly sample reads (expensive!)
 #[derive(Clone, JsonSchema)]
@@ -19,6 +21,10 @@ pub struct ReservoirSample {
     #[tpd(skip, default)] // eserde compatibility
     #[schemars(skip)]
     pub counts: Option<Arc<Mutex<DemultiplexedData<usize>>>>,
+
+    #[tpd(skip, default)]
+    #[schemars(skip)]
+    pub tag_buffers: Option<Arc<Mutex<DemultiplexedData<HashMap<TagLabel, Vec<TagValue>>>>>>,
 
     #[tpd(skip, default)]
     #[schemars(skip)]
@@ -78,6 +84,7 @@ impl Step for ReservoirSample {
         ))));
         self.buffers = Some(Arc::new(Mutex::new(DemultiplexedData::new())));
         self.counts = Some(Arc::new(Mutex::new(DemultiplexedData::new())));
+        self.tag_buffers = Some(Arc::new(Mutex::new(DemultiplexedData::new())));
         Ok(None)
     }
     fn apply(
@@ -93,7 +100,6 @@ impl Step for ReservoirSample {
             .expect("rng mutex poisoned")
             .as_mut()
             .expect("rng must be initialized before process()");
-        let mut pseudo_iter = block.get_pseudo_iter_including_tag();
 
         let mut buffer_lock = self
             .buffers
@@ -109,24 +115,47 @@ impl Step for ReservoirSample {
             .lock();
         let counts = counts_lock.as_mut().expect("counts mutex poisoned");
 
-        while let Some((molecule, demultiplex_tag)) = pseudo_iter.pseudo_next() {
+        let mut tag_buffer_lock = self
+            .tag_buffers
+            .as_ref()
+            .expect("tag_buffers not set in init?")
+            .lock();
+        let tag_buffers = tag_buffer_lock
+            .as_mut()
+            .expect("tag_buffers mutex poisoned");
+
+        let block_len = block.len();
+        for pos in 0..block_len {
+            let demultiplex_tag = block.output_tags.as_ref().map_or(0, |tags| tags[pos]);
             let out = buffers.entry(demultiplex_tag).or_default();
+            let tag_out = tag_buffers.entry(demultiplex_tag).or_default();
             let i = counts.entry(demultiplex_tag).or_insert(0);
             *i += 1;
 
             if out.is_empty() || out[0].len() < self.n {
-                for (segment_no, read) in molecule.segments.iter().enumerate() {
+                for (segment_no, segment) in block.segments.iter().enumerate() {
                     if out.len() <= segment_no {
                         out.push(FastQBlock::empty());
                     }
-                    out[segment_no].append_read(read);
+                    out[segment_no].append_read(&segment.get(pos));
+                }
+                for (label, values) in &block.tags {
+                    tag_out
+                        .entry(label.clone())
+                        .or_default()
+                        .push(values[pos].clone());
                 }
             } else {
                 //algorithm R
                 let j = rng.random_range(1..=*i);
                 if j <= self.n {
-                    for (ii, read) in molecule.segments.iter().enumerate() {
-                        out[ii].replace_read(j - 1, read);
+                    for (ii, segment) in block.segments.iter().enumerate() {
+                        out[ii].replace_read(j - 1, &segment.get(pos));
+                    }
+                    for (label, values) in &block.tags {
+                        if let Some(tag_buf) = tag_out.get_mut(label) {
+                            tag_buf[j - 1] = values[pos].clone();
+                        }
                     }
                 }
             }
@@ -137,6 +166,7 @@ impl Step for ReservoirSample {
             //storage, I suppose.
             let mut output = block.empty();
             let buffers = buffers.replace(DemultiplexedData::new());
+            let tag_bufs = tag_buffers.replace(DemultiplexedData::new());
             for (demultiplex_tag, reads) in buffers {
                 if let Some(demultiplex_tags) = output.output_tags.as_mut() {
                     for _ in 0..reads[0].len() {
@@ -148,11 +178,26 @@ impl Step for ReservoirSample {
                         output.segments[segment_no].append_read(&molecule.get(read_idx));
                     }
                 }
+                if let Some(tag_map) = tag_bufs.get(&demultiplex_tag) {
+                    for (label, values) in tag_map {
+                        output
+                            .tags
+                            .entry(label.clone())
+                            .or_default()
+                            .extend(values.iter().cloned());
+                    }
+                }
             }
             Ok((output, true))
         } else {
-            // Return empty block to continue processing
-            Ok((block.empty(), true))
+            // Return empty block to continue processing, but preserve tag keys
+            // so downstream steps (e.g. StoreTagsInTable) can discover tag labels
+            // before the final block arrives.
+            let mut empty = block.empty();
+            for label in block.tags.keys() {
+                empty.tags.insert(label.clone(), Vec::new());
+            }
+            Ok((empty, true))
         }
     }
 
