@@ -1,11 +1,11 @@
 use anyhow::{Context, Result, bail};
 use ex::fs;
+use mbf_fastq_processor_io::STDIN_MAGIC_PATH;
 use regex::Regex;
 use std::borrow::Cow;
 use std::io::Write;
 use std::path::Path;
 use std::time::Duration;
-use mbf_fastq_processor_parser::STDIN_MAGIC_PATH;
 
 #[allow(clippy::too_many_lines)]
 pub fn verify_outputs(
@@ -769,8 +769,14 @@ impl ExpectedFailure {
         );
 
         //write to stderr file
-        std::fs::write(temp_toml_path.parent().expect("No parent for temp_toml_path?").join("stderr"), &stderr)
-            .context("Failed to write actual stderr to file")?;
+        std::fs::write(
+            temp_toml_path
+                .parent()
+                .expect("No parent for temp_toml_path?")
+                .join("stderr"),
+            &stderr,
+        )
+        .context("Failed to write actual stderr to file")?;
 
         match self {
             ExpectedFailure::ExactText(expected_text) => {
@@ -904,24 +910,25 @@ fn create_symlinks_for_files(
     } else if let Some(paths) = value.as_array() {
         for v in paths {
             if let Some(path_str) = v.as_str()
-                && path_str != STDIN_MAGIC_PATH {
-                    let source_path = source_dir.join(path_str);
-                    let target_path = target_dir.join(path_str);
+                && path_str != STDIN_MAGIC_PATH
+            {
+                let source_path = source_dir.join(path_str);
+                let target_path = target_dir.join(path_str);
 
-                    // Create parent directories if they don't exist
-                    if let Some(parent) = target_path.parent() {
-                        std::fs::create_dir_all(parent).with_context(|| {
-                            format!(
-                                "Failed to create parent directories for {}",
-                                target_path.display()
-                            )
-                        })?;
-                    }
-
-                    create_symlink(&source_path, &target_path)?;
+                // Create parent directories if they don't exist
+                if let Some(parent) = target_path.parent() {
+                    std::fs::create_dir_all(parent).with_context(|| {
+                        format!(
+                            "Failed to create parent directories for {}",
+                            target_path.display()
+                        )
+                    })?;
                 }
-                // else: non-string value (e.g. integer) — skip silently; the
-                // processor will report the type error during config validation.
+
+                create_symlink(&source_path, &target_path)?;
+            }
+            // else: non-string value (e.g. integer) — skip silently; the
+            // processor will report the type error during config validation.
         }
     }
     Ok(())

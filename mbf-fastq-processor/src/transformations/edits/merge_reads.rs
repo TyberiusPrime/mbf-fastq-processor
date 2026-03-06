@@ -1,7 +1,7 @@
-use mbf_fastq_processor_deser::dna::{TagValue, reverse_complement};
+use mbf_fastq_processor_dna::dna::{TagValue, reverse_complement};
 
-use mbf_fastq_processor_parser::io::WrappedFastQReadMut;
 use crate::transformations::prelude::*;
+use mbf_fastq_processor_io::io::WrappedFastQReadMut;
 use std::borrow::Cow;
 use std::cell::RefCell;
 
@@ -145,12 +145,13 @@ impl VerifyIn<PartialConfig> for PartialMergeReads {
         });
         self.spacer_quality_char.verify(|opt_v| {
             if let Some(v) = opt_v
-                && !(33..=126).contains(v) {
-                    return Err(ValidationFailure::new(
-                        "Invalid value. Must be in [33..126]",
-                        Some("Set a valid value."),
-                    ));
-                }
+                && !(33..=126).contains(v)
+            {
+                return Err(ValidationFailure::new(
+                    "Invalid value. Must be in [33..126]",
+                    Some("Set a valid value."),
+                ));
+            }
             Ok(())
         });
 

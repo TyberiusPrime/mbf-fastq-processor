@@ -1,8 +1,8 @@
 use crate::transformations::prelude::*;
 use indexmap::IndexMap;
-use mbf_fastq_processor_deser::dna::reverse_complement;
-use mbf_fastq_processor_parser::STDIN_MAGIC_PATH;
-use mbf_fastq_processor_parser::io::apply_to_read_sequences;
+use mbf_fastq_processor_dna::dna::reverse_complement;
+use mbf_fastq_processor_io::STDIN_MAGIC_PATH;
+use mbf_fastq_processor_io::io::apply_to_read_sequences;
 
 fn default_min_count() -> usize {
     1

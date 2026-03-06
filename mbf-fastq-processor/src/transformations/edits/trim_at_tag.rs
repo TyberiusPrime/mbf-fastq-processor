@@ -1,4 +1,4 @@
-use mbf_fastq_processor_deser::dna::HitRegion;
+use mbf_fastq_processor_dna::dna::HitRegion;
 
 use crate::transformations::prelude::*;
 

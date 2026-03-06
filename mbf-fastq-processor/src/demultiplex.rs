@@ -1,13 +1,15 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-use mbf_fastq_processor_parser::CompressionFormat;
-use mbf_fastq_processor_parser::io::compressed_output::{HashedAndCompressedWriterSingleCore, OutputWriter};
 use crate::join_nonempty;
 use anyhow::{Context, Result};
 use bstr::BString;
 use indexmap::IndexMap;
-use mbf_fastq_processor_deser::dna::iupac_hamming_distance;
+use mbf_fastq_processor_dna::dna::iupac_hamming_distance;
+use mbf_fastq_processor_io::CompressionFormat;
+use mbf_fastq_processor_io::io::compressed_output::{
+    HashedAndCompressedWriterSingleCore, OutputWriter,
+};
 
 pub type Tag = u64;
 
@@ -17,8 +19,6 @@ pub struct DemultiplexedData<T>(BTreeMap<Tag, T>);
 // explicitly not DemultiplexedData, for that is uncloneable at runtime
 // since we use it in the unclonable needs_serial stages
 pub type DemultiplexTagToName = BTreeMap<Tag, Option<String>>;
-
-
 
 #[derive(Default, Clone)]
 pub struct DemultiplexedOutputFiles(pub DemultiplexedData<Option<Box<OutputWriter>>>);
@@ -193,8 +193,7 @@ impl DemultiplexInfo {
             return Some(*tag);
         } else if !barcode.is_empty() {
             for (bc, tag) in &self.local_barcode_to_tag {
-                if bc.len() == barcode.len() && iupac_hamming_distance(bc, barcode) == 0
-                {
+                if bc.len() == barcode.len() && iupac_hamming_distance(bc, barcode) == 0 {
                     return Some(*tag);
                 }
             }

@@ -3,23 +3,23 @@
 use bstr::BString;
 use enum_dispatch::enum_dispatch;
 use indexmap::IndexMap;
-use mbf_fastq_processor_parser::io::FastQBlocksCombined;
+use mbf_fastq_processor_io::io::FastQBlocksCombined;
 use prelude::TagMetadata;
 use schemars::JsonSchema;
 use toml_pretty_deser::prelude::*;
 
-use std::{path::Path};
+use std::path::Path;
 
 use anyhow::Result;
 
-use crate::{
-    demultiplex::{DemultiplexBarcodes, OptDemultiplex},
-};
+use crate::demultiplex::{DemultiplexBarcodes, OptDemultiplex};
 use rand::SeedableRng;
 use scalable_cuckoo_filter::ScalableCuckooFilter;
 
-use mbf_fastq_processor_deser::{
-    DeclaredTag, RemovedTags, TagLabel, UsedTag, dna::TagValue, segments::{ResolvedSourceNoAll, SegmentIndex}
+use mbf_fastq_processor_config::{
+    DeclaredTag, RemovedTags, TagLabel, UsedTag,
+    dna::TagValue,
+    segments::{ResolvedSourceNoAll, SegmentIndex},
 };
 
 pub(crate) mod calc;
@@ -78,7 +78,6 @@ pub enum RegionAnchor {
     #[tpd(alias = "right")]
     End,
 }
-
 
 /// turn a u64 seed into a 32 byte seed for chacha
 fn extend_seed(seed: u64) -> [u8; 32] {
@@ -155,7 +154,6 @@ pub struct InputInfo {
     pub initial_filter_capacity: Option<usize>,
     pub use_rapidgzip: bool,
 }
-
 
 #[derive(Default, Debug)]
 pub struct TagUsageInfo<'a> {

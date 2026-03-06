@@ -5,8 +5,8 @@ use indexmap::IndexMap;
 use schemars::JsonSchema;
 use toml_pretty_deser::{Visitor, prelude::*};
 
-use mbf_fastq_processor_deser::{SegmentLabel, StringOrVecString, default_comment_insert_char};
-use mbf_fastq_processor_parser::{
+use mbf_fastq_processor_config::{SegmentLabel, StringOrVecString, default_comment_insert_char};
+use mbf_fastq_processor_io::{
     STDIN_MAGIC_PATH,
     io::input::{InputOptions, PartialInputOptions},
 };

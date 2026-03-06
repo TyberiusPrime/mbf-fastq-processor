@@ -13,7 +13,7 @@ use crate::io::parsers::ThreadCount;
 pub use input::{
     DetectedInputFormat, InputFile, InputFiles, open_file, open_input_file, total_file_size,
 };
-use mbf_fastq_processor_deser::{default_block_size, default_buffer_size};
+use mbf_fastq_processor_config::{default_block_size, default_buffer_size};
 pub use reads::{
     FastQBlock, FastQBlocksCombined, FastQElement, FastQRead, Position, SegmentsCombined,
     WrappedFastQRead, WrappedFastQReadMut, longest_suffix_that_is_a_prefix,

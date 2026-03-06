@@ -9,11 +9,11 @@ use crate::config::CheckedConfig;
 use crate::demultiplex::OptDemultiplex;
 use crate::join_nonempty;
 use crate::transformations::FinalizeReportResult;
-use mbf_fastq_processor_parser::io::{
+use mbf_fastq_processor_io::io::{
     self,
     compressed_output::{HashedAndCompressedWriter, SimulatedWriteFailure},
 };
-use mbf_fastq_processor_parser::{CompressionFormat, FileFormat};
+use mbf_fastq_processor_io::{CompressionFormat, FileFormat};
 use noodles::{bam, bgzf, sam};
 
 pub struct OutputRunMarker {
@@ -228,7 +228,7 @@ impl OutputFile<'_> {
 enum OutputFileHandle<'a> {
     Fastq(OutputWriter<'a>),
     Fasta(OutputWriter<'a>),
-    Bam(mbf_fastq_processor_parser::io::BamOutput<'a>),
+    Bam(mbf_fastq_processor_io::io::BamOutput<'a>),
     TemporarilyOutOfAction,
 }
 

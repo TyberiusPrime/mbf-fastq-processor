@@ -1,6 +1,5 @@
-use mbf_fastq_processor_deser::{tpd_adapt_bstring, tpd_adapt_regex, dna::Hits};
 use crate::transformations::prelude::*;
-
+use mbf_fastq_processor_config::{dna::Hits, tpd_adapt_bstring, tpd_adapt_regex};
 
 use super::extract_region_tags;
 use super::extract_string_tags;

@@ -1,7 +1,7 @@
 use crate::transformations::prelude::*;
 
 use super::extract_region_tags;
-use mbf_fastq_processor_deser::tpd_adapt_extract_base_or_dot;
+use mbf_fastq_processor_config::tpd_adapt_extract_base_or_dot;
 
 /// Extract ends that are homo-polymers into a tag
 #[derive(Clone, JsonSchema)]

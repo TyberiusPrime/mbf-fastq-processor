@@ -1,5 +1,5 @@
 [workspace]
-	members = ["mbf-fastq-processor", "mbf-fastq-processor-deser", "mbf-fastq-processor-parser"]
+	members = ["mbf-fastq-processor", "mbf-fastq-processor-dna", "mbf-fastq-processor-config", "mbf-fastq-processor-io"]
     resolver = "2"
 
 [workspace.lints.clippy]

@@ -1,6 +1,6 @@
 use crate::transformations::prelude::*;
 use indexmap::IndexMap;
-use mbf_fastq_processor_deser::dna::TagValue;
+use mbf_fastq_processor_dna::dna::TagValue;
 
 ///Create multiple output files based on a tag
 
@@ -70,12 +70,16 @@ impl VerifyIn<PartialConfig> for PartialDemultiplex {
                             .filter_map(|x| x.as_ref())
                             .collect::<Vec<_>>(),
                     ));
-                    self.barcodes.state =
-                        TomlValueState::new_validation_failed("Unknown barcode section".to_string());
+                    self.barcodes.state = TomlValueState::new_validation_failed(
+                        "Unknown barcode section".to_string(),
+                    );
                     return Ok(());
                 }
             } else {
-                self.barcodes.help = Some("There is no valid [barcodes.<barcodes_name>] section in your TOML. Add one.".to_string());
+                self.barcodes.help = Some(
+                    "There is no valid [barcodes.<barcodes_name>] section in your TOML. Add one."
+                        .to_string(),
+                );
                 self.barcodes.state =
                     TomlValueState::new_validation_failed("Unknown barcode section".to_string());
                 return Ok(());

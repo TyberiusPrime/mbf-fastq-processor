@@ -1,5 +1,5 @@
 [package]
-name = "mbf-fastq-processor-parser"
+name = "mbf-fastq-processor-io"
 edition.workspace = true
 version.workspace = true
 rust-version.workspace = true
@@ -22,11 +22,11 @@ exclude.workspace = true
   sha2 = {workspace = true}
   indexmap = {workspace = true}
   memchr = {workspace = true}
-  num_cpus = {workspace = true}
   mutants = {workspace = true}
   serde = {workspace = true}
 
-  mbf-fastq-processor-deser = {path = '../mbf-fastq-processor-deser'}
+  mbf-fastq-processor-dna = {path = "../mbf-fastq-processor-dna"}
+  mbf-fastq-processor-config = {path = "../mbf-fastq-processor-config"}
   schemars = {workspace = true}
   toml-pretty-deser = {workspace = true}
   flate2 = {workspace = true}

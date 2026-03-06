@@ -40,12 +40,13 @@ impl VerifyIn<PartialConfig> for PartialValidateReadPairing {
     {
         self.sample_stride.or_with(default_sample_stride);
         if let Some(input_config) = parent.input.as_ref()
-            && input_config.get_segment_order().len() < 2 {
-                return Err(ValidationFailure::new(
-                    "ValidateReadPairing requires at least two input segments",
-                    Some("Check your [input] section or remove the step"),
-                ));
-            }
+            && input_config.get_segment_order().len() < 2
+        {
+            return Err(ValidationFailure::new(
+                "ValidateReadPairing requires at least two input segments",
+                Some("Check your [input] section or remove the step"),
+            ));
+        }
         self.sample_stride.verify(|v|
             if *v == 0 {
                 Err(
@@ -114,9 +115,9 @@ impl Step for ValidateReadPairing {
                 let candidate_name = candidate.name();
 
                 if reference_name.len() == candidate_name.len() {
-                                    let dist = bio::alignment::distance::hamming(reference_name, candidate_name);
-                                    if dist > 1 {
-                                        bail!("ValidateReadPairing detected mismatched read names near read {global_index}.
+                    let dist = bio::alignment::distance::hamming(reference_name, candidate_name);
+                    if dist > 1 {
+                        bail!("ValidateReadPairing detected mismatched read names near read {global_index}.
                 Had a hamming distance above 1: {dist}
                 First segment's read: {reference_name}
                 Mismatched read     : {candidate_name}
@@ -128,9 +129,9 @@ impl Step for ValidateReadPairing {
                                         reference_name = BStr::new(reference_name),
                                         candidate_name = BStr::new(candidate_name),
                                     );
-                                    }
-                                } else {
-                                    bail!(
+                    }
+                } else {
+                    bail!(
                                         "ValidateReadPairing detected mismatched read name lengths.
                 Occured near read {global_index} (0-based, sampled every {} reads).
                 First segment name: {:?}, length {},
@@ -144,7 +145,7 @@ impl Step for ValidateReadPairing {
                                         BStr::new(candidate_name),
                                         candidate_name.len(),
                                     );
-                                }
+                }
             }
         }
         Ok((block, true))

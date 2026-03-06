@@ -1,7 +1,6 @@
-use mbf_fastq_processor_deser::{NonAmbigousDNA, default_segment_all};
+use mbf_fastq_processor_config::{NonAmbigousDNA, default_segment_all};
 
 use crate::transformations::prelude::*;
-
 
 /// Include a report at this position
 #[derive(JsonSchema)]

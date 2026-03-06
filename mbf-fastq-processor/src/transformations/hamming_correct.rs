@@ -1,5 +1,5 @@
 use indexmap::IndexMap;
-use mbf_fastq_processor_deser::dna::{contains_iupac_ambigous, iupac_hamming_distance, hamming};
+use mbf_fastq_processor_dna::dna::{contains_iupac_ambigous, hamming, iupac_hamming_distance};
 
 use crate::transformations::prelude::*;
 

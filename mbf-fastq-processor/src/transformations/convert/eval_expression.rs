@@ -1,7 +1,7 @@
 use crate::transformations::prelude::*;
 
 use fasteval::{Compiler, Evaler, Parser, Slab};
-use mbf_fastq_processor_deser::dna::TagValue;
+use mbf_fastq_processor_dna::dna::TagValue;
 use std::{
     cell::RefCell,
     collections::{BTreeMap, BTreeSet},

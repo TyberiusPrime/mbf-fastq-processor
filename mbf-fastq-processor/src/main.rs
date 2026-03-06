@@ -401,9 +401,7 @@ fn process_from_toml_file(toml_file: &Path, allow_overwrites: bool) {
         //     eprintln!("# == Documentation == \n(from the 'template' command)\n{indented_docs}\n",);
         // }
 
-        eprintln!(
-            "# == Error Details ==\n{e:?}",
-        );
+        eprintln!("# == Error Details ==\n{e:?}",);
         std::process::exit(1);
     }
 }
@@ -437,9 +435,7 @@ fn validate_config_file(toml_path: &Path) {
             //     );
             // }
 
-            eprintln!(
-                "# == Error Details ==\n{e:?}",
-            );
+            eprintln!("# == Error Details ==\n{e:?}",);
             std::process::exit(1);
         }
     }
@@ -454,9 +450,7 @@ fn verify_config_file(toml_file: &Path, output_dir: Option<PathBuf>, unsafe_prep
         }
         Err(e) => {
             eprintln!("Verification failed:\n");
-            eprintln!(
-                "# == Error Details ==\n{e:?}",
-            );
+            eprintln!("# == Error Details ==\n{e:?}",);
             std::process::exit(1);
         }
     }

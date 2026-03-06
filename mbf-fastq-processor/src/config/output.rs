@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
-use mbf_fastq_processor_deser::offer_alternatives;
-use mbf_fastq_processor_parser::{CompressionFormat, FileFormat};
+use mbf_fastq_processor_config::offer_alternatives;
+use mbf_fastq_processor_io::{CompressionFormat, FileFormat};
 use schemars::JsonSchema;
 use toml_pretty_deser::prelude::*;
 
@@ -200,7 +200,8 @@ impl PartialOutput {
                 let mut any_failed = false;
                 let all_seen: HashSet<String> = output_segments
                     .iter()
-                    .filter_map(|x| x.as_ref()).cloned()
+                    .filter_map(|x| x.as_ref())
+                    .cloned()
                     .collect();
                 for segment in output_segments.iter_mut() {
                     if let Some(segment_str) = segment.as_ref() {
@@ -241,7 +242,8 @@ impl PartialOutput {
                 let mut any_failed = false;
                 let all_seen: HashSet<String> = interleave_order
                     .iter()
-                    .filter_map(|x| x.as_ref()).cloned()
+                    .filter_map(|x| x.as_ref())
+                    .cloned()
                     .collect();
                 for segment in interleave_order.iter_mut() {
                     if let Some(segment_str) = segment.as_ref() {
@@ -291,16 +293,12 @@ impl PartialOutput {
                             {
                                 let spans = vec![
                                     (found.span(), "Duplicate output & interleave".to_string()),
-                                    (
-                                        segment.span(),
-                                        "Duplicate output & interleave".to_string(),
-                                    ),
+                                    (segment.span(), "Duplicate output & interleave".to_string()),
                                 ];
 
                                 found.state = TomlValueState::Custom { spans };
                                 found.help = Some(
-                                    "Remove from either 'interleaved' or from 'output'"
-                                        .to_string(),
+                                    "Remove from either 'interleaved' or from 'output'".to_string(),
                                 );
                             }
                         }

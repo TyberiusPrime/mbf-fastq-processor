@@ -4,7 +4,7 @@ use crate::transformations::prelude::*;
 
 use super::super::{PartialRegionDefinition, RegionDefinition, extract_regions};
 use bstr::ByteVec;
-use mbf_fastq_processor_deser::dna::{Hits, TagValue};
+use mbf_fastq_processor_dna::dna::{Hits, TagValue};
 use toml_pretty_deser::Visitor;
 
 /// Extract regions by coordinates
@@ -188,10 +188,7 @@ impl Step for Regions {
                 continue;
             }
             //all segments -> Location.
-            if matches!(
-                self.output_tag_type,
-                TagValueType::Location
-            ) {
+            if matches!(self.output_tag_type, TagValueType::Location) {
                 let mut h: Vec<Hit> = Vec::new();
                 for (seq, opt_coords) in extracted.into_iter().flatten() {
                     // eats Nones.

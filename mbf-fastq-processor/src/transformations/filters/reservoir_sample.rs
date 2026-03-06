@@ -1,5 +1,5 @@
-use mbf_fastq_processor_parser::io::FastQBlock;
 use crate::transformations::{extend_seed, prelude::*};
+use mbf_fastq_processor_io::io::FastQBlock;
 use rand::Rng;
 
 #[derive(Clone, Debug, Default)]

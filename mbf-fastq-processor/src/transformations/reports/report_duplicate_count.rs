@@ -1,8 +1,8 @@
-use mbf_fastq_processor_parser::io::WrappedFastQRead;
+use mbf_fastq_processor_io::io::WrappedFastQRead;
 
 use super::common::PerReadReportData;
 use crate::transformations::prelude::*;
-use crate::{transformations::tag::calculate_filter_capacity};
+use crate::transformations::tag::calculate_filter_capacity;
 
 #[derive(Default, Debug, Clone)]
 pub struct DuplicateCountData {

@@ -1,4 +1,4 @@
-use mbf_fastq_processor_deser::dna::TagValue;
+use mbf_fastq_processor_dna::dna::TagValue;
 
 use crate::transformations::prelude::*;
 

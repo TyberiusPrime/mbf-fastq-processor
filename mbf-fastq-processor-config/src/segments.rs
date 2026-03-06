@@ -5,20 +5,12 @@ use std::{cell::RefCell, rc::Rc};
 use schemars::JsonSchema;
 use toml_pretty_deser::prelude::*;
 
-#[derive(Debug, Clone, Eq, PartialEq, Copy)]
-pub struct SegmentIndex(pub usize);
+pub use mbf_fastq_processor_dna::segments::SegmentIndex;
 
 #[derive(Debug, Clone, Eq, PartialEq, Copy, JsonSchema)]
 pub enum SegmentIndexOrAll {
     All,
     Indexed(usize),
-}
-
-impl SegmentIndex {
-    #[must_use]
-    pub fn get_index(&self) -> usize {
-        self.0
-    }
 }
 
 impl TryInto<SegmentIndex> for SegmentIndexOrAll {
@@ -31,17 +23,6 @@ impl TryInto<SegmentIndex> for SegmentIndexOrAll {
         }
     }
 }
-
-// #[derive(Clone, Eq, PartialEq, JsonSchema)]
-// #[tpd]
-// #[derive(Debug)]
-// pub struct SegmentSequenceOrName(pub String);
-
-/* impl Default for SegmentSequenceOrName {
-    fn default() -> Self {
-        SegmentSequenceOrName(":::first_and_only_segment".to_string())
-    }
-} */
 
 #[derive(Debug, Clone, Eq, PartialEq, Copy)]
 pub enum SegmentOrNameIndex {
@@ -151,16 +132,11 @@ impl ResolvedSourceAll {
 
     //that's the ones we're going to use
     #[must_use]
-    pub fn get_tags(
-        &self,
-    ) -> Option<Vec<(TagLabel, &'static [TagValueType])>> {
+    pub fn get_tags(&self) -> Option<Vec<(TagLabel, &'static [TagValueType])>> {
         match &self {
             ResolvedSourceAll::Tag(tag_name) => Some(vec![(
                 tag_name.clone(),
-                &[
-                    TagValueType::String,
-                    TagValueType::Location,
-                ],
+                &[TagValueType::String, TagValueType::Location],
             )]),
             _ => None,
         }

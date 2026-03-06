@@ -1,16 +1,13 @@
 use crate::transformations::prelude::*;
 
-use crate::{
-    transformations::prelude::ValidateSegment,
-};
+use crate::transformations::prelude::ValidateSegment;
 
-use super::{
-    apply_in_place_wrapped_with_tag, 
-    store_tag_in_comment,
-};
+use super::{apply_in_place_wrapped_with_tag, store_tag_in_comment};
 
-use mbf_fastq_processor_deser::{default_comment_insert_char, default_comment_separator, tpd_adapt_u8_from_byte_or_char};
-use mbf_fastq_processor_parser::io::WrappedFastQReadMut;
+use mbf_fastq_processor_config::{
+    default_comment_insert_char, default_comment_separator, tpd_adapt_u8_from_byte_or_char,
+};
+use mbf_fastq_processor_io::io::WrappedFastQReadMut;
 
 /// Store currently present tag locations as
 /// {tag}_location=target:start-end,target:start-end

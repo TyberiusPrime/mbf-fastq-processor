@@ -8,8 +8,8 @@ use super::super::extract_bool_tags;
 use super::ApproxOrExactFilter;
 use crate::transformations::tag::initial_filter_elements;
 
-use mbf_fastq_processor_deser::tpd_adapt_u8_from_byte_or_char;
-use mbf_fastq_processor_parser::io::{apply_to_read_names, apply_to_read_sequences};
+use mbf_fastq_processor_config::tpd_adapt_u8_from_byte_or_char;
+use mbf_fastq_processor_io::io::{apply_to_read_names, apply_to_read_sequences};
 /// Tag whether reads are in another file (by sequence)
 #[derive(Clone, JsonSchema)]
 #[tpd]
@@ -94,12 +94,13 @@ impl VerifyIn<PartialConfig> for PartialOtherFile {
         self.source.verify(|v| {
             if let Some(output_tag) = self.out_label.as_ref()
                 && let MustAdapt::PostVerify(ResolvedSourceNoAll::Tag(input_tag)) = v
-                && output_tag == input_tag {
-                    return Err(ValidationFailure::new(
-                        "Source cannot be the same as output tag",
-                        Some("The source (segment or tag) cannot be the same as the output tag"),
-                    ));
-                }
+                && output_tag == input_tag
+            {
+                return Err(ValidationFailure::new(
+                    "Source cannot be the same as output tag",
+                    Some("The source (segment or tag) cannot be the same as the output tag"),
+                ));
+            }
             Ok(())
         });
         Ok(())
@@ -140,30 +141,31 @@ impl TagUser for PartialTaggedVariant<PartialOtherFile> {
             for trafo in transformations_before_this_one.iter().rev() {
                 if let Some(PartialTransformation::StoreTagInComment(info)) = trafo.as_ref()
                     && let Some(info) = info.toml_value.as_ref()
-                        && let Some(info_comment_char) = info.comment_separator.as_ref()
-                        && let Some(read_comment_character) = input_def
-                            .options
-                            .as_ref()
-                            .and_then(|x| x.read_comment_character.as_ref())
-                        && *info_comment_char != *read_comment_character {
-                            let spans = vec![
-                                (
-                                    info.comment_separator.span(),
-                                    "Must match to options.read_comment_character".to_string(),
-                                ),
-                                (
-                                    input_def
-                                        .options
-                                        .as_ref()
-                                        .map_or(0..0, |x| x.read_comment_character.span()),
-                                    "Must match with StoreTagInComment step's comment_separator"
-                                        .to_string(),
-                                ),
-                            ];
-                            self.toml_value.state = TomlValueState::Custom { spans };
-                            self.toml_value.help = Some("Adjust them to be identical.".to_string());
-                            return;
-                        }
+                    && let Some(info_comment_char) = info.comment_separator.as_ref()
+                    && let Some(read_comment_character) = input_def
+                        .options
+                        .as_ref()
+                        .and_then(|x| x.read_comment_character.as_ref())
+                    && *info_comment_char != *read_comment_character
+                {
+                    let spans = vec![
+                        (
+                            info.comment_separator.span(),
+                            "Must match to options.read_comment_character".to_string(),
+                        ),
+                        (
+                            input_def
+                                .options
+                                .as_ref()
+                                .map_or(0..0, |x| x.read_comment_character.span()),
+                            "Must match with StoreTagInComment step's comment_separator"
+                                .to_string(),
+                        ),
+                    ];
+                    self.toml_value.state = TomlValueState::Custom { spans };
+                    self.toml_value.help = Some("Adjust them to be identical.".to_string());
+                    return;
+                }
             }
         }
     }
@@ -213,7 +215,7 @@ impl Step for OtherFile {
                     },
                     self.include_mapped,
                     self.include_unmapped,
-                    input_info.use_rapidgzip
+                    input_info.use_rapidgzip,
                 )?;
             }
             ResolvedSourceNoAll::Name { .. } => {
@@ -232,7 +234,7 @@ impl Step for OtherFile {
                     },
                     self.include_mapped,
                     self.include_unmapped,
-                    input_info.use_rapidgzip
+                    input_info.use_rapidgzip,
                 )?;
             }
         }

@@ -1,6 +1,6 @@
-use mbf_fastq_processor_parser::{CompressionFormat, FileFormat};
-use mbf_fastq_processor_parser::io::output::compressed_output::HashedAndCompressedWriter;
 use crate::transformations::prelude::*;
+use mbf_fastq_processor_io::io::output::compressed_output::HashedAndCompressedWriter;
+use mbf_fastq_processor_io::{CompressionFormat, FileFormat};
 use std::io::Write;
 
 pub type NameSeqQualTuple = (Vec<u8>, Vec<u8>, Vec<u8>, DemultiplexTag);

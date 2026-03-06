@@ -1,5 +1,5 @@
 use crate::transformations::prelude::*;
-use mbf_fastq_processor_deser::{tpd_adapt_bstring, tpd_adapt_regex};
+use mbf_fastq_processor_config::{tpd_adapt_bstring, tpd_adapt_regex};
 use std::sync::atomic::Ordering;
 
 use bstr::ByteSlice;

@@ -1,8 +1,8 @@
 use std::sync::atomic::Ordering;
 
-use crate::transformations::{prelude::*, read_name_canonical_prefix_strict};
 use crate::transformations::validation::read_pairing::default_sample_stride;
-use mbf_fastq_processor_deser::tpd_adapt_u8_from_byte_or_char;
+use crate::transformations::{prelude::*, read_name_canonical_prefix_strict};
+use mbf_fastq_processor_config::tpd_adapt_u8_from_byte_or_char;
 
 /// Validate that read names between segments match
 #[derive(JsonSchema)]
@@ -29,12 +29,13 @@ impl VerifyIn<PartialConfig> for PartialValidateName {
         Self: Sized + toml_pretty_deser::Visitor,
     {
         if let Some(input_config) = parent.input.as_ref()
-            && input_config.get_segment_order().len() < 2 {
-                return Err(ValidationFailure::new(
-                    "ValidateName requires at least two input segments",
-                    Some("Check your [input] section or remove the step"),
-                ));
-            }
+            && input_config.get_segment_order().len() < 2
+        {
+            return Err(ValidationFailure::new(
+                "ValidateName requires at least two input segments",
+                Some("Check your [input] section or remove the step"),
+            ));
+        }
         self.sample_stride.or_with(default_sample_stride);
         self.sample_stride.verify(|v|
             if *v == 0 {

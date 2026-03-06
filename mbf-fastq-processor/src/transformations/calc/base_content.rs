@@ -1,5 +1,5 @@
-use mbf_fastq_processor_deser::tpd_adapt_bstring_uppercase;
 use crate::transformations::prelude::*;
+use mbf_fastq_processor_config::tpd_adapt_bstring_uppercase;
 
 use super::extract_numeric_tags_plus_all;
 

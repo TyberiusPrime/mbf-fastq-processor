@@ -1,14 +1,12 @@
 use anyhow::{Result, bail};
 use bstr::BString;
 use indexmap::IndexMap;
-use mbf_fastq_processor_deser::dna::find_iupac;
-use mbf_fastq_processor_deser::dna::find_iupac_with_indel;
-use mbf_fastq_processor_deser::dna::reverse_complement_iupac;
-use mbf_fastq_processor_deser::{
-    TagLabel,
-    dna::{Anchor, HitRegion, Hits, TagValue, hamming},
-    segments::{SegmentIndex, SegmentIndexOrAll},
+use mbf_fastq_processor_config::{TagLabel, segments::SegmentIndexOrAll};
+use mbf_fastq_processor_dna::dna::{
+    Anchor, HitRegion, Hits, TagValue, find_iupac, find_iupac_with_indel, hamming,
+    reverse_complement_iupac,
 };
+use mbf_fastq_processor_dna::segments::SegmentIndex;
 
 use super::Range;
 

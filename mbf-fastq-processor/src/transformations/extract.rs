@@ -18,16 +18,17 @@ pub use iupac_with_indel::{IUPACWithIndel, PartialIUPACWithIndel};
 pub use longest_poly_x::{LongestPolyX, PartialLongestPolyX};
 pub use low_quality_end::{LowQualityEnd, PartialLowQualityEnd};
 pub use low_quality_start::{LowQualityStart, PartialLowQualityStart};
-use mbf_fastq_processor_parser::io::{FastQBlocksCombined, WrappedFastQRead};
+use mbf_fastq_processor_io::io::{FastQBlocksCombined, WrappedFastQRead};
 pub use poly_tail::{PartialPolyTail, PolyTail};
 pub use regex::{PartialRegex, Regex};
 pub use region::{PartialRegion, Region};
 pub use regions::{PartialRegions, Regions};
 pub use regions_of_low_quality::{PartialRegionsOfLowQuality, RegionsOfLowQuality};
 
-use mbf_fastq_processor_deser::{
+use mbf_fastq_processor_config::{
+    TagLabel,
+    dna::{Hits, TagValue},
     segments::{SegmentIndex, SegmentIndexOrAll},
-    TagLabel, dna::{TagValue, Hits}
 };
 
 use super::prelude::DemultiplexTag;

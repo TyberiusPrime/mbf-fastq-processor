@@ -1,4 +1,4 @@
-use mbf_fastq_processor_parser::io::WrappedFastQRead;
+use mbf_fastq_processor_io::io::WrappedFastQRead;
 
 use crate::transformations::prelude::*;
 

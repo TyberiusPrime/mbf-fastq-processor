@@ -1,5 +1,5 @@
 [package]
-name = "mbf-fastq-processor-deser"
+name = "mbf-fastq-processor-dna"
 edition.workspace = true
 version.workspace = true
 rust-version.workspace = true
@@ -15,15 +15,10 @@ exclude.workspace = true
 
 [dependencies]
 	bstr = {workspace = true}
-	toml-pretty-deser = {workspace = true}
-	schemars = {workspace = true}
-	regex = {workspace = true}
-	serde = {workspace = true}
-	mutants = {workspace = true}
-	anyhow = {workspace = true}
-	toml_edit = {workspace = true}
 	bio = {workspace = true}
 	triple_accel = {workspace = true}
+	toml-pretty-deser = {workspace = true}
+	schemars = {workspace = true}
 
 [lints]
 workspace = true

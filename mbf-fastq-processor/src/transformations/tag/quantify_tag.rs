@@ -1,9 +1,9 @@
 use crate::transformations::prelude::*;
-use mbf_fastq_processor_parser::CompressionFormat;
+use mbf_fastq_processor_io::CompressionFormat;
 
 use std::collections::BTreeMap;
 
-use mbf_fastq_processor_deser::{default_region_separator, tpd_adapt_bstring};
+use mbf_fastq_processor_config::{default_region_separator, tpd_adapt_bstring};
 
 type QuantifyTagCollector = Arc<Mutex<DemultiplexedData<BTreeMap<Vec<u8>, usize>>>>;
 

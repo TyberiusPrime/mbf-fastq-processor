@@ -1,11 +1,11 @@
 #![allow(clippy::struct_field_names)]
 use crate::config::{PartialConfig, StructuredInput};
 use anyhow::{Context, Result};
-use mbf_fastq_processor_deser::{
+use mbf_fastq_processor_config::{
     default_block_size, default_buffer_size, default_output_buffer_size,
     default_spot_check_read_pairing,
 };
-use mbf_fastq_processor_parser::io::output::compressed_output::{
+use mbf_fastq_processor_io::io::output::compressed_output::{
     SimulatedWriteError, SimulatedWriteFailure,
 };
 use schemars::JsonSchema;

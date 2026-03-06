@@ -5,7 +5,7 @@ pub(crate) use super::{
 };
 pub(crate) use crate::config::{PartialConfig, TagMetadata, ValidateSegment};
 
-pub use mbf_fastq_processor_deser::{
+pub use mbf_fastq_processor_config::{
     ConditionalTagLabel, RemovedTags, TagLabel, TagValueType, ToDeclaredTag, ToUsedTag, ToUsedTags,
     UsedTag,
     dna::{Hit, HitRegion, Hits, TagValue},
@@ -20,7 +20,7 @@ pub(crate) use crate::demultiplex::{
 };
 
 pub(crate) use anyhow::{Context, Result, anyhow, bail};
-pub(crate) use mbf_fastq_processor_parser::io::{
+pub(crate) use mbf_fastq_processor_io::io::{
     FastQBlocksCombined, output::compressed_output::OutputWriter, reads::NewLocation,
 };
 

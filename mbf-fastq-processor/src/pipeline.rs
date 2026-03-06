@@ -15,10 +15,11 @@ use crate::{
     output::{open_output_files, output_block, output_html_report, output_json_report},
     transformations::{self, FinalizeReportResult, Step, Transformation},
 };
-use mbf_fastq_processor_parser::
-    io::{
-        self, input::InputOptions, parsers::{ChainedParser, ThreadCount}
-    };
+use mbf_fastq_processor_io::io::{
+    self,
+    input::InputOptions,
+    parsers::{ChainedParser, ThreadCount},
+};
 
 #[allow(clippy::collapsible_if)]
 fn parse_and_send(
@@ -64,7 +65,7 @@ fn parse_interleaved_and_send(
     buffer_size: usize,
     input_thread_count: ThreadCount,
     block_size: usize,
-    input_options:InputOptions,
+    input_options: InputOptions,
 ) -> Result<()> {
     let mut parser = ChainedParser::new(
         readers,

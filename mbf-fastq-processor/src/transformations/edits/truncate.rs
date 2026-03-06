@@ -23,7 +23,7 @@ impl VerifyIn<PartialConfig> for PartialTruncate {
         Self: Sized + toml_pretty_deser::Visitor,
     {
         self.segment.validate_segment(parent);
-      
+
         Ok(())
     }
 }

@@ -1,7 +1,6 @@
-use mbf_fastq_processor_deser::dna::HitRegion;
+use mbf_fastq_processor_dna::dna::HitRegion;
 
 use crate::transformations::prelude::*;
-
 
 /// Cut a fixed number of bases from the start of reads
 #[derive(Clone, JsonSchema)]

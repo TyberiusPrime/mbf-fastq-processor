@@ -1098,8 +1098,9 @@ dependencies = [
  "json_value_merge",
  "libc",
  "log",
- "mbf-fastq-processor-deser",
- "mbf-fastq-processor-parser",
+ "mbf-fastq-processor-config",
+ "mbf-fastq-processor-dna",
+ "mbf-fastq-processor-io",
  "memchr",
  "mutants 0.0.3",
  "niffler",
@@ -1125,23 +1126,34 @@ dependencies = [
 ]
 
 [[package]]
-name = "mbf-fastq-processor-deser"
+name = "mbf-fastq-processor-config"
 version = "0.8.1"
 dependencies = [
  "anyhow",
- "bio",
  "bstr",
+ "mbf-fastq-processor-dna",
  "mutants 0.0.3",
+ "num_cpus",
  "regex",
  "schemars",
  "serde",
  "toml-pretty-deser",
  "toml_edit",
+]
+
+[[package]]
+name = "mbf-fastq-processor-dna"
+version = "0.8.1"
+dependencies = [
+ "bio",
+ "bstr",
+ "schemars",
+ "toml-pretty-deser",
  "triple_accel",
 ]
 
 [[package]]
-name = "mbf-fastq-processor-parser"
+name = "mbf-fastq-processor-io"
 version = "0.8.1"
 dependencies = [
  "anyhow",
@@ -1151,12 +1163,12 @@ dependencies = [
  "flate2",
  "gzp",
  "indexmap",
- "mbf-fastq-processor-deser",
+ "mbf-fastq-processor-config",
+ "mbf-fastq-processor-dna",
  "memchr",
  "mutants 0.0.3",
  "niffler",
  "noodles",
- "num_cpus",
  "schemars",
  "serde",
  "sha2",

@@ -8,15 +8,18 @@ mod qualified_bases;
 
 mod gc_content;
 
-
 pub use base_content::{BaseContent, PartialBaseContent};
 pub use complexity::{Complexity, PartialComplexity};
 pub use expected_error::{ExpectedError, PartialExpectedError};
 pub use gc_content::{GCContent, PartialGCContent};
 pub use kmers::{Kmers, PartialKmers};
 pub use length::{Length, PartialLength};
-use mbf_fastq_processor_deser::{TagLabel, dna::TagValue, segments::{SegmentIndex, SegmentIndexOrAll}};
-use mbf_fastq_processor_parser::io::{FastQBlocksCombined, WrappedFastQRead};
+use mbf_fastq_processor_config::{
+    TagLabel,
+    dna::TagValue,
+    segments::{SegmentIndex, SegmentIndexOrAll},
+};
+use mbf_fastq_processor_io::io::{FastQBlocksCombined, WrappedFastQRead};
 pub use n_count::{NCount, PartialNCount};
 pub use qualified_bases::{PartialQualifiedBases, QualifiedBases};
 

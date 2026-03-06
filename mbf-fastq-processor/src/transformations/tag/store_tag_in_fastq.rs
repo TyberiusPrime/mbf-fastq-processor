@@ -1,10 +1,10 @@
 use super::{format_numeric_for_comment, store_tag_in_comment};
 use crate::transformations::prelude::*;
-use mbf_fastq_processor_deser::{
+use mbf_fastq_processor_config::{
     default_comment_insert_char, default_comment_separator, default_region_separator,
     tpd_adapt_bstring, tpd_adapt_u8_from_byte_or_char,
 };
-use mbf_fastq_processor_parser::{CompressionFormat, FileFormat};
+use mbf_fastq_processor_io::{CompressionFormat, FileFormat};
 use std::io::Write;
 
 /// Store tag values into FASTQ files.

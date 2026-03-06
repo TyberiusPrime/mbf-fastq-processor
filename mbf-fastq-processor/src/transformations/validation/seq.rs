@@ -1,6 +1,5 @@
 use crate::transformations::prelude::*;
-use mbf_fastq_processor_deser::tpd_adapt_bstring;
-
+use mbf_fastq_processor_config::tpd_adapt_bstring;
 
 /// Validate that the sequence is only consisting of the specified bases
 #[derive(Clone, JsonSchema)]

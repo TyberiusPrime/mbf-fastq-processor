@@ -4,8 +4,8 @@ use bio::alignment::{
     pairwise::{Aligner, MIN_SCORE, Scoring},
 };
 use bstr::{BString, ByteVec};
-use schemars::JsonSchema;
 
+use schemars::JsonSchema;
 use toml_pretty_deser::prelude::*;
 
 pub use triple_accel::hamming;
@@ -89,21 +89,7 @@ impl TagValue {
             _ => None,
         }
     }
-
-    // //currently unused
-    // pub fn as_bool(&self) -> Option<bool> {
-    //     match self {
-    //         TagValue::Bool(n) => Some(*n),
-    //         _ => None,
-    //     }
-    // }
 }
-//
-// impl From<f64> for TagValue {
-//     fn from(value: f64) -> Self {
-//         TagValue::Numeric(value)
-//     }
-// }
 
 impl HitRegion {
     pub fn is_empty(&self) -> bool {
@@ -111,13 +97,6 @@ impl HitRegion {
     }
 }
 impl Hits {
-    /* pub fn new(start: usize, len: usize, target: Segment) -> Self {
-        Hit {
-            regions: vec![HitRegion { start, len, target }],
-            replacement: None,
-        }
-    } */
-
     pub fn new(start: usize, len: usize, segment_index: SegmentIndex, sequence: BString) -> Self {
         Hits(vec![Hit {
             location: Some(HitRegion {
@@ -162,21 +141,11 @@ impl Hits {
         }
         total
     }
-
-    /* pub fn replacement_or_seq<'a>(&'a self, seq: &'a [u8]) -> &'a [u8] {
-        if let Some(sequence) = self.sequence.as_ref() {
-            sequence
-        } else {
-            assert!(self.regions.len() == 0, "Hit has no sequence, but multiple regions. That needs to be prevented when creating the read. Use new_with_replacemetn");
-            &seq[self.regions[0].start..self.regions[0].start + self.regions[0].len]
-        }
-    } */
 }
 
 /// Where to search
-#[derive(Copy, Clone, JsonSchema)]
+#[derive(Copy, Clone, Debug, JsonSchema)]
 #[tpd]
-#[derive(Debug)]
 pub enum Anchor {
     #[tpd(alias = "left")]
     Left,

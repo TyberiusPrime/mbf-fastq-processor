@@ -10,7 +10,7 @@ use super::parsers;
 use super::reads::SegmentsCombined;
 use crate::io::parsers::ThreadCount;
 use crate::{CompressionFormat, STDIN_MAGIC_PATH};
-use mbf_fastq_processor_deser::{default_comment_insert_char, tpd_adapt_u8_from_byte_or_char};
+use mbf_fastq_processor_config::{default_comment_insert_char, tpd_adapt_u8_from_byte_or_char};
 
 pub enum InputFile {
     Fastq(ex::fs::File, Option<PathBuf>),

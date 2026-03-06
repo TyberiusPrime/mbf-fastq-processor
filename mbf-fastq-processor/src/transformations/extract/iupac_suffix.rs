@@ -1,5 +1,5 @@
-use mbf_fastq_processor_deser::{tpd_adapt_dna_bstring, dna::hamming};
 use crate::transformations::prelude::*;
+use mbf_fastq_processor_config::{dna::hamming, tpd_adapt_dna_bstring};
 
 use super::extract_region_tags;
 

@@ -49,8 +49,9 @@ indexmap.workspace = true
 	scalable_cuckoo_filter = {workspace = true}
 	serde = {workspace = true}
 	serde_json = {workspace = true}
-    mbf-fastq-processor-deser = {path = "../mbf-fastq-processor-deser"}
-    mbf-fastq-processor-parser = {path = "../mbf-fastq-processor-parser"}
+    mbf-fastq-processor-dna = {path = "../mbf-fastq-processor-dna"}
+    mbf-fastq-processor-config = {path = "../mbf-fastq-processor-config"}
+    mbf-fastq-processor-io = {path = "../mbf-fastq-processor-io"}
 	sha2 = {workspace = true}
 	tempfile = {workspace = true}
 	toml = {workspace = true}

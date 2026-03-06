@@ -1,9 +1,11 @@
 use toml_pretty_deser::prelude::*;
 
 use crate::config::PartialConfig;
-use mbf_fastq_processor_deser::{
+use mbf_fastq_processor_config::{
     TagLabel, offer_alternatives,
-    segments::{ResolvedSourceAll, ResolvedSourceNoAll, SegmentIndex, SegmentIndexOrAll, SegmentOrNameIndex},
+    segments::{
+        ResolvedSourceAll, ResolvedSourceNoAll, SegmentIndex, SegmentIndexOrAll, SegmentOrNameIndex,
+    },
 };
 
 pub trait ValidateSegment {

@@ -4,7 +4,7 @@ pub mod process;
 pub mod validate;
 pub mod verify;
 
-pub (crate) fn link_docs(step_name: &str) -> String {
+pub(crate) fn link_docs(step_name: &str) -> String {
     format!(
         "{}v{}/docs/reference/{}",
         env!("CARGO_PKG_HOMEPAGE"),
