@@ -1,16 +1,10 @@
-#![allow(dead_code)] //TODO
-#![allow(unused_imports)] //TODO
-#![allow(unused_mut)] //TODO
-#![allow(unused_variables)] //TODO
-//
-#![allow(clippy::unnecessary_wraps)] //eserde false positives TODO
-#![allow(clippy::struct_excessive_bools)]
+//#![allow(clippy::struct_excessive_bools)]
 use crate::config::deser::TagLabel;
 use crate::config::options::default_block_size;
 // output false positive, directly on struct doesn't work
 //
 use crate::io::{self, DetectedInputFormat};
-use crate::transformations::{PartialTransformation, Step, TagValueType, Transformation};
+use crate::transformations::{PartialTransformation, TagValueType, Transformation};
 use anyhow::{Result, anyhow, bail};
 use bstr::BString;
 use indexmap::IndexMap;
@@ -18,8 +12,7 @@ use schemars::JsonSchema;
 use std::cell::RefCell;
 use std::collections::{BTreeMap, HashSet};
 use std::path::Path;
-use std::sync::{Arc, Mutex};
-use toml_pretty_deser::{PartialTaggedVariant, Visitor, prelude::*};
+use toml_pretty_deser::prelude::*;
 
 pub mod deser;
 mod input;
@@ -84,7 +77,7 @@ pub fn validate_segment_label(
         "threads_per_segment",
         "tpd_field_match_mode",
     ] {
-        if match_mode.matches(label, *prohibited) {
+        if match_mode.matches(label, prohibited) {
             bail!(
                 "'{prohibited}' is not allowed as a segment label, as it could be confused with an existing option name or an internal. Please choose a different segment name, or prefix in with 'options.' if you meant the option."
             );
@@ -249,7 +242,7 @@ impl PartialConfig {
                     }
                 }
             }
-            for (_filename, spans) in seen_files.into_iter() {
+            for (_filename, spans) in seen_files {
                 if spans.len() > 1 {
                     let spans = spans
                         .into_iter()
@@ -289,8 +282,10 @@ impl PartialConfig {
             x.iter_mut().find(|t| {
                 matches!(
                     t.as_ref(),
-                    Some(PartialTransformation::Report { .. })
-                        | Some(PartialTransformation::_InternalReadCount { .. })
+                    Some(
+                        PartialTransformation::Report { .. }
+                            | PartialTransformation::_InternalReadCount { .. }
+                    )
                 )
             })
         });
@@ -320,20 +315,18 @@ impl PartialConfig {
                 .as_ref()
                 .and_then(|x| x.as_ref())
                 .map(|x| &x.report_html)
+                && let Some(true) = tv_report_html.as_ref()
             {
-                if let Some(true) = tv_report_html.as_ref() {
-                    spans.push((tv_report_html.span(), "Set to true?".to_string()));
-                }
+                spans.push((tv_report_html.span(), "Set to true?".to_string()));
             }
             if let Some(tv_report_json) = self
                 .output
                 .as_ref()
                 .and_then(|x| x.as_ref())
                 .map(|x| &x.report_json)
+                && let Some(true) = tv_report_json.as_ref()
             {
-                if let Some(true) = tv_report_json.as_ref() {
-                    spans.push((tv_report_json.span(), "Set to true?".to_string()));
-                }
+                spans.push((tv_report_json.span(), "Set to true?".to_string()));
             }
             if spans.is_empty() {
                 spans.push((
@@ -357,14 +350,14 @@ impl PartialConfig {
                                 .toml_value
                                 .as_ref()
                                 .and_then(|x| x.name.as_ref())
-                                .map(|x| x.to_string())
+                                .cloned()
                         } else if let PartialTransformation::_InternalReadCount(config) = transform
                         {
                             config
                                 .toml_value
                                 .as_ref()
                                 .and_then(|x| x.out_label.as_ref())
-                                .map(|x| x.to_string())
+                                .map(std::string::ToString::to_string)
                         } else {
                             None
                         };
@@ -381,7 +374,7 @@ impl PartialConfig {
                     }
                 }
             }
-            for (report_name, mut transforms) in report_names_to_spans.into_iter() {
+            for (report_name, mut transforms) in report_names_to_spans {
                 if transforms.len() > 1 {
                     let spans = transforms
                         .iter()
@@ -458,42 +451,36 @@ impl PartialConfig {
             .output
             .as_ref()
             .and_then(|x| x.as_ref())
-            .map(|o| {
+            .is_some_and(|o| {
                 o.stdout.as_ref().copied().unwrap_or(false)
                     || o.output
                         .as_ref()
-                        .map(|inner| inner.as_ref().map_or(true, |v| !v.is_empty()))
-                        .unwrap_or(true)
+                        .is_none_or(|inner| inner.as_ref().is_none_or(|v| !v.is_empty()))
                     || o.interleave
                         .as_ref()
                         .and_then(|inner| inner.as_ref())
-                        .map(|v| !v.is_empty())
-                        .unwrap_or(false)
-            })
-            .unwrap_or(false);
+                        .is_some_and(|v| !v.is_empty())
+            });
         let has_report_output = self
             .output
             .as_ref()
             .and_then(|x| x.as_ref())
-            .map(|o| {
+            .is_some_and(|o| {
                 o.report_html.as_ref().copied().unwrap_or(false)
                     || o.report_json.as_ref().copied().unwrap_or(false)
-            })
-            .unwrap_or(false);
-        let has_tag_output = self
-            .transform
-            .as_ref()
-            .map(|transforms| {
-                transforms.iter().any(|t| {
-                    matches!(
-                        t.as_ref(),
-                        Some(PartialTransformation::StoreTagInFastQ(..))
-                            | Some(PartialTransformation::StoreTagsInTable(..))
-                            | Some(PartialTransformation::Inspect(..))
+            });
+        let has_tag_output = self.transform.as_ref().is_some_and(|transforms| {
+            transforms.iter().any(|t| {
+                matches!(
+                    t.as_ref(),
+                    Some(
+                        PartialTransformation::StoreTagInFastQ(..)
+                            | PartialTransformation::StoreTagsInTable(..)
+                            | PartialTransformation::Inspect(..)
                     )
-                })
+                )
             })
-            .unwrap_or(false);
+        });
         let is_benchmark = self
             .benchmark
             .as_ref()
@@ -516,16 +503,16 @@ impl PartialConfig {
     fn verify_barcodes(&mut self) {
         // Check that barcode names are unique across all barcodes sections
         if let Some(Some(barcodes)) = self.barcodes.as_mut() {
-            for (_section_name, tv_barcodes) in barcodes.map.iter_mut() {
+            for (_section_name, tv_barcodes) in &mut barcodes.map {
                 if let Some(barcodes) = tv_barcodes.as_mut()
                     && let Some(barcodes) = barcodes.barcode_to_name.as_mut()
                 {
-                    for key in barcodes.keys.iter_mut() {
-                        if let Some(key_str) = key.as_ref() {
-                            if !crate::dna::all_iupac_or_underscore(key_str.as_bytes()) {
-                                key.state = TomlValueState::new_validation_failed("Invalid value");
-                                key.help = Some("Barcode contains non-IUPAC / spacer characters. Only A,C,G,T, IUPAC ambiguity codes and '_' are allowed.".to_string());
-                            }
+                    for key in &mut barcodes.keys {
+                        if let Some(key_str) = key.as_ref()
+                            && !crate::dna::all_iupac_or_underscore(key_str.as_bytes())
+                        {
+                            key.state = TomlValueState::new_validation_failed("Invalid value");
+                            key.help = Some("Barcode contains non-IUPAC / spacer characters. Only A,C,G,T, IUPAC ambiguity codes and '_' are allowed.".to_string());
                         }
                     }
                     if barcodes.map.is_empty() {
@@ -541,7 +528,7 @@ impl PartialConfig {
                     // assert that barcodes have all the same length
 
                     let mut lengths: HashSet<usize> = HashSet::new();
-                    for (iupac_key, barcode_name) in barcodes.map.iter_mut() {
+                    for (iupac_key, barcode_name) in &mut barcodes.map {
                         if let Some(barcode_name_str) = barcode_name.as_ref() {
                             if barcode_name_str == "no-barcode" {
                                 barcode_name.state = TomlValueState::new_validation_failed(
@@ -557,7 +544,7 @@ impl PartialConfig {
                         tv_barcodes.state =
                             TomlValueState::new_validation_failed("Barcodes of different lengths");
                         let mut lengths: Vec<_> = lengths.into_iter().collect();
-                        lengths.sort();
+                        lengths.sort_unstable();
                         tv_barcodes.help = Some(format!(
                             "All barcodes in one section must have the same length. Observed lengths: {lengths:?}"
                         ));
@@ -644,7 +631,7 @@ impl PartialConfig {
                 }
                 StructuredInput::Segmented { .. } => {
                     if let Some(segments) = input.segments.as_mut() {
-                        for tv_segment in segments.keys.iter_mut() {
+                        for tv_segment in &mut segments.keys {
                             if let Some(segment) = tv_segment.as_mut() {
                                 segment_names.insert(segment.clone(), tv_segment);
                             }
@@ -653,25 +640,25 @@ impl PartialConfig {
                 }
             }
 
-            for tv_barcode_name in barcodes.keys.iter_mut() {
-                if let Some(barcode_name) = tv_barcode_name.as_ref() {
-                    if let Some(tv_segment) = segment_names.get(barcode_name) {
-                        tv_barcode_name.state = TomlValueState::Custom {
-                            spans: vec![
-                                (
-                                    tv_barcode_name.span(),
-                                    "This barcode name collides with a segment name".to_string(),
-                                ),
-                                (
-                                    tv_segment.span(),
-                                    "Segment with the same name defined here".to_string(),
-                                ),
-                            ],
-                        };
-                        tv_barcode_name.help = Some(
+            for tv_barcode_name in &mut barcodes.keys {
+                if let Some(barcode_name) = tv_barcode_name.as_ref()
+                    && let Some(tv_segment) = segment_names.get(barcode_name)
+                {
+                    tv_barcode_name.state = TomlValueState::Custom {
+                        spans: vec![
+                            (
+                                tv_barcode_name.span(),
+                                "This barcode name collides with a segment name".to_string(),
+                            ),
+                            (
+                                tv_segment.span(),
+                                "Segment with the same name defined here".to_string(),
+                            ),
+                        ],
+                    };
+                    tv_barcode_name.help = Some(
                             "Barcode names must not collide with segment names. Please choose a different name for this barcode.".to_string(),
                         );
-                    }
                 }
             }
         }
@@ -935,7 +922,7 @@ impl PartialConfig {
     fn expand_spot_checks<F: FnMut(PartialTransformation)>(
         &self,
         mut push_new: F,
-        transforms: &Vec<TomlValue<PartialTransformation>>,
+        transforms: &[TomlValue<PartialTransformation>],
     ) {
         if let Some(options) = self.options.as_ref()
             && let Some(spot_check_read_pairing) = options.spot_check_read_pairing.as_ref()
@@ -983,11 +970,11 @@ impl PartialConfig {
         G: FnMut(TomlValue<PartialTransformation>),
     >(
         mut push_new: F,
-        mut push_existing: G,
+        _push_existing: G,
         res_report_labels: &mut Vec<String>,
         report_no: &mut usize,
         tv_config: &mut TomlValue<crate::transformations::reports::PartialReport>,
-        enum_tag_span: std::ops::Range<usize>,
+        _enum_tag_span: std::ops::Range<usize>,
     ) {
         use crate::transformations::reports;
         if let Some(config) = tv_config.as_ref() {
@@ -1071,7 +1058,7 @@ impl PartialConfig {
                                 *report_no,
                                 count_oligos
                                     .into_iter()
-                                    .filter_map(|x| x.into_inner())
+                                    .filter_map(toml_pretty_deser::TomlValue::into_inner)
                                     .map(|x| x.0)
                                     .collect(),
                                 config.count_oligos_segment.clone(),
@@ -1104,258 +1091,246 @@ impl PartialConfig {
         use crate::transformations::TagUser;
         let mut allowed_tags_per_stage: Vec<Vec<TagLabel>> = Vec::new();
         let mut tags_available: IndexMap<TagLabel, TagMetadata> = IndexMap::new();
-        if let Some(transformations) = self.transform.as_mut() {
-            if let Some(input) = self.input.as_ref() {
-                let mut just_trafos = transformations
-                    .iter_mut()
-                    .map(|t| t.as_mut().expect("parent was ok"))
-                    .collect::<Vec<_>>();
-                let mut all_tags_ever: IndexMap<String, std::ops::Range<usize>> = IndexMap::new();
-                let segment_order = input.get_segment_order();
-                let mut any_tag_errors = false;
-                for trafo in just_trafos.iter_mut() {
-                    //     if let err(e) =
-                    //         t.validate_others(&self.input, self.output.as_ref(), &self.transform, step_no)
-                    //     {
-                    //         errors.push(e.context(format!("[step {step_no} ({t})]:")));
-                    //         continue; // skip further processing of this transform if validation failed
-                    //     }
-                    let tag_info = trafo.get_tag_usage(&tags_available, segment_order);
-                    match tag_info.removed_tags {
-                        crate::transformations::RemovedTags::None => {}
-                        crate::transformations::RemovedTags::All => {
-                            for metadata in tags_available.values_mut() {
-                                metadata.used = true;
-                            }
-                            tags_available.clear();
+        if let Some(transformations) = self.transform.as_mut()
+            && let Some(input) = self.input.as_ref()
+        {
+            let mut just_trafos = transformations
+                .iter_mut()
+                .map(|t| t.as_mut().expect("parent was ok"))
+                .collect::<Vec<_>>();
+            let mut all_tags_ever: IndexMap<String, std::ops::Range<usize>> = IndexMap::new();
+            let segment_order = input.get_segment_order();
+            let mut any_tag_errors = false;
+            for trafo in &mut just_trafos {
+                //     if let err(e) =
+                //         t.validate_others(&self.input, self.output.as_ref(), &self.transform, step_no)
+                //     {
+                //         errors.push(e.context(format!("[step {step_no} ({t})]:")));
+                //         continue; // skip further processing of this transform if validation failed
+                //     }
+                let tag_info = trafo.get_tag_usage(&tags_available, segment_order);
+                match tag_info.removed_tags {
+                    crate::transformations::RemovedTags::None => {}
+                    crate::transformations::RemovedTags::All => {
+                        for metadata in tags_available.values_mut() {
+                            metadata.used = true;
                         }
-                        crate::transformations::RemovedTags::Some(tags) => {
-                            for (tag_name, toml_source) in tags {
-                                //no need to check if empty, empty will never be present
-                                if let Some(metadata) = tags_available.get_mut(&tag_name) {
-                                    metadata.used = true;
-                                } else {
-                                    any_tag_errors = true;
-                                    toml_source.state = TomlValueState::new_validation_failed(
-                                        format!("No such tag: '{tag_name}'",),
-                                    );
-                                    toml_source.help = Some(offer_alternatives(
-                                        &tag_name.0,
-                                        &tags_available.keys().map(|x| &x.0).collect::<Vec<_>>(),
-                                    ));
-                                    continue; //no point on doing anything else with this tag
-                                }
-                                tags_available.shift_remove(&tag_name);
+                        tags_available.clear();
+                    }
+                    crate::transformations::RemovedTags::Some(tags) => {
+                        for (tag_name, toml_source) in tags {
+                            //no need to check if empty, empty will never be present
+                            if let Some(metadata) = tags_available.get_mut(&tag_name) {
+                                metadata.used = true;
+                            } else {
+                                any_tag_errors = true;
+                                toml_source.state = TomlValueState::new_validation_failed(format!(
+                                    "No such tag: '{tag_name}'",
+                                ));
+                                toml_source.help = Some(offer_alternatives(
+                                    &tag_name.0,
+                                    &tags_available.keys().map(|x| &x.0).collect::<Vec<_>>(),
+                                ));
+                                continue; //no point on doing anything else with this tag
                             }
+                            tags_available.shift_remove(&tag_name);
                         }
                     }
+                }
 
-                    let mut tags_used_here: Vec<TagLabel> = Vec::new();
-                    if tag_info.must_see_all_tags {
-                        tags_used_here.extend(tags_available.keys().cloned());
-                    }
-                    for used_tag_info in tag_info.used_tags.iter().filter_map(|x| x.as_ref()) {
-                        let tag_name = &used_tag_info.name;
-                        let tag_types = &used_tag_info.accepted_tag_types;
-                        let toml_source = &used_tag_info.toml_source;
-                        //no need to check if empty, empty will never be present
-                        let entry = tags_available.get_mut(tag_name);
-                        match entry {
-                            Some(metadata) => {
-                                metadata.used = true;
-                                if !tag_types
-                                    .iter()
-                                    .any(|tag_type| tag_type.compatible(metadata.tag_type))
-                                {
-                                    any_tag_errors = true;
-                                    *toml_source.borrow_mut().0 =
-                                        TomlValueState::new_validation_failed(
-                                            "Incompatible tag type",
+                let mut tags_used_here: Vec<TagLabel> = Vec::new();
+                if tag_info.must_see_all_tags {
+                    tags_used_here.extend(tags_available.keys().cloned());
+                }
+                for used_tag_info in tag_info.used_tags.iter().filter_map(|x| x.as_ref()) {
+                    let tag_name = &used_tag_info.name;
+                    let tag_types = &used_tag_info.accepted_tag_types;
+                    let toml_source = &used_tag_info.toml_source;
+                    //no need to check if empty, empty will never be present
+                    let entry = tags_available.get_mut(tag_name);
+                    match entry {
+                        Some(metadata) => {
+                            metadata.used = true;
+                            if tag_types
+                                .iter()
+                                .any(|tag_type| tag_type.compatible(metadata.tag_type))
+                            {
+                                if !tag_info.must_see_all_tags {
+                                    //otherwise, we already have the tag in the list.
+                                    if tags_used_here.contains(tag_name) {
+                                        panic!(
+                                            "tag declared twice in our code, fix that! {tag_name}"
                                         );
-                                    let mut help_str = format!(
-                                        "This transform requires tag '{label}' to be one of the following types: {supposed_tag_types:?},\n\
-                                        but it is actually of type '{actual_tag_type}'.",
-                                        label = tag_name,
-                                        supposed_tag_types = tag_types,
-                                        actual_tag_type = metadata.tag_type
-                                    );
-                                    if let Some(further_help) = used_tag_info.further_help.as_ref()
-                                    {
-                                        help_str.push_str(&format!("\n{further_help}"));
-                                    }
-
-                                    *toml_source.borrow_mut().1 = Some(help_str);
-                                } else {
-                                    if !tag_info.must_see_all_tags {
-                                        //otherwise, we already have the tag in the list.
-                                        if tags_used_here.contains(tag_name) {
-                                            panic!(
-                                                "tag declared twice in our code, fix that! {tag_name}"
-                                            );
-                                        } else {
-                                            tags_used_here.push(tag_name.clone());
-                                        }
+                                    } else {
+                                        tags_used_here.push(tag_name.clone());
                                     }
                                 }
-                            }
-                            None => {
+                            } else {
                                 any_tag_errors = true;
                                 *toml_source.borrow_mut().0 =
-                                    TomlValueState::new_validation_failed("No such tag");
-                                if all_tags_ever.contains_key(&tag_name.0) {
-                                    *toml_source.borrow_mut().1 = Some(format!(
-                                        "Tag '{tag_name}' was generated by a previous step, but it is not available at this point.\n\
-                                        This likely means that it was removed (forgotten) by an intermediate step.\n{}",
-                                        offer_alternatives(
-                                            &tag_name.0,
-                                            &tags_available
-                                                .keys()
-                                                .map(|x| &x.0)
-                                                .collect::<Vec<_>>()
-                                        )
-                                    ));
-                                } else {
-                                    *toml_source.borrow_mut().1 = Some(offer_alternatives(
-                                        &tag_name.0,
-                                        &tags_available.keys().map(|x| &x.0).collect::<Vec<_>>(),
-                                    ));
+                                    TomlValueState::new_validation_failed("Incompatible tag type");
+                                let mut help_str = format!(
+                                    "This transform requires tag '{label}' to be one of the following types: {supposed_tag_types:?},\n\
+                                        but it is actually of type '{actual_tag_type}'.",
+                                    label = tag_name,
+                                    supposed_tag_types = tag_types,
+                                    actual_tag_type = metadata.tag_type
+                                );
+                                if let Some(further_help) = used_tag_info.further_help.as_ref() {
+                                    help_str.push_str(&format!("\n{further_help}"));
                                 }
+
+                                *toml_source.borrow_mut().1 = Some(help_str);
+                            }
+                        }
+                        None => {
+                            any_tag_errors = true;
+                            *toml_source.borrow_mut().0 =
+                                TomlValueState::new_validation_failed("No such tag");
+                            if all_tags_ever.contains_key(&tag_name.0) {
+                                *toml_source.borrow_mut().1 = Some(format!(
+                                    "Tag '{tag_name}' was generated by a previous step, but it is not available at this point.\n\
+                                        This likely means that it was removed (forgotten) by an intermediate step.\n{}",
+                                    offer_alternatives(
+                                        &tag_name.0,
+                                        &tags_available.keys().map(|x| &x.0).collect::<Vec<_>>()
+                                    )
+                                ));
+                            } else {
+                                *toml_source.borrow_mut().1 = Some(offer_alternatives(
+                                    &tag_name.0,
+                                    &tags_available.keys().map(|x| &x.0).collect::<Vec<_>>(),
+                                ));
                             }
                         }
                     }
-                    allowed_tags_per_stage.push(tags_used_here);
+                }
+                allowed_tags_per_stage.push(tags_used_here);
 
-                    if let Some(mut dt) = tag_info.declared_tag {
-                        if let Some(meta) = tags_available.get(&dt.name) {
-                            any_tag_errors = true;
+                if let Some(dt) = tag_info.declared_tag {
+                    if let Some(meta) = tags_available.get(&dt.name) {
+                        any_tag_errors = true;
+                        let spans = vec![
+                            (
+                                dt.toml_source_span.clone(),
+                                "Tag also declared here".to_string(),
+                            ),
+                            (meta.span.clone(), "Tag declared here ".to_string()),
+                        ];
+                        *dt.toml_source_state = TomlValueState::Custom { spans };
+                        *dt.toml_source_help = Some(
+                            "Rename either tag, or add a ForgetTag step inbetween.".to_string(),
+                        );
+                    } else {
+                        all_tags_ever.insert(dt.name.0.clone(), dt.toml_source_span.clone());
+                        tags_available.insert(
+                            dt.name.clone(),
+                            TagMetadata {
+                                used: false,
+                                tag_type: dt.tag_type,
+                                span: dt.toml_source_span,
+                            },
+                        );
+                    }
+                }
+            }
+            self.allowed_tags_per_transformation = Some(allowed_tags_per_stage);
+
+            //now verify the tags don't overlap barcodes or segments
+            if let Some(Some(barcodes)) = self.barcodes.as_mut() {
+                for tv_barcode in &mut barcodes.keys {
+                    if let Some(barcode_name) = tv_barcode.as_ref() {
+                        any_tag_errors = true;
+                        if all_tags_ever.contains_key(barcode_name) {
                             let spans = vec![
                                 (
-                                    dt.toml_source_span.clone(),
-                                    "Tag also declared here".to_string(),
+                                    tv_barcode.span(),
+                                    "Barcode with the same name as a tag defined here".to_string(),
                                 ),
-                                (meta.span.clone(), "Tag declared here ".to_string()),
+                                (
+                                    all_tags_ever
+                                        .get(barcode_name)
+                                        .expect("just checked contains_key")
+                                        .clone(),
+                                    "Tag with the same name as a barcode defined here".to_string(),
+                                ),
                             ];
-                            *dt.toml_source_state = TomlValueState::Custom { spans };
-                            *dt.toml_source_help = Some(
-                                "Rename either tag, or add a ForgetTag step inbetween.".to_string(),
-                            );
-                        } else {
-                            all_tags_ever.insert(dt.name.0.clone(), dt.toml_source_span.clone());
-                            tags_available.insert(
-                                dt.name.clone(),
-                                TagMetadata {
-                                    used: false,
-                                    tag_type: dt.tag_type,
-                                    span: dt.toml_source_span,
-                                },
-                            );
-                        }
-                    }
-                }
-                self.allowed_tags_per_transformation = Some(allowed_tags_per_stage);
-
-                //now verify the tags don't overlap barcodes or segments
-                if let Some(Some(barcodes)) = self.barcodes.as_mut() {
-                    for tv_barcode in barcodes.keys.iter_mut() {
-                        if let Some(barcode_name) = tv_barcode.as_ref() {
-                            any_tag_errors = true;
-                            if all_tags_ever.contains_key(barcode_name) {
-                                let spans = vec![
-                                    (
-                                        tv_barcode.span(),
-                                        "Barcode with the same name as a tag defined here"
-                                            .to_string(),
-                                    ),
-                                    (
-                                        all_tags_ever
-                                            .get(barcode_name)
-                                            .expect("just checked contains_key")
-                                            .clone(),
-                                        "Tag with the same name as a barcode defined here"
-                                            .to_string(),
-                                    ),
-                                ];
-                                tv_barcode.state = TomlValueState::Custom { spans };
-                                tv_barcode.help = Some(
+                            tv_barcode.state = TomlValueState::Custom { spans };
+                            tv_barcode.help = Some(
                             "Barcode names must not collide with tag names. Please choose a different name for this barcode.".to_string(),
                         );
-                            }
                         }
                     }
                 }
-                if let Some(input) = self.input.as_mut()
-                    && let Some(structured) = input.structured.as_ref()
-                {
-                    let segment_iter: Vec<&mut TomlValue<String>> = match structured {
-                        StructuredInput::Interleaved { .. } => input
-                            .interleaved
-                            .as_mut()
-                            .and_then(|x| x.as_mut())
-                            .map(|x| x.iter_mut().collect::<Vec<_>>())
-                            .unwrap_or_else(|| vec![]),
-                        StructuredInput::Segmented { .. } => input
-                            .segments
-                            .as_mut()
-                            .map(|x| x.keys.iter_mut().collect())
-                            .unwrap_or_else(|| vec![]),
-                    };
-                    for tv_segment in segment_iter {
-                        if let Some(segment_name) = tv_segment.as_ref() {
-                            if all_tags_ever.contains_key(segment_name) {
-                                any_tag_errors = true;
-                                let spans = vec![
-                                    (
-                                        tv_segment.span(),
-                                        "Segment with the same name as a tag defined here"
-                                            .to_string(),
-                                    ),
-                                    (
-                                        all_tags_ever
-                                            .get(segment_name)
-                                            .expect("just checked contains_key")
-                                            .clone(),
-                                        "Tag with the same name as a segment defined here"
-                                            .to_string(),
-                                    ),
-                                ];
-                                tv_segment.state = TomlValueState::Custom { spans };
-                                tv_segment.help = Some(
+            }
+            if let Some(input) = self.input.as_mut()
+                && let Some(structured) = input.structured.as_ref()
+            {
+                let segment_iter: Vec<&mut TomlValue<String>> = match structured {
+                    StructuredInput::Interleaved { .. } => input
+                        .interleaved
+                        .as_mut()
+                        .and_then(|x| x.as_mut())
+                        .map_or_else(std::vec::Vec::new, |x| x.iter_mut().collect::<Vec<_>>()),
+                    StructuredInput::Segmented { .. } => input
+                        .segments
+                        .as_mut()
+                        .map_or_else(std::vec::Vec::new, |x| x.keys.iter_mut().collect()),
+                };
+                for tv_segment in segment_iter {
+                    if let Some(segment_name) = tv_segment.as_ref()
+                        && all_tags_ever.contains_key(segment_name)
+                    {
+                        any_tag_errors = true;
+                        let spans = vec![
+                            (
+                                tv_segment.span(),
+                                "Segment with the same name as a tag defined here".to_string(),
+                            ),
+                            (
+                                all_tags_ever
+                                    .get(segment_name)
+                                    .expect("just checked contains_key")
+                                    .clone(),
+                                "Tag with the same name as a segment defined here".to_string(),
+                            ),
+                        ];
+                        tv_segment.state = TomlValueState::Custom { spans };
+                        tv_segment.help = Some(
                                     "Segment names must not collide with tag names. Please choose a different name for this tag (or segment).".to_string(),
                                 );
-                            }
-                        }
                     }
                 }
+            }
 
-                //complain about unused tags if there were no tag errors
-                //otherwise, mistyping a tag will give you two errors
-                //one for 'no such tag' and one for 'you did not use the real one'
-                if !any_tag_errors {
-                    let mut spans = vec![];
-                    for (tag_label, meta) in tags_available.iter() {
-                        if !meta.used {
-                            spans.push((meta.span.clone(), "Unused tag".to_string()));
-                        }
+            //complain about unused tags if there were no tag errors
+            //otherwise, mistyping a tag will give you two errors
+            //one for 'no such tag' and one for 'you did not use the real one'
+            if !any_tag_errors {
+                let mut spans = vec![];
+                for (_tag_label, meta) in &tags_available {
+                    if !meta.used {
+                        spans.push((meta.span.clone(), "Unused tag".to_string()));
                     }
-                    if !spans.is_empty() {
-                        self.transform.state = TomlValueState::Custom { spans };
-                        self.transform.help = Some(
-                            "Make sure to either use, or forget (using ForgetTag) all your tags."
-                                .to_string(),
-                        );
-                    }
+                }
+                if !spans.is_empty() {
+                    self.transform.state = TomlValueState::Custom { spans };
+                    self.transform.help = Some(
+                        "Make sure to either use, or forget (using ForgetTag) all your tags."
+                            .to_string(),
+                    );
+                }
 
-                    //now let's go and run the inter-transformation checks
-                    if let Some(trafos) = self.transform.as_mut() {
-                        for idx in 0..trafos.len() {
-                            let (before, rest) = trafos.split_at_mut(idx);
-                            if let Some(trafo) = rest[0].as_mut() {
-                                trafo.verify_others(
-                                    self.input.as_ref(),
-                                    self.output.as_ref().and_then(|o| o.as_ref()),
-                                    before,
-                                );
-                            }
+                //now let's go and run the inter-transformation checks
+                if let Some(trafos) = self.transform.as_mut() {
+                    for idx in 0..trafos.len() {
+                        let (before, rest) = trafos.split_at_mut(idx);
+                        if let Some(trafo) = rest[0].as_mut() {
+                            trafo.verify_others(
+                                self.input.as_ref(),
+                                self.output.as_ref().and_then(|o| o.as_ref()),
+                                before,
+                            );
                         }
                     }
                 }
@@ -1367,7 +1342,6 @@ impl PartialConfig {
 impl Config {
     /// There are transformations that we need to expand right away,
     /// so we can accurately check the names
-
     #[allow(clippy::too_many_lines)]
     pub fn check(self) -> Result<CheckedConfig> {
         self.inner_check(true)
@@ -1386,7 +1360,6 @@ impl Config {
             if check_input_files_exist {
                 let input_formats_observed = self.check_input_format(&mut errors);
                 self.configure_multithreading(&input_formats_observed);
-            } else {
             }
             stages = Some(stages_);
         }
@@ -1559,8 +1532,8 @@ impl Config {
     }
 
     #[allow(clippy::too_many_lines)]
-    fn check_transformations(&mut self, errors: &mut Vec<anyhow::Error>) -> Vec<Stage> {
-        let mut allowed_tags_per_stage = self.allowed_tags_per_transformation.clone();
+    fn check_transformations(&mut self, _errors: &mut Vec<anyhow::Error>) -> Vec<Stage> {
+        let allowed_tags_per_stage = self.allowed_tags_per_transformation.clone();
 
         let stages: Vec<Stage> = self
             .transform
@@ -1715,22 +1688,25 @@ impl VerifyIn<PartialConfig> for PartialBarcodes {
         Ok(())
     }
 }
-//
-/// Validate that IUPAC barcodes are disjoint (don't overlap in their accepted sequences)
 
+/// Validate that IUPAC barcodes are disjoint (don't overlap in their accepted sequences)
 #[allow(clippy::collapsible_if)]
 #[mutants::skip] // yeah, modifying to for j in (i * 1) will still 'work', just perform more checks
 fn validate_barcode_disjointness(barcodes: &mut MapAndKeys<BString, String>) {
     // First pass: collect all overlapping pairs without mutating anything.
     // We must not assign while iterating because one barcode can overlap multiple others
     // (e.g. NNNN overlaps both ATCG and RYRN); assigning in-loop would overwrite earlier results.
-    let mut overlapping_pairs: Vec<(usize, usize, Vec<(std::ops::Range<usize>, String)>)> =
-        Vec::new();
+    struct OverlapPair {
+        index_i: usize,
+        index_j: usize,
+        spans: Vec<(std::ops::Range<usize>, String)>,
+    }
+    let mut overlapping_pairs: Vec<OverlapPair> = Vec::new();
 
-    for i in 0..barcodes.keys.len() {
-        for j in (i + 1)..barcodes.keys.len() {
-            if let Some(dna_a) = barcodes.keys[i].value.as_ref()
-                && let Some(dna_b) = barcodes.keys[j].value.as_ref()
+    for index_i in 0..barcodes.keys.len() {
+        for index_j in (index_i + 1)..barcodes.keys.len() {
+            if let Some(dna_a) = barcodes.keys[index_i].value.as_ref()
+                && let Some(dna_b) = barcodes.keys[index_j].value.as_ref()
                 && let Some(barcode_name_a) = barcodes
                     .map
                     .get(bstr::BStr::new(dna_a))
@@ -1743,10 +1719,20 @@ fn validate_barcode_disjointness(barcodes: &mut MapAndKeys<BString, String>) {
                 && crate::dna::iupac_overlapping(dna_a.as_bytes(), dna_b.as_bytes())
             {
                 let spans = vec![
-                    (barcodes.keys[i].span(), format!("Overlaps with {dna_b}")),
-                    (barcodes.keys[j].span(), format!("Overlaps with {dna_a}")),
+                    (
+                        barcodes.keys[index_i].span(),
+                        format!("Overlaps with {dna_b}"),
+                    ),
+                    (
+                        barcodes.keys[index_j].span(),
+                        format!("Overlaps with {dna_a}"),
+                    ),
                 ];
-                overlapping_pairs.push((i, j, spans));
+                overlapping_pairs.push(OverlapPair {
+                    index_i,
+                    index_j,
+                    spans,
+                })
             }
         }
     }
@@ -1754,9 +1740,13 @@ fn validate_barcode_disjointness(barcodes: &mut MapAndKeys<BString, String>) {
     // Second pass: assign each pair's error to the first barcode in the pair that hasn't
     // already been used as an error anchor, so every overlap gets its own error entry.
     let mut assigned: std::collections::HashSet<usize> = std::collections::HashSet::new();
-    for (i, j, spans) in overlapping_pairs {
-        let error_idx = if !assigned.contains(&i) { i } else { j };
-        barcodes.keys[error_idx].state = TomlValueState::Custom { spans };
+    for op in overlapping_pairs {
+        let error_idx = if assigned.contains(&op.index_i) {
+            op.index_j
+        } else {
+            op.index_i
+        };
+        barcodes.keys[error_idx].state = TomlValueState::Custom { spans: op.spans };
         barcodes.keys[error_idx].help =
             Some("IUPAC patterns overlap, but lead to different barcodes.".to_string());
         assigned.insert(error_idx);

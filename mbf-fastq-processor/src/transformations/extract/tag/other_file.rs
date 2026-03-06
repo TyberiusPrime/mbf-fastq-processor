@@ -94,14 +94,12 @@ impl VerifyIn<PartialConfig> for PartialOtherFile {
         self.source.verify(|v| {
             if let Some(output_tag) = self.out_label.as_ref()
                 && let MustAdapt::PostVerify(ResolvedSourceNoAll::Tag(input_tag)) = v
-            {
-                if output_tag == input_tag {
+                && output_tag == input_tag {
                     return Err(ValidationFailure::new(
                         "Source cannot be the same as output tag",
                         Some("The source (segment or tag) cannot be the same as the output tag"),
                     ));
                 }
-            }
             Ok(())
         });
         Ok(())
@@ -140,15 +138,14 @@ impl TagUser for PartialTaggedVariant<PartialOtherFile> {
             //if there's a StoreTagInComment before us
             //and our fastq_readname_end_char is != their comment_insert_char
             for trafo in transformations_before_this_one.iter().rev() {
-                if let Some(PartialTransformation::StoreTagInComment(info)) = trafo.as_ref() {
-                    if let Some(info) = info.toml_value.as_ref()
+                if let Some(PartialTransformation::StoreTagInComment(info)) = trafo.as_ref()
+                    && let Some(info) = info.toml_value.as_ref()
                         && let Some(info_comment_char) = info.comment_separator.as_ref()
                         && let Some(read_comment_character) = input_def
                             .options
                             .as_ref()
                             .and_then(|x| x.read_comment_character.as_ref())
-                    {
-                        if *info_comment_char != *read_comment_character {
+                        && *info_comment_char != *read_comment_character {
                             let spans = vec![
                                 (
                                     info.comment_separator.span(),
@@ -158,8 +155,7 @@ impl TagUser for PartialTaggedVariant<PartialOtherFile> {
                                     input_def
                                         .options
                                         .as_ref()
-                                        .map(|x| x.read_comment_character.span())
-                                        .unwrap_or(0..0),
+                                        .map_or(0..0, |x| x.read_comment_character.span()),
                                     "Must match with StoreTagInComment step's comment_separator"
                                         .to_string(),
                                 ),
@@ -168,8 +164,6 @@ impl TagUser for PartialTaggedVariant<PartialOtherFile> {
                             self.toml_value.help = Some("Adjust them to be identical.".to_string());
                             return;
                         }
-                    }
-                }
             }
         }
     }

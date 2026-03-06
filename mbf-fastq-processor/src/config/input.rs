@@ -366,7 +366,7 @@ If you have paired end reads, name two 'virtual' segments, e.g. ['read1','read2'
             self.segments.state = TomlValueState::Nested;
         }
 
-        if self.interleaved.as_ref().is_some_and(|x| x.is_some())
+        if self.interleaved.as_ref().is_some_and(std::option::Option::is_some)
             && self.segments.as_ref().is_some()
         {
             self.build_interleaved_structured()?;

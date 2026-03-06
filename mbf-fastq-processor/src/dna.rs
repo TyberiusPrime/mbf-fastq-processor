@@ -78,11 +78,11 @@ impl TagValue {
             TagValue::String(s) => Some(s.clone()),
             TagValue::Location(hits) => {
                 let mut out = BString::default();
-                for section in hits.0.iter() {
+                for section in &hits.0 {
                     if !out.is_empty() {
                         out.push_str(separator);
                     }
-                    out.push_str(&section.sequence)
+                    out.push_str(&section.sequence);
                 }
                 Some(out)
             }

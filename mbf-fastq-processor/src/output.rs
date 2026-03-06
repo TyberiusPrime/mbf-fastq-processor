@@ -225,7 +225,7 @@ impl OutputFile<'_> {
 }
 
 enum OutputFileHandle<'a> {
-    Fastq(OutputWriter<'a>), //todo: unify to text.
+    Fastq(OutputWriter<'a>),
     Fasta(OutputWriter<'a>),
     Bam(crate::io::BamOutput<'a>),
     TemporarilyOutOfAction,

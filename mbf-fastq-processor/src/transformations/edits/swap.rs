@@ -156,7 +156,7 @@ impl Step for Swap {
             .if_tag
             .as_ref()
             .expect("if_tag must be set when conditional swap is used");
-        let tag_values = get_bool_vec_from_tag(&block, &cond_tag);
+        let tag_values = get_bool_vec_from_tag(&block, cond_tag);
 
         // Count how many swaps are needed
         let swap_count = tag_values.iter().filter(|&&x| x).count();

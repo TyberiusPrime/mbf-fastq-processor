@@ -31,14 +31,13 @@ impl VerifyIn<PartialConfig> for PartialValidateName {
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {
-        if let Some(input_config) = parent.input.as_ref() {
-            if input_config.get_segment_order().len() < 2 {
+        if let Some(input_config) = parent.input.as_ref()
+            && input_config.get_segment_order().len() < 2 {
                 return Err(ValidationFailure::new(
                     "ValidateName requires at least two input segments",
                     Some("Check your [input] section or remove the step"),
                 ));
             }
-        }
         self.sample_stride.or_with(default_sample_stride);
         self.sample_stride.verify(|v|
             if *v == 0 {

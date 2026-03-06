@@ -253,7 +253,7 @@ impl Step for Box<EvalExpression> {
                     tag_values.push(TagValue::Numeric((base_index + read_idx as u64) as f64));
                 }
                 virtual_tags.push((var_name.as_str(), tag_values));
-            } else if let Some(tag_values) = block.tags.get(&TagLabel(var_name.to_string())) {
+            } else if let Some(tag_values) = block.tags.get(&TagLabel(var_name.clone())) {
                 tag_data.push((var_name.as_str(), tag_values));
             } else {
                 panic!(

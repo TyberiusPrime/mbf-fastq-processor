@@ -84,7 +84,7 @@ impl Step for Skip {
                 let here = (*remaining).min(block.len());
                 *remaining -= here;
                 block.drain(0..here);
-                for (_key, tag_values) in block.tags.iter_mut() {
+                for (_key, tag_values) in &mut block.tags {
                     tag_values.drain(0..here);
                 }
                 Ok((block, true))

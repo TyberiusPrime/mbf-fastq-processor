@@ -54,7 +54,7 @@ impl VerifyIn<PartialConfig> for PartialDemultiplex {
                             x.map
                                 .iter()
                                 .map(|(k, v)| {
-                                    (k.clone(), v.as_ref().expect("parent was ok").to_string())
+                                    (k.clone(), v.as_ref().expect("parent was ok").clone())
                                 })
                                 .collect()
                         })
@@ -75,15 +75,13 @@ impl VerifyIn<PartialConfig> for PartialDemultiplex {
                             .collect::<Vec<_>>(),
                     ));
                     self.barcodes.state =
-                        TomlValueState::new_validation_failed(format!("Unknown barcode section"));
+                        TomlValueState::new_validation_failed("Unknown barcode section".to_string());
                     return Ok(());
                 }
             } else {
-                self.barcodes.help = Some(format!(
-                    "There is no valid [barcodes.<barcodes_name>] section in your TOML. Add one."
-                ));
+                self.barcodes.help = Some("There is no valid [barcodes.<barcodes_name>] section in your TOML. Add one.".to_string());
                 self.barcodes.state =
-                    TomlValueState::new_validation_failed(format!("Unknown barcode section"));
+                    TomlValueState::new_validation_failed("Unknown barcode section".to_string());
                 return Ok(());
             }
         } else {
@@ -135,7 +133,7 @@ impl TagUser for PartialTaggedVariant<PartialDemultiplex> {
             self.toml_value.state = TomlValueState::new_validation_failed(
                 "output_unmatched must be set when using barcodes for demultiplex.",
             );
-            self.toml_value.help = Some("Add output_unmatched=true (or false)".to_string())
+            self.toml_value.help = Some("Add output_unmatched=true (or false)".to_string());
         }
         let inner = self
             .toml_value

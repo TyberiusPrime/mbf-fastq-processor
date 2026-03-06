@@ -71,7 +71,7 @@ impl TagUser for PartialTaggedVariant<PartialTrimAtTag> {
             .toml_value
             .as_mut()
             .expect("get_tag_usage should only be called after successful verification");
-        for trafo in transformations_before_this_one.iter() {
+        for trafo in transformations_before_this_one {
             if let Some(PartialTransformation::ExtractRegions(tv_extract_region_config)) =
                 trafo.as_ref()
                 && let Some(extract_region_config) = tv_extract_region_config.toml_value.as_ref()

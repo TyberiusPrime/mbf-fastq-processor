@@ -584,6 +584,7 @@ where
 pub struct TagLabel(pub String);
 
 impl TagLabel {
+    #[must_use] 
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
@@ -608,7 +609,7 @@ impl AsRef<str> for TagLabel {
 }
 
 impl ToDeclaredTag for TomlValue<TagLabel> {
-    fn to_declared_tag<'a>(&'a mut self, tag_type: TagValueType) -> Option<DeclaredTag<'a>> {
+    fn to_declared_tag(&mut self, tag_type: TagValueType) -> Option<DeclaredTag<'_>> {
         if self.as_ref().is_some() {
             let name = self.as_ref().expect("just checked").clone();
             let span = self.span();
@@ -625,7 +626,7 @@ impl ToDeclaredTag for TomlValue<TagLabel> {
     }
 }
 impl ToDeclaredTag for TomlValue<Option<TagLabel>> {
-    fn to_declared_tag<'a>(&'a mut self, tag_type: TagValueType) -> Option<DeclaredTag<'a>> {
+    fn to_declared_tag(&mut self, tag_type: TagValueType) -> Option<DeclaredTag<'_>> {
         if let Some(name) = self.as_ref().and_then(|x| x.as_ref()) {
             let span = self.span();
             Some(DeclaredTag {
