@@ -10,7 +10,7 @@ use super::super::tag::default_region_separator;
 
 //otherwise clippy won't shut up, because we can't allow it for the derived serde / eserde fields
 type OutputHandles = Arc<Mutex<DemultiplexedData<Option<csv::Writer<Box<OutputWriter>>>>>>;
-type InLabels = Arc<Mutex<Option<Vec<TagLabel>>>>;
+type InLabels = Vec<TagLabel>;
 
 /// Store all currently defined tags in a TSV
 #[derive(JsonSchema, Clone)]
@@ -57,7 +57,7 @@ impl VerifyIn<PartialConfig> for PartialStoreTagsInTable {
         // });
         self.region_separator.or_with(default_region_separator);
         if let Some(Some(in_labels)) = self.in_labels.as_ref() {
-            self.final_in_labels = Some(Arc::new(Mutex::new(Some(
+            self.final_in_labels = Some(
                 in_labels
                     .iter()
                     .map(|tv| {
@@ -66,9 +66,9 @@ impl VerifyIn<PartialConfig> for PartialStoreTagsInTable {
                             .clone()
                     })
                     .collect(),
-            ))));
+            );
         } else {
-            self.final_in_labels = Some(Arc::new(Mutex::new(None)));
+            // final-in_labels set in get_tag_usage
         }
         Ok(())
     }
@@ -87,6 +87,16 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagsInTable> {
             return TagUsageInfo {
                 ..Default::default()
             };
+        }
+        let inner = self
+            .toml_value
+            .as_mut()
+            .expect("get_tag_usage should only be called after successful verification");
+
+        if inner.final_in_labels.is_none() {
+            let mut final_in_labels: Vec<_> = tags_available.keys().cloned().collect();
+            final_in_labels.sort_unstable();
+            inner.final_in_labels = Some(final_in_labels);
         }
 
         let toml_source = Rc::new(RefCell::new((
@@ -169,21 +179,19 @@ impl Step for StoreTagsInTable {
         &self,
         block: FastQBlocksCombined,
         input_info: &InputInfo,
-        _block_no: usize,
+        block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         // Initialize output handles and tag list on first call
         //TODO move into verify
-        let mut in_label_lock = self.final_in_labels.lock().expect("lock poisoned");
-        if in_label_lock.is_none() {
+        if block_no == 1 {
             // Sort tags for consistent column order
 
-            let mut tag_list: Vec<_> = block.tags.keys().cloned().collect();
-            tag_list.sort();
+            let tag_list = &self.final_in_labels;
             // Write header
             {
                 let mut header = vec!["ReadName"];
-                for tag in &tag_list {
+                for tag in tag_list {
                     header.push(&tag.0);
                 }
 
@@ -202,8 +210,6 @@ impl Step for StoreTagsInTable {
                     }
                 }
             }
-
-            in_label_lock.replace(tag_list);
         }
 
         let output_tags = block.output_tags.as_ref();
@@ -225,9 +231,7 @@ impl Step for StoreTagsInTable {
                     read.name_without_comment(input_info.comment_insert_char)
                         .to_vec(),
                 ];
-                for tag in in_label_lock
-                    .as_ref()
-                    .expect("in_labels must be set during initialization")
+                for tag in &self.final_in_labels
                 {
                     record.push(
                         match &(block.tags.get(tag).expect("tag must exist in block.tags")[ii]) {
