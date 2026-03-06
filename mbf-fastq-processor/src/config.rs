@@ -134,7 +134,7 @@ pub struct Config {
     //barcodes must happen before transforms
     #[schemars(with = "BTreeMap<String, Barcodes>")]
     #[tpd(nested)]
-    pub barcodes: Option<IndexMap<String, Barcodes>>,
+    pub barcodes: Option<IndexMap<TagLabel, Barcodes>>,
 
     #[tpd(alias = "step")]
     #[tpd(nested)]
@@ -159,7 +159,7 @@ pub struct CheckedConfig {
     pub output: Option<Output>,
     pub stages: Vec<Stage>,
     pub options: Options,
-    pub barcodes: IndexMap<String, Barcodes>,
+    pub barcodes: IndexMap<TagLabel, Barcodes>,
     pub benchmark: Option<Benchmark>,
     pub report_labels: Vec<String>,
 }
@@ -516,14 +516,6 @@ impl PartialConfig {
     fn verify_barcodes(&mut self) {
         // Check that barcode names are unique across all barcodes sections
         if let Some(Some(barcodes)) = self.barcodes.as_mut() {
-            for tv_section_name in barcodes.keys.iter_mut() {
-                if let Some(section_name) = tv_section_name.as_ref()
-                    && let Err(e) = validate_tag_name(section_name)
-                {
-                    tv_section_name.state = TomlValueState::new_validation_failed("Invalid value");
-                    tv_section_name.help = Some(e.to_string());
-                }
-            }
             for (_section_name, tv_barcodes) in barcodes.map.iter_mut() {
                 if let Some(barcodes) = tv_barcodes.as_mut()
                     && let Some(barcodes) = barcodes.barcode_to_name.as_mut()

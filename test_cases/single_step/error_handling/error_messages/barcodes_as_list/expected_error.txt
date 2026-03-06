@@ -1,5 +1,5 @@
 Error Details ==
-Error 1/1
+Error 1/2
    ╭─config.toml
 13 │ [[barcodes.basic]]
    ┆ ─────────┬────────
@@ -7,4 +7,22 @@ Error 1/1
    ┆          ╰───────── Wrong type: expected table or inline table, found array of tables.
 ───╯
 Hint: This value has the wrong type.
+
+Error 2/2
+   ╭─config.toml
+   ┆
+19 │ [[step]]
+20 │     action = 'Demultiplex'
+   ┆              ──────┬──────
+   ┆                    │
+   ┆                    ╰─────── In this step
+   ┆
+21 │     in_label = 'barcode'
+22 │     barcodes = 'test_barcodes'
+   ┆                ───────┬───────
+   ┆                       │
+   ┆                       ╰──────── Unknown barcode section
+───╯
+Hint: Did you mean: basic?
+      See https://doc_url.example/version-stripped-from-test/docs/reference/Demultiplex
 

@@ -92,7 +92,7 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
             && let Some(barcode_data) = parent.barcodes.as_ref()
             && let Some(barcodes_data) = barcode_data
         {
-            match barcodes_data.map.get(barcodes_to_use) {
+            match barcodes_data.map.get(barcodes_to_use.as_str()) {
                 Some(barcodes_section) => {
                     let barcodes_section: IndexMap<BString, String> = barcodes_section
                         .as_ref()

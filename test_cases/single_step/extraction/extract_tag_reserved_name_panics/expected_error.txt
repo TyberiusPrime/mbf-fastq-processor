@@ -1,1 +1,17 @@
-Reserved tag label 'ReadName' cannot be used as a tag label.
+Error Details ==
+Error 1/1
+  ╭─config.toml
+  ┆
+4 │ [[step]]
+5 │     action = 'ExtractIUPAC'
+  ┆              ───────┬──────
+  ┆                     │
+  ┆                     ╰─────── In this step
+6 │     out_label = 'ReadName'
+  ┆                 ─────┬────
+  ┆                      │
+  ┆                      ╰───── Invalid label
+──╯
+Hint: Reserved value 'ReadName' cannot be used here. This name is reserved for the index column in StoreTagsInTable. Please choose a different value.
+      See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractIUPAC
+

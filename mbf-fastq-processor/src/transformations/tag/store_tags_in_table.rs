@@ -231,8 +231,7 @@ impl Step for StoreTagsInTable {
                     read.name_without_comment(input_info.comment_insert_char)
                         .to_vec(),
                 ];
-                for tag in &self.final_in_labels
-                {
+                for tag in &self.final_in_labels {
                     record.push(
                         match &(block.tags.get(tag).expect("tag must exist in block.tags")[ii]) {
                             TagValue::Location(v) => {

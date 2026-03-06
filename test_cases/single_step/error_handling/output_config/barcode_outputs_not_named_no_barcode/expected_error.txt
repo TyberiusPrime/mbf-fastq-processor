@@ -29,7 +29,7 @@ Error 2/3
    ┆                   │
    ┆                   ╰── Invalid label
 ───╯
-Hint: Tag label must start with a letter or underscore (a-zA-Z_), got '1'
+Hint: Must start with a letter or underscore (a-zA-Z_), got '1'
       See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractRegion
 
 Error 3/3
@@ -45,6 +45,6 @@ Error 3/3
    ┆                  │
    ┆                  ╰── Invalid label
 ───╯
-Hint: Tag label must start with a letter or underscore (a-zA-Z_), got '1'
+Hint: Must start with a letter or underscore (a-zA-Z_), got '1'
       See https://doc_url.example/version-stripped-from-test/docs/reference/Demultiplex
 

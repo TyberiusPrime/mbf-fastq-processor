@@ -1,5 +1,6 @@
 #![allow(clippy::unnecessary_wraps)]
 use indexmap::IndexMap;
+use toml_pretty_deser::suggest_alternatives;
 
 //eserde false positives
 use crate::transformations::prelude::*;
@@ -14,11 +15,11 @@ pub struct Demultiplex {
     pub output_unmatched: Option<bool>,
 
     /// reference to shared barcodes section (optional for boolean tag mode)
-    pub barcodes: Option<String>,
+    pub barcodes: Option<TagLabel>,
 
     #[tpd(skip, default)]
     #[schemars(skip)]
-    pub resolved_barcodes: Option<IndexMap<BString, String>>,
+    pub resolved_barcodes: IndexMap<BString, String>,
 
     #[tpd(skip, default)]
     #[schemars(skip)]
@@ -28,7 +29,7 @@ pub struct Demultiplex {
 impl VerifyIn<PartialConfig> for PartialDemultiplex {
     fn verify(
         &mut self,
-        _parent: &PartialConfig,
+        parent: &PartialConfig,
         _options: &VerifyOptions,
     ) -> std::result::Result<(), ValidationFailure>
     where
@@ -41,6 +42,62 @@ impl VerifyIn<PartialConfig> for PartialDemultiplex {
                 Ok(())
             }
         });
+        if let Some(Some(barcodes_name)) = self.barcodes.as_ref() {
+            if let Some(Some(barcodes)) = parent.barcodes.value.as_ref() { //error sections are
+                //ok...
+                if let Some(barcodes_ref) = barcodes.map.get(barcodes_name.0.as_str()) {
+                    if let Some(resolved) = barcodes_ref
+                        .as_ref()
+                        .and_then(|x| x.barcode_to_name.as_ref())
+                        .map(|x| x
+                            .map
+                            .iter()
+                            .map(|(k, v)| (k.clone(), v.as_ref().expect("parent was ok").to_string()))
+                            .collect()){
+                        self.resolved_barcodes = Some(resolved);
+                    }else {
+                        //not a valid barcode, error message will have been generated elsewhere.
+                        self.resolved_barcodes = None;
+                    }
+                } else {
+                    dbg!(&barcodes.keys);
+                    self.barcodes.help = Some(suggest_alternatives(
+                        &barcodes_name.0,
+                        &barcodes
+                            .keys
+                            .iter()
+                            .filter_map(|x| x.as_ref())
+                            .collect::<Vec<_>>(),
+                    ));
+                    self.barcodes.state =
+                        TomlValueState::new_validation_failed(format!("Unknown barcode section"));
+                    return Ok(());
+                }
+            } else {
+                self.barcodes.help = Some(format!(
+                    "There is no valid [barcodes.<barcodes_name>] section in your TOML. Add one."
+                ));
+                self.barcodes.state =
+                    TomlValueState::new_validation_failed(format!("Unknown barcode section"));
+                return Ok(());
+            }
+        } else {
+            // Boolean tag mode - create synthetic barcodes for true/false
+            let mut synthetic_barcodes = IndexMap::new();
+            if let Some(label) = self.in_label.as_ref() {
+                synthetic_barcodes.insert(
+                    BString::from("false"),
+                    format!("{label}=false", label = label.0),
+                );
+                synthetic_barcodes.insert(
+                    BString::from("true"),
+                    format!("{label}=true", label = label.0),
+                );
+                self.resolved_barcodes = Some(synthetic_barcodes);
+                self.output_unmatched.value = Some(Some(false));
+                self.output_unmatched.state = TomlValueState::Ok;
+            }
+        }
         Ok(())
     }
 }
@@ -101,7 +158,7 @@ impl Step for Demultiplex {
 
     fn init(
         &mut self,
-        input_info: &InputInfo,
+        _input_info: &InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
         _output_ix_separator: &str,
@@ -114,36 +171,8 @@ impl Step for Demultiplex {
                 .load(std::sync::atomic::Ordering::Relaxed)
         );
 
-        //todo: move into verify.
-        let barcodes_data = &input_info.barcodes_data;
-        if let Some(barcodes_name) = &self.barcodes {
-            // Barcode mode - resolve barcode reference
-            if let Some(barcodes_ref) = barcodes_data.get(barcodes_name) {
-                self.resolved_barcodes = Some(barcodes_ref.barcode_to_name.clone());
-            } else {
-                bail!("Could not find referenced barcode section: {barcodes_name}",);
-            }
-        } else {
-            // Boolean tag mode - create synthetic barcodes for true/false
-            let mut synthetic_barcodes = IndexMap::new();
-            synthetic_barcodes.insert(
-                BString::from("false"),
-                format!("{label}=false", label = self.in_label),
-            );
-            synthetic_barcodes.insert(
-                BString::from("true"),
-                format!("{label}=true", label = self.in_label),
-            );
-            self.resolved_barcodes = Some(synthetic_barcodes);
-            self.output_unmatched = Some(false);
-        }
-
         Ok(Some(DemultiplexBarcodes {
-            barcode_to_name: self
-                .resolved_barcodes
-                .as_ref()
-                .expect("resolved_barcodes must be set during initialization")
-                .clone(),
+            barcode_to_name: self.resolved_barcodes.clone(),
             include_no_barcode: self
                 .output_unmatched
                 .expect("output_unmatched must be set during initialization"),

@@ -12,7 +12,7 @@ Error 1/2
   ┆                  │
   ┆                  ╰── Invalid label
 ──╯
-Hint: Tag label must start with a letter or underscore (a-zA-Z_), got '.'
+Hint: Must start with a letter or underscore (a-zA-Z_), got '.'
       See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractLowQualityStart
 
 Error 2/2

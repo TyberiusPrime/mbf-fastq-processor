@@ -12,6 +12,6 @@ Error 1/1
   ┆                  │
   ┆                  ╰─ Invalid label
 ──╯
-Hint: Tag label cannot be empty. Please provide a non-empty tag name that starts with a letter or underscore.
+Hint: Cannot be empty. Please provide a non-empty tag name that starts with a letter or underscore.
       See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractRegions
 
