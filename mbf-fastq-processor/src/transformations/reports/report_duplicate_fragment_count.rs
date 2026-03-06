@@ -117,30 +117,15 @@ impl Step for Box<_ReportDuplicateFragmentCount> {
                 let target = data_lock
                     .get_mut(&tag)
                     .expect("demultiplextag must exist in data");
-                //todo: use once this is released in scalable_cuckoofilter
-                // if target
-                //     .duplication_filter
-                //     .as_mut()
-                //     .expect("duplication_filter must be set during initialization")
-                //     .insert_if_not_contained(&seq)
-                // {
-                //     target.duplicate_count += 1;
-                // }
-
                 if target
                     .duplication_filter
-                    .as_ref()
+                    .as_mut()
                     .expect("duplication_filter must be set during initialization")
-                    .contains(&seq)
+                    .insert_if_not_contained(&seq)
                 {
                     target.duplicate_count += 1;
-                } else {
-                    target
-                        .duplication_filter
-                        .as_mut()
-                        .expect("duplication_filter must be set during initialization")
-                        .insert(&seq);
                 }
+
             }
         }
         Ok((block, true))

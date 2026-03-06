@@ -1018,7 +1018,6 @@ Quality is checked against encoding.
     qual = 'IIII'                  # TYPE: quality string, REQUIRED (same length)
     encoding = 'Illumina1.8'       #  optional, default=sanger 'Illumina1.8|Illumina1.3|Sanger|Solexa',
 
-encod
 
 [[step]]
     action = 'Postfix'

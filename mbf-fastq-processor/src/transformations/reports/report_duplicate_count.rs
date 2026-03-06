@@ -16,7 +16,6 @@ impl Into<serde_json::Value> for DuplicateCountData {
 }
 
 #[derive(Default, Clone)]
-//todo: maybe implement FromTomlTable myself and panic?
 #[derive(Debug)]
 #[tpd(no_verify)]
 pub struct _ReportDuplicateCount {
