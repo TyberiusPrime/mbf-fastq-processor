@@ -1,10 +1,9 @@
 use std::collections::HashSet;
 
 use mbf_fastq_processor_deser::offer_alternatives;
+use mbf_fastq_processor_parser::{CompressionFormat, FileFormat};
 use schemars::JsonSchema;
 use toml_pretty_deser::prelude::*;
-
-use super::{CompressionFormat, FileFormat};
 
 #[must_use]
 pub fn default_ix_separator() -> String {

@@ -1,4 +1,4 @@
-use crate::io::FastQBlock;
+use mbf_fastq_processor_parser::io::FastQBlock;
 use crate::transformations::{extend_seed, prelude::*};
 use rand::Rng;
 

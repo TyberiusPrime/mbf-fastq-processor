@@ -1,8 +1,8 @@
+use crate::{cli::improve_error_messages, config::Config};
 use anyhow::{Context, Result};
 use ex::fs;
+use mbf_fastq_processor_parser::STDIN_MAGIC_PATH;
 use std::path::Path;
-
-use crate::{cli::improve_error_messages, config::Config};
 use toml_pretty_deser::prelude::*;
 
 pub fn validate_config(toml_file: &Path) -> Result<Vec<String>> {
@@ -28,7 +28,7 @@ pub fn validate_config(toml_file: &Path) -> Result<Vec<String>> {
     match &checked.input.structured {
         crate::config::StructuredInput::Interleaved { files, .. } => {
             for file in files {
-                if file != crate::config::STDIN_MAGIC_PATH {
+                if file != STDIN_MAGIC_PATH {
                     let file_path = toml_dir.join(file);
                     if fs::metadata(&file_path).is_err() {
                         warnings.push(format!("Input file not found: {file}"));
@@ -39,7 +39,7 @@ pub fn validate_config(toml_file: &Path) -> Result<Vec<String>> {
         crate::config::StructuredInput::Segmented { segment_files, .. } => {
             for (segment_name, files) in segment_files {
                 for file in files {
-                    if file != crate::config::STDIN_MAGIC_PATH {
+                    if file != STDIN_MAGIC_PATH {
                         let file_path = toml_dir.join(file);
                         if fs::metadata(&file_path).is_err() {
                             warnings.push(format!(

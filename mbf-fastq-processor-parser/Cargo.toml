@@ -1,0 +1,40 @@
+[package]
+name = "mbf-fastq-processor-parser"
+edition.workspace = true
+version.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+description.workspace = true
+keywords.workspace = true
+categories.workspace = true
+exclude.workspace = true
+
+[dependencies]
+  anyhow = {workspace = true}
+  bstr = {workspace = true}
+  ex = {workspace = true}
+  noodles = {workspace = true}
+  gzp = {workspace = true}
+  sha2 = {workspace = true}
+  indexmap = {workspace = true}
+  memchr = {workspace = true}
+  num_cpus = {workspace = true}
+  mutants = {workspace = true}
+  serde = {workspace = true}
+
+  mbf-fastq-processor-deser = {path = '../mbf-fastq-processor-deser'}
+  schemars = {workspace = true}
+  toml-pretty-deser = {workspace = true}
+  flate2 = {workspace = true}
+  bio = {workspace = true}
+  niffler = {workspace = true}
+  zstd = {workspace = true}
+
+  tempfile = {workspace = true}
+
+[lints]
+workspace = true

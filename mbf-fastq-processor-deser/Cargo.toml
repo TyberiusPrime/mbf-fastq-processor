@@ -19,6 +19,7 @@ exclude.workspace = true
 	schemars = {workspace = true}
 	regex = {workspace = true}
 	serde = {workspace = true}
+	mutants = {workspace = true}
 	anyhow = {workspace = true}
 	toml_edit = {workspace = true}
 	bio = {workspace = true}

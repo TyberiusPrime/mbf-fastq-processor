@@ -9,6 +9,7 @@ use super::ApproxOrExactFilter;
 use crate::transformations::tag::initial_filter_elements;
 
 use mbf_fastq_processor_deser::tpd_adapt_u8_from_byte_or_char;
+use mbf_fastq_processor_parser::io::{apply_to_read_names, apply_to_read_sequences};
 /// Tag whether reads are in another file (by sequence)
 #[derive(Clone, JsonSchema)]
 #[tpd]
@@ -202,7 +203,7 @@ impl Step for OtherFile {
 
         match self.source {
             ResolvedSourceNoAll::Segment(_) | ResolvedSourceNoAll::Tag(_) => {
-                crate::io::apply_to_read_sequences(
+                apply_to_read_sequences(
                     &self.filename,
                     &mut |read_seq| {
                         if !filter.contains(&FragmentEntry(&[read_seq])) {
@@ -216,7 +217,7 @@ impl Step for OtherFile {
                 )?;
             }
             ResolvedSourceNoAll::Name { .. } => {
-                crate::io::apply_to_read_names(
+                apply_to_read_names(
                     &self.filename,
                     &mut |read_name| {
                         let trimmed = read_name_canonical_prefix(

@@ -1,7 +1,7 @@
 use crate::transformations::prelude::*;
 
 use super::common::{BASE_TO_INDEX, PerReadReportData, PositionCount};
-use crate::io;
+use mbf_fastq_processor_parser::io::WrappedFastQRead;
 use serde_json::json;
 
 #[derive(Debug, Default, Clone)]
@@ -90,7 +90,7 @@ impl Step for Box<_ReportBaseStatisticsPart2> {
         _block_no: usize,
         demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        fn update_from_read(target: &mut BaseStatisticsPart2, read: &io::WrappedFastQRead) {
+        fn update_from_read(target: &mut BaseStatisticsPart2, read: &WrappedFastQRead) {
             let read_len = read.len();
             if target.per_position_counts.len() <= read_len {
                 target

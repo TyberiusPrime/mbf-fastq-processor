@@ -16,15 +16,6 @@ pub use cli::validate::validate_config;
 pub use cli::verify::decompress_file; // used by parser tests
 pub use cli::verify::verify_outputs;
 
-#[must_use]
-#[mutants::skip]
-fn get_number_of_cores() -> usize {
-    std::env::var("MBF_FASTQ_PROCESSOR_NUM_CPUS")
-        .ok()
-        .and_then(|s| s.parse::<usize>().ok())
-        .unwrap_or_else(num_cpus::get)
-}
-
 fn join_nonempty<'a>(parts: impl IntoIterator<Item = &'a str>, separator: &str) -> String {
     let mut iter = parts.into_iter().filter(|part| !part.is_empty());
     let mut result = String::new();

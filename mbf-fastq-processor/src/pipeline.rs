@@ -12,13 +12,13 @@ use std::{
 use crate::{
     config::{CheckedConfig, StructuredInput},
     demultiplex::{DemultiplexBarcodes, DemultiplexInfo, OptDemultiplex},
-    io::{
-        self,
-        parsers::{ChainedParser, ThreadCount},
-    },
     output::{open_output_files, output_block, output_html_report, output_json_report},
     transformations::{self, FinalizeReportResult, Step, Transformation},
 };
+use mbf_fastq_processor_parser::
+    io::{
+        self, input::InputOptions, parsers::{ChainedParser, ThreadCount}
+    };
 
 #[allow(clippy::collapsible_if)]
 fn parse_and_send(
@@ -27,7 +27,7 @@ fn parse_and_send(
     buffer_size: usize,
     block_size: usize,
     input_thread_count: ThreadCount,
-    input_options: crate::config::InputOptions,
+    input_options: InputOptions,
 ) -> Result<()> {
     let mut parser = ChainedParser::new(
         readers,
@@ -64,7 +64,7 @@ fn parse_interleaved_and_send(
     buffer_size: usize,
     input_thread_count: ThreadCount,
     block_size: usize,
-    input_options: crate::config::InputOptions,
+    input_options:InputOptions,
 ) -> Result<()> {
     let mut parser = ChainedParser::new(
         readers,
@@ -538,7 +538,7 @@ impl RunStage1 {
                 .expect("Must have been set by config"),
         );
         let mut input_files =
-            io::open_input_files(input_config).context("Error opening input files")?;
+            crate::io::open_input_files(input_config).context("Error opening input files")?;
 
         let block_size = parsed.options.block_size;
         let buffer_size = parsed.options.buffer_size;

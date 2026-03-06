@@ -2,8 +2,6 @@ use mbf_fastq_processor_deser::dna::TagValue;
 
 use crate::transformations::prelude::*;
 
-use crate::{io};
-
 /// Convert region tag to a length tag
 
 #[derive(Clone, JsonSchema)]
@@ -76,11 +74,11 @@ impl TagUser for PartialTaggedVariant<PartialRegionsToLength> {
 impl Step for RegionsToLength {
     fn apply(
         &self,
-        mut block: io::FastQBlocksCombined,
+        mut block: FastQBlocksCombined,
         _input_info: &InputInfo,
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
-    ) -> anyhow::Result<(io::FastQBlocksCombined, bool)> {
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let region_values = block.tags.get(&self.in_label).cloned().ok_or_else(|| {
             anyhow!(
                 "ConvertRegionsToLength expects region tag '{}' to be available",

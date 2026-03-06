@@ -1,5 +1,5 @@
-use crate::config::{CompressionFormat, FileFormat};
-use crate::io::output::compressed_output::HashedAndCompressedWriter;
+use mbf_fastq_processor_parser::{CompressionFormat, FileFormat};
+use mbf_fastq_processor_parser::io::output::compressed_output::HashedAndCompressedWriter;
 use crate::transformations::prelude::*;
 use std::io::Write;
 

@@ -5,6 +5,7 @@ use mbf_fastq_processor_deser::{
     TagValueType, default_comment_insert_char, default_comment_separator, default_region_separator,
     tpd_adapt_bstring, tpd_adapt_u8_from_byte_or_char,
 };
+use mbf_fastq_processor_parser::io::WrappedFastQReadMut;
 
 /// Store currently present tags as comments on read names.
 /// Comments are key=value pairs, separated by `comment_separator`
@@ -178,7 +179,7 @@ impl Step for StoreTagInComment {
             &self.segment,
             &self.in_label,
             &mut block,
-            |read: &mut crate::io::WrappedFastQReadMut, tag_val: &TagValue| {
+            |read: &mut WrappedFastQReadMut, tag_val: &TagValue| {
                 let tag_value: Vec<u8> = match tag_val {
                     TagValue::Location(hits) => hits.joined_sequence(Some(&self.region_separator)),
                     TagValue::String(value) => value.to_vec(),

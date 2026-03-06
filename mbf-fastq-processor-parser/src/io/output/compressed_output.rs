@@ -5,7 +5,7 @@ use gzp::{ZBuilder, ZWriter, deflate::Gzip};
 use sha2::Digest;
 use std::io::{self, BufWriter, Write};
 
-use crate::config::CompressionFormat;
+use crate::CompressionFormat;
 use anyhow::{Context, Result};
 
 #[derive(Clone, Debug)]
@@ -233,6 +233,14 @@ pub struct HashedAndCompressedWriter<'a, T: std::io::Write + Send + 'static> {
 
 pub struct HashedAndCompressedWriterSingleCore<'a, T: std::io::Write + Send + 'static> {
     compressed_writer: HashingFileWriter<CompressedWriterSingleCore<'a, T>>,
+}
+
+pub type OutputWriter = HashedAndCompressedWriterSingleCore<'static, ex::fs::File>;
+impl std::fmt::Debug for OutputWriter {
+    #[mutants::skip] // don't care that it's never used, it' s useful when you need to debug
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("OutputWriter").finish_non_exhaustive()
+    }
 }
 
 impl<T: std::io::Write + Send + 'static> HashedAndCompressedWriter<'_, T> {
@@ -496,7 +504,7 @@ impl<T: std::io::Write> std::io::Write for HashingFileWriter<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::CompressionFormat;
+    use crate::CompressionFormat;
     use std::io::{self, Cursor, Write};
 
     #[test]

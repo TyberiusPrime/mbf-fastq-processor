@@ -5,14 +5,15 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 
-use crate::config::{CheckedConfig, CompressionFormat, FileFormat};
+use crate::config::CheckedConfig;
 use crate::demultiplex::OptDemultiplex;
-use crate::io::{
+use crate::join_nonempty;
+use crate::transformations::FinalizeReportResult;
+use mbf_fastq_processor_parser::io::{
     self,
     compressed_output::{HashedAndCompressedWriter, SimulatedWriteFailure},
 };
-use crate::join_nonempty;
-use crate::transformations::FinalizeReportResult;
+use mbf_fastq_processor_parser::{CompressionFormat, FileFormat};
 use noodles::{bam, bgzf, sam};
 
 pub struct OutputRunMarker {
@@ -227,7 +228,7 @@ impl OutputFile<'_> {
 enum OutputFileHandle<'a> {
     Fastq(OutputWriter<'a>),
     Fasta(OutputWriter<'a>),
-    Bam(crate::io::BamOutput<'a>),
+    Bam(mbf_fastq_processor_parser::io::BamOutput<'a>),
     TemporarilyOutOfAction,
 }
 

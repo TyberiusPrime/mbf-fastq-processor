@@ -16,11 +16,13 @@ pub use mbf_fastq_processor_deser::{
 };
 
 pub(crate) use crate::demultiplex::{
-    DemultiplexBarcodes, DemultiplexedData, DemultiplexedOutputFiles, OptDemultiplex, OutputWriter,
+    DemultiplexBarcodes, DemultiplexedData, DemultiplexedOutputFiles, OptDemultiplex,
 };
 
-pub(crate) use crate::io::{FastQBlocksCombined, reads::NewLocation};
 pub(crate) use anyhow::{Context, Result, anyhow, bail};
+pub(crate) use mbf_fastq_processor_parser::io::{
+    FastQBlocksCombined, output::compressed_output::OutputWriter, reads::NewLocation,
+};
 
 pub(crate) use bstr::{BStr, BString};
 pub(crate) use schemars::JsonSchema;

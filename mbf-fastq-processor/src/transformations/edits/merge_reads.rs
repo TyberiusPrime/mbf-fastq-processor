@@ -1,6 +1,6 @@
 use mbf_fastq_processor_deser::dna::{TagValue, reverse_complement};
 
-use crate::io::WrappedFastQReadMut;
+use mbf_fastq_processor_parser::io::WrappedFastQReadMut;
 use crate::transformations::prelude::*;
 use std::borrow::Cow;
 use std::cell::RefCell;

@@ -1,7 +1,8 @@
+use mbf_fastq_processor_parser::io::WrappedFastQRead;
+
 use crate::transformations::prelude::*;
 
 use super::common::PerReadReportData;
-use crate::io;
 
 #[derive(Default, Clone)]
 #[tpd(no_verify)]
@@ -50,7 +51,7 @@ impl Step for Box<_ReportLengthDistribution> {
         _block_no: usize,
         demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        fn update_from_read(target: &mut Vec<usize>, read: &io::WrappedFastQRead) {
+        fn update_from_read(target: &mut Vec<usize>, read: &WrappedFastQRead) {
             let read_len = read.len();
             if target.len() <= read_len {
                 //println!("Had to resize report buffer, {read_len}");

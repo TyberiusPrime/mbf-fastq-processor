@@ -1,7 +1,8 @@
+use mbf_fastq_processor_parser::io::WrappedFastQRead;
+
 use crate::transformations::prelude::*;
 
 use super::common::{PerReadReportData, Q_LOOKUP, Q20_Q30_LOOKUP};
-use crate::io;
 
 #[derive(Debug, Default, Clone, serde::Serialize)]
 pub struct BaseStatisticsPart1 {
@@ -71,7 +72,7 @@ impl Step for Box<_ReportBaseStatisticsPart1> {
         _block_no: usize,
         demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        fn update_from_read(target: &mut BaseStatisticsPart1, read: &io::WrappedFastQRead) {
+        fn update_from_read(target: &mut BaseStatisticsPart1, read: &WrappedFastQRead) {
             let read_len = read.len();
             target.total_bases += read_len;
             if target.expected_errors_from_quality_curve.len() <= read_len {

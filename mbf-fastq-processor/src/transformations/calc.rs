@@ -8,9 +8,6 @@ mod qualified_bases;
 
 mod gc_content;
 
-use crate::{
-    io,
-};
 
 pub use base_content::{BaseContent, PartialBaseContent};
 pub use complexity::{Complexity, PartialComplexity};
@@ -19,6 +16,7 @@ pub use gc_content::{GCContent, PartialGCContent};
 pub use kmers::{Kmers, PartialKmers};
 pub use length::{Length, PartialLength};
 use mbf_fastq_processor_deser::{TagLabel, dna::TagValue, segments::{SegmentIndex, SegmentIndexOrAll}};
+use mbf_fastq_processor_parser::io::{FastQBlocksCombined, WrappedFastQRead};
 pub use n_count::{NCount, PartialNCount};
 pub use qualified_bases::{PartialQualifiedBases, QualifiedBases};
 
@@ -26,13 +24,12 @@ pub(crate) fn extract_numeric_tags<F>(
     segment: SegmentIndex,
     label: &TagLabel,
     mut extractor: F,
-    block: &mut io::FastQBlocksCombined,
+    block: &mut FastQBlocksCombined,
 ) where
-    F: FnMut(&io::WrappedFastQRead) -> f64,
+    F: FnMut(&WrappedFastQRead) -> f64,
 {
     let mut values = Vec::with_capacity(block.segments[segment.get_index()].len()); //7% speed up
-    //let mut values = Vec::new();
-    let f = |read: &mut io::WrappedFastQRead| {
+    let f = |read: &mut WrappedFastQRead| {
         values.push(TagValue::Numeric(extractor(read)));
     };
 
@@ -44,10 +41,10 @@ pub(crate) fn extract_numeric_tags_plus_all<F>(
     segment: SegmentIndexOrAll,
     label: &TagLabel,
     extractor_single: F,
-    mut extractor_all: impl FnMut(&Vec<io::WrappedFastQRead>) -> f64,
-    block: &mut io::FastQBlocksCombined,
+    mut extractor_all: impl FnMut(&Vec<WrappedFastQRead>) -> f64,
+    block: &mut FastQBlocksCombined,
 ) where
-    F: FnMut(&io::WrappedFastQRead) -> f64,
+    F: FnMut(&WrappedFastQRead) -> f64,
 {
     if let Ok(target) = segment.try_into() as Result<SegmentIndex, _> {
         // Handle single target case

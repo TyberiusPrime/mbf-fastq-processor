@@ -1,13 +1,16 @@
 use anyhow::{Context, Result, bail};
 use ex::Wrapper;
+use schemars::JsonSchema;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::{fs, io::Read, path::Path};
+use toml_pretty_deser::prelude::*;
 
 use super::parsers;
 use super::reads::SegmentsCombined;
-use crate::config::{CompressionFormat, STDIN_MAGIC_PATH};
 use crate::io::parsers::ThreadCount;
+use crate::{CompressionFormat, STDIN_MAGIC_PATH};
+use mbf_fastq_processor_deser::{default_comment_insert_char, tpd_adapt_u8_from_byte_or_char};
 
 pub enum InputFile {
     Fastq(ex::fs::File, Option<PathBuf>),
@@ -24,6 +27,86 @@ pub enum DecompressionOptions {
     },
 }
 
+#[derive(serde::Serialize, Clone, PartialEq, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
+pub struct InputOptions {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[tpd(with = "tpd_adapt_u8_from_byte_or_char")]
+    pub fasta_fake_quality: Option<u8>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bam_include_mapped: Option<bool>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bam_include_unmapped: Option<bool>,
+
+    #[tpd(with = "tpd_adapt_u8_from_byte_or_char")]
+    pub read_comment_character: u8,
+
+    #[serde(skip_serializing)]
+    pub use_rapidgzip: Option<bool>,
+
+    #[serde(skip_serializing)]
+    pub build_rapidgzip_index: Option<bool>,
+
+    pub threads_per_segment: Option<usize>,
+}
+
+impl<R> VerifyIn<R> for PartialInputOptions {
+    fn verify(
+        &mut self,
+        _parent: &R,
+        _options: &VerifyOptions,
+    ) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        self.fasta_fake_quality.verify(|opt_v| {
+            if let Some(v) = opt_v {
+                if *v >= 33 && *v <= 126 {
+                    Ok(())
+                } else {
+                    Err(ValidationFailure::new(
+                        "Out of PHRED range (33..126)",
+                        Some("'B' might be a good value"),
+                    ))
+                }
+            } else {
+                Ok(())
+            }
+        });
+        self.read_comment_character
+            .or_with(default_comment_insert_char);
+
+        // Validate index_gzip option
+        if let Some(Some(true)) = self.build_rapidgzip_index.as_ref()
+            && let Some(Some(false)) = self.use_rapidgzip.as_ref()
+        {
+            self.build_rapidgzip_index.state = TomlValueState::ValidationFailed {
+                message: "Only accepted when use_rapidgzip is set to true".to_string(),
+            };
+            self.build_rapidgzip_index.help =
+                Some("Either set use_rapidgzip=true or unset build_rapidgzip_index".to_string());
+        }
+
+        Ok(())
+    }
+}
+
+impl Default for InputOptions {
+    fn default() -> Self {
+        InputOptions {
+            fasta_fake_quality: None,
+            bam_include_mapped: None,
+            bam_include_unmapped: None,
+            read_comment_character: default_comment_insert_char(),
+            use_rapidgzip: None,
+            build_rapidgzip_index: None,
+            threads_per_segment: None,
+        }
+    }
+}
 impl InputFile {
     #[mutants::skip] // will just fall back to default decompression options, which obvs. works
     #[must_use]
@@ -39,7 +122,7 @@ impl InputFile {
         target_reads_per_block: usize,
         buffer_size: usize,
         thread_count: ThreadCount,
-        options: &crate::config::InputOptions,
+        options: &crate::io::input::InputOptions,
     ) -> Result<Box<dyn parsers::Parser>> {
         let decompression_options = if options
             .use_rapidgzip
@@ -218,70 +301,6 @@ pub fn sum_file_sizes(filenames: &[impl AsRef<Path>]) -> Result<u64> {
             .with_context(|| "Total size of input files exceeds u64 max")?;
     }
     Ok(total_size)
-}
-
-pub fn open_input_files(input_config: &crate::config::Input) -> Result<InputFiles> {
-    match &input_config.structured {
-        crate::config::StructuredInput::Interleaved {
-            files,
-            segment_order,
-        } => {
-            let readers: Result<Vec<_>> = files
-                .iter()
-                .map(|x| {
-                    open_input_file(x).with_context(|| {
-                        format!("Problem in interleaved segment while opening '{x}'")
-                    })
-                })
-                .collect();
-            let readers = vec![readers?];
-            //since there is only one segment, it's by default the largest
-            // mutant fp, since it only affects cuckoo buffer sizes
-            let total_size_of_largest_segment =
-                total_file_size(&readers[0]).map(|x| x / segment_order.len() as u64);
-
-            Ok(InputFiles {
-                segment_files: SegmentsCombined { segments: readers },
-                total_size_of_largest_segment,
-                largest_segment_idx: 0, // does not matter.
-            })
-        }
-        crate::config::StructuredInput::Segmented {
-            segment_order,
-            segment_files,
-        } => {
-            let mut segments = Vec::new();
-            let mut sizes = Vec::new();
-            for key in segment_order {
-                let filenames = segment_files
-                    .get(key)
-                    .expect("Segment order / segments mismatch");
-                let readers: Result<Vec<_>> = filenames
-                    .iter()
-                    .map(|x| {
-                        open_input_file(x).with_context(|| {
-                            format!("Problem in segment {key} while opening '{x}'")
-                        })
-                    })
-                    .collect();
-                let readers = readers?;
-                sizes.push(total_file_size(&readers));
-                segments.push(readers);
-            }
-            let total_size_of_largest_segment = sizes.iter().filter_map(|x| *x).max();
-            let largest_segment_idx = sizes
-                .iter()
-                .filter_map(|x| *x)
-                .enumerate()
-                .max_by_key(|&(_idx, size)| size)
-                .map_or(0, |(idx, _size)| idx);
-            Ok(InputFiles {
-                segment_files: SegmentsCombined { segments },
-                total_size_of_largest_segment,
-                largest_segment_idx,
-            })
-        }
-    }
 }
 
 fn open_stdin() -> Result<ex::fs::File> {

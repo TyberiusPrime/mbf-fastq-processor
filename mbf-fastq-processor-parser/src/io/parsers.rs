@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use crate::config::InputOptions;
+use crate::io::input::InputOptions;
 use crate::io::{FastQBlock, InputFile};
 use anyhow::Result;
 

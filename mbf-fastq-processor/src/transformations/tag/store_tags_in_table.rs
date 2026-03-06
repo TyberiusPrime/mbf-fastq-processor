@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::transformations::prelude::*;
-use crate::{config::CompressionFormat};
+use mbf_fastq_processor_parser::CompressionFormat;
 
 use mbf_fastq_processor_deser::{default_region_separator, tpd_adapt_bstring};
 

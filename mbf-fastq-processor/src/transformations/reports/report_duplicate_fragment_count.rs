@@ -1,6 +1,7 @@
 use crate::transformations::prelude::*;
 
-use crate::{io::WrappedFastQRead, transformations::tag::calculate_filter_capacity};
+use mbf_fastq_processor_parser::io::WrappedFastQRead;
+use crate::transformations::tag::calculate_filter_capacity;
 
 #[derive(Default, Debug, Clone)]
 pub struct DuplicateFragmentCountData {

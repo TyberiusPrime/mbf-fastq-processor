@@ -18,11 +18,11 @@ impl TagUser for PartialTaggedVariant<Box<Partial_InternalDelay>> {}
 impl Step for Box<_InternalDelay> {
     fn apply(
         &self,
-        block: crate::io::FastQBlocksCombined,
+        block: FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         block_no: usize,
         _demultiplex_info: &OptDemultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let seed = block_no; //needs to be reproducible, but different for each block
         let seed_bytes = seed.to_le_bytes();
 
@@ -70,11 +70,11 @@ impl Step for Box<_InternalReadCount> {
     // }
     fn apply(
         &self,
-        block: crate::io::FastQBlocksCombined,
+        block: FastQBlocksCombined,
         _input_info: &InputInfo,
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         self.count.fetch_add(
             block.segments[0].entries.len(),
             std::sync::atomic::Ordering::Relaxed,
@@ -111,11 +111,11 @@ impl Step for Box<_InduceFailure> {
     }
     fn apply(
         &self,
-        _block: crate::io::FastQBlocksCombined,
+        _block: FastQBlocksCombined,
         _input_info: &InputInfo,
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         bail!("Induced failure: {}", self.msg);
     }
 }

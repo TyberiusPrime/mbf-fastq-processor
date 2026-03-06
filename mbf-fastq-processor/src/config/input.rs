@@ -5,11 +5,11 @@ use indexmap::IndexMap;
 use schemars::JsonSchema;
 use toml_pretty_deser::{Visitor, prelude::*};
 
-use mbf_fastq_processor_deser::{
-    StringOrVecString, default_comment_insert_char, tpd_adapt_u8_from_byte_or_char,
-    SegmentLabel,
+use mbf_fastq_processor_deser::{SegmentLabel, StringOrVecString, default_comment_insert_char};
+use mbf_fastq_processor_parser::{
+    STDIN_MAGIC_PATH,
+    io::input::{InputOptions, PartialInputOptions},
 };
-
 
 fn is_default(opt: &InputOptions) -> bool {
     opt.fasta_fake_quality.is_none()
@@ -17,8 +17,6 @@ fn is_default(opt: &InputOptions) -> bool {
         && opt.bam_include_unmapped.is_none()
         && opt.read_comment_character == default_comment_insert_char()
 }
-
-pub const STDIN_MAGIC_PATH: &str = "--stdin--";
 
 /// Input configuration
 #[derive(serde::Serialize)]
@@ -76,7 +74,6 @@ impl PartialInput {
             }
         }
     }
-
 
     fn validate_stdin_usage(&mut self) -> Result<(), ()> {
         // let Some(structured) = self.structured.as_ref() else {
@@ -264,8 +261,7 @@ If you have paired end reads, name two 'virtual' segments, e.g. ['read1','read2'
         let Some(segments) = self.segments.as_mut() else {
             return Ok(());
         };
-        let mut segment_order: Vec<String> =
-            segments.map.keys().map(|x| x.0.to_string()).collect();
+        let mut segment_order: Vec<String> = segments.map.keys().map(|x| x.0.to_string()).collect();
         segment_order.sort(); //always alphabetical...
         if segment_order.is_empty() {
             self.segments.state = TomlValueState::ValidationFailed {
@@ -385,87 +381,6 @@ impl VerifyIn<super::PartialConfig> for PartialInput {
     }
 }
 
-#[derive(serde::Serialize, Clone, PartialEq, JsonSchema)]
-#[tpd]
-#[derive(Debug)]
-pub struct InputOptions {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[tpd(with = "tpd_adapt_u8_from_byte_or_char")]
-    pub fasta_fake_quality: Option<u8>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub bam_include_mapped: Option<bool>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub bam_include_unmapped: Option<bool>,
-
-    #[tpd(with = "tpd_adapt_u8_from_byte_or_char")]
-    pub read_comment_character: u8,
-
-    #[serde(skip_serializing)]
-    pub use_rapidgzip: Option<bool>,
-
-    #[serde(skip_serializing)]
-    pub build_rapidgzip_index: Option<bool>,
-
-    pub threads_per_segment: Option<usize>,
-}
-
-impl VerifyIn<PartialInput> for PartialInputOptions {
-    fn verify(
-        &mut self,
-        _parent: &PartialInput,
-        _options: &VerifyOptions,
-    ) -> std::result::Result<(), ValidationFailure>
-    where
-        Self: Sized + toml_pretty_deser::Visitor,
-    {
-        self.fasta_fake_quality.verify(|opt_v| {
-            if let Some(v) = opt_v {
-                if *v >= 33 && *v <= 126 {
-                    Ok(())
-                } else {
-                    Err(ValidationFailure::new(
-                        "Out of PHRED range (33..126)",
-                        Some("'B' might be a good value"),
-                    ))
-                }
-            } else {
-                Ok(())
-            }
-        });
-        self.read_comment_character
-            .or_with(default_comment_insert_char);
-
-        // Validate index_gzip option
-        if let Some(Some(true)) = self.build_rapidgzip_index.as_ref()
-            && let Some(Some(false)) = self.use_rapidgzip.as_ref()
-        {
-            self.build_rapidgzip_index.state = TomlValueState::ValidationFailed {
-                message: "Only accepted when use_rapidgzip is set to true".to_string(),
-            };
-            self.build_rapidgzip_index.help =
-                Some("Either set use_rapidgzip=true or unset build_rapidgzip_index".to_string());
-        }
-
-        Ok(())
-    }
-}
-
-impl Default for InputOptions {
-    fn default() -> Self {
-        InputOptions {
-            fasta_fake_quality: None,
-            bam_include_mapped: None,
-            bam_include_unmapped: None,
-            read_comment_character: default_comment_insert_char(),
-            use_rapidgzip: None,
-            build_rapidgzip_index: None,
-            threads_per_segment: None,
-        }
-    }
-}
-
 #[derive(Debug, Clone)]
 pub enum StructuredInput {
     Interleaved {
@@ -548,81 +463,6 @@ impl PartialInput {
         {
             StructuredInput::Interleaved { segment_order, .. }
             | StructuredInput::Segmented { segment_order, .. } => segment_order,
-        }
-    }
-}
-
-#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, JsonSchema)]
-#[tpd]
-pub enum CompressionFormat {
-    #[tpd(alias = "uncompressed")]
-    #[tpd(alias = "raw")]
-    #[default]
-    Uncompressed,
-    #[tpd(alias = "gzip")]
-    #[tpd(alias = "gz")]
-    Gzip,
-    #[tpd(alias = "zstd")]
-    #[tpd(alias = "zst")]
-    Zstd,
-}
-
-impl CompressionFormat {
-    #[must_use]
-    pub fn is_compressed(&self) -> bool {
-        !matches!(self, CompressionFormat::Uncompressed)
-    }
-}
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Default, JsonSchema)]
-#[tpd]
-pub enum FileFormat {
-    #[default]
-    Fastq,
-    Fasta,
-    Bam,
-    None,
-}
-
-impl FileFormat {
-    #[must_use]
-    pub fn default_suffix(&self) -> &'static str {
-        match self {
-            FileFormat::Fastq => "fq",
-            FileFormat::Fasta => "fasta",
-            FileFormat::Bam => "bam",
-            FileFormat::None => "",
-        }
-    }
-
-    #[must_use]
-    pub fn get_suffix(
-        &self,
-        compression: CompressionFormat,
-        custom_suffix: Option<&String>,
-    ) -> String {
-        if let Some(custom) = custom_suffix {
-            return custom.clone();
-        }
-
-        match self {
-            FileFormat::Fastq | FileFormat::Fasta => {
-                let base = self.default_suffix();
-                compression.apply_suffix(base)
-            }
-            FileFormat::Bam => self.default_suffix().to_string(),
-            FileFormat::None => String::new(),
-        }
-    }
-}
-
-impl CompressionFormat {
-    #[must_use]
-    pub fn apply_suffix(self, base: &str) -> String {
-        match self {
-            CompressionFormat::Uncompressed => base.to_string(),
-            CompressionFormat::Gzip => format!("{base}.gz"),
-            CompressionFormat::Zstd => format!("{base}.zst"),
         }
     }
 }

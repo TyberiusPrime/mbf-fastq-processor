@@ -5,6 +5,7 @@ use std::borrow::Cow;
 use std::io::Write;
 use std::path::Path;
 use std::time::Duration;
+use mbf_fastq_processor_parser::STDIN_MAGIC_PATH;
 
 #[allow(clippy::too_many_lines)]
 pub fn verify_outputs(
@@ -245,7 +246,7 @@ pub fn verify_outputs(
 
     let current_exe = std::env::current_exe().context("Failed to get current executable path")?;
 
-    let uses_stdin = raw_config.contains(crate::config::STDIN_MAGIC_PATH);
+    let uses_stdin = raw_config.contains(STDIN_MAGIC_PATH);
     let stdin_file = if uses_stdin {
         let stdin_path = toml_dir.join("stdin");
         if stdin_path.exists() {
@@ -884,7 +885,7 @@ fn create_symlinks_for_files(
     target_dir: &Path,
 ) -> Result<()> {
     if let Some(path_str) = value.as_str() {
-        if path_str != crate::config::STDIN_MAGIC_PATH {
+        if path_str != STDIN_MAGIC_PATH {
             let source_path = source_dir.join(path_str);
             let target_path = target_dir.join(path_str);
 
@@ -903,7 +904,7 @@ fn create_symlinks_for_files(
     } else if let Some(paths) = value.as_array() {
         for v in paths {
             if let Some(path_str) = v.as_str()
-                && path_str != crate::config::STDIN_MAGIC_PATH {
+                && path_str != STDIN_MAGIC_PATH {
                     let source_path = source_dir.join(path_str);
                     let target_path = target_dir.join(path_str);
 
@@ -968,7 +969,7 @@ fn create_symlink(source: &Path, target: &Path) -> Result<()> {
 
 fn copy_input_file(value: &toml::Value, source_dir: &Path, target_dir: &Path) -> Result<()> {
     if let Some(path_str) = value.as_str() {
-        if path_str != crate::config::STDIN_MAGIC_PATH {
+        if path_str != STDIN_MAGIC_PATH {
             let out_path = target_dir.join(path_str);
             let input_path = source_dir.join(path_str);
             std::fs::copy(&input_path, &out_path).with_context(|| {
@@ -985,7 +986,7 @@ fn copy_input_file(value: &toml::Value, source_dir: &Path, target_dir: &Path) ->
             .iter()
             .map(|v| {
                 if let Some(path_str) = v.as_str() {
-                    if path_str == crate::config::STDIN_MAGIC_PATH {
+                    if path_str == STDIN_MAGIC_PATH {
                         Ok(())
                     } else {
                         let out_path = target_dir.join(path_str);

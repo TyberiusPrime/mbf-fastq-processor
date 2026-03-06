@@ -10,6 +10,7 @@ use super::{
 };
 
 use mbf_fastq_processor_deser::{default_comment_insert_char, default_comment_separator, tpd_adapt_u8_from_byte_or_char};
+use mbf_fastq_processor_parser::io::WrappedFastQReadMut;
 
 /// Store currently present tag locations as
 /// {tag}_location=target:start-end,target:start-end
@@ -84,7 +85,7 @@ impl Step for StoreTagLocationInComment {
             &self.segment,
             &self.in_label,
             &mut block,
-            |read: &mut crate::io::WrappedFastQReadMut, tag_val: &TagValue| {
+            |read: &mut WrappedFastQReadMut, tag_val: &TagValue| {
                 let mut seq: Vec<u8> = Vec::new();
                 if let Some(hits) = tag_val.as_sequence() {
                     let mut first = true;

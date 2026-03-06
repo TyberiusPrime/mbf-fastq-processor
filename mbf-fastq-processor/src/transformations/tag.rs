@@ -19,6 +19,7 @@ use mbf_fastq_processor_deser::{TagLabel, dna::TagValue};
 pub use concat_tags::{ConcatTags, PartialConcatTags};
 pub use forget_all_tags::{ForgetAllTags, PartialForgetAllTags};
 pub use forget_tag::{ForgetTag, PartialForgetTag};
+use mbf_fastq_processor_parser::io::{FastQBlocksCombined, WrappedFastQReadMut, bam_read_count_from_index};
 pub use quantify_tag::{PartialQuantifyTag, QuantifyTag};
 pub use replace_tag_with_letter::{PartialReplaceTagWithLetter, ReplaceTagWithLetter};
 pub use store_tag_in_comment::{PartialStoreTagInComment, StoreTagInComment};
@@ -30,13 +31,13 @@ pub use store_tag_location_in_comment::{
 pub use store_tags_in_table::{PartialStoreTagsInTable, StoreTagsInTable};
 use toml_pretty_deser::{TomlValue, TomlValueState};
 
-use crate::{config::SegmentIndexOrAll, io};
+use crate::{config::SegmentIndexOrAll};
 
 pub(crate) fn apply_in_place_wrapped_with_tag(
     segment_index: &SegmentIndexOrAll,
     label: &TagLabel,
-    block: &mut io::FastQBlocksCombined,
-    f: impl Fn(&mut io::WrappedFastQReadMut, &TagValue),
+    block: &mut FastQBlocksCombined,
+    f: impl Fn(&mut WrappedFastQReadMut, &TagValue),
 ) {
     match segment_index {
         SegmentIndexOrAll::Indexed(idx) => {
@@ -104,7 +105,7 @@ pub(crate) fn initial_filter_elements(
     include_unmapped: bool,
 ) -> usize {
     let bam_read_count =
-        crate::io::bam_read_count_from_index(filename, include_mapped, include_unmapped);
+        bam_read_count_from_index(filename, include_mapped, include_unmapped);
     bam_read_count.unwrap_or(DEFAULT_INITIAL_FILTER_CAPACITY)
 }
 

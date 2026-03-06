@@ -1,97 +1,67 @@
-use anyhow::Result;
-use std::{ops::Range, path::Path};
+use mbf_fastq_processor_parser::io::{InputFiles, SegmentsCombined, open_input_file, total_file_size};
+use anyhow::{Context, Result};
 
-pub mod fileformats;
-pub mod input;
-pub mod output;
-pub mod parsers;
-pub mod reads;
 
-use crate::config::InputOptions;
-use crate::config::options::{default_block_size, default_buffer_size};
-use crate::get_number_of_cores;
-use crate::io::parsers::ThreadCount;
-pub use input::{
-    DetectedInputFormat, InputFile, InputFiles, open_file, open_input_file, open_input_files,
-    total_file_size,
-};
-pub use reads::{
-    FastQBlock, FastQBlocksCombined, FastQElement, FastQRead, Position, SegmentsCombined,
-    WrappedFastQRead, WrappedFastQReadMut, longest_suffix_that_is_a_prefix,
-};
+pub fn open_input_files(input_config: &crate::config::Input) -> Result<InputFiles> {
+    match &input_config.structured {
+        crate::config::StructuredInput::Interleaved {
+            files,
+            segment_order,
+        } => {
+            let readers: Result<Vec<_>> = files
+                .iter()
+                .map(|x| {
+                    open_input_file(x).with_context(|| {
+                        format!("Problem in interleaved segment while opening '{x}'")
+                    })
+                })
+                .collect();
+            let readers = vec![readers?];
+            //since there is only one segment, it's by default the largest
+            // mutant fp, since it only affects cuckoo buffer sizes
+            let total_size_of_largest_segment =
+                total_file_size(&readers[0]).map(|x| x / segment_order.len() as u64);
 
-pub use output::compressed_output;
-pub use output::{BamOutput, write_read_to_bam};
-pub use parsers::bam_read_count_from_index;
-
-/// Given a fastq or bam file, run a call back on all reads
-fn apply_to_read(
-    filename: impl AsRef<Path>,
-    func: &mut impl FnMut(&Vec<u8>, &FastQRead),
-    include_mapped: bool,
-    include_unmapped: bool,
-    use_rapidgzip: bool,
-) -> Result<()> {
-    let filename = filename.as_ref();
-    let input_file = open_input_file(filename)?;
-    let options = InputOptions {
-        fasta_fake_quality: Some(33),
-        bam_include_mapped: Some(include_mapped),
-        bam_include_unmapped: Some(include_unmapped),
-        read_comment_character: b' ', // ignored here.
-        use_rapidgzip: Some(use_rapidgzip),
-        build_rapidgzip_index: None,
-        threads_per_segment: Some(get_number_of_cores()), // at this point, we're ready to multicore this
-                                                          // hard.
-    };
-    let mut parser = input_file.get_parser(
-        default_block_size(),
-        default_buffer_size(),
-        ThreadCount(1),
-        &options,
-    )?;
-    loop {
-        let res = parser.parse()?;
-        for read in res.fastq_block.entries {
-            func(&res.fastq_block.block, &read);
+            Ok(InputFiles {
+                segment_files: SegmentsCombined { segments: readers },
+                total_size_of_largest_segment,
+                largest_segment_idx: 0, // does not matter.
+            })
         }
-        if res.was_final {
-            break;
+        crate::config::StructuredInput::Segmented {
+            segment_order,
+            segment_files,
+        } => {
+            let mut segments = Vec::new();
+            let mut sizes = Vec::new();
+            for key in segment_order {
+                let filenames = segment_files
+                    .get(key)
+                    .expect("Segment order / segments mismatch");
+                let readers: Result<Vec<_>> = filenames
+                    .iter()
+                    .map(|x| {
+                        open_input_file(x).with_context(|| {
+                            format!("Problem in segment {key} while opening '{x}'")
+                        })
+                    })
+                    .collect();
+                let readers = readers?;
+                sizes.push(total_file_size(&readers));
+                segments.push(readers);
+            }
+            let total_size_of_largest_segment = sizes.iter().filter_map(|x| *x).max();
+            let largest_segment_idx = sizes
+                .iter()
+                .filter_map(|x| *x)
+                .enumerate()
+                .max_by_key(|&(_idx, size)| size)
+                .map_or(0, |(idx, _size)| idx);
+            Ok(InputFiles {
+                segment_files: SegmentsCombined { segments },
+                total_size_of_largest_segment,
+                largest_segment_idx,
+            })
         }
     }
-
-    Ok(())
-}
-
-pub fn apply_to_read_names(
-    filename: impl AsRef<Path>,
-    func: &mut impl FnMut(&[u8]),
-    include_mapped: bool,
-    include_unmapped: bool,
-    use_rapidgzip: bool,
-) -> Result<()> {
-    apply_to_read(
-        filename,
-        &mut |block: &Vec<u8>, read: &FastQRead| func(read.name.get(block)),
-        include_mapped,
-        include_unmapped,
-        use_rapidgzip,
-    )
-}
-
-/// Given a fastq or bam file, run a call back on all read sequences
-pub fn apply_to_read_sequences(
-    filename: impl AsRef<Path>,
-    func: &mut impl FnMut(&[u8]),
-    include_mapped: bool,
-    include_unmapped: bool,
-    use_rapidgzip: bool,
-) -> Result<()> {
-    apply_to_read(
-        filename,
-        &mut |block: &Vec<u8>, read: &FastQRead| func(read.seq.get(block)),
-        include_mapped,
-        include_unmapped,
-        use_rapidgzip,
-    )
 }

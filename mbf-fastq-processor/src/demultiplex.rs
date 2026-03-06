@@ -1,8 +1,8 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-use crate::config::CompressionFormat;
-use crate::io::compressed_output::HashedAndCompressedWriterSingleCore;
+use mbf_fastq_processor_parser::CompressionFormat;
+use mbf_fastq_processor_parser::io::compressed_output::{HashedAndCompressedWriterSingleCore, OutputWriter};
 use crate::join_nonempty;
 use anyhow::{Context, Result};
 use bstr::BString;
@@ -18,14 +18,7 @@ pub struct DemultiplexedData<T>(BTreeMap<Tag, T>);
 // since we use it in the unclonable needs_serial stages
 pub type DemultiplexTagToName = BTreeMap<Tag, Option<String>>;
 
-pub type OutputWriter = HashedAndCompressedWriterSingleCore<'static, ex::fs::File>;
 
-impl std::fmt::Debug for OutputWriter {
-    #[mutants::skip] // don't care that it's never used, it' s useful when you need to debug
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("OutputWriter").finish_non_exhaustive()
-    }
-}
 
 #[derive(Default, Clone)]
 pub struct DemultiplexedOutputFiles(pub DemultiplexedData<Option<Box<OutputWriter>>>);

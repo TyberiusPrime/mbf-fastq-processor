@@ -9,8 +9,6 @@ use std::{
     sync::atomic::Ordering,
 };
 
-use crate::io;
-
 #[derive(Debug)]
 struct CompiledExpression {
     slab: Slab,
@@ -190,11 +188,11 @@ impl Step for Box<EvalExpression> {
     #[allow(clippy::cast_precision_loss)]
     fn apply(
         &self,
-        mut block: io::FastQBlocksCombined,
+        mut block: FastQBlocksCombined,
         input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
-    ) -> anyhow::Result<(io::FastQBlocksCombined, bool)> {
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         // Parse and compile the expression for better performance
         let eval = &self.compiled;
         let slab = &eval.slab;

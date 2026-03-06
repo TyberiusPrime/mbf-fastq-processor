@@ -18,13 +18,13 @@ pub use iupac_with_indel::{IUPACWithIndel, PartialIUPACWithIndel};
 pub use longest_poly_x::{LongestPolyX, PartialLongestPolyX};
 pub use low_quality_end::{LowQualityEnd, PartialLowQualityEnd};
 pub use low_quality_start::{LowQualityStart, PartialLowQualityStart};
+use mbf_fastq_processor_parser::io::{FastQBlocksCombined, WrappedFastQRead};
 pub use poly_tail::{PartialPolyTail, PolyTail};
 pub use regex::{PartialRegex, Regex};
 pub use region::{PartialRegion, Region};
 pub use regions::{PartialRegions, Regions};
 pub use regions_of_low_quality::{PartialRegionsOfLowQuality, RegionsOfLowQuality};
 
-use crate::io;
 use mbf_fastq_processor_deser::{
     segments::{SegmentIndex, SegmentIndexOrAll},
     TagLabel, dna::{TagValue, Hits}
@@ -33,14 +33,14 @@ use mbf_fastq_processor_deser::{
 use super::prelude::DemultiplexTag;
 
 pub(crate) fn extract_region_tags(
-    block: &mut io::FastQBlocksCombined,
+    block: &mut FastQBlocksCombined,
     segment: SegmentIndex,
     label: &TagLabel,
-    f: impl Fn(&mut io::WrappedFastQRead) -> Option<Hits>,
+    f: impl Fn(&mut WrappedFastQRead) -> Option<Hits>,
 ) {
     let mut out = Vec::new();
 
-    let f2 = |read: &mut io::WrappedFastQRead| {
+    let f2 = |read: &mut WrappedFastQRead| {
         out.push(match f(read) {
             Some(hits) => TagValue::Location(hits),
             None => TagValue::Missing,
@@ -52,14 +52,14 @@ pub(crate) fn extract_region_tags(
 }
 
 pub(crate) fn extract_string_tags(
-    block: &mut io::FastQBlocksCombined,
+    block: &mut FastQBlocksCombined,
     segment: SegmentIndex,
     label: &TagLabel,
-    f: impl Fn(&mut io::WrappedFastQRead) -> Option<BString>,
+    f: impl Fn(&mut WrappedFastQRead) -> Option<BString>,
 ) {
     let mut out = Vec::new();
 
-    let f2 = |read: &mut io::WrappedFastQRead| {
+    let f2 = |read: &mut WrappedFastQRead| {
         out.push(match f(read) {
             Some(hits) => TagValue::String(hits),
             None => TagValue::Missing,
@@ -71,15 +71,15 @@ pub(crate) fn extract_string_tags(
 }
 
 pub(crate) fn extract_bool_tags<F>(
-    block: &mut io::FastQBlocksCombined,
+    block: &mut FastQBlocksCombined,
     segment: SegmentIndex,
     label: &TagLabel,
     mut extractor: F,
 ) where
-    F: FnMut(&io::WrappedFastQRead, DemultiplexTag) -> bool,
+    F: FnMut(&WrappedFastQRead, DemultiplexTag) -> bool,
 {
     let mut values = Vec::new();
-    let f = |read: &mut io::WrappedFastQRead, output_tag| {
+    let f = |read: &mut WrappedFastQRead, output_tag| {
         values.push(TagValue::Bool(extractor(read, output_tag)));
     };
     block.segments[segment.get_index()].apply_with_demultiplex_tag(f, block.output_tags.as_ref());
@@ -88,14 +88,14 @@ pub(crate) fn extract_bool_tags<F>(
 }
 
 pub(crate) fn extract_bool_tags_plus_all<F, G>(
-    block: &mut io::FastQBlocksCombined,
+    block: &mut FastQBlocksCombined,
     segment: SegmentIndexOrAll,
     label: &TagLabel,
     extractor_single: F,
     mut extractor_all: G,
 ) where
-    F: FnMut(&io::WrappedFastQRead, DemultiplexTag) -> bool,
-    G: FnMut(&Vec<io::WrappedFastQRead>, DemultiplexTag) -> bool,
+    F: FnMut(&WrappedFastQRead, DemultiplexTag) -> bool,
+    G: FnMut(&Vec<WrappedFastQRead>, DemultiplexTag) -> bool,
 {
     let target: Result<SegmentIndex, _> = segment.try_into();
     if let Ok(target) = target {
@@ -121,7 +121,7 @@ pub(crate) fn extract_bool_tags_plus_all<F, G>(
 }
 
 pub(crate) fn extract_bool_tags_from_tag<F>(
-    block: &mut io::FastQBlocksCombined,
+    block: &mut FastQBlocksCombined,
     label: &TagLabel,
     input_label: &TagLabel,
     mut extractor: F,

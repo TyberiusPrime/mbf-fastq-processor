@@ -1,11 +1,12 @@
-use crate::config::options::default_block_size;
-use crate::io::{self, DetectedInputFormat};
 use crate::transformations::{PartialTransformation, Transformation};
 use anyhow::{Result, anyhow, bail};
 use bstr::BString;
 use indexmap::IndexMap;
+use mbf_fastq_processor_deser::{default_block_size, default_buffer_size, default_output_buffer_size, default_spot_check_read_pairing};
 use mbf_fastq_processor_deser::dna::{all_iupac_or_underscore, iupac_overlapping};
 use mbf_fastq_processor_deser::{RemovedTags, TagLabel, TagValueType, dna};
+use mbf_fastq_processor_parser::io::{self, DetectedInputFormat};
+use mbf_fastq_processor_parser::{CompressionFormat, FileFormat};
 use schemars::JsonSchema;
 use std::cell::RefCell;
 use std::collections::{BTreeMap, HashSet};
@@ -17,16 +18,13 @@ pub mod options;
 mod output;
 mod segments;
 
-use crate::get_number_of_cores;
-pub use input::{
-    CompressionFormat, FileFormat, Input, InputOptions, PartialInput, PartialInputOptions,
-    STDIN_MAGIC_PATH, StructuredInput,
-};
+pub use input::{Input, PartialInput, StructuredInput};
 pub use io::fileformats::PhredEncoding;
 pub use mbf_fastq_processor_deser::segments::{
     ResolvedSourceAll, ResolvedSourceNoAll, SegmentIndex, SegmentIndexOrAll, SegmentOrNameIndex,
 };
 pub use mbf_fastq_processor_deser::{offer_alternatives, validate_tag_name};
+use mbf_fastq_processor_parser::get_number_of_cores;
 
 pub use options::{Options, PartialOptions};
 pub use output::{Output, PartialOutput, validate_compression_level_u8};
@@ -167,11 +165,11 @@ impl VerifyIn<TPDRoot> for PartialConfig {
             threads: TomlValue::new_ok(None, 0..0),
             max_blocks_in_flight: TomlValue::new_ok(None, 0..0),
             block_size: TomlValue::new_ok(default_block_size(), 0..0),
-            buffer_size: TomlValue::new_ok(options::default_buffer_size(), 0..0),
-            output_buffer_size: TomlValue::new_ok(options::default_output_buffer_size(), 0..0),
+            buffer_size: TomlValue::new_ok(default_buffer_size(), 0..0),
+            output_buffer_size: TomlValue::new_ok(default_output_buffer_size(), 0..0),
             accept_duplicate_files: TomlValue::new_ok(false, 0..0),
             spot_check_read_pairing: TomlValue::new_ok(
-                options::default_spot_check_read_pairing(),
+                default_spot_check_read_pairing(),
                 0..0,
             ),
             debug_failures: TomlValue::new_ok(
@@ -585,12 +583,13 @@ impl PartialConfig {
 
     /// Enable/disable rapidgzip. defaults to enabled if we can find the binary.
     fn configure_rapid_gzip(&mut self) {
+        use mbf_fastq_processor_parser::io::input::find_rapidgzip_in_path;
         if let Some(input) = self.input.as_mut()
             && let Some(options) = input.options.as_mut()
         {
             options.use_rapidgzip.value = match options.use_rapidgzip.as_ref() {
                 Some(Some(true)) => {
-                    if crate::io::input::find_rapidgzip_in_path().is_none() {
+                    if find_rapidgzip_in_path().is_none() {
                         options.use_rapidgzip.state = TomlValueState::ValidationFailed {
                             message: "rapidgzip requested but not found in PATH".to_string(),
                         };
@@ -601,7 +600,7 @@ impl PartialConfig {
                     Some(Some(true))
                 }
                 Some(Some(false)) => Some(Some(false)),
-                Some(None) => Some(Some(crate::io::input::find_rapidgzip_in_path().is_some())),
+                Some(None) => Some(Some(find_rapidgzip_in_path().is_some())),
                 None => None, //other error
             }
         }

@@ -11,9 +11,9 @@ use std::sync::{Arc, Mutex};
 use crate::{
     config::Stage,
     demultiplex::OptDemultiplex,
-    io,
     transformations::{self, Step},
 };
+use mbf_fastq_processor_parser::io;
 
 pub struct WorkItem {
     pub block_no: usize,

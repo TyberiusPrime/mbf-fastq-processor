@@ -1,3 +1,5 @@
+use mbf_fastq_processor_parser::io::WrappedFastQRead;
+
 use crate::transformations::prelude::*;
 
 use std::cell::RefCell;
@@ -140,7 +142,7 @@ impl Step for Duplicates {
                     |reads, demultiplex_tag| {
                         // Virtually combine sequences for filter check
                         let inner: Vec<_> =
-                            reads.iter().map(crate::io::WrappedFastQRead::seq).collect();
+                            reads.iter().map(WrappedFastQRead::seq).collect();
                         let entry = FragmentEntry(&inner);
                         filters
                             .borrow_mut()
@@ -194,7 +196,7 @@ impl Step for Duplicates {
                         // Virtually combine sequences for filter check
                         let inner: Vec<_> = reads
                             .iter()
-                            .map(crate::io::WrappedFastQRead::name)
+                            .map(WrappedFastQRead::name)
                             .collect();
                         let entry = FragmentEntry(&inner);
                         filters

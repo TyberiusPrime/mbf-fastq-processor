@@ -3,6 +3,7 @@
 use bstr::BString;
 use enum_dispatch::enum_dispatch;
 use indexmap::IndexMap;
+use mbf_fastq_processor_parser::io::FastQBlocksCombined;
 use prelude::TagMetadata;
 use schemars::JsonSchema;
 use toml_pretty_deser::prelude::*;
@@ -13,7 +14,6 @@ use anyhow::Result;
 
 use crate::{
     demultiplex::{DemultiplexBarcodes, OptDemultiplex},
-    io,
 };
 use rand::SeedableRng;
 use scalable_cuckoo_filter::ScalableCuckooFilter;
@@ -209,11 +209,11 @@ pub trait Step {
     }
     fn apply(
         &self,
-        block: crate::io::FastQBlocksCombined,
-        input_info: &crate::transformations::InputInfo,
+        block: FastQBlocksCombined,
+        input_info: &InputInfo,
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)>;
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)>;
 
     /// does this transformation need to see all reads, or is it fine to run it in multiple
     /// threads in parallel?
@@ -369,7 +369,7 @@ pub struct Coords {
 
 fn extract_regions(
     read_no: usize,
-    block: &io::FastQBlocksCombined,
+    block: &FastQBlocksCombined,
     regions: &[RegionDefinition],
 ) -> Vec<Option<(BString, Option<Coords>)>> {
     let mut out: Vec<_> = Vec::new();
@@ -391,7 +391,7 @@ fn extract_regions(
 #[allow(clippy::too_many_lines)]
 fn extract_from_resolved_source(
     read_no: usize,
-    block: &io::FastQBlocksCombined,
+    block: &FastQBlocksCombined,
     resolved_source: &ResolvedSourceNoAll,
     start: isize,
     length: usize,

@@ -1099,6 +1099,7 @@ dependencies = [
  "libc",
  "log",
  "mbf-fastq-processor-deser",
+ "mbf-fastq-processor-parser",
  "memchr",
  "mutants 0.0.3",
  "niffler",
@@ -1130,12 +1131,38 @@ dependencies = [
  "anyhow",
  "bio",
  "bstr",
+ "mutants 0.0.3",
  "regex",
  "schemars",
  "serde",
  "toml-pretty-deser",
  "toml_edit",
  "triple_accel",
+]
+
+[[package]]
+name = "mbf-fastq-processor-parser"
+version = "0.8.1"
+dependencies = [
+ "anyhow",
+ "bio",
+ "bstr",
+ "ex",
+ "flate2",
+ "gzp",
+ "indexmap",
+ "mbf-fastq-processor-deser",
+ "memchr",
+ "mutants 0.0.3",
+ "niffler",
+ "noodles",
+ "num_cpus",
+ "schemars",
+ "serde",
+ "sha2",
+ "tempfile",
+ "toml-pretty-deser",
+ "zstd",
 ]
 
 [[package]]

@@ -1,6 +1,8 @@
+use mbf_fastq_processor_parser::io::WrappedFastQRead;
+
 use super::common::PerReadReportData;
 use crate::transformations::prelude::*;
-use crate::{io, transformations::tag::calculate_filter_capacity};
+use crate::{transformations::tag::calculate_filter_capacity};
 
 #[derive(Default, Debug, Clone)]
 pub struct DuplicateCountData {
@@ -89,7 +91,7 @@ impl Step for Box<_ReportDuplicateCount> {
         block_no: usize,
         demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        fn update_from_read(target: &mut DuplicateCountData, read: &io::WrappedFastQRead) {
+        fn update_from_read(target: &mut DuplicateCountData, read: &WrappedFastQRead) {
             let seq = read.seq();
             if target
                 .duplication_filter

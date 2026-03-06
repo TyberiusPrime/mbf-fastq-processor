@@ -1,7 +1,7 @@
 use crate::transformations::prelude::*;
 
 use super::extract_numeric_tags_plus_all;
-use crate::{
+use mbf_fastq_processor_parser::{
     io::WrappedFastQRead,
 };
 use mbf_fastq_processor_deser::{tpd_adapt_u8_from_byte_or_char};

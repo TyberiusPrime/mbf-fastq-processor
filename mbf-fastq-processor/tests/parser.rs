@@ -2,7 +2,7 @@
 use std::path::{Path, PathBuf};
 
 use bstr::ByteSlice;
-use mbf_fastq_processor::io::{FastQBlock, parsers::ThreadCount};
+use mbf_fastq_processor_parser::io::{FastQBlock, parsers::ThreadCount};
 
 #[test]
 fn test_fastq_bufsize_variations_windows_file() {
@@ -28,13 +28,13 @@ fn test_bufsize_variations(input_fastq_filename: &str, bufsize_range: &[usize]) 
         let file = ex::fs::File::open(filename).unwrap();
 
         let input_file =
-            mbf_fastq_processor::io::input::InputFile::Fastq(file, Some(PathBuf::from(filename)));
+            mbf_fastq_processor_parser::io::input::InputFile::Fastq(file, Some(PathBuf::from(filename)));
         let mut p = input_file
             .get_parser(
                 10000,
                 *bufsize,
                 ThreadCount(1),
-                &mbf_fastq_processor::config::InputOptions {
+                &mbf_fastq_processor_parser::io::input::InputOptions {
                     bam_include_mapped: None,
                     bam_include_unmapped: None,
                     fasta_fake_quality: None,

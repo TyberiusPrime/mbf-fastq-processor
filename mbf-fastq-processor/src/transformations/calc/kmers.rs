@@ -1,7 +1,8 @@
-use crate::io;
 use crate::transformations::prelude::*;
 use indexmap::IndexMap;
 use mbf_fastq_processor_deser::dna::reverse_complement;
+use mbf_fastq_processor_parser::STDIN_MAGIC_PATH;
+use mbf_fastq_processor_parser::io::apply_to_read_sequences;
 
 fn default_min_count() -> usize {
     1
@@ -54,7 +55,7 @@ impl VerifyIn<PartialConfig> for PartialKmers {
                     Some("Please specify the path to your k-mer database file."),
                 ));
             }
-            if filenames.iter().any(|filepath| filepath.as_ref().expect("Should not be reached on wrong type for filename") == crate::config::STDIN_MAGIC_PATH) {
+            if filenames.iter().any(|filepath| filepath.as_ref().expect("Should not be reached on wrong type for filename") == STDIN_MAGIC_PATH) {
                 return Err(ValidationFailure::new(
                     "QuantifyKmers: K-mer database cannot be read from stdin",
                     Some("Please specify a file path for the k-mer database instead of using '-' or 'stdin'.")
@@ -118,11 +119,11 @@ impl Step for Kmers {
 
     fn apply(
         &self,
-        mut block: crate::io::FastQBlocksCombined,
+        mut block: FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let kmer_db = self
             .resolved_kmer_db
             .as_ref()
@@ -162,7 +163,7 @@ pub fn build_kmer_database(
     let mut kmer_counts: IndexMap<Vec<u8>, usize> = IndexMap::new();
 
     for file_path in files {
-        io::apply_to_read_sequences(
+        apply_to_read_sequences(
             file_path,
             &mut |seq: &[u8]| {
                 // Extract all kmers from this sequence

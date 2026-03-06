@@ -1,7 +1,13 @@
 #![allow(clippy::struct_field_names)]
 use crate::config::{PartialConfig, StructuredInput};
-use crate::io::output::compressed_output::{SimulatedWriteError, SimulatedWriteFailure};
 use anyhow::{Context, Result};
+use mbf_fastq_processor_deser::{
+    default_block_size, default_buffer_size, default_output_buffer_size,
+    default_spot_check_read_pairing,
+};
+use mbf_fastq_processor_parser::io::output::compressed_output::{
+    SimulatedWriteError, SimulatedWriteFailure,
+};
 use schemars::JsonSchema;
 use toml_pretty_deser::prelude::*;
 
@@ -50,29 +56,6 @@ pub enum FailOutputError {
     DiskFull,
     Other,
     RawOs,
-}
-
-#[must_use]
-#[mutants::skip]
-pub const fn default_buffer_size() -> usize {
-    100 * 1024 // bytes, per fastq input file
-}
-
-#[mutants::skip]
-#[must_use]
-pub const fn default_output_buffer_size() -> usize {
-    1024 * 1024 // bytes, per fastq input file
-}
-
-#[must_use]
-#[mutants::skip]
-pub const fn default_block_size() -> usize {
-    10000 // in 'molecules', ie. read1, read2, index1, index2 tuples.
-}
-
-#[must_use]
-pub const fn default_spot_check_read_pairing() -> bool {
-    true
 }
 
 #[derive(JsonSchema)]

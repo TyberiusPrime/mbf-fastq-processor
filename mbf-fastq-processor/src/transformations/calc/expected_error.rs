@@ -1,3 +1,5 @@
+use mbf_fastq_processor_parser::io::WrappedFastQRead;
+
 use crate::transformations::prelude::*;
 
 use std::cell::RefCell;
@@ -123,7 +125,7 @@ impl Step for ExpectedError {
 }
 
 fn expected_error_for_read(
-    read: &crate::io::WrappedFastQRead,
+    read: &WrappedFastQRead,
     aggregate: ExpectedErrorAggregate,
 ) -> anyhow::Result<f64> {
     let mut agg = 0.0;
