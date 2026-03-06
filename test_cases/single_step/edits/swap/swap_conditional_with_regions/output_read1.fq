@@ -1,0 +1,16 @@
+@read1_short|da_region_location=read1:0-2|da_region=AC /1
+ACGT
++
+IIII
+@read2_long|da_region_location=read2:0-2|da_region=AC /2
+GGGGGGGGGGGG
++
+IIIIIIIIIIII
+@read3_short|da_region_location=read1:0-2|da_region=GG /1
+GGGG
++
+IIII
+@read4_long|da_region_location=read2:0-2|da_region=TT /2
+AAAAAAAAAAAA
++
+IIIIIIIIIIII

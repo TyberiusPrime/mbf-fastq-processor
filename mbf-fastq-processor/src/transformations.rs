@@ -177,6 +177,7 @@ pub struct InputInfo {
     pub barcodes_data: IndexMap<TagLabel, crate::config::Barcodes>,
     pub comment_insert_char: u8,
     pub initial_filter_capacity: Option<usize>,
+    pub use_rapidgzip: bool,
 }
 
 #[derive(Debug)]

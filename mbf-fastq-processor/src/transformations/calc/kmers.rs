@@ -98,7 +98,7 @@ impl TagUser for PartialTaggedVariant<PartialKmers> {
 impl Step for Kmers {
     fn init(
         &mut self,
-        _input_info: &InputInfo,
+        input_info: &InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
         _output_ix_separator: &str,
@@ -110,6 +110,7 @@ impl Step for Kmers {
             self.k,
             self.min_count,
             self.count_reverse_complement,
+            input_info.use_rapidgzip,
         )?;
         self.resolved_kmer_db = Some(db);
 
@@ -157,6 +158,7 @@ pub fn build_kmer_database(
     k: usize,
     min_count: usize,
     canonical: bool,
+    use_rapidgzip: bool,
 ) -> Result<IndexMap<Vec<u8>, usize>> {
     let mut kmer_counts: IndexMap<Vec<u8>, usize> = IndexMap::new();
 
@@ -185,6 +187,7 @@ pub fn build_kmer_database(
             },
             true,
             true, //all reads in BAM.
+            use_rapidgzip,
         )
         .with_context(|| format!("Failed to parse kmer database file: {file_path}"))?;
     }

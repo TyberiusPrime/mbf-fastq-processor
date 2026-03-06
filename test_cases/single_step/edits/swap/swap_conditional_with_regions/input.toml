@@ -1,0 +1,40 @@
+[input]
+    read1 = ['input_read1.fq']
+    read2 = ['input_read2.fq']
+
+# Calculate read length for read1
+[[step]]
+    action = 'CalcLength'
+    out_label = 'length'
+    segment = 'read1'
+[[step]]
+  action = "ExtractRegion"
+  start = 0
+  length = 2
+  segment = 'read1'
+  out_label='da_region'
+  anchor = "left"
+
+# Create a boolean tag: swap if read1 length > 6
+[[step]]
+    action = 'EvalExpression'
+    out_label = 'should_swap'
+    expression = 'length > 6'
+    result_type = 'bool'
+
+# Conditionally swap reads based on the boolean tag
+[[step]]
+    action = 'Swap'
+    if_tag = 'should_swap'
+    # No segment_a/segment_b specified - should auto-detect
+
+[[step]]
+  action = "StoreTagLocationInComment"
+  in_label = 'da_region'
+
+[[step]]
+  action = "StoreTagInComment"
+  in_label = 'da_region'
+
+[output]
+    prefix = 'output'

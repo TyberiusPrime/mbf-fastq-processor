@@ -2109,6 +2109,16 @@ fn test_cases_x_single_step_x_edits_x_swap_x_swap_conditional_minority() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_edits_x_swap_x_swap_conditional_with_regions() {
+    println!("Test case is in: test_cases/single_step/edits/swap/swap_conditional_with_regions");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/edits/swap/swap_conditional_with_regions"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_edits_x_swap_x_swap_four_segments() {
     println!("Test case is in: test_cases/single_step/edits/swap/swap_four_segments");
     run_test(
@@ -2613,6 +2623,20 @@ fn test_cases_x_single_step_x_error_handling_x_extraction_x_extract_gc_panic_on_
     run_test(
         std::path::Path::new(
             "../test_cases/single_step/error_handling/extraction/extract_gc_panic_on_store_in_seq",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_extraction_x_extract_iupac_no_segment() {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/extraction/extract_iupac_no_segment"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/error_handling/extraction/extract_iupac_no_segment",
         ),
         "input.toml",
         1,

@@ -356,6 +356,7 @@ impl RunStage0 {
             barcodes_data: parsed.barcodes.clone(),
             comment_insert_char: parsed.input.options.read_comment_character,
             initial_filter_capacity: None, // Filled after the first block.
+            use_rapidgzip: parsed.input.options.use_rapidgzip.is_some_and(|x| x),
         };
         let mut demultiplex_infos: Vec<(usize, OptDemultiplex)> = Vec::new();
         // we need to initialize the progress_output first

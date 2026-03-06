@@ -1,0 +1,21 @@
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+ 5 │ [[step]]
+ 6 │     action = 'ExtractIUPAC'
+   ┆              ───────┬──────
+   ┆                     │
+   ┆                     ╰─────── In this step
+   ┆
+ 7 │ 	out_label = "label"
+ 8 │     query = 'agctc'
+ 9 │     anchor = 'left'
+10 │     max_mismatches = 3
+   ┆                       ┬
+   ┆                       │
+   ┆                       ╰─ Segment not specified but multiple segments available
+───╯
+Hint: Available segments: read1, read2
+      See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractIUPAC
+

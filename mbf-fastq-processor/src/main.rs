@@ -3,8 +3,6 @@ use anyhow::{Context, Result, bail};
 use clap::{Arg, ArgAction, Command, ValueHint, value_parser};
 use clap_complete::{Generator, Shell, generate};
 use human_panic::{Metadata, setup_panic};
-use indexmap::IndexMap;
-use regex::Regex;
 use std::{
     io,
     path::{Path, PathBuf},
@@ -388,129 +386,6 @@ fn print_version_and_exit() {
     std::process::exit(0);
 }
 
-// fn docs_matching_error_message(e: &anyhow::Error) -> String {
-//     use std::fmt::Write;
-//     let mut docs = String::new();
-//     let str_error = format!("{e:?}");
-//     let re = regex::Regex::new(r"[(]([^)]+)[)]").expect("hardcoded regex pattern is valid");
-//     let mut seen = HashSet::new();
-//     for cap in re.captures_iter(&str_error) {
-//         let step = cap[1].to_string();
-//         seen.insert(step);
-//     }
-//     let re =
-//         regex::Regex::new(r"action = ([A-Za-z0-9]+)").expect("hardcoded regex pattern is valid");
-//     for cap in re.captures_iter(&str_error) {
-//         let step = cap[1].to_string();
-//         seen.insert(step);
-//     }
-//
-//     let mut todo = seen.into_iter().collect::<Vec<_>>();
-//     todo.sort();
-//     for step in todo {
-//         let template = mbf_fastq_processor::documentation::get_template(Some(&step));
-//         if let Some(template) = template {
-//             write!(docs, "\n\n ==== {step} ====:\n{template}\n")
-//                 .expect("writing to String never fails");
-//         }
-//     }
-//     docs
-// }
-
-/// We can't fight all aliases, but at least remove those that are
-/// just capitalization variants of each other.
-/// Prefer the ones with more capital letters
-fn canonicalize_variants(parts: Vec<&str>) -> Vec<String> {
-    let mut seen: IndexMap<String, String> = IndexMap::new();
-    for p in parts {
-        let key = p.to_lowercase();
-        match seen.get(&key) {
-            Some(existing) => {
-                if p.chars().filter(|c| c.is_uppercase()).count()
-                    > existing.chars().filter(|c| c.is_uppercase()).count()
-                {
-                    seen.insert(key, p.to_string());
-                }
-            }
-            None => {
-                seen.insert(key, p.to_string());
-            }
-        }
-    }
-    let mut res: Vec<_> = seen.into_values().collect();
-    res.sort();
-    res
-}
-
-/// Formats error messages by adding some newlines and indention for readability
-fn prettyify_error_message(error: &str) -> String {
-    let lines: Vec<&str> = error.lines().collect();
-    let mut formatted_lines = Vec::new();
-
-    let regex = Regex::new(r"([^:]+: )unknown (?:variant|field) `([^`]+)`, expected one of (.+)")
-        .expect("hardcoded regex pattern is valid");
-
-    for line in lines {
-        if line == "    in `action`" {
-            continue;
-        }
-        if let Some(matches) = regex.captures(line) {
-            let prefix = &matches[1];
-            let unknown_variant = &matches[2];
-            let expected_variants = &matches[3];
-
-            let parts: Vec<&str> = expected_variants
-                .split(", ")
-                .filter(|x| !x.starts_with("`_"))
-                .map(|s| s.trim_matches('`'))
-                .collect();
-
-            let parts = canonicalize_variants(parts);
-
-            if parts.len() > 1 {
-                let formatted_suffix = parts.join(",\n\t");
-                let mut parts = parts; // so on equal distance, we have alphabetical order
-                parts.sort();
-                let mut levenstein_distances = parts
-                    .into_iter()
-                    .map(|part| {
-                        let dist = bio::alignment::distance::levenshtein(
-                            unknown_variant.as_bytes(),
-                            part.as_bytes(),
-                        );
-
-                        (part, dist)
-                    })
-                    .collect::<Vec<(String, u32)>>();
-                levenstein_distances.sort_by_key(|&(_, dist)| dist);
-                let best_three = levenstein_distances
-                    .iter()
-                    .take(3)
-                    .map(|(part, _)| format!("`{part}`"))
-                    .collect::<Vec<String>>()
-                    .join(", ");
-                let msg = format!(
-                    "{prefix}Unknown variant `{unknown_variant}`. Did you mean one of {best_three}?"
-                );
-                formatted_lines.push(msg);
-                if prefix.ends_with(".action: ") {
-                    formatted_lines.push(
-                        "\tTo list available steps, run the `list-steps` command".to_string(),
-                    );
-                } else {
-                    formatted_lines.push(format!("Available: \n\t{formatted_suffix}"));
-                }
-            } else {
-                formatted_lines.push(line.to_string());
-            }
-        } else {
-            formatted_lines.push(line.to_string());
-        }
-    }
-
-    formatted_lines.join("\n")
-}
-
 fn process_from_toml_file(toml_file: &Path, allow_overwrites: bool) {
     let current_dir = std::env::current_dir().expect("failed to get current directory");
     if let Err(e) = mbf_fastq_processor::run(toml_file, &current_dir, allow_overwrites) {
@@ -527,8 +402,7 @@ fn process_from_toml_file(toml_file: &Path, allow_overwrites: bool) {
         // }
 
         eprintln!(
-            "# == Error Details ==\n{}",
-            prettyify_error_message(&format!("{e:?}"))
+            "# == Error Details ==\n{e:?}",
         );
         std::process::exit(1);
     }
@@ -564,8 +438,7 @@ fn validate_config_file(toml_path: &Path) {
             // }
 
             eprintln!(
-                "# == Error Details ==\n{}",
-                prettyify_error_message(&format!("{e:?}"))
+                "# == Error Details ==\n{e:?}",
             );
             std::process::exit(1);
         }
@@ -582,8 +455,7 @@ fn verify_config_file(toml_file: &Path, output_dir: Option<PathBuf>, unsafe_prep
         Err(e) => {
             eprintln!("Verification failed:\n");
             eprintln!(
-                "# == Error Details ==\n{}",
-                prettyify_error_message(&format!("{e:?}"))
+                "# == Error Details ==\n{e:?}",
             );
             std::process::exit(1);
         }

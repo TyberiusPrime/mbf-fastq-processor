@@ -15,8 +15,7 @@ impl Into<serde_json::Value> for DuplicateCountData {
     }
 }
 
-#[derive(Default, Clone)]
-#[derive(Debug)]
+#[derive(Default, Clone, Debug)]
 #[tpd(no_verify)]
 pub struct _ReportDuplicateCount {
     pub report_no: usize,

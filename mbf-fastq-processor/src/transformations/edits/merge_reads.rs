@@ -56,8 +56,6 @@ pub struct MergeReads {
     pub concatenate_spacer: Option<String>,
 
     /// Quality score to use for spacer bases (suggested: 33, which is Phred quality 0)
-    ///#[validate(minimum = 33)] TODO
-    ///#[validate(maximum = 126)]
     pub spacer_quality_char: Option<u8>,
 
     /// Whether to reverse complement segment2 before merging
