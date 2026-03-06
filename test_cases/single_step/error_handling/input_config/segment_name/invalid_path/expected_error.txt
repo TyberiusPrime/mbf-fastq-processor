@@ -1,1 +1,12 @@
-Hint: Segment label must start with a letter or underscore (^[a-zA-Z_]), got '/'
+Error Details ==
+Error 1/1
+  ╭─config.toml
+  ┆
+4 │ [input]
+5 │ "/shu" = 'input_read1.fq'
+  ┆ ───┬──
+  ┆    │
+  ┆    ╰────────────────────── Segment label must start with a letter or underscore (^[a-zA-Z_]), got '/'
+──╯
+
+

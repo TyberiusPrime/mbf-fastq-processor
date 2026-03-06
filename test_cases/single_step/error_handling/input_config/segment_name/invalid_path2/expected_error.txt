@@ -1,1 +1,12 @@
-int: Segment label must contain only letters, numbers, and underscores (^[a-zA-Z0-9_]+$), found '\'.
+Error Details ==
+Error 1/1
+  ╭─config.toml
+  ┆
+4 │ [input]
+5 │ "sh\\u" = 'input_read1.fq'
+  ┆ ───┬───
+  ┆    │
+  ┆    ╰─────────────────────── Segment label must contain only letters, numbers, and underscores (^[a-zA-Z0-9_]+$), found '\'.
+──╯
+
+

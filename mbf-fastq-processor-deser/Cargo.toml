@@ -18,6 +18,7 @@ exclude.workspace = true
 	toml-pretty-deser = {workspace = true}
 	schemars = {workspace = true}
 	regex = {workspace = true}
+	serde = {workspace = true}
 	anyhow = {workspace = true}
 	toml_edit = {workspace = true}
 	bio = {workspace = true}

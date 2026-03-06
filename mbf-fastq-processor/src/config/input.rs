@@ -7,9 +7,9 @@ use toml_pretty_deser::{Visitor, prelude::*};
 
 use mbf_fastq_processor_deser::{
     StringOrVecString, default_comment_insert_char, tpd_adapt_u8_from_byte_or_char,
+    SegmentLabel,
 };
 
-use super::validate_segment_label;
 
 fn is_default(opt: &InputOptions) -> bool {
     opt.fasta_fake_quality.is_none()
@@ -34,7 +34,7 @@ pub struct Input {
     #[schemars(with = "BTreeMap<String, StringOrVecString>")]
     #[tpd(absorb_remaining)]
     #[serde(flatten)]
-    pub segments: IndexMap<String, Vec<String>>,
+    pub segments: IndexMap<SegmentLabel, Vec<String>>,
 
     #[tpd(nested)]
     #[serde(skip_serializing_if = "is_default")]
@@ -77,31 +77,6 @@ impl PartialInput {
         }
     }
 
-    fn verify_segment_names(
-        &mut self,
-        match_mode: toml_pretty_deser::FieldMatchMode,
-    ) -> Result<(), ()> {
-        let mut error = false;
-        if let Some(segments) = self.segments.as_mut() {
-            for key in &mut segments.keys {
-                let segment_name = key.as_ref().expect("parent was ok");
-                match validate_segment_label(segment_name, match_mode) {
-                    Ok(()) => {}
-
-                    Err(help) => {
-                        key.state = TomlValueState::ValidationFailed {
-                            message: "Invalid segment name".to_string(),
-                        };
-                        key.help = Some(help.to_string());
-                        error = true;
-                    }
-                }
-            }
-        }
-        //duplicate names can't happen here, it's a map
-
-        if error { Err(()) } else { Ok(()) }
-    }
 
     fn validate_stdin_usage(&mut self) -> Result<(), ()> {
         // let Some(structured) = self.structured.as_ref() else {
@@ -290,7 +265,7 @@ If you have paired end reads, name two 'virtual' segments, e.g. ['read1','read2'
             return Ok(());
         };
         let mut segment_order: Vec<String> =
-            segments.map.keys().map(|x| x.trim().to_string()).collect();
+            segments.map.keys().map(|x| x.0.to_string()).collect();
         segment_order.sort(); //always alphabetical...
         if segment_order.is_empty() {
             self.segments.state = TomlValueState::ValidationFailed {
@@ -349,7 +324,7 @@ If you have paired end reads, name two 'virtual' segments, e.g. ['read1','read2'
                     .iter()
                     .map(|tv| tv.as_ref().expect("parent was ok?").clone())
                     .collect();
-                (k.trim().to_string(), files)
+                (k.0.to_string(), files)
             })
             .collect();
         self.structured = Some(StructuredInput::Segmented {
@@ -359,11 +334,7 @@ If you have paired end reads, name two 'virtual' segments, e.g. ['read1','read2'
         Ok(())
     }
 
-    fn build_structured(&mut self, match_mode: FieldMatchMode) -> Result<(), ()> {
-        if let Err(()) = self.verify_segment_names(match_mode) {
-            self.segments.state = TomlValueState::Nested;
-        }
-
+    fn build_structured(&mut self) -> Result<(), ()> {
         if self
             .interleaved
             .as_ref()
@@ -385,7 +356,7 @@ impl VerifyIn<super::PartialConfig> for PartialInput {
     fn verify(
         &mut self,
         _parent: &super::PartialConfig,
-        options: &VerifyOptions,
+        _options: &VerifyOptions,
     ) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized + toml_pretty_deser::Visitor,
@@ -406,7 +377,7 @@ impl VerifyIn<super::PartialConfig> for PartialInput {
 
         self.verify_same_number_of_input_segments();
 
-        if let Err(()) = self.build_structured(options.field_match_mode)
+        if let Err(()) = self.build_structured()
         //errors go into the fields
         {}
 

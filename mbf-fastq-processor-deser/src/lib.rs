@@ -26,7 +26,6 @@ pub fn default_comment_insert_char() -> u8 {
     b' '
 }
 
-
 // Schema helper for string or list of strings
 #[derive(JsonSchema)]
 #[allow(dead_code)]
@@ -473,3 +472,148 @@ impl TryFrom<&str> for NonAmbigousDNA {
 }
 
 toml_pretty_deser::impl_visitor_for_try_from_str!(NonAmbigousDNA, "Invalid DNA sequence");
+
+
+#[derive(Debug, Clone, Hash, Eq, PartialEq, serde::Serialize, PartialOrd, Ord)]
+pub struct SegmentLabel(pub String);
+
+impl TryFrom<&str> for SegmentLabel {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match validate_segment_label(value, toml_pretty_deser::FieldMatchMode::AnyCase) {
+            Ok(()) => Ok(SegmentLabel(value.to_string())),
+            Err(e) => Err(e.to_string()),
+        }
+    }
+}
+/// Validates that a segment label conforms to the pattern [a-zA-Z0-9_]+
+/// (one or more alphanumeric characters or underscores)
+pub fn validate_segment_label(
+    label: &str,
+    match_mode: toml_pretty_deser::prelude::FieldMatchMode,
+) -> Result<()> {
+    if label.is_empty() {
+        bail!(
+            "Segment name may not be empty or just whitespace. Please provide a segment name containing only letters, numbers, and underscores."
+        );
+    }
+
+    for (i, ch) in label.chars().enumerate() {
+        if i == 0 && !ch.is_ascii_alphabetic() && ch != '_' {
+            bail!("Segment label must start with a letter or underscore (^[a-zA-Z_]), got '{ch}'",);
+        }
+        if !ch.is_ascii_alphanumeric() && ch != '_' {
+            bail!(
+                "Segment label must contain only letters, numbers, and underscores (^[a-zA-Z0-9_]+$), found '{ch}'.",
+            );
+        }
+    }
+    for prohibited in &[
+        "fasta_fake_quality",
+        "bam_include_mapped",
+        "bam_include_unmapped",
+        "read_comment_character",
+        "use_rapidgzip",
+        "build_rapidgzip_index",
+        "threads_per_segment",
+        "tpd_field_match_mode",
+    ] {
+        if match_mode.matches(label, prohibited) {
+            bail!(
+                "'{prohibited}' is not allowed as a segment label, as it could be confused with an existing option name or an internal. Please choose a different segment name, or prefix in with 'options.' if you meant the option."
+            );
+        }
+    }
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod test {
+
+    use crate::validate_segment_label;
+
+    use super::validate_tag_name;
+    #[test]
+    fn test_validate_tag_name_valid() {
+        // Valid tag names
+        assert!(validate_tag_name("a").is_ok());
+        assert!(validate_tag_name("A").is_ok());
+        assert!(validate_tag_name("_").is_ok());
+        assert!(validate_tag_name("abc").is_ok());
+        assert!(validate_tag_name("ABC").is_ok());
+        assert!(validate_tag_name("a123").is_ok());
+        assert!(validate_tag_name("A123").is_ok());
+        assert!(validate_tag_name("_123").is_ok());
+        assert!(validate_tag_name("tag_name").is_ok());
+        assert!(validate_tag_name("TagName").is_ok());
+        assert!(validate_tag_name("tag123_name").is_ok());
+        assert!(validate_tag_name("_private_tag").is_ok());
+    }
+
+    #[test]
+    fn test_validate_tag_name_invalid() {
+        // Invalid tag names
+        assert!(validate_tag_name("").is_err());
+        assert!(validate_tag_name("123").is_err());
+        assert!(validate_tag_name("123abc").is_err());
+        assert!(validate_tag_name("tag-name").is_err());
+        assert!(validate_tag_name("tag.name").is_err());
+        assert!(validate_tag_name("tag name").is_err());
+        assert!(validate_tag_name("tag@name").is_err());
+        assert!(validate_tag_name("tag/name").is_err());
+        assert!(validate_tag_name("tag\\name").is_err());
+        assert!(validate_tag_name("tag:name").is_err());
+        assert!(validate_tag_name("len_123").is_err());
+        assert!(validate_tag_name("len_shu").is_err());
+        assert!(validate_tag_name("ReadName").is_err());
+        assert!(validate_tag_name("read_no").is_err());
+    }
+
+    #[test]
+    fn test_validate_segment_label_valid() {
+        // Valid segment labels
+        let f = toml_pretty_deser::FieldMatchMode::Exact;
+        assert!(validate_segment_label("a", f).is_ok());
+        assert!(validate_segment_label("A", f).is_ok());
+        assert!(validate_segment_label("_", f).is_ok());
+        assert!(validate_segment_label("abc", f).is_ok());
+        assert!(validate_segment_label("ABC", f).is_ok());
+        assert!(validate_segment_label("123", f).is_err());
+        assert!(validate_segment_label("a123", f).is_ok());
+        assert!(validate_segment_label("A123", f).is_ok());
+        assert!(validate_segment_label("123abc", f).is_err());
+        assert!(validate_segment_label("read1", f).is_ok());
+        assert!(validate_segment_label("READ1", f).is_ok());
+        assert!(validate_segment_label("segment_name", f).is_ok());
+        assert!(validate_segment_label("segment123", f).is_ok());
+        assert!(validate_segment_label("_internal", f).is_ok());
+    }
+
+    #[test]
+    fn test_validate_segment_label_invalid() {
+        // Invalid segment labels
+        let f = toml_pretty_deser::FieldMatchMode::Exact;
+        assert!(validate_segment_label("", f).is_err());
+        assert!(validate_segment_label("1", f).is_err());
+        assert!(validate_segment_label("segment-name", f).is_err());
+        assert!(validate_segment_label("segment.name", f).is_err());
+        assert!(validate_segment_label("segment name", f).is_err());
+        assert!(validate_segment_label("segment@name", f).is_err());
+        assert!(validate_segment_label("segment/name", f).is_err());
+        assert!(validate_segment_label("segment\\name", f).is_err());
+        assert!(validate_segment_label("segment:name", f).is_err());
+        assert!(validate_segment_label("fasta_fake_quality", f).is_err());
+        assert!(validate_segment_label("bam_include_mapped", f).is_err());
+        assert!(validate_segment_label("bam_include_unmapped", f).is_err());
+        assert!(validate_segment_label("read_comment_character", f).is_err());
+        assert!(validate_segment_label("use_rapidgzip", f).is_err());
+        assert!(validate_segment_label("build_rapidgzip_index", f).is_err());
+        assert!(validate_segment_label("threads_per_segment", f).is_err());
+        assert!(validate_segment_label("tpd_field_match_mode", f).is_err());
+
+        let f = toml_pretty_deser::FieldMatchMode::AnyCase;
+        assert!(validate_segment_label("FaSTA___FAKE-QUALITY", f).is_err());
+    }
+}

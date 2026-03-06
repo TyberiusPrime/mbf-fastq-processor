@@ -1132,6 +1132,7 @@ dependencies = [
  "bstr",
  "regex",
  "schemars",
+ "serde",
  "toml-pretty-deser",
  "toml_edit",
  "triple_accel",
