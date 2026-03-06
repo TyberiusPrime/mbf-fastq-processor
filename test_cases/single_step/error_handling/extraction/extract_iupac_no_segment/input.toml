@@ -1,0 +1,13 @@
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+    read2 = 'sample_data/ten_reads2.fq'
+
+[[step]]
+    action = 'ExtractIUPAC'
+	out_label = "label"
+    query = 'agctc'
+    anchor = 'left'
+    max_mismatches = 3
+
+[output]
+    prefix = 'output'

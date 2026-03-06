@@ -182,7 +182,7 @@ impl Step for OtherFile {
 
     fn init(
         &mut self,
-        _input_info: &InputInfo,
+        input_info: &InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
         _output_ix_separator: &str,
@@ -219,6 +219,7 @@ impl Step for OtherFile {
                     },
                     self.include_mapped,
                     self.include_unmapped,
+                    input_info.use_rapidgzip
                 )?;
             }
             ResolvedSourceNoAll::Name { .. } => {
@@ -237,6 +238,7 @@ impl Step for OtherFile {
                     },
                     self.include_mapped,
                     self.include_unmapped,
+                    input_info.use_rapidgzip
                 )?;
             }
         }

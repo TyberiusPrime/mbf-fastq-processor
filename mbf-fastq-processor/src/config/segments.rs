@@ -86,7 +86,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, SegmentIndex>> {
                 } else {
                     let segment_names = segment_order.join(", ");
                     *self = TomlValue::new_validation_failed(
-                        self.span.clone(), //todo: is this on the right place (parent span?)
+                        self.span.clone(),
                         "Segment not specified but multiple segments available".to_string(),
                         Some(format!("Available segments: {segment_names}")),
                     );
@@ -146,7 +146,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, SegmentIndexOrAll>> {
                 } else {
                     let segment_names = segment_order.join(", ");
                     *self = TomlValue::new_validation_failed(
-                        self.span.clone(), //todo: is this on the right place (parent span?)
+                        self.span.clone(),
                         "Segment not specified but multiple segments available".to_string(),
                         Some(format!("Available segments: {segment_names}")),
                     );

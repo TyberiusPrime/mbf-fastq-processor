@@ -15,7 +15,6 @@ pub struct PolyTail {
     segment: SegmentIndex,
 
     pub out_label: TagLabel,
-    //#[validate(minimum = 1)] todo
     pub min_length: usize,
     #[tpd(with = "tpd_adapt_extract_base_or_dot")]
     pub base: u8,

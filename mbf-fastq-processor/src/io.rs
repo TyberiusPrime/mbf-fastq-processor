@@ -30,6 +30,7 @@ fn apply_to_read(
     func: &mut impl FnMut(&Vec<u8>, &FastQRead),
     include_mapped: bool,
     include_unmapped: bool,
+    use_rapidgzip: bool,
 ) -> Result<()> {
     let filename = filename.as_ref();
     let input_file = open_input_file(filename)?;
@@ -38,7 +39,7 @@ fn apply_to_read(
         bam_include_mapped: Some(include_mapped),
         bam_include_unmapped: Some(include_unmapped),
         read_comment_character: b' ', // ignored here.
-        use_rapidgzip: Some(false),   //todo : should we use the config here?
+        use_rapidgzip: Some(use_rapidgzip),
         build_rapidgzip_index: None,
         threads_per_segment: Some(get_number_of_cores()), // at this point, we're ready to multicore this
                                                           // hard.
@@ -67,12 +68,14 @@ pub fn apply_to_read_names(
     func: &mut impl FnMut(&[u8]),
     include_mapped: bool,
     include_unmapped: bool,
+    use_rapidgzip: bool,
 ) -> Result<()> {
     apply_to_read(
         filename,
         &mut |block: &Vec<u8>, read: &FastQRead| func(read.name.get(block)),
         include_mapped,
         include_unmapped,
+        use_rapidgzip,
     )
 }
 
@@ -82,11 +85,13 @@ pub fn apply_to_read_sequences(
     func: &mut impl FnMut(&[u8]),
     include_mapped: bool,
     include_unmapped: bool,
+    use_rapidgzip: bool,
 ) -> Result<()> {
     apply_to_read(
         filename,
         &mut |block: &Vec<u8>, read: &FastQRead| func(read.seq.get(block)),
         include_mapped,
         include_unmapped,
+        use_rapidgzip,
     )
 }

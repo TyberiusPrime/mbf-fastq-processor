@@ -470,7 +470,7 @@ impl VerifyIn<PartialInput> for PartialInputOptions {
             && let Some(Some(false)) = self.use_rapidgzip.as_ref()
         {
             self.build_rapidgzip_index.state = TomlValueState::ValidationFailed {
-                message: "Only valid when use_rapidgzip is set to true".to_string(),
+                message: "Only accepted when use_rapidgzip is set to true".to_string(),
             };
             self.build_rapidgzip_index.help =
                 Some("Either set use_rapidgzip=true or unset build_rapidgzip_index".to_string());

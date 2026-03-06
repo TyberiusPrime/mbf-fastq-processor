@@ -182,10 +182,8 @@ impl Step for StoreTagsInTable {
         block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        // Initialize output handles and tag list on first call
-        //TODO move into verify
         if block_no == 1 {
-            // Sort tags for consistent column order
+            // first block, output header
 
             let tag_list = &self.final_in_labels;
             // Write header

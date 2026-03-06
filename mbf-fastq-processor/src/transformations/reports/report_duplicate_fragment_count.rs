@@ -125,7 +125,6 @@ impl Step for Box<_ReportDuplicateFragmentCount> {
                 {
                     target.duplicate_count += 1;
                 }
-
             }
         }
         Ok((block, true))

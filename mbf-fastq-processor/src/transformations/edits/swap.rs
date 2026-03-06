@@ -217,7 +217,6 @@ impl Step for Swap {
                     start: location.start,
                     len: location.len,
                     segment_index: match location.segment_index {
-                        //todo: make sure per test case this actually works as expected
                         SegmentIndex(index) if index == index_a => SegmentIndex(index_b),
                         SegmentIndex(index) if index == index_b => SegmentIndex(index_a),
                         _ => location.segment_index, // others unchanged
