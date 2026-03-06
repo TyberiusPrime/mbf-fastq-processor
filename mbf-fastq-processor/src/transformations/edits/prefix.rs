@@ -1,5 +1,6 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 
+use crate::config::PhredEncoding;
 use crate::transformations::prelude::*;
 
 use crate::{
@@ -16,18 +17,16 @@ pub struct Prefix {
     #[tpd(adapt_in_verify(String))]
     segment: SegmentIndex,
 
-    //todo
-    //#[serde(deserialize_with = "dna_from_string")]
     #[schemars(with = "String")]
     #[tpd(with = "tpd_adapt_dna_bstring_plus_n")]
     pub seq: BString,
-    //#[serde(deserialize_with = "bstring_from_string")]
     //we don't check the quality. It's on you if you
     //write non phred values in there
     #[schemars(with = "String")]
-    #[tpd(with = "tpd_adapt_bstring")] //todo: actually verify range
+    #[tpd(with = "tpd_adapt_bstring")]
     pub qual: BString,
 
+    pub encoding: PhredEncoding,
     if_tag: Option<ConditionalTagLabel>,
 }
 
@@ -51,6 +50,23 @@ impl VerifyIn<PartialConfig> for PartialPrefix {
             ];
             self.seq.state = TomlValueState::Custom { spans };
             self.seq.help = Some("'seq' and 'qual' must be the same length".to_string());
+        }
+        self.encoding.or(PhredEncoding::Sanger);
+
+        if let Some(encoding) = self.encoding.as_ref() {
+            let (lower, upper) = encoding.limits();
+            self.qual.verify(|v| {
+                if v.iter().all(|&x| x >= lower && x <= upper) {
+                    Ok(())
+                } else {
+                    Err(ValidationFailure::new(
+                        format!(
+                            "Quality values must be in the range ({lower}..{upper}) ('{encoding}')"
+                        ),
+                        None,
+                    ))
+                }
+            });
         }
         Ok(())
     }

@@ -642,6 +642,9 @@
 #    qual = "IIIBIII" # same length as seq. Your responsibility to have valid phred values.
 #    segment = "read1" # Any of your input segments
 #    if_tag = "mytag"         # (optional) Only reverse complement reads where this tag is true
+#    encoding = 'Illumina1.8' #  optional, default=sanger 'Illumina1.8|Illumina1.3|Sanger|Solexa',
+
+## qual is verified against encoding
 
 # ==== Postfix ====
 ## Add DNA to the end of read sequences
@@ -651,7 +654,9 @@
 #    qual = "IIII" # same length as seq. Your responsibility to have valid phred values.
 #    segment = "read1" # Any of your input segments
 #    if_tag = "mytag"         # (optional) Only reverse complement reads where this tag is true
+#    encoding = 'Illumina1.8' #  optional, default=sanger 'Illumina1.8|Illumina1.3|Sanger|Solexa',
 
+## qual is verified against encodin
 
 # ==== Rename ====
 ## Rename reads using a pattern

@@ -7831,6 +7831,16 @@ fn test_cases_x_transform_x_prefix_and_postfix() {
 }
 
 #[test]
+fn test_cases_x_transform_x_prefix_and_postfix_qual_range() {
+    println!("Test case is in: test_cases/transform/prefix_and_postfix_qual_range");
+    run_test(
+        std::path::Path::new("../test_cases/transform/prefix_and_postfix_qual_range"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_01_x_basic_x_quality_x_report() {
     println!("Test case is in: cookbooks/01-basic-quality-report");
     run_test(

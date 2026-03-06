@@ -43,19 +43,24 @@ impl VerifyIn<PartialConfig> for PartialDemultiplex {
             }
         });
         if let Some(Some(barcodes_name)) = self.barcodes.as_ref() {
-            if let Some(Some(barcodes)) = parent.barcodes.value.as_ref() { //error sections are
+            if let Some(Some(barcodes)) = parent.barcodes.value.as_ref() {
+                //error sections are
                 //ok...
                 if let Some(barcodes_ref) = barcodes.map.get(barcodes_name.0.as_str()) {
                     if let Some(resolved) = barcodes_ref
                         .as_ref()
                         .and_then(|x| x.barcode_to_name.as_ref())
-                        .map(|x| x
-                            .map
-                            .iter()
-                            .map(|(k, v)| (k.clone(), v.as_ref().expect("parent was ok").to_string()))
-                            .collect()){
+                        .map(|x| {
+                            x.map
+                                .iter()
+                                .map(|(k, v)| {
+                                    (k.clone(), v.as_ref().expect("parent was ok").to_string())
+                                })
+                                .collect()
+                        })
+                    {
                         self.resolved_barcodes = Some(resolved);
-                    }else {
+                    } else {
                         //not a valid barcode, error message will have been generated elsewhere.
                         self.resolved_barcodes = None;
                     }
