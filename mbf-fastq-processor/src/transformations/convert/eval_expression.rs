@@ -44,7 +44,7 @@ pub struct EvalExpression {
 impl VerifyIn<PartialConfig> for PartialEvalExpression {
     fn verify(
         &mut self,
-        parent: &PartialConfig,
+        _parent: &PartialConfig,
         _options: &VerifyOptions,
     ) -> std::result::Result<(), ValidationFailure>
     where
