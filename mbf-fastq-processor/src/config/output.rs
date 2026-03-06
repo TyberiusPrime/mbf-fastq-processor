@@ -176,20 +176,18 @@ impl PartialOutput {
         } else if let Some(None) = self.output.as_ref() {
             if let Some(Some(_)) = self.interleave.as_ref() {
                 self.output = TomlValue::new_ok(Some(Vec::new()), 0..0); // no extra output by default
-            } else {
-                if let Some(input) = config.input.as_ref() {
-                    //default to output all targets
-                    self.output = TomlValue::new_ok(
-                        Some(
-                            input
-                                .get_segment_order()
-                                .iter()
-                                .map(|x| TomlValue::new_ok(x.clone(), 0..0))
-                                .collect(),
-                        ),
-                        0..0,
-                    );
-                }
+            } else if let Some(input) = config.input.as_ref() {
+                //default to output all targets
+                self.output = TomlValue::new_ok(
+                    Some(
+                        input
+                            .get_segment_order()
+                            .iter()
+                            .map(|x| TomlValue::new_ok(x.clone(), 0..0))
+                            .collect(),
+                    ),
+                    0..0,
+                );
             }
         }
     }
@@ -203,35 +201,34 @@ impl PartialOutput {
                 let mut any_failed = false;
                 let all_seen: HashSet<String> = output_segments
                     .iter()
-                    .filter_map(|x| x.as_ref())
-                    .map(|x| x.to_string())
+                    .filter_map(|x| x.as_ref()).cloned()
                     .collect();
                 for segment in output_segments.iter_mut() {
                     if let Some(segment_str) = segment.as_ref() {
-                        if !valid_segments.contains(segment_str) {
-                            let available: Vec<&String> = valid_segments
-                                .iter()
-                                .filter_map(|x| {
-                                    if !all_seen.contains(*x) {
-                                        Some(*x)
-                                    } else {
-                                        None
-                                    }
-                                })
-                                .collect();
-                            segment.help = Some(offer_alternatives(&segment_str, &available));
-                            segment.state = TomlValueState::new_validation_failed(
-                                "Not found in input segments",
-                            );
-                            any_failed = true;
-                        } else {
-                            if !seen_segments.insert(segment_str.to_string()) {
+                        if valid_segments.contains(segment_str) {
+                            if !seen_segments.insert(segment_str.clone()) {
                                 segment.help = Some(format!("Remove all but one '{segment_str}'",));
                                 segment.state = TomlValueState::new_validation_failed(
                                     "Segment is duplicated in output segments",
                                 );
                                 any_failed = true;
                             }
+                        } else {
+                            let available: Vec<&String> = valid_segments
+                                .iter()
+                                .filter_map(|x| {
+                                    if all_seen.contains(*x) {
+                                        None
+                                    } else {
+                                        Some(*x)
+                                    }
+                                })
+                                .collect();
+                            segment.help = Some(offer_alternatives(segment_str, &available));
+                            segment.state = TomlValueState::new_validation_failed(
+                                "Not found in input segments",
+                            );
+                            any_failed = true;
                         }
                     }
                 }
@@ -245,19 +242,26 @@ impl PartialOutput {
                 let mut any_failed = false;
                 let all_seen: HashSet<String> = interleave_order
                     .iter()
-                    .filter_map(|x| x.as_ref())
-                    .map(|x| x.to_string())
+                    .filter_map(|x| x.as_ref()).cloned()
                     .collect();
                 for segment in interleave_order.iter_mut() {
                     if let Some(segment_str) = segment.as_ref() {
-                        if !valid_segments.contains(segment_str) {
+                        if valid_segments.contains(segment_str) {
+                            if !seen_segments.insert(segment_str.clone()) {
+                                segment.help = Some(format!("Remove all but one '{segment_str}'",));
+                                segment.state = TomlValueState::new_validation_failed(
+                                    "Segment is duplicated in interleave order",
+                                );
+                                any_failed = true;
+                            }
+                        } else {
                             let available: Vec<&String> = valid_segments
                                 .iter()
                                 .filter_map(|x| {
-                                    if !all_seen.contains(*x) {
-                                        Some(*x)
-                                    } else {
+                                    if all_seen.contains(*x) {
                                         None
+                                    } else {
+                                        Some(*x)
                                     }
                                 })
                                 .collect();
@@ -266,51 +270,39 @@ impl PartialOutput {
                                 "Not found in input segments",
                             );
                             any_failed = true;
-                        } else {
-                            if !seen_segments.insert(segment_str.to_string()) {
-                                segment.help = Some(format!("Remove all but one '{segment_str}'",));
-                                segment.state = TomlValueState::new_validation_failed(
-                                    "Segment is duplicated in interleave order",
-                                );
-                                any_failed = true;
-                            }
                         }
                     }
                 }
                 if any_failed {
                     self.interleave.state = TomlValueState::Nested;
+                } else if interleave_order.len() < 2 && !*self.stdout.unwrap_ref() {
+                    self.interleave.state = TomlValueState::new_validation_failed(
+                        "Must contain at least two segments to interleave.",
+                    );
+                    self.interleave.help = Some("Either add another segment to interleave, or remove interleave, or output to files in stead of stdout".to_string());
+                    //     ));
                 } else {
-                    if interleave_order.len() < 2 && !*self.stdout.unwrap_ref() {
-                        self.interleave.state = TomlValueState::new_validation_failed(
-                            "Must contain at least two segments to interleave.",
-                        );
-                        self.interleave.help = Some(format!(
-                            "Either add another segment to interleave, or remove interleave, or output to files in stead of stdout"
-                        ));
-                        //     ));
-                    } else {
-                        //make sure there's no overlap between interleave and output
-                        if let Some(Some(output_segments)) = self.output.as_ref() {
-                            for segment in output_segments {
-                                if let Some(segment_str) = segment.as_ref()
-                                    && let Some(found) = interleave_order
-                                        .iter_mut()
-                                        .find(|x| x.as_ref() == Some(segment_str))
-                                {
-                                    let spans = vec![
-                                        (found.span(), "Duplicate output & interleave".to_string()),
-                                        (
-                                            segment.span(),
-                                            "Duplicate output & interleave".to_string(),
-                                        ),
-                                    ];
+                    //make sure there's no overlap between interleave and output
+                    if let Some(Some(output_segments)) = self.output.as_ref() {
+                        for segment in output_segments {
+                            if let Some(segment_str) = segment.as_ref()
+                                && let Some(found) = interleave_order
+                                    .iter_mut()
+                                    .find(|x| x.as_ref() == Some(segment_str))
+                            {
+                                let spans = vec![
+                                    (found.span(), "Duplicate output & interleave".to_string()),
+                                    (
+                                        segment.span(),
+                                        "Duplicate output & interleave".to_string(),
+                                    ),
+                                ];
 
-                                    found.state = TomlValueState::Custom { spans };
-                                    found.help = Some(
-                                        "Remove from either 'interleaved' or from 'output'"
-                                            .to_string(),
-                                    );
-                                }
+                                found.state = TomlValueState::Custom { spans };
+                                found.help = Some(
+                                    "Remove from either 'interleaved' or from 'output'"
+                                        .to_string(),
+                                );
                             }
                         }
                     }

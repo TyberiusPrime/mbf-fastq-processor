@@ -41,14 +41,13 @@ impl VerifyIn<PartialConfig> for PartialValidateReadPairing {
         Self: Sized + toml_pretty_deser::Visitor,
     {
         self.sample_stride.or_with(default_sample_stride);
-        if let Some(input_config) = parent.input.as_ref() {
-            if input_config.get_segment_order().len() < 2 {
+        if let Some(input_config) = parent.input.as_ref()
+            && input_config.get_segment_order().len() < 2 {
                 return Err(ValidationFailure::new(
                     "ValidateReadPairing requires at least two input segments",
                     Some("Check your [input] section or remove the step"),
                 ));
             }
-        }
         self.sample_stride.verify(|v|
             if *v == 0 {
                 Err(
@@ -116,38 +115,38 @@ impl Step for ValidateReadPairing {
                 let candidate = block.segments[segment_idx].get(read_idx);
                 let candidate_name = candidate.name();
 
-                if reference_name.len() != candidate_name.len() {
-                    bail!(
-                        "ValidateReadPairing detected mismatched read name lengths.
-Occured near read {global_index} (0-based, sampled every {} reads).
-First segment name: {:?}, length {},
-other segment name: {:?}, length {}. \
-Fix your input,
-    or disable this sampling check by setting options.spot_check_read_pairing = false
-    or add a ValidateName step to choose a custom read_name_end_char.",
-                        self.sample_stride,
-                        BStr::new(reference_name),
-                        reference_name.len(),
-                        BStr::new(candidate_name),
-                        candidate_name.len(),
-                    );
-                } else {
-                    let dist = bio::alignment::distance::hamming(reference_name, candidate_name);
-                    if dist > 1 {
-                        bail!("ValidateReadPairing detected mismatched read names near read {global_index}.
-Had a hamming distance above 1: {dist}
-First segment's read: {reference_name}
-Mismatched read     : {candidate_name}
-Fix your input,
-    or disable sampling check by setting options.spot_check_read_pairing = false
-    or add a ValidateName step to choose a custom read_name_end_char and non-hamming comparison.
-",
+                if reference_name.len() == candidate_name.len() {
+                                    let dist = bio::alignment::distance::hamming(reference_name, candidate_name);
+                                    if dist > 1 {
+                                        bail!("ValidateReadPairing detected mismatched read names near read {global_index}.
+                Had a hamming distance above 1: {dist}
+                First segment's read: {reference_name}
+                Mismatched read     : {candidate_name}
+                Fix your input,
+                    or disable sampling check by setting options.spot_check_read_pairing = false
+                    or add a ValidateName step to choose a custom read_name_end_char and non-hamming comparison.
+                ",
 
-                        reference_name = BStr::new(reference_name),
-                        candidate_name = BStr::new(candidate_name),
-                    );
-                    }
-                }
+                                        reference_name = BStr::new(reference_name),
+                                        candidate_name = BStr::new(candidate_name),
+                                    );
+                                    }
+                                } else {
+                                    bail!(
+                                        "ValidateReadPairing detected mismatched read name lengths.
+                Occured near read {global_index} (0-based, sampled every {} reads).
+                First segment name: {:?}, length {},
+                other segment name: {:?}, length {}. \
+                Fix your input,
+                    or disable this sampling check by setting options.spot_check_read_pairing = false
+                    or add a ValidateName step to choose a custom read_name_end_char.",
+                                        self.sample_stride,
+                                        BStr::new(reference_name),
+                                        reference_name.len(),
+                                        BStr::new(candidate_name),
+                                        candidate_name.len(),
+                                    );
+                                }
             }
         }
         Ok((block, true))

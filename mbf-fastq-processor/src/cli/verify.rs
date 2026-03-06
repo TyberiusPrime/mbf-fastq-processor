@@ -768,7 +768,7 @@ impl ExpectedFailure {
         );
 
         //write to stderr file
-        std::fs::write(temp_toml_path.parent().unwrap().join("stderr"), &stderr)
+        std::fs::write(temp_toml_path.parent().expect("No parent for temp_toml_path?").join("stderr"), &stderr)
             .context("Failed to write actual stderr to file")?;
 
         match self {
@@ -902,8 +902,8 @@ fn create_symlinks_for_files(
         }
     } else if let Some(paths) = value.as_array() {
         for v in paths {
-            if let Some(path_str) = v.as_str() {
-                if path_str != crate::config::STDIN_MAGIC_PATH {
+            if let Some(path_str) = v.as_str()
+                && path_str != crate::config::STDIN_MAGIC_PATH {
                     let source_path = source_dir.join(path_str);
                     let target_path = target_dir.join(path_str);
 
@@ -921,7 +921,6 @@ fn create_symlinks_for_files(
                 }
                 // else: non-string value (e.g. integer) — skip silently; the
                 // processor will report the type error during config validation.
-            }
         }
     }
     Ok(())

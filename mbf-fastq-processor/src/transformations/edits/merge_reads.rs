@@ -145,14 +145,13 @@ impl VerifyIn<PartialConfig> for PartialMergeReads {
             }
         });
         self.spacer_quality_char.verify(|opt_v| {
-            if let Some(v) = opt_v {
-                if !(33..=126).contains(v) {
+            if let Some(v) = opt_v
+                && !(33..=126).contains(v) {
                     return Err(ValidationFailure::new(
                         "Invalid value. Must be in [33..126]",
                         Some("Set a valid value."),
                     ));
                 }
-            }
             Ok(())
         });
 

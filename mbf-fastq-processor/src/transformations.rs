@@ -204,7 +204,7 @@ pub trait ToUsedTag {
 }
 
 pub trait ToUsedTags {
-    fn to_used_tags<'a>(&'a mut self) -> Vec<Option<UsedTag<'a>>>;
+    fn to_used_tags(&mut self) -> Vec<Option<UsedTag<'_>>>;
 }
 
 #[derive(Debug)]
@@ -217,7 +217,7 @@ pub(crate) struct DeclaredTag<'a> {
 }
 
 pub trait ToDeclaredTag {
-    fn to_declared_tag<'a>(&'a mut self, tag_type: TagValueType) -> Option<DeclaredTag<'a>>;
+    fn to_declared_tag(&mut self, tag_type: TagValueType) -> Option<DeclaredTag<'_>>;
 }
 //see deser for impl
 

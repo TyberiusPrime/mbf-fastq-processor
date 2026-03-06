@@ -111,7 +111,7 @@ impl TagUser for PartialTaggedVariant<PartialRegions> {
                             accepted_tag_types: entry.1,
                             toml_source: toml_source.clone(),
                             further_help: None,
-                        }))
+                        }));
                     }
                 }
             }
@@ -125,7 +125,7 @@ impl TagUser for PartialTaggedVariant<PartialRegions> {
 
         TagUsageInfo {
             declared_tag: inner.out_label.to_declared_tag(output_tag_type),
-            used_tags: used_tags,
+            used_tags,
             ..Default::default()
         }
     }

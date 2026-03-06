@@ -192,7 +192,7 @@ pub fn validate_seed(
             tv_false_positive_rate.help = Some(
                 "False positive rate must be < 1.0 Change `false_positive_rate` to a valid value."
                     .to_string(),
-            )
+            );
         } else if *false_positive_rate > 0.0 && seed.is_none() {
             tv_seed.state =
                 TomlValueState::new_validation_failed("Seed required for approximate filtering");

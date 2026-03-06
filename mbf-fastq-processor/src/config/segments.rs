@@ -8,7 +8,7 @@ use crate::{
         PartialConfig,
         deser::{TagLabel, offer_alternatives},
     },
-    transformations::{TagValueType, ToUsedTags, UsedTag},
+    transformations::{ToUsedTags, UsedTag},
 };
 
 // #[derive(Clone, Eq, PartialEq, JsonSchema)]
@@ -445,7 +445,7 @@ impl ResolvedSourceNoAll {
     }
 }
 impl ToUsedTags for TomlValue<MustAdapt<String, ResolvedSourceNoAll>> {
-    fn to_used_tags<'a>(&'a mut self) -> Vec<Option<UsedTag<'a>>> {
+    fn to_used_tags(&mut self) -> Vec<Option<UsedTag<'_>>> {
         let resolved = self
             .as_ref()
             .expect("Called on non-ok value")
@@ -460,7 +460,7 @@ impl ToUsedTags for TomlValue<MustAdapt<String, ResolvedSourceNoAll>> {
                     accepted_tag_types,
                     toml_source: toml_source.clone(),
                     further_help: None,
-                }))
+                }));
             }
         }
         res
@@ -692,7 +692,7 @@ impl ResolvedSourceAll {
 }
 
 impl ToUsedTags for TomlValue<MustAdapt<String, ResolvedSourceAll>> {
-    fn to_used_tags<'a>(&'a mut self) -> Vec<Option<UsedTag<'a>>> {
+    fn to_used_tags(&mut self) -> Vec<Option<UsedTag<'_>>> {
         let resolved = self
             .as_ref()
             .expect("Called on non-ok value")
@@ -707,7 +707,7 @@ impl ToUsedTags for TomlValue<MustAdapt<String, ResolvedSourceAll>> {
                     accepted_tag_types,
                     toml_source: toml_source.clone(),
                     further_help: None,
-                }))
+                }));
             }
         }
         res
