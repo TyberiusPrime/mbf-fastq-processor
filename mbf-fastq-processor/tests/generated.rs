@@ -2478,6 +2478,20 @@ fn test_cases_x_single_step_x_error_handling_x_error_messages_x_barcodes_as_list
 }
 
 #[test]
+fn test_cases_x_single_step_x_error_handling_x_error_messages_x_no_source_on_source_all() {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/error_messages/no_source_on_source_all"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/error_handling/error_messages/no_source_on_source_all",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_error_handling_x_error_messages_x_show_step_template_on_error() {
     println!(
         "Test case is in: test_cases/single_step/error_handling/error_messages/show_step_template_on_error"

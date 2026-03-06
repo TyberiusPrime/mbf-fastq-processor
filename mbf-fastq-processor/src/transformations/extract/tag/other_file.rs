@@ -55,7 +55,6 @@ impl VerifyIn<PartialConfig> for PartialOtherFile {
     {
         self.source.validate_segment(parent);
         crate::transformations::tag::validate_seed(&mut self.seed, &mut self.false_positive_rate);
-        //todo: refactor with OtherFileByName to avoid code duplication.
         if let Some(filename) = self.filename.as_ref()
             && Path::new(filename)
                 .extension()

@@ -82,11 +82,6 @@ pub fn tpd_adapt_regex(mut input: TomlValue<String>) -> TomlValue<regex::bytes::
 }
 
 #[must_use]
-pub fn tpd_adapt_trim_string(mut input: TomlValue<String>) -> TomlValue<String> {
-    input.try_map(|x| Ok(x.trim().to_string()))
-}
-
-#[must_use]
 pub fn tpd_adapt_u8_from_byte_or_char(mut input: TomlValue<toml_edit::Item>) -> TomlValue<u8> {
     let help =
         "Provide either a number (0..255), or a single letter string (with an ascii character)";

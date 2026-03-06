@@ -38,7 +38,6 @@ pub enum OnMissing {
 #[derive(Debug)]
 pub struct ConcatTags {
     /// Input tag labels to concatenate (must have at least 2)
-    //#[validate(min_items = 2)] //TODO
     in_labels: Vec<TagLabel>,
 
     /// Output tag label for the concatenated result
