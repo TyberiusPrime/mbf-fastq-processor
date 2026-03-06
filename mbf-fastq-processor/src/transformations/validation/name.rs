@@ -1,4 +1,3 @@
-#![allow(clippy::unnecessary_wraps)]
 use std::sync::atomic::Ordering;
 
 // eserde false positives

@@ -1,5 +1,3 @@
-#![allow(clippy::unnecessary_wraps)] //eserde false positives
-
 use crate::transformations::{RegionAnchor, prelude::*};
 
 /// Define a region by coordinates

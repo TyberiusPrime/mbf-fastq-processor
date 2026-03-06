@@ -1,5 +1,3 @@
-#![allow(clippy::unnecessary_wraps)]
-
 use crate::io::WrappedFastQReadMut;
 use crate::transformations::TagValue;
 use crate::transformations::prelude::*;

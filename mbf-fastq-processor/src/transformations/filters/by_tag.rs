@@ -1,4 +1,3 @@
-#![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::{dna::TagValue, transformations::prelude::*};
 
 /// Filter reads by presence/value of a (non-numeric) tag

@@ -1,5 +1,3 @@
-//eserde false positives
-#![allow(clippy::unnecessary_wraps)]
 use super::extract_numeric_tags_plus_all;
 use crate::transformations::prelude::*;
 

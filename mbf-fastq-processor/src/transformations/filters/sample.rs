@@ -1,4 +1,3 @@
-#![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::transformations::prelude::*;
 
 use super::super::extend_seed;

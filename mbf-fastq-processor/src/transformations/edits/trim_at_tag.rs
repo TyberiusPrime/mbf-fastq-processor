@@ -1,7 +1,4 @@
-#![allow(clippy::unnecessary_wraps)] //eserde false positives
-
 use crate::transformations::prelude::*;
-
 use crate::dna::{HitRegion, TagValue};
 
 #[derive(Clone, Eq, PartialEq, Copy, JsonSchema)]

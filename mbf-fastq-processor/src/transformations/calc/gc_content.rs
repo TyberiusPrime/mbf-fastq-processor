@@ -1,5 +1,3 @@
-#![allow(clippy::unnecessary_wraps)]
-
 use crate::transformations::prelude::*;
 
 /// Calculate (relative) GC content. See `CalcBaseContent`

@@ -1,4 +1,3 @@
-#![allow(clippy::unnecessary_wraps)]
 use crate::{
     config::deser::{tpd_adapt_bstring, tpd_adapt_u8_from_byte_or_char},
     transformations::prelude::*,

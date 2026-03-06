@@ -1,4 +1,3 @@
-#![allow(clippy::unnecessary_wraps)]
 use indexmap::IndexMap;
 use toml_pretty_deser::suggest_alternatives;
 

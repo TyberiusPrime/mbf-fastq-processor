@@ -1,8 +1,5 @@
-//#![allow(clippy::struct_excessive_bools)]
 use crate::config::deser::TagLabel;
 use crate::config::options::default_block_size;
-// output false positive, directly on struct doesn't work
-//
 use crate::io::{self, DetectedInputFormat};
 use crate::transformations::{PartialTransformation, TagValueType, Transformation};
 use anyhow::{Result, anyhow, bail};

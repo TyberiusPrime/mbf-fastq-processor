@@ -1,5 +1,4 @@
-#![allow(clippy::used_underscore_items)]
-#![allow(non_camel_case_types)] // to make eserde and _Internal* shut up
+#![allow(non_camel_case_types)] // to make derived Partial_* shut up
 
 use bstr::BString;
 use enum_dispatch::enum_dispatch;

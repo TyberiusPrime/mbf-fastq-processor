@@ -1,5 +1,3 @@
-#![allow(clippy::unnecessary_wraps)] //eserde false positives
-
 use crate::config::deser::tpd_adapt_dna_bstring;
 use crate::transformations::prelude::*;
 

@@ -1,5 +1,3 @@
-#![allow(clippy::unnecessary_wraps)] //eserde false positives
-
 mod all_reads_same_length;
 mod name;
 mod quality;

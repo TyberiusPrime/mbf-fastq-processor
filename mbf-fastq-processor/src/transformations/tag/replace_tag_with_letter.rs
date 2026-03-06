@@ -1,5 +1,3 @@
-//eserde false positives
-#![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::transformations::prelude::*;
 
 use crate::config::deser::tpd_adapt_u8_from_byte_or_char;

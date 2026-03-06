@@ -1,5 +1,3 @@
-#![allow(clippy::unnecessary_wraps)]
-
 use crate::transformations::prelude::*;
 
 /// Convert a read, name, tag into upper case

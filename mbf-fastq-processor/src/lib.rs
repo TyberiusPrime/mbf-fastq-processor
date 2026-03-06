@@ -1,10 +1,3 @@
-#![allow(clippy::manual_string_new)]
-#![allow(clippy::redundant_else)]
-#![allow(clippy::missing_panics_doc)]
-#![allow(clippy::missing_errors_doc)]
-#![allow(clippy::single_match_else)]
-#![allow(clippy::default_trait_access)]
-
 pub mod cli;
 pub mod config;
 pub mod cookbooks;

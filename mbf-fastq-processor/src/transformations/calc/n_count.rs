@@ -1,4 +1,3 @@
-//#![allow(clippy::unnecessary_wraps)]
 use crate::transformations::prelude::*;
 
 /// Count the number of N. See `CalcBaseContent` for general case

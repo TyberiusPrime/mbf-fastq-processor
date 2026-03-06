@@ -1,5 +1,3 @@
-#![allow(clippy::unnecessary_wraps)] //eserde false positives
-
 use crate::config::deser::{tpd_adapt_bstring, tpd_adapt_regex};
 use crate::transformations::prelude::*;
 

@@ -1,4 +1,3 @@
-#![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::dna::HitRegion;
 use crate::transformations::prelude::*;
 

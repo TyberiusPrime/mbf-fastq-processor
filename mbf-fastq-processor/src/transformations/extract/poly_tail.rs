@@ -1,5 +1,3 @@
-#![allow(clippy::unnecessary_wraps)] //eserde false positives
-
 use crate::{config::deser::tpd_adapt_extract_base_or_dot, transformations::prelude::*};
 
 use super::extract_region_tags;

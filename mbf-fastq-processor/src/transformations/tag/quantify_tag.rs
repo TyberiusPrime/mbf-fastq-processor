@@ -1,4 +1,3 @@
-#![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::{
     config::{CompressionFormat, deser::tpd_adapt_bstring},
     transformations::prelude::*,

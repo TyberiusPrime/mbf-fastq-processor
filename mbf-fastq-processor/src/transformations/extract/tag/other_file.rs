@@ -1,4 +1,3 @@
-#![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::config::deser::tpd_adapt_u8_from_byte_or_char;
 use crate::transformations::extract::extract_bool_tags_from_tag;
 use crate::transformations::{prelude::*, read_name_canonical_prefix};

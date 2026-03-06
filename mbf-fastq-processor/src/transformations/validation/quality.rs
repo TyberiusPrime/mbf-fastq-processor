@@ -1,4 +1,3 @@
-#![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::config::PhredEncoding;
 use crate::transformations::prelude::*;
 

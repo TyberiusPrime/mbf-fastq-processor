@@ -1,5 +1,3 @@
-#![allow(clippy::unnecessary_wraps)]
-//eserde false positives
 use crate::dna::TagValue;
 use crate::io::FastQBlock;
 use crate::transformations::{extend_seed, prelude::*};

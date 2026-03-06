@@ -1,4 +1,3 @@
-#![allow(clippy::unnecessary_wraps)]
 use toml_pretty_deser::PartialTaggedVariant;
 
 use crate::transformations::prelude::*;

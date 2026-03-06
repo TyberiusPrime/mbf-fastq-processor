@@ -1,4 +1,3 @@
-#![allow(clippy::unnecessary_wraps)]
 use std::{cell::RefCell, collections::HashSet, rc::Rc};
 
 //eserde false positives

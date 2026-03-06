@@ -1,4 +1,3 @@
-#![allow(clippy::unnecessary_wraps)]
 use crate::transformations::prelude::*;
 
 /// remove one tag from memory

@@ -1,5 +1,3 @@
-#![allow(clippy::unnecessary_wraps)] // eserde false positive
-
 use crate::config::deser::tpd_adapt_bstring_uppercase;
 use crate::transformations::prelude::*;
 

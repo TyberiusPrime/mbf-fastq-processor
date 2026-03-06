@@ -1,5 +1,3 @@
-#![allow(clippy::unnecessary_wraps)]
-
 use crate::transformations::prelude::*;
 
 use crate::{config::deser::tpd_adapt_extract_base_or_dot, dna::Hits};

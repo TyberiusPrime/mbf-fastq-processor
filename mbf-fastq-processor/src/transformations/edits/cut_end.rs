@@ -1,5 +1,3 @@
-#![allow(clippy::unnecessary_wraps)] //eserde false positives
-
 use crate::transformations::prelude::*;
 
 /// Cut a fixed number of bases from the end of reads

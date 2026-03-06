@@ -1,5 +1,3 @@
-#![allow(clippy::unnecessary_wraps)]
-
 use crate::io;
 use crate::transformations::prelude::*;
 use indexmap::IndexMap;
