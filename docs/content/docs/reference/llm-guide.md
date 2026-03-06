@@ -1008,18 +1008,24 @@ Limit maximum read length.
 
 Add bases to start/end of reads.
 
+Quality is checked against encoding.
+
 ```toml
 [[step]]
     action = 'Prefix'
     segment = 'read1'              # TYPE: segment name, REQUIRED
     seq = 'AGTC'                   # TYPE: DNA string (agtcn), REQUIRED
     qual = 'IIII'                  # TYPE: quality string, REQUIRED (same length)
+    encoding = 'Illumina1.8'       #  optional, default=sanger 'Illumina1.8|Illumina1.3|Sanger|Solexa',
+
+encod
 
 [[step]]
     action = 'Postfix'
     segment = 'read1'              # TYPE: segment name, REQUIRED
     seq = 'AGTC'                   # TYPE: DNA string (agtcn), REQUIRED
     qual = 'IIII'                  # TYPE: quality string, REQUIRED (same length)
+    encoding = 'Illumina1.8'       #  optional, default=sanger 'Illumina1.8|Illumina1.3|Sanger|Solexa',
 ```
 
 ### ReplaceTagWithLetter

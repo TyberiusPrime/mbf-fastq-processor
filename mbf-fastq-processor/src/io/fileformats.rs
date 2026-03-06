@@ -14,6 +14,16 @@ pub enum PhredEncoding {
     Illumina13, //64..=126, offset 64
 }
 
+impl std::fmt::Display for PhredEncoding {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PhredEncoding::Sanger => write!(f, "Sanger/Illumina1.8 (PHRED+33)"),
+            PhredEncoding::Solexa => write!(f, "Solexa (PHRED+64)"),
+            PhredEncoding::Illumina13 => write!(f, "Illumina 1.3+ (PHRED+64)"),
+        }
+    }
+}
+
 impl PhredEncoding {
     #[must_use]
     pub fn limits(&self) -> (u8, u8) {

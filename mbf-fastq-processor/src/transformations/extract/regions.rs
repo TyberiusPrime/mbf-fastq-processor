@@ -23,10 +23,6 @@ pub struct Regions {
 
     pub out_label: TagLabel,
 
-    /* #[serde(deserialize_with = "crate::config::deser::option_bstring_from_string")]
-    #[schemars(with = "Option<String>")]
-    #[serde(default)]
-    pub region_separator: Option<BString>, */
     #[tpd(skip)]
     #[schemars(skip)]
     pub output_tag_type: TagValueType,

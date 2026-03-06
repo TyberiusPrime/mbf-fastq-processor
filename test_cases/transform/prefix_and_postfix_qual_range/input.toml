@@ -1,0 +1,53 @@
+[input]
+    read1 = 'input_read1.fq'
+[[step]]
+    action = 'Head'
+    n = 1
+
+[[step]]
+    action = 'Prefix'
+    seq = 'ACGT'
+    qual = ' BCD'
+
+[[step]]
+    action = 'Prefix'
+    seq = 'ACGT'
+    qual = '€BCD'
+
+
+[[step]]
+    action = 'Prefix'
+    seq = 'ACGT'
+    qual = 'ABCA'
+    encoding = "illumina1.3"
+
+[[step]]
+    action = 'Prefix'
+    seq = 'ACGT'
+    qual = 'ABC?'
+    encoding = "illumina1.3"
+
+[[step]]
+    action = 'Postfix'
+    seq = 'ACGT'
+    qual = 'ABC?'
+    encoding = "illumina1.3"
+
+[[step]]
+    action = 'Postfix'
+    seq = 'ACGT'
+    qual = 'ABC~'
+    encoding = "illumina1.3"
+
+[[step]]
+    action = 'Postfix'
+    seq = 'ACGT'
+    qual = ' BCD'
+
+[[step]]
+    action = 'Postfix'
+    seq = 'ACGT'
+    qual = '€BCD'
+
+[output]
+    prefix = 'output'
