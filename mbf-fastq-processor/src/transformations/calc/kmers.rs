@@ -2,7 +2,7 @@
 
 use crate::io;
 use crate::transformations::prelude::*;
-use std::collections::HashMap;
+use indexmap::IndexMap;
 
 fn default_min_count() -> usize {
     1
@@ -33,7 +33,7 @@ pub struct Kmers {
 
     #[schemars(skip)]
     #[tpd(skip, default)]
-    pub resolved_kmer_db: Option<HashMap<Vec<u8>, usize>>,
+    pub resolved_kmer_db: Option<IndexMap<Vec<u8>, usize>>,
 }
 
 impl VerifyIn<PartialConfig> for PartialKmers {
@@ -157,8 +157,8 @@ pub fn build_kmer_database(
     k: usize,
     min_count: usize,
     canonical: bool,
-) -> Result<HashMap<Vec<u8>, usize>> {
-    let mut kmer_counts: HashMap<Vec<u8>, usize> = HashMap::new();
+) -> Result<IndexMap<Vec<u8>, usize>> {
+    let mut kmer_counts: IndexMap<Vec<u8>, usize> = IndexMap::new();
 
     for file_path in files {
         io::apply_to_read_sequences(
@@ -199,7 +199,7 @@ pub fn build_kmer_database(
 pub fn count_kmers_in_database(
     sequence: &[u8],
     k: usize,
-    kmer_db: &HashMap<Vec<u8>, usize>,
+    kmer_db: &IndexMap<Vec<u8>, usize>,
 ) -> usize {
     if sequence.len() < k {
         return 0;

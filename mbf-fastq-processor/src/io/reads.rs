@@ -8,7 +8,7 @@ use crate::{
 };
 use anyhow::{Result, bail};
 use bstr::BString;
-use std::collections::HashMap;
+use indexmap::IndexMap;
 
 use super::Range;
 
@@ -558,7 +558,7 @@ impl FastQBlock {
 
     pub fn apply_mut_with_tag(
         &mut self,
-        tags: &HashMap<TagLabel, Vec<TagValue>>,
+        tags: &IndexMap<TagLabel, Vec<TagValue>>,
         label: &TagLabel,
         f: impl Fn(&mut WrappedFastQReadMut, &TagValue),
     ) {
@@ -1211,7 +1211,7 @@ pub struct SegmentsCombined<T> {
 pub struct FastQBlocksCombined {
     pub segments: Vec<FastQBlock>,
     pub output_tags: Option<Vec<crate::demultiplex::Tag>>, // used by Demultiplex
-    pub tags: HashMap<TagLabel, Vec<TagValue>>,
+    pub tags: IndexMap<TagLabel, Vec<TagValue>>,
     pub is_final: bool,
 }
 
@@ -1226,7 +1226,7 @@ impl FastQBlocksCombined {
             } else {
                 None
             },
-            tags: HashMap::default(),
+            tags: IndexMap::default(),
             is_final: self.is_final,
         }
     }
@@ -1302,7 +1302,7 @@ impl FastQBlocksCombined {
     where
         F: for<'a> FnMut(&mut [WrappedFastQReadMut<'a>], &TagValue),
     {
-        let tags = self.tags.get(&label).expect("Tag must be present, bug");
+        let tags = self.tags.get(label).expect("Tag must be present, bug");
 
         for ii in 0..self.segments[0].entries.len() {
             let mut reads: Vec<WrappedFastQReadMut> = Vec::new();

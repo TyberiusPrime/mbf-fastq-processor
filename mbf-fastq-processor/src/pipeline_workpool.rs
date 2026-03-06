@@ -528,7 +528,7 @@ fn process_work_item(
     let unused_tags: Vec<_> = work_item
         .block
         .tags
-        .extract_if(|k, _v| !stage.allowed_tags.contains(k))
+        .extract_if(.., |k, _v| !stage.allowed_tags.contains(k))
         .collect();
 
     let result = {

@@ -1,6 +1,7 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashSet};
 use std::fs;
 use std::path::PathBuf;
+use indexmap::IndexMap;
 use walkdir::WalkDir;
 
 #[test]
@@ -19,7 +20,7 @@ fn all_test_cases_are_generated() {
             search_dir.display()
         );
 
-        let mut counters = HashMap::new();
+        let mut counters = IndexMap::new();
 
         for entry in WalkDir::new(search_dir)
             .into_iter()

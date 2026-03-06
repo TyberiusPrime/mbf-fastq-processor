@@ -3,7 +3,6 @@ use std::collections::{BTreeMap, HashSet};
 use anyhow::Result;
 use indexmap::IndexMap;
 use schemars::JsonSchema;
-use std::collections::HashMap;
 use toml_pretty_deser::{Visitor, prelude::*};
 
 use crate::config::deser::tpd_adapt_u8_from_byte_or_char;
@@ -238,14 +237,14 @@ If you have paired end reads, name two 'virtual' segments, e.g. ['read1','read2'
                 return Err(());
             }
             //detect duplicate names in interleaved
-            let mut seen: HashMap<String, Vec<std::ops::Range<usize>>> = HashMap::new();
+            let mut seen: IndexMap<String, Vec<std::ops::Range<usize>>> = IndexMap::new();
             for segment_toml_value in interleaved.iter() {
                 let segment_name = segment_toml_value.as_ref().expect("parent was ok").trim();
                 match seen.entry(segment_name.to_string()) {
-                    std::collections::hash_map::Entry::Vacant(e) => {
+                    indexmap::map::Entry::Vacant(e) => {
                         e.insert(vec![segment_toml_value.span.clone()]);
                     }
-                    std::collections::hash_map::Entry::Occupied(mut e) => {
+                    indexmap::map::Entry::Occupied(mut e) => {
                         e.get_mut().push(segment_toml_value.span.clone());
                     }
                 }

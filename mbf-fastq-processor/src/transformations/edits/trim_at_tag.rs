@@ -141,7 +141,7 @@ impl Step for TrimAtTag {
         let mut cut_locations: Vec<TagValue> = {
             block
                 .tags
-                .extract_if(|k, _v| k == &self.in_label)
+                .extract_if(.., |k, _v| k == &self.in_label)
                 .next()
                 .map(|(_k, v)| v)
                 .expect("in_label tag must exist in block")

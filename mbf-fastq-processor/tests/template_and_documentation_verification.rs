@@ -1,8 +1,9 @@
 #![allow(clippy::unwrap_used)]
+use indexmap::IndexMap;
 use mbf_fastq_processor::config::config_from_string;
 use regex::Regex;
 use schemars::schema_for;
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashSet};
 use std::fmt::Write;
 use std::fs;
 use std::io::ErrorKind;
@@ -47,8 +48,8 @@ fn get_all_transformations() -> Vec<String> {
     transformations
 }
 
-fn get_transformation_target_patterns() -> HashMap<String, &'static str> {
-    let mut patterns = HashMap::new();
+fn get_transformation_target_patterns() -> IndexMap<String, &'static str> {
+    let mut patterns = IndexMap::new();
 
     // Dynamically discover all Rust files in src/transformations/
     let transformations_dir = Path::new("src/transformations");
@@ -71,7 +72,7 @@ fn get_transformation_target_patterns() -> HashMap<String, &'static str> {
     patterns
 }
 
-fn analyze_transformations_in_file(content: &str, patterns: &mut HashMap<String, &'static str>) {
+fn analyze_transformations_in_file(content: &str, patterns: &mut IndexMap<String, &'static str>) {
     // Use regex to find all struct definitions with their content
     let struct_regex =
         STRUCT_REGEX.get_or_init(|| Regex::new(r"(?s)pub struct (\w+)\s*\{([^}]+)\}").unwrap());
@@ -541,9 +542,9 @@ fn get_transformation_schema() -> &'static serde_json::Value {
 
 /// Extract field names from the JSON schema for a given transformation variant
 /// Returns a map of field name -> list of aliases (empty if no aliases)
-fn extract_schema_fields_with_aliases(transformation: &str) -> HashMap<String, Vec<String>> {
+fn extract_schema_fields_with_aliases(transformation: &str) -> IndexMap<String, Vec<String>> {
     let schema = get_transformation_schema();
-    let mut field_map = HashMap::new();
+    let mut field_map = IndexMap::new();
 
     // Get fields from schema - the oneOf array is at the top level
     let one_ofs = schema
@@ -584,12 +585,12 @@ fn extract_schema_fields_with_aliases(transformation: &str) -> HashMap<String, V
 
 /// Extract field aliases from Rust source code for a given transformation
 /// Returns a map of `field_name` -> Vec<alias>
-fn extract_field_aliases_from_source(transformation: &str) -> Option<HashMap<String, Vec<String>>> {
+fn extract_field_aliases_from_source(transformation: &str) -> Option<IndexMap<String, Vec<String>>> {
     // Find the struct file
     let struct_file = find_struct_file_for_transformation(transformation)?;
     let content = fs::read_to_string(&struct_file).ok()?;
 
-    let mut aliases_map: HashMap<String, Vec<String>> = HashMap::new();
+    let mut aliases_map: IndexMap<String, Vec<String>> = IndexMap::new();
     let lines: Vec<&str> = content.lines().collect();
 
     // Find the struct definition

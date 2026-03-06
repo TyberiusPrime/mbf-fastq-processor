@@ -1,7 +1,8 @@
 use anyhow::{Context, Result, bail};
 use crossbeam::channel::{bounded, unbounded};
+use indexmap::IndexMap;
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::BTreeMap,
     panic,
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
@@ -88,7 +89,7 @@ fn parse_interleaved_and_send(
                 io::FastQBlocksCombined {
                     segments: out_blocks,
                     output_tags: None,
-                    tags: HashMap::default(),
+                    tags: IndexMap::default(),
                     is_final: false,
                 },
                 expected_read_count,
@@ -104,7 +105,7 @@ fn parse_interleaved_and_send(
             let final_block = io::FastQBlocksCombined {
                 segments: vec![io::FastQBlock::empty()],
                 output_tags: None,
-                tags: HashMap::default(),
+                tags: IndexMap::default(),
                 is_final: true,
             };
             let _ = combiner_output_tx.send((block_no, final_block, expected_read_count));

@@ -38,7 +38,7 @@ impl Step for ForgetTag {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        block.tags.remove(&self.in_label);
+        block.tags.shift_remove(&self.in_label);
         Ok((block, true))
     }
 }
