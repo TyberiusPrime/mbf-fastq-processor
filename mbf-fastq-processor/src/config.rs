@@ -16,7 +16,7 @@ use bstr::BString;
 use indexmap::IndexMap;
 use schemars::JsonSchema;
 use std::cell::RefCell;
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashSet};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use toml_pretty_deser::{PartialTaggedVariant, Visitor, prelude::*};
@@ -218,7 +218,7 @@ impl VerifyIn<TPDRoot> for PartialConfig {
 
 impl PartialConfig {
     fn verify_no_duplicate_files_no_empty_segments(&mut self) {
-        let mut seen_files: HashMap<String, Vec<std::ops::Range<usize>>> = HashMap::new();
+        let mut seen_files: IndexMap<String, Vec<std::ops::Range<usize>>> = IndexMap::new();
         if let Some(input) = self.input.as_mut()
             && let Some(segments) = input.segments.as_mut()
             && let Some(false) = self
@@ -237,10 +237,10 @@ impl PartialConfig {
                         for tv_file in files {
                             if let Some(str_file) = tv_file.as_ref() {
                                 match seen_files.entry(str_file.clone()) {
-                                    std::collections::hash_map::Entry::Occupied(occupied_entry) => {
+                                    indexmap::map::Entry::Occupied(occupied_entry) => {
                                         occupied_entry.into_mut().push(tv_file.span());
                                     }
-                                    std::collections::hash_map::Entry::Vacant(vacant_entry) => {
+                                    indexmap::map::Entry::Vacant(vacant_entry) => {
                                         vacant_entry.insert(vec![tv_file.span()]);
                                     }
                                 }
@@ -345,10 +345,10 @@ impl PartialConfig {
             self.output.help =
                 Some("No report step, but report output requested.\nRemove/disable report_html & report_json, or add in a report step.".to_string());
         } else {
-            let mut report_names_to_spans: HashMap<
+            let mut report_names_to_spans: IndexMap<
                 String,
                 Vec<&mut TomlValue<PartialTransformation>>,
-            > = HashMap::new();
+            > = IndexMap::new();
             if let Some(transform) = self.transform.as_mut() {
                 for tv_transform in transform.iter_mut() {
                     if let Some(transform) = tv_transform.as_ref() {
@@ -370,10 +370,10 @@ impl PartialConfig {
                         };
                         if let Some(name) = name {
                             match report_names_to_spans.entry(name) {
-                                std::collections::hash_map::Entry::Occupied(occupied_entry) => {
+                                indexmap::map::Entry::Occupied(occupied_entry) => {
                                     occupied_entry.into_mut().push(tv_transform);
                                 }
-                                std::collections::hash_map::Entry::Vacant(vacant_entry) => {
+                                indexmap::map::Entry::Vacant(vacant_entry) => {
                                     vacant_entry.insert(vec![tv_transform]);
                                 }
                             }
@@ -632,7 +632,7 @@ impl PartialConfig {
     }
 
     fn verify_barcodes_and_segment_names_disjoint(&mut self) {
-        let mut segment_names = HashMap::new();
+        let mut segment_names = IndexMap::new();
 
         if let Some(input) = self.input.as_mut()
             && let Some(structured) = input.structured.as_mut()
@@ -1118,7 +1118,7 @@ impl PartialConfig {
                     .iter_mut()
                     .map(|t| t.as_mut().expect("parent was ok"))
                     .collect::<Vec<_>>();
-                let mut all_tags_ever: HashMap<String, std::ops::Range<usize>> = HashMap::new();
+                let mut all_tags_ever: IndexMap<String, std::ops::Range<usize>> = IndexMap::new();
                 let segment_order = input.get_segment_order();
                 let mut any_tag_errors = false;
                 for trafo in just_trafos.iter_mut() {

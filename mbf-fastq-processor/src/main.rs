@@ -4,8 +4,8 @@ use clap::{Arg, ArgAction, Command, ValueHint, value_parser};
 use clap_complete::{Generator, Shell, generate};
 use human_panic::{Metadata, setup_panic};
 use regex::Regex;
+use indexmap::IndexMap;
 use std::{
-    collections::HashMap,
     io,
     path::{Path, PathBuf},
 };
@@ -421,7 +421,7 @@ fn print_version_and_exit() {
 /// just capitalization variants of each other.
 /// Prefer the ones with more capital letters
 fn canonicalize_variants(parts: Vec<&str>) -> Vec<String> {
-    let mut seen: HashMap<String, String> = HashMap::new();
+    let mut seen: IndexMap<String, String> = IndexMap::new();
     for p in parts {
         let key = p.to_lowercase();
         match seen.get(&key) {

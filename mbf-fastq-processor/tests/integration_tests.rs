@@ -1,10 +1,12 @@
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::identity_op)]
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashSet};
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
+
+use indexmap::IndexMap;
 
 #[test]
 fn test_cookbooks_in_sync() {
@@ -253,7 +255,7 @@ fn test_every_demultiplexed_data_transform_has_test() {
     let transformations_content =
         fs::read_to_string(transformations_path).expect("Failed to read src/transformations.rs");
 
-    let mut struct_to_action: HashMap<String, String> = HashMap::new();
+    let mut struct_to_action: IndexMap<String, String> = IndexMap::new();
 
     // Find the enum definition and parse it
     let mut in_enum = false;
