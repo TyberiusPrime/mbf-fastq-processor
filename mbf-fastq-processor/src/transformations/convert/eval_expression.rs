@@ -222,7 +222,8 @@ impl Step for Box<EvalExpression> {
                         .1
                         .to_string(),
                 );
-                if let Some(segment_index) = input_info.segment_order.iter().position(|x| *x == suffix.0)
+                if let Some(segment_index) =
+                    input_info.segment_order.iter().position(|x| *x == suffix.0)
                 {
                     #[allow(clippy::cast_precision_loss)]
                     for read in &block.segments[segment_index].entries {

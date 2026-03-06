@@ -1,10 +1,27 @@
 Error Details ==
-Error 1/1
+Error 1/2
    ╭─config.toml
 21 │ [barcodes.'I have spaces']
    ┆           ───────┬───────
    ┆                  │
-   ┆                  ╰───────── Invalid value
+   ┆                  ╰───────── Must contain only letters, numbers, and underscores (a-zA-Z0-9_), found ' '.
 ───╯
-Hint: Tag label must contain only letters, numbers, and underscores (a-zA-Z0-9_), found ' '.
+
+Error 2/2
+   ╭─config.toml
+   ┆
+15 │ [[step]]
+16 │     action = 'Demultiplex'
+   ┆              ──────┬──────
+   ┆                    │
+   ┆                    ╰─────── In this step
+   ┆
+17 │     in_label = 'barcode'
+18 │     barcodes = 'I have spaces'
+   ┆                ───────┬───────
+   ┆                       │
+   ┆                       ╰──────── Invalid label
+───╯
+Hint: Must contain only letters, numbers, and underscores (a-zA-Z0-9_), found ' '.
+      See https://doc_url.example/version-stripped-from-test/docs/reference/Demultiplex
 

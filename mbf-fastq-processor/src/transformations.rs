@@ -174,7 +174,7 @@ pub struct FinalizeReportResult {
 #[allow(clippy::struct_excessive_bools)]
 pub struct InputInfo {
     pub segment_order: Vec<String>,
-    pub barcodes_data: IndexMap<String, crate::config::Barcodes>,
+    pub barcodes_data: IndexMap<TagLabel, crate::config::Barcodes>,
     pub comment_insert_char: u8,
     pub initial_filter_capacity: Option<usize>,
 }

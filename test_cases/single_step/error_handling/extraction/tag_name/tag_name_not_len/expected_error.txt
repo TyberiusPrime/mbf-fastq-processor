@@ -1,1 +1,22 @@
-Tag label 'len_read1' cannot start with reserved prefix 'len_'
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+ 4 │ [[step]]
+ 5 │     action = "ExtractRegion"
+   ┆              ───────┬───────
+   ┆                     │
+   ┆                     ╰──────── In this step
+   ┆
+ 6 │     anchor = "Left"
+ 7 │ 	source = "read1"
+ 8 │ 	start = 0
+ 9 │ 	len = 4
+10 │     out_label = "len_read1"
+   ┆                 ─────┬─────
+   ┆                      │
+   ┆                      ╰────── Invalid label
+───╯
+Hint: Cannot start with reserved prefix 'len_'. This prefix is reserved for length-related internal tags. Please choose a different value that doesn't start with 'len_'.
+      See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractRegion
+

@@ -17,7 +17,7 @@ Error 1/2
    ┆                     │
    ┆                     ╰──── Invalid label
 ───╯
-Hint: Tag label must contain only letters, numbers, and underscores (a-zA-Z0-9_), found ','.
+Hint: Must contain only letters, numbers, and underscores (a-zA-Z0-9_), found ','.
       See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractRegion
 
 Error 2/2
@@ -33,6 +33,6 @@ Error 2/2
    ┆                    │
    ┆                    ╰──── Invalid label
 ───╯
-Hint: Tag label must contain only letters, numbers, and underscores (a-zA-Z0-9_), found ','.
+Hint: Must contain only letters, numbers, and underscores (a-zA-Z0-9_), found ','.
       See https://doc_url.example/version-stripped-from-test/docs/reference/StoreTagInComment
 

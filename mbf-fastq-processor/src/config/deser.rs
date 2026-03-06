@@ -772,10 +772,17 @@ impl std::fmt::Display for TagLabel {
     }
 }
 
-// impl std::borrow::Borrow<str> for TagLabel {
-//     fn borrow(&self) -> &str {
-//         &self.0
-//     }
+impl std::borrow::Borrow<str> for TagLabel {
+    fn borrow(&self) -> &str {
+        &self.0
+    }
+}
+
+impl AsRef<str> for TagLabel {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
 
 impl ToDeclaredTag for TomlValue<TagLabel> {
     fn to_declared_tag<'a>(&'a mut self, tag_type: TagValueType) -> Option<DeclaredTag<'a>> {
@@ -909,7 +916,7 @@ pub fn validate_tag_name(tag_name: &str) -> anyhow::Result<()> {
     use anyhow::bail;
     if tag_name.is_empty() {
         bail!(
-            "Tag label cannot be empty. Please provide a non-empty tag name that starts with a letter or underscore."
+            "Cannot be empty. Please provide a non-empty tag name that starts with a letter or underscore."
         );
     }
 
@@ -919,13 +926,13 @@ pub fn validate_tag_name(tag_name: &str) -> anyhow::Result<()> {
         .expect("tag_name is not empty so must have at least one char");
 
     if !first_char.is_ascii_alphabetic() && first_char != '_' {
-        bail!("Tag label must start with a letter or underscore (a-zA-Z_), got '{first_char}'",);
+        bail!("Must start with a letter or underscore (a-zA-Z_), got '{first_char}'",);
     }
 
     for ch in chars {
         if !ch.is_ascii_alphanumeric() && ch != '_' {
             bail!(
-                "Tag label must contain only letters, numbers, and underscores (a-zA-Z0-9_), found '{ch}'.",
+                "Must contain only letters, numbers, and underscores (a-zA-Z0-9_), found '{ch}'.",
             );
         }
     }
@@ -938,13 +945,13 @@ pub fn validate_tag_name(tag_name: &str) -> anyhow::Result<()> {
             // because that's what we store in the output tables as
             // column 0
             bail!(
-                "Reserved tag label '{forbidden}' cannot be used as a tag label. This name is reserved for {reason}. Please choose a different tag name."
+                "Reserved value '{forbidden}' cannot be used here. This name is reserved for {reason}. Please choose a different value."
             );
         }
     }
     if tag_name.starts_with("len_") {
         bail!(
-            "Tag label '{tag_name}' cannot start with reserved prefix 'len_'. This prefix is reserved for length-related internal tags. Please choose a different tag name that doesn't start with 'len_'."
+            "Cannot start with reserved prefix 'len_'. This prefix is reserved for length-related internal tags. Please choose a different value that doesn't start with 'len_'."
         );
     }
     Ok(())
