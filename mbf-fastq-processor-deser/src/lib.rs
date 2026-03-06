@@ -1,18 +1,112 @@
-use crate::dna;
-use crate::transformations::{DeclaredTag, TagValueType, ToDeclaredTag, ToUsedTag, UsedTag};
+use anyhow::{Result, bail};
 use bstr::BString;
+use regex::bytes::Regex;
 use schemars::JsonSchema;
 use std::cell::RefCell;
-use std::rc::Rc;
 use std::fmt;
-use toml_pretty_deser::{TomlValue, ValidationFailure};
+use std::rc::Rc;
+use toml_pretty_deser::{TomlValue, TomlValueState, ValidationFailure};
+
+pub mod dna;
+pub mod segments;
 //
+// Default functions for common values
+pub fn default_region_separator() -> bstr::BString {
+    b"_".into()
+}
+
+pub fn default_segment_all() -> segments::SegmentIndexOrAll {
+    segments::SegmentIndexOrAll::All
+}
+
+pub fn default_comment_separator() -> u8 {
+    b'|'
+}
+pub fn default_comment_insert_char() -> u8 {
+    b' '
+}
+
+
 // Schema helper for string or list of strings
 #[derive(JsonSchema)]
 #[allow(dead_code)]
-pub(crate) enum StringOrVecString {
+pub enum StringOrVecString {
     String(String),
     Vec(Vec<String>),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Copy)]
+pub enum TagValueType {
+    //Todo: should this be a struct with 4 bools?
+    Location, // string + in-sequence-location
+    String,   // just a piece of text
+    Numeric,
+    Bool,
+}
+
+#[derive(Debug)]
+pub struct UsedTag<'a> {
+    pub name: TagLabel,
+    pub accepted_tag_types: &'a [TagValueType],
+    pub toml_source: Rc<RefCell<(&'a mut TomlValueState, &'a mut Option<String>)>>,
+    pub further_help: Option<String>,
+}
+
+impl UsedTag<'_> {
+    pub fn add_help(mut self, line: impl AsRef<str>) -> Self {
+        self.further_help = match self.further_help.take() {
+            Some(existing) => Some(format!("{}\n{}", existing, line.as_ref())),
+            None => Some(line.as_ref().to_string()),
+        };
+        self
+    }
+}
+
+pub trait ToUsedTag {
+    fn to_used_tag<'a>(&'a mut self, accepted_tag_types: &'a [TagValueType])
+    -> Option<UsedTag<'a>>;
+}
+
+pub trait ToUsedTags {
+    fn to_used_tags(&mut self) -> Vec<Option<UsedTag<'_>>>;
+}
+
+#[derive(Debug)]
+pub struct DeclaredTag<'a> {
+    pub name: TagLabel,
+    pub tag_type: TagValueType,
+    pub toml_source_state: &'a mut TomlValueState,
+    pub toml_source_help: &'a mut Option<String>,
+    pub toml_source_span: std::ops::Range<usize>,
+}
+
+pub trait ToDeclaredTag {
+    fn to_declared_tag(&mut self, tag_type: TagValueType) -> Option<DeclaredTag<'_>>;
+}
+//see deser for impl
+
+#[derive(Default, Debug)]
+pub enum RemovedTags<'a> {
+    #[default]
+    None,
+    All,
+    Some(Vec<(TagLabel, &'a mut TomlValue<TagLabel>)>),
+}
+impl TagValueType {
+    pub fn compatible(self, other: TagValueType) -> bool {
+        self == other
+    }
+}
+
+impl std::fmt::Display for TagValueType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TagValueType::Location => write!(f, "Location"),
+            TagValueType::String => write!(f, "String"),
+            TagValueType::Numeric => write!(f, "Numeric"),
+            TagValueType::Bool => write!(f, "Boolean"),
+        }
+    }
 }
 
 #[must_use]
@@ -75,7 +169,6 @@ pub fn tpd_adapt_iupac_bstring(mut input: TomlValue<String>) -> TomlValue<BStrin
 
 #[must_use]
 pub fn tpd_adapt_regex(mut input: TomlValue<String>) -> TomlValue<regex::bytes::Regex> {
-    use regex::bytes::Regex;
     input.try_map(|s| match Regex::new(s) {
         Ok(r) => Ok(r),
         Err(e) => Err(ValidationFailure::new(
@@ -140,10 +233,6 @@ pub fn tpd_adapt_extract_base_or_dot(mut input: TomlValue<String>) -> TomlValue<
             err()
         }
     })
-}
-
-pub(crate) fn default_comment_insert_char() -> u8 {
-    b' '
 }
 
 #[derive(Clone, Debug, JsonSchema, PartialEq, Eq, Hash, Ord, PartialOrd)]
@@ -303,8 +392,7 @@ pub fn offer_alternatives<T: AsRef<str>>(current: &str, available: &[T]) -> Stri
 
 /// Validates that a tag name conforms to the pattern [a-zA-Z_][a-zA-Z0-9_]*
 /// (starts with a letter or underscore, followed by zero or more alphanumeric characters or underscores)
-pub fn validate_tag_name(tag_name: &str) -> anyhow::Result<()> {
-    use anyhow::bail;
+pub fn validate_tag_name(tag_name: &str) -> Result<()> {
     if tag_name.is_empty() {
         bail!(
             "Cannot be empty. Please provide a non-empty tag name that starts with a letter or underscore."

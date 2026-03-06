@@ -1,4 +1,4 @@
-use crate::config::SegmentIndex;
+use crate::segments::SegmentIndex;
 use bio::alignment::{
     AlignmentOperation,
     pairwise::{Aligner, MIN_SCORE, Scoring},
@@ -7,8 +7,8 @@ use bstr::{BString, ByteVec};
 use schemars::JsonSchema;
 
 use toml_pretty_deser::prelude::*;
+
 pub use triple_accel::hamming;
-//pub use bio::alignment::distance::hamming;
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct HitRegion {
@@ -612,7 +612,7 @@ fn iupac_to_bases(c: u8) -> &'static [u8] {
 #[cfg(test)]
 #[allow(clippy::bool_assert_comparison)]
 mod test {
-    use crate::config::SegmentIndex;
+    use crate::segments::SegmentIndex;
 
     fn check(should: &[u8], input: &[u8]) {
         let s: Vec<u8> = should.to_vec();

@@ -1,4 +1,3 @@
-use crate::config::deser::tpd_adapt_u8_from_byte_or_char;
 use crate::transformations::extract::extract_bool_tags_from_tag;
 use crate::transformations::{prelude::*, read_name_canonical_prefix};
 
@@ -9,6 +8,7 @@ use super::super::extract_bool_tags;
 use super::ApproxOrExactFilter;
 use crate::transformations::tag::initial_filter_elements;
 
+use mbf_fastq_processor_deser::tpd_adapt_u8_from_byte_or_char;
 /// Tag whether reads are in another file (by sequence)
 #[derive(Clone, JsonSchema)]
 #[tpd]

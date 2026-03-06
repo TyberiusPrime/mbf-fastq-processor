@@ -1,13 +1,9 @@
 use crate::transformations::prelude::*;
 
-use crate::{
-    config::deser::{tpd_adapt_bstring, tpd_adapt_u8_from_byte_or_char},
-    dna::TagValue,
-};
-
-use super::{
-    apply_in_place_wrapped_with_tag, default_comment_insert_char, default_comment_separator,
-    default_region_separator, format_numeric_for_comment, store_tag_in_comment,
+use super::{apply_in_place_wrapped_with_tag, format_numeric_for_comment, store_tag_in_comment};
+use mbf_fastq_processor_deser::{
+    TagValueType, default_comment_insert_char, default_comment_separator, default_region_separator,
+    tpd_adapt_bstring, tpd_adapt_u8_from_byte_or_char,
 };
 
 /// Store currently present tags as comments on read names.

@@ -1,4 +1,4 @@
-use crate::config::deser::tpd_adapt_bstring_uppercase;
+use mbf_fastq_processor_deser::tpd_adapt_bstring_uppercase;
 use crate::transformations::prelude::*;
 
 use super::extract_numeric_tags_plus_all;

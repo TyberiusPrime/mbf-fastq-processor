@@ -2,7 +2,6 @@ pub mod cli;
 pub mod config;
 pub mod cookbooks;
 pub mod demultiplex;
-mod dna;
 pub mod documentation;
 pub mod interactive;
 pub mod io;

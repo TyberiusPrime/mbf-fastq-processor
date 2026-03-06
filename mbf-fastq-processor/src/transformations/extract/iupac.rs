@@ -1,5 +1,5 @@
 use crate::transformations::prelude::*;
-use crate::{config::deser::tpd_adapt_iupac_bstring, dna::Anchor};
+use mbf_fastq_processor_deser::{dna::Anchor, tpd_adapt_iupac_bstring};
 
 use super::extract_region_tags;
 

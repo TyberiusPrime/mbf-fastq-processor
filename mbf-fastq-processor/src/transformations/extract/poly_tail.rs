@@ -1,7 +1,7 @@
-use crate::{config::deser::tpd_adapt_extract_base_or_dot, transformations::prelude::*};
+use crate::transformations::prelude::*;
 
 use super::extract_region_tags;
-use crate::dna::Hits;
+use mbf_fastq_processor_deser::tpd_adapt_extract_base_or_dot;
 
 /// Extract ends that are homo-polymers into a tag
 #[derive(Clone, JsonSchema)]

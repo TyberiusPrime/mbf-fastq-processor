@@ -5,16 +5,17 @@ use indexmap::IndexMap;
 use schemars::JsonSchema;
 use toml_pretty_deser::{Visitor, prelude::*};
 
-use crate::config::deser::tpd_adapt_u8_from_byte_or_char;
+use mbf_fastq_processor_deser::{
+    StringOrVecString, default_comment_insert_char, tpd_adapt_u8_from_byte_or_char,
+};
 
-use super::deser::{self};
 use super::validate_segment_label;
 
 fn is_default(opt: &InputOptions) -> bool {
     opt.fasta_fake_quality.is_none()
         && opt.bam_include_mapped.is_none()
         && opt.bam_include_unmapped.is_none()
-        && opt.read_comment_character == deser::default_comment_insert_char()
+        && opt.read_comment_character == default_comment_insert_char()
 }
 
 pub const STDIN_MAGIC_PATH: &str = "--stdin--";
@@ -30,7 +31,7 @@ pub struct Input {
     pub interleaved: Option<Vec<String>>,
 
     /// Your segments. Define just one with any name for interlaveed input.
-    #[schemars(with = "BTreeMap<String, crate::config::deser::StringOrVecString>")]
+    #[schemars(with = "BTreeMap<String, StringOrVecString>")]
     #[tpd(absorb_remaining)]
     #[serde(flatten)]
     pub segments: IndexMap<String, Vec<String>>,
@@ -463,7 +464,7 @@ impl VerifyIn<PartialInput> for PartialInputOptions {
             }
         });
         self.read_comment_character
-            .or_with(deser::default_comment_insert_char);
+            .or_with(default_comment_insert_char);
 
         // Validate index_gzip option
         if let Some(Some(true)) = self.build_rapidgzip_index.as_ref()
@@ -486,7 +487,7 @@ impl Default for InputOptions {
             fasta_fake_quality: None,
             bam_include_mapped: None,
             bam_include_unmapped: None,
-            read_comment_character: deser::default_comment_insert_char(),
+            read_comment_character: default_comment_insert_char(),
             use_rapidgzip: None,
             build_rapidgzip_index: None,
             threads_per_segment: None,

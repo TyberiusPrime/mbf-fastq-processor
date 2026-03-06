@@ -1,6 +1,7 @@
+use mbf_fastq_processor_deser::dna::TagValue;
+
 use crate::transformations::prelude::*;
 
-use crate::dna::TagValue;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[tpd]

@@ -1,6 +1,6 @@
 use crate::transformations::prelude::*;
+use mbf_fastq_processor_deser::tpd_adapt_u8_from_byte_or_char;
 
-use crate::config::deser::tpd_adapt_u8_from_byte_or_char;
 
 /// Replace all bases with this (region) tag with one base
 

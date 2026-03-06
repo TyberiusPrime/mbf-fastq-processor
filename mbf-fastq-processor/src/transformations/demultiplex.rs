@@ -1,5 +1,6 @@
 use crate::transformations::prelude::*;
 use indexmap::IndexMap;
+use mbf_fastq_processor_deser::dna::TagValue;
 
 ///Create multiple output files based on a tag
 
@@ -198,19 +199,19 @@ impl Step for Demultiplex {
 
         for (ii, tag_value) in hits.iter().enumerate() {
             let key: BString = match tag_value {
-                crate::dna::TagValue::Location(hits) => hits.joined_sequence(Some(b"_")).into(),
-                crate::dna::TagValue::String(bstring) => bstring.clone(),
-                crate::dna::TagValue::Bool(bool_val) => {
+                TagValue::Location(hits) => hits.joined_sequence(Some(b"_")).into(),
+                TagValue::String(bstring) => bstring.clone(),
+                TagValue::Bool(bool_val) => {
                     if *bool_val {
                         b"true".into()
                     } else {
                         b"false".into()
                     }
                 }
-                crate::dna::TagValue::Missing => {
+                TagValue::Missing => {
                     continue;
                 } // leave at 0.
-                crate::dna::TagValue::Numeric(_) => {
+                TagValue::Numeric(_) => {
                     unreachable!();
                 }
             };

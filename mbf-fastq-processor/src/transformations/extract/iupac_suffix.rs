@@ -1,8 +1,5 @@
-use crate::config::deser::tpd_adapt_dna_bstring;
+use mbf_fastq_processor_deser::{tpd_adapt_dna_bstring, dna::hamming};
 use crate::transformations::prelude::*;
-
-use crate::dna::Hits;
-use crate::dna::hamming;
 
 use super::extract_region_tags;
 

@@ -1,7 +1,5 @@
-use crate::{
-    config::deser::{tpd_adapt_bstring, tpd_adapt_regex},
-    transformations::prelude::*,
-};
+use crate::transformations::prelude::*;
+use mbf_fastq_processor_deser::{tpd_adapt_bstring, tpd_adapt_regex};
 use std::sync::atomic::Ordering;
 
 use bstr::ByteSlice;

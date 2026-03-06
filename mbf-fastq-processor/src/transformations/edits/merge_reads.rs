@@ -1,5 +1,6 @@
+use mbf_fastq_processor_deser::dna::{TagValue, reverse_complement};
+
 use crate::io::WrappedFastQReadMut;
-use crate::transformations::TagValue;
 use crate::transformations::prelude::*;
 use std::borrow::Cow;
 use std::cell::RefCell;
@@ -184,7 +185,7 @@ impl Step for MergeReads {
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let seg1_idx = self.segment1.0;
         let seg2_idx = self.segment2.0;
-        let reverse_complement = self.reverse_complement_segment2;
+        let reverse_complement_segment2 = self.reverse_complement_segment2;
         let no_overlap_strategy = self.no_overlap_strategy.clone();
         let concatenate_spacer = self.concatenate_spacer.clone();
         let spacer_qual = self.spacer_quality_char.unwrap_or(33);
@@ -209,8 +210,8 @@ impl Step for MergeReads {
 
             // Optionally reverse complement read2
             let (read2_seq_processed, read2_qual_processed): (Cow<[u8]>, Cow<[u8]>) =
-                if reverse_complement {
-                    let rc_seq = crate::dna::reverse_complement(read2_seq);
+                if reverse_complement_segment2 {
+                    let rc_seq = reverse_complement(read2_seq);
                     let rc_qual: Vec<u8> = read2_qual.iter().rev().copied().collect();
                     (Cow::Owned(rc_seq), Cow::Owned(rc_qual))
                 } else {

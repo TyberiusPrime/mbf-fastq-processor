@@ -2,9 +2,9 @@ use crate::transformations::prelude::*;
 
 use super::extract_numeric_tags_plus_all;
 use crate::{
-    config::{SegmentIndexOrAll, deser::tpd_adapt_u8_from_byte_or_char},
     io::WrappedFastQRead,
 };
+use mbf_fastq_processor_deser::{tpd_adapt_u8_from_byte_or_char};
 
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq, JsonSchema)]

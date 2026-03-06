@@ -1,6 +1,7 @@
+use mbf_fastq_processor_deser::dna::{HitRegion, reverse_complement_iupac};
+
 use crate::transformations::prelude::*;
 
-use crate::{config::SegmentIndex, dna::HitRegion};
 
 /// Reverse complement a read
 #[derive(Clone, JsonSchema)]
@@ -73,7 +74,7 @@ impl Step for ReverseComplement {
             |location: &HitRegion, _pos, seq: &BString, read_len: usize| -> NewLocation {
                 {
                     let new_start = read_len - (location.start + location.len);
-                    let new_seq = crate::dna::reverse_complement_iupac(seq);
+                    let new_seq = reverse_complement_iupac(seq);
                     NewLocation::NewWithSeq(
                         HitRegion {
                             start: new_start,

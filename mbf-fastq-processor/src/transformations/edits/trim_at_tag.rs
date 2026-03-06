@@ -1,5 +1,6 @@
+use mbf_fastq_processor_deser::dna::HitRegion;
+
 use crate::transformations::prelude::*;
-use crate::dna::{HitRegion, TagValue};
 
 #[derive(Clone, Eq, PartialEq, Copy, JsonSchema)]
 #[tpd]

@@ -1,45 +1,14 @@
-use std::{cell::RefCell, rc::Rc};
-
-use schemars::JsonSchema;
 use toml_pretty_deser::prelude::*;
 
-use crate::{
-    config::{
-        PartialConfig,
-        deser::{TagLabel, offer_alternatives},
-    },
-    transformations::{ToUsedTags, UsedTag},
+use crate::config::PartialConfig;
+use mbf_fastq_processor_deser::{
+    TagLabel, offer_alternatives,
+    segments::{ResolvedSourceAll, ResolvedSourceNoAll, SegmentIndex, SegmentIndexOrAll, SegmentOrNameIndex},
 };
 
-// #[derive(Clone, Eq, PartialEq, JsonSchema)]
-// #[tpd]
-// #[derive(Debug)]
-// pub struct Segment(pub String);
-//
-//
-// impl Default for Segment {
-//     fn default() -> Self {
-//         Segment(":::first_and_only_segment".to_string())
-//     }
-// }
-//
-// #[derive(Clone, Eq, PartialEq, JsonSchema)]
-// #[tpd]
-// #[derive(Debug)]
-// pub struct SegmentOrAll(pub String);
-//
-// impl Default for SegmentOrAll {
-//     fn default() -> Self {
-//         SegmentOrAll(":::first_and_only_segment".to_string())
-//     }
-// }
-//
 pub trait ValidateSegment {
     fn validate_segment(&mut self, config: &PartialConfig);
 }
-
-#[derive(Debug, Clone, Eq, PartialEq, Copy)]
-pub struct SegmentIndex(pub usize);
 
 impl ValidateSegment for TomlValue<MustAdapt<String, SegmentIndex>> {
     #[track_caller]
@@ -96,12 +65,6 @@ impl ValidateSegment for TomlValue<MustAdapt<String, SegmentIndex>> {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Copy, JsonSchema)]
-pub enum SegmentIndexOrAll {
-    All,
-    Indexed(usize),
-}
-
 impl ValidateSegment for TomlValue<MustAdapt<String, SegmentIndexOrAll>> {
     #[track_caller]
     fn validate_segment(&mut self, config: &PartialConfig) {
@@ -155,41 +118,6 @@ impl ValidateSegment for TomlValue<MustAdapt<String, SegmentIndexOrAll>> {
             //other errors passed on as is.
         }
     }
-}
-
-impl SegmentIndex {
-    #[must_use]
-    pub fn get_index(&self) -> usize {
-        self.0
-    }
-}
-
-impl TryInto<SegmentIndex> for SegmentIndexOrAll {
-    type Error = ();
-
-    fn try_into(self) -> std::prelude::v1::Result<SegmentIndex, Self::Error> {
-        match self {
-            SegmentIndexOrAll::Indexed(idx) => Ok(SegmentIndex(idx)),
-            SegmentIndexOrAll::All => Err(()),
-        }
-    }
-}
-
-// #[derive(Clone, Eq, PartialEq, JsonSchema)]
-// #[tpd]
-// #[derive(Debug)]
-// pub struct SegmentSequenceOrName(pub String);
-
-/* impl Default for SegmentSequenceOrName {
-    fn default() -> Self {
-        SegmentSequenceOrName(":::first_and_only_segment".to_string())
-    }
-} */
-
-#[derive(Debug, Clone, Eq, PartialEq, Copy)]
-pub enum SegmentOrNameIndex {
-    Sequence(SegmentIndex),
-    Name(SegmentIndex),
 }
 
 impl ValidateSegment for TomlValue<MustAdapt<String, SegmentOrNameIndex>> {
@@ -249,72 +177,6 @@ impl ValidateSegment for TomlValue<MustAdapt<String, SegmentOrNameIndex>> {
         }
         //no default for missing.
     }
-}
-
-// impl SegmentSequenceOrName {
-//     /// validate and turn into an indexed segment (either sequence or name)
-//     pub(crate) fn validate(
-//         &mut self,
-//         input_def: &crate::config::Input,
-//     ) -> Result<SegmentOrNameIndex> {
-//         /* if self.0 == ":::first_and_only_segment" {
-//             if input_def.segment_count() == 1 {
-//                 return Ok(SegmentOrNameIndex::Sequence(SegmentIndex(0)));
-//             } else {
-//                 let segment_names = input_def.get_segment_order().join(", ");
-//                 bail!(
-//                     "Source (segment/name) not specified but multiple segments available: [{segment_names}]. \
-//                      Please specify which segment to use with 'source = \"segment_name\"' or 'source = \"name:segment_name\"'",
-//                 );
-//             }
-//         } */
-//         if self.0 == "all" || self.0 == "All" {
-//             bail!(
-//                 "'all' (or 'All') is not a valid segment in this position. Choose one of these: [{}]",
-//                 input_def.get_segment_order().join(", ")
-//             );
-//         }
-//
-//         // Check for name: prefix
-//         if let Some(segment_name) = self.0.strip_prefix("name:") {
-//             let idx = input_def.index(segment_name).with_context(|| {
-//                 let segment_names = input_def.get_segment_order().join(", ");
-//                 format!("Unknown segment in 'name:{segment_name}'. Available [{segment_names}]")
-//             })?;
-//             Ok(SegmentOrNameIndex::Name(SegmentIndex(idx)))
-//         } else {
-//             // Regular segment reference (sequence)
-//             let idx = input_def.index(&self.0).with_context(|| {
-//                 let segment_names = input_def.get_segment_order().join(", ");
-//                 format!("Unknown segment: {}. Available [{segment_names}]", self.0)
-//             })?;
-//             Ok(SegmentOrNameIndex::Sequence(SegmentIndex(idx)))
-//         }
-//     }
-// }
-
-impl SegmentOrNameIndex {
-    #[must_use]
-    pub fn get_segment_index(&self) -> SegmentIndex {
-        match self {
-            SegmentOrNameIndex::Sequence(idx) | SegmentOrNameIndex::Name(idx) => *idx,
-        }
-    }
-
-    #[must_use]
-    pub fn is_name(&self) -> bool {
-        matches!(self, SegmentOrNameIndex::Name(_))
-    }
-}
-
-#[derive(Debug, Clone)]
-pub enum ResolvedSourceNoAll {
-    Segment(SegmentIndex),
-    Tag(TagLabel),
-    Name {
-        segment_index: SegmentIndex,
-        split_character: u8,
-    },
 }
 
 impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceNoAll>> {
@@ -426,56 +288,6 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceNoAll>> {
     }
 }
 
-impl ResolvedSourceNoAll {
-    //that's the ones we're going to use
-    #[must_use]
-    pub fn get_tags(
-        &self,
-    ) -> Option<Vec<(TagLabel, &'static [crate::transformations::TagValueType])>> {
-        match &self {
-            ResolvedSourceNoAll::Tag(tag_name) => Some(vec![(
-                tag_name.clone(),
-                &[
-                    crate::transformations::TagValueType::String,
-                    crate::transformations::TagValueType::Location,
-                ],
-            )]),
-            _ => None,
-        }
-    }
-}
-impl ToUsedTags for TomlValue<MustAdapt<String, ResolvedSourceNoAll>> {
-    fn to_used_tags(&mut self) -> Vec<Option<UsedTag<'_>>> {
-        let resolved = self
-            .as_ref()
-            .expect("Called on non-ok value")
-            .as_ref_post()
-            .expect("called on a non-transformed resource");
-        let mut res = Vec::new();
-        if let Some(tags) = resolved.get_tags() {
-            let toml_source = Rc::new(RefCell::new((&mut self.state, &mut self.help)));
-            for (tag_name, accepted_tag_types) in tags {
-                res.push(Some(UsedTag {
-                    name: tag_name,
-                    accepted_tag_types,
-                    toml_source: toml_source.clone(),
-                    further_help: None,
-                }));
-            }
-        }
-        res
-    }
-}
-
-#[derive(Debug, Clone)]
-pub enum ResolvedSourceAll {
-    Segment(SegmentIndexOrAll),
-    Tag(TagLabel),
-    Name {
-        segment_index_or_all: SegmentIndexOrAll,
-        split_character: u8,
-    },
-}
 impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceAll>> {
     #[allow(clippy::too_many_lines)]
     #[track_caller]
@@ -611,105 +423,5 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceAll>> {
                 }
             }
         }
-    }
-}
-
-impl ResolvedSourceAll {
-    #[must_use]
-    pub fn get_name(&self, segment_order: &[String]) -> String {
-        match self {
-            ResolvedSourceAll::Segment(SegmentIndexOrAll::Indexed(idx)) => {
-                segment_order.get(*idx).cloned().unwrap_or_else(|| {
-                    panic!(
-                        "Segment index {idx} out of bounds for segment order: [{segment_order:?}]"
-                    )
-                })
-            }
-            ResolvedSourceAll::Segment(SegmentIndexOrAll::All) => "all".to_string(),
-            ResolvedSourceAll::Tag(name) => format!("tag:{name}"),
-            ResolvedSourceAll::Name {
-                segment_index_or_all,
-                ..
-            } => format!(
-                "name:{}",
-                match segment_index_or_all {
-                    SegmentIndexOrAll::Indexed(idx) => {
-                        segment_order.get(*idx).cloned().unwrap_or_else(|| {
-                        panic!("Segment index {idx} out of bounds for segment order: [{segment_order:?}]")
-                    })
-                    }
-                    SegmentIndexOrAll::All => "all".to_string(),
-                }
-            ),
-        }
-    }
-
-    // pub fn parse(
-    //     source: &str,
-    //     input_def: &config::Input,
-    // ) -> Result<ResolvedSourceAll, anyhow::Error> {
-    //     let source = source.trim();
-    //     let resolved = if let Some(tag_name) = source.strip_prefix("tag:") {
-    //         let trimmed = tag_name.trim();
-    //         if trimmed.is_empty() {
-    //             bail!("Source/target tag:<name> may not have an empty name.");
-    //         }
-    //         ResolvedSourceAll::Tag(trimmed.to_string())
-    //     } else if let Some(segment_name) = source.strip_prefix("name:") {
-    //         let trimmed = segment_name.trim();
-    //         if trimmed.is_empty() {
-    //             bail!("Source/target name:<segment> requires a segment name");
-    //         }
-    //         let mut segment = SegmentOrAll(trimmed.to_string());
-    //         let segment_index_or_all = segment.validate(input_def)?;
-    //         ResolvedSourceAll::Name {
-    //             segment_index_or_all,
-    //             split_character: input_def.options.read_comment_character,
-    //         }
-    //     } else {
-    //         let mut segment = SegmentOrAll(source.to_string());
-    //         ResolvedSourceAll::Segment(segment.validate(input_def)?)
-    //     };
-    //     Ok(resolved)
-    // }
-
-    //that's the ones we're going to use
-    #[must_use]
-    pub fn get_tags(
-        &self,
-    ) -> Option<Vec<(TagLabel, &'static [crate::transformations::TagValueType])>> {
-        match &self {
-            ResolvedSourceAll::Tag(tag_name) => Some(vec![(
-                tag_name.clone(),
-                &[
-                    crate::transformations::TagValueType::String,
-                    crate::transformations::TagValueType::Location,
-                ],
-            )]),
-            _ => None,
-        }
-    }
-}
-
-impl ToUsedTags for TomlValue<MustAdapt<String, ResolvedSourceAll>> {
-    fn to_used_tags(&mut self) -> Vec<Option<UsedTag<'_>>> {
-        let resolved = self
-            .as_ref()
-            .expect("Called on non-ok value")
-            .as_ref_post()
-            .expect("called on a non-transformed resource");
-        let mut res = Vec::new();
-        if let Some(tags) = resolved.get_tags() {
-            let toml_source = Rc::new(RefCell::new((&mut self.state, &mut self.help)));
-            for (tag_name, accepted_tag_types) in tags {
-                res.push(Some(UsedTag {
-                    name: tag_name,
-                    accepted_tag_types,
-                    toml_source: toml_source.clone(),
-                    further_help: None,
-                }));
-            }
-        }
-        res
     }
 }

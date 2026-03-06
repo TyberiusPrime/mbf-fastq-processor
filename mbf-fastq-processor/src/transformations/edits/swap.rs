@@ -1,6 +1,7 @@
+use mbf_fastq_processor_deser::dna::HitRegion;
+
 use crate::transformations::prelude::*;
 
-use crate::dna::HitRegion;
 
 /// Swap two segments
 #[derive(Clone, JsonSchema)]

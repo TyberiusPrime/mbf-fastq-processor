@@ -9,8 +9,6 @@ mod qualified_bases;
 mod gc_content;
 
 use crate::{
-    config::{SegmentIndex, SegmentIndexOrAll, deser::TagLabel},
-    dna::TagValue,
     io,
 };
 
@@ -20,6 +18,7 @@ pub use expected_error::{ExpectedError, PartialExpectedError};
 pub use gc_content::{GCContent, PartialGCContent};
 pub use kmers::{Kmers, PartialKmers};
 pub use length::{Length, PartialLength};
+use mbf_fastq_processor_deser::{TagLabel, dna::TagValue, segments::{SegmentIndex, SegmentIndexOrAll}};
 pub use n_count::{NCount, PartialNCount};
 pub use qualified_bases::{PartialQualifiedBases, QualifiedBases};
 

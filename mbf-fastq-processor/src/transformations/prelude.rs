@@ -1,12 +1,20 @@
 pub(crate) use super::{
     FinalizeReportResult, FragmentEntry, FragmentEntryForCuckooFilter, InputInfo, OurCuckCooFilter,
-    PartialTransformation, RemovedTags, Step, TagUsageInfo, TagUser, TagValueType, ToDeclaredTag,
-    ToUsedTag, ToUsedTags, UsedTag, edits::get_bool_vec_from_tag, reproducible_cuckoofilter,
+    PartialTransformation, Step, TagUsageInfo, TagUser, edits::get_bool_vec_from_tag,
+    reproducible_cuckoofilter,
 };
-pub(crate) use crate::config::{
-    PartialConfig, ResolvedSourceAll, ResolvedSourceNoAll, SegmentIndex, SegmentIndexOrAll,
-    SegmentOrNameIndex, TagMetadata, ValidateSegment, offer_alternatives,
+pub(crate) use crate::config::{PartialConfig, TagMetadata, ValidateSegment};
+
+pub use mbf_fastq_processor_deser::{
+    ConditionalTagLabel, RemovedTags, TagLabel, TagValueType, ToDeclaredTag, ToUsedTag, ToUsedTags,
+    UsedTag,
+    dna::{Hit, HitRegion, Hits, TagValue},
+    offer_alternatives,
+    segments::{
+        ResolvedSourceAll, ResolvedSourceNoAll, SegmentIndex, SegmentIndexOrAll, SegmentOrNameIndex,
+    },
 };
+
 pub(crate) use crate::demultiplex::{
     DemultiplexBarcodes, DemultiplexedData, DemultiplexedOutputFiles, OptDemultiplex, OutputWriter,
 };
@@ -29,8 +37,6 @@ pub(crate) const ANY_TAG_TYPE: &[TagValueType] = &[
     TagValueType::Numeric,
     TagValueType::Location,
 ];
-
-pub use crate::config::deser::{ConditionalTagLabel, TagLabel};
 
 pub use indexmap::IndexMap;
 pub use toml_pretty_deser::prelude::*;

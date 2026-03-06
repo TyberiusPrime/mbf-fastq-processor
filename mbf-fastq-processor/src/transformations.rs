@@ -7,18 +7,20 @@ use prelude::TagMetadata;
 use schemars::JsonSchema;
 use toml_pretty_deser::prelude::*;
 
-use std::{cell::RefCell, path::Path, rc::Rc};
+use std::{path::Path};
 
 use anyhow::Result;
 
 use crate::{
-    config::{ResolvedSourceNoAll, SegmentIndex, deser::TagLabel},
     demultiplex::{DemultiplexBarcodes, OptDemultiplex},
-    dna::TagValue,
     io,
 };
 use rand::SeedableRng;
 use scalable_cuckoo_filter::ScalableCuckooFilter;
+
+use mbf_fastq_processor_deser::{
+    DeclaredTag, RemovedTags, TagLabel, UsedTag, dna::TagValue, segments::{ResolvedSourceNoAll, SegmentIndex}
+};
 
 pub(crate) mod calc;
 pub(crate) mod convert;
@@ -77,31 +79,6 @@ pub enum RegionAnchor {
     End,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Copy)]
-pub enum TagValueType {
-    //Todo: should this be a struct with 4 bools?
-    Location, // string + in-sequence-location
-    String,   // just a piece of text
-    Numeric,
-    Bool,
-}
-
-impl TagValueType {
-    pub fn compatible(self, other: TagValueType) -> bool {
-        self == other
-    }
-}
-
-impl std::fmt::Display for TagValueType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            TagValueType::Location => write!(f, "Location"),
-            TagValueType::String => write!(f, "String"),
-            TagValueType::Numeric => write!(f, "Numeric"),
-            TagValueType::Bool => write!(f, "Boolean"),
-        }
-    }
-}
 
 /// turn a u64 seed into a 32 byte seed for chacha
 fn extend_seed(seed: u64) -> [u8; 32] {
@@ -179,54 +156,6 @@ pub struct InputInfo {
     pub use_rapidgzip: bool,
 }
 
-#[derive(Debug)]
-pub struct UsedTag<'a> {
-    pub name: TagLabel,
-    pub accepted_tag_types: &'a [TagValueType],
-    pub toml_source: Rc<RefCell<(&'a mut TomlValueState, &'a mut Option<String>)>>,
-    pub further_help: Option<String>,
-}
-
-impl UsedTag<'_> {
-    fn add_help(mut self, line: impl AsRef<str>) -> Self {
-        self.further_help = match self.further_help.take() {
-            Some(existing) => Some(format!("{}\n{}", existing, line.as_ref())),
-            None => Some(line.as_ref().to_string()),
-        };
-        self
-    }
-}
-
-pub trait ToUsedTag {
-    fn to_used_tag<'a>(&'a mut self, accepted_tag_types: &'a [TagValueType])
-    -> Option<UsedTag<'a>>;
-}
-
-pub trait ToUsedTags {
-    fn to_used_tags(&mut self) -> Vec<Option<UsedTag<'_>>>;
-}
-
-#[derive(Debug)]
-pub(crate) struct DeclaredTag<'a> {
-    pub(crate) name: TagLabel,
-    pub(crate) tag_type: TagValueType,
-    pub(crate) toml_source_state: &'a mut TomlValueState,
-    pub(crate) toml_source_help: &'a mut Option<String>,
-    pub(crate) toml_source_span: std::ops::Range<usize>,
-}
-
-pub trait ToDeclaredTag {
-    fn to_declared_tag(&mut self, tag_type: TagValueType) -> Option<DeclaredTag<'_>>;
-}
-//see deser for impl
-
-#[derive(Default, Debug)]
-pub enum RemovedTags<'a> {
-    #[default]
-    None,
-    All,
-    Some(Vec<(TagLabel, &'a mut TomlValue<TagLabel>)>),
-}
 
 #[derive(Default, Debug)]
 pub struct TagUsageInfo<'a> {

@@ -1,12 +1,7 @@
 use indexmap::IndexMap;
+use mbf_fastq_processor_deser::dna::{contains_iupac_ambigous, iupac_hamming_distance, hamming};
 
-use crate::{
-    config::deser::offer_alternatives,
-    dna::{hamming, iupac_hamming_distance},
-    transformations::prelude::*,
-};
-
-use crate::dna::{Hits, TagValue};
+use crate::transformations::prelude::*;
 
 /// Correct a tag (extracted region) to known barcodes
 
@@ -111,11 +106,8 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
                     // Copy the resolved barcodes
 
                     // Check if any barcode contains IUPAC ambiguous bases
-                    self.had_iupac = Some(
-                        barcodes_section
-                            .keys()
-                            .any(|x| crate::dna::contains_iupac_ambigous(x)),
-                    );
+                    self.had_iupac =
+                        Some(barcodes_section.keys().any(|x| contains_iupac_ambigous(x)));
                     self.resolved_barcodes = Some(barcodes_section);
                 }
                 None => {
@@ -260,7 +252,7 @@ trait WithUpdatedSequence {
     fn clone_with_sequence(&self, sequence: &BString) -> Self;
 }
 
-impl WithUpdatedSequence for crate::dna::Hit {
+impl WithUpdatedSequence for Hit {
     fn clone_with_sequence(&self, sequence: &BString) -> Self {
         let mut new_hit = self.clone();
         new_hit.sequence = sequence.clone();

@@ -4,7 +4,6 @@ use std::cell::RefCell;
 
 use super::super::extract_bool_tags_plus_all;
 use super::ApproxOrExactFilter;
-use crate::dna::TagValue;
 use crate::transformations::extract::extract_bool_tags_from_tag;
 use crate::transformations::{read_name_canonical_prefix, tag::calculate_filter_capacity};
 

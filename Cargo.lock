@@ -1098,6 +1098,7 @@ dependencies = [
  "json_value_merge",
  "libc",
  "log",
+ "mbf-fastq-processor-deser",
  "memchr",
  "mutants 0.0.3",
  "niffler",
@@ -1120,6 +1121,20 @@ dependencies = [
  "wait-timeout",
  "walkdir",
  "zstd",
+]
+
+[[package]]
+name = "mbf-fastq-processor-deser"
+version = "0.8.1"
+dependencies = [
+ "anyhow",
+ "bio",
+ "bstr",
+ "regex",
+ "schemars",
+ "toml-pretty-deser",
+ "toml_edit",
+ "triple_accel",
 ]
 
 [[package]]

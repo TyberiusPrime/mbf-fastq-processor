@@ -14,6 +14,7 @@ pub mod store_tags_in_table;
 
 use anyhow::{Result, bail};
 use bstr::{BStr, BString};
+use mbf_fastq_processor_deser::{TagLabel, dna::TagValue};
 // Re-exports
 pub use concat_tags::{ConcatTags, PartialConcatTags};
 pub use forget_all_tags::{ForgetAllTags, PartialForgetAllTags};
@@ -29,7 +30,7 @@ pub use store_tag_location_in_comment::{
 pub use store_tags_in_table::{PartialStoreTagsInTable, StoreTagsInTable};
 use toml_pretty_deser::{TomlValue, TomlValueState};
 
-use crate::{config::SegmentIndexOrAll, dna::TagValue, io};
+use crate::{config::SegmentIndexOrAll, io};
 
 pub(crate) fn apply_in_place_wrapped_with_tag(
     segment_index: &SegmentIndexOrAll,
@@ -48,21 +49,6 @@ pub(crate) fn apply_in_place_wrapped_with_tag(
         }
     }
 }
-
-// Default functions for common values
-pub(crate) fn default_region_separator() -> bstr::BString {
-    b"_".into()
-}
-
-pub(crate) fn default_segment_all() -> SegmentIndexOrAll {
-    SegmentIndexOrAll::All
-}
-
-pub(crate) fn default_comment_separator() -> u8 {
-    b'|'
-}
-
-use crate::config::deser::{TagLabel, default_comment_insert_char};
 
 pub const DEFAULT_INITIAL_FILTER_CAPACITY: usize = 134_217_728; // 2^27. Scaleable cuckoo filters
 // always need a power of 2, and we want to be north of a 'typical' danaset with 100 million reads

@@ -1,6 +1,6 @@
 use crate::transformations::prelude::*;
 
-use crate::{config::deser::tpd_adapt_extract_base_or_dot, dna::Hits};
+use mbf_fastq_processor_deser::{dna::Hits, tpd_adapt_extract_base_or_dot};
 
 use super::extract_region_tags;
 

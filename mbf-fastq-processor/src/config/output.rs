@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use crate::config::deser::offer_alternatives;
+use mbf_fastq_processor_deser::offer_alternatives;
 use schemars::JsonSchema;
 use toml_pretty_deser::prelude::*;
 

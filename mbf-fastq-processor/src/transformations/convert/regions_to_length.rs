@@ -1,6 +1,8 @@
+use mbf_fastq_processor_deser::dna::TagValue;
+
 use crate::transformations::prelude::*;
 
-use crate::{dna::TagValue, io};
+use crate::{io};
 
 /// Convert region tag to a length tag
 

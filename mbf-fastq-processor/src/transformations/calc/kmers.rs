@@ -1,6 +1,7 @@
 use crate::io;
 use crate::transformations::prelude::*;
 use indexmap::IndexMap;
+use mbf_fastq_processor_deser::dna::reverse_complement;
 
 fn default_min_count() -> usize {
     1
@@ -175,7 +176,7 @@ pub fn build_kmer_database(
                         // Only count valid DNA sequences (A, C, G, T)
                         if kmer.iter().all(|&b| matches!(b, b'A' | b'C' | b'G' | b'T')) {
                             if canonical {
-                                let revcomp = crate::dna::reverse_complement(&kmer);
+                                let revcomp = reverse_complement(&kmer);
                                 *kmer_counts.entry(revcomp).or_insert(0) += 1;
                             }
                             *kmer_counts.entry(kmer).or_insert(0) += 1;

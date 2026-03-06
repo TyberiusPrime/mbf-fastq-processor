@@ -1,20 +1,12 @@
-use crate::{
-    config::deser::{tpd_adapt_bstring, tpd_adapt_u8_from_byte_or_char},
-    transformations::prelude::*,
-};
+use crate::{ transformations::prelude::*, };
 
 use std::io::Write;
 
-use crate::{
-    config::{CompressionFormat, FileFormat},
-    dna::TagValue,
-};
+use crate::{ config::{CompressionFormat, FileFormat}, };
 
-use super::{
-    default_comment_insert_char, default_comment_separator, default_region_separator,
-    format_numeric_for_comment, store_tag_in_comment,
-};
+use super::{ format_numeric_for_comment, store_tag_in_comment, };
 
+use mbf_fastq_processor_deser::{default_comment_insert_char, default_comment_separator, default_region_separator, tpd_adapt_bstring, tpd_adapt_u8_from_byte_or_char};
 /// Store tag values into FASTQ files.
 ///
 /// Files are named using the pattern: `{output_prefix}_{infix}.tag.fastq.{suffix}`

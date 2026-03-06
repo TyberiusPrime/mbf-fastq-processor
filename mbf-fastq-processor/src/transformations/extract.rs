@@ -24,10 +24,10 @@ pub use region::{PartialRegion, Region};
 pub use regions::{PartialRegions, Regions};
 pub use regions_of_low_quality::{PartialRegionsOfLowQuality, RegionsOfLowQuality};
 
-use crate::{
-    config::{SegmentIndex, SegmentIndexOrAll, deser::TagLabel},
-    dna::TagValue,
-    io,
+use crate::io;
+use mbf_fastq_processor_deser::{
+    segments::{SegmentIndex, SegmentIndexOrAll},
+    TagLabel, dna::{TagValue, Hits}
 };
 
 use super::prelude::DemultiplexTag;
@@ -36,7 +36,7 @@ pub(crate) fn extract_region_tags(
     block: &mut io::FastQBlocksCombined,
     segment: SegmentIndex,
     label: &TagLabel,
-    f: impl Fn(&mut io::WrappedFastQRead) -> Option<crate::dna::Hits>,
+    f: impl Fn(&mut io::WrappedFastQRead) -> Option<Hits>,
 ) {
     let mut out = Vec::new();
 

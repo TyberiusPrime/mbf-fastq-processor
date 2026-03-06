@@ -1,4 +1,3 @@
-use crate::dna::HitRegion;
 use crate::transformations::prelude::*;
 
 ///Store the tag's 'sequence', probably modified by a previous step,

@@ -31,7 +31,8 @@ pub use trim_at_tag::{PartialTrimAtTag, TrimAtTag};
 pub use truncate::{PartialTruncate, Truncate};
 pub use uppercase::{PartialUppercase, Uppercase};
 
-use crate::{config::deser::ConditionalTagLabel, io::FastQBlocksCombined};
+use crate::{io::FastQBlocksCombined};
+use mbf_fastq_processor_deser::ConditionalTagLabel;
 
 /// Helper function to extract a boolean Vec from tags
 /// Converts any tag value to its truthy representation, with optional inversion

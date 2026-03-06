@@ -1,14 +1,16 @@
+use crate::config::SegmentIndex;
 use crate::config::SegmentIndexOrAll;
-use crate::config::deser::TagLabel;
-use crate::dna::HitRegion;
 use crate::transformations::prelude::DemultiplexTag;
-use crate::{
-    config::SegmentIndex,
-    dna::{Anchor, Hits, TagValue, hamming},
-};
 use anyhow::{Result, bail};
 use bstr::BString;
 use indexmap::IndexMap;
+use mbf_fastq_processor_deser::dna::find_iupac;
+use mbf_fastq_processor_deser::dna::find_iupac_with_indel;
+use mbf_fastq_processor_deser::dna::reverse_complement_iupac;
+use mbf_fastq_processor_deser::{
+    TagLabel,
+    dna::{Anchor, HitRegion, Hits, TagValue, hamming},
+};
 
 use super::Range;
 
@@ -186,7 +188,7 @@ impl FastQElement {
 
     fn reverse_complement(&mut self, local_buffer: &mut [u8]) {
         let m = self.get_mut(local_buffer);
-        let reversed = crate::dna::reverse_complement_iupac(m);
+        let reversed = reverse_complement_iupac(m);
         m.copy_from_slice(&reversed[..m.len()]);
     }
 
@@ -845,7 +847,7 @@ impl WrappedFastQRead<'_> {
         target: SegmentIndex,
     ) -> Option<Hits> {
         let seq = self.0.seq.get(self.1);
-        crate::dna::find_iupac(seq, query, anchor, max_mismatches, target)
+        find_iupac(seq, query, anchor, max_mismatches, target)
     }
 
     #[must_use]
@@ -859,7 +861,7 @@ impl WrappedFastQRead<'_> {
         target: SegmentIndex,
     ) -> Option<Hits> {
         let seq = self.0.seq.get(self.1);
-        crate::dna::find_iupac_with_indel(
+        find_iupac_with_indel(
             seq,
             query,
             anchor,

@@ -1,8 +1,8 @@
 use crate::transformations::prelude::*;
 
 use super::extract_region_tags;
-use crate::{
-    config::deser::tpd_adapt_u8_from_byte_or_char,
+use mbf_fastq_processor_deser::{
+    tpd_adapt_u8_from_byte_or_char,
     dna::{Hit, HitRegion, Hits},
 };
 

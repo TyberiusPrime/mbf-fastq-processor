@@ -1,4 +1,3 @@
-use crate::dna::TagValue;
 use crate::transformations::prelude::*;
 use std::collections::BTreeMap;
 

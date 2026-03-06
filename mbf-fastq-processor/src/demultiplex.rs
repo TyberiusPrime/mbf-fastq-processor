@@ -7,6 +7,7 @@ use crate::join_nonempty;
 use anyhow::{Context, Result};
 use bstr::BString;
 use indexmap::IndexMap;
+use mbf_fastq_processor_deser::dna::iupac_hamming_distance;
 
 pub type Tag = u64;
 
@@ -199,7 +200,7 @@ impl DemultiplexInfo {
             return Some(*tag);
         } else if !barcode.is_empty() {
             for (bc, tag) in &self.local_barcode_to_tag {
-                if bc.len() == barcode.len() && crate::dna::iupac_hamming_distance(bc, barcode) == 0
+                if bc.len() == barcode.len() && iupac_hamming_distance(bc, barcode) == 0
                 {
                     return Some(*tag);
                 }

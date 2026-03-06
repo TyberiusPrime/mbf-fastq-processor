@@ -1,6 +1,5 @@
 use crate::transformations::prelude::*;
 
-use crate::dna::{Hit, Hits, TagValue};
 
 /// Behavior when encountering missing tags during concatenation
 #[derive(Clone, JsonSchema, PartialEq, Eq, Copy)]

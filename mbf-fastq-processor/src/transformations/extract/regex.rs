@@ -1,7 +1,6 @@
-use crate::config::deser::{tpd_adapt_bstring, tpd_adapt_regex};
+use mbf_fastq_processor_deser::{tpd_adapt_bstring, tpd_adapt_regex, dna::Hits};
 use crate::transformations::prelude::*;
 
-use crate::dna::Hits;
 
 use super::extract_region_tags;
 use super::extract_string_tags;
@@ -80,9 +79,9 @@ impl TagUser for PartialTaggedVariant<PartialRegex> {
                     .expect("not in PostVerify")
                     .is_name()
                 {
-                    crate::transformations::TagValueType::String
+                    TagValueType::String
                 } else {
-                    crate::transformations::TagValueType::Location
+                    TagValueType::Location
                 },
             ),
             ..Default::default()

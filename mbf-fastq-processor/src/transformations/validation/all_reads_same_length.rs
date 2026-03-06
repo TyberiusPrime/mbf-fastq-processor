@@ -1,4 +1,3 @@
-use crate::dna::TagValue;
 use crate::transformations::prelude::*;
 
 /// Verify that all reads have the same length

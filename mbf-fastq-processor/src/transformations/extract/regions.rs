@@ -3,8 +3,8 @@ use std::{cell::RefCell, collections::HashSet, rc::Rc};
 use crate::transformations::prelude::*;
 
 use super::super::{PartialRegionDefinition, RegionDefinition, extract_regions};
-use crate::dna::{Hit, HitRegion, TagValue};
 use bstr::ByteVec;
+use mbf_fastq_processor_deser::dna::{Hits, TagValue};
 use toml_pretty_deser::Visitor;
 
 /// Extract regions by coordinates
@@ -190,7 +190,7 @@ impl Step for Regions {
             //all segments -> Location.
             if matches!(
                 self.output_tag_type,
-                crate::transformations::TagValueType::Location
+                TagValueType::Location
             ) {
                 let mut h: Vec<Hit> = Vec::new();
                 for (seq, opt_coords) in extracted.into_iter().flatten() {
@@ -212,7 +212,7 @@ impl Step for Regions {
                     //if no region was extracted, we do not store a hit
                     out.push(TagValue::Missing);
                 } else {
-                    out.push(TagValue::Location(crate::dna::Hits::new_multiple(h)));
+                    out.push(TagValue::Location(Hits::new_multiple(h)));
                 }
             } else {
                 let mut h = BString::default();

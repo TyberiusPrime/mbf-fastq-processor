@@ -2,9 +2,9 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::transformations::prelude::*;
-use crate::{config::CompressionFormat, config::deser::tpd_adapt_bstring, dna::TagValue};
+use crate::{config::CompressionFormat};
 
-use super::super::tag::default_region_separator;
+use mbf_fastq_processor_deser::{default_region_separator, tpd_adapt_bstring};
 
 type OutputHandles = Arc<Mutex<DemultiplexedData<Option<csv::Writer<Box<OutputWriter>>>>>>;
 type InLabels = Vec<TagLabel>;

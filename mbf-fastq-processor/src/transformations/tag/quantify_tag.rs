@@ -1,11 +1,11 @@
 use crate::{
-    config::{CompressionFormat, deser::tpd_adapt_bstring},
+    config::{CompressionFormat, },
     transformations::prelude::*,
 };
 
 use std::collections::BTreeMap;
 
-use super::super::tag::default_region_separator;
+use mbf_fastq_processor_deser::{tpd_adapt_bstring, default_region_separator};
 
 type QuantifyTagCollector = Arc<Mutex<DemultiplexedData<BTreeMap<Vec<u8>, usize>>>>;
 

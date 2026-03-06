@@ -1,6 +1,7 @@
 use crate::transformations::prelude::*;
 
 use fasteval::{Compiler, Evaler, Parser, Slab};
+use mbf_fastq_processor_deser::dna::TagValue;
 use std::{
     cell::RefCell,
     collections::{BTreeMap, BTreeSet},
@@ -8,7 +9,7 @@ use std::{
     sync::atomic::Ordering,
 };
 
-use crate::{dna::TagValue, io};
+use crate::io;
 
 #[derive(Debug)]
 struct CompiledExpression {

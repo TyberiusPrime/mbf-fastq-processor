@@ -1,4 +1,3 @@
-use crate::dna::TagValue;
 use crate::io::FastQBlock;
 use crate::transformations::{extend_seed, prelude::*};
 use rand::Rng;

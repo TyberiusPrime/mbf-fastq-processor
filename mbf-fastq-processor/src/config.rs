@@ -1,35 +1,36 @@
-use crate::config::deser::TagLabel;
 use crate::config::options::default_block_size;
 use crate::io::{self, DetectedInputFormat};
-use crate::transformations::{PartialTransformation, TagValueType, Transformation};
+use crate::transformations::{PartialTransformation, Transformation};
 use anyhow::{Result, anyhow, bail};
 use bstr::BString;
 use indexmap::IndexMap;
+use mbf_fastq_processor_deser::dna::{all_iupac_or_underscore, iupac_overlapping};
+use mbf_fastq_processor_deser::{RemovedTags, TagLabel, TagValueType, dna};
 use schemars::JsonSchema;
 use std::cell::RefCell;
 use std::collections::{BTreeMap, HashSet};
 use std::path::Path;
 use toml_pretty_deser::prelude::*;
 
-pub mod deser;
 mod input;
 pub mod options;
 mod output;
 mod segments;
 
-use crate::{dna, get_number_of_cores};
-pub use deser::{offer_alternatives, validate_tag_name};
+use crate::get_number_of_cores;
 pub use input::{
     CompressionFormat, FileFormat, Input, InputOptions, PartialInput, PartialInputOptions,
     STDIN_MAGIC_PATH, StructuredInput,
 };
 pub use io::fileformats::PhredEncoding;
+pub use mbf_fastq_processor_deser::segments::{
+    ResolvedSourceAll, ResolvedSourceNoAll, SegmentIndex, SegmentIndexOrAll, SegmentOrNameIndex,
+};
+pub use mbf_fastq_processor_deser::{offer_alternatives, validate_tag_name};
+
 pub use options::{Options, PartialOptions};
 pub use output::{Output, PartialOutput, validate_compression_level_u8};
-pub use segments::{
-    ResolvedSourceAll, ResolvedSourceNoAll, SegmentIndex, SegmentIndexOrAll, SegmentOrNameIndex,
-    ValidateSegment,
-};
+pub use segments::ValidateSegment;
 
 #[derive(Debug)]
 pub struct TagMetadata {
@@ -505,7 +506,7 @@ impl PartialConfig {
                 {
                     for key in &mut barcodes.keys {
                         if let Some(key_str) = key.as_ref()
-                            && !crate::dna::all_iupac_or_underscore(key_str.as_bytes())
+                            && !all_iupac_or_underscore(key_str.as_bytes())
                         {
                             key.state = TomlValueState::new_validation_failed("Invalid value");
                             key.help = Some("Barcode contains non-IUPAC / spacer characters. Only A,C,G,T, IUPAC ambiguity codes and '_' are allowed.".to_string());
@@ -1106,14 +1107,14 @@ impl PartialConfig {
                 //     }
                 let tag_info = trafo.get_tag_usage(&tags_available, segment_order);
                 match tag_info.removed_tags {
-                    crate::transformations::RemovedTags::None => {}
-                    crate::transformations::RemovedTags::All => {
+                    RemovedTags::None => {}
+                    RemovedTags::All => {
                         for metadata in tags_available.values_mut() {
                             metadata.used = true;
                         }
                         tags_available.clear();
                     }
-                    crate::transformations::RemovedTags::Some(tags) => {
+                    RemovedTags::Some(tags) => {
                         for (tag_name, toml_source) in tags {
                             //no need to check if empty, empty will never be present
                             if let Some(metadata) = tags_available.get_mut(&tag_name) {
@@ -1708,7 +1709,7 @@ fn validate_barcode_disjointness(barcodes: &mut MapAndKeys<BString, String>) {
                     .get(bstr::BStr::new(dna_b))
                     .and_then(|x| x.as_ref())
                 && barcode_name_a != barcode_name_b
-                && crate::dna::iupac_overlapping(dna_a.as_bytes(), dna_b.as_bytes())
+                && iupac_overlapping(dna_a.as_bytes(), dna_b.as_bytes())
             {
                 let spans = vec![
                     (
