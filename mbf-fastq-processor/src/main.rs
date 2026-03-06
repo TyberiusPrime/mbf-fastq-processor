@@ -3,8 +3,8 @@ use anyhow::{Context, Result, bail};
 use clap::{Arg, ArgAction, Command, ValueHint, value_parser};
 use clap_complete::{Generator, Shell, generate};
 use human_panic::{Metadata, setup_panic};
-use regex::Regex;
 use indexmap::IndexMap;
+use regex::Regex;
 use std::{
     io,
     path::{Path, PathBuf},
