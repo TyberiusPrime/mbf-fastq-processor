@@ -1256,6 +1256,10 @@ Split output by barcode or boolean tag.
 **CREATES**: Separate output files per barcode value
 
 ```toml
+[barcodes.my_barcodes]
+    'AAAAAAAA' = 'sample_1'        # barcode -> output_name
+    'CCCCCCCC' = 'sample_2'
+    'GGGGGGGG' = 'sample_1'        # Multiple barcodes can map to same sample
 [[step]]
     action = 'Demultiplex'
     in_label = 'barcode_corrected' # TYPE: existing tag, REQUIRED
