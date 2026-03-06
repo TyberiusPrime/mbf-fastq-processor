@@ -26,7 +26,7 @@ pub const STDIN_MAGIC_PATH: &str = "--stdin--";
 pub struct Input {
     /// whether you have input files with interleaved reads, or one file per segment
     /// If interleaved, define the name of the segments here.
-    #[tpd(default)] // todo, with="tpd_adapt_trim_string")]
+    #[tpd(default)]
     pub interleaved: Option<Vec<String>>,
 
     /// Your segments. Define just one with any name for interlaveed input.
@@ -195,171 +195,185 @@ impl PartialInput {
         }
         Ok(())
     }
-    #[allow(clippy::too_many_lines)] // I know, but it's two distingt if branches, 
+    fn build_interleaved_structured(&mut self) -> Result<(), ()> {
+        let Some(Some(interleaved)) = self.interleaved.as_mut() else {
+            unreachable!();
+        };
+        let Some(segments) = self.segments.as_ref() else {
+            unreachable!();
+        };
+        if segments.map.len() != 1 {
+            let mut spans: Vec<_> = segments
+                .map
+                .iter()
+                .map(|(_k, v)| (v.span.clone(), "More than one segment defined".to_string()))
+                .collect();
+            spans.push((
+                self.interleaved.span.clone(),
+                "Interleaved segment definition".to_string(),
+            ));
+            self.interleaved.state = TomlValueState::Custom { spans };
+            self.interleaved.help = Some(
+                "Interleaved input can only have exactly one other key defining the segments."
+                    .to_string(),
+            );
+            return Err(());
+        }
+        if interleaved.len() < 2 {
+            self.interleaved.state = TomlValueState::ValidationFailed {
+                message: "Must define at least two segments".to_string(),
+            };
+            self.interleaved.help = Some(
+                "If you have single end reads, remove interleaved.
+If you have paired end reads, name two 'virtual' segments, e.g. ['read1','read2']"
+                    .to_string(),
+            );
+            return Err(());
+        }
+        //detect duplicate names in interleaved
+        let mut seen: IndexMap<String, Vec<std::ops::Range<usize>>> = IndexMap::new();
+        for segment_toml_value in interleaved.iter() {
+            let segment_name = segment_toml_value.as_ref().expect("parent was ok").trim();
+            match seen.entry(segment_name.to_string()) {
+                indexmap::map::Entry::Vacant(e) => {
+                    e.insert(vec![segment_toml_value.span.clone()]);
+                }
+                indexmap::map::Entry::Occupied(mut e) => {
+                    e.get_mut().push(segment_toml_value.span.clone());
+                }
+            }
+        }
+        let mut reported = HashSet::new();
+        for segment_toml_value in interleaved.iter_mut() {
+            let segment_name = segment_toml_value.as_ref().expect("parent was ok").clone();
+            if reported.insert(segment_name.clone()) {
+                let spans = seen.get(&segment_name).expect("We just built this map");
+                if spans.len() > 1 {
+                    segment_toml_value.state = TomlValueState::Custom {
+                        spans: spans
+                            .iter()
+                            .map(|span| (span.clone(), "Duplicate value".to_string()))
+                            .collect(),
+                    };
+                    segment_toml_value.help = Some(
+                        "Use each segment only once in interleaved. If you really want to use the same reads twice, define multiple segments, set input.accept_duplicate_files = true.".to_string()
+                    );
+                }
+            }
+        }
+        if !interleaved.can_concrete() {
+            self.interleaved.state = TomlValueState::Nested;
+            return Err(());
+        }
+
+        let files: Vec<String> = segments
+            .map
+            .values()
+            .next()
+            .expect("We ensured there was at least one segment")
+            .as_ref()
+            .expect("parent was ok")
+            .iter()
+            .map(|tv| tv.as_ref().expect("parent was ok?").clone())
+            .collect();
+
+        self.structured = Some(StructuredInput::Interleaved {
+            files,
+            segment_order: interleaved
+                .iter()
+                .map(|x| x.as_ref().expect("parent was ok").trim().to_string())
+                .collect(),
+        });
+        Ok(())
+    }
+
+    fn build_segmented_structured(&mut self) -> Result<(), ()> {
+        let Some(segments) = self.segments.as_mut() else {
+            return Ok(());
+        };
+        let mut segment_order: Vec<String> =
+            segments.map.keys().map(|x| x.trim().to_string()).collect();
+        segment_order.sort(); //always alphabetical...
+        if segment_order.is_empty() {
+            self.segments.state = TomlValueState::ValidationFailed {
+                message: "No segments defined in input.".to_string(),
+            };
+            self.segments.help = Some(
+                "At least one segment must be defined. Example: read1 = ['filename.fq']"
+                    .to_string(),
+            );
+            return Err(());
+        }
+        if let Some(all_segment) = segments.keys.iter_mut().find(|tv| {
+            tv.as_ref()
+                .expect("Parent was ok")
+                .eq_ignore_ascii_case("all")
+        }) {
+            all_segment.state = TomlValueState::ValidationFailed {
+                message: "Reserved segment name".to_string(),
+            };
+            all_segment.help = Some(
+                "Segment name 'all' is reserved and cannot be used as a segment name.".to_string(),
+            );
+            self.segments.state = TomlValueState::Nested;
+            return Err(());
+        }
+        if let Some(all_segment) = segments.keys.iter_mut().find(|tv| {
+            tv.as_ref()
+                .expect("Parent was ok")
+                .to_ascii_lowercase()
+                .starts_with("_internal_")
+        }) {
+            all_segment.state = TomlValueState::ValidationFailed {
+                message: "Reserved segment name".to_string(),
+            };
+            all_segment.help = Some(
+                "Segment names starting with '_internal_' are reserved and cannot be used as a segment name. Choose something else."
+                    .to_string(),
+            );
+            self.segments.state = TomlValueState::Nested;
+            return Err(());
+        }
+
+        assert!(
+            !segment_order
+                .iter()
+                .any(|x| x.eq_ignore_ascii_case("options")),
+            "Options should have been filtered by toml-pretty-deser"
+        );
+        let segment_files: IndexMap<String, Vec<String>> = segments
+            .map
+            .iter()
+            .map(|(k, v)| {
+                let files = v
+                    .as_ref()
+                    .expect("Parent was ok")
+                    .iter()
+                    .map(|tv| tv.as_ref().expect("parent was ok?").clone())
+                    .collect();
+                (k.trim().to_string(), files)
+            })
+            .collect();
+        self.structured = Some(StructuredInput::Segmented {
+            segment_files,
+            segment_order,
+        });
+        Ok(())
+    }
+
     fn build_structured(&mut self, match_mode: FieldMatchMode) -> Result<(), ()> {
-        //todo: remove
-        //Result
         if let Err(()) = self.verify_segment_names(match_mode) {
             self.segments.state = TomlValueState::Nested;
         }
 
-        //We need to make it not fail on unset structrude
-        //todo: refactor, but the borrow checking is annoying.
-        if let Some(Some(interleaved)) = self.interleaved.as_mut()
-            && let Some(segments) = self.segments.as_ref()
+        if self.interleaved.as_ref().is_some_and(|x| x.is_some())
+            && self.segments.as_ref().is_some()
         {
-            if segments.map.len() != 1 {
-                let mut spans: Vec<_> = segments
-                    .map
-                    .iter()
-                    .map(|(_k, v)| (v.span.clone(), "More than one segment defined".to_string()))
-                    .collect();
-                spans.push((
-                    self.interleaved.span.clone(),
-                    "Interleaved segment definition".to_string(),
-                ));
-                self.interleaved.state = TomlValueState::Custom { spans };
-                self.interleaved.help = Some(
-                    "Interleaved input can only have exactly one other key defining the segments."
-                        .to_string(),
-                );
-                return Err(());
-            }
-            if interleaved.len() < 2 {
-                self.interleaved.state = TomlValueState::ValidationFailed {
-                    message: "Must define at least two segments".to_string(),
-                };
-                self.interleaved.help = Some(
-                    "If you have single end reads, remove interleaved.
-If you have paired end reads, name two 'virtual' segments, e.g. ['read1','read2']"
-                        .to_string(),
-                );
-                return Err(());
-            }
-            //detect duplicate names in interleaved
-            let mut seen: IndexMap<String, Vec<std::ops::Range<usize>>> = IndexMap::new();
-            for segment_toml_value in interleaved.iter() {
-                let segment_name = segment_toml_value.as_ref().expect("parent was ok").trim();
-                match seen.entry(segment_name.to_string()) {
-                    indexmap::map::Entry::Vacant(e) => {
-                        e.insert(vec![segment_toml_value.span.clone()]);
-                    }
-                    indexmap::map::Entry::Occupied(mut e) => {
-                        e.get_mut().push(segment_toml_value.span.clone());
-                    }
-                }
-            }
-            let mut reported = HashSet::new();
-            for segment_toml_value in interleaved.iter_mut() {
-                let segment_name = segment_toml_value.as_ref().expect("parent was ok").clone();
-                if reported.insert(segment_name.clone()) {
-                    let spans = seen.get(&segment_name).expect("We just built this map");
-                    if spans.len() > 1 {
-                        segment_toml_value.state = TomlValueState::Custom {
-                            spans: spans
-                                .iter()
-                                .map(|span| (span.clone(), "Duplicate value".to_string()))
-                                .collect(),
-                        };
-                        segment_toml_value.help = Some(
-                            "Use each segment only once in interleaved. If you really want to use the same reads twice, define multiple segments, set input.accept_duplicate_files = true.".to_string()
-                        );
-                    }
-                }
-            }
-            if !interleaved.can_concrete() {
-                self.interleaved.state = TomlValueState::Nested;
-                return Err(());
-            }
-
-            let files: Vec<String> = segments
-                .map
-                .values()
-                .next()
-                .expect("We ensured there was at least one segment")
-                .as_ref()
-                .expect("parent was ok")
-                .iter()
-                .map(|tv| tv.as_ref().expect("parent was ok?").clone())
-                .collect();
-
-            self.structured = Some(StructuredInput::Interleaved {
-                files,
-                segment_order: interleaved
-                    .iter()
-                    .map(|x| x.as_ref().expect("parent was ok").trim().to_string())
-                    .collect(),
-            });
-        } else if let Some(segments) = self.segments.as_mut() {
-            let mut segment_order: Vec<String> =
-                segments.map.keys().map(|x| x.trim().to_string()).collect();
-            segment_order.sort(); //always alphabetical...
-            if segment_order.is_empty() {
-                self.segments.state = TomlValueState::ValidationFailed {
-                    message: "No segments defined in input.".to_string(),
-                };
-                self.segments.help = Some(
-                    "At least one segment must be defined. Example: read1 = ['filename.fq']"
-                        .to_string(),
-                );
-                return Err(());
-            }
-            if let Some(all_segment) = segments.keys.iter_mut().find(|tv| {
-                tv.as_ref()
-                    .expect("Parent was ok")
-                    .eq_ignore_ascii_case("all")
-            }) {
-                all_segment.state = TomlValueState::ValidationFailed {
-                    message: "Reserved segment name".to_string(),
-                };
-                all_segment.help = Some(
-                    "Segment name 'all' is reserved and cannot be used as a segment name."
-                        .to_string(),
-                );
-                self.segments.state = TomlValueState::Nested;
-                return Err(());
-            }
-            if let Some(all_segment) = segments.keys.iter_mut().find(|tv| {
-                tv.as_ref()
-                    .expect("Parent was ok")
-                    .to_ascii_lowercase()
-                    .starts_with("_internal_")
-            }) {
-                all_segment.state = TomlValueState::ValidationFailed {
-                    message: "Reserved segment name".to_string(),
-                };
-                all_segment.help = Some(
-                    "Segment names starting with '_internal_' are reserved and cannot be used as a segment name. Choose something else."
-                        .to_string(),
-                );
-                self.segments.state = TomlValueState::Nested;
-                return Err(());
-            }
-
-            assert!(
-                !segment_order
-                    .iter()
-                    .any(|x| x.eq_ignore_ascii_case("options")),
-                "Options should have been filtered by toml-pretty-deser"
-            );
-            let segment_files: IndexMap<String, Vec<String>> = segments
-                .map
-                .iter()
-                .map(|(k, v)| {
-                    let files = v
-                        .as_ref()
-                        .expect("Parent was ok")
-                        .iter()
-                        .map(|tv| tv.as_ref().expect("parent was ok?").clone())
-                        .collect();
-                    (k.trim().to_string(), files)
-                })
-                .collect();
-            self.structured = Some(StructuredInput::Segmented {
-                segment_files,
-                segment_order,
-            });
+            self.build_interleaved_structured()?;
+        } else {
+            self.build_segmented_structured()?;
         }
+
         self.validate_stdin_usage()?;
 
         Ok(())
@@ -404,8 +418,6 @@ impl VerifyIn<super::PartialConfig> for PartialInput {
 #[derive(Debug)]
 pub struct InputOptions {
     #[serde(skip_serializing_if = "Option::is_none")]
-    // #[validate(minimum = 33)] TODO
-    // #[validate(maximum = 126)] TODO
     #[tpd(with = "tpd_adapt_u8_from_byte_or_char")]
     pub fasta_fake_quality: Option<u8>,
 

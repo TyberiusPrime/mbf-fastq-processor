@@ -589,25 +589,14 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceAll>> {
                 }
                 //no default for missing.
             } else {
-                if self.is_missing() {
-                    //if we have exactly one segment, and no tags,
-                    //we default to the one and only segment.
-                    //Todo: this is not fully implemented, we're not checking the tags,
-                    //since we're not yet buildng them in verify
-                    if let Some(input_def) = config.input.as_ref() {
-                        let segment_count = input_def.get_segment_order().len();
-                        if segment_count == 1 {
-                            // && input_def.tag_at_this_step().is_empty() {
-                            self.value = Some(MustAdapt::PostVerify(ResolvedSourceAll::Segment(
-                                SegmentIndexOrAll::Indexed(0),
-                            )));
-                        }
-                    }
-                }
-                //still missing? Error message
+                // we can not reliably detect the 'no tags' and single segment case here -
+                // tags are assembled after the transformations have been verified
+                // and the segments validated.
+                //
+                // So we need the user to provide it.
                 if self.is_missing() {
                     self.help = Some(format!(
-                        "Please provide a source, that is a <segment name>, a <name:segment_name> or tag name. Use 'all' to refer to all <segment_name>s. Available segments: {}",
+                        "Could not automatically determine source. Please provide a source, that is a <segment name>, a <name:segment_name> or tag name. Use 'all' to refer to all <segment_name>s. Available segments: {}",
                         toml_pretty_deser::format_quoted_list(
                             &(config.input.as_ref().map_or_else(
                                 || vec![""],

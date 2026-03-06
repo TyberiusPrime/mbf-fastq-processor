@@ -38,10 +38,6 @@ pub struct EvalExpression {
 
     #[tpd(skip)]
     #[schemars(skip)]
-    segment_names: Vec<String>, //todo: why do we need this copy of the segment order?
-
-    #[tpd(skip)]
-    #[schemars(skip)]
     next_index: std::sync::atomic::AtomicU64, // for read_no
 }
 
@@ -95,15 +91,6 @@ impl VerifyIn<PartialConfig> for PartialEvalExpression {
             }
         }
 
-        if let Some(input_def) = parent.input.as_ref() {
-            self.segment_names = Some(
-                input_def
-                    .get_segment_order()
-                    .iter()
-                    .map(Clone::clone)
-                    .collect(),
-            );
-        }
         self.next_index = Some(std::sync::atomic::AtomicU64::new(0));
 
         Ok(())
@@ -203,7 +190,7 @@ impl Step for Box<EvalExpression> {
     fn apply(
         &self,
         mut block: io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
+        input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(io::FastQBlocksCombined, bool)> {
@@ -235,7 +222,7 @@ impl Step for Box<EvalExpression> {
                         .1
                         .to_string(),
                 );
-                if let Some(segment_index) = self.segment_names.iter().position(|x| *x == suffix.0)
+                if let Some(segment_index) = input_info.segment_order.iter().position(|x| *x == suffix.0)
                 {
                     #[allow(clippy::cast_precision_loss)]
                     for read in &block.segments[segment_index].entries {

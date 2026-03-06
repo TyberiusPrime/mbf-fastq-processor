@@ -19,8 +19,6 @@ pub struct PolyTail {
     pub min_length: usize,
     #[tpd(with = "tpd_adapt_extract_base_or_dot")]
     pub base: u8,
-    //#[validate(minimum = 0.)]// todo
-    //#[validate(maximum = 1.)] //todo
     pub max_mismatch_rate: f64,
     pub max_consecutive_mismatches: usize,
 }

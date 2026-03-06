@@ -1,0 +1,12 @@
+Error 1/1
+  ╭─config.toml
+  ┆
+4 │ [[step]]
+5 │   action = 'LowerCase'
+  ┆            ─────┬─────┬
+  ┆                 │     │
+  ┆                 ╰─────── In this step
+  ┆                       │
+  ┆                       ╰─ Missing required key: 'target'.
+──╯
+Hint: Could not automatically determine source. Please provide a source, that is a <segment name>, a <name:segment_name> or tag name. Use 'all' to refer to all <segment_name>s. Available segments: read1

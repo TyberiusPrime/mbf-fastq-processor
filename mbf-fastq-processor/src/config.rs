@@ -1388,11 +1388,9 @@ impl Config {
         //no point in checking them if segment definition is broken
         //self.check_output(&mut errors);
         if errors.is_empty() {
-            let (tag_names, stages_) = self.check_transformations(&mut errors);
+            let stages_ = self.check_transformations(&mut errors);
             //self.transfrom is now empty, the trafos have been expanded into stepsk.
-            let stages_ = stages_;
             assert!(self.transform.is_empty());
-            self.check_name_collisions(&mut errors, &tag_names);
             if check_input_files_exist {
                 let input_formats_observed = self.check_input_format(&mut errors);
                 self.configure_multithreading(&input_formats_observed);
@@ -1431,36 +1429,6 @@ impl Config {
     #[allow(clippy::too_many_lines)]
     pub fn check_for_validation(self) -> Result<CheckedConfig> {
         self.inner_check(false)
-    }
-
-    fn check_name_collisions(&self, errors: &mut Vec<anyhow::Error>, tag_names: &[String]) {
-        //verify that segment_labels, barcode names, and Tag label don't collide
-        let mut segment_names_used: HashSet<String> = HashSet::new();
-        //segments
-        for segment in self.input.get_segment_order() {
-            segment_names_used.insert(segment.clone()); //can't be duplicate, TOML parsing would have
-            //complained
-        }
-        let mut barcode_names_used: HashSet<String> = HashSet::new();
-        //barcodes
-        if let Some(barcodes) = self.barcodes.as_ref() {
-            for barcode_name in barcodes.keys() {
-                barcode_names_used.insert(barcode_name.clone());
-                //barcode -> segment is in VerifyIn.
-            }
-        }
-        for tag_name in tag_names {
-            if segment_names_used.contains(tag_name) {
-                errors.push(anyhow!(
-                    "Name collision: Tag label '{tag_name}' collides with an existing segment label"
-                ));
-            }
-            if barcode_names_used.contains(tag_name) {
-                errors.push(anyhow!(
-                    "Name collision: Tag label '{tag_name}' collides with an existing barcode name"
-                ));
-            }
-        }
     }
 
     #[allow(clippy::similar_names)]
@@ -1599,112 +1567,9 @@ impl Config {
     }
 
     #[allow(clippy::too_many_lines)]
-    fn check_transformations(
-        &mut self,
-        errors: &mut Vec<anyhow::Error>,
-    ) -> (Vec<String>, Vec<Stage>) {
-        let mut tags_available: IndexMap<String, TagMetadata> = IndexMap::new();
+    fn check_transformations(&mut self, errors: &mut Vec<anyhow::Error>) -> Vec<Stage> {
         let mut allowed_tags_per_stage = self.allowed_tags_per_transformation.clone();
 
-        // for (step_no, t) in self.transform.iter().enumerate() {
-        //     if let err(e) =
-        //         t.validate_others(&self.input, self.output.as_ref(), &self.transform, step_no)
-        //     {
-        //         errors.push(e.context(format!("[step {step_no} ({t})]:")));
-        //         continue; // skip further processing of this transform if validation failed
-        //     }
-        //
-        //     for tag_name in t.removes_tags() {
-        //         //no need to check if empty, empty will never be present
-        //         if let some(metadata) = tags_available.get_mut(&tag_name) {
-        //             metadata.used = true;
-        //         } else {
-        //             errors.push(anyhow!(
-        //                 "[step {step_no} ({t})]: can't remove tag {tag_name}, not present. available at this point: {tags_available:?}. transform: {t}"
-        //             ));
-        //             continue;
-        //         }
-        //         tags_available.shift_remove(&tag_name);
-        //     }
-        //
-        //     if t.removes_all_tags() {
-        //         for metadata in tags_available.values_mut() {
-        //             metadata.used = true;
-        //         }
-        //         tags_available.clear();
-        //     }
-        //
-        //     let tags_here: vec<string> = if let some(tag_names_and_types) =
-        //         t.uses_tags(&tags_available)
-        //     {
-        //         for (tag_name, tag_types) in &tag_names_and_types {
-        //             //no need to check if empty, empty will never be present
-        //             let entry = tags_available.get_mut(tag_name);
-        //             match entry {
-        //                 some(metadata) => {
-        //                     metadata.used = true;
-        //                     if !tag_types
-        //                         .iter()
-        //                         .any(|tag_type| tag_type.compatible(metadata.tag_type))
-        //                     {
-        //                         errors.push(anyhow!  (
-        //                     "[step {step_no} ({t})]: tag '{label}' does not provide any of the required tag types {supposed_tag_types:?}. it provides '{actual_tag_type}'.", supposed_tag_types=tag_types, label=tag_name, actual_tag_type=metadata.tag_type ));
-        //                     }
-        //                 }
-        //                 none => {
-        //                     errors.push(anyhow!(
-        //                         "[step {step_no} ({t})]: no step generating label '{tag_name}' (or removed previously). available at this point: {{{}}}.", tags_available.keys().cloned().collect::<vec<_>>().join(", ")
-        //                     ));
-        //                 }
-        //             }
-        //         }
-        //         if t.must_see_all_tags() {
-        //             tags_available.keys().cloned().collect()
-        //         } else {
-        //             tag_names_and_types
-        //                 .into_iter()
-        //                 .map(|(name, _)| name)
-        //                 .collect()
-        //         }
-        //     } else if t.must_see_all_tags() {
-        //         tags_available.keys().cloned().collect()
-        //     } else {
-        //         vec::new()
-        //     };
-        //
-        //     if let some((tag_name, tag_type)) = t.declares_tag_type() {
-        //         if let err(e) = validate_tag_name(&tag_name) {
-        //             errors.push(anyhow!("[step {step_no} ({t})]: {e}"));
-        //             continue;
-        //         }
-        //
-        //         if tags_available.contains_key(&tag_name) {
-        //             errors.push(anyhow!(
-        //                 "[step {step_no} ([{t})]: duplicate label: {tag_name}. each tag must be unique",
-        //             ));
-        //             continue;
-        //         }
-        //         tags_available.insert(
-        //             tag_name.clone(),
-        //             tagmetadata {
-        //                 used: false,
-        //                 declared_at_step: step_no,
-        //                 declared_by: t.to_string(),
-        //                 tag_type,
-        //             },
-        //         );
-        //     }
-        //     allowed_tags_per_stage.push(tags_here);
-        // }
-        // for (tag_name, metadata) in tags_available.iter().filter(|(_, meta)| !meta.used) {
-        //     errors.push(anyhow!(
-        //         "[Step {declared_at_step} ({declared_by})]: Extract label '{tag_name}' (type {tag_type}) is never used downstream.",
-        //         declared_at_step = metadata.declared_at_step,
-        //         tag_name = tag_name,
-        //         declared_by = metadata.declared_by,
-        //         tag_type = metadata.tag_type,
-        //     ));
-        // }
         let stages: Vec<Stage> = self
             .transform
             .drain(..)
@@ -1716,7 +1581,7 @@ impl Config {
             })
             .collect();
 
-        (tags_available.keys().cloned().collect(), stages)
+        stages
     }
 
     #[mutants::skip] // yeah, no rapidgzip doesn't change the result
