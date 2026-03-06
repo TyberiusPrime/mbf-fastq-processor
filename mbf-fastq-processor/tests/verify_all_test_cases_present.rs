@@ -1,7 +1,7 @@
-use std::collections::{HashSet};
+use indexmap::IndexMap;
+use std::collections::HashSet;
 use std::fs;
 use std::path::PathBuf;
-use indexmap::IndexMap;
 use walkdir::WalkDir;
 
 #[test]

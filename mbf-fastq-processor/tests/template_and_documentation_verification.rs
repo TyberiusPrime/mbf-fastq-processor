@@ -3,7 +3,7 @@ use indexmap::IndexMap;
 use mbf_fastq_processor::config::config_from_string;
 use regex::Regex;
 use schemars::schema_for;
-use std::collections::{HashSet};
+use std::collections::HashSet;
 use std::fmt::Write;
 use std::fs;
 use std::io::ErrorKind;
@@ -585,7 +585,9 @@ fn extract_schema_fields_with_aliases(transformation: &str) -> IndexMap<String, 
 
 /// Extract field aliases from Rust source code for a given transformation
 /// Returns a map of `field_name` -> Vec<alias>
-fn extract_field_aliases_from_source(transformation: &str) -> Option<IndexMap<String, Vec<String>>> {
+fn extract_field_aliases_from_source(
+    transformation: &str,
+) -> Option<IndexMap<String, Vec<String>>> {
     // Find the struct file
     let struct_file = find_struct_file_for_transformation(transformation)?;
     let content = fs::read_to_string(&struct_file).ok()?;

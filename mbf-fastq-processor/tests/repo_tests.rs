@@ -15,7 +15,12 @@ fn no_hashmaps_in_src() {
 
         for (line_no, line) in content.lines().enumerate() {
             if line.contains("HashMap") {
-                violations.push(format!("{}:{}: {}", path.display(), line_no + 1, line.trim()));
+                violations.push(format!(
+                    "{}:{}: {}",
+                    path.display(),
+                    line_no + 1,
+                    line.trim()
+                ));
             }
         }
     }
