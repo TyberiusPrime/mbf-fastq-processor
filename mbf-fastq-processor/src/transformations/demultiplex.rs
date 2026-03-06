@@ -1,8 +1,5 @@
-use indexmap::IndexMap;
-use toml_pretty_deser::suggest_alternatives;
-
-//eserde false positives
 use crate::transformations::prelude::*;
+use indexmap::IndexMap;
 
 ///Create multiple output files based on a tag
 
@@ -64,8 +61,7 @@ impl VerifyIn<PartialConfig> for PartialDemultiplex {
                         self.resolved_barcodes = None;
                     }
                 } else {
-                    dbg!(&barcodes.keys);
-                    self.barcodes.help = Some(suggest_alternatives(
+                    self.barcodes.help = Some(offer_alternatives(
                         &barcodes_name.0,
                         &barcodes
                             .keys

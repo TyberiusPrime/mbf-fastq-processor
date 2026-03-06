@@ -9,7 +9,6 @@ use super::extract_region_tags;
 #[derive(Clone, JsonSchema)]
 #[tpd]
 #[derive(Debug)]
-#[serde(deny_unknown_fields)]
 pub struct LongestPolyX {
     #[tpd(adapt_in_verify(String))]
     #[schemars(with = "String")]

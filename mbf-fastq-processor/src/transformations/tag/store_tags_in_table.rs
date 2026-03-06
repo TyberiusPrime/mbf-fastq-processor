@@ -2,12 +2,10 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::transformations::prelude::*;
-
 use crate::{config::CompressionFormat, config::deser::tpd_adapt_bstring, dna::TagValue};
 
 use super::super::tag::default_region_separator;
 
-//otherwise clippy won't shut up, because we can't allow it for the derived serde / eserde fields
 type OutputHandles = Arc<Mutex<DemultiplexedData<Option<csv::Writer<Box<OutputWriter>>>>>>;
 type InLabels = Vec<TagLabel>;
 

@@ -125,7 +125,6 @@ impl Step for Box<_ReportBaseStatisticsPart1> {
 
     fn finalize(&self, demultiplex_info: &OptDemultiplex) -> Result<Option<FinalizeReportResult>> {
         let mut contents = serde_json::Map::new();
-        //needs updating for demultiplex
         match &demultiplex_info {
             OptDemultiplex::No => {
                 self.data

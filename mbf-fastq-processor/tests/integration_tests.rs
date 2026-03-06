@@ -269,8 +269,8 @@ fn test_every_demultiplexed_data_transform_has_test() {
                 break;
             }
 
-            // Skip lines with #[serde(skip)] or comments
-            if line.contains("#[serde(skip)]") || line.trim().starts_with("//") {
+            // Skip lines with #[tpd(skip)] or comments
+            if line.contains("#[tpd(skip)]") || line.trim().starts_with("//") {
                 continue;
             }
 
@@ -2347,8 +2347,8 @@ fn test_cookbook_not_found() {
 
 #[test]
 fn test_only_list_one_case_variant_on_error() {
-    //we only list one casing, ie 'Worse', but not 'worse'
-    //since we can't get serde to be truly case insensitive
+    //we only list one casing, i.e. 'Worse', but not 'worse'
+    //since that's the canonical spelling.
     // Create temp directory
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();

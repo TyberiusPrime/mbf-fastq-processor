@@ -24,9 +24,9 @@ Anchor is the regex equivalent of ^ (Left), $ (Right) or no anchor (Anywhere).
 
 If anchor = 'Anywhere', ExtractIUPAC will find the left most occurrence.
 
-When multiple search queries are present they'll be searched in order. 
+When multiple search queries are present they'll be searched in order.
 The first hit wins.
 
-Ambiguous matches (e.g. query 'Y' matching 'C') do not count as even partial mismatches.
+Ambiguous matches (e.g. query 'Y' matching 'C') do not count as mismatches, but as full matches.
 
 

@@ -100,7 +100,6 @@ impl Step for Box<_ReportLengthDistribution> {
     fn finalize(&self, demultiplex_info: &OptDemultiplex) -> Result<Option<FinalizeReportResult>> {
         let data_lock = self.data.lock().expect("lock poisened");
         let mut contents = serde_json::Map::new();
-        //needs updating for demultiplex
         match demultiplex_info {
             OptDemultiplex::No => {
                 data_lock

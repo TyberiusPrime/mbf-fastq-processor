@@ -7,7 +7,7 @@ use crate::transformations::prelude::*;
 pub struct Skip {
     pub n: usize,
 
-    #[tpd(skip)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
+    #[tpd(skip)]
     #[schemars(skip)]
     pub remaining: Option<Arc<Mutex<DemultiplexedData<usize>>>>,
 }

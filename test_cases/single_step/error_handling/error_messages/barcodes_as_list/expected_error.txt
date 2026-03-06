@@ -23,6 +23,7 @@ Error 2/2
    ┆                       │
    ┆                       ╰──────── Unknown barcode section
 ───╯
-Hint: Did you mean: basic?
+Hint: Did you mean: 'basic'?
       See https://doc_url.example/version-stripped-from-test/docs/reference/Demultiplex
+
 

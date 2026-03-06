@@ -84,19 +84,18 @@ pub fn validate_segment_label(
     Ok(())
 }
 
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive(Debug, Clone, JsonSchema)]
 #[tpd(no_verify)]
 pub struct Benchmark {
     /// Enable benchmark mode
-    #[serde(default)]
+    #[tpd(default)]
     pub enable: bool,
 
     /// Number of molecules to process in benchmark mode
     pub molecule_count: usize,
 }
 
-#[derive(eserde::Deserialize, Debug, JsonSchema, Default)]
+#[derive(Debug, JsonSchema, Default)]
 #[allow(dead_code)] //we currently only use gzip for multi thread considerations, but set them all
 struct InputFormatsObserved {
     fastq: bool,
@@ -1655,10 +1654,6 @@ fn calculate_thread_counts(
 #[tpd]
 #[derive(Debug)]
 pub struct Barcodes {
-    // #[serde(
-    //     deserialize_with = "deser::btreemap_iupac_dna_string_from_string",
-    //     flatten
-    // )]
     #[schemars(with = "BTreeMap<String, String>")]
     #[tpd(absorb_remaining)]
     pub barcode_to_name: IndexMap<BString, String>,

@@ -1,6 +1,5 @@
 #![allow(clippy::struct_field_names)]
 use crate::config::{PartialConfig, StructuredInput};
-// FailureOptions - eserde(?) interferes with clippy here.
 use crate::io::output::compressed_output::{SimulatedWriteError, SimulatedWriteFailure};
 use anyhow::{Context, Result};
 use schemars::JsonSchema;
@@ -80,7 +79,6 @@ pub const fn default_spot_check_read_pairing() -> bool {
 #[tpd]
 #[derive(Debug)]
 pub struct Options {
-    //#[serde(default)]
     #[tpd(alias = "thread_count")]
     pub threads: Option<usize>,
     pub max_blocks_in_flight: Option<usize>,
@@ -90,7 +88,6 @@ pub struct Options {
     pub output_buffer_size: usize,
     #[tpd(default)]
     pub accept_duplicate_files: bool,
-    //#[serde(default = "default_spot_check_read_pairing")]
     pub spot_check_read_pairing: bool,
     #[tpd(nested)]
     pub debug_failures: FailureOptions,

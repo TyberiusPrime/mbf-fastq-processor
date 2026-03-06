@@ -1,6 +1,5 @@
 use std::sync::atomic::Ordering;
 
-// eserde false positives
 use crate::config::deser::tpd_adapt_u8_from_byte_or_char;
 use crate::transformations::{prelude::*, read_name_canonical_prefix_strict};
 

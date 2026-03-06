@@ -5,7 +5,7 @@ pub(crate) use super::{
 };
 pub(crate) use crate::config::{
     PartialConfig, ResolvedSourceAll, ResolvedSourceNoAll, SegmentIndex, SegmentIndexOrAll,
-    SegmentOrNameIndex, TagMetadata, ValidateSegment,
+    SegmentOrNameIndex, TagMetadata, ValidateSegment, offer_alternatives,
 };
 pub(crate) use crate::demultiplex::{
     DemultiplexBarcodes, DemultiplexedData, DemultiplexedOutputFiles, OptDemultiplex, OutputWriter,

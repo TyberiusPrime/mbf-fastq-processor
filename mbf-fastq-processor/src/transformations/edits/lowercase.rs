@@ -11,7 +11,6 @@ pub struct Lowercase {
     #[tpd(alias = "segment")]
     pub target: ResolvedSourceAll,
 
-    #[serde(default)]
     pub if_tag: Option<ConditionalTagLabel>,
 }
 

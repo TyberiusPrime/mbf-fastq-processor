@@ -7,8 +7,7 @@ use super::extract_region_tags;
 /// Can be at the start (anchor = Left, the end (anchor = Right),
 /// or anywhere (anchor = Anywhere) within the read.
 /// The search parameter can be either a single IUPAC string or a list of IUPAC strings.
-/// If multiple strings are provided, all will be searched and they must be distinct
-/// (non-overlapping patterns).
+/// If multiple strings are provided, the first hit wins.
 #[derive(Clone, JsonSchema)]
 #[tpd]
 #[allow(clippy::upper_case_acronyms)]
@@ -46,7 +45,6 @@ impl VerifyIn<PartialConfig> for PartialIUPAC {
 // Schema helper for string or list of strings
 #[derive(JsonSchema)]
 #[allow(dead_code)]
-#[serde(untagged)]
 enum StringOrVecString {
     String(String),
     Vec(Vec<String>),

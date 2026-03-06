@@ -306,7 +306,6 @@ pub trait Step {
     }
 }
 
-//#[serde(tag = "action")]
 #[enum_dispatch]
 #[tpd(tag = "action", further_attr = "enum_dispatch")]
 #[derive(Debug, JsonSchema)]
@@ -323,7 +322,7 @@ pub enum Transformation {
     Swap(edits::Swap),
     Lowercase(edits::Lowercase),
     Uppercase(edits::Uppercase),
-    // #[serde(skip)] // nodefault
+    #[tpd(skip)]
     #[schemars(skip)]
     _ChangeCase(edits::_ChangeCase), // public interface is Lowercase/Uppercase
     TrimAtTag(edits::TrimAtTag),

@@ -1424,7 +1424,6 @@ fn test_readme_toml_examples_validate() {
     for (line_no, toml_content) in &toml_blocks {
         println!("  Validating TOML block starting at line {line_no}...");
 
-        // Parse the TOML using eserde (same as in run())
         let parsed = match config_from_string(toml_content) {
             Ok(config) => config,
             Err(e) => {

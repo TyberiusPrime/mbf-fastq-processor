@@ -30,7 +30,7 @@ pub struct Input {
     pub interleaved: Option<Vec<String>>,
 
     /// Your segments. Define just one with any name for interlaveed input.
-    #[schemars(with = "BTreeMap<String, Vec<String>>")]
+    #[schemars(with = "BTreeMap<String, crate::config::deser::StringOrVecString>")]
     #[tpd(absorb_remaining)]
     #[serde(flatten)]
     pub segments: IndexMap<String, Vec<String>>,
@@ -43,9 +43,6 @@ pub struct Input {
     #[schemars(skip)]
     #[serde(skip_serializing)]
     pub structured: StructuredInput,
-    // #[tpd(skip)]
-    // #[serde(skip_serializing)]
-    // pub stdin_stream: bool,
 }
 
 impl PartialInput {
@@ -366,7 +363,10 @@ If you have paired end reads, name two 'virtual' segments, e.g. ['read1','read2'
             self.segments.state = TomlValueState::Nested;
         }
 
-        if self.interleaved.as_ref().is_some_and(std::option::Option::is_some)
+        if self
+            .interleaved
+            .as_ref()
+            .is_some_and(std::option::Option::is_some)
             && self.segments.as_ref().is_some()
         {
             self.build_interleaved_structured()?;

@@ -21,11 +21,11 @@ pub struct QuantifyTag {
     #[tpd(with = "tpd_adapt_bstring")]
     region_separator: BString,
 
-    #[tpd(skip, default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
+    #[tpd(skip, default)]
     #[schemars(skip)]
     pub collector: Option<QuantifyTagCollector>,
 
-    #[tpd(skip, default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
+    #[tpd(skip, default)]
     #[schemars(skip)]
     pub output_streams: Option<Arc<Mutex<DemultiplexedOutputFiles>>>,
 }
