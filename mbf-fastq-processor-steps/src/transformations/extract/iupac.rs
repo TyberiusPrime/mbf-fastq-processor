@@ -1,5 +1,5 @@
 use crate::transformations::prelude::*;
-use mbf_fastq_processor_config::{dna::Anchor, tpd_adapt_iupac_bstring};
+use mbf_fastq_processor_config::{StringOrVecString, dna::Anchor, tpd_adapt_iupac_bstring};
 
 use super::extract_region_tags;
 
@@ -40,14 +40,6 @@ impl VerifyIn<PartialConfig> for PartialIUPAC {
         self.segment.validate_segment(parent);
         Ok(())
     }
-}
-
-// Schema helper for string or list of strings
-#[derive(JsonSchema)]
-#[allow(dead_code)]
-enum StringOrVecString {
-    String(String),
-    Vec(Vec<String>),
 }
 
 impl TagUser for PartialTaggedVariant<PartialIUPAC> {

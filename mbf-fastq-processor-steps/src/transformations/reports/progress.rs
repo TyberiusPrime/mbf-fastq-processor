@@ -111,7 +111,7 @@ impl Step for Progress {
                 crate::join_nonempty([output_prefix, output_infix.as_str()], output_ix_separator);
             self.filename = Some(output_directory.join(format!("{base}.progress")));
 
-            crate::output::ensure_output_destination_available(
+            mbf_fastq_processor_io::ensure_output_destination_available(
                 self.filename
                     .as_ref()
                     .expect("filename must be set when output_infix is provided"),

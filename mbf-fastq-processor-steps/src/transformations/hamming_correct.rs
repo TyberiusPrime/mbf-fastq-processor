@@ -128,7 +128,7 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
         } else {
             return Err(ValidationFailure::new(
                 "HammingCorrect step requires a barcodes section to be defined in the config.",
-                Some(&format!("See {}", crate::cli::link_docs("barcodes"))),
+                Some(&format!("See {}", crate::link_docs("barcodes"))),
             ));
         }
 

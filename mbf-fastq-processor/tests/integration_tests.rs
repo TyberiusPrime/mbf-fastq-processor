@@ -221,7 +221,10 @@ fn test_every_demultiplexed_data_transform_has_test() {
     // Step 1: Find all Rust files containing DemultiplexedData field declarations
     let mut files_with_demux = HashSet::new();
 
-    scan_dir(Path::new("src/transformations"), &mut files_with_demux);
+    scan_dir(
+        Path::new("../mbf-fastq-processor-steps/src/transformations"),
+        &mut files_with_demux,
+    );
 
     // Step 2: Extract public struct names from these files (excluding internal ones)
     let mut struct_names = HashSet::new();
@@ -250,9 +253,9 @@ fn test_every_demultiplexed_data_transform_has_test() {
     }
 
     // Step 3: Parse Transformation enum to map struct names to action names
-    let transformations_path = Path::new("src/transformations.rs");
-    let transformations_content =
-        fs::read_to_string(transformations_path).expect("Failed to read src/transformations.rs");
+    let transformations_path = Path::new("../mbf-fastq-processor-steps/src/transformations.rs");
+    let transformations_content = fs::read_to_string(transformations_path)
+        .expect("Failed to read ../mbf-fastq-processor-steps/src/transformations.rs");
 
     let mut struct_to_action: IndexMap<String, String> = IndexMap::new();
 

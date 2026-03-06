@@ -52,6 +52,7 @@ indexmap.workspace = true
     mbf-fastq-processor-dna = {path = "../mbf-fastq-processor-dna"}
     mbf-fastq-processor-config = {path = "../mbf-fastq-processor-config"}
     mbf-fastq-processor-io = {path = "../mbf-fastq-processor-io"}
+    mbf-fastq-processor-steps = {workspace = true}
 	sha2 = {workspace = true}
 	tempfile = {workspace = true}
 	toml = {workspace = true}

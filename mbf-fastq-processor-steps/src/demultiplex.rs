@@ -305,7 +305,10 @@ impl OptDemultiplex {
         for (tag, opt_filename) in filenames_in_order {
             if let Some(filename) = opt_filename {
                 let filename = output_directory.join(filename);
-                crate::output::ensure_output_destination_available(&filename, allow_overwrite)?;
+                mbf_fastq_processor_io::ensure_output_destination_available(
+                    &filename,
+                    allow_overwrite,
+                )?;
                 let file_handle = ex::fs::File::create(&filename).with_context(|| {
                     format!("Could not open output file: {}", filename.display())
                 })?;

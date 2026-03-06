@@ -1101,6 +1101,7 @@ dependencies = [
  "mbf-fastq-processor-config",
  "mbf-fastq-processor-dna",
  "mbf-fastq-processor-io",
+ "mbf-fastq-processor-steps",
  "memchr",
  "mutants 0.0.3",
  "niffler",
@@ -1174,6 +1175,47 @@ dependencies = [
  "sha2",
  "tempfile",
  "toml-pretty-deser",
+ "zstd",
+]
+
+[[package]]
+name = "mbf-fastq-processor-steps"
+version = "0.8.1"
+dependencies = [
+ "anyhow",
+ "bio",
+ "bstr",
+ "crossbeam",
+ "csv",
+ "enum_dispatch",
+ "ex",
+ "fasteval",
+ "flate2",
+ "gzp",
+ "indexmap",
+ "itertools 0.14.0",
+ "json_value_merge",
+ "mbf-fastq-processor-config",
+ "mbf-fastq-processor-dna",
+ "mbf-fastq-processor-io",
+ "memchr",
+ "mutants 0.0.3",
+ "noodles",
+ "rand 0.9.2",
+ "rand_chacha 0.9.0",
+ "regex",
+ "scalable_cuckoo_filter",
+ "schemars",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "toml",
+ "toml-pretty-deser",
+ "toml_edit",
+ "triple_accel",
+ "unicode-width",
+ "wait-timeout",
  "zstd",
 ]
 
@@ -2279,6 +2321,8 @@ dependencies = [
 [[package]]
 name = "toml-pretty-deser"
 version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d08bf0668d7e75ba4ae3c6db1e551089d16156d3cfb5bfe3da11a2bec78bc310"
 dependencies = [
  "codesnake",
  "indexmap",
@@ -2292,6 +2336,8 @@ dependencies = [
 [[package]]
 name = "toml-pretty-deser-macros"
 version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b7843ed429203e3af6c618193991fdf9c06e966adbcd189ac47383053d06fba9"
 dependencies = [
  "proc-macro2 1.0.103",
  "quote 1.0.42",

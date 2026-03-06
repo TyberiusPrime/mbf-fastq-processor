@@ -146,7 +146,7 @@ impl Step for Inspect {
         );
 
         let full_path = output_directory.join(format!("{base}.{format_suffix}"));
-        crate::output::ensure_output_destination_available(&full_path, allow_overwrite)?;
+        mbf_fastq_processor_io::ensure_output_destination_available(&full_path, allow_overwrite)?;
 
         let report_file = ex::fs::File::create(full_path)?;
         self.writer = Arc::new(Mutex::new(Some(DebugFile(report_file))));
