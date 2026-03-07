@@ -81,6 +81,8 @@
 	debug = 1
 
 
+# reduce to minimal necessary debug information in dev profile.
+# use debugging profile for full.
 [profile.dev]
 debug = "line-tables-only"
 
@@ -111,4 +113,9 @@ debug = false
 
 [profile.dev.build-override]
 opt-level = 3
+
+
+[profile.mutants]
+inherits = "test"
+debug = "none"
 

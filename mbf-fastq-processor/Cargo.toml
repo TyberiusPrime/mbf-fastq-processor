@@ -25,7 +25,7 @@ workspace = true
 	path = "src/lib.rs"
 
 
-[dependencies ]
+[dependencies]
 	allocation-counter = {workspace = true}
 	anyhow = {workspace = true}
 	bstr = {workspace = true}

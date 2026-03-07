@@ -6632,6 +6632,16 @@ fn test_cases_x_single_step_x_filter_x_other_file_by_tag() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_filter_x_other_file_by_tag_string_location() {
+    println!("Test case is in: test_cases/single_step/filter/other_file_by_tag_string_location");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/filter/other_file_by_tag_string_location"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_filter_x_qualified_bases_x_above() {
     println!("Test case is in: test_cases/single_step/filter/qualified_bases/above");
     run_test(

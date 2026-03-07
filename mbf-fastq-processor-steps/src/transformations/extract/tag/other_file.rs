@@ -292,10 +292,12 @@ impl Step for OtherFile {
                             .filter
                             .as_ref()
                             .expect("filter must be set during initialization");
-                        let query = tag_value
-                            .as_str(b"")
-                            .expect("Input tag value must be a string");
-                        filter.contains(&FragmentEntry(&[&query]))
+                        if let Some( query) = tag_value
+                            .as_str(b"") { // might be missing!
+                            filter.contains(&FragmentEntry(&[&query]))
+                        } else {
+                            false
+                        }
                     },
                 );
             }

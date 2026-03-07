@@ -33,5 +33,7 @@ We can compare reads based on sequencs, names, or extracted sequences (=string &
 by using [source]({{< relref "docs/concepts/source.md" >}}) concept.
 
 In name mode, our read's names are cut [input.options.read_name_end_character]({{< relref "docs/reference/input-section.md" >}})at 
-The other files read names are cut iff other_read_name_end_character is set.
+The other files read names are cut if other_read_name_end_character is set.
+
+In tag mode, missing tags are treated as 'not present in other file'. 
 

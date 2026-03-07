@@ -1,0 +1,26 @@
+[input]
+    read1 = 'input_read1.fq.zst'
+
+[[step]]
+  action = "ExtractRegex"
+  query = "[.](0{1,4}|1{1,4}|2{1,4}|3{1,4}|4{1,4}|5{1,4}|6{1,4}|7{1,4}|8{1,4}|9{1,4}) "
+  # first read in other file. if the query is present -> keep, I suppose
+  replacement = "AGACATCCCAGCAGACAGAAGCGCTCGGTGGAGAACACTGGCCCCATGGAGGACCACAACTGGCCACAGTACTTCAGAGACCCCTGTGACCCAAACCCTTGCCAGAATGAAGGCACCTGTGTGAACGTAAAGGGAATGGCCAGCTGCAGG"
+  segment = 'name:read1'
+  out_label = 'tag_seq_1'
+
+[[step]]
+    action = 'TagOtherFile'
+    source = 'tag:tag_seq_1'
+	out_label = "tag"
+    filename = 'input_ERR12828869_10k_1.head_500.fq'
+    false_positive_rate = 0
+    seed  = 42
+
+[[step]]
+	action = "FilterByTag"
+	in_label = "tag"
+    keep_or_remove = 'Keep'
+
+[output]
+    prefix = 'output'

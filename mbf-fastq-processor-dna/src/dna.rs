@@ -38,10 +38,6 @@ pub enum TagValue {
 }
 
 impl TagValue {
-    pub fn is_missing(&self) -> bool {
-        matches!(self, TagValue::Missing)
-    }
-
     pub fn truthy_val(&self) -> bool {
         match self {
             TagValue::Missing => false,
@@ -438,8 +434,8 @@ pub fn reverse_complement_iupac(input: &[u8]) -> Vec<u8> {
 
             b'R' => b'Y',
             b'Y' => b'R',
-            b'S' => b'S',
-            b'W' => b'W',
+            //b'S' => b'S',
+            //b'W' => b'W',
             b'K' => b'M',
             b'M' => b'K',
             b'B' => b'V',
@@ -449,8 +445,8 @@ pub fn reverse_complement_iupac(input: &[u8]) -> Vec<u8> {
 
             b'r' => b'y',
             b'y' => b'r',
-            b's' => b's',
-            b'w' => b'w',
+            //b's' => b's',
+            //b'w' => b'w',
             b'k' => b'm',
             b'm' => b'k',
             b'b' => b'v',
@@ -605,12 +601,15 @@ mod test {
     }
 
     #[test]
-    fn test_reverse_complement_upac() {
+    fn test_reverse_complement_uupac() {
         let input = b"AGCTRYSWKMNBVDH";
         let rev = super::reverse_complement_iupac(input);
         let rev_rev = super::reverse_complement_iupac(&rev);
+        let rev2 = super::reverse_complement_iupac(&input.to_ascii_lowercase());
+        let rev_rev2 = super::reverse_complement_iupac(&rev2);
 
         assert!(rev_rev == input);
+        assert!(rev_rev2 == input.to_ascii_lowercase());
         assert!(rev_rev != rev);
     }
 
@@ -782,6 +781,10 @@ mod test {
             super::find_iupac(b"AGTTC", b"AA", super::Anchor::Left, 1, SegmentIndex(1)),
             Some(super::Hits::new(0, 2, SegmentIndex(1), b"AG".into(),))
         );
+        assert_eq!(
+            super::find_iupac(b"AGTTC", b"AGTTN", super::Anchor::Left, 0, SegmentIndex(1)),
+            Some(super::Hits::new(0, 5, SegmentIndex(1), b"AGTTC".into(),))
+        );
     }
 
     #[test]
@@ -924,6 +927,31 @@ mod test {
             ),
             None
         );
+        //empty input
+        assert_eq!(
+            super::find_iupac_with_indel(
+                b"",
+                b"AGT",
+                super::Anchor::Anywhere,
+                0,
+                0,
+                None,
+                SegmentIndex(0),
+            ),
+            None
+        );
+        assert_eq!(
+            super::find_iupac_with_indel(
+                b"AG",
+                b"",
+                super::Anchor::Anywhere,
+                0,
+                0,
+                None,
+                SegmentIndex(0),
+            ),
+            None
+        );
     }
 
     use super::*;
@@ -1055,5 +1083,11 @@ mod test {
         assert_eq!(all_iupac(b"R"), true);
         assert_eq!(all_iupac(b"AGCTURYSWKMNBVDH"), true);
         assert_eq!(all_iupac(b"aGCTURYSWKMNBVDH"), false);
+    }
+
+    #[test]
+    #[should_panic(expected = "non iupac string passed to iupac_to_bases")]
+    fn test_iupac_to_bases_panics_on_non_iupac() {
+        iupac_to_bases(b'X');
     }
 }
