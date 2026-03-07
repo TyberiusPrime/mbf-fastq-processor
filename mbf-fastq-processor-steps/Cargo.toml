@@ -20,18 +20,13 @@ workspace = true
 anyhow = {workspace = true}
 bio = {workspace = true}
 bstr = {workspace = true}
-crossbeam = {workspace = true}
 csv = {workspace = true}
 enum_dispatch = {workspace = true}
 ex = {workspace = true}
 fasteval = {workspace = true}
-flate2 = {workspace = true}
-gzp = {workspace = true}
 indexmap = {workspace = true}
-json_value_merge = {workspace = true}
 memchr = {workspace = true}
 mutants = {workspace = true}
-noodles = {workspace = true}
 rand = {workspace = true}
 rand_chacha = {workspace = true}
 regex = {workspace = true}
@@ -39,16 +34,7 @@ scalable_cuckoo_filter = {workspace = true}
 schemars = {workspace = true}
 serde = {workspace = true}
 serde_json = {workspace = true}
-sha2 = {workspace = true}
-tempfile = {workspace = true}
-toml = {workspace = true}
-toml_edit = {workspace = true}
 toml-pretty-deser = {workspace = true}
-zstd = {workspace = true}
-triple_accel = "0.4.0"
-unicode-width = "0.2.2"
-itertools = "0.14.0"
-wait-timeout = "0.2"
 mbf-fastq-processor-config = {workspace = true}
 mbf-fastq-processor-dna = {workspace = true}
 mbf-fastq-processor-io = {workspace = true}

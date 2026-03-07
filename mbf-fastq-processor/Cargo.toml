@@ -26,51 +26,31 @@ workspace = true
 
 
 [dependencies ]
-	anyhow = {workspace = true}
 	allocation-counter = {workspace = true}
-	bio = {workspace = true}
-	clap = {workspace = true}
+	anyhow = {workspace = true}
+	bstr = {workspace = true}
 	clap_complete = {workspace = true}
+	clap = {workspace = true}
 	crossbeam = {workspace = true}
-	csv = {workspace = true}
-	enum_dispatch = {workspace = true}
-	fasteval = {workspace = true}
 	ex = {workspace = true}
 	flate2 = {workspace = true}
 	human-panic = {workspace = true}
-indexmap.workspace = true
+    indexmap = {workspace = true}
+    itertools = "0.14.0"
 	json_value_merge = {workspace = true}
-	memchr = {workspace = true}
-	niffler = {workspace = true}
-	noodles = {workspace = true}
-	rand = {workspace = true}
-	rand_chacha = {workspace = true}
-	regex = {workspace = true}
-	scalable_cuckoo_filter = {workspace = true}
-	serde = {workspace = true}
-	serde_json = {workspace = true}
-    mbf-fastq-processor-dna = {path = "../mbf-fastq-processor-dna"}
-    mbf-fastq-processor-config = {path = "../mbf-fastq-processor-config"}
     mbf-fastq-processor-io = {path = "../mbf-fastq-processor-io"}
     mbf-fastq-processor-steps = {workspace = true}
-	sha2 = {workspace = true}
-	tempfile = {workspace = true}
-	toml = {workspace = true}
-	toml_edit = {workspace = true}
-	zstd = {workspace = true}
-	bstr = {workspace = true}
-	toml-pretty-deser = {workspace = true}
-	log = {workspace = true}
-	schemars = {workspace = true}
-	libc = {workspace = true}
-	num_cpus = {workspace = true}
-	gzp = {workspace = true}
 	mutants = {workspace = true}
-    triple_accel = "0.4.0"
+	niffler = {workspace = true}
+	noodles = {workspace = true}
+	regex = {workspace = true}
+	schemars = {workspace = true}
+	serde_json = {workspace = true}
+	tempfile = {workspace = true}
+	toml_edit = {workspace = true}
+	toml-pretty-deser = {workspace = true}
+	toml = {workspace = true}
 	wait-timeout = "0.2"
-    unicode-width = "0.2.2"
-    itertools = "0.14.0"
-
 [dev-dependencies]
 	##function_name="0.3.0"
 	walkdir = "2.5.0"

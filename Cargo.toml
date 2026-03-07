@@ -81,7 +81,16 @@
 	debug = 1
 
 
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.debugging]
+inherits = "dev"
+debug = true
+
+
 [profile.dev.package."*"]
+     debug = false
 	opt-level = 3
 
 [profile.dev.package.toml-pretty-deser]
