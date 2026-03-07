@@ -92,6 +92,14 @@ debug = false
 opt-level = 3
 debug = false
 
+[profile.dev.package.schemars]
+opt-level = 3
+debug = false
+
+[profile.dev.package.schemars_derive]
+opt-level = 3
+debug = false
+
 [profile.dev.build-override]
 opt-level = 3
 
