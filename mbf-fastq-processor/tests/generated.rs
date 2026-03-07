@@ -6622,6 +6622,16 @@ fn test_cases_x_single_step_x_filter_x_other_file_by_seq_x_remove_bam_unmapped_o
 }
 
 #[test]
+fn test_cases_x_single_step_x_filter_x_other_file_by_tag() {
+    println!("Test case is in: test_cases/single_step/filter/other_file_by_tag");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/filter/other_file_by_tag"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_filter_x_qualified_bases_x_above() {
     println!("Test case is in: test_cases/single_step/filter/qualified_bases/above");
     run_test(

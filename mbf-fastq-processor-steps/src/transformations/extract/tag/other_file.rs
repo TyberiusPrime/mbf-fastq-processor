@@ -117,8 +117,10 @@ impl TagUser for PartialTaggedVariant<PartialOtherFile> {
             .toml_value
             .as_mut()
             .expect("get_tag_usage should only be called after successful verification");
+        let used_tags = inner.source.to_used_tags();
         TagUsageInfo {
             declared_tag: inner.out_label.to_declared_tag(TagValueType::Bool),
+            used_tags,
             ..Default::default()
         }
     }
@@ -283,8 +285,8 @@ impl Step for OtherFile {
             ResolvedSourceNoAll::Tag(tag) => {
                 extract_bool_tags_from_tag(
                     &mut block,
-                    tag,
                     &self.out_label,
+                    tag,
                     |tag_value, _ignored_demultiplex_tag| {
                         let filter = self
                             .filter

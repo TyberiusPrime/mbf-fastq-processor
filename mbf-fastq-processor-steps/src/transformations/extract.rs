@@ -123,7 +123,7 @@ pub(crate) fn extract_bool_tags_plus_all<F, G>(
 
 pub(crate) fn extract_bool_tags_from_tag<F>(
     block: &mut FastQBlocksCombined,
-    label: &TagLabel,
+    out_label: &TagLabel,
     input_label: &TagLabel,
     mut extractor: F,
 ) where
@@ -144,5 +144,5 @@ pub(crate) fn extract_bool_tags_from_tag<F>(
         values.push(TagValue::Bool(extractor(tag_value, output_tag)));
     }
 
-    block.tags.insert(label.clone(), values);
+    block.tags.insert(out_label.clone(), values);
 }
