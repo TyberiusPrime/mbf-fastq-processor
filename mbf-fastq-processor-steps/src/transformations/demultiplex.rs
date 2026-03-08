@@ -32,13 +32,6 @@ impl VerifyIn<PartialConfig> for PartialDemultiplex {
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {
-        self.in_label.verify(|v| {
-            if v.0.is_empty() {
-                Err(ValidationFailure::new("Must not be empty", None))
-            } else {
-                Ok(())
-            }
-        });
         if let Some(Some(barcodes_name)) = self.barcodes.as_ref() {
             if let Some(Some(barcodes)) = parent.barcodes.value.as_ref() {
                 //error sections are

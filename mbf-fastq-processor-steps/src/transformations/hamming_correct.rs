@@ -14,7 +14,7 @@ pub struct HammingCorrect {
     /// Output tag to store corrected result
     pub out_label: TagLabel,
     /// Reference to barcodes section
-    pub barcodes: String,
+    pub barcodes: TagLabel,
     /// Maximum hamming distance for correction
     pub max_hamming_distance: u8,
     /// What to do when no match is found
@@ -37,27 +37,6 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {
-        self.in_label.verify(|v| {
-            if v.is_empty() {
-                Err(ValidationFailure::new("Must not be empty", None))
-            } else {
-                Ok(())
-            }
-        });
-        self.out_label.verify(|v| {
-            if v.is_empty() {
-                Err(ValidationFailure::new("Must not be empty", None))
-            } else {
-                Ok(())
-            }
-        });
-        self.barcodes.verify(|v| {
-            if v.is_empty() {
-                Err(ValidationFailure::new("Must not be empty", None))
-            } else {
-                Ok(())
-            }
-        });
         if let Some(out_label) = self.out_label.as_ref()
             && let Some(in_label) = self.in_label.as_ref()
             && out_label == in_label
@@ -86,7 +65,7 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
             && let Some(barcode_data) = parent.barcodes.as_ref()
             && let Some(barcodes_data) = barcode_data
         {
-            match barcodes_data.map.get(barcodes_to_use.as_str()) {
+            match barcodes_data.map.get(barcodes_to_use) {
                 Some(barcodes_section) => {
                     let barcodes_section: IndexMap<BString, String> = barcodes_section
                         .as_ref()
@@ -112,13 +91,14 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
                 }
                 None => {
                     self.barcodes.help = Some(offer_alternatives(
-                        barcodes_to_use,
+                        &barcodes_to_use.0,
                         &barcodes_data.map.keys().collect::<Vec<_>>(),
                     ));
 
                     self.barcodes.state = TomlValueState::ValidationFailed {
                         message: "Barcodes section not found".to_string(),
                     };
+                    return Ok(());
                 }
             }
             assert!(

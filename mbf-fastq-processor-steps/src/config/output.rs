@@ -97,19 +97,7 @@ impl VerifyIn<super::PartialConfig> for PartialOutput {
         self.ix_separator.or_with(default_ix_separator);
 
         if let Some(Some(_level)) = self.compression_level.value {
-            if self
-                .compression
-                .as_ref()
-                .is_some_and(CompressionFormat::is_compressed)
-            {
-                validate_compression_level_u8(&self.compression, &mut self.compression_level);
-            } else {
-                self.compression_level.state = TomlValueState::ValidationFailed {
-                    message: "Invalid when compression='uncompressed'".to_string(),
-                };
-                self.compression_level.help = Some(
-                "Either remove the compression_lever parameter, or set the compression to 'Gzip'/'Zstd'".to_string());
-            }
+            validate_compression_level_u8(&self.compression, &mut self.compression_level);
         }
         self.verify_compression_and_stdout();
 
@@ -346,13 +334,15 @@ pub fn validate_compression_level_u8(
 ) {
     if let Some(Some(level)) = compression_level.as_ref() {
         match compression.as_ref() {
+            None |
             Some(CompressionFormat::Uncompressed) => {
                 if *level != 0 {
                     compression_level.state = TomlValueState::ValidationFailed {
-                        message: "Compression level {level} specified for uncompressed output"
-                            .to_string(),
+                        message: "Compression level specified for uncompressed output".to_string(),
                     };
-                    compression_level.help = Some("Remove compression_level".to_string());
+                    compression_level.help = Some(
+                        "Remove compression_level, or set compressed='gzip' or 'zstd'".to_string(),
+                    );
                 }
             }
             Some(CompressionFormat::Gzip) => {
@@ -370,9 +360,6 @@ pub fn validate_compression_level_u8(
                     };
                     compression_level.help = Some("Valid range is 1-22 for zstd.".to_string());
                 }
-            }
-            None => {
-                //nothing to verify, compression not set
             }
         }
     } else {

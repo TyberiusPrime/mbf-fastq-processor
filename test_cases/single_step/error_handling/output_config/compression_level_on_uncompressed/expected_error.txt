@@ -1,0 +1,12 @@
+Error 1/1
+  ╭─config.toml
+  ┆
+4 │ [output]
+5 │ 	prefix = 'output'
+6 │     compression = "uncompressed"
+7 │     compression_level = 33
+  ┆                         ─┬
+  ┆                          │
+  ┆                          ╰─ Compression level specified for uncompressed output
+──╯
+Hint: Remove compression_level, or set compressed='gzip' or 'zstd'

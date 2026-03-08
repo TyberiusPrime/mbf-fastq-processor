@@ -63,27 +63,13 @@ impl VerifyIn<PartialConfig> for PartialConcatTags {
             let mut seen = std::collections::HashSet::new();
             for label in v.iter_mut() {
                 let lv = label.value.as_ref().expect("Parent was ok?");
-                if lv.is_empty() {
-                    label.state = TomlValueState::ValidationFailed {
-                        message: "Must not be empty".to_string(),
-                    };
-                } else if !seen.insert(lv) {
+                if !seen.insert(lv) {
                     label.state = TomlValueState::ValidationFailed {
                         message: "Duplicate input label".to_string(),
                     };
                 }
             }
             Ok(())
-        });
-        self.out_label.verify(|v| {
-            if v.is_empty() {
-                Err(ValidationFailure::new(
-                    "Output label must not be empty",
-                    None,
-                ))
-            } else {
-                Ok(())
-            }
         });
 
         Ok(())

@@ -23,13 +23,6 @@ impl VerifyIn<PartialConfig> for PartialByNumericTag {
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {
-        self.in_label.verify(|v| {
-            if v.0.is_empty() {
-                Err(ValidationFailure::new("Must not be empty", None))
-            } else {
-                Ok(())
-            }
-        });
         //since options are not 'missing'
         if let Some(None) = self.min_value.value
             && let Some(None) = self.max_value.value

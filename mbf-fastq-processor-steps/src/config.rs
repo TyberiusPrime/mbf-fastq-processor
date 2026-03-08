@@ -580,7 +580,6 @@ impl PartialConfig {
         }
     }
 
-
     fn verify_barcodes_and_segment_names_disjoint(&mut self) {
         let mut segment_names = IndexMap::new();
 
@@ -1320,19 +1319,16 @@ impl Config {
 
     fn inner_check(mut self, check_input_files_exist: bool) -> Result<CheckedConfig> {
         let mut errors = Vec::new();
-        let mut stages = None;
 
         //no point in checking them if segment definition is broken
-        //self.check_output(&mut errors);
-        if errors.is_empty() {
-            let stages_ = self.check_transformations(&mut errors);
-            //self.transfrom is now empty, the trafos have been expanded into stepsk.
-            assert!(self.transform.is_empty());
-            if check_input_files_exist {
-                let input_formats_observed = self.check_input_format(&mut errors);
-                self.configure_multithreading(&input_formats_observed);
-            }
-            stages = Some(stages_);
+        let stages = self.transforms_to_stages();
+        //self.transform is now empty, the trafos have been expanded into steps.
+        assert!(self.transform.is_empty());
+        if check_input_files_exist {
+            //todo :if we figure out a way to have VerifyIn do this only
+            // when requested, we could have better error messages.
+            let input_formats_observed = self.check_input_format(&mut errors);
+            self.configure_multithreading(&input_formats_observed);
         }
 
         // Return collected errors if any
@@ -1349,7 +1345,7 @@ impl Config {
         Ok(CheckedConfig {
             input: self.input,
             output: self.output,
-            stages: stages.expect("Set above"),
+            stages: stages,
             options: self.options,
             barcodes: self.barcodes.unwrap_or_default(),
             benchmark: self.benchmark,
@@ -1499,7 +1495,7 @@ impl Config {
     }
 
     #[allow(clippy::too_many_lines)]
-    fn check_transformations(&mut self, _errors: &mut Vec<anyhow::Error>) -> Vec<Stage> {
+    fn transforms_to_stages(&mut self) -> Vec<Stage> {
         let allowed_tags_per_stage = self.allowed_tags_per_transformation.clone();
 
         let stages: Vec<Stage> = self
@@ -1547,8 +1543,8 @@ impl Config {
         if self.input.options.threads_per_segment.expect("Set before") == 1
             // if user requests an index, run rapidgzip anyway
             && !self.input.options.build_rapidgzip_index.unwrap_or(false)
-            // // if the user explicitly requested rapidgzip, then do don't disable it.
-            // && self.input.options.use_rapidgzip != Some(true)
+        // // if the user explicitly requested rapidgzip, then do don't disable it.
+        // && self.input.options.use_rapidgzip != Some(true)
         {
             // otherwise, we can fall back
             self.input.options.use_rapidgzip = false;

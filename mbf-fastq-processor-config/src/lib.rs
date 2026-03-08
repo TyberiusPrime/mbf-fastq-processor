@@ -348,13 +348,6 @@ pub fn tpd_adapt_extract_base_or_dot(mut input: TomlValue<String>) -> TomlValue<
 #[schemars(with = "String")]
 pub struct TagLabel(pub String);
 
-impl TagLabel {
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-}
-
 impl fmt::Display for TagLabel {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
@@ -418,25 +411,6 @@ impl ToUsedTag for TomlValue<TagLabel> {
             toml_source: Rc::new(RefCell::new((&mut self.state, &mut self.help))),
             further_help: None,
         })
-    }
-}
-
-impl ToUsedTag for TomlValue<Option<TagLabel>> {
-    fn to_used_tag<'a>(
-        &'a mut self,
-        accepted_tag_types: &'a [TagValueType],
-    ) -> Option<UsedTag<'a>> {
-        let name = self.as_ref().expect("parent was ok?").as_ref();
-        if let Some(name) = name {
-            Some(UsedTag {
-                name: name.clone(),
-                accepted_tag_types,
-                toml_source: Rc::new(RefCell::new((&mut self.state, &mut self.help))),
-                further_help: None,
-            })
-        } else {
-            None
-        }
     }
 }
 

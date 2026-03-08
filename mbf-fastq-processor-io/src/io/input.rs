@@ -152,10 +152,7 @@ impl InputFile {
         thread_count: ThreadCount,
         options: &crate::io::input::InputOptions,
     ) -> Result<Box<dyn parsers::Parser>> {
-        let decompression_options = if options
-            .use_rapidgzip
-            && self.get_filename().is_some()
-        {
+        let decompression_options = if options.use_rapidgzip && self.get_filename().is_some() {
             DecompressionOptions::Rapidgzip {
                 thread_count,
                 index_gzip: options.build_rapidgzip_index.unwrap_or(false),

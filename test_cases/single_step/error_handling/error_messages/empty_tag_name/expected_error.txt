@@ -1,0 +1,10 @@
+4 │ [[step]]
+5 │     action = 'EvalExpression'
+  ┆              ────────┬───────
+  ┆                      │
+  ┆                      ╰──────── In this step
+6 │     out_label = ''
+  ┆                 ─┬
+  ┆                  │
+  ┆                  ╰─ Invalid label
+──╯

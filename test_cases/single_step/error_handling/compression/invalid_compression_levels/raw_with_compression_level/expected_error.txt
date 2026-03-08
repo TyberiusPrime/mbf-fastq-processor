@@ -1,4 +1,3 @@
-Error Details ==
 Error 1/1
   ╭─config.toml
   ┆
@@ -7,7 +6,6 @@ Error 1/1
 6 │     compression_level = 5
   ┆                         ┬
   ┆                         │
-  ┆                         ╰─ Invalid when compression='uncompressed'
+  ┆                         ╰─ Compression level specified for uncompressed output
 ──╯
-Hint: Either remove the compression_lever parameter, or set the compression to 'Gzip'/'Zstd'
-
+Hint: Remove compression_level, or set compressed='gzip' or 'zstd'

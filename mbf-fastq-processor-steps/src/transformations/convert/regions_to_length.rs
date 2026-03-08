@@ -21,20 +21,6 @@ impl VerifyIn<PartialConfig> for PartialRegionsToLength {
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {
-        self.out_label.verify(|v| {
-            if v.0.is_empty() {
-                Err(ValidationFailure::new("Must not be empty", None))
-            } else {
-                Ok(())
-            }
-        });
-        self.in_label.verify(|v| {
-            if v.0.is_empty() {
-                Err(ValidationFailure::new("Must not be empty", None))
-            } else {
-                Ok(())
-            }
-        });
         if let Some(out) = self.out_label.as_ref()
             && let Some(in_) = self.in_label.as_ref()
             && out == in_

@@ -2488,6 +2488,20 @@ fn test_cases_x_single_step_x_error_handling_x_error_messages_x_barcodes_as_list
 }
 
 #[test]
+fn test_cases_x_single_step_x_error_handling_x_error_messages_x_empty_tag_name() {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/error_messages/empty_tag_name"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/error_handling/error_messages/empty_tag_name",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_error_handling_x_error_messages_x_no_source_on_source_all() {
     println!(
         "Test case is in: test_cases/single_step/error_handling/error_messages/no_source_on_source_all"
@@ -4131,6 +4145,20 @@ fn test_cases_x_single_step_x_error_handling_x_output_config_x_barcode_outputs_n
     run_test(
         std::path::Path::new(
             "../test_cases/single_step/error_handling/output_config/barcode_outputs_not_named_no_barcode",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_output_config_x_compression_level_on_uncompressed() {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/output_config/compression_level_on_uncompressed"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/error_handling/output_config/compression_level_on_uncompressed",
         ),
         "input.toml",
         1,
@@ -6706,6 +6734,16 @@ fn test_cases_x_single_step_x_filter_x_too_many_n_x_segments_vs_all() {
     println!("Test case is in: test_cases/single_step/filter/too_many_n/segments_vs_all");
     run_test(
         std::path::Path::new("../test_cases/single_step/filter/too_many_n/segments_vs_all"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_hamming_x_barcodes_not_found() {
+    println!("Test case is in: test_cases/single_step/hamming/barcodes_not_found");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/hamming/barcodes_not_found"),
         "input.toml",
         1,
     );

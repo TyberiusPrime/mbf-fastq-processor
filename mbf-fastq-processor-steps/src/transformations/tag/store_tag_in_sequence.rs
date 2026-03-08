@@ -23,13 +23,6 @@ impl VerifyIn<PartialConfig> for PartialStoreTagInSequence {
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {
-        self.in_label.verify(|v| {
-            if v.is_empty() {
-                Err(ValidationFailure::new("Must not be empty", None))
-            } else {
-                Ok(())
-            }
-        });
         Ok(())
     }
 }
