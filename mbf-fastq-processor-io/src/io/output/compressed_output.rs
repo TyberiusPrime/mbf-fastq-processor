@@ -88,6 +88,7 @@ impl<T: Write> Write for FailForTestWriter<T> {
         }
     }
 
+    #[mutants::skip]
     fn flush(&mut self) -> io::Result<()> {
         self.inner.flush()
     }

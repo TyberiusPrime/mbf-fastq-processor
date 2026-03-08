@@ -67,6 +67,7 @@ impl ResolvedSourceNoAll {
         }
     }
 }
+
 impl ToUsedTags for TomlValue<MustAdapt<String, ResolvedSourceNoAll>> {
     fn to_used_tags(&mut self) -> Vec<Option<UsedTag<'_>>> {
         let resolved = self
