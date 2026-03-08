@@ -45,12 +45,39 @@ pub struct InputOptions {
     pub read_comment_character: u8,
 
     #[serde(skip_serializing)]
-    pub use_rapidgzip: Option<bool>,
+    pub use_rapidgzip: bool,
 
     #[serde(skip_serializing)]
     pub build_rapidgzip_index: Option<bool>,
 
     pub threads_per_segment: Option<usize>,
+}
+
+impl PartialInputOptions {
+    /// Enable/disable rapidgzip. defaults to enabled if we can find the binary.
+    fn configure_rapid_gzip(&mut self) {
+        use crate::io::input::find_rapidgzip_in_path;
+        match &self.use_rapidgzip.state {
+            TomlValueState::Missing { .. } => {
+                // auto detect
+                self.use_rapidgzip.state = TomlValueState::Ok;
+                self.use_rapidgzip.value = Some(find_rapidgzip_in_path().is_some());
+            }
+            TomlValueState::Ok => {
+                if *self.use_rapidgzip.value.as_ref().expect("State was ok") {
+                    if find_rapidgzip_in_path().is_none() {
+                        self.use_rapidgzip.state = TomlValueState::ValidationFailed {
+                            message: "rapidgzip requested but not found in PATH".to_string(),
+                        };
+                        self.use_rapidgzip.help = Some(
+                                "Make sure you have a rapidgzip binary on your path, or set use_rapidgzip to false (or leave off for auto-detect).".to_string(),
+                            );
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
 }
 
 impl<R> VerifyIn<R> for PartialInputOptions {
@@ -79,9 +106,10 @@ impl<R> VerifyIn<R> for PartialInputOptions {
         self.read_comment_character
             .or_with(default_comment_insert_char);
 
+        self.configure_rapid_gzip();
         // Validate index_gzip option
         if let Some(Some(true)) = self.build_rapidgzip_index.as_ref()
-            && let Some(Some(false)) = self.use_rapidgzip.as_ref()
+            && let Some(false) = self.use_rapidgzip.as_ref()
         {
             self.build_rapidgzip_index.state = TomlValueState::ValidationFailed {
                 message: "Only accepted when use_rapidgzip is set to true".to_string(),
@@ -101,7 +129,7 @@ impl Default for InputOptions {
             bam_include_mapped: None,
             bam_include_unmapped: None,
             read_comment_character: default_comment_insert_char(),
-            use_rapidgzip: None,
+            use_rapidgzip: false,
             build_rapidgzip_index: None,
             threads_per_segment: None,
         }
@@ -126,7 +154,6 @@ impl InputFile {
     ) -> Result<Box<dyn parsers::Parser>> {
         let decompression_options = if options
             .use_rapidgzip
-            .expect("Config.check should have set use_rapidgzip no matter what")
             && self.get_filename().is_some()
         {
             DecompressionOptions::Rapidgzip {

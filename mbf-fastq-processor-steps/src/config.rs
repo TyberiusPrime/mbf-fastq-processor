@@ -194,7 +194,6 @@ impl VerifyIn<TPDRoot> for PartialConfig {
         self.verify_benchmark_molecule_count();
         self.disable_output_on_benchmark();
         self.verify_for_any_output();
-        self.configure_rapid_gzip();
         self.verify_head_rapidgzip_conflict();
         self.expand_transformations();
         self.verify_transformation_labels();
@@ -581,30 +580,6 @@ impl PartialConfig {
         }
     }
 
-    /// Enable/disable rapidgzip. defaults to enabled if we can find the binary.
-    fn configure_rapid_gzip(&mut self) {
-        use mbf_fastq_processor_io::io::input::find_rapidgzip_in_path;
-        if let Some(input) = self.input.as_mut()
-            && let Some(options) = input.options.as_mut()
-        {
-            options.use_rapidgzip.value = match options.use_rapidgzip.as_ref() {
-                Some(Some(true)) => {
-                    if find_rapidgzip_in_path().is_none() {
-                        options.use_rapidgzip.state = TomlValueState::ValidationFailed {
-                            message: "rapidgzip requested but not found in PATH".to_string(),
-                        };
-                        options.use_rapidgzip.help = Some(
-                            "Make sure you have a rapidgzip binary on your path, or set use_rapidgzip to false (or leave off for auto-detect).".to_string(),
-                        );
-                    }
-                    Some(Some(true))
-                }
-                Some(Some(false)) => Some(Some(false)),
-                Some(None) => Some(Some(find_rapidgzip_in_path().is_some())),
-                None => None, //other error
-            }
-        }
-    }
 
     fn verify_barcodes_and_segment_names_disjoint(&mut self) {
         let mut segment_names = IndexMap::new();
@@ -1370,10 +1345,6 @@ impl Config {
                 .join("\n\n---------\n\n");
             bail!("Multiple errors occurred:\n\n{combined_error}");
         }
-        assert!(
-            self.input.options.use_rapidgzip.is_some(),
-            "use_rapidgzip should have been set during check_input_segment_definitions"
-        );
 
         Ok(CheckedConfig {
             input: self.input,
@@ -1576,11 +1547,11 @@ impl Config {
         if self.input.options.threads_per_segment.expect("Set before") == 1
             // if user requests an index, run rapidgzip anyway
             && !self.input.options.build_rapidgzip_index.unwrap_or(false)
-            // if the user explicitly requested rapidgzip, then do don't disable it.
-            && self.input.options.use_rapidgzip != Some(true)
+            // // if the user explicitly requested rapidgzip, then do don't disable it.
+            // && self.input.options.use_rapidgzip != Some(true)
         {
             // otherwise, we can fall back
-            self.input.options.use_rapidgzip = Some(false);
+            self.input.options.use_rapidgzip = false;
         }
     }
 }
