@@ -22,6 +22,7 @@ pub(crate) use crate::demultiplex::{
 pub(crate) use anyhow::{Context, Result, anyhow, bail};
 pub(crate) use mbf_fastq_processor_io::io::{
     FastQBlocksCombined, output::compressed_output::OutputWriter, reads::NewLocation,
+    reads::WrappedFastQReadCommon,
 };
 
 pub(crate) use bstr::{BStr, BString};

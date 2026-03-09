@@ -3,7 +3,7 @@
 use bstr::BString;
 use enum_dispatch::enum_dispatch;
 use indexmap::IndexMap;
-use mbf_fastq_processor_io::io::FastQBlocksCombined;
+use mbf_fastq_processor_io::io::{FastQBlocksCombined, reads::WrappedFastQReadCommon};
 use prelude::TagMetadata;
 use schemars::JsonSchema;
 use toml_pretty_deser::prelude::*;

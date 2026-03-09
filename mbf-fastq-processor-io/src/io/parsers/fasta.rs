@@ -114,7 +114,7 @@ impl Parser for FastaParser {
                     ),
                 };
             let seq = record.seq();
-            if qual.len() < seq.len() {
+            if qual.len() < seq.len() { //mutant false positive, <= isn't harmful, just tad slower
                 qual.resize(seq.len(), self.fake_quality_char);
             }
             let read = FastQRead::new(

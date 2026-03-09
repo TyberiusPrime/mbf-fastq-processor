@@ -162,7 +162,9 @@ impl ChainedParser {
                     self.expected_read_count = next_power_of_two;
                 }
                 None => {
+                    //this happens for non-bam files!
                     let reads_so_far = res.fastq_block.entries.len();
+                    assert!(reads_so_far > 0, "First block done, but no reads read???");
                     if reads_so_far > 0 {
                         //sheer paranoia, but downstream has to cope with this being
                         //unknown anyway for non-file inputs
@@ -190,7 +192,7 @@ impl ChainedParser {
                                 expected_reads
                             ); */
                         }
-                    }
+                    } 
                 }
             }
         }
@@ -202,13 +204,13 @@ impl ChainedParser {
             }
         }
 
-        if res.fastq_block.entries.is_empty() && !res.was_final {
-            // This happens when there's an empty file (which must have been  BAM)
-            // in the sequence (other file formats would be truly empty files
-            // and then niffler would complain because they are less than 5 bytes long
-            // or if for some reason (zst?)
-            // we check teh empty bam file thing in the bam parser
-        }
+        // if res.fastq_block.entries.is_empty() && !res.was_final {
+        //     // This happens when there's an empty file (which must have been  BAM)
+        //     // in the sequence (other file formats would be truly empty files
+        //     // and then niffler would complain because they are less than 5 bytes long
+        //     // or if for some reason (zst?)
+        //     // we check the empty bam file thing in the bam parser
+        // }
         Ok(ChainParseResult {
             fastq_block: res.fastq_block,
             was_final: res.was_final,

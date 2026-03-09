@@ -759,17 +759,20 @@ impl std::fmt::Debug for WrappedFastQReadMut<'_> {
     }
 }
 
-impl WrappedFastQRead<'_> {
+pub trait WrappedFastQReadCommon {
     #[must_use]
-    pub fn name(&self) -> &[u8] {
-        self.0.name.get(self.1)
-    }
+    fn name(&self) -> &[u8];
+
+    #[must_use]
+    fn seq(&self) -> &[u8];
+    #[must_use]
+    fn qual(&self) -> &[u8];
 
     //get only the name part (up to the first read_comment_insert_char, or in full
     //if note is present)
     #[must_use]
-    pub fn name_without_comment(&self, read_comment_insert_char: u8) -> &[u8] {
-        let full = self.0.name.get(self.1);
+    fn name_without_comment(&self, read_comment_insert_char: u8) -> &[u8] {
+        let full = self.name();
         let pos_of_first_space = full.iter().position(|&x| x == read_comment_insert_char);
         match pos_of_first_space {
             Some(pos) => &full[..pos],
@@ -780,9 +783,9 @@ impl WrappedFastQRead<'_> {
     /// get only the comment (without `read_comment_insert_char`)
     /// or None if not present
     #[must_use]
-    pub fn name_only_comment(&self, read_comment_insert_char: u8) -> Option<&[u8]> {
+    fn name_only_comment(&self, read_comment_insert_char: u8) -> Option<&[u8]> {
         //read comment character to a top level input (i suppose) and have them use this
-        let full = self.0.name.get(self.1);
+        let full = self.name();
         let pos_of_first_space = full.iter().position(|&x| x == read_comment_insert_char);
         match pos_of_first_space {
             Some(pos) => Some(&full[pos + 1..]),
@@ -791,28 +794,19 @@ impl WrappedFastQRead<'_> {
     }
 
     #[must_use]
-    pub fn seq(&self) -> &[u8] {
-        self.0.seq.get(self.1)
+    fn len(&self) -> usize {
+        self.seq().len()
     }
 
     #[must_use]
-    pub fn len(&self) -> usize {
-        self.0.seq.len()
+    fn is_empty(&self) -> bool {
+        self.seq().is_empty()
     }
 
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.0.seq.is_empty()
-    }
-
-    #[must_use]
-    pub fn qual(&self) -> &[u8] {
-        self.0.qual.get(self.1)
-    }
-    pub fn append_as_fastq(&self, out: &mut Vec<u8>) {
-        let name = self.0.name.get(self.1);
-        let seq = self.0.seq.get(self.1);
-        let qual = self.0.qual.get(self.1);
+    fn append_as_fastq(&self, out: &mut Vec<u8>) {
+        let name = self.name();
+        let seq = self.seq();
+        let qual = self.qual();
         out.push(b'@');
 
         out.extend(name);
@@ -825,9 +819,9 @@ impl WrappedFastQRead<'_> {
         out.push(b'\n');
     }
 
-    pub fn as_fasta(&self, out: &mut Vec<u8>) {
-        let name = self.0.name.get(self.1);
-        let seq = self.0.seq.get(self.1);
+    fn as_fasta(&self, out: &mut Vec<u8>) {
+        let name = self.name();
+        let seq = self.seq();
         out.push(b'>');
         out.extend(name);
         out.push(b'\n');
@@ -836,19 +830,19 @@ impl WrappedFastQRead<'_> {
     }
 
     #[must_use]
-    pub fn find_iupac(
+    fn find_iupac(
         &self,
         query: &[u8],
         anchor: Anchor,
         max_mismatches: u8,
         target: SegmentIndex,
     ) -> Option<Hits> {
-        let seq = self.0.seq.get(self.1);
+        let seq = self.seq();
         find_iupac(seq, query, anchor, max_mismatches, target)
     }
 
     #[must_use]
-    pub fn find_iupac_with_indel(
+    fn find_iupac_with_indel(
         &self,
         query: &[u8],
         anchor: Anchor,
@@ -857,7 +851,7 @@ impl WrappedFastQRead<'_> {
         max_total_edits: Option<usize>,
         target: SegmentIndex,
     ) -> Option<Hits> {
-        let seq = self.0.seq.get(self.1);
+        let seq = self.seq();
         find_iupac_with_indel(
             seq,
             query,
@@ -878,80 +872,40 @@ impl WrappedFastQRead<'_> {
     // }
 }
 
-impl WrappedFastQReadMut<'_> {
-    #[must_use]
-    pub fn name(&self) -> &[u8] {
+impl WrappedFastQReadCommon for WrappedFastQRead<'_> {
+    fn name(&self) -> &[u8] {
         self.0.name.get(self.1)
     }
-    //
-    //get only the name part (up to the first read_comment_insert_char, or in full
-    //if note is present)
-    #[must_use]
-    pub fn name_without_comment(&self, read_comment_insert_char: u8) -> &[u8] {
-        let full = self.0.name.get(self.1);
-        let pos_of_first_space = full.iter().position(|&x| x == read_comment_insert_char);
-        match pos_of_first_space {
-            Some(pos) => &full[..pos],
-            None => full,
-        }
-    }
-
-    /// get only the comment (without `read_comment_insert_char`)
-    /// or None if not present
-    #[must_use]
-    pub fn name_only_comment(&self, read_comment_insert_char: u8) -> Option<&[u8]> {
-        //read comment character to a top level input (i suppose) and have them use this
-        let full = self.0.name.get(self.1);
-        let pos_of_first_space = full.iter().position(|&x| x == read_comment_insert_char);
-        match pos_of_first_space {
-            Some(pos) => Some(&full[pos + 1..]),
-            None => None,
-        }
-    }
-
-    #[must_use]
-    pub fn seq(&self) -> &[u8] {
+    fn seq(&self) -> &[u8] {
         self.0.seq.get(self.1)
     }
-
-    // #[must_use]
-    // pub fn len(&self) -> usize {
-    //     self.0.seq.len()
-    // }
-    //
-    // #[must_use]
-    // pub fn is_empty(&self) -> bool {
-    //     self.0.seq.len() == 0
-    // }
-
-    #[must_use]
-    pub fn seq_mut(&mut self) -> &mut [u8] {
-        self.0.seq.get_mut(self.1)
-    }
-
-    #[must_use]
-    pub fn qual(&self) -> &[u8] {
+    fn qual(&self) -> &[u8] {
         self.0.qual.get(self.1)
     }
+}
 
-    /* pub fn name_mut(&mut self) -> &mut [u8] {
-        self.0.name.get_mut(self.1)
+impl WrappedFastQReadCommon for WrappedFastQReadMut<'_> {
+    fn name(&self) -> &[u8] {
+        self.0.name.get(self.1)
     }
+    fn seq(&self) -> &[u8] {
+        self.0.seq.get(self.1)
+    }
+    fn qual(&self) -> &[u8] {
+        self.0.qual.get(self.1)
+    }
+}
+
+impl WrappedFastQReadMut<'_> {
+ 
+    #[must_use]
     pub fn seq_mut(&mut self) -> &mut [u8] {
         self.0.seq.get_mut(self.1)
     }
-
-    pub fn qual_mut(&mut self) -> &mut [u8] {
-        self.0.seq.get_mut(self.1)
-    } */
 
     pub fn cut_start(&mut self, n: usize) {
         self.0.cut_start(n);
     }
-
-    // pub fn cut_end(&mut self, n: usize) {
-    //     self.0.cut_end(n);
-    // }
 
     pub fn max_len(&mut self, n: usize) {
         self.0.max_len(n);
@@ -1250,10 +1204,11 @@ impl FastQBlocksCombined {
         self.segments[0].entries.len()
     }
 
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.segments[0].entries.is_empty()
-    }
+    // #[must_use] //todo: remove
+    // pub fn is_empty(&self) -> bool {
+    //     panic!();
+    //     self.segments[0].entries.is_empty()
+    // }
 
     pub fn resize(&mut self, len: usize) {
         for v in &mut self.segments {
@@ -2186,17 +2141,6 @@ mod test {
         let mut wrapped = WrappedFastQReadMut(&mut read, &mut block);
         wrapped.trim_poly_base_suffix(25, 0.3, 3, b'A');
         assert!(wrapped.seq() == read2.seq.get(&block2));
-    }
-
-    #[test]
-    fn test_fastq_blocks_combined_empty_is_empty() {
-        let blocks = FastQBlocksCombined::empty(&FastQBlocksCombined {
-            segments: vec![FastQBlock::empty()],
-            output_tags: None,
-            tags: Default::default(),
-            is_final: false,
-        });
-        assert!(blocks.is_empty());
     }
 
     #[test]

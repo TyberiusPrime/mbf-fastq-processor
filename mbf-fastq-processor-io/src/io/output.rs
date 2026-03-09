@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use std::sync::Arc;
 
-use super::reads::WrappedFastQRead;
+use super::reads::{WrappedFastQRead, WrappedFastQReadCommon};
 use crate::io::output::compressed_output::HashedAndCompressedWriter;
 use bstr::BString;
 use noodles::sam::alignment::{
