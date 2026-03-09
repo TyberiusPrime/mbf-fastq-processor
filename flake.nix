@@ -132,6 +132,7 @@
             rapidgzip
             which
             mold
+            pkgs.shellcheck
           ];
           buildInputs = with pkgs; [ openssl ];
           release = true;

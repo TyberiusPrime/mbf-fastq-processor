@@ -152,6 +152,7 @@ impl OutputFile<'_> {
         Ok(())
     }
 
+    #[mutants::skip] // changing when exactly the buffer is being written 
     fn after_text_fragment(&mut self, buffer: &mut Vec<u8>, buffer_size: usize) -> Result<()> {
         if let Some(chunk_size) = self.config.chunk_size {
             self.config.fragments_written_in_chunk += 1;

@@ -12,5 +12,5 @@
 
 [output]
     prefix = 'output'
-    format = 'None'
+    output = []
     report_json=true

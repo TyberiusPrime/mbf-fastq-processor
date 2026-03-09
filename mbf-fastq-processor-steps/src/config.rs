@@ -441,20 +441,26 @@ impl PartialConfig {
     }
 
     fn verify_for_any_output(&mut self) {
-        let has_fastq_output = self
-            .output
-            .as_ref()
-            .and_then(|x| x.as_ref())
-            .is_some_and(|o| {
-                o.stdout.as_ref().copied().unwrap_or(false)
-                    || o.output
-                        .as_ref()
-                        .is_none_or(|inner| inner.as_ref().is_none_or(|v| !v.is_empty()))
-                    || o.interleave
-                        .as_ref()
-                        .and_then(|inner| inner.as_ref())
-                        .is_some_and(|v| !v.is_empty())
-            });
+        let has_fastq_output = {
+            if let Some(Some(o)) = self.output.as_ref() {
+                let has_stdout = o.stdout.as_ref().copied().unwrap_or(false);
+                let has_outputs = o
+                    .output
+                    .as_ref()
+                    .and_then(|x| x.as_ref())
+                    .map(|x| x.len())
+                    .unwrap_or(1)
+                    != 0;
+                let has_interleave = o
+                    .interleave
+                    .as_ref()
+                    .and_then(|inner| inner.as_ref())
+                    .is_some_and(|v| !v.is_empty());
+                    has_stdout | has_outputs | has_interleave
+            } else {
+                false
+            }
+        };
         let has_report_output = self
             .output
             .as_ref()

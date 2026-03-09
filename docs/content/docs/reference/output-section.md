@@ -77,9 +77,16 @@ The above configuration produces:
 ### No sequence output
 
 Set `format = "None"` or `output = []` when you only need reports or tag quantification.
-A `prefix` is still required so report files have a stable name.
+A `prefix` is still required so report files can derive a name.
 
-See also the [Report steps reference]({{< relref "docs/reference/report-steps/_index.md" >}}) for producing summaries, and the [Demultiplex documentation]({{< relref "docs/reference/Demultiplex.md" >}}) for how barcode outputs influence file naming.
+See also the [Report steps reference]({{< relref
+"docs/reference/report-steps/_index.md" >}}) for producing summaries, and the
+[Demultiplex documentation]({{< relref "docs/reference/Demultiplex.md" >}}) for
+how barcode outputs influence file naming.
+
+There is a slight conceptual difference: Setting `output = []` 
+will complain if there is no other file being produces (report, tables, etc).
+Setting `format = "None`" will not.
 
 ## Named pipe outputs
 
