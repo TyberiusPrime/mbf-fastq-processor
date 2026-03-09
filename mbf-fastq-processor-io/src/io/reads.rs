@@ -897,7 +897,6 @@ impl WrappedFastQReadCommon for WrappedFastQReadMut<'_> {
 }
 
 impl WrappedFastQReadMut<'_> {
- 
     #[must_use]
     pub fn seq_mut(&mut self) -> &mut [u8] {
         self.0.seq.get_mut(self.1)

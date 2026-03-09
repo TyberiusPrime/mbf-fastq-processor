@@ -295,14 +295,21 @@ mod tests {
 
     #[test]
     fn test_bam_read_count_from_index() {
-        let path = PathBuf::from("../test_cases/sample_data/bam/input_read1.bam").canonicalize().unwrap();
-        assert!(std::fs::metadata(&path).is_ok(), "Test BAM file not found at {:?}", &path);
+        let path = PathBuf::from("../test_cases/sample_data/bam/input_read1.bam")
+            .canonicalize()
+            .unwrap();
+        assert!(
+            std::fs::metadata(&path).is_ok(),
+            "Test BAM file not found at {:?}",
+            &path
+        );
         assert_eq!(bam_read_count_from_index(&path, true, false), Some(0));
         assert_eq!(bam_read_count_from_index(&path, false, false), Some(0));
         assert_eq!(bam_read_count_from_index(&path, false, true), Some(2));
         assert_eq!(bam_read_count_from_index(&path, true, true), Some(2));
 
-        let path = "../test_cases/sample_data/bam/input_ERR12828869_10k_1.head_500.all_unaligned.bam";
+        let path =
+            "../test_cases/sample_data/bam/input_ERR12828869_10k_1.head_500.all_unaligned.bam";
         assert_eq!(bam_read_count_from_index(path, true, false), Some(0));
         assert_eq!(bam_read_count_from_index(path, false, true), Some(533));
         assert_eq!(bam_read_count_from_index(path, true, true), Some(533));

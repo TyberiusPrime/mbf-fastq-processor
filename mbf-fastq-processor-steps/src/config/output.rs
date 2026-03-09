@@ -334,8 +334,7 @@ pub fn validate_compression_level_u8(
 ) {
     if let Some(Some(level)) = compression_level.as_ref() {
         match compression.as_ref() {
-            None |
-            Some(CompressionFormat::Uncompressed) => {
+            None | Some(CompressionFormat::Uncompressed) => {
                 if *level != 0 {
                     compression_level.state = TomlValueState::ValidationFailed {
                         message: "Compression level specified for uncompressed output".to_string(),

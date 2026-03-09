@@ -513,6 +513,195 @@ report_html = true
 }
 
 #[test]
+fn test_validate_command_missing_interleaved_files() {
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+
+    let config_path = temp_path.join("interleaved_missing.toml");
+    let mut config = fs::File::create(&config_path).unwrap();
+    writeln!(
+        config,
+        r"[input]
+read1 = 'nonexistent_interleaved.fq'
+interleaved = ['read1', 'read2']
+
+[[step]]
+action = 'Head'
+n = 2
+
+[output]
+prefix = 'output'
+"
+    )
+    .unwrap();
+
+    let cmd = std::process::Command::new(get_bin_path())
+        .arg("validate")
+        .arg(&config_path)
+        .output()
+        .unwrap();
+
+    let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
+    let stderr = std::str::from_utf8(&cmd.stderr).unwrap().to_string();
+
+    assert!(
+        stdout.contains("✓ Configuration is valid (with warnings)"),
+        "Expected success with warnings, got: {stdout}"
+    );
+    assert!(
+        stderr.contains("Warning: Input file not found: nonexistent_interleaved.fq"),
+        "Expected interleaved file not found warning, got: {stderr}"
+    );
+    assert!(
+        cmd.status.success(),
+        "Exit code should be 0 even with missing files"
+    );
+}
+
+#[test]
+fn test_validate_command_missing_segmented_files_with_segment_name() {
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+
+    let config_path = temp_path.join("segmented_missing.toml");
+    let mut config = fs::File::create(&config_path).unwrap();
+    writeln!(
+        config,
+        r"[input]
+read_1 = 'nonexistent_r1.fq'
+read_2 = 'nonexistent_r2.fq'
+
+[[step]]
+action = 'Head'
+n = 2
+
+[output]
+prefix = 'output'
+"
+    )
+    .unwrap();
+
+    let cmd = std::process::Command::new(get_bin_path())
+        .arg("validate")
+        .arg(&config_path)
+        .output()
+        .unwrap();
+
+    let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
+    let stderr = std::str::from_utf8(&cmd.stderr).unwrap().to_string();
+
+    assert!(
+        stdout.contains("✓ Configuration is valid (with warnings)"),
+        "Expected success with warnings, got: {stdout}"
+    );
+    assert!(
+        stderr.contains("Warning: Input file not found in segment"),
+        "Expected segment file not found warning, got: {stderr}"
+    );
+    assert!(
+        stderr.contains("nonexistent_r1.fq") || stderr.contains("nonexistent_r2.fq"),
+        "Expected missing file name in warning, got: {stderr}"
+    );
+    assert!(
+        cmd.status.success(),
+        "Exit code should be 0 even with missing files"
+    );
+}
+
+#[test]
+fn test_validate_command_interleaved_stdin_no_warning() {
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+
+    let config_path = temp_path.join("interleaved_stdin.toml");
+    let mut config = fs::File::create(&config_path).unwrap();
+    writeln!(
+        config,
+        r"[input]
+read1 = '--stdin--'
+interleaved = ['read1', 'read2']
+
+[[step]]
+action = 'Head'
+n = 2
+
+[output]
+prefix = 'output'
+"
+    )
+    .unwrap();
+
+    let cmd = std::process::Command::new(get_bin_path())
+        .arg("validate")
+        .arg(&config_path)
+        .output()
+        .unwrap();
+
+    let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
+    let stderr = std::str::from_utf8(&cmd.stderr).unwrap().to_string();
+
+    assert!(
+        stdout.contains("✓ Configuration is valid"),
+        "Expected success message, got: {stdout}"
+    );
+    assert!(
+        !stdout.contains("with warnings"),
+        "Should not have warnings for stdin input"
+    );
+    assert!(
+        stderr.is_empty(),
+        "Should have no warnings in stderr for stdin input, got: {stderr}"
+    );
+    assert!(cmd.status.success(), "Exit code should be 0");
+}
+
+#[test]
+fn test_validate_command_segmented_stdin_no_warning() {
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+
+    let config_path = temp_path.join("segmented_stdin.toml");
+    let mut config = fs::File::create(&config_path).unwrap();
+    writeln!(
+        config,
+        r"[input]
+read1 = '--stdin--'
+
+[[step]]
+action = 'Head'
+n = 2
+
+[output]
+prefix = 'output'
+"
+    )
+    .unwrap();
+
+    let cmd = std::process::Command::new(get_bin_path())
+        .arg("validate")
+        .arg(&config_path)
+        .output()
+        .unwrap();
+
+    let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
+    let stderr = std::str::from_utf8(&cmd.stderr).unwrap().to_string();
+
+    assert!(
+        stdout.contains("✓ Configuration is valid"),
+        "Expected success message, got: {stdout}"
+    );
+    assert!(
+        !stdout.contains("with warnings"),
+        "Should not have warnings for stdin input"
+    );
+    assert!(
+        stderr.is_empty(),
+        "Should have no warnings in stderr for stdin input, got: {stderr}"
+    );
+    assert!(cmd.status.success(), "Exit code should be 0");
+}
+
+#[test]
 fn test_validate_command_invalid_action() {
     // Create temp directory
     let temp_dir = tempfile::tempdir().unwrap();

@@ -192,7 +192,7 @@ impl ChainedParser {
                                 expected_reads
                             ); */
                         }
-                    } 
+                    }
                 }
             }
         }
