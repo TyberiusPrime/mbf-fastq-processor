@@ -122,27 +122,6 @@ pub fn verify_outputs(
         toml::from_str(&raw_config).context("Failed to parse TOML for file setup")?;
 
     if do_copy_input_files {
-        if let Some(input_table) = toml_value.get("input").and_then(|v| v.as_table()) {
-            for field_name in input_table.keys() {
-                if field_name == "interleaved" || field_name == "options" {
-                    continue;
-                }
-                if let Some(value) = input_table.get(field_name) {
-                    copy_input_file(value, &toml_dir, &temp_path)?;
-                }
-            }
-        }
-        if let Some(steps) = toml_value.get("step").and_then(|v| v.as_array()) {
-            for step in steps {
-                if let Some(step_table) = step.as_table() {
-                    for filename_key in ["filename", "filenames", "files"] {
-                        if let Some(value) = step_table.get(filename_key) {
-                            copy_input_file(value, &toml_dir, &temp_path)?;
-                        }
-                    }
-                }
-            }
-        }
         for entry in fs::read_dir(&toml_dir)? {
             let entry = entry?;
             let src_path = entry.path();
@@ -258,7 +237,7 @@ pub fn verify_outputs(
         None
     };
 
-    if expected_validation_error.is_none() | expected_validation_warning.is_some() {
+    if expected_validation_error.is_none() || expected_validation_warning.is_some() {
         let warnings =
             crate::cli::validate::validate_config(&temp_toml_path).with_context(|| {
                 if expected_runtime_error.is_some() {
@@ -823,7 +802,7 @@ fn strip_backtrace(stderr: &str) -> Cow<'_, str> {
     let mut outside = true;
     for line in lines {
         if outside {
-            if line.trim() == "Stack backtrace:" {
+            if line.trim().eq_ignore_ascii_case("stack backtrace:") {
                 outside = false;
             } else {
                 out.push(line);
@@ -950,6 +929,7 @@ fn create_symlink(source: &Path, target: &Path) -> Result<()> {
     Ok(())
 }
 
+#[mutants::skip]
 #[cfg(windows)]
 fn create_symlink(source: &Path, target: &Path) -> Result<()> {
     if std::fs::symlink_metadata(target).is_err() {
@@ -970,49 +950,6 @@ fn create_symlink(source: &Path, target: &Path) -> Result<()> {
                 )
             })?;
         }
-    }
-    Ok(())
-}
-
-fn copy_input_file(value: &toml::Value, source_dir: &Path, target_dir: &Path) -> Result<()> {
-    if let Some(path_str) = value.as_str() {
-        if path_str != STDIN_MAGIC_PATH {
-            let out_path = target_dir.join(path_str);
-            let input_path = source_dir.join(path_str);
-            std::fs::copy(&input_path, &out_path).with_context(|| {
-                format!(
-                    "Failed to copy input file from {} to {}",
-                    input_path.display(),
-                    out_path.display(),
-                )
-            })?;
-        }
-        return Ok(());
-    } else if let Some(paths) = value.as_array() {
-        let new_paths: Result<Vec<()>> = paths
-            .iter()
-            .map(|v| {
-                if let Some(path_str) = v.as_str() {
-                    if path_str == STDIN_MAGIC_PATH {
-                        Ok(())
-                    } else {
-                        let out_path = target_dir.join(path_str);
-                        let input_path = source_dir.join(path_str);
-                        std::fs::copy(&input_path, &out_path).with_context(|| {
-                            format!(
-                                "Failed to copy input file from {} to {}",
-                                input_path.display(),
-                                out_path.display(),
-                            )
-                        })?;
-                        Ok(())
-                    }
-                } else {
-                    anyhow::bail!("Invalid toml value")
-                }
-            })
-            .collect();
-        new_paths?;
     }
     Ok(())
 }
@@ -1067,5 +1004,61 @@ mod test {
             decompress_file(temp_file.path()).expect("Failed to decompress file");
 
         assert_eq!(decompressed_data, b"Hello, world!");
+    }
+
+    #[test]
+    fn test_strip_backtrace() {
+        use super::strip_backtrace;
+
+        let stderr = "running 3 tests
+test pipeline::tests::test_checked_f64_to_u16 ... ok
+test cli::verify::test::test_calculate_size_difference_percent ... ok
+test cli::verify::test::test_decompress_file ... FAILED
+
+failures:
+
+---- cli::verify::test::test_decompress_file stdout ----
+
+thread 'cli::verify::test::test_decompress_file' (1426326) panicked at mbf-fastq-processor/src/cli/verify.rs:1008:9:
+explicit panic
+stack backtrace:
+   0: __rustc::rust_begin_unwind
+             at /rustc/ded5c06cf21d2b93bffd5d884aa6e96934ee4234/library/std/src/panicking.rs:698:5
+   1: core::panicking::panic_fmt
+             at /rustc/ded5c06cf21d2b93bffd5d884aa6e96934ee4234/library/core/src/panicking.rs:80:14
+   2: core::panicking::panic
+             at /rustc/ded5c06cf21d2b93bffd5d884aa6e96934ee4234/library/core/src/panicking.rs:150:5
+   3: mbf_fastq_processor::cli::verify::test::test_decompress_file
+             at ./src/cli/verify.rs:1008:9
+   4: mbf_fastq_processor::cli::verify::test::test_decompress_file::{{closure}}
+             at ./src/cli/verify.rs:989:30
+   5: core::ops::function::FnOnce::call_once
+             at /rustc/ded5c06cf21d2b93bffd5d884aa6e96934ee4234/library/core/src/ops/function.rs:250:5
+   6: core::ops::function::FnOnce::call_once
+             at /rustc/ded5c06cf21d2b93bffd5d884aa6e96934ee4234/library/core/src/ops/function.rs:250:5
+note: Some details are omitted, run with `RUST_BACKTRACE=full` for a verbose backtrace.
+
+
+failures:
+    cli::verify::test::test_decompress_file";
+        let should = "running 3 tests
+test pipeline::tests::test_checked_f64_to_u16 ... ok
+test cli::verify::test::test_calculate_size_difference_percent ... ok
+test cli::verify::test::test_decompress_file ... FAILED
+
+failures:
+
+---- cli::verify::test::test_decompress_file stdout ----
+
+thread 'cli::verify::test::test_decompress_file' (1426326) panicked at mbf-fastq-processor/src/cli/verify.rs:1008:9:
+explicit panic
+
+failures:
+    cli::verify::test::test_decompress_file";
+        println!("{}", strip_backtrace(stderr));
+        //dump both to a file for diff
+        std::fs::write("actual_stderr.txt", strip_backtrace(stderr).to_string()).expect("Failed to write actual stderr to file");
+        std::fs::write("expected_stderr.txt", should).expect("Failed to write expected stderr to file");
+        assert_eq!(strip_backtrace(stderr), should);
     }
 }
