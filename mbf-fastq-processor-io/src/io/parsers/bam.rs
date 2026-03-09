@@ -76,15 +76,12 @@ pub fn bam_read_count_from_index(
                             0
                         });
 
-                    if total_reads > 0 {
-                        return Some(total_reads.try_into().expect("Read count exceeded usize"));
-                    }
-                    return None;
+                    return Some(total_reads.try_into().expect("Read count exceeded usize"));
                 }
                 Err(error) => {
                     //treat it as a soft error
                     eprintln!(
-                        "Failed to read BAM index {} for {}: {error}",
+                        "Failed to read BAM index {} for {}: {error} - returning an expected read count of zero",
                         index_path.display(),
                         path.display()
                     );
@@ -294,5 +291,23 @@ mod tests {
         assert_eq!(block.entries.len(), 2);
 
         Ok(())
+    }
+
+    #[test]
+    fn test_bam_read_count_from_index() {
+        let path = PathBuf::from("../test_cases/sample_data/bam/input_read1.bam").canonicalize().unwrap();
+        assert!(std::fs::metadata(&path).is_ok(), "Test BAM file not found at {:?}", &path);
+        assert_eq!(bam_read_count_from_index(&path, true, false), Some(0));
+        assert_eq!(bam_read_count_from_index(&path, false, false), Some(0));
+        assert_eq!(bam_read_count_from_index(&path, false, true), Some(2));
+        assert_eq!(bam_read_count_from_index(&path, true, true), Some(2));
+
+        let path = "../test_cases/sample_data/bam/input_ERR12828869_10k_1.head_500.all_unaligned.bam";
+        assert_eq!(bam_read_count_from_index(path, true, false), Some(0));
+        assert_eq!(bam_read_count_from_index(path, false, true), Some(533));
+        assert_eq!(bam_read_count_from_index(path, true, true), Some(533));
+        let path = "../test_cases/sample_data/bam//input_ERR12828869_10k_1.head_500.bam";
+        assert_eq!(bam_read_count_from_index(path, false, true), Some(0));
+        assert_eq!(bam_read_count_from_index(path, true, true), Some(533));
     }
 }
