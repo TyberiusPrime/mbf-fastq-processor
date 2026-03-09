@@ -4,43 +4,126 @@ use mbf_fastq_processor_io::STDIN_MAGIC_PATH;
 use regex::Regex;
 use std::borrow::Cow;
 use std::io::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-#[allow(clippy::too_many_lines)]
 pub fn verify_outputs(
     toml_file: &Path,
     output_dir: Option<&Path>,
     unsafe_prep: bool,
 ) -> Result<()> {
+    let (toml_dir, output_dir) = resolve_paths(toml_file, output_dir)?;
+
+    let prep_script = toml_dir.join("prep.sh");
+    let post_script = toml_dir.join("post.sh");
+    let test_script = toml_dir.join("test.sh");
+    // Copy (not symlink) when scripts may run in the temp dir and could follow symlinks to
+    // mutate the original files (e.g. via chmod/touch on what appears to be a local file).
+    let do_copy_input_files =
+        toml_dir.join("copy_input").exists() || test_script.exists() || prep_script.exists();
+
+    let (expected_validation_error, expected_validation_warning, expected_runtime_error) =
+        load_expected_failures(&toml_dir)?;
+    let expected_failure = {
+        let validation_error = expected_validation_error.as_ref();
+        let runtime_error = expected_runtime_error.as_ref();
+        match (validation_error, runtime_error) {
+            (Some(x), None) | (None, Some(x)) => Some(x),
+            (None, None) => None,
+            (Some(_), Some(_)) => unreachable!(),
+        }
+    };
+
+    let raw_config = ex::fs::read_to_string(toml_file)
+        .with_context(|| format!("Could not read toml file: {}", toml_file.to_string_lossy()))?;
+    let (output_prefix, uses_stdout) = extract_output_config(&raw_config)?;
+
+    let (_temp_dir, temp_path) = create_working_dir(output_dir.as_deref())?;
+    let temp_toml_path = temp_path.join("config.toml");
+
+    populate_working_dir(
+        toml_file,
+        &raw_config,
+        &toml_dir,
+        &temp_path,
+        do_copy_input_files,
+    )?;
+
+    run_prep_if_needed(
+        &prep_script,
+        &post_script,
+        &test_script,
+        &toml_dir,
+        &temp_path,
+        unsafe_prep,
+    )?;
+
+    validate_config_if_needed(
+        &temp_toml_path,
+        expected_validation_error.as_ref(),
+        expected_runtime_error.is_some(),
+        expected_validation_warning.as_ref(),
+    )?;
+
+    let current_exe = std::env::current_exe().context("Failed to get current executable path")?;
+    let stdin_file = detect_stdin_file(&raw_config, &toml_dir);
+
+    if test_script.exists() {
+        run_test_script_and_check(&test_script, &temp_path, &current_exe)?;
+    } else {
+        run_processor_and_verify(
+            &current_exe,
+            expected_failure,
+            expected_validation_error.as_ref(),
+            stdin_file,
+            &temp_path,
+            &temp_toml_path,
+            uses_stdout,
+            &output_prefix,
+            &toml_dir,
+            &post_script,
+            unsafe_prep,
+        )?;
+    }
+
+    cleanup_output_dir(output_dir.as_deref())?;
+    Ok(())
+}
+
+fn resolve_paths(
+    toml_file: &Path,
+    output_dir: Option<&Path>,
+) -> Result<(PathBuf, Option<PathBuf>)> {
     let toml_file_abs = toml_file.canonicalize().with_context(|| {
         format!(
             "Failed to canonicalize TOML file path: {}",
             toml_file.display()
         )
     })?;
-    let toml_dir = toml_file_abs.parent().unwrap_or_else(|| Path::new("."));
-    let toml_dir = toml_dir.to_path_buf();
-    let output_dir = output_dir.map(|output_dir| {
-        if output_dir.is_absolute() {
-            output_dir.to_owned()
+    let toml_dir = toml_file_abs
+        .parent()
+        .unwrap_or_else(|| Path::new("."))
+        .to_path_buf();
+    let resolved_output_dir = output_dir.map(|d| {
+        if d.is_absolute() {
+            d.to_owned()
         } else {
-            toml_dir.join(output_dir)
+            toml_dir.join(d)
         }
     });
+    Ok((toml_dir, resolved_output_dir))
+}
 
-    let prep_script = toml_dir.join("prep.sh");
-    let post_script = toml_dir.join("post.sh");
-    let test_script = toml_dir.join("test.sh");
-
-    // Copy (not symlink) when scripts may run in the temp dir and could follow symlinks to
-    // mutate the original files (e.g. via chmod/touch on what appears to be a local file).
-    let do_copy_input_files =
-        toml_dir.join("copy_input").exists() || test_script.exists() || prep_script.exists();
-
-    let expected_validation_error = ExpectedFailure::new(&toml_dir, "error")?;
-    let expected_validation_warning = ExpectedFailure::new(&toml_dir, "validation_warning")?;
-    let expected_runtime_error = ExpectedFailure::new(&toml_dir, "runtime_error")?;
+fn load_expected_failures(
+    toml_dir: &Path,
+) -> Result<(
+    Option<ExpectedFailure>,
+    Option<ExpectedFailure>,
+    Option<ExpectedFailure>,
+)> {
+    let expected_validation_error = ExpectedFailure::new(toml_dir, "error")?;
+    let expected_validation_warning = ExpectedFailure::new(toml_dir, "validation_warning")?;
+    let expected_runtime_error = ExpectedFailure::new(toml_dir, "runtime_error")?;
 
     let error_file_count =
         u8::from(expected_validation_error.is_some()) + u8::from(expected_runtime_error.is_some());
@@ -50,45 +133,34 @@ pub fn verify_outputs(
         );
     }
 
-    let expected_failure = match (
-        expected_validation_error.as_ref(),
-        expected_runtime_error.as_ref(),
-    ) {
-        (Some(x), None) | (None, Some(x)) => Some(x),
-        (None, None) => None,
-        (Some(_), Some(_)) => unreachable!(),
-    };
+    Ok((
+        expected_validation_error,
+        expected_validation_warning,
+        expected_runtime_error,
+    ))
+}
 
-    let raw_config = ex::fs::read_to_string(toml_file)
-        .with_context(|| format!("Could not read toml file: {}", toml_file.to_string_lossy()))?;
+fn extract_output_config(raw_config: &str) -> Result<(String, bool)> {
+    let result = crate::config::config_from_string(raw_config);
 
-    let (output_prefix, uses_stdout) = {
-        let result = crate::config::config_from_string(&raw_config);
+    if let Ok(parsed) = &result
+        && let Some(benchmark) = &parsed.benchmark
+        && benchmark.enable
+    {
+        bail!(
+            "This is a benchmarking configuration, which can't be verified for it's output (it has none). Maybe turn off benchmark.enable in your TOML, or use another configuration?"
+        )
+    }
 
-        // let parsed = match result {
-        //     Ok(config) => config,
-        //     Err(e) => {
-        //         return Err(anyhow::anyhow!("{}", e.pretty("config.toml")));
-        //     }
-        // };
+    Ok(result
+        .ok()
+        .and_then(|parsed| parsed.output.as_ref().map(|o| (o.prefix.clone(), o.stdout)))
+        .unwrap_or_else(|| ("missing_output_config".to_string(), false)))
+}
 
-        if let Ok(parsed) = &result
-            && let Some(benchmark) = &parsed.benchmark
-            && benchmark.enable
-        {
-            bail!(
-                "This is a benchmarking configuration, which can't be verified for it's output (it has none). Maybe turn off benchmark.enable in your TOML, or use another configuration?"
-            )
-        }
-
-        result
-            .ok()
-            .and_then(|parsed| parsed.output.as_ref().map(|o| (o.prefix.clone(), o.stdout)))
-            .unwrap_or_else(|| ("missing_output_config".to_string(), false))
-    };
-
+fn create_working_dir(output_dir: Option<&Path>) -> Result<(tempfile::TempDir, PathBuf)> {
     let temp_dir = tempfile::tempdir().context("Failed to create temporary directory")?;
-    let temp_path = if let Some(output_dir) = output_dir.as_ref() {
+    let temp_path = if let Some(output_dir) = output_dir {
         if output_dir.exists() {
             ex::fs::remove_dir_all(output_dir).with_context(|| {
                 format!(
@@ -109,76 +181,104 @@ pub fn verify_outputs(
     } else {
         temp_dir.path().to_owned()
     };
+    Ok((temp_dir, temp_path))
+}
 
-    let temp_toml_path = temp_path.join("config.toml");
-
+fn populate_working_dir(
+    toml_file: &Path,
+    raw_config: &str,
+    toml_dir: &Path,
+    temp_path: &Path,
+    do_copy_input_files: bool,
+) -> Result<()> {
     // Copy the original TOML without modification
-    ex::fs::copy(toml_file, &temp_toml_path).context("Failed to copy TOML to temp directory")?;
+    ex::fs::copy(toml_file, &temp_path.join("config.toml"))
+        .context("Failed to copy TOML to temp directory")?;
 
     // Set up input files in the temp dir. When prep/test scripts will run (do_copy_input_files),
     // we must copy files so those scripts cannot mutate the originals (e.g. via chmod).
     // Otherwise, symlinks suffice — the TOML is kept verbatim so relative paths still resolve.
     let toml_value: toml::Value =
-        toml::from_str(&raw_config).context("Failed to parse TOML for file setup")?;
+        toml::from_str(raw_config).context("Failed to parse TOML for file setup")?;
 
     if do_copy_input_files {
-        for entry in fs::read_dir(&toml_dir)? {
-            let entry = entry?;
-            let src_path = entry.path();
-            if src_path.is_file()
-                && let Some(file_name) = src_path.file_name()
-            {
-                let file_name_str = file_name.to_string_lossy();
-                if file_name_str.starts_with("input") && file_name_str != "input.toml" {
-                    let dst_path = temp_path.join(file_name);
-                    if !dst_path.exists() {
-                        ex::fs::copy(&src_path, &dst_path)?;
-                    }
-                }
-            }
-        }
+        copy_input_files(toml_dir, temp_path)?;
     } else {
-        // No prep/test scripts — safe to use symlinks so the TOML stays verbatim
-        if let Some(input_table) = toml_value.get("input").and_then(|v| v.as_table()) {
-            for field_name in input_table.keys() {
-                if field_name == "interleaved" || field_name == "options" {
-                    continue;
-                }
-                if let Some(value) = input_table.get(field_name) {
-                    create_symlinks_for_files(value, &toml_dir, &temp_path)?;
-                }
-            }
-        }
-        if let Some(steps) = toml_value.get("step").and_then(|v| v.as_array()) {
-            for step in steps {
-                if let Some(step_table) = step.as_table() {
-                    for filename_key in ["filename", "filenames", "files"] {
-                        if let Some(value) = step_table.get(filename_key) {
-                            create_symlinks_for_files(value, &toml_dir, &temp_path)?;
-                        }
-                    }
+        symlink_input_files(&toml_value, toml_dir, temp_path)?;
+    }
+    Ok(())
+}
+
+fn copy_input_files(toml_dir: &Path, temp_path: &Path) -> Result<()> {
+    for entry in fs::read_dir(toml_dir)? {
+        let entry = entry?;
+        let src_path = entry.path();
+        if src_path.is_file()
+            && let Some(file_name) = src_path.file_name()
+        {
+            let file_name_str = file_name.to_string_lossy();
+            if file_name_str.starts_with("input") && file_name_str != "input.toml" {
+                let dst_path = temp_path.join(file_name);
+                if !dst_path.exists() {
+                    ex::fs::copy(&src_path, &dst_path)?;
                 }
             }
         }
-        // Also symlink any ancillary input files (e.g. .bai index alongside .bam)
-        // that aren't explicitly named in the TOML but live next to the inputs.
-        for entry in fs::read_dir(&toml_dir)? {
-            let entry = entry?;
-            let src_path = entry.path();
-            if src_path.is_file()
-                && let Some(file_name) = src_path.file_name()
-            {
-                let file_name_str = file_name.to_string_lossy();
-                if file_name_str.starts_with("input") && file_name_str != "input.toml" {
-                    let dst_path = temp_path.join(file_name);
-                    if std::fs::symlink_metadata(&dst_path).is_err() {
-                        create_symlink(&src_path, &dst_path)?;
+    }
+    Ok(())
+}
+
+fn symlink_input_files(toml_value: &toml::Value, toml_dir: &Path, temp_path: &Path) -> Result<()> {
+    // No prep/test scripts — safe to use symlinks so the TOML stays verbatim
+    if let Some(input_table) = toml_value.get("input").and_then(|v| v.as_table()) {
+        for field_name in input_table.keys() {
+            if field_name == "interleaved" || field_name == "options" {
+                continue;
+            }
+            if let Some(value) = input_table.get(field_name) {
+                create_symlinks_for_files(value, toml_dir, temp_path)?;
+            }
+        }
+    }
+    if let Some(steps) = toml_value.get("step").and_then(|v| v.as_array()) {
+        for step in steps {
+            if let Some(step_table) = step.as_table() {
+                for filename_key in ["filename", "filenames", "files"] {
+                    if let Some(value) = step_table.get(filename_key) {
+                        create_symlinks_for_files(value, toml_dir, temp_path)?;
                     }
                 }
             }
         }
     }
+    // Also symlink any ancillary input files (e.g. .bai index alongside .bam)
+    // that aren't explicitly named in the TOML but live next to the inputs.
+    for entry in fs::read_dir(toml_dir)? {
+        let entry = entry?;
+        let src_path = entry.path();
+        if src_path.is_file()
+            && let Some(file_name) = src_path.file_name()
+        {
+            let file_name_str = file_name.to_string_lossy();
+            if file_name_str.starts_with("input") && file_name_str != "input.toml" {
+                let dst_path = temp_path.join(file_name);
+                if std::fs::symlink_metadata(&dst_path).is_err() {
+                    create_symlink(&src_path, &dst_path)?;
+                }
+            }
+        }
+    }
+    Ok(())
+}
 
+fn run_prep_if_needed(
+    prep_script: &Path,
+    post_script: &Path,
+    test_script: &Path,
+    toml_dir: &Path,
+    temp_path: &Path,
+    unsafe_prep: bool,
+) -> Result<()> {
     if unsafe_prep {
         if prep_script.exists() {
             #[cfg(not(target_os = "windows"))]
@@ -186,7 +286,7 @@ pub fn verify_outputs(
                 let mut command = std::process::Command::new("bash");
                 command
                     .arg(prep_script.canonicalize().context("canonicalize prep.sh")?)
-                    .current_dir(&temp_path);
+                    .current_dir(temp_path);
                 command
             };
 
@@ -196,7 +296,6 @@ pub fn verify_outputs(
             };
 
             let prep_output = prep_command.output().context("Failed to execute prep.sh")?;
-
             if !prep_output.status.success() {
                 bail!(
                     "prep.sh failed with exit code: {:?}\nstdout: {}\nstderr: {}",
@@ -222,25 +321,19 @@ pub fn verify_outputs(
             toml_dir.display()
         );
     }
+    Ok(())
+}
 
-    let current_exe = std::env::current_exe().context("Failed to get current executable path")?;
-
-    let uses_stdin = raw_config.contains(STDIN_MAGIC_PATH);
-    let stdin_file = if uses_stdin {
-        let stdin_path = toml_dir.join("stdin");
-        if stdin_path.exists() {
-            Some(stdin_path)
-        } else {
-            None
-        }
-    } else {
-        None
-    };
-
+fn validate_config_if_needed(
+    temp_toml_path: &Path,
+    expected_validation_error: Option<&ExpectedFailure>,
+    has_runtime_error: bool,
+    expected_validation_warning: Option<&ExpectedFailure>,
+) -> Result<()> {
     if expected_validation_error.is_none() || expected_validation_warning.is_some() {
         let warnings =
-            crate::cli::validate::validate_config(&temp_toml_path).with_context(|| {
-                if expected_runtime_error.is_some() {
+            crate::cli::validate::validate_config(temp_toml_path).with_context(|| {
+                if has_runtime_error {
                     "Configuration validation failed, but a runtime error was expected.".to_string()
                 } else {
                     "Configuration validation failed unexpectedly.".to_string()
@@ -251,7 +344,7 @@ pub fn verify_outputs(
                 bail!("Expected validation warning, but none were produced.");
             } else if !warnings.iter().any(|w| {
                 expected_warning
-                    .validate_expected_failure(w, &temp_toml_path)
+                    .validate_expected_failure(w, temp_toml_path)
                     .is_ok()
             }) {
                 bail!(
@@ -262,205 +355,256 @@ pub fn verify_outputs(
             }
         }
     }
+    Ok(())
+}
 
-    if test_script.exists() {
-        let mut command = std::process::Command::new("bash");
-        command
-            .arg(test_script)
-            .env("PROCESSOR_CMD", current_exe)
-            .env("CONFIG_FILE", "config.toml")
-            .env("NO_FRIENDLY_PANIC", "1")
-            .current_dir(temp_path);
-
-        let output = run_command_with_timeout(&mut command).context("Failed to run test.sh")?;
-
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            anyhow::bail!("Test script failed:\nstdout: {stdout}\nstderr: {stderr}",);
+fn detect_stdin_file(raw_config: &str, toml_dir: &Path) -> Option<PathBuf> {
+    if raw_config.contains(STDIN_MAGIC_PATH) {
+        let stdin_path = toml_dir.join("stdin");
+        if stdin_path.exists() {
+            return Some(stdin_path);
         }
-    } else {
-        let mut command = std::process::Command::new(current_exe);
-        command
-            .arg(if expected_validation_error.is_none() {
-                "process"
-            } else {
-                "validate"
-            })
-            .arg("config.toml")
-            .current_dir(&temp_path);
+    }
+    None
+}
 
-        let output = if let Some(stdin_path) = stdin_file {
-            let stdin_content = ex::fs::read(&stdin_path)
-                .with_context(|| format!("Failed to read stdin file: {}", stdin_path.display()))?;
+fn run_test_script_and_check(
+    test_script: &Path,
+    temp_path: &Path,
+    current_exe: &Path,
+) -> Result<()> {
+    let mut command = std::process::Command::new("bash");
+    command
+        .arg(test_script)
+        .env("PROCESSOR_CMD", current_exe)
+        .env("CONFIG_FILE", "config.toml")
+        .env("NO_FRIENDLY_PANIC", "1")
+        .current_dir(temp_path);
 
-            let mut child = command
-                .stdin(std::process::Stdio::piped())
-                .stdout(std::process::Stdio::piped())
-                .stderr(std::process::Stdio::piped())
-                .spawn()
-                .context("Failed to spawn mbf-fastq-processor subprocess")?;
-
-            if let Some(mut stdin) = child.stdin.take() {
-                stdin
-                    .write_all(&stdin_content)
-                    .context("Failed to write to subprocess stdin")?;
-                stdin.flush().context("Failed to flush subprocess stdin")?;
-                drop(stdin);
-            }
-
-            child
-                .wait_with_output()
-                .context("Failed to wait for subprocess completion")?
-        } else {
-            command
-                .output()
-                .context("Failed to execute mbf-fastq-processor subprocess")?
-        };
+    let output = run_command_with_timeout(&mut command).context("Failed to run test.sh")?;
+    if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        anyhow::bail!("Test script failed:\nstdout: {stdout}\nstderr: {stderr}",);
+    }
+    Ok(())
+}
 
-        match (expected_failure.as_ref(), output.status.success()) {
-            (Some(expected_failure_pattern), false) => {
-                expected_failure_pattern.validate_expected_failure(&stderr, &temp_toml_path)?;
+fn execute_processor(
+    command: &mut std::process::Command,
+    stdin_file: Option<PathBuf>,
+) -> Result<std::process::Output> {
+    if let Some(stdin_path) = stdin_file {
+        let stdin_content = ex::fs::read(&stdin_path)
+            .with_context(|| format!("Failed to read stdin file: {}", stdin_path.display()))?;
+
+        let mut child = command
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .spawn()
+            .context("Failed to spawn mbf-fastq-processor subprocess")?;
+
+        if let Some(mut stdin) = child.stdin.take() {
+            stdin
+                .write_all(&stdin_content)
+                .context("Failed to write to subprocess stdin")?;
+            stdin.flush().context("Failed to flush subprocess stdin")?;
+            drop(stdin);
+        }
+
+        child
+            .wait_with_output()
+            .context("Failed to wait for subprocess completion")
+    } else {
+        command
+            .output()
+            .context("Failed to execute mbf-fastq-processor subprocess")
+    }
+}
+
+fn verify_processor_success(
+    output: &std::process::Output,
+    temp_path: &Path,
+    expected_dir: &Path,
+    output_prefix: &str,
+    uses_stdout: bool,
+    post_script: &Path,
+    unsafe_prep: bool,
+) -> Result<()> {
+    if !output.stdout.is_empty() {
+        ex::fs::write(temp_path.join("stdout"), &output.stdout)
+            .context("Failed to write stdout to temp directory")?;
+    }
+    if !output.stderr.is_empty() {
+        ex::fs::write(temp_path.join("stderr"), &output.stderr)
+            .context("Failed to write stderr to temp directory")?;
+    }
+
+    let mut mismatches = Vec::new();
+
+    if post_script.exists() && unsafe_prep {
+        #[cfg(not(target_os = "windows"))]
+        let mut post_command = {
+            let mut command = std::process::Command::new("bash");
+            command
+                .arg(post_script.canonicalize().context("canonicalize post.sh")?)
+                .current_dir(temp_path);
+            command
+        };
+
+        #[cfg(target_os = "windows")]
+        let mut post_command = {
+            bail!("post.sh execution on Windows is not currently supported");
+        };
+
+        let post_output = post_command.output().context("Failed to execute post.sh")?;
+        if !post_output.status.success() {
+            mismatches.push(format!(
+                "post.sh failed with exit code: {:?}\nstdout: {}\nstderr: {}",
+                post_output.status.code(),
+                String::from_utf8_lossy(&post_output.stdout),
+                String::from_utf8_lossy(&post_output.stderr)
+            ));
+        }
+    }
+
+    let actual_dir = temp_path;
+
+    if !uses_stdout {
+        let expected_files = find_output_files(expected_dir, output_prefix).unwrap_or_default();
+        if expected_files.is_empty() {
+            bail!(
+                "No expected output files found in {} with prefix '{}'",
+                expected_dir.display(),
+                output_prefix
+            );
+        }
+        for expected_file in &expected_files {
+            let surplus = expected_file
+                .strip_prefix(expected_dir)
+                .expect("Stripping the dir again should work...");
+            let str_surplus = surplus.to_string_lossy();
+            let actual_file = actual_dir.join(str_surplus.as_ref());
+            if !actual_file.exists() {
+                mismatches.push(format!("Missing output file: {str_surplus}"));
+                continue;
             }
-            (Some(_), true) => {
-                if expected_validation_error.is_some() {
-                    bail!(
-                        "Expected validation failure but 'validate' command succeeded. stderr: {stderr}"
-                    );
-                } else {
-                    bail!(
-                        "Expected runtime failure but 'process' command succeeded. stderr: {stderr}"
-                    );
-                };
-            }
-            (None, false) => {
-                bail!(
-                    "Processing failed with exit code {:?}. stderr: {}",
-                    output.status.code(),
-                    stderr
-                );
-            }
-            (None, true) => {
-                if !output.stdout.is_empty() {
-                    ex::fs::write(temp_path.join("stdout"), &output.stdout)
-                        .context("Failed to write stdout to temp directory")?;
-                }
-                if !output.stderr.is_empty() {
-                    ex::fs::write(temp_path.join("stderr"), &output.stderr)
-                        .context("Failed to write stderr to temp directory")?;
-                }
-
-                let mut mismatches = Vec::new();
-                if post_script.exists() && unsafe_prep {
-                    #[cfg(not(target_os = "windows"))]
-                    let mut post_command = {
-                        let mut command = std::process::Command::new("bash");
-                        command
-                            .arg(post_script.canonicalize().context("canonicalize post.sh")?)
-                            .current_dir(&temp_path);
-                        command
-                    };
-
-                    #[cfg(target_os = "windows")]
-                    let mut post_command = {
-                        bail!("post.sh execution on Windows is not currently supported");
-                    };
-
-                    let post_output = post_command.output().context("Failed to execute post.sh")?;
-
-                    if !post_output.status.success() {
-                        mismatches.push(format!(
-                            "post.sh failed with exit code: {:?}\nstdout: {}\nstderr: {}",
-                            post_output.status.code(),
-                            String::from_utf8_lossy(&post_output.stdout),
-                            String::from_utf8_lossy(&post_output.stderr)
-                        ));
-                    }
-                }
-
-                let expected_dir = &toml_dir;
-                let actual_dir = temp_path;
-
-                if !uses_stdout {
-                    let expected_files =
-                        find_output_files(expected_dir, &output_prefix).unwrap_or_default();
-
-                    if expected_files.is_empty() {
-                        bail!(
-                            "No expected output files found in {} with prefix '{}'",
-                            expected_dir.display(),
-                            output_prefix
-                        );
-                    }
-
-                    for expected_file in &expected_files {
-                        let surplus = expected_file
-                            .strip_prefix(expected_dir)
-                            .expect("Stripping the dir again should work...");
-                        let str_surplus = surplus.to_string_lossy();
-                        let actual_file = actual_dir.join(str_surplus.as_ref());
-
-                        if !actual_file.exists() {
-                            mismatches.push(format!("Missing output file: {str_surplus}",));
-                            continue;
-                        }
-
-                        if let Err(e) = compare_files(expected_file, &actual_file, expected_dir) {
-                            mismatches.push(format!("{str_surplus}: {e}"));
-                        }
-                    }
-                }
-
-                for stream_name in ["stdout", "stderr"] {
-                    let expected_stream_file = expected_dir.join(stream_name);
-                    let actual_stream_file = actual_dir.join(stream_name);
-
-                    if expected_stream_file.exists() {
-                        if !actual_stream_file.exists() {
-                            mismatches.push(format!("Missing {stream_name} file"));
-                        } else if let Err(e) =
-                            compare_files(&expected_stream_file, &actual_stream_file, expected_dir)
-                        {
-                            mismatches.push(format!("{stream_name}: {e}"));
-                        }
-                    } else if actual_stream_file.exists() {
-                        mismatches.push(format!("Unexpected {stream_name} file"));
-                    }
-                }
-
-                if !uses_stdout {
-                    let actual_files = find_output_files(&actual_dir, &output_prefix)?;
-                    for actual_file in &actual_files {
-                        let surplus = actual_file
-                            .strip_prefix(&actual_dir)
-                            .expect("Stripping the dir again should work...");
-                        let str_surplus = surplus.to_string_lossy();
-                        let expected_file = expected_dir.join(str_surplus.as_ref());
-                        if !expected_file.exists() {
-                            mismatches.push(format!("Unexpected output file: {str_surplus}",));
-                        }
-                    }
-                }
-
-                if !mismatches.is_empty() {
-                    bail!("Output verification failed:\n  {}", mismatches.join("\n  "));
-                }
+            if let Err(e) = compare_files(expected_file, &actual_file, expected_dir) {
+                mismatches.push(format!("{str_surplus}: {e}"));
             }
         }
     }
 
+    for stream_name in ["stdout", "stderr"] {
+        let expected_stream_file = expected_dir.join(stream_name);
+        let actual_stream_file = actual_dir.join(stream_name);
+        if expected_stream_file.exists() {
+            if !actual_stream_file.exists() {
+                mismatches.push(format!("Missing {stream_name} file"));
+            } else if let Err(e) =
+                compare_files(&expected_stream_file, &actual_stream_file, expected_dir)
+            {
+                mismatches.push(format!("{stream_name}: {e}"));
+            }
+        } else if actual_stream_file.exists() {
+            mismatches.push(format!("Unexpected {stream_name} file"));
+        }
+    }
+
+    if !uses_stdout {
+        let actual_files = find_output_files(actual_dir, output_prefix)?;
+        for actual_file in &actual_files {
+            let surplus = actual_file
+                .strip_prefix(actual_dir)
+                .expect("Stripping the dir again should work...");
+            let str_surplus = surplus.to_string_lossy();
+            let expected_file = expected_dir.join(str_surplus.as_ref());
+            if !expected_file.exists() {
+                mismatches.push(format!("Unexpected output file: {str_surplus}"));
+            }
+        }
+    }
+
+    if !mismatches.is_empty() {
+        bail!("Output verification failed:\n  {}", mismatches.join("\n  "));
+    }
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+fn run_processor_and_verify(
+    current_exe: &Path,
+    expected_failure: Option<&ExpectedFailure>,
+    expected_validation_error: Option<&ExpectedFailure>,
+    stdin_file: Option<PathBuf>,
+    temp_path: &Path,
+    temp_toml_path: &Path,
+    uses_stdout: bool,
+    output_prefix: &str,
+    toml_dir: &Path,
+    post_script: &Path,
+    unsafe_prep: bool,
+) -> Result<()> {
+    let mut command = std::process::Command::new(current_exe);
+    command
+        .arg(if expected_validation_error.is_none() {
+            "process"
+        } else {
+            "validate"
+        })
+        .arg("config.toml")
+        .current_dir(temp_path);
+
+    let output = execute_processor(&mut command, stdin_file)?;
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    match (expected_failure, output.status.success()) {
+        (Some(expected_failure_pattern), false) => {
+            expected_failure_pattern.validate_expected_failure(&stderr, temp_toml_path)?;
+        }
+        (Some(_), true) => {
+            if expected_validation_error.is_some() {
+                bail!(
+                    "Expected validation failure but 'validate' command succeeded. stderr: {stderr}"
+                );
+            } else {
+                bail!("Expected runtime failure but 'process' command succeeded. stderr: {stderr}");
+            }
+        }
+        (None, false) => {
+            bail!(
+                "Processing failed with exit code {:?}. stderr: {}",
+                output.status.code(),
+                stderr
+            );
+        }
+        (None, true) => {
+            verify_processor_success(
+                &output,
+                temp_path,
+                toml_dir,
+                output_prefix,
+                uses_stdout,
+                post_script,
+                unsafe_prep,
+            )?;
+        }
+    }
+    Ok(())
+}
+
+fn cleanup_output_dir(output_dir: Option<&Path>) -> Result<()> {
     if let Some(output_dir) = output_dir
         && output_dir.exists()
     {
-        ex::fs::remove_dir_all(&output_dir).with_context(|| {
+        ex::fs::remove_dir_all(output_dir).with_context(|| {
             format!(
                 "Failed to remove existing output directory: {}",
                 output_dir.display()
             )
         })?;
     }
-
     Ok(())
 }
 
@@ -690,6 +834,15 @@ enum ExpectedFailure {
     Regex(Regex),
 }
 
+impl std::fmt::Display for ExpectedFailure {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ExpectedFailure::ExactText(text) => write!(f, "{text}"),
+            ExpectedFailure::Regex(regex) => write!(f, "/{}/", regex.as_str()),
+        }
+    }
+}
+
 impl ExpectedFailure {
     fn new(toml_dir: &Path, key: &str) -> Result<Option<Self>> {
         let expected_failure_file = toml_dir.join(format!("expected_{key}.txt"));
@@ -784,15 +937,6 @@ impl ExpectedFailure {
             }
         }
         Ok(())
-    }
-}
-
-impl std::fmt::Display for ExpectedFailure {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ExpectedFailure::ExactText(text) => write!(f, "ExactText({text})"),
-            ExpectedFailure::Regex(regex) => write!(f, "Regex({})", regex.as_str()),
-        }
     }
 }
 
@@ -1057,8 +1201,10 @@ failures:
     cli::verify::test::test_decompress_file";
         println!("{}", strip_backtrace(stderr));
         //dump both to a file for diff
-        std::fs::write("actual_stderr.txt", strip_backtrace(stderr).to_string()).expect("Failed to write actual stderr to file");
-        std::fs::write("expected_stderr.txt", should).expect("Failed to write expected stderr to file");
+        std::fs::write("actual_stderr.txt", strip_backtrace(stderr).to_string())
+            .expect("Failed to write actual stderr to file");
+        std::fs::write("expected_stderr.txt", should)
+            .expect("Failed to write expected stderr to file");
         assert_eq!(strip_backtrace(stderr), should);
     }
 }
