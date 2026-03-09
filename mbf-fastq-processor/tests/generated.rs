@@ -1399,6 +1399,16 @@ fn test_cases_x_single_step_x_concat_tags_x_multiple_hits_per_tag_anchor_right()
 }
 
 #[test]
+fn test_cases_x_single_step_x_concat_tags_x_repeated_tag_fails() {
+    println!("Test case is in: test_cases/single_step/concat_tags/repeated_tag_fails");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/concat_tags/repeated_tag_fails"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_concat_tags_x_string_string_concat() {
     println!("Test case is in: test_cases/single_step/concat_tags/string_string_concat");
     run_test(

@@ -1,0 +1,34 @@
+# == Error Details ==
+Error 1/2
+   ╭─config.toml
+   ┆
+11 │ [[step]]
+12 │     action = 'ConcatTags'
+   ┆              ──────┬─────
+   ┆                    │
+   ┆                    ╰────── In this step
+13 │     in_labels = ['tag1', 'tag1', 'tag1']
+   ┆                  ───┬──  ───┬──
+   ┆                     │       │
+   ┆                     ╰──────────────────── First occurrence
+   ┆                             │
+   ┆                             ╰──────────── Duplicate input label
+───╯
+Hint: See https://doc_url.example/version-stripped-from-test/docs/reference/ConcatTags
+
+Error 2/2
+   ╭─config.toml
+   ┆
+11 │ [[step]]
+12 │     action = 'ConcatTags'
+   ┆              ──────┬─────
+   ┆                    │
+   ┆                    ╰────── In this step
+13 │     in_labels = ['tag1', 'tag1', 'tag1']
+   ┆                  ───┬──          ───┬──
+   ┆                     │               │
+   ┆                     ╰──────────────────── First occurrence
+   ┆                                     │
+   ┆                                     ╰──── Duplicate input label
+───╯
+Hint: See https://doc_url.example/version-stripped-from-test/docs/reference/ConcatTags

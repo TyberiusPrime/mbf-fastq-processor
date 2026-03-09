@@ -60,13 +60,20 @@ impl VerifyIn<PartialConfig> for PartialConcatTags {
             // if v.len() < 2 {
             // don't check here, check  in get_tag_usage, so we can make suggestions
             // }
-            let mut seen = std::collections::HashSet::new();
+            let mut seen: IndexMap<&TagLabel, std::ops::Range<usize>> = IndexMap::new();
             for label in v.iter_mut() {
                 let lv = label.value.as_ref().expect("Parent was ok?");
-                if !seen.insert(lv) {
-                    label.state = TomlValueState::ValidationFailed {
-                        message: "Duplicate input label".to_string(),
-                    };
+                match seen.entry(lv) {
+                    indexmap::map::Entry::Occupied(occupied_entry) => {
+                        let spans = vec![
+                            (label.span(), "Duplicate input label".to_string()),
+                            (occupied_entry.get().clone(), "First occurrence".to_string()),
+                        ];
+                        label.state = TomlValueState::Custom { spans };
+                    }
+                    indexmap::map::Entry::Vacant(vacant_entry) => {
+                        vacant_entry.insert(label.span());
+                    }
                 }
             }
             Ok(())
