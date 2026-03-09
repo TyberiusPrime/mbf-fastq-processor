@@ -834,6 +834,51 @@ interleaved = ['read1','read2']
 }
 
 #[test]
+fn test_validate_command_two_autodetect_toml() {
+    // Create temp directory
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+
+    // Create config with invalid action
+    let config_path = temp_path.join("input.toml");
+    let mut config = fs::File::create(&config_path).unwrap();
+    writeln!(
+        config,
+        r"[input]
+seq = 'test.fq'
+[output]
+    prefix = 'out'
+"
+    )
+    .unwrap();
+    let config_path2 = temp_path.join("input2.toml");
+    let mut config2 = fs::File::create(&config_path2).unwrap();
+    writeln!(
+        config2,
+        r"[input]
+seq = 'test.fq'
+[output]
+    prefix = 'out'
+"
+    )
+    .unwrap();
+    // Run validate command
+    let cmd = std::process::Command::new(get_bin_path())
+        .arg("validate")
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+
+    let stderr = std::str::from_utf8(&cmd.stderr).unwrap().to_string();
+
+    assert!(stderr.contains(
+        "Found 2 valid TOML files in current directory. Please specify which one to use"
+    ));
+    assert!(stderr.contains("input.toml"));
+    assert!(stderr.contains("input2.toml"));
+}
+
+#[test]
 fn test_validate_command_bad_autodetect_toml_missing_input() {
     // Create temp directory
     let temp_dir = tempfile::tempdir().unwrap();
