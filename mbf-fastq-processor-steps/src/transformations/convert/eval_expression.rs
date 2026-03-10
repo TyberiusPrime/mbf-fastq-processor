@@ -49,15 +49,6 @@ impl VerifyIn<PartialConfig> for PartialEvalExpression {
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {
-        self.out_label.verify(|v| {
-            if v.0.trim().is_empty() {
-                return Err(ValidationFailure::new(
-                    "out_label cannot be empty",
-                    Some("Provide a label to store the result under"),
-                ));
-            }
-            Ok(())
-        });
         self.expression.verify(|v| {
             if v.trim().is_empty() {
                 return Err(ValidationFailure::new(
@@ -105,12 +96,6 @@ impl std::fmt::Debug for EvalExpression {
             .field("expression", &self.expression)
             .field("result_type", &self.result_type)
             .finish()
-    }
-}
-
-impl Clone for EvalExpression {
-    fn clone(&self) -> Self {
-        panic!("No cloning needs_serial steps")
     }
 }
 

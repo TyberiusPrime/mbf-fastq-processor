@@ -19,7 +19,7 @@ pub(crate) use crate::demultiplex::{
     DemultiplexBarcodes, DemultiplexedData, DemultiplexedOutputFiles, OptDemultiplex,
 };
 
-pub(crate) use anyhow::{Context, Result, anyhow, bail};
+pub(crate) use anyhow::{Context, Result, bail};
 pub(crate) use mbf_fastq_processor_io::io::{
     FastQBlocksCombined, output::compressed_output::OutputWriter, reads::NewLocation,
     reads::WrappedFastQReadCommon,

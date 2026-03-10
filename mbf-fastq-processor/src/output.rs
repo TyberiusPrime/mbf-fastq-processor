@@ -1,4 +1,5 @@
 use anyhow::{Context, Result, anyhow};
+use mbf_fastq_processor_steps::join_nonempty;
 use std::collections::BTreeMap;
 use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
@@ -7,7 +8,6 @@ use std::sync::{Arc, Mutex};
 
 use crate::config::CheckedConfig;
 use crate::demultiplex::OptDemultiplex;
-use crate::join_nonempty;
 use crate::transformations::FinalizeReportResult;
 use mbf_fastq_processor_io::ensure_output_destination_available;
 use mbf_fastq_processor_io::io::{

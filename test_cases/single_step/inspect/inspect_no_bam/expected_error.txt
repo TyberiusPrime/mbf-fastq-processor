@@ -1,0 +1,20 @@
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+ 9 │ [[step]]
+10 │     action ='Inspect'
+   ┆             ────┬────
+   ┆                 │
+   ┆                 ╰───── In this step
+   ┆
+11 │     infix = 'tcepsni'
+12 │     format = 'bam'
+   ┆              ──┬──
+   ┆                │
+   ┆                ╰─── Inspect step supports only 'fastq' or 'fasta' formats
+───╯
+Hint: See https://doc_url.example/version-stripped-from-test/docs/redirects/Inspect
+      Or run: `mbf-fastq-processor template Inspect`
+
+

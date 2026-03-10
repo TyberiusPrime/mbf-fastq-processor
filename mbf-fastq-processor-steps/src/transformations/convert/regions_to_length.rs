@@ -65,12 +65,9 @@ impl Step for RegionsToLength {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let region_values = block.tags.get(&self.in_label).cloned().ok_or_else(|| {
-            anyhow!(
-                "ConvertRegionsToLength expects region tag '{}' to be available",
-                self.in_label
-            )
-        })?;
+        let region_values = block.tags.get(&self.in_label).cloned().expect(
+                "ConvertRegionsToLength expects region tag to be available -should have been caught in validation. Bug",
+            );
 
         let mut lengths: Vec<TagValue> = Vec::with_capacity(region_values.len());
         for tag_value in region_values {
@@ -86,10 +83,9 @@ impl Step for RegionsToLength {
                     .sum::<usize>(),
                 TagValue::Missing => 0,
                 other => {
-                    bail!(
-                        "ConvertRegionsToLength expected '{}' to contain region tags, found {:?}",
-                        self.in_label,
-                        other
+                    panic!(
+                        "ConvertRegionsToLength expected '{}' to contain region tags, found {:?}. Should have been caught in validation",
+                        self.in_label, other
                     );
                 }
             };

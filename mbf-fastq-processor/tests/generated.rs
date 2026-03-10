@@ -4771,6 +4771,16 @@ fn test_cases_x_single_step_x_error_handling_x_validation_errors_x_merge_reads_m
 }
 
 #[test]
+fn test_cases_x_single_step_x_eval_x_eval_expr_x_err_empty_expr() {
+    println!("Test case is in: test_cases/single_step/eval/eval_expr/err_empty_expr");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/eval/eval_expr/err_empty_expr"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_eval_x_eval_expr_x_eval_expression_basic() {
     println!("Test case is in: test_cases/single_step/eval/eval_expr/eval_expression_basic");
     run_test(
@@ -4795,6 +4805,16 @@ fn test_cases_x_single_step_x_eval_x_eval_expr_x_eval_expression_complex() {
     println!("Test case is in: test_cases/single_step/eval/eval_expr/eval_expression_complex");
     run_test(
         std::path::Path::new("../test_cases/single_step/eval/eval_expr/eval_expression_complex"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_eval_x_eval_expr_x_syntax_error() {
+    println!("Test case is in: test_cases/single_step/eval/eval_expr/syntax_error");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/eval/eval_expr/syntax_error"),
         "input.toml",
         1,
     );
@@ -7158,6 +7178,26 @@ fn test_cases_x_single_step_x_inspect_x_inspect_x_inspect_read2() {
     println!("Test case is in: test_cases/single_step/inspect/inspect/inspect_read2");
     run_test(
         std::path::Path::new("../test_cases/single_step/inspect/inspect/inspect_read2"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_inspect_x_inspect_x_inspect_read2_fasta() {
+    println!("Test case is in: test_cases/single_step/inspect/inspect/inspect_read2_fasta");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/inspect/inspect/inspect_read2_fasta"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_inspect_x_inspect_no_bam() {
+    println!("Test case is in: test_cases/single_step/inspect/inspect_no_bam");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/inspect/inspect_no_bam"),
         "input.toml",
         1,
     );

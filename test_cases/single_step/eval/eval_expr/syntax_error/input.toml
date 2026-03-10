@@ -1,0 +1,26 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'CalcNCount'
+    segment = 'read1'
+    out_label = 'n_count'
+
+[[step]]
+    action = 'CalcLength'
+    segment = 'read1'
+    out_label = 'length'
+
+[[step]]
+    action = 'EvalExpression'
+    out_label = 'n_rate'
+    expression = 'len_read1 + 23)'
+	result_type = 'numeric'
+
+[[step]]
+    action = 'StoreTagInComment'
+    in_label = 'n_rate'
+    segment = 'read1'
+
+[output]
+    prefix = 'output'

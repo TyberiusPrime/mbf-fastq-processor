@@ -135,7 +135,9 @@ impl Step for Inspect {
         demultiplex_info: &OptDemultiplex,
         allow_overwrite: bool,
     ) -> Result<Option<DemultiplexBarcodes>> {
-        let format_suffix = FileFormat::Fastq.get_suffix(self.compression, self.suffix.as_ref());
+        let format_suffix = self
+            .format
+            .get_suffix(self.compression, self.suffix.as_ref());
 
         let target = match self.segment {
             SegmentIndexOrAll::Indexed(idx) => input_info.segment_order[idx].clone(),
@@ -236,24 +238,50 @@ impl Step for Inspect {
         )?;
         if !collector.is_empty() {
             let reads_to_write = collected.min(self.n);
-            for read_idx in 0..reads_to_write {
-                for segment_reads in collector.iter() {
-                    if let Some((name, seq, qual, tag)) = segment_reads.get(read_idx) {
-                        writer.write_all(b"@")?;
-                        writer.write_all(name)?;
-                        if let Some(demux_names) = &self.demultiplex_names
-                            && let Some(demux_name) = demux_names.get(tag)
-                        {
-                            writer.write_all(b" Demultiplex=")?;
-                            writer.write_all(demux_name.as_bytes())?;
-                        }
+            match self.format {
+                FileFormat::None | FileFormat::Fastq => {
+                    for read_idx in 0..reads_to_write {
+                        for segment_reads in collector.iter() {
+                            if let Some((name, seq, qual, tag)) = segment_reads.get(read_idx) {
+                                writer.write_all(b"@")?;
+                                writer.write_all(name)?;
+                                if let Some(demux_names) = &self.demultiplex_names
+                                    && let Some(demux_name) = demux_names.get(tag)
+                                {
+                                    writer.write_all(b" Demultiplex=")?;
+                                    writer.write_all(demux_name.as_bytes())?;
+                                }
 
-                        writer.write_all(b"\n")?;
-                        writer.write_all(seq)?;
-                        writer.write_all(b"\n+\n")?;
-                        writer.write_all(qual)?;
-                        writer.write_all(b"\n")?;
+                                writer.write_all(b"\n")?;
+                                writer.write_all(seq)?;
+                                writer.write_all(b"\n+\n")?;
+                                writer.write_all(qual)?;
+                                writer.write_all(b"\n")?;
+                            }
+                        }
                     }
+                }
+                FileFormat::Fasta => {
+                    for read_idx in 0..reads_to_write {
+                        for segment_reads in collector.iter() {
+                            if let Some((name, seq, _qual, tag)) = segment_reads.get(read_idx) {
+                                writer.write_all(b">")?;
+                                writer.write_all(name)?;
+                                if let Some(demux_names) = &self.demultiplex_names
+                                    && let Some(demux_name) = demux_names.get(tag)
+                                {
+                                    writer.write_all(b" Demultiplex=")?;
+                                    writer.write_all(demux_name.as_bytes())?;
+                                }
+                                writer.write_all(b"\n")?;
+                                writer.write_all(seq)?;
+                                writer.write_all(b"\n")?;
+                            }
+                        }
+                    }
+                }
+                FileFormat::Bam => {
+                    panic!("Bam not valid - should have been cought in verify");
                 }
             }
         }

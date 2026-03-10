@@ -1,3 +1,4 @@
+use mbf_fastq_processor_steps::link_docs;
 use toml_pretty_deser::TomlValue;
 
 use crate::config::PartialConfig;
@@ -5,15 +6,6 @@ use crate::config::PartialConfig;
 pub mod process;
 pub mod validate;
 pub mod verify;
-
-pub(crate) fn link_docs(step_name: &str) -> String {
-    format!(
-        "{}v{}/docs/redirects/{}",
-        env!("CARGO_PKG_HOMEPAGE"),
-        env!("CARGO_PKG_VERSION"),
-        step_name
-    )
-}
 
 pub(crate) fn improve_error_messages(
     toml_filename: &str,

@@ -8,7 +8,7 @@ Dump a few reads to a FASTQ file for inspection at this point in the graph.
     n  = 1000 # how many molecules 
     infix = "inspect_at_point" # output filename infix
     segment = "read1" # Any of your input segments (use "all" for interleaved output)
-    format = "FASTQ" # output format: FASTQ, FASTA or BAM
+    format = "FASTQ" # output format: FASTQ, FASTA  (no BAM)
     suffix = "compressed" # (optional) custom suffix for filename
     compression = "gzip" # (optional) compression format: raw, gzip, zstd. Defaults to uncompressed
     compression_level = 1 # (optional) compression level for gzip/zstd/bam (gzip, zstd: 1-22)
@@ -25,7 +25,6 @@ Where `{format_extension}` is:
 - `fq` for raw format
 - `fq.gz` for gzip format  
 - `fq.zst` for zstd format
-- `bam` for BAM format
 
 
 Note that inspect will collect all reads in memory before writing them out.

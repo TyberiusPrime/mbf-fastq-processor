@@ -1,0 +1,21 @@
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+14 │ [[step]]
+15 │     action = 'EvalExpression'
+   ┆              ────────┬───────
+   ┆                      │
+   ┆                      ╰──────── In this step
+   ┆
+16 │     out_label = 'n_rate'
+17 │     expression = ''
+   ┆                  ─┬
+   ┆                   │
+   ┆                   ╰─ expression cannot be empty
+───╯
+Hint: Provide an expression to evaluate
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/EvalExpression
+      Or run: `mbf-fastq-processor template EvalExpression`
+
+

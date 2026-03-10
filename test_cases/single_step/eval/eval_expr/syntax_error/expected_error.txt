@@ -1,0 +1,22 @@
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+14 │ [[step]]
+15 │     action = 'EvalExpression'
+   ┆              ────────┬───────
+   ┆                      │
+   ┆                      ╰──────── In this step
+   ┆
+16 │     out_label = 'n_rate'
+17 │     expression = 'len_read1 + 23)'
+18 │     result_type = 'numeric'
+   ┆                            ┬
+   ┆                            │
+   ┆                            ╰─ Syntax error
+───╯
+Hint: Inner error message UnparsedTokensRemaining(")")
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/EvalExpression
+      Or run: `mbf-fastq-processor template EvalExpression`
+
+

@@ -33,8 +33,8 @@ pub fn ensure_output_destination_available(
             );
         }
         Err(err) if err.kind() == ErrorKind::NotFound => {
-            //I mean that's basically expected.
-            //missing directory is handled by the marker file creation
+            // I mean that's basically expected.
+            // missing directory is handled by the marker file creation
             Ok(None)
         }
         Err(err) => {

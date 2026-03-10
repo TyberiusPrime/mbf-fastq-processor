@@ -114,30 +114,30 @@ impl<T> IntoIterator for DemultiplexedData<T> {
     }
 }
 
-#[allow(clippy::into_iter_without_iter)]
-impl<'a, T> IntoIterator for &'a DemultiplexedData<T> {
-    type Item = (Tag, &'a T);
-    type IntoIter = std::iter::Map<
-        std::collections::btree_map::Iter<'a, Tag, T>,
-        fn((&'a Tag, &'a T)) -> (Tag, &'a T),
-    >;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.0.iter().map(|(tag, data)| (*tag, data))
-    }
-}
-
-impl<'a, T> IntoIterator for &'a mut DemultiplexedData<T> {
-    type Item = (Tag, &'a mut T);
-    type IntoIter = std::iter::Map<
-        std::collections::btree_map::IterMut<'a, Tag, T>,
-        fn((&'a Tag, &'a mut T)) -> (Tag, &'a mut T),
-    >;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.0.iter_mut().map(|(tag, data)| (*tag, data))
-    }
-}
+// #[allow(clippy::into_iter_without_iter)]
+// impl<'a, T> IntoIterator for &'a DemultiplexedData<T> {
+//     type Item = (Tag, &'a T);
+//     type IntoIter = std::iter::Map<
+//         std::collections::btree_map::Iter<'a, Tag, T>,
+//         fn((&'a Tag, &'a T)) -> (Tag, &'a T),
+//     >;
+//
+//     fn into_iter(self) -> Self::IntoIter {
+//         self.0.iter().map(|(tag, data)| (*tag, data))
+//     }
+// }
+//
+// impl<'a, T> IntoIterator for &'a mut DemultiplexedData<T> {
+//     type Item = (Tag, &'a mut T);
+//     type IntoIter = std::iter::Map<
+//         std::collections::btree_map::IterMut<'a, Tag, T>,
+//         fn((&'a Tag, &'a mut T)) -> (Tag, &'a mut T),
+//     >;
+//
+//     fn into_iter(self) -> Self::IntoIter {
+//         self.0.iter_mut().map(|(tag, data)| (*tag, data))
+//     }
+// }
 
 impl<T> FromIterator<(Tag, T)> for DemultiplexedData<T> {
     fn from_iter<I: IntoIterator<Item = (Tag, T)>>(iter: I) -> Self {
