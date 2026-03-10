@@ -17,5 +17,5 @@ Error 1/1
   ┆              ╰── 2 characters
 ──╯
 Hint: 'seq' and 'qual' must be the same length
-      See https://doc_url.example/version-stripped-from-test/docs/reference/Prefix
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/Prefix
 

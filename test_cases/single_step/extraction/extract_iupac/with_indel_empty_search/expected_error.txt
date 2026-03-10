@@ -14,5 +14,5 @@ Error 1/1
   ┆               │
   ┆               ╰─ Must contain at least one letter (base)
 ──╯
-Hint: See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractIUPACWithIndel
+Hint: See https://doc_url.example/version-stripped-from-test/docs/redirects/ExtractIUPACWithIndel
 

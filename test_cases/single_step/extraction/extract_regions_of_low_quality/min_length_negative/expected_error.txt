@@ -16,5 +16,5 @@ Error 1/1
   ┆                   ╰─ integer (usize), must be positive
 ──╯
 Hint: Use a number between 0 and 9223372036854775807 inclusive.
-      See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractRegionsOfLowQuality
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/ExtractRegionsOfLowQuality
 

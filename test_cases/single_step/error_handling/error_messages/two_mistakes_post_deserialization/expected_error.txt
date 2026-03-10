@@ -17,7 +17,7 @@ Error 1/2
   ┆              ╰── 2 characters
 ──╯
 Hint: 'seq' and 'qual' must be the same length
-      See https://doc_url.example/version-stripped-from-test/docs/reference/Prefix
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/Prefix
 
 Error 2/2
    ╭─config.toml
@@ -37,5 +37,5 @@ Error 2/2
    ┆             ╰── 1 characters
 ───╯
 Hint: 'seq' and 'qual' must be the same length
-      See https://doc_url.example/version-stripped-from-test/docs/reference/Postfix
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/Postfix
 

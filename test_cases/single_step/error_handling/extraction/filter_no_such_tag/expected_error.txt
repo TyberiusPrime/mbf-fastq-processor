@@ -15,5 +15,5 @@ Error 1/1
    ┆                   ╰─── No such tag
 ───╯
 Hint: Did you mean: 'other' or 'something'?
-      See https://doc_url.example/version-stripped-from-test/docs/reference/FilterByTag
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/FilterByTag
 

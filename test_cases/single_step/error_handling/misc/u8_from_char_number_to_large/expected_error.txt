@@ -15,5 +15,5 @@ Error 1/1
   ┆                 ╰── Integer value 300 is out of range for a byte (0..255)
 ──╯
 Hint: Provide either a number (0..255), or a single letter string (with an ascii character)
-      See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractLowQualityStart
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/ExtractLowQualityStart
 

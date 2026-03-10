@@ -11,5 +11,5 @@ Error 1/1
   ┆                                ╰─ ValidateReadPairing requires at least two input segments
 ──╯
 Hint: Check your [input] section or remove the step
-      See https://doc_url.example/version-stripped-from-test/docs/reference/ValidateReadPairing
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/ValidateReadPairing
 

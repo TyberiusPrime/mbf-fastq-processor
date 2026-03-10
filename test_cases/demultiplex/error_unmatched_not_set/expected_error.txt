@@ -15,5 +15,5 @@ Error 1/1
    ┆                             ╰─ output_unmatched must be set when using barcodes for demultiplex.
 ───╯
 Hint: Add output_unmatched=true (or false)
-      See https://doc_url.example/version-stripped-from-test/docs/reference/Demultiplex
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/Demultiplex
 

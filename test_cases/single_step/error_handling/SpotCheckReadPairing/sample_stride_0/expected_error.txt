@@ -13,5 +13,5 @@ Error 1/1
   ┆                 ╰─ Must be > 0
 ──╯
 Hint: sample_stride = n means every n-th read is checked, so choose a number > 0
-      See https://doc_url.example/version-stripped-from-test/docs/reference/ValidateReadPairing
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/ValidateReadPairing
 

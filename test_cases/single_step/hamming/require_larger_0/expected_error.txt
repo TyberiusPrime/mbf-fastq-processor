@@ -18,5 +18,5 @@ Error 1/1
    ┆                          ╰─ Must be greater than 0 to perform correction
 ───╯
 Hint: Leave off the HammingCorrect step if no correction is desired.
-      See https://doc_url.example/version-stripped-from-test/docs/reference/HammingCorrect
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/HammingCorrect
 

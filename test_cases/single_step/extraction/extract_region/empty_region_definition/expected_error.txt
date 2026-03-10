@@ -17,5 +17,5 @@ Error 1/1
    ┆ │     │
    ┆ ╰─────┴─ Must contain at least one region definition
 ───╯
-Hint: See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractRegions
+Hint: See https://doc_url.example/version-stripped-from-test/docs/redirects/ExtractRegions
 

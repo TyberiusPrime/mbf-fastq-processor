@@ -17,5 +17,5 @@ Error 1/1
    ┆                         ╰─ Invalid Value
 ───╯
 Hint: Valid range is 1-22 for zstd.
-      See https://doc_url.example/version-stripped-from-test/docs/reference/Inspect
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/Inspect
 

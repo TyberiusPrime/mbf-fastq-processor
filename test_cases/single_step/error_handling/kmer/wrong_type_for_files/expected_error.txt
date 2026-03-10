@@ -16,5 +16,5 @@ Error 1/1
    ┆              ╰─ Wrong type: expected string, found integer.
 ───╯
 Hint: This value has the wrong type.
-      See https://doc_url.example/version-stripped-from-test/docs/reference/CalcKmers
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/CalcKmers
 

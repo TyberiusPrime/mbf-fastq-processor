@@ -17,5 +17,5 @@ Error 1/1
    ┆                    ╰──── Identical to segment_a
 ───╯
 Hint: Please specify two different segments to swap.
-      See https://doc_url.example/version-stripped-from-test/docs/reference/Swap
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/Swap
 

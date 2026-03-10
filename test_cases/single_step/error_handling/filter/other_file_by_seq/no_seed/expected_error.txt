@@ -17,5 +17,5 @@ Error 1/1
   ┆                                ╰─ Seed required for approximate filtering
 ──╯
 Hint: Seed is required when false_positive_rate > 0.0 (approximate filtering). Add `seed=42` for example.
-      See https://doc_url.example/version-stripped-from-test/docs/reference/TagOtherFile
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/TagOtherFile
 

@@ -13,5 +13,5 @@ Error 1/1
   ┆                   ╰─── Invalid label
 ──╯
 Hint: Must start with a letter or underscore (a-zA-Z_), got '.'
-      See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractIUPACSuffix
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/ExtractIUPACSuffix
 

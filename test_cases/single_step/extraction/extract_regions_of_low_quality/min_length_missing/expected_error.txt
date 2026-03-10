@@ -14,5 +14,5 @@ Error 1/1
   ┆                     │
   ┆                     ╰─ Missing required key: 'min_length'.
 ──╯
-Hint: See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractRegionsOfLowQuality
+Hint: See https://doc_url.example/version-stripped-from-test/docs/redirects/ExtractRegionsOfLowQuality
 

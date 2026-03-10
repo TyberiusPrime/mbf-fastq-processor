@@ -17,7 +17,7 @@ Error 1/2
    ┆                   ╰──── Segment not present in [input] section
 ───╯
 Hint: Did you mean: 'read1' or 'read2'?
-      See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractIUPAC
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/ExtractIUPAC
 
 Error 2/2
    ╭─config.toml
@@ -37,5 +37,5 @@ Error 2/2
    ┆                   ╰──── Segment not present in [input] section
 ───╯
 Hint: Did you mean: 'read2' or 'read1'?
-      See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractIUPAC
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/ExtractIUPAC
 

@@ -15,5 +15,5 @@ Error 1/1
   ┆              ╰── Invalid DNA base
 ──╯
 Hint: Must be a single character: A, C, G, T, N or '.'
-      See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractPolyTail
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/ExtractPolyTail
 

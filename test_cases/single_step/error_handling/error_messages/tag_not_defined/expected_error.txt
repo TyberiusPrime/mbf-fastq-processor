@@ -15,5 +15,5 @@ Error 1/1
   ┆                         ╰─────── No such tag
 ──╯
 Hint: All known accepted values have been used.
-      See https://doc_url.example/version-stripped-from-test/docs/reference/EvalExpression
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/EvalExpression
 

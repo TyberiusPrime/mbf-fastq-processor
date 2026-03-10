@@ -1060,6 +1060,7 @@ fn test_documentation_toml_examples_parse() {
                     if let Some(transformation) = &transformation {
                         if !is_concept_file
                             && !toml_block.contains(&format!("action = \"{transformation}\""))
+                            && !toml_block.contains("[barcodes.")
                         {
                             failed_files.push(format!(
                                 "{}: TOML block {} does not contain action = \"{transformation}\"",
@@ -1465,3 +1466,88 @@ fn test_readme_toml_examples_validate() {
 //     // toml-pretty-deser is unknown fields by default
 //
 // }
+
+#[test]
+fn test_every_link_docs_target_has_a_redirect_page() {
+    // link_docs() is called two ways:
+    //   1. Dynamically with step.tpd_get_tag() — covers every transformation name
+    //   2. With a literal string for non-step targets (e.g. "barcodes")
+    // We check both.
+
+    let redirects_dir = Path::new("../docs/content/docs/redirects");
+
+    // --- 1. All transformation names (dynamic call sites) ---
+    let transformations = get_all_transformations();
+
+    // --- 2. Literal link_docs("...") call sites ---
+    let link_docs_re = Regex::new(r#"link_docs\(\s*"([^"]+)"\s*\)"#).unwrap();
+
+    fn collect_rs_files(dir: &Path, out: &mut Vec<PathBuf>) {
+        if let Ok(entries) = fs::read_dir(dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    collect_rs_files(&path, out);
+                } else if path.extension().and_then(|e| e.to_str()) == Some("rs") {
+                    out.push(path);
+                }
+            }
+        }
+    }
+
+    let src_roots = [
+        Path::new("src"),
+        Path::new("../mbf-fastq-processor-steps/src"),
+    ];
+    let mut literal_targets: Vec<(String, PathBuf)> = Vec::new();
+    for root in &src_roots {
+        if !root.exists() {
+            continue;
+        }
+        let mut rs_files = Vec::new();
+        collect_rs_files(root, &mut rs_files);
+        for file in rs_files {
+            let Ok(content) = fs::read_to_string(&file) else {
+                continue;
+            };
+            for cap in link_docs_re.captures_iter(&content) {
+                literal_targets.push((cap[1].to_string(), file.clone()));
+            }
+        }
+    }
+
+    // --- Check everything ---
+    let mut missing: Vec<String> = Vec::new();
+
+    for name in &transformations {
+        if !redirects_dir.join(format!("{name}.md")).exists() {
+            missing.push(format!(
+                "  {name}  (transformation — run dev/update_generated.sh)"
+            ));
+        }
+    }
+    for (target, source_file) in &literal_targets {
+        if !redirects_dir.join(format!("{target}.md")).exists() {
+            missing.push(format!(
+                "  {target}  (literal call in {})",
+                source_file.display()
+            ));
+        }
+    }
+
+    if !missing.is_empty() {
+        missing.sort();
+        missing.dedup();
+        panic!(
+            "The following link_docs() targets have no redirect page in docs/reference/redirects/.\n\
+             Run dev/update_generated.sh to regenerate, or add a doc page for missing entries:\n{}",
+            missing.join("\n")
+        );
+    }
+
+    println!(
+        "✓ All {} transformation + {} literal link_docs() targets have redirect pages",
+        transformations.len(),
+        literal_targets.len()
+    );
+}

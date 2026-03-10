@@ -24,5 +24,5 @@ Error 1/1
    ┆                     ╰─────── In this step
 ───╯
 Hint: Adjust them to be identical.
-      See https://doc_url.example/version-stripped-from-test/docs/reference/TagOtherFile
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/TagOtherFile
 

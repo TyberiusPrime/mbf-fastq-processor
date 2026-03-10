@@ -15,5 +15,5 @@ Error 1/1
   ┆               ╰───── Invalid enum variant: 'nosuchop'
 ──╯
 Hint: Did you mean: Below, Above, or '>' (='Above')?
-      See https://doc_url.example/version-stripped-from-test/docs/reference/CalcQualifiedBases
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/CalcQualifiedBases
 

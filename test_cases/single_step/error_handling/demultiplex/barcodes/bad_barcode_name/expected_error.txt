@@ -23,5 +23,5 @@ Error 2/2
    ┆                       ╰──────── Invalid label
 ───╯
 Hint: Must contain only letters, numbers, and underscores (a-zA-Z0-9_), found ' '.
-      See https://doc_url.example/version-stripped-from-test/docs/reference/Demultiplex
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/Demultiplex
 

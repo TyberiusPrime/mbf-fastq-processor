@@ -20,5 +20,5 @@ Error 1/1
    ┆                      ╰───────── Invalid DNA sequence
 ───╯
 Hint: DNA sequence cannot be empty
-      See https://doc_url.example/version-stripped-from-test/docs/reference/Report
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/Report
 

@@ -13,5 +13,5 @@ Error 1/1
   ┆                      ╰───── Invalid label
 ──╯
 Hint: Reserved value 'ReadName' cannot be used here. This name is reserved for the index column in StoreTagsInTable. Please choose a different value.
-      See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractIUPAC
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/ExtractIUPAC
 

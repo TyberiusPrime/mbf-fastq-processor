@@ -16,5 +16,5 @@ Error 1/1
   ┆                  ╰─ min_length must be > 0
 ──╯
 Hint: Set to a positive integer
-      See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractLongestPolyX
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/ExtractLongestPolyX
 

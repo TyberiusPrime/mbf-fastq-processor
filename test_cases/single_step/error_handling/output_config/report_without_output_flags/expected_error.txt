@@ -22,5 +22,5 @@ Error 1/1
    ┆                   ╰─ Add report_json | report_html here?
 ───╯
 Hint: Either remove the report, or enable it's output.
-      See https://doc_url.example/version-stripped-from-test/docs/reference/Report
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/Report
 

@@ -16,5 +16,5 @@ Error 1/1
    ┆                       ╰─── max_mismatch_rate must be in [0.0..1.0)
 ───╯
 Hint: Set to a unit scale probability >= 0 and < 1.0
-      See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractLongestPolyX
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/ExtractLongestPolyX
 

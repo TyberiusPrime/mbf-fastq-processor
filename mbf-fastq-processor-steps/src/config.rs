@@ -456,7 +456,7 @@ impl PartialConfig {
                     .as_ref()
                     .and_then(|inner| inner.as_ref())
                     .is_some_and(|v| !v.is_empty());
-                    has_stdout | has_outputs | has_interleave
+                has_stdout | has_outputs | has_interleave
             } else {
                 false
             }

@@ -13,7 +13,7 @@ Error 1/2
   ┆                  ╰── Invalid label
 ──╯
 Hint: Must start with a letter or underscore (a-zA-Z_), got '.'
-      See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractLowQualityStart
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/ExtractLowQualityStart
 
 Error 2/2
   ╭─config.toml
@@ -31,5 +31,5 @@ Error 2/2
   ┆                  ╰── Invalid value
 ──╯
 Hint: Provide either a number (0..255), or a single letter string (with an ascii character)
-      See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractLowQualityStart
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/ExtractLowQualityStart
 

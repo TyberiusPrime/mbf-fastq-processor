@@ -28,5 +28,5 @@ Error 1/1
 ───╯
 Hint: Adjust your regions to cover only one span on the reads
       This is an implementation limitation, not a design one, PR welcome.
-      See https://doc_url.example/version-stripped-from-test/docs/reference/TrimAtTag
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/TrimAtTag
 

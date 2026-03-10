@@ -16,5 +16,5 @@ Error 1/1
   ┆                  ╰─ Must be > 0
 ──╯
 Hint: Change to a positive integer
-      See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractRegionsOfLowQuality
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/ExtractRegionsOfLowQuality
 

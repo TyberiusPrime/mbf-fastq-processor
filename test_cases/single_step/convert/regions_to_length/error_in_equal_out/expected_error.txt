@@ -17,5 +17,5 @@ Error 1/1
    ┆                   ╰──── Same as out_label
 ───╯
 Hint: 'out_label' must differ from 'in_label' to avoid overwriting the source tag.
-      See https://doc_url.example/version-stripped-from-test/docs/reference/ConvertRegionsToLength
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/ConvertRegionsToLength
 

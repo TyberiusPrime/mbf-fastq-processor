@@ -4,7 +4,7 @@ pub mod transformations;
 
 pub(crate) fn link_docs(step_name: &str) -> String {
     format!(
-        "{}v{}/docs/reference/{}",
+        "{}v{}/docs/redirects/{}",
         env!("CARGO_PKG_HOMEPAGE"),
         env!("CARGO_PKG_VERSION"),
         step_name

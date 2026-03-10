@@ -18,5 +18,5 @@ Error 1/1
    ┆                      ╰────── Invalid label
 ───╯
 Hint: Cannot start with reserved prefix 'len_'. This prefix is reserved for length-related internal tags. Please choose a different value that doesn't start with 'len_'.
-      See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractRegion
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/ExtractRegion
 

@@ -16,5 +16,5 @@ Error 1/1
   ┆                         ╰── Only ASCII letters are allowed as bases
 ──╯
 Hint: Invalid character: '1'
-      See https://doc_url.example/version-stripped-from-test/docs/reference/CalcBaseContent
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/CalcBaseContent
 

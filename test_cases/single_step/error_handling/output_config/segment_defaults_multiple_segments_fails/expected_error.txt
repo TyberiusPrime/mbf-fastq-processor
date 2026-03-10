@@ -13,5 +13,5 @@ Error 1/1
   ┆                      ╰─ Segment not specified but multiple segments available
 ──╯
 Hint: Available segments: read1, read2
-      See https://doc_url.example/version-stripped-from-test/docs/reference/ValidateSeq
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/ValidateSeq
 

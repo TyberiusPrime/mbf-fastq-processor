@@ -16,5 +16,5 @@ Error 1/1
 ───╯
 Hint: This transform requires tag 'gc_content' to be one of the following types: [Bool, String, Location],
       but it is actually of type 'Numeric'.
-      See https://doc_url.example/version-stripped-from-test/docs/reference/FilterByTag
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/FilterByTag
 

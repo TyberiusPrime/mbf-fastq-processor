@@ -12,7 +12,7 @@ Error 1/2
    ┆                            ╰────────────────────────────────────────────────────────────────────────────── No such tag
 ───╯
 Hint: Did you mean: 'prefix_5', 'regex', or 'read_length'?
-      See https://doc_url.example/version-stripped-from-test/docs/reference/_ReportTagHistogram
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/_ReportTagHistogram
 
 Error 2/2
    ╭─config.toml
@@ -27,5 +27,5 @@ Error 2/2
    ┆                                                        ╰────────────────────────────────────────────────── No such tag
 ───╯
 Hint: Did you mean: 'read_length', 'read_no_lt_4', or 'regex'?
-      See https://doc_url.example/version-stripped-from-test/docs/reference/_ReportTagHistogram
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/_ReportTagHistogram
 

@@ -16,5 +16,5 @@ Error 1/1
    ┆              ╰─ At least one filename must be provided for the k-mer database.
 ───╯
 Hint: Please specify the path to your k-mer database file.
-      See https://doc_url.example/version-stripped-from-test/docs/reference/CalcKmers
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/CalcKmers
 

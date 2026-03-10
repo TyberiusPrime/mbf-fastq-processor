@@ -15,5 +15,5 @@ Error 1/1
    ┆              │
    ┆              ╰─── StoreTagInFastQ supports only 'fastq' or 'fasta' formats
 ───╯
-Hint: See https://doc_url.example/version-stripped-from-test/docs/reference/StoreTagInFastQ
+Hint: See https://doc_url.example/version-stripped-from-test/docs/redirects/StoreTagInFastQ
 

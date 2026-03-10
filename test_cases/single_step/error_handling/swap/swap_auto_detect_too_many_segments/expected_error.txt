@@ -11,5 +11,5 @@ Error 1/1
   ┆                    ╰─ Insuffient swap definition
 ──╯
 Hint: There were more (or fewer) than 2 segments, and you did not specify both segment_a and segment_b.
-      See https://doc_url.example/version-stripped-from-test/docs/reference/Swap
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/Swap
 

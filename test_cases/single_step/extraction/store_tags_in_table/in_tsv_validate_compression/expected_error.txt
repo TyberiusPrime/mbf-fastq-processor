@@ -16,5 +16,5 @@ Error 1/1
    ┆                     ╰─── Invalid enum variant: 'shu'
 ───╯
 Hint: Did you mean: Zstd, Gzip, or 'gz' (='Gzip')?
-      See https://doc_url.example/version-stripped-from-test/docs/reference/StoreTagsInTable
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/StoreTagsInTable
 

@@ -19,5 +19,5 @@ Error 1/1
    ┆                          ╰── Invalid value. Must be in [0.0..1.0)
 ───╯
 Hint: Set a valid value >= 0 and < 1.0.
-      See https://doc_url.example/version-stripped-from-test/docs/reference/MergeReads
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/MergeReads
 

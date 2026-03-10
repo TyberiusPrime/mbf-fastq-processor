@@ -1955,6 +1955,16 @@ fn test_cases_x_single_step_x_edits_x_lowercase_name() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_edits_x_lowercase_name_autodetect_segment() {
+    println!("Test case is in: test_cases/single_step/edits/lowercase_name_autodetect_segment");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/edits/lowercase_name_autodetect_segment"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_edits_x_lowercase_sequence() {
     println!("Test case is in: test_cases/single_step/edits/lowercase_sequence");
     run_test(

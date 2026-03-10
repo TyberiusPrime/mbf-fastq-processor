@@ -20,5 +20,5 @@ Error 1/1
    ┆                   ╰─ Report name not unique
 ───╯
 Hint: Multiple reports with the same name 'report' found. Please ensure all reports have unique names.
-      See https://doc_url.example/version-stripped-from-test/docs/reference/Report
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/Report
 

@@ -12,5 +12,5 @@ Error 1/1
    ┆                             │
    ┆                             ╰─ Missing required key: 'letter'.
 ───╯
-Hint: See https://doc_url.example/version-stripped-from-test/docs/reference/ReplaceTagWithLetter
+Hint: See https://doc_url.example/version-stripped-from-test/docs/redirects/ReplaceTagWithLetter
 

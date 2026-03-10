@@ -19,5 +19,5 @@ Error 1/1
   ┆                  ╰─ Too large, can not be longer than the search pattern
 ──╯
 Hint: min_length cannot be greater than the length of the search pattern
-      See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractIUPACSuffix
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/ExtractIUPACSuffix
 

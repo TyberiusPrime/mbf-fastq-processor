@@ -30,7 +30,7 @@ Error 2/3
    ┆                   ╰── Invalid label
 ───╯
 Hint: Must start with a letter or underscore (a-zA-Z_), got '1'
-      See https://doc_url.example/version-stripped-from-test/docs/reference/ExtractRegion
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/ExtractRegion
 
 Error 3/3
    ╭─config.toml
@@ -46,5 +46,5 @@ Error 3/3
    ┆                  ╰── Invalid label
 ───╯
 Hint: Must start with a letter or underscore (a-zA-Z_), got '1'
-      See https://doc_url.example/version-stripped-from-test/docs/reference/Demultiplex
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/Demultiplex
 
