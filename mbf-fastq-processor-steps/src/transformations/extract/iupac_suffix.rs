@@ -32,16 +32,6 @@ impl VerifyIn<PartialConfig> for PartialIUPACSuffix {
         Self: Sized + toml_pretty_deser::Visitor,
     {
         self.segment.validate_segment(parent);
-        self.max_mismatches.verify(|v| {
-            if *v > 255 {
-                Err(ValidationFailure::new(
-                    "max_mismatches must be <= 255",
-                    Some("Set to a value between 0 and 255."),
-                ))
-            } else {
-                Ok(())
-            }
-        });
         let ml_span = self.min_length.span();
         self.min_length.verify(|v| {
             if *v == 0 {

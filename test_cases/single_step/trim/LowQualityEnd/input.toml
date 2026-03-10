@@ -5,9 +5,9 @@
     accept_duplicate_files = true
     block_size = 3
 
-[[step]]
-    action = 'Skip'
-    n = 9
+# [[step]]
+#     action = 'Skip'
+#     n = 9
 
 [[step]]
     action = 'ExtractLowQualityEnd'

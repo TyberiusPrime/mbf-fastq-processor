@@ -9,7 +9,7 @@
     n = 4
 [[step]]
     action = 'Head'
-    n = 1
+    n = 2
 
 [[step]]
     action = 'ExtractLowQualityStart'
