@@ -2,6 +2,7 @@ use anyhow::{Context, Result, bail};
 use crossbeam::channel::{bounded, unbounded};
 use indexmap::IndexMap;
 use std::{
+    cell::OnceCell,
     collections::BTreeMap,
     panic,
     path::{Path, PathBuf},
@@ -126,7 +127,7 @@ fn run_combiner_thread(
     //I need to receive the blocks (from all segment input threads)
     //and then, match them up into something that's the same length!
     let mut block_no = 1; // for the sorting later on.
-    let mut expected_read_count = None;
+    let expected_read_count = OnceCell::new();
     loop {
         let mut blocks = Vec::new();
         for receiver in &raw_rx_readers {
@@ -135,7 +136,9 @@ fn run_combiner_thread(
             if let Ok((block, block_expected_read_count)) = receiver.recv() {
                 if block_no == 1 && blocks.len() == largest_segment_idx {
                     //println!("Received expected read count for largest segment: {:?}", block_expected_read_count);
-                    expected_read_count = block_expected_read_count;
+                    expected_read_count
+                        .set(block_expected_read_count)
+                        .expect("Read count already set!?");
                 }
                 blocks.push(block);
             } else if blocks.is_empty() {
@@ -159,7 +162,13 @@ fn run_combiner_thread(
                     tags: Default::default(),
                     is_final: true,
                 };
-                let _ = combiner_output_tx.send((block_no, final_block, expected_read_count));
+                let _ = combiner_output_tx.send((
+                    block_no,
+                    final_block,
+                    //'will not have been set if we're suffering 
+                    // an early parse error
+                    *expected_read_count.get().unwrap_or(&None),
+                ));
                 return;
             } else {
                 error_collector.lock().expect("mutex lock should not be poisoned").push("Unequal number of reads in the segment inputs (first > later). Check your fastqs for identical read counts".to_string());
@@ -181,7 +190,7 @@ fn run_combiner_thread(
                 tags: Default::default(),
                 is_final: false,
             },
-            expected_read_count,
+            *expected_read_count.get().expect("Should have been set"),
         );
         block_no += 1;
         match combiner_output_tx.send(out) {
