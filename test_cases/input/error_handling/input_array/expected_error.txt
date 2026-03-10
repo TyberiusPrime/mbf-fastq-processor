@@ -6,5 +6,7 @@ Error 1/1
   ┆     │
   ┆     ╰────── Wrong type: expected table or inline table, found array of tables.
 ──╯
-Hint: This value has the wrong type.
+Hint: See https://doc_url.example/version-stripped-from-test/docs/redirects/input-section
+      Or run: `mbf-fastq-processor template input-section`
+
 

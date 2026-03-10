@@ -395,6 +395,20 @@ fn test_cases_x_input_x_compression_x_rapidgzip_x_basic() {
 }
 
 #[test]
+fn test_cases_x_input_x_compression_x_rapidgzip_x_error_index_but_no_rapid_gzip() {
+    println!(
+        "Test case is in: test_cases/input/compression/rapidgzip/error_index_but_no_rapid_gzip"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/input/compression/rapidgzip/error_index_but_no_rapid_gzip",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_input_x_compression_x_rapidgzip_x_error_no_rapid_gzip() {
     println!("Test case is in: test_cases/input/compression/rapidgzip/error_no_rapid_gzip");
     run_test(
@@ -693,6 +707,26 @@ fn test_cases_x_input_validation_x_fastq_breakng_after_sequence_in_partial_but_s
         std::path::Path::new(
             "../test_cases/input_validation/fastq_breakng_after_sequence_in_partial_but_stop_at_newline_so_check_in_spacer_windows",
         ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_input_validation_x_not_fastq_nor_fasta_nor_bam() {
+    println!("Test case is in: test_cases/input_validation/not_fastq_nor_fasta_nor_bam");
+    run_test(
+        std::path::Path::new("../test_cases/input_validation/not_fastq_nor_fasta_nor_bam"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_input_validation_x_unsupported_compression() {
+    println!("Test case is in: test_cases/input_validation/unsupported_compression");
+    run_test(
+        std::path::Path::new("../test_cases/input_validation/unsupported_compression"),
         "input.toml",
         1,
     );

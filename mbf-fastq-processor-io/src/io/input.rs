@@ -309,24 +309,6 @@ pub fn open_input_file(filename: impl AsRef<Path>) -> Result<InputFile> {
     Ok(input_file)
 }
 
-#[mutants::skip] // Only used for estimation of expected input size - failure means we allocate
-// more ScaleableCuckooFilter but will still work
-pub fn sum_file_sizes(filenames: &[impl AsRef<Path>]) -> Result<u64> {
-    let mut total_size = 0u64;
-    for filename in filenames {
-        let metadata = fs::metadata(filename.as_ref()).with_context(|| {
-            format!(
-                "Could not get file metadata for size calculation of {}",
-                filename.as_ref().display()
-            )
-        })?;
-        total_size = total_size
-            .checked_add(metadata.len())
-            .with_context(|| "Total size of input files exceeds u64 max")?;
-    }
-    Ok(total_size)
-}
-
 fn open_stdin() -> Result<ex::fs::File> {
     #[cfg(unix)]
     {

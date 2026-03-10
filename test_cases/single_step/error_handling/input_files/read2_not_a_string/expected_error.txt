@@ -10,6 +10,8 @@ Error 1/2
   ┆               ╰── Wrong type: expected string, found boolean.
 ──╯
 Hint: This value has the wrong type.
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/input-section
+      Or run: `mbf-fastq-processor template input-section`
 
 Error 2/2
   ╭─config.toml
@@ -19,4 +21,5 @@ Error 2/2
   ┆ ╰─────── No output files and no reports requested. Nothing to do.
 ──╯
 Hint: Add an [output] section with output files or reports, or use a benchmark configuration.
+
 

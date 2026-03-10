@@ -41,11 +41,11 @@ impl TagUser for PartialTaggedVariant<PartialLowercase> {
 impl Step for Lowercase {
     fn apply(
         &self,
-        block: FastQBlocksCombined,
+        _block: FastQBlocksCombined,
         _input_info: &InputInfo,
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        Ok((block, true))
+        unreachable!();
     }
 }

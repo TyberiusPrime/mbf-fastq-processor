@@ -1,0 +1,5 @@
+Error opening input files
+
+Caused by:
+    0: Problem in segment read1 while opening 'input_read1.fq'
+    1: Could not detect input format for input_read1.fq. Expected FASTA, FASTQ, or BAM.

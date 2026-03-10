@@ -1,0 +1,5 @@
+Error opening input files
+
+Caused by:
+    0: Problem in segment read1 while opening 'input_read1.fq.bz2'
+    1: Unsupported compression format for input detection

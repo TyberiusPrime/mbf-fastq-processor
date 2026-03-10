@@ -1,0 +1,16 @@
+Error Details ==
+Error 1/1
+  ╭─config.toml
+  ┆
+4 │ [input.options]
+5 │ 	use_rapidgzip=false
+6 │     build_rapidgzip_index=true
+  ┆                           ──┬─
+  ┆                             │
+  ┆                             ╰── Only accepted when use_rapidgzip is set to true
+──╯
+Hint: Either set use_rapidgzip=true or unset build_rapidgzip_index
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/input-section
+      Or run: `mbf-fastq-processor template input-section`
+
+

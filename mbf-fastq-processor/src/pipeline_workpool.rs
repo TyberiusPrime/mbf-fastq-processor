@@ -545,7 +545,8 @@ fn process_work_item(
 
         if let Ok(ref result) = result {
             let len_after = result.0.len();
-            if len_before != len_after { // mutants false positve.
+            if len_before != len_after {
+                // mutants false positve.
                 assert!(
                     stage.allowed_tags.len() == block_tag_count,
                     "A filtering stage forgot to declare must_see_all_tags=true: {:?}. Declared {} tags, block had {} tags",

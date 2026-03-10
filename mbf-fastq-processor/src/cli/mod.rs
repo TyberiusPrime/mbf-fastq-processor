@@ -1,3 +1,5 @@
+use toml_pretty_deser::TomlValue;
+
 use crate::config::PartialConfig;
 
 pub mod process;
@@ -17,6 +19,21 @@ pub(crate) fn improve_error_messages(
     toml_filename: &str,
     mut err: toml_pretty_deser::DeserError<PartialConfig>,
 ) -> String {
+    fn add_help<T>(toml_value: &mut TomlValue<T>, step_name: &str) {
+        let new_help = format!(
+            "See {}\nOr run: `{} template {}`",
+            link_docs(step_name),
+            env!("CARGO_PKG_NAME"),
+            step_name
+        );
+        toml_value.help = match toml_value.help.as_ref() {
+            Some(old_help) => Some(format!("{old_help}\n{new_help}",)),
+            None => Some(new_help),
+        };
+        if let Some(context) = toml_value.context.as_mut() {
+            context.1 = "In this step".to_string();
+        }
+    }
     match &mut err {
         toml_pretty_deser::DeserError::ParsingFailure(_, _) => {}
         toml_pretty_deser::DeserError::DeserFailure(_source, tv_partial) => {
@@ -28,20 +45,11 @@ pub(crate) fn improve_error_messages(
                         && let Some(step) = tv_step.value.as_ref()
                     {
                         let step_name = step.tpd_get_tag();
-                        let new_help = format!(
-                            "See {}\nOr run: `{} template {}`",
-                            link_docs(step_name),
-                            env!("CARGO_PKG_NAME"),
-                            step_name
-                        );
-                        tv_step.help = match tv_step.help.as_ref() {
-                            Some(old_help) => Some(format!("{old_help}\n{new_help}",)),
-                            None => Some(new_help),
-                        };
-                        if let Some(context) = tv_step.context.as_mut() {
-                            context.1 = "In this step".to_string();
-                        }
+                        add_help(tv_step, step_name);
                     }
+                }
+                if !partial.input.is_ok() {
+                    add_help(&mut partial.input, "input-section");
                 }
             }
         }

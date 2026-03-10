@@ -165,7 +165,7 @@ fn run_combiner_thread(
                 let _ = combiner_output_tx.send((
                     block_no,
                     final_block,
-                    //'will not have been set if we're suffering 
+                    //'will not have been set if we're suffering
                     // an early parse error
                     *expected_read_count.get().unwrap_or(&None),
                 ));
