@@ -58,7 +58,7 @@ impl VerifyIn<PartialConfig> for PartialSwap {
                 ));
             }
         } else if self.segment_a.is_needs_further_validation()
-            && self.segment_b.is_needs_further_validation()
+            || self.segment_b.is_needs_further_validation()
         {
             self.segment_a.validate_segment(parent);
             self.segment_b.validate_segment(parent);
@@ -85,12 +85,6 @@ impl VerifyIn<PartialConfig> for PartialSwap {
                 self.segment_b.state = TomlValueState::Nested;
             }
         } else {
-            if self.segment_a.is_needs_further_validation() {
-                self.segment_a.validate_segment(parent);
-            }
-            if self.segment_b.is_needs_further_validation() {
-                self.segment_b.validate_segment(parent);
-            }
             //all other errors we pass straight on
         }
         Ok(())
@@ -178,12 +172,9 @@ impl Step for Swap {
             if should_swap {
                 actual_swap_count += 1;
                 // Get mutable references to both blocks for swapping
-                let (block_a, block_b) = if index_a < index_b {
+                let (block_a, block_b) = {
                     let (left, right) = block.segments.split_at_mut(index_b);
                     (&mut left[index_a], &mut right[0])
-                } else {
-                    let (left, right) = block.segments.split_at_mut(index_a);
-                    (&mut right[0], &mut left[index_b])
                 };
 
                 // Swap the FastQRead entries between the two segments for this read

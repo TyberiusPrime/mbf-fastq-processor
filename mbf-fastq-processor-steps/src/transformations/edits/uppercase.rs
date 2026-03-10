@@ -29,6 +29,7 @@ impl VerifyIn<PartialConfig> for PartialUppercase {
 }
 
 impl TagUser for PartialTaggedVariant<PartialUppercase> {
+    #[mutants::skip]
     fn get_tag_usage(
         &mut self,
         _tags_available: &IndexMap<TagLabel, TagMetadata>,

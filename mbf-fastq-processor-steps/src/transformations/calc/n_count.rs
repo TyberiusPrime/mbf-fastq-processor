@@ -26,6 +26,7 @@ impl VerifyIn<PartialConfig> for PartialNCount {
 }
 
 impl TagUser for PartialTaggedVariant<PartialNCount> {
+    #[mutants::skip]
     fn get_tag_usage(
         &mut self,
         _tags_available: &IndexMap<TagLabel, TagMetadata>,

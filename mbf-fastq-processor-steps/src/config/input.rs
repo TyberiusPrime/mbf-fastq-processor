@@ -401,7 +401,6 @@ impl StructuredInput {
 }
 
 impl Input {
-
     #[must_use]
     #[mutants::skip] // only used to figure out thread count.
     pub fn parser_count(&self) -> usize {
@@ -418,8 +417,6 @@ impl Input {
             | StructuredInput::Segmented { segment_order, .. } => segment_order,
         }
     }
-
-
 }
 
 impl PartialInput {

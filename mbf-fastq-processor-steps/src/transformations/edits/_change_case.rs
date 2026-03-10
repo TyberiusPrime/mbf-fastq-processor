@@ -45,14 +45,15 @@ impl Partial_ChangeCase {
 impl VerifyIn<PartialConfig> for Partial_ChangeCase {
     fn verify(
         &mut self,
-        parent: &PartialConfig,
+        _parent: &PartialConfig,
         _options: &VerifyOptions,
     ) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {
-        self.target.validate_segment(parent);
-        Ok(())
+        unreachable!(); //since this is in expanded step.
+        // self.target.validate_segment(parent);
+        // Ok(())
     }
 }
 

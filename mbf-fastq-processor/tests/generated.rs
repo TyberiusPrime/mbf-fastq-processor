@@ -5015,6 +5015,34 @@ fn test_cases_x_single_step_x_extraction_x_edits_altering_tag_locations_x_swap_c
 }
 
 #[test]
+fn test_cases_x_single_step_x_extraction_x_edits_altering_tag_locations_x_swap_conditional_third() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/edits_altering_tag_locations/swap_conditional_third"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/edits_altering_tag_locations/swap_conditional_third",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_extraction_x_edits_altering_tag_locations_x_swap_third() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/edits_altering_tag_locations/swap_third"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/edits_altering_tag_locations/swap_third",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_extraction_x_edits_altering_tag_locations_x_trim_quality_start() {
     println!(
         "Test case is in: test_cases/single_step/extraction/edits_altering_tag_locations/trim_quality_start"

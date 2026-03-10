@@ -14,25 +14,12 @@ pub enum Direction {
 
 /// Trim reads at a tag's position
 #[derive(Clone, JsonSchema)]
-#[tpd]
+#[tpd(no_verify)]
 #[derive(Debug)]
 pub struct TrimAtTag {
     in_label: TagLabel,
     direction: Direction,
     keep_tag: bool,
-}
-
-impl VerifyIn<PartialConfig> for PartialTrimAtTag {
-    fn verify(
-        &mut self,
-        _parent: &PartialConfig,
-        _options: &VerifyOptions,
-    ) -> std::result::Result<(), ValidationFailure>
-    where
-        Self: Sized + toml_pretty_deser::Visitor,
-    {
-        Ok(())
-    }
 }
 
 impl TagUser for PartialTaggedVariant<PartialTrimAtTag> {
