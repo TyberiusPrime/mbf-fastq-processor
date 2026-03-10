@@ -401,18 +401,6 @@ impl StructuredInput {
 }
 
 impl Input {
-    #[must_use]
-    pub fn is_interleaved(&self) -> bool {
-        self.interleaved.is_some()
-    }
-
-    #[must_use]
-    pub fn segment_count(&self) -> usize {
-        match &self.structured {
-            StructuredInput::Interleaved { segment_order, .. }
-            | StructuredInput::Segmented { segment_order, .. } => segment_order.len(),
-        }
-    }
 
     #[must_use]
     #[mutants::skip] // only used to figure out thread count.
@@ -431,15 +419,7 @@ impl Input {
         }
     }
 
-    #[must_use]
-    pub fn index(&self, segment_name: &str) -> Option<usize> {
-        match &self.structured {
-            StructuredInput::Interleaved { segment_order, .. }
-            | StructuredInput::Segmented { segment_order, .. } => {
-                segment_order.iter().position(|s| s == segment_name)
-            }
-        }
-    }
+
 }
 
 impl PartialInput {
