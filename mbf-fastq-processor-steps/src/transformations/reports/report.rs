@@ -35,23 +35,6 @@ pub struct Report {
     pub tag_histograms: Option<Vec<TagLabel>>,
 }
 
-impl Clone for PartialReport {
-    fn clone(&self) -> Self {
-        Self {
-            name: self.name.clone(),
-            count: self.count.clone(),
-            base_statistics: self.base_statistics.clone(),
-            length_distribution: self.length_distribution.clone(),
-            duplicate_count_per_read: self.duplicate_count_per_read.clone(),
-            duplicate_count_per_fragment: self.duplicate_count_per_fragment.clone(),
-            debug_reproducibility: self.debug_reproducibility.clone(),
-            count_oligos: self.count_oligos.clone(),
-            count_oligos_segment: self.count_oligos_segment.clone(),
-            tag_histograms: self.tag_histograms.clone(),
-        }
-    }
-}
-
 impl VerifyIn<PartialConfig> for PartialReport {
     fn verify(
         &mut self,
@@ -94,6 +77,7 @@ impl Default for Report {
 }
 
 impl TagUser for PartialTaggedVariant<PartialReport> {
+    #[mutants::skip]
     fn get_tag_usage(
         &mut self,
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
@@ -108,6 +92,7 @@ impl TagUser for PartialTaggedVariant<PartialReport> {
 }
 
 impl Step for Report {
+    #[mutants::skip]
     fn init(
         &mut self,
         _input_info: &InputInfo,

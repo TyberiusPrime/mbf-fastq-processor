@@ -1173,6 +1173,16 @@ fn test_cases_x_output_x_progress_x_followed_by_head() {
 }
 
 #[test]
+fn test_cases_x_output_x_progress_x_stdout() {
+    println!("Test case is in: test_cases/output/progress/stdout");
+    run_test(
+        std::path::Path::new("../test_cases/output/progress/stdout"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_output_x_stdout_output_interleaved() {
     println!("Test case is in: test_cases/output/stdout_output_interleaved");
     run_test(
@@ -1271,6 +1281,16 @@ fn test_cases_x_single_step_x_calc_x_kmer_x_files_as_sequence() {
     println!("Test case is in: test_cases/single_step/calc/kmer/files_as_sequence");
     run_test(
         std::path::Path::new("../test_cases/single_step/calc/kmer/files_as_sequence"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_calc_x_kmer_x_min_count_zero_error() {
+    println!("Test case is in: test_cases/single_step/calc/kmer/min_count_zero_error");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/calc/kmer/min_count_zero_error"),
         "input.toml",
         1,
     );
@@ -2959,6 +2979,20 @@ fn test_cases_x_single_step_x_error_handling_x_filter_x_bynumerictagminormax() {
     run_test(
         std::path::Path::new(
             "../test_cases/single_step/error_handling/filter/ByNumericTagMinOrMax",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_filter_x_other_file_by_seq_x_input_is_output() {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/filter/other_file_by_seq/input_is_output"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/error_handling/filter/other_file_by_seq/input_is_output",
         ),
         "input.toml",
         1,
@@ -7691,6 +7725,34 @@ fn test_cases_x_single_step_x_validation_x_validate_all_reads_same_length_x_name
     run_test(
         std::path::Path::new(
             "../test_cases/single_step/validation/validate_all_reads_same_length/name",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_validation_x_validate_all_reads_same_length_x_name_all() {
+    println!(
+        "Test case is in: test_cases/single_step/validation/validate_all_reads_same_length/name_all"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/validation/validate_all_reads_same_length/name_all",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_validation_x_validate_all_reads_same_length_x_name_all_fail() {
+    println!(
+        "Test case is in: test_cases/single_step/validation/validate_all_reads_same_length/name_all_fail"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/validation/validate_all_reads_same_length/name_all_fail",
         ),
         "input.toml",
         1,

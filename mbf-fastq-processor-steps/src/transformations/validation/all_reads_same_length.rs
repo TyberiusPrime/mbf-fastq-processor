@@ -130,10 +130,11 @@ impl Step for ValidateAllReadsSameLength {
                 match segment_index_or_all {
                     SegmentIndexOrAll::All => {
                         while let Some(read) = pseudo_iter.pseudo_next() {
-                            let mut length_here = 0;
-                            for segment in &read.segments {
-                                length_here += segment.name_without_comment(*split_character).len();
-                            }
+                            let length_here = read
+                                .segments
+                                .iter()
+                                .map(|segment| segment.name_without_comment(*split_character).len())
+                                .sum();
                             self.check(length_here)?;
                         }
                     }

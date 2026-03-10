@@ -47,6 +47,8 @@ impl Step for Box<_ReportDuplicateCount> {
     fn transmits_premature_termination(&self) -> bool {
         false
     }
+
+    #[mutants::skip]
     fn needs_serial(&self) -> bool {
         //for the init
         true

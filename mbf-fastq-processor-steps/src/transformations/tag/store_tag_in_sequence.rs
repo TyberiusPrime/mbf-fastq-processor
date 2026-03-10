@@ -6,25 +6,12 @@ use crate::transformations::prelude::*;
 ///Does work with `ExtractRegions` and multiple regions.
 ///
 #[derive(Clone, JsonSchema)]
-#[tpd]
+#[tpd(no_verify)]
 #[derive(Debug)]
 pub struct StoreTagInSequence {
     in_label: TagLabel,
     #[tpd(default)]
     ignore_missing: bool,
-}
-
-impl VerifyIn<PartialConfig> for PartialStoreTagInSequence {
-    fn verify(
-        &mut self,
-        _parent: &PartialConfig,
-        _options: &VerifyOptions,
-    ) -> std::result::Result<(), ValidationFailure>
-    where
-        Self: Sized + toml_pretty_deser::Visitor,
-    {
-        Ok(())
-    }
 }
 
 impl TagUser for PartialTaggedVariant<PartialStoreTagInSequence> {
@@ -112,7 +99,7 @@ impl Step for StoreTagInSequence {
                                 avg_qual.round() as u8
                             };
                             new_qual.extend_from_slice(&vec![avg_qual; region.sequence.len()]);
-                            kept_size = region.sequence.len() < location.len;
+                            kept_size = region.sequence.len() <= location.len;
                         }
                         new_qual.extend_from_slice(&read.qual()[location.start + location.len..]);
 

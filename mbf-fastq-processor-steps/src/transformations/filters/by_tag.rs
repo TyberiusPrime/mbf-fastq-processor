@@ -3,24 +3,11 @@ use crate::transformations::prelude::*;
 /// Filter reads by presence/value of a (non-numeric) tag
 
 #[derive(Clone, JsonSchema)]
-#[tpd]
+#[tpd(no_verify)]
 #[derive(Debug)]
 pub struct ByTag {
     in_label: TagLabel,
     keep_or_remove: super::super::KeepOrRemove,
-}
-
-impl VerifyIn<PartialConfig> for PartialByTag {
-    fn verify(
-        &mut self,
-        _parent: &PartialConfig,
-        _options: &VerifyOptions,
-    ) -> std::result::Result<(), ValidationFailure>
-    where
-        Self: Sized + toml_pretty_deser::Visitor,
-    {
-        Ok(())
-    }
 }
 
 impl TagUser for PartialTaggedVariant<PartialByTag> {

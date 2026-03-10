@@ -63,6 +63,8 @@ impl Step for QuantifyTag {
     fn transmits_premature_termination(&self) -> bool {
         false
     }
+    #[mutants::skip] //better to have the pipeline know about it than blocking in our 
+    //internal lock
     fn needs_serial(&self) -> bool {
         true
     }

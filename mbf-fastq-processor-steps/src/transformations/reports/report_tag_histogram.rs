@@ -141,6 +141,9 @@ impl Step for Box<_ReportTagHistogram> {
         false
     }
 
+    #[mutants::skip] // makes on difference to the outcome where we block 
+    // (only once by pipeline, or in self.data.lock()),
+    // but better for structure if the pipeline knows about it
     fn needs_serial(&self) -> bool {
         true
     }

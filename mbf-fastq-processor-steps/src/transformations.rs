@@ -165,6 +165,7 @@ pub struct TagUsageInfo<'a> {
 
 #[enum_dispatch(PartialTransformation)]
 pub trait TagUser {
+    #[mutants::skip] // this *is* Default::default()
     fn get_tag_usage(
         &mut self,
         _tags_available: &IndexMap<TagLabel, TagMetadata>,

@@ -106,9 +106,6 @@ pub struct _InduceFailure {
 impl TagUser for PartialTaggedVariant<Box<Partial_InduceFailure>> {}
 
 impl Step for Box<_InduceFailure> {
-    fn needs_serial(&self) -> bool {
-        true
-    }
     fn apply(
         &self,
         _block: FastQBlocksCombined,

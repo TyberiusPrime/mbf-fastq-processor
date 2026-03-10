@@ -262,6 +262,7 @@ fn correct_barcodes<'a, T: Clone + WithUpdatedSequence + 'a>(
             corrected_hits.push(hit_seq.clone());
             found_match = true;
         } else if max_hamming_distance > 0 {
+            //mutants false positive
             // Try hamming distance correction
             // Use IUPAC hamming distance
             for barcode in barcodes.keys() {

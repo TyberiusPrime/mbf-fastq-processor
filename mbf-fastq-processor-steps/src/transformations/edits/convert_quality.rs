@@ -73,9 +73,9 @@ impl Step for ConvertQuality {
                         .iter()
                         .map(|x| {
                             let v = func(*x);
-                            if v < i16::from(lower) {
+                            if v <= i16::from(lower) {
                                 lower
-                            } else if v > i16::from(upper) {
+                            } else if v >= i16::from(upper) {
                                 upper
                             } else {
                                 u8::try_from(v).expect("value must be in u8 range after validation")

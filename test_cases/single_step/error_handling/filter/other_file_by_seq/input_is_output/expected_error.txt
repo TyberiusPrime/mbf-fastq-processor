@@ -1,0 +1,16 @@
+Error 1/1
+  ╭─config.toml
+  ┆
+4 │ [[step]]
+5 │     action = 'TagOtherFile'
+  ┆              ───────┬──────
+  ┆                     │
+  ┆                     ╰─────── In this step
+6 │     source = 'tag:tag'
+  ┆              ────┬────
+  ┆                  │
+  ┆                  ╰───── Source cannot be the same as output tag
+──╯
+Hint: The source (segment or tag) cannot be the same as the output tag
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/TagOtherFile
+      Or run: `mbf-fastq-processor template TagOtherFile`

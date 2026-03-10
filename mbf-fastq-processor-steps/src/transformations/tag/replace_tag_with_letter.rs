@@ -48,10 +48,9 @@ impl Step for ReplaceTagWithLetter {
 
                         // Replace the sequence bases in the specified region with the replacement letter
                         let seq = read.seq_mut();
-                        for i in location.start..location.start + location.len {
-                            if i < seq.len() {
-                                seq[i] = self.letter;
-                            }
+                        //robust agaistt out-of-bounds, just in case
+                        for i in location.start..(location.start + location.len).min(seq.len()) {
+                            seq[i] = self.letter;
                         }
                     }
                 }

@@ -4,10 +4,6 @@ use mbf_fastq_processor_dna::dna::reverse_complement;
 use mbf_fastq_processor_io::STDIN_MAGIC_PATH;
 use mbf_fastq_processor_io::io::apply_to_read_sequences;
 
-fn default_min_count() -> usize {
-    1
-}
-
 /// Quantify Kmer occurance vs database
 #[derive(Clone, JsonSchema)]
 #[tpd]
@@ -46,7 +42,16 @@ impl VerifyIn<PartialConfig> for PartialKmers {
         Self: Sized,
     {
         self.segment.validate_segment(parent);
-        self.min_count.or_with(default_min_count);
+        self.min_count.or(1);
+        self.min_count.verify(|min_count| {
+            if *min_count == 0 {
+                return Err(ValidationFailure::new(
+                    "'min_count' must be greater than 0.",
+                    Some("Please specify a positive integer value for min_count (e.g., min_count = 1)."),
+                ));
+            }
+            Ok(())
+        });
 
         self.filename.verify(|filenames| {
             if filenames.is_empty() {

@@ -98,6 +98,7 @@ impl Step for Rename {
         Ok((block, true))
     }
 
+    #[mutants::skip] // replacing with constant true will obvs. work, this is an optimization.
     fn needs_serial(&self) -> bool {
         self.needs_counting
     }

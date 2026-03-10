@@ -20,16 +20,16 @@ pub struct _ReportCountOligos {
 }
 
 impl VerifyIn<PartialConfig> for Partial_ReportCountOligos {
+    #[mutants::skip]
     fn verify(
         &mut self,
-        parent: &PartialConfig,
+        _parent: &PartialConfig,
         _options: &VerifyOptions,
     ) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {
-        self.segment.validate_segment(parent);
-        Ok(())
+        unreachable!("_ReportCountOligos is only created by ::new, so no verify");
     }
 }
 impl TagUser for PartialTaggedVariant<Box<Partial_ReportCountOligos>> {}
@@ -51,9 +51,6 @@ impl Partial_ReportCountOligos {
 
 impl Step for Box<_ReportCountOligos> {
     fn transmits_premature_termination(&self) -> bool {
-        false
-    }
-    fn needs_serial(&self) -> bool {
         false
     }
 

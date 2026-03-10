@@ -312,7 +312,7 @@ impl Step for Box<EvalExpression> {
                 ResultType::Numeric => TagValue::Numeric(result),
                 ResultType::Bool => {
                     // Treat 0.0 as false, any other value as true
-                    TagValue::Bool(result.abs() > f64::EPSILON)
+                    TagValue::Bool(result.abs() >= f64::EPSILON)
                 }
             };
 

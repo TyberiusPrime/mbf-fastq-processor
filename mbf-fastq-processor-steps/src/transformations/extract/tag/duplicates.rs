@@ -96,14 +96,7 @@ impl Step for Duplicates {
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         // Initialize filters on first block using dynamic sizing
         if block_no == 1 {
-            let seed = {
-                if self.false_positive_rate > 0.0 {
-                    self.seed
-                        .expect("seed should be validated to exist when false_positive_rate > 0.0")
-                } else {
-                    42 // ignored anyway
-                }
-            };
+            let seed = self.seed.unwrap_or(42);
 
             let capacity = calculate_filter_capacity(
                 self.initial_filter_capacity,

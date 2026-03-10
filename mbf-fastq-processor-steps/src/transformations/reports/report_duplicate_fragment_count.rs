@@ -41,9 +41,13 @@ impl Step for Box<_ReportDuplicateFragmentCount> {
     fn transmits_premature_termination(&self) -> bool {
         false
     }
+
+    #[mutants::skip]
     fn needs_serial(&self) -> bool {
         // necessary for the correct init. Could get away with it
         // afterwards, I suppose
+        // hard to show in testing though, since most of the time,
+        // of course the first block will have aquired the lock
         true
     }
 

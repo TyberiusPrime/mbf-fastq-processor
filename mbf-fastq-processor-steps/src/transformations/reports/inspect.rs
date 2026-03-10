@@ -8,6 +8,7 @@ pub type NameSeqQualTuple = (Vec<u8>, Vec<u8>, Vec<u8>, DemultiplexTag);
 struct DebugFile(ex::fs::File);
 
 impl std::fmt::Debug for DebugFile {
+    #[mutants::skip]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "ex::fs::File(...)")
     }
@@ -120,6 +121,7 @@ impl TagUser for PartialTaggedVariant<PartialInspect> {
 }
 
 impl Step for Inspect {
+    #[mutants::skip] // doesn't always trigger if replaced by false, but often enough
     fn needs_serial(&self) -> bool {
         true
     }

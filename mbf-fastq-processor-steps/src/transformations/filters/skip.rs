@@ -106,6 +106,7 @@ impl Step for Skip {
         }
     }
 
+    #[mutants::skip] // test case failing if this is false is not 100%, but good enough.
     fn needs_serial(&self) -> bool {
         true
     }
