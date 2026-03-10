@@ -1,4 +1,4 @@
-# == Error Details ==
+Error Details ==
 Error 1/2
    ╭─config.toml
    ┆
@@ -15,6 +15,7 @@ Error 1/2
    ┆                             ╰──────────── Duplicate input label
 ───╯
 Hint: See https://doc_url.example/version-stripped-from-test/docs/redirects/ConcatTags
+      Or run: `mbf-fastq-processor template ConcatTags`
 
 Error 2/2
    ╭─config.toml
@@ -32,3 +33,6 @@ Error 2/2
    ┆                                     ╰──── Duplicate input label
 ───╯
 Hint: See https://doc_url.example/version-stripped-from-test/docs/redirects/ConcatTags
+      Or run: `mbf-fastq-processor template ConcatTags`
+
+

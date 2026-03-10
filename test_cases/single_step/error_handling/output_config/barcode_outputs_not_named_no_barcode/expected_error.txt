@@ -31,6 +31,7 @@ Error 2/3
 ───╯
 Hint: Must start with a letter or underscore (a-zA-Z_), got '1'
       See https://doc_url.example/version-stripped-from-test/docs/redirects/ExtractRegion
+      Or run: `mbf-fastq-processor template ExtractRegion`
 
 Error 3/3
    ╭─config.toml
@@ -47,4 +48,6 @@ Error 3/3
 ───╯
 Hint: Must start with a letter or underscore (a-zA-Z_), got '1'
       See https://doc_url.example/version-stripped-from-test/docs/redirects/Demultiplex
+      Or run: `mbf-fastq-processor template Demultiplex`
+
 

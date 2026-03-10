@@ -19,6 +19,7 @@ Error 1/2
 ───╯
 Hint: Must contain only letters, numbers, and underscores (a-zA-Z0-9_), found ','.
       See https://doc_url.example/version-stripped-from-test/docs/redirects/ExtractRegion
+      Or run: `mbf-fastq-processor template ExtractRegion`
 
 Error 2/2
    ╭─config.toml
@@ -35,4 +36,6 @@ Error 2/2
 ───╯
 Hint: Must contain only letters, numbers, and underscores (a-zA-Z0-9_), found ','.
       See https://doc_url.example/version-stripped-from-test/docs/redirects/StoreTagInComment
+      Or run: `mbf-fastq-processor template StoreTagInComment`
+
 

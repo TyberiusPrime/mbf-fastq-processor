@@ -28,11 +28,15 @@ pub(crate) fn improve_error_messages(
                         && let Some(step) = tv_step.value.as_ref()
                     {
                         let step_name = step.tpd_get_tag();
+                        let new_help = format!(
+                            "See {}\nOr run: `{} template {}`",
+                            link_docs(step_name),
+                            env!("CARGO_PKG_NAME"),
+                            step_name
+                        );
                         tv_step.help = match tv_step.help.as_ref() {
-                            Some(old_help) => {
-                                Some(format!("{old_help}\nSee {}", link_docs(step_name)))
-                            }
-                            None => Some(format!("See {}", link_docs(step_name))),
+                            Some(old_help) => Some(format!("{old_help}\n{new_help}",)),
+                            None => Some(new_help),
                         };
                         if let Some(context) = tv_step.context.as_mut() {
                             context.1 = "In this step".to_string();
