@@ -1,5 +1,5 @@
 ---
 title: "llm-guide"
 type: redirect
-redirect_to: "../reference/llm-guide/"
+redirect_to: "../../reference/llm-guide/"
 ---

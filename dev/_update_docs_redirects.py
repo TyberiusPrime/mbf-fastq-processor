@@ -34,7 +34,7 @@ for md_file in sorted(reference_dir.rglob("*.md")):
 
     # Relative URL from redirects/{page_name}/ to the target page
     rel = md_file.relative_to(reference_dir).with_suffix("")
-    target_url = f"../reference/{rel}/"
+    target_url = f"../../reference/{rel}/"
 
     content = f"""\
 ---

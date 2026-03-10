@@ -1,5 +1,5 @@
 ---
 title: "CutEnd"
 type: redirect
-redirect_to: "../reference/modification-steps/CutEnd/"
+redirect_to: "../../reference/modification-steps/CutEnd/"
 ---

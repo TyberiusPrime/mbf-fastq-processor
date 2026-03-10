@@ -1,5 +1,5 @@
 ---
 title: "ExtractIUPACWithIndel"
 type: redirect
-redirect_to: "../reference/tag-steps/extract/ExtractIUPACWithIndel/"
+redirect_to: "../../reference/tag-steps/extract/ExtractIUPACWithIndel/"
 ---

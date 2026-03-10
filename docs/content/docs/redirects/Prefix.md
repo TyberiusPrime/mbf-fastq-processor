@@ -1,5 +1,5 @@
 ---
 title: "Prefix"
 type: redirect
-redirect_to: "../reference/modification-steps/Prefix/"
+redirect_to: "../../reference/modification-steps/Prefix/"
 ---

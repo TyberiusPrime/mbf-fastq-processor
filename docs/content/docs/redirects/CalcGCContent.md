@@ -1,5 +1,5 @@
 ---
 title: "CalcGCContent"
 type: redirect
-redirect_to: "../reference/tag-steps/calc/CalcGCContent/"
+redirect_to: "../../reference/tag-steps/calc/CalcGCContent/"
 ---

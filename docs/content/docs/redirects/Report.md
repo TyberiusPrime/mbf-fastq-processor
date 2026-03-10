@@ -1,5 +1,5 @@
 ---
 title: "Report"
 type: redirect
-redirect_to: "../reference/report-steps/Report/"
+redirect_to: "../../reference/report-steps/Report/"
 ---

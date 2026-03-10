@@ -1,5 +1,5 @@
 ---
 title: "ReverseComplement"
 type: redirect
-redirect_to: "../reference/modification-steps/ReverseComplement/"
+redirect_to: "../../reference/modification-steps/ReverseComplement/"
 ---

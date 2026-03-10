@@ -1,5 +1,5 @@
 ---
 title: "Head"
 type: redirect
-redirect_to: "../reference/modification-steps/Head/"
+redirect_to: "../../reference/modification-steps/Head/"
 ---

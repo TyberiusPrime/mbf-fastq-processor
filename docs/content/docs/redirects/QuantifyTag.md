@@ -1,5 +1,5 @@
 ---
 title: "QuantifyTag"
 type: redirect
-redirect_to: "../reference/report-steps/QuantifyTag/"
+redirect_to: "../../reference/report-steps/QuantifyTag/"
 ---

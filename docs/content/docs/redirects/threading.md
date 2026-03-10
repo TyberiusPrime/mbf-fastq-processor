@@ -1,5 +1,5 @@
 ---
 title: "threading"
 type: redirect
-redirect_to: "../reference/threading/"
+redirect_to: "../../reference/threading/"
 ---
