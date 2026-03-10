@@ -8,6 +8,14 @@
     min_length = 27
 
 [[step]]
+  action = 'lowercase'
+  target = 'tag:low_quality'
+
+[[step]]
+  action = 'StoreTagInSequence'
+  in_label = "low_quality"
+
+[[step]]
     action = 'StoreTagLocationInComment'
     in_label = 'low_quality'
 

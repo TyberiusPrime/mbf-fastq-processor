@@ -1,7 +1,7 @@
-@Read1|low_quality_location=read1:20-51
-CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNNNNNN
+@Read1|low_quality_location=read1:18-50
+CTCCTGCACATCAACTTTctnctcatgnnnnnnnnnnnnnnnnnnnnnnnA
 +
-CCCCDCCCCCCCCCC?A???###############################
+CCCCDCCCCCCCCCC?)('###############################B
 @Read2|low_quality_location=
 GGCGATTTCAATGTCCAAGGNCAGTTTNNNNNNNNNNNNNNNNNNNNNNNN
 +
@@ -23,11 +23,11 @@ GCTTATTACTTTGTACTTCCNATGGAGNNNNNNNNNNNNNNNNNNNNNNNN
 +
 CCCCCCCCCCCCCCCCCCCC#CCCA##########################
 @Read7|low_quality_location=read1:24-51
-CGGGTGGGGTGGATAGTGAGNTGGAGGNNNNNNNNNNNNNNNNNNNNNNNN
+CGGGTGGGGTGGATAGTGAGNTGGaggnnnnnnnnnnnnnnnnnnnnnnnn
 +
 CCCCACC>>6CB=CABA@AB#5AA###########################
 @Read8|low_quality_location=read1:24-51
-GGTTCAGTATGTCAGCATAANGATAATNNNNNNNNNNNNNNNNNNNNNNNN
+GGTTCAGTATGTCAGCATAANGATaatnnnnnnnnnnnnnnnnnnnnnnnn
 +
 CCCCCCCCCCCC@CC@=@?@#A=@###########################
 @Read9|low_quality_location=
