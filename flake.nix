@@ -250,6 +250,7 @@
             pkgs.cargo-license
             pkgs.cargo-llvm-cov
             pkgs.cargo-llvm-lines
+            pkgs.lcov
             pkgs.cargo-machete
             pkgs.cargo-mutants
             pkgs.cargo-nextest

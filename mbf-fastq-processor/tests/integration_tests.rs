@@ -2768,3 +2768,263 @@ fn test_output_already_exists() {
     let written_output = std::fs::read_to_string(temp_path.join("output_read1.fq")).unwrap();
     assert!(!written_output.contains("read1_already"));
 }
+
+#[test]
+fn test_verify_command_missing_output_file() {
+    // Expected file exists in test dir but process doesn't produce it
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+
+    let mut input_file = fs::File::create(temp_path.join("input.fq")).unwrap();
+    writeln!(input_file, "@read1\nACGT\n+\nIIII").unwrap();
+
+    let config_path = temp_path.join("config.toml");
+    fs::write(
+        &config_path,
+        r"[input]
+read1 = 'input.fq'
+
+[[step]]
+action = 'Head'
+n = 1
+
+[output]
+prefix = 'output'
+",
+    )
+    .unwrap();
+
+    // Run process to generate the correct expected output
+    let process_cmd = std::process::Command::new(get_bin_path())
+        .arg("process")
+        .arg(&config_path)
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+    assert!(process_cmd.status.success(), "Process should succeed");
+
+    // Add a phantom expected file that process will never produce
+    fs::write(
+        temp_path.join("output_read2.fq"),
+        "@phantom\nACGT\n+\nIIII\n",
+    )
+    .unwrap();
+
+    let verify_cmd = std::process::Command::new(get_bin_path())
+        .arg("verify")
+        .arg(&config_path)
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+
+    let stderr = std::str::from_utf8(&verify_cmd.stderr).unwrap().to_string();
+    assert!(!verify_cmd.status.success(), "Verify should fail");
+    assert!(
+        stderr.contains("Missing output file"),
+        "Should report missing output file, got: {stderr}"
+    );
+}
+
+#[test]
+fn test_verify_command_unexpected_output_file() {
+    // Process produces a file that has no corresponding expected file
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+
+    let mut input_r1 = fs::File::create(temp_path.join("input_r1.fq")).unwrap();
+    writeln!(input_r1, "@read1\nACGT\n+\nIIII").unwrap();
+    let mut input_r2 = fs::File::create(temp_path.join("input_r2.fq")).unwrap();
+    writeln!(input_r2, "@read1\nTGCA\n+\nIIII").unwrap();
+
+    let config_path = temp_path.join("config.toml");
+    fs::write(
+        &config_path,
+        r"[input]
+read1 = 'input_r1.fq'
+read2 = 'input_r2.fq'
+
+[[step]]
+action = 'Head'
+n = 1
+
+[output]
+prefix = 'output'
+",
+    )
+    .unwrap();
+
+    // Run process to generate both output_read1.fq and output_read2.fq as expected files
+    let process_cmd = std::process::Command::new(get_bin_path())
+        .arg("process")
+        .arg(&config_path)
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+    assert!(process_cmd.status.success(), "Process should succeed");
+    assert!(
+        temp_path.join("output_read2.fq").exists(),
+        "output_read2.fq should have been produced"
+    );
+
+    // Remove read2 expected file so it becomes "unexpected" when verify runs
+    fs::remove_file(temp_path.join("output_read2.fq")).unwrap();
+
+    let verify_cmd = std::process::Command::new(get_bin_path())
+        .arg("verify")
+        .arg(&config_path)
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+
+    let stderr = std::str::from_utf8(&verify_cmd.stderr).unwrap().to_string();
+    assert!(!verify_cmd.status.success(), "Verify should fail");
+    assert!(
+        stderr.contains("Unexpected output file"),
+        "Should report unexpected output file, got: {stderr}"
+    );
+}
+
+#[test]
+fn test_verify_command_error_message_found_multiple_times() {
+    // expected_error.txt contains a string that appears more than once in stderr
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+
+    let config_path = temp_path.join("config.toml");
+    // read1 = 23 triggers a validation error; the word "error" appears multiple times in the output
+    fs::write(
+        &config_path,
+        r"[input]
+read1 = 23
+
+[output]
+prefix = 'output'
+",
+    )
+    .unwrap();
+
+    // Use a short string guaranteed to appear multiple times in any error output
+    fs::write(temp_path.join("expected_error.txt"), "e").unwrap();
+
+    let verify_cmd = std::process::Command::new(get_bin_path())
+        .arg("verify")
+        .arg(&config_path)
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+
+    let stderr = std::str::from_utf8(&verify_cmd.stderr).unwrap().to_string();
+    assert!(!verify_cmd.status.success(), "Verify should fail");
+    assert!(
+        stderr.contains("expected message was found multiple times"),
+        "Should report duplicate match, got: {stderr}"
+    );
+}
+
+#[test]
+fn test_verify_command_expected_warning_but_none_produced() {
+    // expected_validation_warning.regex present but config produces no warnings
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+
+    let mut input_file = fs::File::create(temp_path.join("input.fq")).unwrap();
+    writeln!(input_file, "@read1\nACGT\n+\nIIII").unwrap();
+
+    let config_path = temp_path.join("config.toml");
+    // Config with an existing input file -> no "file not found" warning
+    fs::write(
+        &config_path,
+        r"[input]
+read1 = 'input.fq'
+
+[[step]]
+action = 'Head'
+n = 1
+
+[output]
+prefix = 'output'
+",
+    )
+    .unwrap();
+
+    // Generate expected output so verify doesn't fail for other reasons
+    let process_cmd = std::process::Command::new(get_bin_path())
+        .arg("process")
+        .arg(&config_path)
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+    assert!(process_cmd.status.success());
+
+    fs::write(
+        temp_path.join("expected_validation_warning.regex"),
+        "Input file not found",
+    )
+    .unwrap();
+
+    let verify_cmd = std::process::Command::new(get_bin_path())
+        .arg("verify")
+        .arg(&config_path)
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+
+    let stderr = std::str::from_utf8(&verify_cmd.stderr).unwrap().to_string();
+    assert!(!verify_cmd.status.success(), "Verify should fail");
+    assert!(
+        stderr.contains("Expected validation warning, but none were produced"),
+        "Should report missing warning, got: {stderr}"
+    );
+}
+
+#[test]
+fn test_verify_command_validation_warning_wrong_pattern() {
+    // expected_validation_warning.regex present but actual warning doesn't match
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+
+    let config_path = temp_path.join("config.toml");
+    // Missing input file -> warning "Input file not found: missing_input.fq"
+    fs::write(
+        &config_path,
+        r"[input]
+read1 = 'missing_input.fq'
+
+[[step]]
+action = 'Head'
+n = 1
+
+[output]
+prefix = 'output'
+",
+    )
+    .unwrap();
+
+    // Regex that does NOT match the actual warning
+    fs::write(
+        temp_path.join("expected_validation_warning.regex"),
+        "This pattern will never match",
+    )
+    .unwrap();
+
+    // expected_runtime_error so verify doesn't fail because process fails
+    fs::write(
+        temp_path.join("expected_runtime_error.txt"),
+        "No such file or directory",
+    )
+    .unwrap();
+
+    let verify_cmd = std::process::Command::new(get_bin_path())
+        .arg("verify")
+        .arg(&config_path)
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+
+    let stderr = std::str::from_utf8(&verify_cmd.stderr).unwrap().to_string();
+    assert!(!verify_cmd.status.success(), "Verify should fail");
+    assert!(
+        stderr.contains("Validation warnings did not match expected pattern"),
+        "Should report warning mismatch, got: {stderr}"
+    );
+}

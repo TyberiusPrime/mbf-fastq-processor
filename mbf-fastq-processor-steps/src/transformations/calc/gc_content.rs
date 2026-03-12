@@ -25,6 +25,7 @@ impl VerifyIn<PartialConfig> for PartialGCContent {
     }
 }
 
+// cov:excl-start
 impl TagUser for PartialTaggedVariant<PartialGCContent> {
     #[mutants::skip]
     fn get_tag_usage(
@@ -47,3 +48,4 @@ impl Step for GCContent {
         bail!("ExtractGCContent is converted into ExtractBaseContent during expansion")
     }
 }
+// cov:excl-stop
