@@ -1,0 +1,23 @@
+Error Details ==
+Error 1/1
+  ╭─config.toml
+  ┆
+4 │ [[step]]
+5 │     action = 'ExtractRegion'
+  ┆              ───────┬───────
+  ┆                     │
+  ┆                     ╰──────── In this step
+  ┆
+6 │     start = 0
+7 │     len = 2
+8 │     anchor = 'left'
+9 │      source = 'tag:'
+  ┆               ───┬──
+  ┆                  │
+  ┆                  ╰─── Must not be empty
+──╯
+Hint: Please provide a name after 'tag:'.
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/ExtractRegion
+      Or run: `mbf-fastq-processor template ExtractRegion`
+
+

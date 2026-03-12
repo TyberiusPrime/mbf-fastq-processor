@@ -1,0 +1,19 @@
+Error Details ==
+Error 1/1
+  ╭─config.toml
+  ┆
+4 │ [[step]]
+5 │     action = 'ExtractRegion'
+6 │     start = 0
+7 │     len = 2
+8 │     anchor = 'left'
+9 │      source = 'tag:nosuchtag'
+  ┆               ───────┬───────
+  ┆                      │
+  ┆                      ╰──────── No such tag: 'nosuchtag'
+──╯
+Hint: All known accepted values have been used.
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/ExtractRegions
+      Or run: `mbf-fastq-processor template ExtractRegions`
+
+

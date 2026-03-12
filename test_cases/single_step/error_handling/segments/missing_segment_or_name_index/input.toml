@@ -1,0 +1,11 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'ExtractRegex'
+    out_label = 'test'
+    segment = 'read2'
+    query = "AGTC"
+
+[output]
+    prefix = 'output'

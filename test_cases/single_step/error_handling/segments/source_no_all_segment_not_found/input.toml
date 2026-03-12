@@ -1,0 +1,14 @@
+[input]
+    read1 = 'input_read1.fq'
+    read2 = 'input_read2.fq'
+
+[[step]]
+    action = 'ExtractRegion'
+    start = 0
+    len = 2
+    anchor = 'left'
+     source = 'read3'
+    out_label = 'test'
+
+[output]
+    prefix = 'output'

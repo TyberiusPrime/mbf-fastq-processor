@@ -1,0 +1,23 @@
+Error Details ==
+Error 1/1
+  ╭─config.toml
+  ┆
+4 │ [[step]]
+5 │     action = 'ExtractRegion'
+  ┆              ───────┬───────
+  ┆                     │
+  ┆                     ╰──────── In this step
+  ┆
+6 │     start = 0
+7 │     len = 2
+8 │     anchor = 'left'
+9 │      source = 'all'
+  ┆               ──┬──
+  ┆                 │
+  ┆                 ╰─── 'all' segments not valid in this position
+──╯
+Hint: Available are: 'read1'
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/ExtractRegion
+      Or run: `mbf-fastq-processor template ExtractRegion`
+
+

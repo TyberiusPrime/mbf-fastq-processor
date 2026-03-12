@@ -10,8 +10,10 @@ Error 1/1
 9 │     in_label = 'in_other_file'
   ┆                ───────┬───────
   ┆                       │
-  ┆                       ╰──────── No such tag
+  ┆                       ╰──────── No such tag: 'in_other_file'
 ──╯
 Hint: All known accepted values have been used.
       See https://doc_url.example/version-stripped-from-test/docs/redirects/Demultiplex
+      Or run: `mbf-fastq-processor template Demultiplex`
+
 

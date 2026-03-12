@@ -270,7 +270,7 @@ def main():
             run_command(
                 f"genhtml {raw_lcov} --output-directory {html_dir} "
                 f"--prefix {project_root} "
-                f"--show-details --legend --ignore-errors category --quiet",
+                f"--show-details --legend --no-function-coverage --ignore-errors category --quiet",
                 "Rendering HTML report",
             )
             print(f"  HTML report: {html_dir}/index.html")

@@ -1,0 +1,21 @@
+Error Details ==
+Error 1/1
+  ╭─config.toml
+  ┆
+4 │ [[step]]
+5 │     action = 'CalcComplexity'
+  ┆              ────────┬───────
+  ┆                      │
+  ┆                      ╰──────── In this step
+  ┆
+6 │     out_label = 'test'
+7 │     segment = 'read2'
+  ┆               ───┬───
+  ┆                  │
+  ┆                  ╰──── Segment not present in [input] section
+──╯
+Hint: Did you mean: 'read1'?
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/CalcComplexity
+      Or run: `mbf-fastq-processor template CalcComplexity`
+
+

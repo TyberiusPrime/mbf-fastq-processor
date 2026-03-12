@@ -45,7 +45,9 @@ impl ValidateSegment for TomlValue<MustAdapt<String, SegmentIndex>> {
                         }
                     }
                     MustAdapt::PostVerify(_) => {
+                        // cov:excl-start
                         panic!("validate_segment called on an already validated segment")
+                        // cov:excl-stop
                     }
                 }
             } else if self.is_missing() {
@@ -281,7 +283,9 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceNoAll>> {
                         }
                     }
                     MustAdapt::PostVerify(_) => {
+                        // cov:excl-start
                         panic!("validate_segment called on an already validated segment")
+                        // cov:excl-stop
                     }
                 }
                 //no default for missing.

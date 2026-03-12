@@ -12,8 +12,10 @@ Error 1/1
 7 │     expression = '5 * whatever'
   ┆                  ───────┬──────
   ┆                         │
-  ┆                         ╰─────── No such tag
+  ┆                         ╰─────── No such tag: 'whatever'
 ──╯
 Hint: All known accepted values have been used.
       See https://doc_url.example/version-stripped-from-test/docs/redirects/EvalExpression
+      Or run: `mbf-fastq-processor template EvalExpression`
+
 

@@ -1,0 +1,16 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'ExtractRegion'
+    start = 0
+    len = 2
+    anchor = 'left'
+     source = 'name:'
+    out_label = 'test'
+
+[[step]]
+  action = "ForgetAllTags"
+
+[output]
+    prefix = 'output'

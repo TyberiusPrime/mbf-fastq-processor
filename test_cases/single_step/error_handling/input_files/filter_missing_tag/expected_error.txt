@@ -12,8 +12,10 @@ Error 1/1
 7 │     in_label = 'nonexistent_tag'
   ┆                ────────┬────────
   ┆                        │
-  ┆                        ╰───────── No such tag
+  ┆                        ╰───────── No such tag: 'nonexistent_tag'
 ──╯
 Hint: All known accepted values have been used.
       See https://doc_url.example/version-stripped-from-test/docs/redirects/FilterByNumericTag
+      Or run: `mbf-fastq-processor template FilterByNumericTag`
+
 

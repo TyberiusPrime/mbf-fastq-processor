@@ -12,8 +12,10 @@ Error 1/1
 21 │     in_label = 'test'
    ┆                ───┬──
    ┆                   │
-   ┆                   ╰─── No such tag
+   ┆                   ╰─── No such tag: 'test'
 ───╯
 Hint: Did you mean: 'other' or 'something'?
       See https://doc_url.example/version-stripped-from-test/docs/redirects/FilterByTag
+      Or run: `mbf-fastq-processor template FilterByTag`
+
 
