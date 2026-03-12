@@ -1,0 +1,12 @@
+Error 1/1
+   ╭─config.toml
+   ┆
+ 9 │ [[step]]
+10 │     action = 'ValidateAllReadsSameLength'
+   ┆              ──────────────┬─────────────┬
+   ┆                            │             │
+   ┆                            ╰─────────────── In this step
+   ┆                                          │
+   ┆                                          ╰─ Missing required key: 'source'.
+───╯
+Hint: Could not automatically determine source. Please provide a source, that is a <segment name>, a <name:segment_name> or tag name. Use 'all' to refer to all <segment_name>s. Available segments: read1 or read2

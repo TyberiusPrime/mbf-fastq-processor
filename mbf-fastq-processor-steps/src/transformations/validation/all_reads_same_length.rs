@@ -34,23 +34,8 @@ impl VerifyIn<PartialConfig> for PartialValidateAllReadsSameLength {
         {
             self.source_name = Some(source.get_name(input_def.get_segment_order()));
         } else {
-            self.source_name = Some("".to_string()); // just supress the error message.
-        }
-
-        if self.source.is_missing() {
-            self.source.help = Some(format!(
-                "Please provide a source, that is a <segment name>, a <name:segment_name> or tag name. Available segments: {}",
-                toml_pretty_deser::format_quoted_list(
-                    &(parent.input.as_ref().map_or_else(
-                        || vec![""],
-                        |input_def| input_def
-                            .get_segment_order()
-                            .iter()
-                            .map(String::as_str)
-                            .collect()
-                    ))
-                )
-            ));
+            self.source_name = Some("".to_string()); // $'well get an error anyway, just not
+            // another one about source_name being unset
         }
 
         Ok(())

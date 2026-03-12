@@ -1,0 +1,4 @@
+Error in stage 0: ValidateReadPairing detected mismatched read name lengths.
+                Occured near read 0 (0-based, sampled every 1000 reads).
+                First segment name: "READ_A/1", length 8,
+                other segment name: "READ_Ax/2", length 9. Fix your input,

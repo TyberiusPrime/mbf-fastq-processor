@@ -1,0 +1,1 @@
+Error in reading thread for segment se: Empty name in input FASTQ. Verify your input files are proper FASTQ.

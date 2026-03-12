@@ -104,11 +104,10 @@ impl Step for ValidateReadPairing {
             let reference = block.segments[0].get(read_idx);
             let reference_name = reference.name();
 
-            if reference_name.is_empty() {
-                bail!(
-                    "ValidateReadPairing encountered an empty read name for the first segment, at sampled read index {global_index}"
-                );
-            }
+            assert!(
+                !reference_name.is_empty(),
+                "ValidateReadPairing saw an empty read - the parser is supposed to detect these",
+            );
 
             for segment_idx in 1..segment_count {
                 let candidate = block.segments[segment_idx].get(read_idx);

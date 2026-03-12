@@ -116,7 +116,7 @@ impl Step for ValidateName {
 
                 if candidate_prefix != expected_prefix {
                     bail!(
-                        "ValidateNamew detected mismatched read names near read {global_index} (0-based, sampled every {} reads).
+                        "ValidateName detected mismatched read names near read {global_index} (0-based, sampled every {} reads).
 First segment (prefix): {},
 Other segment (prefix): {}
 First segment (full name): {},

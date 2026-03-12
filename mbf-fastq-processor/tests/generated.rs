@@ -6876,6 +6876,16 @@ fn test_cases_x_single_step_x_filter_x_too_many_n_x_segments_vs_all() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_forget_all_tags() {
+    println!("Test case is in: test_cases/single_step/forget_all_tags");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/forget_all_tags"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_hamming_x_barcodes_not_found() {
     println!("Test case is in: test_cases/single_step/hamming/barcodes_not_found");
     run_test(
@@ -7841,6 +7851,20 @@ fn test_cases_x_single_step_x_validation_x_validate_all_reads_same_length_x_name
     run_test(
         std::path::Path::new(
             "../test_cases/single_step/validation/validate_all_reads_same_length/name_fail",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_validation_x_validate_all_reads_same_length_x_no_source() {
+    println!(
+        "Test case is in: test_cases/single_step/validation/validate_all_reads_same_length/no_source"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/validation/validate_all_reads_same_length/no_source",
         ),
         "input.toml",
         1,

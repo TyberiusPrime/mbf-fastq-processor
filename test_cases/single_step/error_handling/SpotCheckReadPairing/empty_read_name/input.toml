@@ -1,0 +1,10 @@
+[input]
+  se = 'input_read1.fastq'
+  se2 = 'input_read2.fastq'
+
+
+[[step]]
+  action= 'ValidateReadPairing'
+
+[output]
+  prefix = 'se'
