@@ -1,0 +1,26 @@
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+ 5 │ [[step]]
+ 6 │     action = 'MergeReads'
+   ┆              ──────┬─────
+   ┆                    │
+   ┆                    ╰────── In this step
+   ┆
+ 7 │     algorithm = 'Fastp'
+ 8 │     min_overlap = 10
+ 9 │     max_mismatch_rate = 0.2
+10 │     max_mismatch_count = 5
+11 │     no_overlap_strategy = 'concatenate'
+12 │     concatenate_spacer = 'NNNN'
+13 │     spacer_quality_char = 32
+   ┆                           ─┬
+   ┆                            │
+   ┆                            ╰─ Invalid value. Must be in [33..126]
+───╯
+Hint: Set a valid value.
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/MergeReads
+      Or run: `mbf-fastq-processor template MergeReads`
+
+

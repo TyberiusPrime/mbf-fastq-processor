@@ -1,0 +1,21 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'ExtractIUPAC'
+    search = "AAAA"
+    out_label = 'tag1'
+    anchor = 'Left'
+    max_mismatches = 0
+
+[[step]]
+    action = 'ConcatTags'
+    in_labels = ['tag1']
+    out_label = 'combined'
+    on_missing = 'merge_present'
+
+[[step]]
+  action ="forgetalltags"
+
+[output]
+    prefix = 'output'

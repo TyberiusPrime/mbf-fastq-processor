@@ -1,0 +1,15 @@
+Error Details ==
+Error 1/1
+  ╭─config.toml
+  ┆
+4 │ [output]
+5 │     prefix = 'output'
+6 │     format = 'bam'
+7 │     stdout = true
+  ┆              ──┬─
+  ┆                │
+  ┆                ╰── Output to stdout is not supported when format = 'bam'.
+──╯
+Hint: Either disable stdout output, or switch output formats
+
+

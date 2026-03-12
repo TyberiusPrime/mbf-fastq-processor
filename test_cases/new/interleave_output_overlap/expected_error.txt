@@ -1,0 +1,18 @@
+Error Details ==
+Error 1/1
+  ╭─config.toml
+  ┆
+5 │ [output]
+6 │     prefix = 'output'
+7 │     interleave = ['read1', 'read2']
+  ┆                   ───┬───
+  ┆                      │
+  ┆                      ╰────────────── Duplicate output & interleave
+8 │     output = ['read1']
+  ┆               ───┬───
+  ┆                  │
+  ┆                  ╰───── Duplicate output & interleave
+──╯
+Hint: Remove from either 'interleave' or from 'output'
+
+

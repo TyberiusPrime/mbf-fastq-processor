@@ -141,10 +141,19 @@ impl PartialOutput {
     fn verify_stdout(&mut self, config: &super::PartialConfig) {
         if let Some(true) = self.stdout.as_ref() {
             if let Some(Some(_)) = self.output.as_ref() {
-                self.stdout.state = TomlValueState::new_validation_failed(
-                    "Cannot specify both 'stdout' and 'output' options together.",
-                );
-                self.stdout.help = Some("Remove either one ".to_string());
+                let spans = vec![
+                    (
+                        self.stdout.span(),
+                        "Conflict with 'output' option".to_string(),
+                    ),
+                    (
+                        self.output.span(),
+                        "Conflict with 'stdout' option".to_string(),
+                    ),
+                ];
+                self.stdout.state = TomlValueState::Custom { spans };
+                self.stdout.help = Some("Remove either `output` or `stdout` ".to_string());
+                return; // Don't auto-set interleave when there's a conflict
             }
             if let Some(None) = self.interleave.as_ref()
                 && let Some(input) = config.input.as_ref()
@@ -286,7 +295,7 @@ impl PartialOutput {
 
                                 found.state = TomlValueState::Custom { spans };
                                 found.help = Some(
-                                    "Remove from either 'interleaved' or from 'output'".to_string(),
+                                    "Remove from either 'interleave' or from 'output'".to_string(),
                                 );
                             }
                         }

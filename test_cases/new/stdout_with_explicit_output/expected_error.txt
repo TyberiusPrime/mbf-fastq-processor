@@ -1,0 +1,18 @@
+Error Details ==
+Error 1/1
+  ╭─config.toml
+  ┆
+4 │ [output]
+5 │     prefix = 'output'
+6 │     stdout = true
+  ┆              ──┬─
+  ┆                │
+  ┆                ╰── Conflict with 'output' option
+7 │     output = ['read1']
+  ┆              ────┬────
+  ┆                  │
+  ┆                  ╰───── Conflict with 'stdout' option
+──╯
+Hint: Remove either `output` or `stdout` 
+
+

@@ -957,6 +957,86 @@ fn test_cases_x_integration_tests_x_quality_base_replacement() {
 }
 
 #[test]
+fn test_cases_x_new_x_bam_stdout() {
+    println!("Test case is in: test_cases/new/bam_stdout");
+    run_test(
+        std::path::Path::new("../test_cases/new/bam_stdout"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_new_x_bam_uncompressed_output() {
+    println!("Test case is in: test_cases/new/bam_uncompressed_output");
+    run_test(
+        std::path::Path::new("../test_cases/new/bam_uncompressed_output"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_new_x_concat_tags_too_few_labels() {
+    println!("Test case is in: test_cases/new/concat_tags_too_few_labels");
+    run_test(
+        std::path::Path::new("../test_cases/new/concat_tags_too_few_labels"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_new_x_interleave_output_overlap() {
+    println!("Test case is in: test_cases/new/interleave_output_overlap");
+    run_test(
+        std::path::Path::new("../test_cases/new/interleave_output_overlap"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_new_x_merge_reads_invalid_spacer_quality() {
+    println!("Test case is in: test_cases/new/merge_reads_invalid_spacer_quality");
+    run_test(
+        std::path::Path::new("../test_cases/new/merge_reads_invalid_spacer_quality"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_new_x_merge_reads_missing_spacer() {
+    println!("Test case is in: test_cases/new/merge_reads_missing_spacer");
+    run_test(
+        std::path::Path::new("../test_cases/new/merge_reads_missing_spacer"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_new_x_merge_reads_same_segment() {
+    println!("Test case is in: test_cases/new/merge_reads_same_segment");
+    run_test(
+        std::path::Path::new("../test_cases/new/merge_reads_same_segment"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_new_x_stdout_with_explicit_output() {
+    println!("Test case is in: test_cases/new/stdout_with_explicit_output");
+    run_test(
+        std::path::Path::new("../test_cases/new/stdout_with_explicit_output"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_output_x_bam_x_basic() {
     println!("Test case is in: test_cases/output/bam/basic");
     run_test(

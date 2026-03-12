@@ -92,7 +92,7 @@ impl VerifyIn<PartialConfig> for PartialMergeReads {
                 ),
                 (
                     self.segment2.span(),
-                    "Must be different from segment2".to_string(),
+                    "Must be different from segment1".to_string(),
                 ),
             ];
             self.segment1 = TomlValue::new_custom(
