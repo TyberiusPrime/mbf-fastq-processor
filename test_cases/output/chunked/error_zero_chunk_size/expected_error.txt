@@ -1,0 +1,15 @@
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+ 8 │ [output]
+ 9 │     prefix = 'output'
+10 │ 	compression='gzip'
+11 │     chunk_size = 0
+   ┆                  ┬
+   ┆                  │
+   ┆                  ╰─ Must not be 0.
+───╯
+Hint: 'Chunksize' must be greater than zero when specified. Increase or remove setting
+
+

@@ -30,14 +30,14 @@ pub struct _ChangeCase {
 
 impl Partial_ChangeCase {
     pub fn new(
-        target: MustAdapt<String, ResolvedSourceAll>,
+        target: TomlValue<MustAdapt<String, ResolvedSourceAll>>,
         case_type: CaseType,
-        if_tag: Option<ConditionalTagLabel>,
+        if_tag: TomlValue<Option<ConditionalTagLabel>>,
     ) -> Self {
         Self {
-            target: TomlValue::new_ok_unplaced(target),
+            target: target,
             case_type: TomlValue::new_ok_unplaced(case_type),
-            if_tag: TomlValue::new_ok_unplaced(if_tag),
+            if_tag: if_tag,
         }
     }
 }

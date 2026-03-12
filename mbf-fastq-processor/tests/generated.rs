@@ -987,6 +987,16 @@ fn test_cases_x_output_x_chunked_x_bam() {
 }
 
 #[test]
+fn test_cases_x_output_x_chunked_x_error_zero_chunk_size() {
+    println!("Test case is in: test_cases/output/chunked/error_zero_chunk_size");
+    run_test(
+        std::path::Path::new("../test_cases/output/chunked/error_zero_chunk_size"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_output_x_chunked_x_fastq_exceeding_100_chunks() {
     println!("Test case is in: test_cases/output/chunked/fastq_exceeding_100_chunks");
     run_test(
@@ -1041,6 +1051,16 @@ fn test_cases_x_output_x_error_handling_x_colon_in_ix_sep() {
     println!("Test case is in: test_cases/output/error_handling/colon_in_ix_sep");
     run_test(
         std::path::Path::new("../test_cases/output/error_handling/colon_in_ix_sep"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_output_x_error_handling_x_ix_sep_empty() {
+    println!("Test case is in: test_cases/output/error_handling/ix_sep_empty");
+    run_test(
+        std::path::Path::new("../test_cases/output/error_handling/ix_sep_empty"),
         "input.toml",
         1,
     );
@@ -4746,6 +4766,90 @@ fn test_cases_x_single_step_x_error_handling_x_segments_x_no_such_tag_source_no_
     run_test(
         std::path::Path::new(
             "../test_cases/single_step/error_handling/segments/no_such_tag_source_no_all",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_segments_x_source_all_name_empty() {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/segments/source_all_name_empty"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/error_handling/segments/source_all_name_empty",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_segments_x_source_all_name_segment_not_found() {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/segments/source_all_name_segment_not_found"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/error_handling/segments/source_all_name_segment_not_found",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_segments_x_source_all_segment_not_foudn() {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/segments/source_all_segment_not_foudn"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/error_handling/segments/source_all_segment_not_foudn",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_segments_x_source_all_tag_empty() {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/segments/source_all_tag_empty"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/error_handling/segments/source_all_tag_empty",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_segments_x_source_all_tag_not_found() {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/segments/source_all_tag_not_found"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/error_handling/segments/source_all_tag_not_found",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_segments_x_source_no_all_name_segmentnot_found() {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/segments/source_no_all_name_segmentnot_found"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/error_handling/segments/source_no_all_name_segmentnot_found",
         ),
         "input.toml",
         1,

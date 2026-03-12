@@ -101,7 +101,9 @@ impl ValidateSegment for TomlValue<MustAdapt<String, SegmentIndexOrAll>> {
                         }
                     }
                     MustAdapt::PostVerify(_) => {
+                        // cov:excl-start
                         panic!("validate_segment called on an already validated segment")
+                        // cov:excl-stop
                     }
                 }
             } else if self.is_missing() {
@@ -175,7 +177,9 @@ impl ValidateSegment for TomlValue<MustAdapt<String, SegmentOrNameIndex>> {
                     }
                 }
                 MustAdapt::PostVerify(_) => {
+                    // cov:excl-start
                     panic!("validate_segment called on an already validated segment")
+                    // cov:excl-stop
                 }
             }
         }
@@ -402,7 +406,9 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceAll>> {
                         }
                     }
                     MustAdapt::PostVerify(_) => {
+                        // cov:excl-start
                         panic!("validate_segment called on an already validated segment")
+                        // cov:excl-stop
                     }
                 }
                 //no default for missing.

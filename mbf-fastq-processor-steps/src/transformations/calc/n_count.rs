@@ -25,6 +25,7 @@ impl VerifyIn<PartialConfig> for PartialNCount {
     }
 }
 
+// cov:excl-start
 impl TagUser for PartialTaggedVariant<PartialNCount> {
     #[mutants::skip]
     fn get_tag_usage(
@@ -47,3 +48,4 @@ impl Step for NCount {
         bail!("ExtractNCount is converted into ExtractBaseContent during expansion")
     }
 }
+// cov:excl-stop

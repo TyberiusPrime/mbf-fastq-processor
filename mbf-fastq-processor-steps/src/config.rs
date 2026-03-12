@@ -842,15 +842,9 @@ impl PartialConfig {
                                     PartialTaggedVariant {
                                         toml_value: TomlValue::new_ok_unplaced(
                                             crate::transformations::edits::Partial_ChangeCase::new(
-                                                step_config
-                                                    .target
-                                                    .into_inner()
-                                                    .expect("parent was ok"),
+                                                step_config.target,
                                                 crate::transformations::edits::CaseType::Lower,
-                                                step_config
-                                                    .if_tag
-                                                    .into_inner()
-                                                    .expect("parent was ok"),
+                                                step_config.if_tag,
                                             ),
                                         ),
                                         tag_span,
@@ -865,15 +859,9 @@ impl PartialConfig {
                                     PartialTaggedVariant {
                                         toml_value: TomlValue::new_ok_unplaced(
                                             crate::transformations::edits::Partial_ChangeCase::new(
-                                                step_config
-                                                    .target
-                                                    .into_inner()
-                                                    .expect("parent was ok"),
+                                                step_config.target,
                                                 crate::transformations::edits::CaseType::Upper,
-                                                step_config
-                                                    .if_tag
-                                                    .into_inner()
-                                                    .expect("parent was ok"),
+                                                step_config.if_tag,
                                             ),
                                         ),
                                         tag_span,
@@ -1135,9 +1123,11 @@ impl PartialConfig {
                                 if !tag_info.must_see_all_tags {
                                     //otherwise, we already have the tag in the list.
                                     if tags_used_here.contains(tag_name) {
+                                        // cov:excl-start
                                         panic!(
                                             "tag declared twice in our code, fix that! {tag_name}"
                                         );
+                                        // cov:excl-stop
                                     } else {
                                         tags_used_here.push(tag_name.clone());
                                     }

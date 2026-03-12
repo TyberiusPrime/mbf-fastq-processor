@@ -1,0 +1,19 @@
+Error Details ==
+Error 1/1
+  ╭─config.toml
+  ┆
+5 │ [[step]]
+6 │     action = 'UpperCase'
+  ┆              ─────┬─────
+  ┆                   │
+  ┆                   ╰────── In this step
+7 │     source = 'name:read3'
+  ┆              ──────┬─────
+  ┆                    │
+  ┆                    ╰────── Segment not found
+──╯
+Hint: Available segments: [read1, read2]
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/Uppercase
+      Or run: `mbf-fastq-processor template Uppercase`
+
+

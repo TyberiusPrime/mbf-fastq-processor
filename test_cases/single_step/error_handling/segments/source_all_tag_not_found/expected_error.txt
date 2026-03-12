@@ -1,0 +1,16 @@
+Error Details ==
+Error 1/1
+  ╭─config.toml
+  ┆
+5 │ [[step]]
+6 │     action = 'UpperCase'
+7 │     source = 'tag:nosuchtag'
+  ┆              ───────┬───────
+  ┆                     │
+  ┆                     ╰──────── No such tag: 'nosuchtag'
+──╯
+Hint: All known accepted values have been used.
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/_ChangeCase
+      Or run: `mbf-fastq-processor template _ChangeCase`
+
+
