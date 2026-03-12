@@ -1,4 +1,4 @@
-Error in stage 0: ValidateNamew detected mismatched read names near read 1 (0-based, sampled every 1 reads).
+Error in stage 0: ValidateName detected mismatched read names near read 1 (0-based, sampled every 1 reads).
 First segment (prefix): Beta,
 Other segment (prefix): Gamma
 First segment (full name): Beta_1,

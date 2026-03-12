@@ -86,6 +86,73 @@ fn test_process_command() {
 }
 
 #[test]
+fn test_process_nonexistent_toml() {
+    let cmd = std::process::Command::new(get_bin_path())
+        .arg("process")
+        .arg("/nonexistent/path/config.toml")
+        .output()
+        .unwrap();
+    let stderr = std::str::from_utf8(&cmd.stderr).unwrap().to_string();
+    assert!(
+        stderr.contains("Could not read toml file"),
+        "stderr was: {stderr}"
+    );
+    assert!(!cmd.status.success());
+}
+
+#[test]
+fn test_verify_nonexistent_toml() {
+    let cmd = std::process::Command::new(get_bin_path())
+        .arg("verify")
+        .arg("/nonexistent/path/config.toml")
+        .output()
+        .unwrap();
+    let stderr = std::str::from_utf8(&cmd.stderr).unwrap().to_string();
+    assert!(
+        stderr.contains("Failed to canonicalize TOML file path"),
+        "stderr was: {stderr}"
+    );
+    assert!(!cmd.status.success());
+}
+
+#[test]
+fn test_verify_benchmark_config_error() {
+    let dir = tempfile::tempdir().unwrap();
+    let toml_path = dir.path().join("bench.toml");
+    std::fs::write(
+        &toml_path,
+        "[input]\nread1 = \"input.fq\"\n\n[benchmark]\nenable = true\nmolecule_count = 1000\n",
+    )
+    .unwrap();
+    let cmd = std::process::Command::new(get_bin_path())
+        .arg("verify")
+        .arg(&toml_path)
+        .output()
+        .unwrap();
+    let stderr = std::str::from_utf8(&cmd.stderr).unwrap().to_string();
+    assert!(
+        stderr.contains("benchmarking configuration"),
+        "stderr was: {stderr}"
+    );
+    assert!(!cmd.status.success());
+}
+
+#[test]
+fn test_validate_nonexistent_toml() {
+    let cmd = std::process::Command::new(get_bin_path())
+        .arg("validate")
+        .arg("/nonexistent/path/config.toml")
+        .output()
+        .unwrap();
+    let stderr = std::str::from_utf8(&cmd.stderr).unwrap().to_string();
+    assert!(
+        stderr.contains("Could not read toml file"),
+        "stderr was: {stderr}"
+    );
+    assert!(!cmd.status.success());
+}
+
+#[test]
 fn test_template_command() {
     let cmd = std::process::Command::new(get_bin_path())
         .arg("template")

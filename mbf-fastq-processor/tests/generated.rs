@@ -2223,6 +2223,20 @@ fn test_cases_x_single_step_x_edits_x_uppercase_tag() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_error_handling_x_spotcheckreadpairing_x_empty_read_name() {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/SpotCheckReadPairing/empty_read_name"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/error_handling/SpotCheckReadPairing/empty_read_name",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_error_handling_x_spotcheckreadpairing_x_not_paired() {
     println!(
         "Test case is in: test_cases/single_step/error_handling/SpotCheckReadPairing/not_paired"
@@ -7386,6 +7400,16 @@ fn test_cases_x_single_step_x_reports_x_report_x_duplicate_label() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_reports_x_report_x_empty_name() {
+    println!("Test case is in: test_cases/single_step/reports/report/empty_name");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/reports/report/empty_name"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_reports_x_report_x_fasta() {
     println!("Test case is in: test_cases/single_step/reports/report/fasta");
     run_test(
@@ -7702,6 +7726,20 @@ fn test_cases_x_single_step_x_validation_x_spot_check_read_pairing_x_fail() {
     println!("Test case is in: test_cases/single_step/validation/spot_check_read_pairing/fail");
     run_test(
         std::path::Path::new("../test_cases/single_step/validation/spot_check_read_pairing/fail"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_validation_x_spot_check_read_pairing_x_fail_unequal_len() {
+    println!(
+        "Test case is in: test_cases/single_step/validation/spot_check_read_pairing/fail_unequal_len"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/validation/spot_check_read_pairing/fail_unequal_len",
+        ),
         "input.toml",
         1,
     );
