@@ -1,0 +1,34 @@
+[input]
+  read1 = "input_read1.fq"
+
+[[step]]
+  action = "EvalExpression"
+  expression = "read_no % 2 != 0"
+  out_label = "even"
+  result_type = "bool"
+
+
+[[step]]
+  action = "Report"
+  name = "before_demux"
+  count = true
+  base_statistics = true
+  duplicate_count_per_read = true
+  length_distribution = true
+
+[[step]]
+  action = "Demultiplex"
+  in_label = "even"
+
+[[step]]
+  action = "Report"
+  name = "after_demux"
+  count = true
+  base_statistics = true
+  duplicate_count_per_read = true
+  length_distribution = true
+
+[output]
+  prefix = "out"
+  report_json = true
+  report_html = true

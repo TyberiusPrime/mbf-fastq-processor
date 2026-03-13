@@ -7933,6 +7933,16 @@ fn test_cases_x_single_step_x_trim_x_lowqualityend() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_trim_x_lowqualityendwrongtypeforminqual() {
+    println!("Test case is in: test_cases/single_step/trim/LowQualityEndWrongTypeForMinQual");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/trim/LowQualityEndWrongTypeForMinQual"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_trim_x_cut_end_x_basic() {
     println!("Test case is in: test_cases/single_step/trim/cut_end/basic");
     run_test(
@@ -8412,6 +8422,20 @@ fn test_cases_x_tags_and_readset_modifying_steps_x_head_demultiplex() {
     println!("Test case is in: test_cases/tags_and_readset_modifying_steps/head_demultiplex");
     run_test(
         std::path::Path::new("../test_cases/tags_and_readset_modifying_steps/head_demultiplex"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_tags_and_readset_modifying_steps_x_report_demultiplex_even() {
+    println!(
+        "Test case is in: test_cases/tags_and_readset_modifying_steps/report_demultiplex_even"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/tags_and_readset_modifying_steps/report_demultiplex_even",
+        ),
         "input.toml",
         1,
     );
