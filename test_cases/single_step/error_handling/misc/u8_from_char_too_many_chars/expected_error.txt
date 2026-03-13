@@ -14,7 +14,7 @@ Error 1/2
 ──╯
 Hint: Must start with a letter or underscore (a-zA-Z_), got '.'
       See https://doc_url.example/version-stripped-from-test/docs/redirects/ExtractLowQualityStart
-      Or run: `mbf-fastq-processor template ExtractLowQualityStart`
+      Or run: `mbf-fastq-processor template ExtractLowQualityStart` for more information.
 
 Error 2/2
   ╭─config.toml
@@ -33,6 +33,6 @@ Error 2/2
 ──╯
 Hint: Provide either a number (0..255), or a single letter string (with an ascii character)
       See https://doc_url.example/version-stripped-from-test/docs/redirects/ExtractLowQualityStart
-      Or run: `mbf-fastq-processor template ExtractLowQualityStart`
+      Or run: `mbf-fastq-processor template ExtractLowQualityStart` for more information.
 
 

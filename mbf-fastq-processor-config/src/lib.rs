@@ -41,11 +41,6 @@ pub enum CompressionFormat {
 
 impl CompressionFormat {
     #[must_use]
-    pub fn is_compressed(&self) -> bool {
-        !matches!(self, CompressionFormat::Uncompressed)
-    }
-
-    #[must_use]
     pub fn apply_suffix(self, base: &str) -> String {
         match self {
             CompressionFormat::Uncompressed => base.to_string(),
@@ -72,7 +67,8 @@ impl FileFormat {
             FileFormat::Fastq => "fq",
             FileFormat::Fasta => "fasta",
             FileFormat::Bam => "bam",
-            FileFormat::None => "",
+            // cov:excl-start
+            FileFormat::None => unreachable!("No output has no suffix either"), // cov:excl-stop
         }
     }
 
@@ -100,10 +96,6 @@ impl FileFormat {
 // Default functions for common values
 pub fn default_region_separator() -> bstr::BString {
     b"_".into()
-}
-
-pub fn default_segment_all() -> segments::SegmentIndexOrAll {
-    segments::SegmentIndexOrAll::All
 }
 
 pub fn default_comment_separator() -> u8 {
@@ -232,11 +224,15 @@ pub fn tpd_adapt_bstring_uppercase(input: TomlValue<String>) -> TomlValue<BStrin
 pub fn tpd_adapt_dna_bstring(mut input: TomlValue<String>) -> TomlValue<BString> {
     input.try_map(|s| {
         let res = BString::from(s.as_bytes());
-        for c in res.iter() {
-            let c = c.to_ascii_uppercase();
+        for org_c in res.iter() {
+            let c = org_c.to_ascii_uppercase();
             if !matches!(c, b'A' | b'C' | b'G' | b'T') {
                 return Err(ValidationFailure::new(
-                    format!("Invalid DNA base: '{c}'."),
+                    format!(
+                        "Invalid DNA base: '{}' (ascii: {org_c}).",
+                        std::char::from_u32(*org_c as u32)
+                            .unwrap_or(std::char::REPLACEMENT_CHARACTER)
+                    ),
                     None,
                 ));
             }
@@ -249,11 +245,15 @@ pub fn tpd_adapt_dna_bstring(mut input: TomlValue<String>) -> TomlValue<BString>
 pub fn tpd_adapt_dna_bstring_plus_n(mut input: TomlValue<String>) -> TomlValue<BString> {
     input.try_map(|s| {
         let res = BString::from(s.as_bytes());
-        for c in res.iter() {
-            let c = c.to_ascii_uppercase();
+        for org_c in res.iter() {
+            let c = org_c.to_ascii_uppercase();
             if !matches!(c, b'A' | b'C' | b'G' | b'T' | b'N') {
                 return Err(ValidationFailure::new(
-                    format!("Invalid DNA base: '{c}'."),
+                    format!(
+                        "Invalid DNA base: '{}' (ascii: {org_c}).",
+                        std::char::from_u32(*org_c as u32)
+                            .unwrap_or(std::char::REPLACEMENT_CHARACTER)
+                    ),
                     None,
                 ));
             }
@@ -265,7 +265,7 @@ pub fn tpd_adapt_dna_bstring_plus_n(mut input: TomlValue<String>) -> TomlValue<B
 #[must_use]
 pub fn tpd_adapt_iupac_bstring(mut input: TomlValue<String>) -> TomlValue<BString> {
     input.try_map(|s| {
-        let res = BString::from(s.as_bytes());
+        let res = BString::from(s.as_bytes().to_ascii_uppercase());
         if !dna::all_iupac(res.as_ref()) {
             return Err(ValidationFailure::new(
                 format!("Invalid IUPAC base in '{res}'."),

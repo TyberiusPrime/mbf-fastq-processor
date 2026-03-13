@@ -5706,6 +5706,18 @@ fn test_cases_x_single_step_x_extraction_x_extract_iupac_x_suffix() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_extraction_x_extract_iupac_x_suffix_using_iupac() {
+    println!("Test case is in: test_cases/single_step/extraction/extract_iupac/suffix_using_iupac");
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/extract_iupac/suffix_using_iupac",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_extraction_x_extract_iupac_x_with_indel() {
     println!("Test case is in: test_cases/single_step/extraction/extract_iupac/with_indel");
     run_test(
@@ -8456,10 +8468,30 @@ fn test_cases_x_transform_x_prefix_and_postfix() {
 }
 
 #[test]
+fn test_cases_x_transform_x_prefix_and_postfix_not_dna() {
+    println!("Test case is in: test_cases/transform/prefix_and_postfix_not_dna");
+    run_test(
+        std::path::Path::new("../test_cases/transform/prefix_and_postfix_not_dna"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_transform_x_prefix_and_postfix_qual_range() {
     println!("Test case is in: test_cases/transform/prefix_and_postfix_qual_range");
     run_test(
         std::path::Path::new("../test_cases/transform/prefix_and_postfix_qual_range"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_transform_x_prefix_and_postfix_qual_range_solexa() {
+    println!("Test case is in: test_cases/transform/prefix_and_postfix_qual_range_solexa");
+    run_test(
+        std::path::Path::new("../test_cases/transform/prefix_and_postfix_qual_range_solexa"),
         "input.toml",
         1,
     );

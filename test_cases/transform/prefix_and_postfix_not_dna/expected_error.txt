@@ -2,15 +2,15 @@ Error Details ==
 Error 1/2
   ╭─config.toml
   ┆
-4 │ [[step]]
-5 │     action = 'Prefix'
+6 │ [[step]]
+7 │     action = 'Prefix'
   ┆              ────┬───
   ┆                  │
   ┆                  ╰──── In this step
-6 │     seq ='A'
-  ┆             ┬
-  ┆             │
-  ┆             ╰─ Missing required key: 'qual'.
+8 │     seq = 'ACGX'
+  ┆           ───┬──
+  ┆              │
+  ┆              ╰─── Invalid DNA base: 'X' (ascii: 88).
 ──╯
 Hint: See https://doc_url.example/version-stripped-from-test/docs/redirects/Prefix
       Or run: `mbf-fastq-processor template Prefix` for more information.
@@ -18,15 +18,15 @@ Hint: See https://doc_url.example/version-stripped-from-test/docs/redirects/Pref
 Error 2/2
    ╭─config.toml
    ┆
- 8 │ [[step]]
- 9 │     action = 'Postfix'
+10 │ [[step]]
+11 │     action = 'Postfix'
    ┆              ────┬────
    ┆                  │
    ┆                  ╰───── In this step
-10 │     qual = 'B'
-   ┆               ┬
-   ┆               │
-   ┆               ╰─ Missing required key: 'seq'.
+12 │     seq = 'TGCY'
+   ┆           ───┬──
+   ┆              │
+   ┆              ╰─── Invalid DNA base: 'Y' (ascii: 89).
 ───╯
 Hint: See https://doc_url.example/version-stripped-from-test/docs/redirects/Postfix
       Or run: `mbf-fastq-processor template Postfix` for more information.

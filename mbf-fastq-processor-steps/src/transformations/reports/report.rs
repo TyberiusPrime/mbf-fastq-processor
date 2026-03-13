@@ -1,4 +1,4 @@
-use mbf_fastq_processor_config::{NonAmbigousDNA, default_segment_all};
+use mbf_fastq_processor_config::NonAmbigousDNA;
 
 use crate::transformations::prelude::*;
 
@@ -61,6 +61,7 @@ impl VerifyIn<PartialConfig> for PartialReport {
 
 impl Default for Report {
     fn default() -> Self {
+        panic!();
         Self {
             name: "report".to_string(),
             count: true,
@@ -70,7 +71,7 @@ impl Default for Report {
             duplicate_count_per_fragment: false,
             debug_reproducibility: false,
             count_oligos: None,
-            count_oligos_segment: default_segment_all(),
+            count_oligos_segment: SegmentIndexOrAll::All,
             tag_histograms: None,
         }
     }

@@ -13,7 +13,7 @@ pub(crate) fn improve_error_messages(
 ) -> String {
     fn add_help<T>(toml_value: &mut TomlValue<T>, step_name: &str) {
         let new_help = format!(
-            "See {}\nOr run: `{} template {}`",
+            "See {}\nOr run: `{} template {}` for more information.",
             link_docs(step_name),
             env!("CARGO_PKG_NAME"),
             step_name

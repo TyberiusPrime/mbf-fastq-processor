@@ -133,21 +133,15 @@ impl<T: Write + Send + 'static> CompressedWriter<'_, T> {
     fn finish(self) -> HashingFileWriter<BufWriter<T>> {
         match self {
             CompressedWriter::Raw(inner) => inner,
-            CompressedWriter::GzipSingle(inner) => {
-                inner
-                    .finish()
-                    .expect("compression finalization should not fail")
-            }
-            CompressedWriter::GzipParallel(mut inner) => {
-                inner
-                    .finish()
-                    .expect("compression finalization should not fail")
-            }
-            CompressedWriter::Zstd(inner) => {
-                inner
-                    .finish()
-                    .expect("compression finalization should not fail")
-            }
+            CompressedWriter::GzipSingle(inner) => inner
+                .finish()
+                .expect("compression finalization should not fail"),
+            CompressedWriter::GzipParallel(mut inner) => inner
+                .finish()
+                .expect("compression finalization should not fail"),
+            CompressedWriter::Zstd(inner) => inner
+                .finish()
+                .expect("compression finalization should not fail"),
         }
     }
 }

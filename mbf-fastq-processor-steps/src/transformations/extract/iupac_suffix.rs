@@ -1,5 +1,5 @@
 use crate::transformations::prelude::*;
-use mbf_fastq_processor_config::{dna::hamming, tpd_adapt_dna_bstring};
+use mbf_fastq_processor_config::{dna::iupac_hamming_distance, tpd_adapt_iupac_bstring};
 
 use super::extract_region_tags;
 
@@ -15,7 +15,7 @@ pub struct IUPACSuffix {
     pub out_label: TagLabel,
     pub min_length: usize,
     pub max_mismatches: usize,
-    #[tpd(with = "tpd_adapt_dna_bstring")]
+    #[tpd(with = "tpd_adapt_iupac_bstring")]
     #[schemars(with = "String")]
     #[tpd(alias = "query")]
     #[tpd(alias = "pattern")]
@@ -75,7 +75,7 @@ impl IUPACSuffix {
         let max_len = std::cmp::min(seq.len(), query.len());
         for prefix_len in (min_length..=max_len).rev() {
             let suffix_start = seq.len() - prefix_len;
-            let dist = hamming(&seq[suffix_start..], &query[..prefix_len]) as usize;
+            let dist = iupac_hamming_distance(&query[..prefix_len], &seq[suffix_start..]) as usize;
             if dist <= max_mismatches {
                 return Some(prefix_len);
             }
