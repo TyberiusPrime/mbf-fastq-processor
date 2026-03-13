@@ -60,13 +60,10 @@ impl Step for ValidateName {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        if block.segments.is_empty() {
-            return Ok((block, true));
-        }
+        assert!(self.sample_stride > 0);
 
         let segment_count = block.segments.len();
         let reads_in_block = block.segments[0].entries.len();
-        assert!(self.sample_stride > 0);
 
         let offset = self
             .processed_reads
@@ -81,11 +78,10 @@ impl Step for ValidateName {
             let reference = block.segments[0].get(read_idx);
             let reference_name = reference.name();
 
-            if reference_name.is_empty() {
-                bail!(
-                    "ValidateName encountered an empty read name for segment 0 at sampled read index {global_index}."
-                );
-            }
+            assert!(
+                !reference_name.is_empty(),
+                "ValidateReadPairing saw an empty read - the parser is supposed to detect these",
+            );
 
             let expected_prefix = read_name_canonical_prefix_strict(
                 reference_name,

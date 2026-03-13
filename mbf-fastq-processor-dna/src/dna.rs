@@ -349,29 +349,26 @@ pub fn contains_iupac_ambigous(input: &[u8]) -> bool {
 
 //check the complet string is valid dna + iupac, upper case only
 pub fn first_non_iupac(input: &[u8]) -> Option<u8> {
-    input
-        .iter()
-        .find(|&char| {
-            !matches!(
-                char,
-                b'A' | b'T'
-                    | b'U'
-                    | b'C'
-                    | b'G'
-                    | b'R'
-                    | b'Y'
-                    | b'S'
-                    | b'W'
-                    | b'K'
-                    | b'M'
-                    | b'B'
-                    | b'V'
-                    | b'D'
-                    | b'H'
-                    | b'N'
-            )
-        })
-        .map(|&c| c)
+    input.iter().map(|c| c.to_ascii_uppercase()).find(|char| {
+        !matches!(
+            char,
+            b'A' | b'T'
+                | b'U'
+                | b'C'
+                | b'G'
+                | b'R'
+                | b'Y'
+                | b'S'
+                | b'W'
+                | b'K'
+                | b'M'
+                | b'B'
+                | b'V'
+                | b'D'
+                | b'H'
+                | b'N'
+        )
+    })
 }
 pub fn all_iupac_or_underscore(input: &[u8]) -> bool {
     input.iter().all(|&char| {
@@ -1084,6 +1081,7 @@ mod test {
     fn test_all_iupac() {
         assert_eq!(first_non_iupac(b"A"), None);
         assert_eq!(first_non_iupac(b"AAAA"), None);
+        assert_eq!(first_non_iupac(b"aaaycn"), None);
         assert_eq!(first_non_iupac(b"AAAx"), Some(b'X'));
         assert_eq!(first_non_iupac(b"R"), None);
         assert_eq!(first_non_iupac(b"AGCTURYSWKMNBVDH"), None);

@@ -76,9 +76,3 @@ pub fn get_cookbook(number: usize) -> Option<&'static Cookbook> {
 pub fn get_cookbook_by_name(name: &str) -> Option<&'static Cookbook> {
     COOKBOOKS.iter().find(|cb| cb.name == name)
 }
-
-/// Get the total number of cookbooks
-#[must_use]
-pub fn cookbook_count() -> usize {
-    COOKBOOKS.len()
-}

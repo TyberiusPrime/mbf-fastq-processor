@@ -58,7 +58,8 @@ impl VerifyIn<PartialConfig> for PartialReport {
         Ok(())
     }
 }
-
+//
+// cov:excl-start
 impl TagUser for PartialTaggedVariant<PartialReport> {
     #[mutants::skip]
     fn get_tag_usage(
@@ -66,16 +67,16 @@ impl TagUser for PartialTaggedVariant<PartialReport> {
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> TagUsageInfo<'_> {
-        // cov:excl-start
         unreachable!(
             "Report should not be used as a tagged variant - should be expanded into individual parts before"
         );
-        // cov:excl-stop
     }
 
     //report name dupliaction is being done in config verify_reports
 }
+// cov:excl-stop
 
+// cov:excl-start
 impl Step for Report {
     #[mutants::skip]
     fn init(
@@ -87,9 +88,7 @@ impl Step for Report {
         _demultiplex_info: &OptDemultiplex,
         _allow_overwrite: bool,
     ) -> Result<Option<DemultiplexBarcodes>> {
-        // cov:excl-start
         unreachable!("Should not be reached - should be expanded into individual parts before");
-        // cov:excl-stop
     }
 
     fn apply(
@@ -99,8 +98,7 @@ impl Step for Report {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        // cov:excl-start
         panic!("Should not be reached - should be expanded into individual parts before");
-        // cov:excl-stop
     }
 }
+// cov:excl-stop

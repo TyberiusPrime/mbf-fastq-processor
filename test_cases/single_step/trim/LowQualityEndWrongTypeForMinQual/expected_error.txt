@@ -1,0 +1,19 @@
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+12 │ [[step]]
+13 │     action = 'ExtractLowQualityEnd'
+   ┆              ───────────┬──────────
+   ┆                         │
+   ┆                         ╰─────────── In this step
+14 │     min_qual = false
+   ┆                ──┬──
+   ┆                  │
+   ┆                  ╰─── Wrong type, expected a byte
+───╯
+Hint: Provide either a number (0..255), or a single letter string (with an ascii character)
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/ExtractLowQualityEnd
+      Or run: `mbf-fastq-processor template ExtractLowQualityEnd` for more information.
+
+

@@ -58,15 +58,6 @@ impl VerifyIn<PartialConfig> for PartialValidateReadPairing {
     }
 }
 
-impl Default for ValidateReadPairing {
-    fn default() -> Self {
-        Self {
-            processed_reads: 0.into(),
-            sample_stride: default_sample_stride(),
-        }
-    }
-}
-
 impl TagUser for PartialTaggedVariant<PartialValidateReadPairing> {
     //default is ok, no tags
 }
@@ -83,10 +74,6 @@ impl Step for ValidateReadPairing {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        if block.segments.is_empty() {
-            return Ok((block, true));
-        }
-
         let segment_count = block.segments.len();
         let reads_in_block = block.segments[0].entries.len();
         assert!(self.sample_stride > 0);
