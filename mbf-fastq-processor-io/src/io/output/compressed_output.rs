@@ -133,15 +133,21 @@ impl<T: Write + Send + 'static> CompressedWriter<'_, T> {
     fn finish(self) -> HashingFileWriter<BufWriter<T>> {
         match self {
             CompressedWriter::Raw(inner) => inner,
-            CompressedWriter::GzipSingle(inner) => inner
-                .finish()
-                .expect("compression finalization should not fail"),
-            CompressedWriter::GzipParallel(mut inner) => inner
-                .finish()
-                .expect("compression finalization should not fail"),
-            CompressedWriter::Zstd(inner) => inner
-                .finish()
-                .expect("compression finalization should not fail"),
+            CompressedWriter::GzipSingle(inner) => {
+                inner
+                    .finish()
+                    .expect("compression finalization should not fail")
+            }
+            CompressedWriter::GzipParallel(mut inner) => {
+                inner
+                    .finish()
+                    .expect("compression finalization should not fail")
+            }
+            CompressedWriter::Zstd(inner) => {
+                inner
+                    .finish()
+                    .expect("compression finalization should not fail")
+            }
         }
     }
 }
@@ -170,12 +176,20 @@ impl<T: Write + Send + 'static> CompressedWriterSingleCore<'_, T> {
     fn finish(self) -> HashingFileWriter<BufWriter<T>> {
         match self {
             CompressedWriterSingleCore::Raw(inner) => inner,
-            CompressedWriterSingleCore::GzipSingle(inner) => inner
-                .finish()
-                .expect("compression finalization should not fail"),
-            CompressedWriterSingleCore::Zstd(inner) => inner
-                .finish()
-                .expect("compression finalization should not fail"),
+            CompressedWriterSingleCore::GzipSingle(inner) => {
+                // cov:excl-start
+                inner
+                    .finish()
+                    .expect("compression finalization should not fail")
+                // cov:excl-stop
+            }
+            CompressedWriterSingleCore::Zstd(inner) => {
+                // cov:excl-start
+                inner
+                    .finish()
+                    .expect("compression finalization should not fail")
+                // cov:excl-stop
+            }
         }
     }
 }
@@ -237,12 +251,14 @@ pub struct HashedAndCompressedWriterSingleCore<'a, T: std::io::Write + Send + 's
 }
 
 pub type OutputWriter = HashedAndCompressedWriterSingleCore<'static, ex::fs::File>;
+// cov:excl-start
 impl std::fmt::Debug for OutputWriter {
     #[mutants::skip] // don't care that it's never used, it' s useful when you need to debug
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("OutputWriter").finish_non_exhaustive()
     }
 }
+// cov:excl-stop
 
 impl<T: std::io::Write + Send + 'static> HashedAndCompressedWriter<'_, T> {
     pub fn new(

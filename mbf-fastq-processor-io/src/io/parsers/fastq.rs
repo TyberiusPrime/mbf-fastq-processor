@@ -175,7 +175,9 @@ impl FastqParser {
         if was_final && let Some(partial) = self.last_partial.take() {
             match self.last_status {
                 PartialStatus::InQual => {}
+                // cov:excl-start
                 PartialStatus::NoPartial => unreachable!(),
+                // cov:excl-stop
                 _ => bail!("Incomplete final read. Was in state {:?}", self.last_status),
             }
             let final_read = FastQRead::new(partial.name, partial.seq, partial.qual)
@@ -290,7 +292,9 @@ pub fn parse_to_fastq_block(
                     FastQElement::Owned(name) => {
                         name.extend_from_slice(&input[pos..start_offset + next_newline]);
                     }
+                    // cov:excl-start
                     FastQElement::Local(_) => panic!("Should not happen"),
+                    // cov:excl-stop
                 }
                 pos = start_offset + next_newline + newline_length;
                 last_status = PartialStatus::InSeq;
@@ -306,7 +310,9 @@ pub fn parse_to_fastq_block(
                     FastQElement::Owned(name) => {
                         name.extend_from_slice(&input[pos..name_end]);
                     }
+                    // cov:excl-start
                     FastQElement::Local(_) => panic!("Should not happen"),
+                    // cov:excl-stop
                 }
                 // debug!("Returning in name 1 {:?}", last_read.as_ref().unwrap());
                 return Ok(FastQBlockParseResult {
@@ -330,7 +336,9 @@ pub fn parse_to_fastq_block(
                     FastQElement::Owned(seq) => {
                         seq.extend_from_slice(&input[pos..start_offset + next_newline]);
                     }
+                    // cov:excl-start
                     FastQElement::Local(_) => unreachable!(),
+                    // cov:excl-stop
                 }
                 pos = start_offset + next_newline + newline_length;
             }
@@ -345,7 +353,9 @@ pub fn parse_to_fastq_block(
                     FastQElement::Owned(seq) => {
                         seq.extend_from_slice(&input[pos..seq_end]);
                     }
+                    // cov:excl-start
                     FastQElement::Local(_) => panic!("Should not happen"),
+                    // cov:excl-stop
                 }
                 // debug!("Returning in seq1: {:?}", last_read.as_ref().unwrap());
                 return Ok(FastQBlockParseResult {
@@ -446,7 +456,9 @@ pub fn parse_to_fastq_block(
                     FastQElement::Owned(qual) => {
                         qual.extend_from_slice(&input[pos..start_offset + next_newline]);
                     }
+                    // cov:excl-start
                     FastQElement::Local(_) => panic!("Should not happen"),
+                    // cov:excl-stop
                 }
                 pos = start_offset + next_newline + newline_length;
             }
@@ -461,7 +473,9 @@ pub fn parse_to_fastq_block(
                     FastQElement::Owned(qual) => {
                         qual.extend_from_slice(&input[pos..qual_end]);
                     }
+                    // cov:excl-start
                     FastQElement::Local(_) => panic!("Should not happen"),
+                    // cov:excl-stop
                 }
                 return Ok(FastQBlockParseResult {
                     status,

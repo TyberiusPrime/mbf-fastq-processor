@@ -51,7 +51,9 @@ impl VerifyIn<PartialConfig> for Partial_ChangeCase {
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {
+        // cov:excl-start
         unreachable!(); //since this is in expanded step.
+        // cov:excl-stop
         // self.target.validate_segment(parent);
         // Ok(())
     }

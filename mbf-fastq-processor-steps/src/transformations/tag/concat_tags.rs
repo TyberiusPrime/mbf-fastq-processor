@@ -206,12 +206,13 @@ impl Step for ConcatTags {
                     TagValue::String(_) => {
                         has_string = true;
                     }
+                    // cov:excl-start
                     TagValue::Numeric(_) | TagValue::Bool(_) => {
                         bail!(
                             "ConcatTags does not support Numeric or Bool tags. Found in one of: {:?}",
                             self.in_labels
                         );
-                    }
+                    } // cov:excl-stop
                 }
             }
             // Handle missing tags according to on_missing setting
@@ -241,7 +242,9 @@ impl Step for ConcatTags {
                         TagValue::Missing => {
                             // Skip missing tags
                         }
+                        // cov:excl-start
                         _ => unreachable!("Should only have Location or Missing"),
+                        // cov:excl-stop
                     }
                 }
 
@@ -265,7 +268,9 @@ impl Step for ConcatTags {
                         TagValue::Missing => {
                             // Skip missing tags
                         }
+                        // cov:excl-start
                         _ => unreachable!("Should only have String or Missing"),
+                        // cov:excl-stop
                     }
                 }
 
@@ -298,7 +303,9 @@ impl Step for ConcatTags {
                         TagValue::Missing => {
                             // Skip missing tags
                         }
+                        // cov:excl-start
                         _ => unreachable!("Should only have Location, String, or Missing"),
+                        // cov:excl-stop
                     }
                 }
 

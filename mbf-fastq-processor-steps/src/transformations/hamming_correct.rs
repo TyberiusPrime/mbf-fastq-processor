@@ -178,7 +178,9 @@ impl Step for HammingCorrect {
                             _ => {
                                 // This shouldn't happen as we handle it above
                                 //output_hits.push(TagValue::Sequence(Hits(corrected_hits)));
+                                // cov:excl-start
                                 unreachable!();
+                                // cov:excl-stop
                             }
                         }
                     } else {
@@ -201,7 +203,9 @@ impl Step for HammingCorrect {
                             }
                             _ => {
                                 // This shouldn't happen as we handle it above
+                                // cov:excl-start
                                 unreachable!();
+                                // cov:excl-stop
                             }
                         }
                     } else {
@@ -215,9 +219,10 @@ impl Step for HammingCorrect {
                 TagValue::Missing => {
                     output_hits.push(TagValue::Missing);
                 }
+                // cov:excl-start
                 TagValue::Bool(_) | TagValue::Numeric(_) => {
                     unreachable!(); // we verify that it's a location tag in validation
-                }
+                } // cov:excl-stop
             }
         }
 

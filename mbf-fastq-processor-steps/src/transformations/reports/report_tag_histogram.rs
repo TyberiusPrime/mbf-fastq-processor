@@ -29,7 +29,9 @@ impl HistogramData {
                 if let HistogramData::String(map) = self {
                     *map.entry(s.to_string()).or_insert(0) += 1;
                 } else {
+                    // cov:excl-start
                     unreachable!();
+                    // cov:excl-stop
                 }
             }
             TagValue::Numeric(n) => {
@@ -38,7 +40,9 @@ impl HistogramData {
                 if let HistogramData::Numeric(map) = self {
                     *map.entry(bucket).or_insert(0) += 1;
                 } else {
+                    // cov:excl-start
                     unreachable!();
+                    // cov:excl-stop
                 }
             }
             TagValue::Bool(b) => {
@@ -49,7 +53,9 @@ impl HistogramData {
                         *false_count += 1;
                     }
                 } else {
+                    // cov:excl-start
                     unreachable!();
+                    // cov:excl-stop
                 }
             }
             TagValue::Location(hits) => {
@@ -58,7 +64,9 @@ impl HistogramData {
                 if let HistogramData::String(map) = self {
                     *map.entry(s).or_insert(0) += 1;
                 } else {
+                    // cov:excl-start
                     unreachable!();
+                    // cov:excl-stop
                 }
             }
         }

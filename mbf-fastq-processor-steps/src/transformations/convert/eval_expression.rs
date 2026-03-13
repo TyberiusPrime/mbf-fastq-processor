@@ -87,6 +87,7 @@ impl VerifyIn<PartialConfig> for PartialEvalExpression {
     }
 }
 
+// cov:excl-start
 #[allow(clippy::missing_fields_in_debug)]
 impl std::fmt::Debug for EvalExpression {
     #[mutants::skip]
@@ -98,6 +99,7 @@ impl std::fmt::Debug for EvalExpression {
             .finish()
     }
 }
+// cov:excl-stop
 
 #[derive(Debug, Clone, Copy, PartialEq, Default, JsonSchema)]
 #[tpd]
@@ -223,9 +225,11 @@ impl Step for Box<EvalExpression> {
                             TagValue::String(s) => s.len() as f64,
                             TagValue::Location(locs) => locs.covered_len() as f64,
                             TagValue::Missing => 0.0,
+                            // cov:excl-start
                             _ => panic!(
                                 "EvalExpression: 'len_{suffix}' (a derived length variable) expects String or Location tag type, but found other type. This should have been caught earlier. Bug",
                             ),
+                            // cov:excl-stop
                         };
                         tag_values.push(TagValue::Numeric(len));
                     }
@@ -240,10 +244,12 @@ impl Step for Box<EvalExpression> {
             } else if let Some(tag_values) = block.tags.get(&TagLabel(var_name.clone())) {
                 tag_data.push((var_name.as_str(), tag_values));
             } else {
+                // cov:excl-start
                 panic!(
                     "EvalExpression: variable '{}' in expression '{}' does not match any available tag. This should have been caught earlier. Bug",
                     var_name, self.expression
                 );
+                // cov:excl-stop
             }
         }
         for (var_name, tag_values) in &virtual_tags {

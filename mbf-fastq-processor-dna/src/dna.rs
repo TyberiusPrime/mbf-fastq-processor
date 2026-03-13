@@ -43,7 +43,9 @@ impl TagValue {
             TagValue::Missing => false,
             TagValue::Location(_hits) => true,
             TagValue::String(_bstring) => true,
+            // cov:excl-start
             TagValue::Numeric(_) => panic!("truthy val on numeric tags not supported"),
+            // cov:excl-stop
             TagValue::Bool(val) => *val,
         }
     }

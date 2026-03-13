@@ -29,6 +29,7 @@ impl DemultiplexedOutputFiles {
     }
 }
 
+// cov:excl-start
 impl std::fmt::Debug for DemultiplexedOutputFiles {
     #[mutants::skip] // never used, but it' s useful when you need to debug
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -37,6 +38,7 @@ impl std::fmt::Debug for DemultiplexedOutputFiles {
             .finish()
     }
 }
+// cov:excl-stop
 
 impl<T> Default for DemultiplexedData<T> {
     fn default() -> Self {
@@ -236,7 +238,9 @@ impl OptDemultiplex {
     pub fn expect(&self, msg: &str) -> &DemultiplexInfo {
         match self {
             Self::No => {
+                // cov:excl-start
                 panic!("OptDemultiplex::expect() called on OptDemultiplex::No. Message was {msg}")
+                // cov:excl-stop
             }
             Self::Yes(info) => info,
         }

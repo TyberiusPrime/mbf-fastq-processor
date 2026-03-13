@@ -208,9 +208,10 @@ impl Step for Demultiplex {
                 TagValue::Missing => {
                     continue;
                 } // leave at 0.
+                // cov:excl-start
                 TagValue::Numeric(_) => {
                     unreachable!();
-                }
+                } // cov:excl-stop
             };
             if let Some(tag) = demultiplex_info.barcode_to_tag(&key) {
                 output_tags[ii] |= tag;

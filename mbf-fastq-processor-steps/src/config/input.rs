@@ -167,10 +167,14 @@ impl PartialInput {
     }
     fn build_interleaved_structured(&mut self) -> Result<(), ()> {
         let Some(Some(interleaved)) = self.interleaved.as_mut() else {
+            // cov:excl-start
             unreachable!();
+            // cov:excl-stop
         };
         let Some(segments) = self.segments.as_ref() else {
+            // cov:excl-start
             unreachable!();
+            // cov:excl-stop
         };
         if segments.map.len() != 1 {
             let mut spans: Vec<_> = segments

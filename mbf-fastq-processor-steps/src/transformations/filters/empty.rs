@@ -36,6 +36,8 @@ impl Step for Empty {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
+        // cov:excl-start
         unreachable!("Should have been replaced before validation");
+        // cov:excl-stop
     }
 }

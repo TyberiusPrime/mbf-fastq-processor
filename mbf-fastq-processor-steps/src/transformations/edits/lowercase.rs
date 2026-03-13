@@ -34,7 +34,9 @@ impl TagUser for PartialTaggedVariant<PartialLowercase> {
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> TagUsageInfo<'_> {
+        // cov:excl-start
         unreachable!("Should have been transformed before");
+        // cov:excl-stop
     }
 }
 
@@ -46,6 +48,8 @@ impl Step for Lowercase {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
+        // cov:excl-start
         unreachable!();
+        // cov:excl-stop
     }
 }

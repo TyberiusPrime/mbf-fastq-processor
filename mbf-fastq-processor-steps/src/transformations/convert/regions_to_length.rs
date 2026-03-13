@@ -82,12 +82,13 @@ impl Step for RegionsToLength {
                     })
                     .sum::<usize>(),
                 TagValue::Missing => 0,
+                // cov:excl-start
                 other => {
                     panic!(
                         "ConvertRegionsToLength expected '{}' to contain region tags, found {:?}. Should have been caught in validation",
                         self.in_label, other
                     );
-                }
+                } // cov:excl-stop
             };
             #[allow(clippy::cast_precision_loss)]
             lengths.push(TagValue::Numeric(length as f64));

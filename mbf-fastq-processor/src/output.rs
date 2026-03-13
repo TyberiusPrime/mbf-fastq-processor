@@ -161,7 +161,9 @@ impl OutputFile<'_> {
                     OutputFileHandle::Fastq(writer) | OutputFileHandle::Fasta(writer) => {
                         writer.write_all(buffer)?;
                     }
+                    // cov:excl-start
                     _ => unreachable!("Text fragment encountered non-text writer"),
+                    // cov:excl-stop
                 }
                 buffer.clear();
             }
@@ -173,7 +175,9 @@ impl OutputFile<'_> {
                 OutputFileHandle::Fastq(writer) | OutputFileHandle::Fasta(writer) => {
                     writer.write_all(buffer)?;
                 }
+                // cov:excl-start
                 _ => unreachable!("Text block writer expected"),
+                // cov:excl-stop
             }
             buffer.clear();
         }
@@ -229,9 +233,10 @@ impl OutputFileHandle<'_> {
                 }
                 Ok(())
             }
+            // cov:excl-start
             Self::TemporarilyOutOfAction => {
                 unreachable!()
-            }
+            } // cov:excl-stop
         }
     }
 
@@ -305,7 +310,9 @@ impl OutputFileConfig {
         match format {
             FileFormat::Fastq | FileFormat::Fasta => {}
             FileFormat::Bam => anyhow::bail!("BAM output is not supported on stdout"),
+            // cov:excl-start
             FileFormat::None => unreachable!("Cannot emit 'none' format to stdout"),
+            // cov:excl-stop
         }
         Ok(Self {
             directory: PathBuf::new(),
@@ -422,7 +429,9 @@ impl OutputFileConfig {
                     self.simulated_failure.clone(),
                 )?))
             }
+            // cov:excl-start
             FileFormat::None => unreachable!("Cannot create output file with format 'None'"),
+            // cov:excl-stop
         };
         Ok(kind)
     }
@@ -981,7 +990,9 @@ where
                 buffer.clear();
             }
         }
+        // cov:excl-start
         _ => unreachable!("Text block writer expected"),
+        // cov:excl-stop
     }
     Ok(())
 }
@@ -1031,7 +1042,9 @@ where
                 buffer.clear();
             }
         }
+        // cov:excl-start
         _ => unreachable!("Text block writer expected"),
+        // cov:excl-stop
     }
     Ok(())
 }
@@ -1070,7 +1083,9 @@ fn output_block_inner(
             buffer.clear();
             Ok(())
         }
+        // cov:excl-start
         FileFormat::None => unreachable!("Cannot output with format 'None'"),
+        // cov:excl-stop
     }
 }
 
@@ -1113,7 +1128,9 @@ fn output_block_interleaved(
             buffer.clear();
             Ok(())
         }
+        // cov:excl-start
         FileFormat::None => unreachable!("Cannot output with format 'None'"),
+        // cov:excl-stop
     }
 }
 
@@ -1134,7 +1151,9 @@ fn write_block_to_bam(
 
     while let Some(read) = pseudo_iter.pseudo_next() {
         let OutputFileHandle::Bam(bam_output) = &mut output_file.handle else {
+            // cov:excl-start
             unreachable!("BAM writer expected");
+            // cov:excl-stop
         };
         io::write_read_to_bam(bam_output, &read, 0, 1)?;
         output_file.after_bam_fragment()?;
@@ -1171,7 +1190,9 @@ fn write_interleaved_blocks_to_bam(
             match iter.pseudo_next() {
                 Some(read) => {
                     let OutputFileHandle::Bam(bam_output) = &mut output_file.handle else {
+                        // cov:excl-start
                         unreachable!("BAM writer expected")
+                        // cov:excl-stop
                     };
                     io::write_read_to_bam(bam_output, &read, segment_index, segment_count)?;
                     output_file.after_bam_fragment()?;

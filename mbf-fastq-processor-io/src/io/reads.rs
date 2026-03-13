@@ -356,6 +356,7 @@ pub struct FastQBlock {
     pub entries: Vec<FastQRead>,
 }
 
+// cov:excl-start
 impl std::fmt::Debug for FastQBlock {
     #[mutants::skip] // debugging only.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -365,6 +366,7 @@ impl std::fmt::Debug for FastQBlock {
             .finish()
     }
 }
+// cov:excl-stop
 
 impl Clone for FastQBlock {
     ///we can clone complete `FastQblocks`, but we can't clone individual reads.
@@ -594,36 +596,44 @@ impl FastQBlock {
                     .expect("right buffer must have at least one element")
                     .name
                 {
+                    // cov:excl-start
                     FastQElement::Owned(_) => {
                         unreachable!("Left and write were owned, that shouldn't happen")
                     }
+                    // cov:excl-stop
                     FastQElement::Local(position) => position.start,
                 },
                 FastQElement::Local(position) => position.end,
             };
             for entry in &mut right {
                 match &mut entry.name {
+                    // cov:excl-start
                     FastQElement::Owned(_) => {
                         unreachable!()
                     }
+                    // cov:excl-stop
                     FastQElement::Local(position) => {
                         position.start -= buffer_split_pos;
                         position.end -= buffer_split_pos;
                     }
                 }
                 match &mut entry.seq {
+                    // cov:excl-start
                     FastQElement::Owned(_) => {
                         unreachable!()
                     }
+                    // cov:excl-stop
                     FastQElement::Local(position) => {
                         position.start -= buffer_split_pos;
                         position.end -= buffer_split_pos;
                     }
                 }
                 match &mut entry.qual {
+                    // cov:excl-start
                     FastQElement::Owned(_) => {
                         unreachable!()
                     }
+                    // cov:excl-stop
                     FastQElement::Local(position) => {
                         position.start -= buffer_split_pos;
                         position.end -= buffer_split_pos;
@@ -739,6 +749,7 @@ impl<'a> FastQBlockPseudoIterIncludingTag<'a> {
 pub struct WrappedFastQRead<'a>(&'a FastQRead, &'a Vec<u8>);
 pub struct WrappedFastQReadMut<'a>(&'a mut FastQRead, &'a mut Vec<u8>);
 
+// cov:excl-start
 impl std::fmt::Debug for WrappedFastQRead<'_> {
     #[mutants::skip] // debugging only.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -747,7 +758,9 @@ impl std::fmt::Debug for WrappedFastQRead<'_> {
         f.write_str(&format!("WrappedFastQRead {{ name: {name}, seq: {seq} }}",))
     }
 }
+// cov:excl-stop
 
+// cov:excl-start
 impl std::fmt::Debug for WrappedFastQReadMut<'_> {
     #[mutants::skip] // debugging only.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -758,6 +771,7 @@ impl std::fmt::Debug for WrappedFastQReadMut<'_> {
         ))
     }
 }
+// cov:excl-stop
 
 pub trait WrappedFastQReadCommon {
     #[must_use]
@@ -1212,17 +1226,23 @@ impl FastQBlocksCombined {
     pub fn resize(&mut self, len: usize) {
         for v in &mut self.segments {
             v.entries.resize_with(len, || {
+                // cov:excl-start
                 panic!("Read amplification not expected. Can't resize to larger")
+                // cov:excl-stop
             });
         }
         if let Some(output_tags) = &mut self.output_tags {
             output_tags.resize_with(len, || {
+                // cov:excl-start
                 panic!("Read amplification not expected. Can't resize to larger")
+                // cov:excl-stop
             });
         }
         for tags in self.tags.values_mut() {
             tags.resize_with(len, || {
+                // cov:excl-start
                 panic!("Read amplification not expected. Can't resize to larger")
+                // cov:excl-stop
             });
         }
     }
@@ -2100,7 +2120,9 @@ mod test {
         wrapped.replace_qual(b"IIIIIIIIIIIIIxx"); // longer
         assert!(wrapped.qual().eq(b"IIIIIIIIIIIIIxx"));
         if let FastQElement::Owned(_) = wrapped.0.qual {
+            // cov:excl-start
             panic!("Should be local");
+            // cov:excl-stop
         }
         //same length
         let (mut read, mut block) = get_local();
@@ -2110,7 +2132,9 @@ mod test {
         assert!(wrapped.qual().len() == start_len);
         assert!(wrapped.qual().iter().all(|x| *x == b'B'));
         if let FastQElement::Owned(_) = wrapped.0.qual {
+            // cov:excl-start
             panic!("Should not be Owned");
+            // cov:excl-stop
         }
         //shorter
         let (mut read, mut block) = get_local();
@@ -2118,7 +2142,9 @@ mod test {
         wrapped.replace_qual(b"xx"); // longer
         assert!(wrapped.qual().eq(b"xx"));
         if let FastQElement::Owned(_) = wrapped.0.qual {
+            // cov:excl-start
             panic!("Should not be owned");
+            // cov:excl-stop
         }
     }
 

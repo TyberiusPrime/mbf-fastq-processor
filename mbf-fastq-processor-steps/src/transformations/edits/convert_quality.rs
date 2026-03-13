@@ -102,10 +102,11 @@ impl Step for ConvertQuality {
         //we may assume they have been checked, for range, because Transformation::expand
         //has added a ValidatePhred step before this one.
         match (self.from, self.to) {
+            // cov:excl-start
             (PhredEncoding::Sanger, PhredEncoding::Sanger)
             | (PhredEncoding::Illumina13, PhredEncoding::Illumina13)
             | (PhredEncoding::Solexa, PhredEncoding::Solexa) => unreachable!(),
-
+            // cov:excl-stop
             (PhredEncoding::Sanger, PhredEncoding::Illumina13) => {
                 apply_to_qual(lower, upper, &mut block, |x: u8| i16::from(x) + (64 - 33));
             }

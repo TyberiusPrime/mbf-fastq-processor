@@ -307,7 +307,6 @@ impl PartialOutput {
 }
 
 impl Output {
-
     #[must_use]
     pub fn get_suffix(&self) -> String {
         self.format

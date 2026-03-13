@@ -372,9 +372,10 @@ impl Step for StoreTagInFastQ {
                                 writer.write_all(&seq)?;
                                 writer.write_all(b"\n")?;
                             }
+                            // cov:excl-start
                             FileFormat::Bam | FileFormat::None => {
                                 unreachable!("Unsupported format encountered after validation")
-                            }
+                            } // cov:excl-stop
                         }
                     }
                 }

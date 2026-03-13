@@ -41,7 +41,9 @@ impl TagUser for PartialTaggedVariant<PartialRegion> {
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> TagUsageInfo<'_> {
+        // cov:excl-start
         unreachable!("Should have been turned into Regions already")
+        // cov:excl-stop
     }
 }
 
@@ -53,8 +55,10 @@ impl Step for Region {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
+        // cov:excl-start
         unreachable!(
             "ExtractRegion is only a configuration step. It is supposed to be replaced by ExtractRegions when the Transformations are expandend"
         );
+        // cov:excl-stop
     }
 }

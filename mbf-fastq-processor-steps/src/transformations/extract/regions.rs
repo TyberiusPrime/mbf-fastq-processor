@@ -203,7 +203,9 @@ impl Step for Regions {
                         });
                     } else if !seq.is_empty() {
                         //mutants false positive
+                        // cov:excl-start
                         unreachable!();
+                        // cov:excl-stop
                     }
                 }
                 if h.is_empty() {

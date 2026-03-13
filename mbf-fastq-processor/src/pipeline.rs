@@ -219,7 +219,9 @@ fn run_benchmark_combiner_thread(
         .unwrap_or(0);
 
     if block_molecule_count == 0 {
+        // cov:excl-start
         unreachable!("Empty first block in benchmark. Should have been validated before?");
+        // cov:excl-stop
     }
 
     while molecules_sent < molecule_count {
@@ -502,7 +504,9 @@ impl RunStage0 {
                         // There's an O(2^n) runtime above, and anything beyond 16 will slow.
                         // our tests down significantly (tests happen in debug mode)
                         // We could limit this to like 18 bits, maybe?
+                        // cov:excl-start
                         bail!("Too many demultiplexed outputs defined - exceeds 64 bits");
+                        // cov:excl-stop
                     }
                 }
             }
@@ -589,9 +593,11 @@ impl RunStage1 {
                             .parse()
                             .context("Failed to read first block for benchmark")?;
                         if first_block.fastq_block.entries.is_empty() {
+                            // cov:excl-start
                             bail!(
                                 "Benchmark error: Input is empty - cannot benchmark with empty input"
                             );
+                            // cov:excl-stop
                         }
 
                         let combiner_thread = thread::Builder::new()
@@ -631,9 +637,11 @@ impl RunStage1 {
                                 .parse()
                                 .context("Failed to read first block for benchmark")?;
                             if first_block.fastq_block.entries.is_empty() {
+                                // cov:excl-start
                                 bail!(
                                     "Benchmark error: Input segment is empty - cannot benchmark with empty input"
                                 );
+                                // cov:excl-stop
                             }
                             first_blocks.push(first_block.fastq_block);
                         }
@@ -641,9 +649,11 @@ impl RunStage1 {
                         // Validate that all first blocks have the same size
                         let first_len = first_blocks[0].len();
                         if !first_blocks.iter().all(|b| b.len() == first_len) {
+                            // cov:excl-start
                             bail!(
                                 "Benchmark error: First blocks of different segments have different sizes. Cannot proceed with benchmark."
                             );
+                            // cov:excl-stop
                         }
 
                         let first_combined = io::FastQBlocksCombined {
@@ -668,7 +678,9 @@ impl RunStage1 {
                     }
                 }
             } else {
+                // cov:excl-start
                 bail!("Benchmark is configured but not enabled");
+                // cov:excl-stop
             }
         } else {
             // Normal mode

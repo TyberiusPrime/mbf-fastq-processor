@@ -101,7 +101,9 @@ impl Step for ValidateAllReadsSameLength {
                         TagValue::Missing => continue,
                         TagValue::Location(hits) => hits.covered_len(),
                         TagValue::String(bstring) => bstring.len(),
+                        // cov:excl-start
                         _ => unreachable!(),
+                        // cov:excl-stop
                     };
                     self.check(length_here)?;
                 }

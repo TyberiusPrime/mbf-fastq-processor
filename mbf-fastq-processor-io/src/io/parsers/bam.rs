@@ -264,7 +264,9 @@ mod tests {
         if let FastQElement::Local(_) = &block.entries[0].name {
             assert_eq!(block.entries[0].name.get(&block.block), b"mapped");
         } else {
+            // cov:excl-start
             panic!("expected local name");
+            // cov:excl-stop
         }
 
         let file = open(temp.path())?;
@@ -278,7 +280,9 @@ mod tests {
         if let FastQElement::Local(_) = &block.entries[0].name {
             assert_eq!(block.entries[0].name.get(&block.block), b"unmapped");
         } else {
+            // cov:excl-start
             panic!("expected Local name");
+            // cov:excl-stop
         }
 
         let file = open(temp.path())?;

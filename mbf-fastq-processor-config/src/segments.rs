@@ -107,9 +107,11 @@ impl ResolvedSourceAll {
         match self {
             ResolvedSourceAll::Segment(SegmentIndexOrAll::Indexed(idx)) => {
                 segment_order.get(*idx).cloned().unwrap_or_else(|| {
+                    // cov:excl-start
                     panic!(
                         "Segment index {idx} out of bounds for segment order: [{segment_order:?}]"
                     )
+                    // cov:excl-stop
                 })
             }
             ResolvedSourceAll::Segment(SegmentIndexOrAll::All) => "all".to_string(),
@@ -122,7 +124,9 @@ impl ResolvedSourceAll {
                 match segment_index_or_all {
                     SegmentIndexOrAll::Indexed(idx) => {
                         segment_order.get(*idx).cloned().unwrap_or_else(|| {
+                        // cov:excl-start
                         panic!("Segment index {idx} out of bounds for segment order: [{segment_order:?}]")
+                        // cov:excl-stop
                     })
                     }
                     SegmentIndexOrAll::All => "all".to_string(),

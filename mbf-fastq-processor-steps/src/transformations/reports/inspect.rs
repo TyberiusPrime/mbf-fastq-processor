@@ -7,12 +7,14 @@ pub type NameSeqQualTuple = (Vec<u8>, Vec<u8>, Vec<u8>, DemultiplexTag);
 
 struct DebugFile(ex::fs::File);
 
+// cov:excl-start
 impl std::fmt::Debug for DebugFile {
     #[mutants::skip]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "ex::fs::File(...)")
     }
 }
+// cov:excl-stop
 
 /// Inspect reads within the workflow
 #[derive(JsonSchema)]
@@ -94,10 +96,13 @@ impl VerifyIn<PartialConfig> for PartialInspect {
 
 impl Clone for Inspect {
     fn clone(&self) -> Self {
+        // cov:excl-start
         panic!("No cloning needs_serial steps")
+        // cov:excl-stop
     }
 }
 
+// cov:excl-start
 #[allow(clippy::missing_fields_in_debug)]
 impl std::fmt::Debug for Inspect {
     #[mutants::skip]
@@ -115,6 +120,7 @@ impl std::fmt::Debug for Inspect {
             .finish()
     }
 }
+// cov:excl-stop
 
 impl TagUser for PartialTaggedVariant<PartialInspect> {
     //default is ok, no tags
@@ -280,9 +286,10 @@ impl Step for Inspect {
                         }
                     }
                 }
+                // cov:excl-start
                 FileFormat::Bam => {
                     panic!("Bam not valid - should have been cought in verify");
-                }
+                } // cov:excl-stop
             }
         }
 

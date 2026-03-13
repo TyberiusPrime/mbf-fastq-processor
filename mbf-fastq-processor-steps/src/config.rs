@@ -879,7 +879,9 @@ impl PartialConfig {
                     TomlValue::new_ok(expanded_transforms.into_inner(), transform_span);
                 self.report_labels = Some(res_report_labels);
             } else {
+                // cov:excl-start
                 unreachable!()
+                // cov:excl-stop
             }
         }
     }

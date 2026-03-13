@@ -167,15 +167,21 @@ mod tests {
             .expect("test should have expected number of reads");
         match first.name {
             FastQElement::Local(_) => assert_eq!(first.name.get(&block.block), b"read1".to_vec()),
+            // cov:excl-start
             _ => panic!("expected Local name"),
+            // cov:excl-stop
         }
         match first.seq {
             FastQElement::Local(_) => assert_eq!(first.seq.get(&block.block), b"ACGT".to_vec()),
+            // cov:excl-start
             _ => panic!("expected Local sequence"),
+            // cov:excl-stop
         }
         match first.qual {
             FastQElement::Local(_) => assert_eq!(first.qual.get(&block.block), vec![30; 4]),
+            // cov:excl-start
             _ => panic!("expected Local qualities"),
+            // cov:excl-stop
         }
 
         let second = reads
@@ -185,15 +191,21 @@ mod tests {
             FastQElement::Local(_) => {
                 assert_eq!(second.name.get(&block.block), b"read2 description".to_vec());
             }
+            // cov:excl-start
             _ => panic!("expected Local name"),
+            // cov:excl-stop
         }
         match second.seq {
             FastQElement::Local(_) => assert_eq!(second.seq.get(&block.block), b"TGCA".to_vec()),
+            // cov:excl-start
             _ => panic!("expected Local sequence"),
+            // cov:excl-stop
         }
         match second.qual {
             FastQElement::Local(_) => assert_eq!(second.qual.get(&block.block), vec![30; 4]),
+            // cov:excl-start
             _ => panic!("expected Local qualities"),
+            // cov:excl-stop
         }
         let ParseResult {
             fastq_block: second_block,
