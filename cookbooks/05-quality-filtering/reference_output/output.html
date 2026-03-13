@@ -378,6 +378,23 @@
         headerContainer.appendChild(sectionHeader);
         headerContainer.appendChild(backButton);
         container.appendChild(headerContainer);
+
+        if (sectionData.multiplexed !== undefined) {
+          Object.entries(sectionData.multiplexed).forEach(([bucketKey, bucketData]) => {
+            const bucketHeader = document.createElement("h3");
+            bucketHeader.textContent = bucketKey;
+            container.appendChild(bucketHeader);
+            container.appendChild(addSectionTable(bucketData));
+            container.appendChild(document.createElement("hr"));
+          });
+          return;
+        }
+
+        container.appendChild(addSectionTable(sectionData));
+        container.appendChild(document.createElement("hr"));
+      }
+
+      function addSectionTable(sectionData) {
         // Create table for the section with three columns: target, description, content
         const table = document.createElement("table");
         table.style.width = "95%";
@@ -547,8 +564,7 @@
             table.appendChild(tr);
           }
         }
-        container.appendChild(table);
-        container.appendChild(document.createElement("hr"));
+        return table;
       }
 
       window.addEventListener("resize", function () {
@@ -594,15 +610,15 @@
 
       const embeddedData = {
   "__": {
-    "version": "0.8.1",
-    "cwd": "/home/user/05-quality-filtering",
+    "version": "_IGNORED_",
+    "cwd": "_IGNORED_",
     "input_files": {
       "interleaved": null,
       "read1": [
         "input/sample_R1.fq"
       ]
     },
-    "repository": ""
+    "repository": "_IGNORED_"
   },
   "initial": {
     "molecule_count": 10,
@@ -1039,9 +1055,9 @@
     }
   },
   "run_info": {
-    "program_version": "0.8.1",
-    "input_toml": "[input]\n    read1 = 'input/sample_R1.fq'\n\n[[step]]\n    # Generate initial quality report to assess data quality\n    action = 'Report'\n    name = 'initial'\n    base_statistics = true\n\n[[step]]\n    # Calculate expected error (EE) for each read\n    # EE = sum of error probabilities across all bases\n    # Lower EE indicates higher quality reads\n    action = 'CalcExpectedError'\n    segment = 'read1'\n    out_label = 'expected_error'\n    aggregate = \"max\"\n\n[[step]]\n    # Filter reads based on expected error threshold\n    # Keep only reads with EE ≤ 1.0 (expect ≤1 error per read)\n    action = 'FilterByNumericTag'\n    in_label = \"expected_error\"\n    max_value = 1.0\n    keep_or_remove = 'keep'\n\n[[step]]\n    # Generate report after filtering to show quality improvement\n    action = 'Report'\n    name = 'filtered'\n    base_statistics = true\n\n[output]\n    prefix = 'output'\n    format = \"Fastq\"\n    report_html = true # when you have reports, you need to set at least one of  report_html or report_json\n",
-    "working_directory": "/home/user/05-quality-filtering"
+    "program_version": "_IGNORED_",
+    "input_toml": "_IGNORED_",
+    "working_directory": "_IGNORED_"
   },
   "report_order": [
     "initial",

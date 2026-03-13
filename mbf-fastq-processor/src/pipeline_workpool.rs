@@ -470,7 +470,18 @@ impl WorkpoolCoordinator {
             }
 
             match stage.transformation.finalize(demultiplex_info) {
-                Ok(Some(report)) => {
+                Ok(Some(mut report)) => {
+                    if matches!(demultiplex_info, OptDemultiplex::Yes(_)) {
+                        let inner = std::mem::replace(
+                            &mut report.contents,
+                            serde_json::Value::Object(serde_json::Map::new()),
+                        );
+                        report
+                            .contents
+                            .as_object_mut()
+                            .expect("just created")
+                            .insert("multiplexed".to_string(), inner);
+                    }
                     if let Ok(mut collector) = self.report_collector.lock() {
                         collector.push(report);
                     }

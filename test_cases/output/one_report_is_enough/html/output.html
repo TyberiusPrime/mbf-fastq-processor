@@ -378,6 +378,23 @@
         headerContainer.appendChild(sectionHeader);
         headerContainer.appendChild(backButton);
         container.appendChild(headerContainer);
+
+        if (sectionData.multiplexed !== undefined) {
+          Object.entries(sectionData.multiplexed).forEach(([bucketKey, bucketData]) => {
+            const bucketHeader = document.createElement("h3");
+            bucketHeader.textContent = bucketKey;
+            container.appendChild(bucketHeader);
+            container.appendChild(addSectionTable(bucketData));
+            container.appendChild(document.createElement("hr"));
+          });
+          return;
+        }
+
+        container.appendChild(addSectionTable(sectionData));
+        container.appendChild(document.createElement("hr"));
+      }
+
+      function addSectionTable(sectionData) {
         // Create table for the section with three columns: target, description, content
         const table = document.createElement("table");
         table.style.width = "95%";
@@ -547,8 +564,7 @@
             table.appendChild(tr);
           }
         }
-        container.appendChild(table);
-        container.appendChild(document.createElement("hr"));
+        return table;
       }
 
       window.addEventListener("resize", function () {
@@ -594,15 +610,15 @@
 
       const embeddedData = {
   "__": {
-    "version": "0.8.1",
-    "cwd": "/home/user/output",
+    "version": "_IGNORED_",
+    "cwd": "_IGNORED_",
     "input_files": {
       "interleaved": null,
       "read1": [
         "input_read1.fq"
       ]
     },
-    "repository": ""
+    "repository": "_IGNORED_"
   },
   "xyz": {
     "molecule_count": 10,
@@ -993,9 +1009,9 @@
     "actual_filter_capacity": 16
   },
   "run_info": {
-    "program_version": "0.8.1",
-    "input_toml": "[input]\n    read1 = 'input_read1.fq'\n\n\n[[step]]\n    action = 'Report'\n    name = 'xyz'\n    count = true\n    base_statistics = true\n    duplicate_count_per_read = true\n    length_distribution = true\n\n[output]\n    prefix = 'output'\n    format = 'None'\n    report_html=true\n",
-    "working_directory": "/home/user/output"
+    "program_version": "_IGNORED_",
+    "input_toml": "_IGNORED_",
+    "working_directory": "_IGNORED_"
   },
   "report_order": [
     "xyz"

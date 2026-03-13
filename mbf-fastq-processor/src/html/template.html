@@ -378,6 +378,23 @@
         headerContainer.appendChild(sectionHeader);
         headerContainer.appendChild(backButton);
         container.appendChild(headerContainer);
+
+        if (sectionData.multiplexed !== undefined) {
+          Object.entries(sectionData.multiplexed).forEach(([bucketKey, bucketData]) => {
+            const bucketHeader = document.createElement("h3");
+            bucketHeader.textContent = bucketKey;
+            container.appendChild(bucketHeader);
+            container.appendChild(addSectionTable(bucketData));
+            container.appendChild(document.createElement("hr"));
+          });
+          return;
+        }
+
+        container.appendChild(addSectionTable(sectionData));
+        container.appendChild(document.createElement("hr"));
+      }
+
+      function addSectionTable(sectionData) {
         // Create table for the section with three columns: target, description, content
         const table = document.createElement("table");
         table.style.width = "95%";
@@ -547,8 +564,7 @@
             table.appendChild(tr);
           }
         }
-        container.appendChild(table);
-        container.appendChild(document.createElement("hr"));
+        return table;
       }
 
       window.addEventListener("resize", function () {

@@ -378,6 +378,23 @@
         headerContainer.appendChild(sectionHeader);
         headerContainer.appendChild(backButton);
         container.appendChild(headerContainer);
+
+        if (sectionData.multiplexed !== undefined) {
+          Object.entries(sectionData.multiplexed).forEach(([bucketKey, bucketData]) => {
+            const bucketHeader = document.createElement("h3");
+            bucketHeader.textContent = bucketKey;
+            container.appendChild(bucketHeader);
+            container.appendChild(addSectionTable(bucketData));
+            container.appendChild(document.createElement("hr"));
+          });
+          return;
+        }
+
+        container.appendChild(addSectionTable(sectionData));
+        container.appendChild(document.createElement("hr"));
+      }
+
+      function addSectionTable(sectionData) {
         // Create table for the section with three columns: target, description, content
         const table = document.createElement("table");
         table.style.width = "95%";
@@ -547,8 +564,7 @@
             table.appendChild(tr);
           }
         }
-        container.appendChild(table);
-        container.appendChild(document.createElement("hr"));
+        return table;
       }
 
       window.addEventListener("resize", function () {
@@ -594,15 +610,15 @@
 
       const embeddedData = {
   "__": {
-    "version": "0.8.1",
-    "cwd": "/home/user/08-length-filtering",
+    "version": "_IGNORED_",
+    "cwd": "_IGNORED_",
     "input_files": {
       "interleaved": null,
       "read1": [
         "input/variable_length_R1.fq"
       ]
     },
-    "repository": ""
+    "repository": "_IGNORED_"
   },
   "initial": {
     "molecule_count": 10,
@@ -2215,9 +2231,9 @@
     }
   },
   "run_info": {
-    "program_version": "0.8.1",
-    "input_toml": "[input]\n    read1 = 'input/variable_length_R1.fq'\n\n[[step]]\n    # Generate initial report to see input length distribution\n    action = 'Report'\n    name = 'initial'\n  base_statistics = true\n\n[[step]]\n    # Calculate the length of each read and store in a tag\n    action = 'CalcLength'\n    segment = 'read1'\n    out_label = 'length'\n\n[[step]]\n    # Remove reads shorter than 30bp\n    # Short reads after adapter trimming often align poorly\n    action = 'FilterByNumericTag'\n    in_label = 'length'\n    min_value = 30\n    keep_or_remove = 'keep'\n\n[[step]]\n    # Remove reads longer than 150bp\n    # Unusually long reads may indicate incomplete adapter trimming\n    action = 'FilterByNumericTag'\n    in_label = 'length'\n    max_value = 150\n    keep_or_remove = 'keep'\n\n\n# Alternative filter both short and long reads at once\n#[[step]]\n  # # Remove reads shorter than 30bp\n    # # Remove reads longer than 150bp\n    # # Unusually long reads may indicate incomplete adapter trimming\n    # action = 'FilterByNumericTag'\n    # in_label = 'length'\n    # min_value = 30\n    # max_value = 150\n    # keep_or_remove = 'keep'\n\n[[step]]\n    # Truncate all reads to exactly 100bp\n    # Some downstream tools require uniform read lengths\n    # Reads shorter than 100bp are kept at their original length\n    action = 'Truncate'\n    segment = 'read1'\n    n = 100\n\n[[step]]\n    # Generate report after filtering and truncation\n    action = 'Report'\n    name = 'filtered'\n    base_statistics = true\n\n[output]\n    prefix = 'reference_output/output'\n    format = \"FASTQ\"\n    report_html = true\n",
-    "working_directory": "/home/user/08-length-filtering"
+    "program_version": "_IGNORED_",
+    "input_toml": "_IGNORED_",
+    "working_directory": "_IGNORED_"
   },
   "report_order": [
     "initial",
