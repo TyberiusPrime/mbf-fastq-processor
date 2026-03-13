@@ -220,25 +220,33 @@ pub fn tpd_adapt_bstring_uppercase(input: TomlValue<String>) -> TomlValue<BStrin
     input.map(|s| BString::from(s.as_bytes().to_ascii_uppercase()))
 }
 
-#[must_use]
-pub fn tpd_adapt_dna_bstring(mut input: TomlValue<String>) -> TomlValue<BString> {
-    input.try_map(|s| {
-        let res = BString::from(s.as_bytes());
-        for org_c in res.iter() {
-            let c = org_c.to_ascii_uppercase();
-            if !matches!(c, b'A' | b'C' | b'G' | b'T') {
-                return Err(ValidationFailure::new(
-                    format!(
-                        "Invalid DNA base: '{}' (ascii: {org_c}).",
-                        std::char::from_u32(*org_c as u32)
-                            .unwrap_or(std::char::REPLACEMENT_CHARACTER)
-                    ),
-                    None,
-                ));
-            }
-        }
-        Ok(res)
-    })
+// #[must_use]
+// pub fn tpd_adapt_dna_bstring(mut input: TomlValue<String>) -> TomlValue<BString> {
+//     input.try_map(|s| {
+//         let res = BString::from(s.as_bytes());
+//         for org_c in res.iter() {
+//             let c = org_c.to_ascii_uppercase();
+//             if !matches!(c, b'A' | b'C' | b'G' | b'T') {
+//                 return Err(ValidationFailure::new(
+//                     format!(
+//                         "Invalid DNA base: '{}' (ascii: {org_c}).",
+//                         std::char::from_u32(*org_c as u32)
+//                             .unwrap_or(std::char::REPLACEMENT_CHARACTER)
+//                     ),
+//                     None,
+//                 ));
+//             }
+//         }
+//         Ok(res)
+//     })
+// }
+//
+//
+fn err_invalid_base(org_c: u8) -> String {
+    format!(
+        "Invalid DNA base: '{}' (ascii: {org_c}). Allowed letters are A, C, G, T and N.",
+        std::char::from_u32(org_c as u32).unwrap_or(std::char::REPLACEMENT_CHARACTER)
+    )
 }
 
 #[must_use]
@@ -248,14 +256,7 @@ pub fn tpd_adapt_dna_bstring_plus_n(mut input: TomlValue<String>) -> TomlValue<B
         for org_c in res.iter() {
             let c = org_c.to_ascii_uppercase();
             if !matches!(c, b'A' | b'C' | b'G' | b'T' | b'N') {
-                return Err(ValidationFailure::new(
-                    format!(
-                        "Invalid DNA base: '{}' (ascii: {org_c}).",
-                        std::char::from_u32(*org_c as u32)
-                            .unwrap_or(std::char::REPLACEMENT_CHARACTER)
-                    ),
-                    None,
-                ));
+                return Err(ValidationFailure::new(err_invalid_base(*org_c), None));
             }
         }
         Ok(res)
@@ -266,10 +267,10 @@ pub fn tpd_adapt_dna_bstring_plus_n(mut input: TomlValue<String>) -> TomlValue<B
 pub fn tpd_adapt_iupac_bstring(mut input: TomlValue<String>) -> TomlValue<BString> {
     input.try_map(|s| {
         let res = BString::from(s.as_bytes().to_ascii_uppercase());
-        if !dna::all_iupac(res.as_ref()) {
+        if let Some(org_c) = dna::first_non_iupac(res.as_ref()) {
             return Err(ValidationFailure::new(
-                format!("Invalid IUPAC base in '{res}'."),
-                Some("Allowed letters are AGTC I R Y S W K M B D H V N ".to_string()),
+                err_invalid_base(org_c),
+                Some("Allowed letters are A G T C I R Y S W K M B D H V N ".to_string()),
             ));
         }
         Ok(res)

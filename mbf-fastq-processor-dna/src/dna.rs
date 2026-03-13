@@ -348,27 +348,30 @@ pub fn contains_iupac_ambigous(input: &[u8]) -> bool {
 }
 
 //check the complet string is valid dna + iupac, upper case only
-pub fn all_iupac(input: &[u8]) -> bool {
-    input.iter().all(|&char| {
-        matches!(
-            char,
-            b'A' | b'T'
-                | b'U'
-                | b'C'
-                | b'G'
-                | b'R'
-                | b'Y'
-                | b'S'
-                | b'W'
-                | b'K'
-                | b'M'
-                | b'B'
-                | b'V'
-                | b'D'
-                | b'H'
-                | b'N'
-        )
-    })
+pub fn first_non_iupac(input: &[u8]) -> Option<u8> {
+    input
+        .iter()
+        .find(|&char| {
+            !matches!(
+                char,
+                b'A' | b'T'
+                    | b'U'
+                    | b'C'
+                    | b'G'
+                    | b'R'
+                    | b'Y'
+                    | b'S'
+                    | b'W'
+                    | b'K'
+                    | b'M'
+                    | b'B'
+                    | b'V'
+                    | b'D'
+                    | b'H'
+                    | b'N'
+            )
+        })
+        .map(|&c| c)
 }
 pub fn all_iupac_or_underscore(input: &[u8]) -> bool {
     input.iter().all(|&char| {
@@ -1079,12 +1082,12 @@ mod test {
 
     #[test]
     fn test_all_iupac() {
-        assert_eq!(all_iupac(b"A"), true);
-        assert_eq!(all_iupac(b"AAAA"), true);
-        assert_eq!(all_iupac(b"AAAx"), false);
-        assert_eq!(all_iupac(b"R"), true);
-        assert_eq!(all_iupac(b"AGCTURYSWKMNBVDH"), true);
-        assert_eq!(all_iupac(b"aGCTURYSWKMNBVDH"), false);
+        assert_eq!(first_non_iupac(b"A"), None);
+        assert_eq!(first_non_iupac(b"AAAA"), None);
+        assert_eq!(first_non_iupac(b"AAAx"), Some(b'X'));
+        assert_eq!(first_non_iupac(b"R"), None);
+        assert_eq!(first_non_iupac(b"AGCTURYSWKMNBVDH"), None);
+        assert_eq!(first_non_iupac(b"aGCTURYSWKMNBVDH"), None);
     }
 
     #[test]

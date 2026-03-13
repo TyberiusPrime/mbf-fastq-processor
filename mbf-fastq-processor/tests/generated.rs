@@ -5642,6 +5642,20 @@ fn test_cases_x_single_step_x_extraction_x_extract_highlight_x_regex() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_extraction_x_extract_iupac_x_error_suffix_using_iupac_non_iupac() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/extract_iupac/error_suffix_using_iupac_non_iupac"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/extract_iupac/error_suffix_using_iupac_non_iupac",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_extraction_x_extract_iupac_x_multiple() {
     println!("Test case is in: test_cases/single_step/extraction/extract_iupac/multiple");
     run_test(

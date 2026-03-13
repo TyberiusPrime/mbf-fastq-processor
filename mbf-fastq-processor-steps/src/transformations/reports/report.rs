@@ -59,24 +59,6 @@ impl VerifyIn<PartialConfig> for PartialReport {
     }
 }
 
-impl Default for Report {
-    fn default() -> Self {
-        panic!();
-        Self {
-            name: "report".to_string(),
-            count: true,
-            base_statistics: false,
-            length_distribution: false,
-            duplicate_count_per_read: false,
-            duplicate_count_per_fragment: false,
-            debug_reproducibility: false,
-            count_oligos: None,
-            count_oligos_segment: SegmentIndexOrAll::All,
-            tag_histograms: None,
-        }
-    }
-}
-
 impl TagUser for PartialTaggedVariant<PartialReport> {
     #[mutants::skip]
     fn get_tag_usage(

@@ -10,7 +10,7 @@ Error 1/1
 5 │     seq = 'X'
   ┆           ─┬─
   ┆            │
-  ┆            ╰── Invalid DNA base: 'X' (ascii: 88).
+  ┆            ╰── Invalid DNA base: 'X' (ascii: 88). Allowed letters are A, C, G, T and N.
 ──╯
 Hint: See https://doc_url.example/version-stripped-from-test/docs/redirects/Prefix
       Or run: `mbf-fastq-processor template Prefix` for more information.
