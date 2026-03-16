@@ -360,6 +360,64 @@ fn test_interactive_nonexistent_file() {
     );
 }
 
+#[test]
+fn test_interactive_processes_file_on_first_run() {
+    use std::time::{Duration, Instant};
+
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(
+        dir.path().join("input.fq"),
+        b"@r1\nACGT\n+\nIIII\n@r2\nTTTT\n+\nIIII\n",
+    )
+    .unwrap();
+    std::fs::write(
+        dir.path().join("config.toml"),
+        "[input]\nread1 = \"input.fq\"\n\n[output]\nprefix = \"out\"\nformat = \"None\"\n",
+    )
+    .unwrap();
+
+    // By setting TMPDIR the interactive process will create its temp dir under `dir`,
+    // whose name encodes the child PID — giving us a deterministic path to monitor.
+    let mut child = std::process::Command::new(get_bin_path())
+        .args(["interactive", "config.toml"])
+        .current_dir(dir.path())
+        .env("TMPDIR", dir.path())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .unwrap();
+
+    let child_pid = child.id();
+    let inspect_file = dir
+        .path()
+        .join(format!("mbf-fastq-interactive-{child_pid}"))
+        .join("interactive_output_inspect_interleaved.fq");
+
+    // Poll until the inspect output file appears (proves a full processing pass completed)
+    // or time out after 30 s.
+    let deadline = Instant::now() + Duration::from_secs(30);
+    while Instant::now() < deadline && !inspect_file.exists() {
+        std::thread::sleep(Duration::from_millis(100));
+    }
+
+    child.kill().unwrap();
+    let output = child.wait_with_output().unwrap();
+
+    assert!(
+        inspect_file.exists(),
+        "interactive never produced inspect output file"
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("Interactive mode starting"),
+        "stdout: {stdout}"
+    );
+    assert!(
+        stdout.contains("Processing completed successfully"),
+        "stdout: {stdout}"
+    );
+}
+
 fn scan_dir(dir: &Path, files: &mut HashSet<std::path::PathBuf>) {
     if let Ok(entries) = fs::read_dir(dir) {
         for entry in entries.flatten() {

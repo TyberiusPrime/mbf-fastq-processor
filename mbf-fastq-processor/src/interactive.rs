@@ -118,6 +118,7 @@ pub fn run_interactive(
         .canonicalize()
         .with_context(|| format!("Failed to canonicalize path: {}", toml_path.display()))?;
 
+    // cov:excl-start
     let mut last_content = b"".into();
     let mut first_run = true;
     let mut run_count: u64 = 0;
@@ -127,8 +128,6 @@ pub fn run_interactive(
         .with_context(|| format!("Failed to create temp directory: {}", temp_dir.display()))?;
 
     loop {
-        // Check if file has been modified
-
         let content: BString = fs::read(&toml_path)
             .with_context(|| format!("Failed to read file: {}", toml_path.display()))?
             .into();
@@ -161,6 +160,7 @@ pub fn run_interactive(
 
         interruptible_sleep(poll_interval_ms);
     }
+    // cov:excl-stop
 }
 
 /// Process a TOML file in interactive mode
@@ -170,8 +170,6 @@ fn process_toml_interactive(
     toml_path: &Path,
     config: &InteractiveConfig,
 ) -> Result<String> {
-    // Read the original TOML content
-
     // Parse as toml_edit document to preserve formatting
     let mut doc = std::str::from_utf8(content)
         .context("UTF-8 error")?
@@ -185,25 +183,16 @@ fn process_toml_interactive(
 
     // Modify the document
     modify_toml_for_interactive(&mut doc, toml_dir, config)?;
-    //println!("{}", &doc.to_string());
-
-    // Create temp directory
 
     // Write modified TOML to temp directory
     let temp_toml = temp_dir.join("config.toml");
     let modified_content = doc.to_string();
 
-    // Debug: print the modified TOML for inspection
-    /* eprintln!("\n=== Modified TOML ===");
-    eprintln!("{}", modified_content);
-    eprintln!("=== End Modified TOML ===\n"); */
     fs::write(&temp_toml, modified_content)
         .with_context(|| format!("Failed to write temp TOML: {}", temp_toml.display()))?;
 
-    // Get the current executable path
-    let exe_path = std::env::current_exe().context("Failed to get current executable path")?;
-
     // Run the processor on the modified TOML
+    let exe_path = std::env::current_exe().context("Failed to get current executable path")?;
     let output = Command::new(&exe_path)
         .arg("process")
         .arg("--allow-overwrite")
@@ -290,12 +279,14 @@ fn make_paths_absolute(input_table: &mut Table, toml_dir: &Path) -> Result<()> {
             Item::Value(value) => match value {
                 toml_edit::Value::Array(array) => {
                     for path_str in array.iter_mut() {
-                        let path = PathBuf::from(path_str.to_string());
-                        if !path.is_absolute() {
-                            let absolute = toml_dir.join(path);
-                            let absolute_str = absolute.to_string_lossy().to_string();
-                            *path_str = absolute_str.into();
-                        }
+                        if let Some(s) = path_str.as_str() {
+                            let path = PathBuf::from(s);
+                            if !path.is_absolute() {
+                                let absolute = toml_dir.join(path);
+                                let absolute_str = absolute.to_string_lossy().to_string();
+                                *path_str = absolute_str.into();
+                            }
+                        } // cov:excl-line
                     }
                 }
                 toml_edit::Value::String(path_str) => {
@@ -436,4 +427,277 @@ fn display_error(error: &anyhow::Error) {
     println!("{}", "─".repeat(80));
     println!("\n{error:?}");
     println!("\n{}", "─".repeat(80));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    fn make_config(n: u64) -> InteractiveConfig {
+        InteractiveConfig {
+            head_count: n,
+            sample_count: n,
+            inspect_count: n,
+            max_runs: None,
+        }
+    }
+
+    fn parse_doc(toml: &str) -> DocumentMut {
+        toml.parse::<DocumentMut>().expect("valid toml")
+    }
+
+    #[test]
+    fn test_inject_steps_prepends_head_and_sample_and_appends_inspect() {
+        let toml = r#"
+[input]
+read1 = ["a.fq"]
+
+[[step]]
+action = "Report"
+
+[output]
+prefix = "out"
+format = "None"
+"#;
+        let mut doc = parse_doc(toml);
+        let config = make_config(5);
+        inject_interactive_steps(&mut doc, &config);
+
+        let steps: Vec<_> = doc["step"]
+            .as_array_of_tables()
+            .expect("step array should exist")
+            .iter()
+            .collect();
+        assert_eq!(
+            steps.len(),
+            4,
+            "should have Head, FilterReservoirSample, Report, Inspect"
+        );
+
+        let action = |i: usize| steps[i]["action"].as_str().unwrap_or("").to_string();
+        assert_eq!(action(0), "Head");
+        assert_eq!(action(1), "FilterReservoirSample");
+        assert_eq!(action(2), "Report");
+        assert_eq!(action(3), "Inspect");
+
+        // Check Head n value
+        assert_eq!(steps[0]["n"].as_integer(), Some(5));
+        // Check FilterReservoirSample seed
+        assert_eq!(steps[1]["seed"].as_integer(), Some(42));
+        // Check Inspect segment
+        assert_eq!(steps[3]["segment"].as_str(), Some("All"));
+    }
+
+    #[test]
+    fn test_inject_steps_creates_steps_when_none_exist() {
+        let toml = r#"
+[input]
+read1 = ["a.fq"]
+
+[output]
+prefix = "out"
+format = "None"
+"#;
+        let mut doc = parse_doc(toml);
+        let config = make_config(10);
+        inject_interactive_steps(&mut doc, &config);
+
+        let steps: Vec<_> = doc["step"]
+            .as_array_of_tables()
+            .expect("step array should be created")
+            .iter()
+            .collect();
+        assert_eq!(
+            steps.len(),
+            3,
+            "should have Head, FilterReservoirSample, Inspect"
+        );
+        assert_eq!(steps[0]["action"].as_str(), Some("Head"));
+        assert_eq!(steps[1]["action"].as_str(), Some("FilterReservoirSample"));
+        assert_eq!(steps[2]["action"].as_str(), Some("Inspect"));
+    }
+
+    #[test]
+    fn test_modify_output_sets_none_format() {
+        let toml = r#"
+[input]
+read1 = ["a.fq"]
+
+[[step]]
+action = "Head"
+n = 10
+
+[output]
+prefix = "original"
+format = "Fastq"
+compression = "Gzip"
+"#;
+        let mut doc = parse_doc(toml);
+        modify_output_for_interactive(&mut doc);
+
+        let output = doc["output"].as_table().expect("output table");
+        assert_eq!(output["prefix"].as_str(), Some("interactive_output"));
+        assert_eq!(output["format"].as_str(), Some("none"));
+        // report_json should NOT be set when there's no Report step
+        assert!(output.get("report_json").is_none());
+    }
+
+    #[test]
+    fn test_modify_output_enables_report_json_when_report_step_present() {
+        let toml = r#"
+[input]
+read1 = ["a.fq"]
+
+[[step]]
+action = "Report"
+
+[output]
+prefix = "out"
+format = "None"
+"#;
+        let mut doc = parse_doc(toml);
+        modify_output_for_interactive(&mut doc);
+
+        let output = doc["output"].as_table().expect("output table");
+        assert_eq!(output["report_json"].as_bool(), Some(true));
+    }
+
+    #[test]
+    fn test_make_paths_absolute_converts_relative_paths() {
+        let toml = r#"
+[input]
+read1 = "relative/path.fq"
+read2 = "other.fq"
+"#;
+        let mut doc = parse_doc(toml);
+        let toml_dir = PathBuf::from("/some/directory");
+
+        let input_table = doc["input"].as_table_mut().expect("input table");
+        make_paths_absolute(input_table, &toml_dir).unwrap();
+
+        let read1 = doc["input"]["read1"].as_str().expect("read1");
+        assert!(read1.starts_with('/'), "should be absolute: {read1}");
+        assert!(
+            read1.contains("relative/path.fq"),
+            "should contain original path: {read1}"
+        );
+    }
+
+    #[test]
+    fn test_make_paths_absolute_leaves_absolute_paths_unchanged() {
+        let toml = r#"
+[input]
+read1 = "/already/absolute.fq"
+"#;
+        let mut doc = parse_doc(toml);
+        let toml_dir = PathBuf::from("/some/directory");
+
+        let input_table = doc["input"].as_table_mut().expect("input table");
+        make_paths_absolute(input_table, &toml_dir).unwrap();
+
+        let read1 = doc["input"]["read1"].as_str().expect("read1");
+        assert_eq!(read1, "/already/absolute.fq");
+    }
+
+    #[test]
+    fn test_interactive_config_defaults() {
+        let config = InteractiveConfig::new(None, None, None, None);
+        assert_eq!(config.head_count, DEFAULT_HEAD_COUNT);
+        assert_eq!(config.sample_count, DEFAULT_SAMPLE_COUNT);
+        assert_eq!(config.inspect_count, DEFAULT_INSPECT_COUNT);
+    }
+
+    #[test]
+    fn test_interactive_config_custom_values() {
+        let config = InteractiveConfig::new(Some(100), Some(5), Some(20), Some(10));
+        assert_eq!(config.head_count, 100);
+        assert_eq!(config.sample_count, 5);
+        assert_eq!(config.inspect_count, 20);
+        assert_eq!(config.max_runs, Some(10));
+    }
+
+    #[test]
+    fn test_make_paths_absolute_handles_array_paths() {
+        let toml = "[input]\nread1 = [\"a.fq\", \"b.fq\"]\n";
+        let mut doc = parse_doc(toml);
+        let toml_dir = PathBuf::from("/base");
+        let input_table = doc["input"].as_table_mut().expect("input table");
+        make_paths_absolute(input_table, &toml_dir).unwrap();
+        // Serialize back and verify absolute paths appear
+        let serialized = doc.to_string();
+        assert!(
+            serialized.contains("/base/a.fq"),
+            "serialized: {serialized}"
+        );
+        assert!(
+            serialized.contains("/base/b.fq"),
+            "serialized: {serialized}"
+        );
+    }
+
+    #[test]
+    fn test_modify_toml_for_interactive_combines_all_modifications() {
+        let toml = r#"
+[input]
+read1 = "relative.fq"
+
+[[step]]
+action = "Report"
+
+[output]
+prefix = "original"
+format = "Fastq"
+compression = "Gzip"
+"#;
+        let mut doc = parse_doc(toml);
+        let toml_dir = PathBuf::from("/some/dir");
+        let config = make_config(7);
+        modify_toml_for_interactive(&mut doc, &toml_dir, &config).unwrap();
+
+        // Paths made absolute
+        let read1 = doc["input"]["read1"].as_str().expect("read1");
+        assert!(read1.starts_with('/'), "path should be absolute: {read1}");
+
+        // Steps injected: Head + FilterReservoirSample + original Report + Inspect = 4
+        let steps: Vec<_> = doc["step"]
+            .as_array_of_tables()
+            .expect("steps")
+            .iter()
+            .collect();
+        assert_eq!(steps.len(), 4);
+        assert_eq!(steps[0]["action"].as_str(), Some("Head"));
+        assert_eq!(steps[3]["action"].as_str(), Some("Inspect"));
+
+        // Output overridden, report_json set because of Report step
+        assert_eq!(doc["output"]["prefix"].as_str(), Some("interactive_output"));
+        assert_eq!(doc["output"]["format"].as_str(), Some("none"));
+        assert_eq!(doc["output"]["report_json"].as_bool(), Some(true));
+    }
+
+    #[test]
+    fn test_process_toml_interactive_fails_on_invalid_utf8() {
+        let invalid_utf8: BString = vec![0xFF, 0xFE, 0xFD].into();
+        let toml_path = PathBuf::from("/some/dir/config.toml");
+        let temp_dir = PathBuf::from("/tmp");
+        let result =
+            process_toml_interactive(&temp_dir, &invalid_utf8, &toml_path, &make_config(5));
+        assert!(result.is_err());
+        let msg = format!("{}", result.unwrap_err());
+        assert!(msg.contains("UTF-8") || msg.contains("utf8"), "err: {msg}");
+    }
+
+    #[test]
+    fn test_process_toml_interactive_fails_on_invalid_toml() {
+        let bad_toml: BString = b"this is [[[[ not valid toml".to_vec().into();
+        let toml_path = PathBuf::from("/some/dir/config.toml");
+        let temp_dir = PathBuf::from("/tmp");
+        let result = process_toml_interactive(&temp_dir, &bad_toml, &toml_path, &make_config(5));
+        assert!(result.is_err());
+        let msg = format!("{}", result.unwrap_err());
+        assert!(
+            msg.contains("TOML") || msg.contains("toml") || msg.contains("parse"),
+            "err: {msg}"
+        );
+    }
 }
