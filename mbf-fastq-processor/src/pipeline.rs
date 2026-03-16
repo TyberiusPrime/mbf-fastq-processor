@@ -242,7 +242,9 @@ fn run_benchmark_combiner_thread(
             Ok(()) => {}
             Err(_) => {
                 // downstream hung up
+                //cov:excl-start
                 break;
+                //cov:excl-stop
             }
         }
 
@@ -305,7 +307,9 @@ fn run_benchmark_interleaved_thread(
             Ok(()) => {}
             Err(_) => {
                 // downstream hung up
+                //cov:excl-start
                 break;
+                //cov:excl-stop
             }
         }
 
@@ -541,8 +545,10 @@ impl RunStage1 {
         let orig_hook = panic::take_hook();
         panic::set_hook(Box::new(move |panic_info| {
             // invoke the default handler and exit the process
+            // cov:excl-start
             orig_hook(panic_info);
             std::process::exit(1);
+            // cov:excl-stop
         }));
         let input_config = &parsed.input;
         let threads_per_parser = ThreadCount(
@@ -706,10 +712,12 @@ impl RunStage1 {
                             block_size,
                             options,
                         ) {
+                            // cov:excl-start
                             error_collector
                                 .lock()
                                 .expect("mutex lock should not be poisoned")
                                 .push(format!("Error in interleaved parsing thread: {e:?}"));
+                            // cov:excl-stop
                         }
                         })
                         .expect("thread spawn should not fail");
@@ -942,6 +950,9 @@ fn collect_thread_failures(
     }
     for p in threads {
         if let Err(e) = p.join() {
+            // that's not a controlled 'we detected an error' failure (those are collected
+            // above, but something more catastrophic
+            // cov:excl-start
             let err_msg = if let Some(e) = e.downcast_ref::<String>() {
                 e.clone()
             } else if let Some(e) = e.downcast_ref::<&str>() {
@@ -953,6 +964,7 @@ fn collect_thread_failures(
                     std::any::type_name_of_val(&e)
                 )
             };
+            // cov:excl-stop
             stage_errors.push(format!("{msg}: {err_msg}"));
         }
     }
@@ -1014,10 +1026,12 @@ impl RunStage3 {
                     let mut buffer = Vec::new();
                     let output_files = output_files.into_writer();
                     if let Err(e) = output_files {
+                        // cov:excl-start
                         error_collector
                             .lock()
                             .expect("mutex lock should not be poisoned")
                             .push(format!("Error in output thread: {e:?}"));
+                        // cov:excl-stop
                         return;
                     }
                     let mut output_files = output_files.expect("Output_file was error?");
@@ -1092,11 +1106,13 @@ impl RunStage3 {
                             ) {
                                 Ok(res) => Some(res),
                                 Err(e) => {
+                                    // cov:excl-start
                                     error_collector
                                         .lock()
                                         .expect("mutex lock should not be poisoned")
                                         .push(format!("Error writing json report: {e:?}"));
                                     return;
+                                    // cov:excl-stop
                                 }
                             }
                         } else {
@@ -1111,10 +1127,12 @@ impl RunStage3 {
                                 .expect("json_report must be Some when html output is enabled"),
                         )
                     {
+                        // cov:excl-start
                         error_collector
                             .lock()
                             .expect("mutex lock should not be poisoned")
                             .push(format!("Error writing html report: {e:?}"));
+                        // cov:excl-stop
                     }
                 })
                 .expect("thread spawn should not fail")

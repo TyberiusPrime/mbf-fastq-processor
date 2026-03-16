@@ -3456,6 +3456,63 @@ fn test_cases_x_single_step_x_error_handling_x_input_files_x_permission_denied_i
 }
 
 #[test]
+fn test_cases_x_single_step_x_error_handling_x_input_files_x_permission_denied_output_dir() {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/input_files/permission_denied_output_dir"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/error_handling/input_files/permission_denied_output_dir",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_input_files_x_permission_denied_output_dir_direct() {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/input_files/permission_denied_output_dir_direct"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/error_handling/input_files/permission_denied_output_dir_direct",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_input_files_x_permission_denied_output_dir_direct_x_permission_denied_output_dir()
+ {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/input_files/permission_denied_output_dir_direct/permission_denied_output_dir"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/error_handling/input_files/permission_denied_output_dir_direct/permission_denied_output_dir",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_input_files_x_permission_denied_output_file() {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/input_files/permission_denied_output_file"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/error_handling/input_files/permission_denied_output_file",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_error_handling_x_input_files_x_permission_denied_read1() {
     println!(
         "Test case is in: test_cases/single_step/error_handling/input_files/permission_denied_read1"

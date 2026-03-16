@@ -162,12 +162,7 @@ fn create_working_dir(output_dir: Option<&Path>) -> Result<(tempfile::TempDir, P
     let temp_dir = tempfile::tempdir().context("Failed to create temporary directory")?;
     let temp_path = if let Some(output_dir) = output_dir {
         if output_dir.exists() {
-            ex::fs::remove_dir_all(output_dir).with_context(|| {
-                format!(
-                    "Failed to remove existing output directory: {}",
-                    output_dir.display()
-                )
-            })?;
+            cleanup_output_dir(Some(output_dir))?;
         }
         std::fs::create_dir_all(output_dir).with_context(|| {
             format!(
@@ -595,15 +590,29 @@ fn run_processor_and_verify(
 }
 
 fn cleanup_output_dir(output_dir: Option<&Path>) -> Result<()> {
+    use std::os::unix::fs::PermissionsExt;
     if let Some(output_dir) = output_dir
         && output_dir.exists()
     {
-        ex::fs::remove_dir_all(output_dir).with_context(|| {
-            format!(
-                "Failed to remove existing output directory: {}",
-                output_dir.display()
-            )
-        })?;
+        if let Err(_) = ex::fs::remove_dir_all(output_dir) {
+            //try chmod it to write+executable
+            ex::fs::set_permissions(output_dir, std::fs::Permissions::from_mode(0o755)).ok();
+            //also chmod +x all subdirs...
+            for entry in ex::fs::read_dir(output_dir)? {
+                if let Ok(entry) = entry {
+                    let path = entry.path();
+                    if path.is_dir() {
+                        ex::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755)).ok();
+                    }
+                }
+            }
+            ex::fs::remove_dir_all(output_dir).with_context(|| {
+                format!(
+                    "Failed to remove existing output directory: {}",
+                    output_dir.display()
+                )
+            })?;
+        }
     }
     Ok(())
 }

@@ -64,6 +64,7 @@ impl OutputRunMarker {
     pub fn mark_complete(&self) -> Result<()> {
         match ex::fs::remove_file(&self.path) {
             Ok(()) => Ok(()),
+            // cov:excl-start
             Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(()),
             Err(err) => Err(err).with_context(|| {
                 format!(
@@ -71,6 +72,7 @@ impl OutputRunMarker {
                     self.path.display()
                 )
             }),
+            // cov:excl-stop
         }
     }
 

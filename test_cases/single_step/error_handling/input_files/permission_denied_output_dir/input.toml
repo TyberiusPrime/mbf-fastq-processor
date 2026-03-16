@@ -1,0 +1,10 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[output]
+    prefix = 'subdir/2ndlevel/output'
+    report_json = true
+
+[[step]]
+    action = 'Report'
+    name = 'start'

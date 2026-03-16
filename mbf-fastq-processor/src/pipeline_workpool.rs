@@ -138,6 +138,7 @@ impl WorkpoolCoordinator {
                                 }
                             }
                             Err(_) => {
+                                // cov:excl-start
                                 self
                                 .error_collector
                                 .lock()
@@ -147,6 +148,7 @@ impl WorkpoolCoordinator {
                                         .to_string(),
                                 );
                                 break; // WoSleep::rkers closed
+                                // cov:excl-stop
                             }
                         }
                     }
@@ -177,7 +179,9 @@ impl WorkpoolCoordinator {
                         match msg {
                             Ok((block_no, block, expected_read_count)) => {
                                 if self.process_incoming_block(block_no, block, expected_read_count).is_err() {
+                                    // cov:excl-start
                                     break
+                                    // cov:excl-stop
                                 }
                             }
                             Err(_) => {
@@ -198,7 +202,9 @@ impl WorkpoolCoordinator {
                                 }
                             }
                             Err(_) => {
+                                // cov:excl-start
                                 break; // Workers pipe crashed?
+                                // cov:excl-stop
                             }
                         }
                     }
@@ -336,10 +342,12 @@ impl WorkpoolCoordinator {
         if self.todo_tx.send(work_item).is_ok() {
             Ok(())
         } else {
+            // cov:excl-start
             bail!(
                 "Failed to send work item for block {}",
                 block_status.block_no
             );
+            // cov:excl-stop
         }
     }
 
@@ -439,10 +447,12 @@ impl WorkpoolCoordinator {
             ))
             .is_err()
         {
-            // eprintln!(
-            //     "Failed to send completed block {} to output",
-            //     block_status.block_no
-            // );
+            //cov:excl-start
+            bail!(
+                "Failed to send completed block {} to output",
+                block_status.block_no
+            );
+            // cov:excl-stop
         }
         self.queue_stalled()
     }
@@ -558,6 +568,8 @@ fn process_work_item(
             let len_after = result.0.len();
             if len_before != len_after {
                 // mutants false positve.
+                // defensive construct against coding errors
+                //cov:excl-start
                 assert!(
                     stage.allowed_tags.len() == block_tag_count,
                     "A filtering stage forgot to declare must_see_all_tags=true: {:?}. Declared {} tags, block had {} tags",
@@ -565,6 +577,7 @@ fn process_work_item(
                     stage.allowed_tags.len(),
                     block_tag_count
                 );
+                //cov:excl-stop
             }
         }
         result
@@ -586,6 +599,7 @@ fn process_work_item(
                 stage.transformation, result_block.tags
             );
             if let Some(tag_len) = result_block.tags.values().next().map(std::vec::Vec::len) {
+                //cov:excl-start
                 assert!(
                     result_block.len() == tag_len,
                     "Tag lengths don't match block length after stage {:?}:. Block len: {}. Tag len: {tag_len} This is a bug!. \n\
@@ -593,6 +607,8 @@ fn process_work_item(
                     stage.transformation,
                     result_block.len(),
                 );
+
+                //cov:excl-stop
             }
             WorkResult {
                 work_item: WorkItem {
