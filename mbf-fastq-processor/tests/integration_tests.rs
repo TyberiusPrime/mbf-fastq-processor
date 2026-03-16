@@ -237,6 +237,129 @@ fn test_version_flag() {
     assert!(cmd.status.success());
 }
 
+#[test]
+fn test_template_with_input_section() {
+    let cmd = std::process::Command::new(get_bin_path())
+        .args(["template", "Input"])
+        .output()
+        .unwrap();
+    let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
+    assert!(
+        cmd.status.success(),
+        "stderr: {}",
+        std::str::from_utf8(&cmd.stderr).unwrap()
+    );
+    assert!(stdout.contains("[input]"), "stdout was: {stdout}");
+    // Should not include the full template preamble
+    assert!(
+        !stdout.contains("# mbf-fastq-processor Configuration Template"),
+        "stdout was: {stdout}"
+    );
+}
+
+#[test]
+fn test_template_with_output_section() {
+    let cmd = std::process::Command::new(get_bin_path())
+        .args(["template", "Output"])
+        .output()
+        .unwrap();
+    let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
+    assert!(
+        cmd.status.success(),
+        "stderr: {}",
+        std::str::from_utf8(&cmd.stderr).unwrap()
+    );
+    assert!(stdout.contains("[output]"), "stdout was: {stdout}");
+    assert!(stdout.contains("prefix"), "stdout was: {stdout}");
+}
+
+#[test]
+fn test_template_with_step_section() {
+    let cmd = std::process::Command::new(get_bin_path())
+        .args(["template", "Head"])
+        .output()
+        .unwrap();
+    let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
+    assert!(
+        cmd.status.success(),
+        "stderr: {}",
+        std::str::from_utf8(&cmd.stderr).unwrap()
+    );
+    assert!(stdout.contains("Head"), "stdout was: {stdout}");
+    assert!(!stdout.is_empty(), "stdout was empty");
+}
+
+#[test]
+fn test_template_with_options_section_last_in_template() {
+    // The Options section is the last section in template.toml, so search_query hits the
+    // `else` branch where no subsequent "# =" marker exists (the "no next section" case).
+    let cmd = std::process::Command::new(get_bin_path())
+        .args(["template", "Options"])
+        .output()
+        .unwrap();
+    let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
+    assert!(
+        cmd.status.success(),
+        "stderr: {}",
+        std::str::from_utf8(&cmd.stderr).unwrap()
+    );
+    assert!(!stdout.is_empty(), "stdout was empty");
+    assert!(stdout.contains("options"), "stdout was: {stdout}");
+    // Must not contain any section header that would belong to a subsequent section
+    assert!(
+        !stdout.contains("# == "),
+        "should not include next section: {stdout}"
+    );
+}
+
+#[test]
+fn test_template_nonexistent_section() {
+    let cmd = std::process::Command::new(get_bin_path())
+        .args(["template", "NoSuchSectionExists"])
+        .output()
+        .unwrap();
+    let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
+    assert!(
+        cmd.status.success(),
+        "stderr: {}",
+        std::str::from_utf8(&cmd.stderr).unwrap()
+    );
+    assert!(
+        stdout.contains("No such documentation found"),
+        "stdout was: {stdout}"
+    );
+}
+
+#[test]
+fn test_interactive_no_config_in_empty_dir() {
+    let dir = tempfile::tempdir().unwrap();
+    let cmd = std::process::Command::new(get_bin_path())
+        .arg("interactive")
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    let stderr = std::str::from_utf8(&cmd.stderr).unwrap().to_string();
+    assert!(!cmd.status.success(), "expected failure, stderr: {stderr}");
+    assert!(
+        stderr.contains("No TOML file found") || stderr.contains("Please specify"),
+        "stderr was: {stderr}"
+    );
+}
+
+#[test]
+fn test_interactive_nonexistent_file() {
+    let cmd = std::process::Command::new(get_bin_path())
+        .args(["interactive", "/nonexistent/path/config.toml"])
+        .output()
+        .unwrap();
+    let stderr = std::str::from_utf8(&cmd.stderr).unwrap().to_string();
+    assert!(!cmd.status.success(), "expected failure, stderr: {stderr}");
+    assert!(
+        stderr.contains("canonicalize") || stderr.contains("No such file"),
+        "stderr was: {stderr}"
+    );
+}
+
 fn scan_dir(dir: &Path, files: &mut HashSet<std::path::PathBuf>) {
     if let Ok(entries) = fs::read_dir(dir) {
         for entry in entries.flatten() {
