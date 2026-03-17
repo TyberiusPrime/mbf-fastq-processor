@@ -45,8 +45,11 @@ impl OutputRunMarker {
             .open(&path)
             .map_err(|e| {
                 if e.kind() == std::io::ErrorKind::NotFound {
+                    // I mean, we just created it, so I don't expect it to fail
+                    // cov:excl-start
                     let parent_dir = path.parent().unwrap_or(output_directory);
                     anyhow!("Output directory does not exist: {}", parent_dir.display())
+                    // cov:excl-stop
                 } else {
                     e.into()
                 }
@@ -142,12 +145,14 @@ impl OutputFile<'_> {
         //now rotate the filenames, rename files if necessary,
         let new_filename = self.config.rotate_chunk()?;
         let handle = ex::fs::File::create(&new_filename).with_context(|| {
+            // cov:excl-start
             format!(
-                "Could not open file for hashing: {}",
+                "Could not open file for hash output: {}",
                 new_filename.display()
             )
         })?;
-        //swap teh new handle in
+        // cov:excl-stop
+        //swap the new handle in
         self.handle = self.config.build_writer(handle)?;
         //let old_handle = std::mem::replace(&mut self.handle, self.config.build_writer(handle)?);
         //and make sure teh hashes get where they need to go
@@ -227,8 +232,13 @@ impl OutputFileHandle<'_> {
                 let hashed_writer = bgzf_writer.into_inner();
                 let (uncompressed_hash, compressed_hash) = hashed_writer.finish();
 
-                if let Some(hash) = uncompressed_hash {
-                    Self::write_hash_file_static(filename, &hash, ".uncompressed.sha256")?;
+                if let Some(_hash) = uncompressed_hash {
+                    // cov:excl-start
+                    unreachable!(
+                        "Bam files are not meant to have an uncompressed hash, something is wrong (bug)"
+                    );
+                    //Self::write_hash_file_static(filename, &hash, ".uncompressed.sha256")?;
+                    // cov:excl-stop
                 }
                 if let Some(hash) = compressed_hash {
                     Self::write_hash_file_static(filename, &hash, ".compressed.sha256")?;
@@ -311,7 +321,13 @@ impl OutputFileConfig {
     ) -> Result<Self> {
         match format {
             FileFormat::Fastq | FileFormat::Fasta => {}
-            FileFormat::Bam => anyhow::bail!("BAM output is not supported on stdout"),
+            FileFormat::Bam => {
+                // cov:excl-start
+                unreachable!(
+                    "BAM output is not supported on stdout. Should have been caught in validation. Bug."
+                );
+                // cov:excl-stop
+            }
             // cov:excl-start
             FileFormat::None => unreachable!("Cannot emit 'none' format to stdout"),
             // cov:excl-stop
@@ -485,16 +501,20 @@ impl OutputFileConfig {
         );
         let mut old_files = Vec::new();
         for entry in ex::fs::read_dir(&self.directory).with_context(|| {
+            // cov:excl-start
             format!(
                 "Could not read output directory for renaming files: {}",
                 self.directory.display()
             )
+            // cov:excl-stop
         })? {
             let entry = entry.with_context(|| {
+                // cov:excl-start
                 format!(
                     "Could not read output directory entry for renaming files: {}",
                     self.directory.display()
                 )
+                // cov:excl-stop
             })?;
             let path = entry.path();
             old_files.push(path);
@@ -533,11 +553,13 @@ impl OutputFileConfig {
                         suffix
                     ));
                     ex::fs::rename(path, &new_filename).with_context(|| {
+                        // cov:excl-start
                         format!(
                             "Could not rename output chunk file from {} to {}",
                             path.display(),
                             new_filename.display()
                         )
+                        // cov:excl-stop
                     })?;
                 }
             }
@@ -596,15 +618,6 @@ pub struct OutputFastqs<T> {
     segment_files: Vec<Option<T>>,
 }
 
-impl Default for OutputFastqs<OutputFileConfig> {
-    fn default() -> Self {
-        OutputFastqs {
-            interleaved_file: None,
-            segment_files: Vec::new(),
-        }
-    }
-}
-
 impl OutputFastqs<OutputFileConfig> {
     pub fn into_writer<'a>(self) -> Result<OutputFastqs<OutputFile<'a>>> {
         Ok(OutputFastqs {
@@ -658,7 +671,9 @@ impl OutputReports {
                 let _ = ensure_output_destination_available(&filename, allow_overwrite)?;
                 Some(BufWriter::new(
                     ex::fs::File::create(&filename).with_context(|| {
+                        // cov:excl-start
                         format!("Could not open output file: {}", filename.display())
+                        // cov:excl-stop
                     })?,
                 ))
             } else {
@@ -669,7 +684,9 @@ impl OutputReports {
                 let _ = ensure_output_destination_available(&filename, allow_overwrite)?;
                 Some(BufWriter::new(
                     ex::fs::File::create(&filename).with_context(|| {
+                        // cov:excl-start
                         format!("Could not open output file: {}", filename.display())
+                        // cov:excl-stop
                     })?,
                 ))
             } else {
@@ -779,7 +796,11 @@ fn open_one_set_of_output_files(
                 segment_files,
             }
         }
-        None => OutputFastqs::default(),
+        None =>
+        // cov:excl-start
+        {
+            unreachable!("Should not be reached")
+        } // cov:excl-stop
     })
 }
 
@@ -828,10 +849,14 @@ pub fn open_output_files(
             report_json,
             allow_overwrite,
         )?,
-        None => OutputReports {
-            html: None,
-            json: None,
-        },
+        None =>
+        // cov:excl-start
+        {
+            unreachable!(
+                "Should not be reached, output config should have been checked in validation"
+            )
+        } // cov:excl-stop
+          ,
     };
     match demultiplexed {
         OptDemultiplex::No => {
@@ -853,22 +878,15 @@ pub fn open_output_files(
                 crate::demultiplex::Tag,
                 Arc<Mutex<OutputFastqs<OutputFileConfig>>>,
             > = BTreeMap::new();
-            let mut seen: BTreeMap<String, Arc<Mutex<OutputFastqs<OutputFileConfig>>>> =
-                BTreeMap::new();
             for (tag, output_key) in &demultiplex_info.tag_to_name {
                 if let Some(output_key) = output_key {
-                    if seen.contains_key(output_key) {
-                        res.insert(*tag, seen[output_key].clone());
-                    } else {
-                        let output = Arc::new(Mutex::new(open_one_set_of_output_files(
-                            parsed_config,
-                            output_directory,
-                            Some(output_key),
-                            allow_overwrite,
-                        )?));
-                        seen.insert(output_key.clone(), output.clone());
-                        res.insert(*tag, output);
-                    }
+                    let output = Arc::new(Mutex::new(open_one_set_of_output_files(
+                        parsed_config,
+                        output_directory,
+                        Some(output_key),
+                        allow_overwrite,
+                    )?));
+                    res.insert(*tag, output);
                 }
             }
             Ok(OutputFiles {

@@ -30,7 +30,11 @@ pub fn verify_outputs(
         match (validation_error, runtime_error) {
             (Some(x), None) | (None, Some(x)) => Some(x),
             (None, None) => None,
-            (Some(_), Some(_)) => unreachable!(),
+            (Some(_), Some(_)) =>
+            // cov:excl-start
+            {
+                unreachable!()
+            } // cov:excl-stop
         }
     };
 
@@ -162,14 +166,18 @@ fn create_working_dir(output_dir: Option<&Path>) -> Result<(tempfile::TempDir, P
     let temp_dir = tempfile::tempdir().context("Failed to create temporary directory")?;
     let temp_path = if let Some(output_dir) = output_dir {
         if output_dir.exists() {
+            // cov:excl-start
             cleanup_output_dir(Some(output_dir))?;
+            // cov:excl-stop
         }
         std::fs::create_dir_all(output_dir).with_context(|| {
+            // cov:excl-start
             format!(
                 "Failed to create output directory: {}",
                 output_dir.display()
             )
         })?;
+        // cov:excl-stop
         output_dir
             .canonicalize()
             .expect("Failed to canonicalize output dir")

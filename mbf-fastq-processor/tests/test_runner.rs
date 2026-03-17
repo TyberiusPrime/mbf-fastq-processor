@@ -1,6 +1,7 @@
 #![allow(clippy::unwrap_used)]
 use anyhow::{Context, Result};
 use std::env;
+use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
 
 #[allow(clippy::missing_panics_doc)]
@@ -41,7 +42,18 @@ fn run_verify_test(
             .unwrap()
             .join(format!("actual_{test_no_in_directory}"))
     } else {
-        test_case_dir.canonicalize().unwrap().join("actual")
+        //trigger ~half with relative and ~half with absolute dir for path coverage
+        //in verify.rs
+        if test_case_dir
+            .file_name()
+            .and_then(|ostr| ostr.as_bytes().iter().last())
+            .map(|x| x & 1 == 1)
+            .unwrap_or(false)
+        {
+            test_case_dir.canonicalize().unwrap().join("actual")
+        } else {
+            test_case_dir.join("actual")
+        }
     };
 
     // Use the verify command for regular test cases (handles both panic and non-panic tests)

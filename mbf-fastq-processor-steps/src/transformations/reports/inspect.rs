@@ -74,6 +74,7 @@ impl VerifyIn<PartialConfig> for PartialInspect {
         crate::config::validate_compression_level_u8(
             &self.compression,
             &mut self.compression_level,
+            &self.format.as_ref().unwrap_or(&FileFormat::Fastq),
         );
         if let Some(MustAdapt::PostVerify(segment)) = self.segment.as_ref()
             && let Some(segment_order) = parent

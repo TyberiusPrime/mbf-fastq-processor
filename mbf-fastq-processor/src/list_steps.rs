@@ -57,14 +57,10 @@ pub fn format_steps_list() -> String {
     let mut output = String::from("Available transformation steps:\n\n");
 
     for (action, description) in steps {
-        if description.is_empty() {
-            writeln!(&mut output, "  {action}").expect("writing to String never fails");
-        } else {
-            // Get first line of description only
-            let first_line = description.lines().next().unwrap_or("");
-            writeln!(&mut output, "  {action:<30} {first_line}")
-                .expect("writing to String never fails");
-        }
+        // Get first line of description only
+        let first_line = description.lines().next().unwrap_or("");
+        writeln!(&mut output, "  {action:<30} {first_line}")
+            .expect("writing to String never fails");
     }
 
     output

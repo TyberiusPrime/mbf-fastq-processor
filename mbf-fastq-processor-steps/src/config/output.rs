@@ -97,7 +97,11 @@ impl VerifyIn<super::PartialConfig> for PartialOutput {
         self.ix_separator.or_with(default_ix_separator);
 
         if let Some(Some(_level)) = self.compression_level.value {
-            validate_compression_level_u8(&self.compression, &mut self.compression_level);
+            validate_compression_level_u8(
+                &self.compression,
+                &mut self.compression_level,
+                &self.format.as_ref().unwrap_or(&FileFormat::Fastq),
+            );
         }
         self.verify_compression_and_stdout();
 
@@ -116,7 +120,7 @@ impl PartialOutput {
                     "Uncompressed hashing is not supported when format = 'bam'.",
                 );
                 self.output_hash_uncompressed.help = Some(
-                    "Either disable output_hash_uncompressed, or switch output formats".to_string(),
+                    "You probably want 'output_hash_compressed=true'. Or disable output_hash_uncompressed, or switch output formats".to_string(),
                 );
             }
             if *self.stdout.unwrap_ref() {
@@ -318,17 +322,31 @@ impl Output {
 pub fn validate_compression_level_u8(
     compression: &TomlValue<CompressionFormat>,
     compression_level: &mut TomlValue<Option<u8>>,
+    output_format: &FileFormat,
 ) {
     if let Some(Some(level)) = compression_level.as_ref() {
         match compression.as_ref() {
             None | Some(CompressionFormat::Uncompressed) => {
-                if *level != 0 {
-                    compression_level.state = TomlValueState::ValidationFailed {
-                        message: "Compression level specified for uncompressed output".to_string(),
-                    };
-                    compression_level.help = Some(
-                        "Remove compression_level, or set compressed='gzip' or 'zstd'".to_string(),
-                    );
+                if output_format == &FileFormat::Bam {
+                    if *level > 9 || *level < 1 {
+                        compression_level.state = TomlValueState::ValidationFailed {
+                            message: "Invalid compression level specified for BAM output"
+                                .to_string(),
+                        };
+                        compression_level.help =
+                            Some("Valid range is 1-9 for BAM (and our compressor)".to_string());
+                    }
+                } else {
+                    if *level != 0 {
+                        compression_level.state = TomlValueState::ValidationFailed {
+                            message: "Compression level specified for uncompressed output"
+                                .to_string(),
+                        };
+                        compression_level.help = Some(
+                            "Remove compression_level, or set compressed='gzip' or 'zstd'"
+                                .to_string(),
+                        );
+                    }
                 }
             }
             Some(CompressionFormat::Gzip) => {

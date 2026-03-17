@@ -1,0 +1,8 @@
+[input]
+    seq = 'input_read1.fq'
+    interleaved = ['read1','read2']
+
+[output]
+    prefix = 'output'
+    compression = 'Raw'
+

@@ -105,6 +105,16 @@ fn test_cases_x_demultiplex_x_interleaved_output_demultiplex() {
 }
 
 #[test]
+fn test_cases_x_demultiplex_x_interleaved_output_demultiplex_bam_output() {
+    println!("Test case is in: test_cases/demultiplex/interleaved_output_demultiplex_bam_output");
+    run_test(
+        std::path::Path::new("../test_cases/demultiplex/interleaved_output_demultiplex_bam_output"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_demultiplex_x_multiple_barcode_and_bool() {
     println!("Test case is in: test_cases/demultiplex/multiple_barcode_and_bool");
     run_test(
@@ -1041,6 +1051,26 @@ fn test_cases_x_output_x_bam_x_basic() {
     println!("Test case is in: test_cases/output/bam/basic");
     run_test(
         std::path::Path::new("../test_cases/output/bam/basic"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_output_x_bam_x_basic_higher_compression() {
+    println!("Test case is in: test_cases/output/bam/basic_higher_compression");
+    run_test(
+        std::path::Path::new("../test_cases/output/bam/basic_higher_compression"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_output_x_bam_x_basic_higher_compression_wrong_level() {
+    println!("Test case is in: test_cases/output/bam/basic_higher_compression_wrong_level");
+    run_test(
+        std::path::Path::new("../test_cases/output/bam/basic_higher_compression_wrong_level"),
         "input.toml",
         1,
     );
@@ -3278,6 +3308,21 @@ fn test_cases_x_single_step_x_error_handling_x_input_config_x_segment_name_x_whi
     run_test(
         std::path::Path::new(
             "../test_cases/single_step/error_handling/input_config/segment_name/whitespace_only",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_input_files_x_ermission_denied_input_file_interleaved()
+ {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/input_files/ermission_denied_input_file_interleaved"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/error_handling/input_files/ermission_denied_input_file_interleaved",
         ),
         "input.toml",
         1,
@@ -7612,6 +7657,18 @@ fn test_cases_x_single_step_x_inspect_x_inspect_read1_compressed() {
     println!("Test case is in: test_cases/single_step/inspect/inspect_read1_compressed");
     run_test(
         std::path::Path::new("../test_cases/single_step/inspect/inspect_read1_compressed"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_output_x_allow_override_but_file_is_read_only() {
+    println!("Test case is in: test_cases/single_step/output/allow_override_but_file_is_read_only");
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/output/allow_override_but_file_is_read_only",
+        ),
         "input.toml",
         1,
     );
