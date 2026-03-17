@@ -1773,6 +1773,16 @@ fn test_cases_x_single_step_x_duplicates_x_basic() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_duplicates_x_dedup_all_segments() {
+    println!("Test case is in: test_cases/single_step/duplicates/dedup_all_segments");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/duplicates/dedup_all_segments"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_duplicates_x_dedup_exact() {
     println!("Test case is in: test_cases/single_step/duplicates/dedup_exact");
     run_test(
@@ -2884,6 +2894,21 @@ fn test_cases_x_single_step_x_error_handling_x_extraction_x_extract_iupac_suffix
     run_test(
         std::path::Path::new(
             "../test_cases/single_step/error_handling/extraction/extract_iupac_suffix_min_length_too_high",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_extraction_x_extract_iupac_suffix_min_length_too_low()
+ {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/extraction/extract_iupac_suffix_min_length_too_low"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/error_handling/extraction/extract_iupac_suffix_min_length_too_low",
         ),
         "input.toml",
         1,

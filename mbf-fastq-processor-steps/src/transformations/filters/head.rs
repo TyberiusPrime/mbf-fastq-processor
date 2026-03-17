@@ -61,7 +61,9 @@ impl Step for Head {
             let so_far = so_far.get_mut(&0).expect("tag 0 must exist in so_far");
             if *so_far >= self.n {
                 // cov:excl-start
-                unreachable!("we should have stopped already if we had reached n, since we returned do_continue=false");
+                unreachable!(
+                    "we should have stopped already if we had reached n, since we returned do_continue=false"
+                );
                 // cov:excl-stop
             } else {
                 //we know so_far is smaller than n

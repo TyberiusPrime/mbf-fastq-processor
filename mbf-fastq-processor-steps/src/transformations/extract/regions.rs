@@ -208,12 +208,7 @@ impl Step for Regions {
                         // cov:excl-stop
                     }
                 }
-                if h.is_empty() {
-                    //if no region was extracted, we do not store a hit
-                    out.push(TagValue::Missing);
-                } else {
-                    out.push(TagValue::Location(Hits::new_multiple(h)));
-                }
+                out.push(TagValue::Location(Hits::new_multiple(h)));
             } else {
                 let mut h = BString::default();
                 for (seq, _segment_index) in extracted.into_iter().flatten() {

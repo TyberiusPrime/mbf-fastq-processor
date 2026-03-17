@@ -1,0 +1,20 @@
+[input]
+    read1 = 'input_read1.fq.zst'
+    read2 = 'input_read2.fq.zst'
+
+
+[[step]]
+    action = 'TagDuplicates'
+    false_positive_rate = 0.001
+    source = 'all'
+    seed = 34
+	out_label = 'is_duplicate'
+
+[[step]]
+	action = 'FilterByTag'
+	in_label = 'is_duplicate'
+	keep_or_remove = 'remove'
+
+[output]
+    prefix = 'output'
+	compression = 'zst'
