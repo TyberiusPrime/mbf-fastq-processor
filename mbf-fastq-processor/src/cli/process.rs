@@ -18,8 +18,11 @@ pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> 
         Err(e) => {
             let pretty = e.pretty("config.toml");
             if pretty.trim().is_empty() {
+                // shouldn't happen, but if it does, we got this error
+                // cov:excl-start
                 dbg!(&e);
                 bail!("Failed to parse config.toml and no pretty error available");
+                // cov:excl-stop
             }
             let pretty = improve_error_messages("config.toml", e);
             bail!("{pretty}");

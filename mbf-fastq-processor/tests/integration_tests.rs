@@ -3151,3 +3151,518 @@ prefix = 'output'
         "Should report warning mismatch, got: {stderr}"
     );
 }
+
+#[test]
+fn test_verify_broken_prep_sh_fails() {
+    // Verify that when prep.sh exits with a non-zero status, the verify command fails
+    // with the expected error message (covers verify.rs line 303).
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+
+    let mut input_file = fs::File::create(temp_path.join("input.fq")).unwrap();
+    writeln!(input_file, "@read1\nACGT\n+\nIIII").unwrap();
+
+    let config_path = temp_path.join("config.toml");
+    fs::write(
+        &config_path,
+        r"[input]
+read1 = 'input.fq'
+
+[[step]]
+action = 'Head'
+n = 1
+
+[output]
+prefix = 'output'
+",
+    )
+    .unwrap();
+
+    // Write a prep.sh that always fails
+    let prep_sh = temp_path.join("prep.sh");
+    fs::write(&prep_sh, "#!/usr/bin/env bash\nexit 42\n").unwrap();
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&prep_sh, fs::Permissions::from_mode(0o755)).unwrap();
+    }
+
+    let verify_cmd = std::process::Command::new(get_bin_path())
+        .arg("verify")
+        .arg(&config_path)
+        .arg("--unsafe-call-prep-sh")
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+
+    let stderr = std::str::from_utf8(&verify_cmd.stderr).unwrap().to_string();
+    assert!(
+        !verify_cmd.status.success(),
+        "Verify should fail when prep.sh exits non-zero"
+    );
+    assert!(
+        stderr.contains("prep.sh failed with exit code"),
+        "Should report prep.sh failure, got: {stderr}"
+    );
+}
+
+fn minimal_config_and_input(temp_path: &std::path::Path) -> PathBuf {
+    let mut input_file = fs::File::create(temp_path.join("input.fq")).unwrap();
+    writeln!(input_file, "@read1\nACGT\n+\nIIII").unwrap();
+    let config_path = temp_path.join("config.toml");
+    fs::write(
+        &config_path,
+        r"[input]
+read1 = 'input.fq'
+
+[[step]]
+action = 'Head'
+n = 1
+
+[output]
+prefix = 'output'
+",
+    )
+    .unwrap();
+    config_path
+}
+
+fn make_executable(path: &std::path::Path) {
+    use std::os::unix::fs::PermissionsExt;
+    fs::set_permissions(path, fs::Permissions::from_mode(0o755)).unwrap();
+}
+
+#[test]
+fn test_verify_prep_sh_without_unsafe_flag_fails() {
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    let config_path = minimal_config_and_input(temp_path);
+
+    let prep_sh = temp_path.join("prep.sh");
+    fs::write(&prep_sh, "#!/usr/bin/env bash\nexit 0\n").unwrap();
+    make_executable(&prep_sh);
+
+    let verify_cmd = std::process::Command::new(get_bin_path())
+        .arg("verify")
+        .arg(&config_path)
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+
+    let stderr = std::str::from_utf8(&verify_cmd.stderr).unwrap().to_string();
+    assert!(
+        !verify_cmd.status.success(),
+        "Verify should fail when prep.sh exists but --unsafe-call-prep-sh is absent"
+    );
+    assert!(
+        stderr.contains("prep.sh script found in") && stderr.contains("--unsafe-call-prep-sh"),
+        "Should explain how to enable prep.sh, got: {stderr}"
+    );
+}
+
+#[test]
+fn test_verify_post_sh_without_unsafe_flag_fails() {
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    let config_path = minimal_config_and_input(temp_path);
+
+    let post_sh = temp_path.join("post.sh");
+    fs::write(&post_sh, "#!/usr/bin/env bash\nexit 0\n").unwrap();
+    make_executable(&post_sh);
+
+    let verify_cmd = std::process::Command::new(get_bin_path())
+        .arg("verify")
+        .arg(&config_path)
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+
+    let stderr = std::str::from_utf8(&verify_cmd.stderr).unwrap().to_string();
+    assert!(
+        !verify_cmd.status.success(),
+        "Verify should fail when post.sh exists but --unsafe-call-prep-sh is absent"
+    );
+    assert!(
+        stderr.contains("post.sh script found in") && stderr.contains("--unsafe-call-prep-sh"),
+        "Should explain how to enable post.sh, got: {stderr}"
+    );
+}
+
+#[test]
+fn test_verify_test_sh_without_unsafe_flag_fails() {
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    let config_path = minimal_config_and_input(temp_path);
+
+    let test_sh = temp_path.join("test.sh");
+    fs::write(&test_sh, "#!/usr/bin/env bash\nexit 0\n").unwrap();
+    make_executable(&test_sh);
+
+    let verify_cmd = std::process::Command::new(get_bin_path())
+        .arg("verify")
+        .arg(&config_path)
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+
+    let stderr = std::str::from_utf8(&verify_cmd.stderr).unwrap().to_string();
+    assert!(
+        !verify_cmd.status.success(),
+        "Verify should fail when test.sh exists but --unsafe-call-prep-sh is absent"
+    );
+    assert!(
+        stderr.contains("test.sh script found in") && stderr.contains("--unsafe-call-prep-sh"),
+        "Should explain how to enable test.sh, got: {stderr}"
+    );
+}
+
+#[test]
+fn test_verify_config_validation_failed_unexpectedly() {
+    // Config has a validation error, no expected_error file → triggers
+    // "Configuration validation failed unexpectedly." context message.
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+
+    let mut input_file = fs::File::create(temp_path.join("input.fq")).unwrap();
+    writeln!(input_file, "@read1\nACGT\n+\nIIII").unwrap();
+
+    let config_path = temp_path.join("config.toml");
+    fs::write(
+        &config_path,
+        r"[input]
+read1 = 'input.fq'
+
+[[step]]
+action = 'NonExistentAction'
+
+[output]
+prefix = 'output'
+",
+    )
+    .unwrap();
+
+    // No expected_error.txt — validation failure is unexpected
+    let verify_cmd = std::process::Command::new(get_bin_path())
+        .arg("verify")
+        .arg(&config_path)
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+
+    let stderr = std::str::from_utf8(&verify_cmd.stderr).unwrap().to_string();
+    assert!(
+        !verify_cmd.status.success(),
+        "Verify should fail on unexpected validation error"
+    );
+    assert!(
+        stderr.contains("Configuration validation failed unexpectedly."),
+        "Should report unexpected validation failure, got: {stderr}"
+    );
+}
+
+#[test]
+fn test_verify_failing_post_sh_is_detected() {
+    // When post.sh exits non-zero, verify should report "post.sh failed with exit code"
+    // as part of the "Output verification failed:" mismatch list.
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    let config_path = minimal_config_and_input(temp_path);
+
+    // Pre-generate expected output so find_output_files doesn't bail before post.sh is checked.
+    let process_cmd = std::process::Command::new(get_bin_path())
+        .arg("process")
+        .arg(&config_path)
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+    assert!(process_cmd.status.success(), "process should succeed");
+
+    let post_sh = temp_path.join("post.sh");
+    fs::write(
+        &post_sh,
+        "#!/usr/bin/env bash\necho 'post step broke' >&2\nexit 2\n",
+    )
+    .unwrap();
+    make_executable(&post_sh);
+
+    let verify_cmd = std::process::Command::new(get_bin_path())
+        .arg("verify")
+        .arg(&config_path)
+        .arg("--unsafe-call-prep-sh")
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+
+    let stderr = std::str::from_utf8(&verify_cmd.stderr).unwrap().to_string();
+    assert!(
+        !verify_cmd.status.success(),
+        "Verify should fail when post.sh exits non-zero"
+    );
+    assert!(
+        stderr.contains("post.sh failed with exit code"),
+        "Should report post.sh failure, got: {stderr}"
+    );
+    assert!(
+        stderr.contains("post step broke"),
+        "Should include post.sh stderr output, got: {stderr}"
+    );
+}
+
+#[test]
+fn test_verify_failing_test_sh_is_detected() {
+    // When test.sh exits non-zero, verify should fail with "Test script failed:"
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    let config_path = minimal_config_and_input(temp_path);
+
+    let test_sh = temp_path.join("test.sh");
+    fs::write(
+        &test_sh,
+        "#!/usr/bin/env bash\necho 'something went wrong' >&2\nexit 1\n",
+    )
+    .unwrap();
+    make_executable(&test_sh);
+
+    let verify_cmd = std::process::Command::new(get_bin_path())
+        .arg("verify")
+        .arg(&config_path)
+        .arg("--unsafe-call-prep-sh")
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+
+    let stderr = std::str::from_utf8(&verify_cmd.stderr).unwrap().to_string();
+    assert!(
+        !verify_cmd.status.success(),
+        "Verify should fail when test.sh exits non-zero"
+    );
+    assert!(
+        stderr.contains("Test script failed:"),
+        "Should report test script failure, got: {stderr}"
+    );
+    assert!(
+        stderr.contains("something went wrong"),
+        "Should include test.sh stderr output, got: {stderr}"
+    );
+}
+
+// ── stdout / stderr stream-file branch coverage ─────────────────────────────
+
+/// Run process first so expected output_read1.fq exists, then add an extra
+/// expected `stdout` (or `stderr`) file; verify must then report it missing.
+fn setup_with_expected_output(temp_path: &std::path::Path) -> PathBuf {
+    let config_path = minimal_config_and_input(temp_path);
+    let process_cmd = std::process::Command::new(get_bin_path())
+        .arg("process")
+        .arg(&config_path)
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+    assert!(process_cmd.status.success(), "process should succeed");
+    config_path
+}
+
+#[test]
+fn test_verify_missing_stdout_file() {
+    // Expected `stdout` file present but processor produces no stdout → "Missing stdout file"
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    let config_path = setup_with_expected_output(temp_path);
+
+    fs::write(temp_path.join("stdout"), b"anything\n").unwrap();
+
+    let verify_cmd = std::process::Command::new(get_bin_path())
+        .arg("verify")
+        .arg(&config_path)
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+
+    let stderr = std::str::from_utf8(&verify_cmd.stderr).unwrap().to_string();
+    assert!(!verify_cmd.status.success(), "Verify should fail");
+    assert!(
+        stderr.contains("Missing stdout file"),
+        "Should report missing stdout, got: {stderr}"
+    );
+}
+
+#[test]
+fn test_verify_missing_stderr_file() {
+    // Expected `stderr` file present but processor produces no stderr → "Missing stderr file"
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    let config_path = setup_with_expected_output(temp_path);
+
+    fs::write(temp_path.join("stderr"), b"anything\n").unwrap();
+
+    let verify_cmd = std::process::Command::new(get_bin_path())
+        .arg("verify")
+        .arg(&config_path)
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+
+    let stderr = std::str::from_utf8(&verify_cmd.stderr).unwrap().to_string();
+    assert!(!verify_cmd.status.success(), "Verify should fail");
+    assert!(
+        stderr.contains("Missing stderr file"),
+        "Should report missing stderr, got: {stderr}"
+    );
+}
+
+#[test]
+fn test_verify_unexpected_stdout_file() {
+    // Config uses stdout=true, no expected `stdout` file → "Unexpected stdout file"
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+
+    let mut input_file = fs::File::create(temp_path.join("input.fq")).unwrap();
+    writeln!(input_file, "@read1\nACGT\n+\nIIII").unwrap();
+
+    let config_path = temp_path.join("config.toml");
+    fs::write(
+        &config_path,
+        r"[input]
+read1 = 'input.fq'
+
+[[step]]
+action = 'Head'
+n = 1
+
+[output]
+prefix = 'output'
+stdout = true
+",
+    )
+    .unwrap();
+
+    // No expected `stdout` file — processor will write to stdout
+    let verify_cmd = std::process::Command::new(get_bin_path())
+        .arg("verify")
+        .arg(&config_path)
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+
+    let stderr = std::str::from_utf8(&verify_cmd.stderr).unwrap().to_string();
+    assert!(!verify_cmd.status.success(), "Verify should fail");
+    assert!(
+        stderr.contains("Unexpected stdout file"),
+        "Should report unexpected stdout, got: {stderr}"
+    );
+}
+
+#[test]
+fn test_verify_wrong_content_stdout_file() {
+    // Config uses stdout=true, expected `stdout` has wrong content → "stdout: …"
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+
+    let mut input_file = fs::File::create(temp_path.join("input.fq")).unwrap();
+    writeln!(input_file, "@read1\nACGT\n+\nIIII").unwrap();
+
+    let config_path = temp_path.join("config.toml");
+    fs::write(
+        &config_path,
+        r"[input]
+read1 = 'input.fq'
+
+[[step]]
+action = 'Head'
+n = 1
+
+[output]
+prefix = 'output'
+stdout = true
+",
+    )
+    .unwrap();
+
+    fs::write(temp_path.join("stdout"), b"this is not the correct fastq\n").unwrap();
+
+    let verify_cmd = std::process::Command::new(get_bin_path())
+        .arg("verify")
+        .arg(&config_path)
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+
+    let stderr = std::str::from_utf8(&verify_cmd.stderr).unwrap().to_string();
+    assert!(!verify_cmd.status.success(), "Verify should fail");
+    assert!(
+        stderr.contains("stdout:"),
+        "Should report stdout content mismatch, got: {stderr}"
+    );
+}
+
+#[test]
+fn test_verify_compressed_size_difference_too_large() {
+    // Generate expected outputs at compression_level=9 (small), then verify with
+    // compression_level=1 (large). The size difference on read1 (~27%) exceeds the
+    // 5% tolerance and triggers "Compressed file size difference too large".
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+
+    // Use the existing compressed-output test data: two FASTQ files, 5 reads each.
+    let src = Path::new("../test_cases/output/output_compression_gzip_level");
+    fs::copy(src.join("input_read1.fq"), temp_path.join("input_read1.fq")).unwrap();
+    fs::copy(src.join("input_read2.fq"), temp_path.join("input_read2.fq")).unwrap();
+
+    // Step 1: produce the expected .gz files at level 9.
+    let config_level9 = temp_path.join("config.toml");
+    fs::write(
+        &config_level9,
+        r"[input]
+    read1 = 'input_read1.fq'
+    read2 = 'input_read2.fq'
+[[step]]
+    action = 'Head'
+    n = 5
+[output]
+    prefix = 'output'
+    compression = 'gzip'
+    compression_level = 9
+",
+    )
+    .unwrap();
+
+    let proc = std::process::Command::new(get_bin_path())
+        .arg("process")
+        .arg(&config_level9)
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+    assert!(proc.status.success(), "process (level 9) should succeed");
+
+    // Step 2: replace config with level=1; the expected .gz files (level 9) stay in place.
+    fs::write(
+        &config_level9,
+        r"[input]
+    read1 = 'input_read1.fq'
+    read2 = 'input_read2.fq'
+[[step]]
+    action = 'Head'
+    n = 5
+[output]
+    prefix = 'output'
+    compression = 'gzip'
+    compression_level = 1
+",
+    )
+    .unwrap();
+
+    // Step 3: verify — processor produces level-1 output (~27% larger for read1)
+    // which exceeds the 5% size-difference tolerance.
+    let verify_cmd = std::process::Command::new(get_bin_path())
+        .arg("verify")
+        .arg(&config_level9)
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+
+    let stderr = std::str::from_utf8(&verify_cmd.stderr).unwrap().to_string();
+    assert!(!verify_cmd.status.success(), "Verify should fail");
+    assert!(
+        stderr.contains("Compressed file size difference too large"),
+        "Should report compressed size mismatch, got: {stderr}"
+    );
+}

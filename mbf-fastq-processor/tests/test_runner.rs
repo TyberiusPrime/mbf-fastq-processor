@@ -42,8 +42,11 @@ fn run_verify_test(
             .unwrap()
             .join(format!("actual_{test_no_in_directory}"))
     } else {
-        //trigger ~half with relative and ~half with absolute dir for path coverage
-        //in verify.rs
+        // Trigger ~half with relative and ~half with absolute dir for path coverage
+        // in verify.rs. Both branches must use paths that are correct regardless of
+        // how resolve_paths() in verify.rs resolves them: absolute paths are used
+        // as-is; relative paths are joined with toml_dir, so they must be relative
+        // to toml_dir (i.e. just "actual"), not relative to the test-runner CWD.
         if test_case_dir
             .file_name()
             .and_then(|ostr| ostr.as_bytes().iter().last())
@@ -52,7 +55,9 @@ fn run_verify_test(
         {
             test_case_dir.canonicalize().unwrap().join("actual")
         } else {
-            test_case_dir.join("actual")
+            // "actual" is relative → resolve_paths joins it with toml_dir, landing
+            // correctly at <test_case_dir>/actual.
+            PathBuf::from("actual")
         }
     };
 

@@ -440,8 +440,10 @@ fn verify_processor_success(
             .context("Failed to write stdout to temp directory")?;
     }
     if !output.stderr.is_empty() {
+        // cov:excl-start
         ex::fs::write(temp_path.join("stderr"), &output.stderr)
             .context("Failed to write stderr to temp directory")?;
+        // cov:excl-stop
     }
 
     let mut mismatches = Vec::new();
@@ -564,6 +566,10 @@ fn run_processor_and_verify(
 
     match (expected_failure, output.status.success()) {
         (Some(expected_failure_pattern), false) => {
+            if !output.stderr.is_empty() {
+                ex::fs::write(temp_path.join("stderr"), &output.stderr)
+                    .context("Failed to write stderr to temp directory")?;
+            }
             expected_failure_pattern.validate_expected_failure(&stderr, temp_toml_path)?;
         }
         (Some(_), true) => {
@@ -615,11 +621,13 @@ fn cleanup_output_dir(output_dir: Option<&Path>) -> Result<()> {
                 }
             }
             ex::fs::remove_dir_all(output_dir).with_context(|| {
+                // cov:excl-start
                 format!(
                     "Failed to remove existing output directory: {}",
                     output_dir.display()
                 )
             })?;
+            // cov:excl-stop
         }
     }
     Ok(())
@@ -668,11 +676,13 @@ pub(crate) fn compare_files(expected: &Path, actual: &Path, input_dir: &Path) ->
                     normalize_progress_content(&actual_str),
                 );
                 std::fs::write(actual, &res.1).with_context(|| {
+                    // cov:excl-start
                     format!(
                         "Failed to write normalized actual report file: {}",
                         actual.display()
                     )
                 })?;
+                // cov:excl-stop
                 res
             } else {
                 let res = (
@@ -680,16 +690,20 @@ pub(crate) fn compare_files(expected: &Path, actual: &Path, input_dir: &Path) ->
                     normalize_report_content(&actual_str, Some(input_dir)),
                 );
                 std::fs::write(actual, &res.1).with_context(|| {
+                    // cov:excl-start
                     format!(
                         "Failed to write normalized actual report file: {}",
                         actual.display()
                     )
                 })?;
+                // cov:excl-stop
                 res
             };
 
         if expected_normalized.is_empty() {
-            bail!("expected file was empty after normalization - shouldn't be?");
+            // cov:excl-start
+            unreachable!("expected file was empty after normalization - shouldn't be? Bug");
+            // cov:excl-stop
         }
         (
             expected_normalized.into_bytes(),
@@ -717,7 +731,9 @@ pub(crate) fn compare_files(expected: &Path, actual: &Path, input_dir: &Path) ->
                 bail!("Content mismatch at byte {i}: expected 0x{exp:02x}, got 0x{act:02x}",);
             }
         }
-        bail!("Content mismatch (no specific byte difference found)");
+        // cov:excl-start
+        unreachable!("Content mismatch (no specific byte difference found)");
+        // cov:excl-stop
     }
 
     Ok(())
@@ -820,11 +836,13 @@ pub fn decompress_file(path: &Path) -> Result<Vec<u8>> {
         .with_context(|| format!("Failed to open compressed file: {}", path.display()))?;
 
     let (mut reader, _format) = niffler::send::get_reader(Box::new(file)).with_context(|| {
+        // cov:excl-start
         format!(
             "Failed to create decompression reader for: {}",
             path.display()
         )
     })?;
+    // cov:excl-stop
 
     let mut decompressed = Vec::new();
     reader
@@ -851,6 +869,7 @@ enum ExpectedFailure {
     Regex(Regex),
 }
 
+// cov:excl-start
 impl std::fmt::Display for ExpectedFailure {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -859,6 +878,7 @@ impl std::fmt::Display for ExpectedFailure {
         }
     }
 }
+// cov:excl-stop
 
 impl ExpectedFailure {
     fn new(toml_dir: &Path, key: &str) -> Result<Option<Self>> {
@@ -866,10 +886,12 @@ impl ExpectedFailure {
         let expected_failure_regex_file = toml_dir.join(format!("expected_{key}.regex"));
 
         if expected_failure_file.exists() && expected_failure_regex_file.exists() {
+            // cov:excl-start
             bail!(
                 "Both expected_failure.txt and expected_failure.regex files exist in {}. Please provide only one.",
                 toml_dir.display()
             );
+            // cov:excl-stop
         }
 
         if expected_failure_file.exists() {
@@ -877,11 +899,13 @@ impl ExpectedFailure {
                 .context("Read expected failure file")?
                 .trim()
                 .to_string();
+            // cov:excl-start
             assert!(
                 content.trim() != "",
                 "{}.txt was empty!",
                 expected_failure_file.display()
             );
+            // cov:excl-stop
             Ok(Some(ExpectedFailure::ExactText(content)))
         } else if expected_failure_regex_file.exists() {
             let content = ex::fs::read_to_string(&expected_failure_regex_file)
@@ -1002,6 +1026,9 @@ fn run_command_with_timeout(cmd: &mut std::process::Command) -> Result<std::proc
             stderr,
         })
     } else {
+        // not in coverage, this is a last resort to force tests
+        // to come back.
+        // cov:excl-start
         let _ = child.kill();
         let status = child.wait()?;
         let mut stdout = Vec::new();
@@ -1022,6 +1049,7 @@ fn run_command_with_timeout(cmd: &mut std::process::Command) -> Result<std::proc
             stdout_str,
             stderr_str
         );
+        // cov:excl-stop
     }
 }
 
@@ -1038,11 +1066,13 @@ fn create_symlinks_for_files(
             // Create parent directories if they don't exist
             if let Some(parent) = target_path.parent() {
                 std::fs::create_dir_all(parent).with_context(|| {
+                    // cov:excl-start
                     format!(
                         "Failed to create parent directories for {}",
                         target_path.display()
                     )
                 })?;
+                // cov:excl-stop
             }
 
             create_symlink(&source_path, &target_path)?;
@@ -1058,11 +1088,13 @@ fn create_symlinks_for_files(
                 // Create parent directories if they don't exist
                 if let Some(parent) = target_path.parent() {
                     std::fs::create_dir_all(parent).with_context(|| {
+                        // cov:excl-start
                         format!(
                             "Failed to create parent directories for {}",
                             target_path.display()
                         )
                     })?;
+                    // cov:excl-stop
                 }
 
                 create_symlink(&source_path, &target_path)?;
@@ -1080,12 +1112,14 @@ fn create_symlink(source: &Path, target: &Path) -> Result<()> {
     // detected as already existing and we don't attempt to recreate them.
     if std::fs::symlink_metadata(target).is_err() {
         std::os::unix::fs::symlink(source, target).with_context(|| {
+            // cov:excl-start
             format!(
                 "Failed to create symlink from {} to {}",
                 source.display(),
                 target.display()
             )
         })?;
+        // cov:excl-stop
     }
     Ok(())
 }

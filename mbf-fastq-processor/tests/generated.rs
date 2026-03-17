@@ -8385,6 +8385,35 @@ fn test_cases_x_single_step_x_validation_x_validate_all_reads_same_length_x_with
 }
 
 #[test]
+fn test_cases_x_single_step_x_validation_x_validate_all_reads_same_length_x_with_tag_missing() {
+    println!(
+        "Test case is in: test_cases/single_step/validation/validate_all_reads_same_length/with_tag_missing"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/validation/validate_all_reads_same_length/with_tag_missing",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_validation_x_validate_all_reads_same_length_x_with_tag_missing_fail()
+{
+    println!(
+        "Test case is in: test_cases/single_step/validation/validate_all_reads_same_length/with_tag_missing_fail"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/validation/validate_all_reads_same_length/with_tag_missing_fail",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_validation_x_validate_all_reads_same_length_x_with_tag_string_type() {
     println!(
         "Test case is in: test_cases/single_step/validation/validate_all_reads_same_length/with_tag_string_type"
@@ -8418,6 +8447,16 @@ fn test_cases_x_single_step_x_validation_x_validate_name_x_simple() {
     println!("Test case is in: test_cases/single_step/validation/validate_name/simple");
     run_test(
         std::path::Path::new("../test_cases/single_step/validation/validate_name/simple"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_validation_x_validate_name_x_stride_eq_0() {
+    println!("Test case is in: test_cases/single_step/validation/validate_name/stride_eq_0");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/validation/validate_name/stride_eq_0"),
         "input.toml",
         1,
     );
