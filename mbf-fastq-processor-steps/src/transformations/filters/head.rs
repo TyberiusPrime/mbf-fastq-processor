@@ -60,8 +60,9 @@ impl Step for Head {
         if so_far.len() == 1 {
             let so_far = so_far.get_mut(&0).expect("tag 0 must exist in so_far");
             if *so_far >= self.n {
-                let empty = block.empty();
-                Ok((empty, false))
+                // cov:excl-start
+                unreachable!("we should have stopped already if we had reached n, since we returned do_continue=false");
+                // cov:excl-stop
             } else {
                 //we know so_far is smaller than n
                 let remaining = self.n.saturating_sub(*so_far);

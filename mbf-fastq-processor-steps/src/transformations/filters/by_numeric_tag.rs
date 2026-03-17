@@ -84,7 +84,9 @@ impl Step for ByNumericTag {
                     let passes_max = self.max_value.is_none_or(|max| value < max);
                     passes_min && passes_max
                 } else {
-                    false // Non-numeric values are filtered out
+                    // cov:excl-start
+                    unreachable!("Tag values should have been verified to be numeric during configuration verification")
+                    // cov:excl-stop
                 }
             })
             .map(|passes| {
