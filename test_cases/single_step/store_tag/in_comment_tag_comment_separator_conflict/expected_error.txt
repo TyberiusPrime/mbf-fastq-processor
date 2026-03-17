@@ -1,0 +1,49 @@
+Error Details ==
+Error 1/2
+   ╭─config.toml
+   ┆
+11 │ [[step]]
+12 │     action = 'StoreTagInComment'
+   ┆              ─────────┬─────────
+   ┆                       │
+   ┆                       ╰────────── In this step
+13 │     in_label = 'length'
+   ┆                ────┬───
+   ┆                    │
+   ┆                    ╰──── Tag label contains comment_separator
+   ┆
+14 │     segment = 'read1'
+15 │     comment_separator = 't'
+   ┆                         ─┬─
+   ┆                          │
+   ┆                          ╰── comment_separator defined here
+───╯
+Hint: Tag labels cannot contain the comment_separator 't'. You probably want a comment separator that's not in a-zA-Z0-9
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/StoreTagInComment
+      Or run: `mbf-fastq-processor template StoreTagInComment` for more information.
+
+Error 2/2
+   ╭─config.toml
+   ┆
+11 │ [[step]]
+12 │     action = 'StoreTagInComment'
+   ┆              ─────────┬─────────
+   ┆                       │
+   ┆                       ╰────────── In this step
+13 │     in_label = 'length'
+   ┆                ────┬───
+   ┆                    │
+   ┆                    ╰──── Tag label contains comment_insert_char
+   ┆
+14 │     segment = 'read1'
+15 │     comment_separator = 't'
+16 │     comment_insert_char = 'g'
+   ┆                           ─┬─
+   ┆                            │
+   ┆                            ╰── comment_insert_char defined here
+───╯
+Hint: Tag labels cannot contain the comment_insert_char 'g'. You probably want an insert char that's not in a-zA-Z0-9
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/StoreTagInComment
+      Or run: `mbf-fastq-processor template StoreTagInComment` for more information.
+
+

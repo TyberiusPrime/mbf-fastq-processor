@@ -6636,6 +6636,20 @@ fn test_cases_x_single_step_x_extraction_x_store_tags_in_table_x_in_tsv_gz() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_extraction_x_store_tags_in_table_x_in_tsv_string_tag() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/store_tags_in_table/in_tsv_string_tag"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/store_tags_in_table/in_tsv_string_tag",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_extraction_x_store_tags_in_table_x_in_tsv_validate_compression() {
     println!(
         "Test case is in: test_cases/single_step/extraction/store_tags_in_table/in_tsv_validate_compression"
@@ -8006,6 +8020,20 @@ fn test_cases_x_single_step_x_store_tag_x_in_comment_no_insert_char_present() {
     run_test(
         std::path::Path::new(
             "../test_cases/single_step/store_tag/in_comment_no_insert_char_present",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_store_tag_x_in_comment_tag_comment_separator_conflict() {
+    println!(
+        "Test case is in: test_cases/single_step/store_tag/in_comment_tag_comment_separator_conflict"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/store_tag/in_comment_tag_comment_separator_conflict",
         ),
         "input.toml",
         1,

@@ -1,0 +1,28 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'Head'
+    n = 4
+
+[[step]]
+    action = 'ExtractRegex'
+    out_label = 'barcode1'
+    search = 'Read[12]$'
+    source = 'name:read1'
+
+[[step]]
+    action = 'ExtractIUPAC'
+    out_label = 'barcode2'
+    search = 'CAA'
+    anchor = 'Anywhere'
+    max_mismatches = 0
+
+[[step]]
+    action = 'StoreTagsInTable'
+    infix = 'tags'
+#format = 'TSV'
+
+[output]
+    prefix = 'output'
+	format = 'None'

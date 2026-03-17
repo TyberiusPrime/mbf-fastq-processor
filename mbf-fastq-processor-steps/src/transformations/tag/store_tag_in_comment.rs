@@ -75,21 +75,40 @@ impl VerifyIn<PartialConfig> for PartialStoreTagInComment {
             if let Some(sep) = self.comment_separator.as_ref().copied()
                 && in_label.0.bytes().any(|x| x == sep)
             {
-                self.in_label.state = TomlValueState::ValidationFailed {
-                    message: format!(
-                        "Tag labels cannot contain the comment_separator '{}'",
-                        BString::new(vec![sep])
+                let spans = vec![
+                    (
+                        self.in_label.span(),
+                        "Tag label contains comment_separator".to_string(),
                     ),
-                };
-            } else if let Some(ins) = self.comment_insert_char.as_ref().copied()
+                    (
+                        self.comment_separator.span(),
+                        "comment_separator defined here".to_string(),
+                    ),
+                ];
+                self.comment_separator.state = TomlValueState::Custom { spans };
+                self.comment_separator.help = Some(format!(
+                    "Tag labels cannot contain the comment_separator '{}'. You probably want a comment separator that's not in a-zA-Z0-9",
+                    BString::new(vec![sep])
+                ));
+            }
+            if let Some(ins) = self.comment_insert_char.as_ref().copied()
                 && in_label.0.bytes().any(|x| x == ins)
             {
-                self.in_label.state = TomlValueState::ValidationFailed {
-                    message: format!(
-                        "Tag labels cannot contain the comment_insert_char '{}'",
-                        BString::new(vec![ins])
+                let spans = vec![
+                    (
+                        self.in_label.span(),
+                        "Tag label contains comment_insert_char".to_string(),
                     ),
-                };
+                    (
+                        self.comment_insert_char.span(),
+                        "comment_insert_char defined here".to_string(),
+                    ),
+                ];
+                self.comment_insert_char.state = TomlValueState::Custom { spans };
+                self.comment_insert_char.help = Some(format!(
+                    "Tag labels cannot contain the comment_insert_char '{}'. You probably want an insert char that's not in a-zA-Z0-9",
+                    BString::new(vec![ins])
+                ));
             }
         }
         Ok(())
