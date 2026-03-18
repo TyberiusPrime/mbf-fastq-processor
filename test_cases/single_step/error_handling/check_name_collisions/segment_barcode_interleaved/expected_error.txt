@@ -1,0 +1,18 @@
+Error Details ==
+Error 1/1
+  ╭─config.toml
+  ┆
+1 │ [input]
+2 │     segs = 'sample_data/ten_reads.fq'
+3 │     interleaved = ['read1','read2']
+  ┆                    ───┬───
+  ┆                       │
+  ┆                       ╰───────────── Segment with the same name defined here
+5 │ [barcodes.read1]
+  ┆           ──┬──
+  ┆             │
+  ┆             ╰──── This barcode name collides with a segment name
+──╯
+Hint: Barcode names must not collide with segment names. Please choose a different name for this barcode.
+
+

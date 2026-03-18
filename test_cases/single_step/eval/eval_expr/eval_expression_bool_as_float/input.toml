@@ -1,0 +1,28 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'CalcNCount'
+    segment = 'read1'
+    out_label = 'n_count'
+
+[[step]]
+    action = 'EvalExpression'
+    out_label = 'n_even'
+    expression = 'n_count % 2 == 0'
+	result_type = 'bool'
+
+
+[[step]]
+    action = 'EvalExpression'
+    out_label = 'mult'
+    expression = 'n_even * 3'
+	result_type = 'numeric'
+
+[[step]]
+    action = 'StoreTagInComment'
+    in_label = 'mult'
+    segment = 'read1'
+
+[output]
+    prefix = 'output'

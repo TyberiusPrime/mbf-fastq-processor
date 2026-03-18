@@ -22,7 +22,8 @@ impl HistogramData {
                     HistogramData::String(hash_map) => {
                         *hash_map.entry(String::new()).or_insert(0) += 1;
                     }
-                    _ => {} // Don't count missing values otherwise.
+                    _ => {} // cov:excl-line
+                            // Don't count missing values otherwise.
                 }
             }
             TagValue::String(s) => {

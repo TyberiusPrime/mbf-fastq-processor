@@ -388,7 +388,7 @@ impl RunStage0 {
                         &output_ix_separator,
                         &OptDemultiplex::No,
                         allow_overwrite,
-                    )?;
+                    )?; // cov:excl-line
                     res = Some(inner.clone());
                 }
             }
@@ -964,8 +964,8 @@ fn collect_thread_failures(
                     std::any::type_name_of_val(&e)
                 )
             };
-            // cov:excl-stop
             stage_errors.push(format!("{msg}: {err_msg}"));
+            // cov:excl-stop
         }
     }
     stage_errors
@@ -1105,8 +1105,8 @@ impl RunStage3 {
                                 &raw_config,
                             ) {
                                 Ok(res) => Some(res),
+                                // cov:excl-start
                                 Err(e) => {
-                                    // cov:excl-start
                                     error_collector
                                         .lock()
                                         .expect("mutex lock should not be poisoned")
@@ -1126,14 +1126,14 @@ impl RunStage3 {
                             &json_report
                                 .expect("json_report must be Some when html output is enabled"),
                         )
+                    // cov:excl-start
                     {
-                        // cov:excl-start
                         error_collector
                             .lock()
                             .expect("mutex lock should not be poisoned")
                             .push(format!("Error writing html report: {e:?}"));
-                        // cov:excl-stop
                     }
+                    // cov:excl-stop
                 })
                 .expect("thread spawn should not fail")
         };

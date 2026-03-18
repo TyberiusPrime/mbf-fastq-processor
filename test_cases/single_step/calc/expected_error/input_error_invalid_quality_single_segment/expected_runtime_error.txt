@@ -1,0 +1,1 @@
+CalcExpectedError requires PHRED+33 encoded qualities

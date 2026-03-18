@@ -50,15 +50,6 @@ pub struct _InternalReadCount {
     pub count: std::sync::atomic::AtomicUsize,
 }
 
-impl _InternalReadCount {
-    pub fn new(out_label: TagLabel, report_no: usize) -> Self {
-        Self {
-            out_label,
-            report_no,
-            count: std::sync::atomic::AtomicUsize::new(0),
-        }
-    }
-}
 impl TagUser for PartialTaggedVariant<Box<Partial_InternalReadCount>> {}
 
 impl Step for Box<_InternalReadCount> {

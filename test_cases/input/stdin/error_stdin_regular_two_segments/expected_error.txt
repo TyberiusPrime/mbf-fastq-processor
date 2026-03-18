@@ -1,0 +1,18 @@
+Error Details ==
+Error 1/1
+  ╭─config.toml
+  ┆
+1 │ [input]
+2 │       read1 = '--stdin--'
+  ┆               ▲
+  ┆ ╭─────────────╯
+3 │ │     read2 = 'input.fq'
+  ┆ │                      ▲
+  ┆ │                      │
+  ┆ ╰──────────────────────┴─ Invalid use of stdin magic value
+──╯
+Hint: Using '--stdin--' requires exactly one segment (and possibly interleaved).
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/input-section
+      Or run: `mbf-fastq-processor template input-section` for more information.
+
+

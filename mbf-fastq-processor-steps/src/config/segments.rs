@@ -293,7 +293,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceNoAll>> {
                     }
                 }
                 //no default for missing.
-            }
+            } // cov:excl-line
         }
     }
 }
@@ -422,18 +422,18 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceAll>> {
                     self.help = Some(format!(
                         "Could not automatically determine source. Please provide a source, that is a <segment name>, a <name:segment_name> or tag name. Use 'all' to refer to all <segment_name>s. Available segments: {}",
                         toml_pretty_deser::format_quoted_list(
-                            &(config.input.as_ref().map_or_else(
-                                || vec![""],
-                                |input_def| input_def
-                                    .get_segment_order()
-                                    .iter()
-                                    .map(String::as_str)
-                                    .collect()
-                            ))
+                            &(config
+                                .input
+                                .as_ref()
+                                .expect("can only be reached when input was ok")
+                                .get_segment_order()
+                                .iter()
+                                .map(String::as_str)
+                                .collect::<Vec<&str>>())
                         )
                     ));
-                }
+                } // cov:excl-line
             }
-        }
+        } // cov:excl-line
     }
 }

@@ -3595,6 +3595,45 @@ stdout = true
 }
 
 #[test]
+fn test_process_failure_captured() {
+    // Config uses stdout=true, expected `stdout` has wrong content → "stdout: …"
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+
+    let mut input_file = fs::File::create(temp_path.join("input.fq")).unwrap();
+    writeln!(input_file, "@read1\nAXGT\n+\nIIII").unwrap();
+
+    let config_path = temp_path.join("config.toml");
+    fs::write(
+        &config_path,
+        r"[input]
+read1 = 'input.fq'
+[[step]]
+    action='ValidateSequence'
+    allowed = 'AGTC'
+
+[output]
+prefix = 'output'
+",
+    )
+    .unwrap();
+
+    let verify_cmd = std::process::Command::new(get_bin_path())
+        .arg("verify")
+        .arg(&config_path)
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+
+    let stderr = std::str::from_utf8(&verify_cmd.stderr).unwrap().to_string();
+    assert!(!verify_cmd.status.success(), "Verify should fail");
+    assert!(
+        stderr.contains(" Invalid base found in read named 'read1', sequence: 'AXGT' "),
+        "Should report invalid base, got: {stderr}"
+    );
+}
+
+#[test]
 fn test_verify_compressed_size_difference_too_large() {
     // Generate expected outputs at compression_level=9 (small), then verify with
     // compression_level=1 (large). The size difference on read1 (~27%) exceeds the

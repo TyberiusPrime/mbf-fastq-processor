@@ -60,9 +60,11 @@ impl<T> DemultiplexedData<T> {
     #[allow(dead_code)]
     #[mutants::skip] // unused, but makes clippy happy
     #[must_use]
+    // cov:excl-start
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
+    // cov:excl-stop
 
     // pub fn iter(&self) -> impl Iterator<Item = (Tag, &T)> {
     //     self.0.iter().map(|(tag, data)| (*tag, data))
@@ -230,9 +232,11 @@ impl OptDemultiplex {
     #[must_use]
     #[allow(dead_code)]
     #[mutants::skip] // since it's dead, only here to make clippy happy.
+    // cov:excl-start
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
+    // cov:excl-stop
 
     #[must_use]
     pub fn expect(&self, msg: &str) -> &DemultiplexInfo {
@@ -314,8 +318,8 @@ impl OptDemultiplex {
                     allow_overwrite,
                 )?;
                 let file_handle = ex::fs::File::create(&filename).with_context(|| {
-                    format!("Could not open output file: {}", filename.display())
-                })?;
+                    format!("Could not open output file: {}", filename.display()) // cov:excl-line
+                })?; // cov:excl-line
                 let buffered_writer = HashedAndCompressedWriterSingleCore::new(
                     file_handle,
                     compression_format,
@@ -323,7 +327,7 @@ impl OptDemultiplex {
                     hash_compressed,
                     compression_level,
                     None,
-                )?;
+                )?; // cov:excl-line
                 streams.insert(tag, Some(Box::new(buffered_writer)));
             } else {
                 streams.insert(tag, None);

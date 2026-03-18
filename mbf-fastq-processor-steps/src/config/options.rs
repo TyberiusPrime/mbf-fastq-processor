@@ -32,13 +32,12 @@ impl FailureOptions {
             .unwrap_or(FailOutputError::DiskFull);
         let error = match failure_error {
             FailOutputError::DiskFull => SimulatedWriteError::RawOs(28),
-            FailOutputError::Other => SimulatedWriteError::Other,
             FailOutputError::RawOs => {
                 let code = self
                     .fail_output_raw_os_code
                     .context(
                         "options.debug_failures.fail_output_raw_os_code required when fail_output_error = 'raw_os'",
-                    )?;
+                    )?; // cov:excl-line
                 SimulatedWriteError::RawOs(code)
             }
         };
@@ -54,7 +53,6 @@ impl FailureOptions {
 #[derive(Debug, Clone, JsonSchema)]
 pub enum FailOutputError {
     DiskFull,
-    Other,
     RawOs,
 }
 

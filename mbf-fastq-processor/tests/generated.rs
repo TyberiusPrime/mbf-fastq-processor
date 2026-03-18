@@ -55,6 +55,26 @@ fn test_cases_x_demultiplex_x_duplicates() {
 }
 
 #[test]
+fn test_cases_x_demultiplex_x_duplicates_with_initial_filter_capacity() {
+    println!("Test case is in: test_cases/demultiplex/duplicates_with_initial_filter_capacity");
+    run_test(
+        std::path::Path::new("../test_cases/demultiplex/duplicates_with_initial_filter_capacity"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_demultiplex_x_error_barcodes_undefined() {
+    println!("Test case is in: test_cases/demultiplex/error_barcodes_undefined");
+    run_test(
+        std::path::Path::new("../test_cases/demultiplex/error_barcodes_undefined"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_demultiplex_x_error_no_upstream() {
     println!("Test case is in: test_cases/demultiplex/error_no_upstream");
     run_test(
@@ -255,6 +275,16 @@ fn test_cases_x_demultiplex_x_simple_no_unmatched() {
 }
 
 #[test]
+fn test_cases_x_demultiplex_x_simple_on_string_tag() {
+    println!("Test case is in: test_cases/demultiplex/simple_on_string_tag");
+    run_test(
+        std::path::Path::new("../test_cases/demultiplex/simple_on_string_tag"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_demultiplex_x_simple_single_barcode() {
     println!("Test case is in: test_cases/demultiplex/simple_single_barcode");
     run_test(
@@ -335,10 +365,22 @@ fn test_cases_x_error_handling_x_misc_x_disk_full_fastq() {
 }
 
 #[test]
-fn test_cases_x_error_handling_x_misc_x_missing_output_dir() {
-    println!("Test case is in: test_cases/error_handling/misc/missing_output_dir");
+fn test_cases_x_error_handling_x_misc_x_missing_output_dir_will_be_created() {
+    println!("Test case is in: test_cases/error_handling/misc/missing_output_dir_will_be_created");
     run_test(
-        std::path::Path::new("../test_cases/error_handling/misc/missing_output_dir"),
+        std::path::Path::new(
+            "../test_cases/error_handling/misc/missing_output_dir_will_be_created",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_error_handling_x_misc_x_too_many_open_files() {
+    println!("Test case is in: test_cases/error_handling/misc/too_many_open_files");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/misc/too_many_open_files"),
         "input.toml",
         1,
     );
@@ -549,6 +591,16 @@ fn test_cases_x_input_x_error_handling_x_input_non_str_value_nested() {
 }
 
 #[test]
+fn test_cases_x_input_x_error_handling_x_input_reserved_segment() {
+    println!("Test case is in: test_cases/input/error_handling/input_reserved_segment");
+    run_test(
+        std::path::Path::new("../test_cases/input/error_handling/input_reserved_segment"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_input_x_error_handling_x_input_str() {
     println!("Test case is in: test_cases/input/error_handling/input_str");
     run_test(
@@ -593,6 +645,26 @@ fn test_cases_x_input_x_interleaved_x_error_mixing_formats() {
     println!("Test case is in: test_cases/input/interleaved/error_mixing_formats");
     run_test(
         std::path::Path::new("../test_cases/input/interleaved/error_mixing_formats"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_input_x_interleaved_x_error_mixing_formats_fasta_fastq() {
+    println!("Test case is in: test_cases/input/interleaved/error_mixing_formats_fasta_fastq");
+    run_test(
+        std::path::Path::new("../test_cases/input/interleaved/error_mixing_formats_fasta_fastq"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_input_x_interleaved_x_error_mixing_formats_fasta_fastq_gz() {
+    println!("Test case is in: test_cases/input/interleaved/error_mixing_formats_fasta_fastq_gz");
+    run_test(
+        std::path::Path::new("../test_cases/input/interleaved/error_mixing_formats_fasta_fastq_gz"),
         "input.toml",
         1,
     );
@@ -653,6 +725,42 @@ fn test_cases_x_input_x_interleaved_x_two_files() {
     println!("Test case is in: test_cases/input/interleaved/two_files");
     run_test(
         std::path::Path::new("../test_cases/input/interleaved/two_files"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_input_x_stdin_x_error_stdin_regular_two_files_one_segement() {
+    println!("Test case is in: test_cases/input/stdin/error_stdin_regular_two_files_one_segement");
+    run_test(
+        std::path::Path::new(
+            "../test_cases/input/stdin/error_stdin_regular_two_files_one_segement",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_input_x_stdin_x_error_stdin_regular_two_files_one_segement_rev() {
+    println!(
+        "Test case is in: test_cases/input/stdin/error_stdin_regular_two_files_one_segement_rev"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/input/stdin/error_stdin_regular_two_files_one_segement_rev",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_input_x_stdin_x_error_stdin_regular_two_segments() {
+    println!("Test case is in: test_cases/input/stdin/error_stdin_regular_two_segments");
+    run_test(
+        std::path::Path::new("../test_cases/input/stdin/error_stdin_regular_two_segments"),
         "input.toml",
         1,
     );
@@ -1404,6 +1512,20 @@ fn test_cases_x_single_step_x_calc_x_expected_error_x_input_error_invalid_qualit
     run_test(
         std::path::Path::new(
             "../test_cases/single_step/calc/expected_error/input_error_invalid_quality",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_calc_x_expected_error_x_input_error_invalid_quality_single_segment() {
+    println!(
+        "Test case is in: test_cases/single_step/calc/expected_error/input_error_invalid_quality_single_segment"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/calc/expected_error/input_error_invalid_quality_single_segment",
         ),
         "input.toml",
         1,
@@ -2478,6 +2600,21 @@ fn test_cases_x_single_step_x_error_handling_x_check_name_collisions_x_segment_b
     run_test(
         std::path::Path::new(
             "../test_cases/single_step/error_handling/check_name_collisions/segment_barcode",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_check_name_collisions_x_segment_barcode_interleaved()
+{
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/check_name_collisions/segment_barcode_interleaved"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/error_handling/check_name_collisions/segment_barcode_interleaved",
         ),
         "input.toml",
         1,
@@ -4389,6 +4526,20 @@ fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_windows_newline
 }
 
 #[test]
+fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_windows_newlines_but_broken() {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/malformed_fastq/windows_newlines_but_broken"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/error_handling/malformed_fastq/windows_newlines_but_broken",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_error_handling_x_misc_x_empty_list_of_files() {
     println!("Test case is in: test_cases/single_step/error_handling/misc/empty_list_of_files");
     run_test(
@@ -4813,6 +4964,20 @@ fn test_cases_x_single_step_x_error_handling_x_output_config_x_undefined_segment
     run_test(
         std::path::Path::new(
             "../test_cases/single_step/error_handling/output_config/undefined_segments",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_output_config_x_undefined_segments_repeated() {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/output_config/undefined_segments_repeated"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/error_handling/output_config/undefined_segments_repeated",
         ),
         "input.toml",
         1,
@@ -5268,6 +5433,20 @@ fn test_cases_x_single_step_x_eval_x_eval_expr_x_eval_expression_bool() {
     println!("Test case is in: test_cases/single_step/eval/eval_expr/eval_expression_bool");
     run_test(
         std::path::Path::new("../test_cases/single_step/eval/eval_expr/eval_expression_bool"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_eval_x_eval_expr_x_eval_expression_bool_as_float() {
+    println!(
+        "Test case is in: test_cases/single_step/eval/eval_expr/eval_expression_bool_as_float"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/eval/eval_expr/eval_expression_bool_as_float",
+        ),
         "input.toml",
         1,
     );
@@ -7008,6 +7187,26 @@ fn test_cases_x_single_step_x_filter_x_low_complexity_x_basic() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_filter_x_low_complexity_x_empty_read() {
+    println!("Test case is in: test_cases/single_step/filter/low_complexity/empty_read");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/filter/low_complexity/empty_read"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_filter_x_low_complexity_x_empty_read_all() {
+    println!("Test case is in: test_cases/single_step/filter/low_complexity/empty_read_all");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/filter/low_complexity/empty_read_all"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_filter_x_max_len() {
     println!("Test case is in: test_cases/single_step/filter/max_len");
     run_test(
@@ -7329,6 +7528,16 @@ fn test_cases_x_single_step_x_filter_x_qualified_bases_x_above() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_filter_x_qualified_bases_x_above_all() {
+    println!("Test case is in: test_cases/single_step/filter/qualified_bases/above_all");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/filter/qualified_bases/above_all"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_filter_x_qualified_bases_x_above_or_equal() {
     println!("Test case is in: test_cases/single_step/filter/qualified_bases/above_or_equal");
     run_test(
@@ -7433,6 +7642,26 @@ fn test_cases_x_single_step_x_hamming_x_basic_correction_keep() {
     println!("Test case is in: test_cases/single_step/hamming/basic_correction_keep");
     run_test(
         std::path::Path::new("../test_cases/single_step/hamming/basic_correction_keep"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_hamming_x_input_label_is_output_label() {
+    println!("Test case is in: test_cases/single_step/hamming/input_label_is_output_label");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/hamming/input_label_is_output_label"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_hamming_x_missing_barcode() {
+    println!("Test case is in: test_cases/single_step/hamming/missing_barcode");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/hamming/missing_barcode"),
         "input.toml",
         1,
     );

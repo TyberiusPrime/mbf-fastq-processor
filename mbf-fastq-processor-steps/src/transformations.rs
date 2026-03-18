@@ -114,11 +114,14 @@ pub struct FragmentEntry<'a>(&'a [&'a [u8]]);
 #[derive(Hash, Debug)]
 pub struct FragmentEntryForCuckooFilter(FragmentEntry<'static>);
 
+// cov:excl-start
+// not sure why coverage isn't seeing it, we need it though to compile.
 impl<'a> std::borrow::Borrow<FragmentEntry<'a>> for FragmentEntryForCuckooFilter {
     fn borrow(&self) -> &FragmentEntry<'a> {
         &self.0
     }
 }
+// cov:excl-stop
 
 impl FragmentEntry<'_> {
     fn to_continuous_vec(&self) -> Vec<u8> {
@@ -271,7 +274,9 @@ pub enum Transformation {
     // //Validation
     #[tpd(alias = "SpotCheckReadNames")]
     ValidateReadPairing(validation::ValidateReadPairing),
+    #[tpd(alias = "ValidateSequence")]
     ValidateSeq(validation::ValidateSeq),
+    #[tpd(alias = "ValidateQual")]
     ValidateQuality(validation::ValidateQuality),
     ValidateName(validation::ValidateName),
     ValidateAllReadsSameLength(validation::ValidateAllReadsSameLength),

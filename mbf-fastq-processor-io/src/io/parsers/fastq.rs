@@ -44,7 +44,7 @@ impl FastqParser {
                         .expect("rapid gzip and stdin not supported"),
                     thread_count,
                     index_gzip,
-                )?;
+                )?; // cov:excl-line
                 reader = Box::new(file);
             } // cov:excl-line
         }
@@ -87,7 +87,7 @@ impl FastqParser {
                     .as_mut()
                     .expect("current_block must be initialized")
                     .block[*start..],
-            )?;
+            )?; // cov:excl-line
 
             if read == 0 {
                 return Ok(false);
@@ -267,7 +267,6 @@ pub fn parse_to_fastq_block(
             _ => false,
         };
         if verify_newline {
-            // debug!("Started within newline");
             if input[pos] != b'\n' {
                 bail!("Expected \\n after \\r in windows mode. Failed around position {pos}");
             }
@@ -487,6 +486,7 @@ pub fn parse_to_fastq_block(
     }
     if let Some(last_read) = last_read {
         last_read.verify().with_context(|| {
+            // cov:excl-start
             format!(
                 "Read was: \nname: {}\n seq: '{}' (len={})\nqual: '{}' (len={}).\nPosition around {}. Org status: {:?}",
                 BString::from(last_read.name.get(input)),
@@ -499,6 +499,7 @@ pub fn parse_to_fastq_block(
 
             )
         })?;
+        // cov:excl-stop
 
         entries.push(last_read);
     }

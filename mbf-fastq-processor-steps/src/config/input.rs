@@ -147,17 +147,18 @@ impl PartialInput {
                     self.segments.state = TomlValueState::ValidationFailed {
                         message: "Invalid use of stdin magic value".to_string(),
                     };
-                    self.segments.help =
-                        Some("'{STDIN_MAGIC_PATH}' requires exactly one input file.".to_string());
-                }
-                if files[0] != STDIN_MAGIC_PATH {
-                    self.segments.state = TomlValueState::ValidationFailed {
-                        message: "Invalid use of stdin magic value".to_string(),
-                    };
                     self.segments.help = Some(format!(
-                        "When using '{STDIN_MAGIC_PATH}' as an input file, it must be the only file listed in the segment. Found additional files: {files:?}"
+                        "'{STDIN_MAGIC_PATH}' requires exactly one input file."
                     ));
                 }
+                // if files[0] != STDIN_MAGIC_PATH {
+                //     self.segments.state = TomlValueState::ValidationFailed {
+                //         message: "Invalid use of stdin magic value".to_string(),
+                //     };
+                //     self.segments.help = Some(format!(
+                //         "When using '{STDIN_MAGIC_PATH}' as an input file, it must be the only file listed in the segment. Found additional files: {files:?}"
+                //     ));
+                // }
             }
             None => {
                 //no segments, no further checking :)

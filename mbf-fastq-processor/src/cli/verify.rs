@@ -51,7 +51,7 @@ pub fn verify_outputs(
         &toml_dir,
         &temp_path,
         do_copy_input_files,
-    )?;
+    )?; // cov:excl-line 
 
     run_prep_if_needed(
         &prep_script,
@@ -912,11 +912,13 @@ impl ExpectedFailure {
                 .context("Read expected failure regex file")?
                 .trim()
                 .to_string();
+            // cov:excl-start
             assert!(
                 content.trim() != "",
                 "{}.txt was empty!",
                 expected_failure_regex_file.display()
             );
+            // cov:excl-stop
             let regex = Regex::new(&content).context("Compile expected failure regex failed")?;
             Ok(Some(ExpectedFailure::Regex(regex)))
         } else {
@@ -926,7 +928,9 @@ impl ExpectedFailure {
 
     fn validate_expected_failure(&self, stderr: &str, temp_toml_path: &Path) -> Result<()> {
         let stderr = if std::env::var("RUST_BACKTRACE").is_ok() {
+            // cov:excl-start
             strip_backtrace(stderr)
+            // cov:excl-stop
         } else {
             Cow::Borrowed(stderr)
         };
@@ -1073,7 +1077,7 @@ fn create_symlinks_for_files(
                     )
                 })?;
                 // cov:excl-stop
-            }
+            } // cov:excl-line
 
             create_symlink(&source_path, &target_path)?;
         }
@@ -1095,7 +1099,7 @@ fn create_symlinks_for_files(
                         )
                     })?;
                     // cov:excl-stop
-                }
+                } // cov:excl-line
 
                 create_symlink(&source_path, &target_path)?;
             }

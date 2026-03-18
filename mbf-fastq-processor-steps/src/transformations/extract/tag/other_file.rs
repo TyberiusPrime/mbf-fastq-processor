@@ -218,7 +218,7 @@ impl Step for OtherFile {
                     self.include_mapped,
                     self.include_unmapped,
                     input_info.use_rapidgzip,
-                )?;
+                )?; // cov:excl-line
             }
             ResolvedSourceNoAll::Name { .. } => {
                 apply_to_read_names(
@@ -237,7 +237,7 @@ impl Step for OtherFile {
                     self.include_mapped,
                     self.include_unmapped,
                     input_info.use_rapidgzip,
-                )?;
+                )?; // cov:excl-line
             }
         }
 

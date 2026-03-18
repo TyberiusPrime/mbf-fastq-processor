@@ -190,9 +190,7 @@ impl Step for Box<EvalExpression> {
         let mut tag_data: Vec<(&str, &Vec<TagValue>)> = Vec::new();
         let mut virtual_tags: Vec<(&str, Vec<TagValue>)> = Vec::new();
 
-        let Some(first_segment) = block.segments.first() else {
-            return Ok((block, true));
-        };
+        let first_segment = block.segments.first().expect("No segment!?");
         let read_count = first_segment.entries.len();
         let base_index = self
             .next_index
@@ -290,12 +288,16 @@ impl Step for Box<EvalExpression> {
 
             let result = match compiled.eval(slab, &mut vars) {
                 Ok(val) => val,
+                // cov:excl-start
+                // when would this occur? We have already checked for
+                // undefined variables.
                 Err(e) => bail!(
                     "EvalExpression: error evaluating expression '{}' for read {}: {}",
                     self.expression,
                     read_idx,
                     e
                 ),
+                // cov:excl-stop
             };
 
             // Convert result to TagValue based on result_type

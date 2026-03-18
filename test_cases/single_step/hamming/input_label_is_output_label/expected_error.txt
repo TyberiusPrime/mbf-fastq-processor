@@ -1,0 +1,23 @@
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+27 │ [[step]]
+28 │     action = 'HammingCorrect'
+   ┆              ────────┬───────
+   ┆                      │
+   ┆                      ╰──────── In this step
+29 │     in_label = 'barcode_extracted'
+   ┆                ─────────┬─────────
+   ┆                         │
+   ┆                         ╰────────── The same as outlabel
+30 │     out_label = 'barcode_extracted'
+   ┆                 ─────────┬─────────
+   ┆                          │
+   ┆                          ╰────────── The same as inlabel
+───╯
+Hint: Please use different tag names for the input and output labels to avoid overwriting the source tag.
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/HammingCorrect
+      Or run: `mbf-fastq-processor template HammingCorrect` for more information.
+
+

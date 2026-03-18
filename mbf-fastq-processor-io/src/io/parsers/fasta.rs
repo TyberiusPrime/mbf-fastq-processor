@@ -45,7 +45,7 @@ impl FastaParser {
                     .expect("rapid gzip and stdin not supported"),
                 thread_count,
                 index_gzip,
-            )?;
+            )?; // cov:excl-line
             reader = Box::new(file);
         }
 
@@ -152,7 +152,7 @@ mod tests {
             10,
             30,
             DecompressionOptions::Default,
-        )?;
+        )?; // cov:excl-line
 
         let ParseResult {
             fastq_block: block,

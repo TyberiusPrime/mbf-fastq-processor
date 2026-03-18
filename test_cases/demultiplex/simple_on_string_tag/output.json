@@ -1,0 +1,42 @@
+{
+  "__": {
+    "version": "0.8.1",
+    "cwd": "/home/user/demultiplex",
+    "input_files": {
+      "interleaved": null,
+      "read1": [
+        "input_read1.fq.gz"
+      ]
+    },
+    "repository": "https://tyberiusprime.github.io/mbf-fastq-processor/"
+  },
+  "start": {
+    "molecule_count": 5
+  },
+  "pre_multiplex": {
+    "molecule_count": 5
+  },
+  "post_multiplex": {
+    "multiplexed": {
+      "no-barcode": {
+        "molecule_count": 1
+      },
+      "aaaa": {
+        "molecule_count": 2
+      },
+      "gggg": {
+        "molecule_count": 2
+      }
+    }
+  },
+  "run_info": {
+    "program_version": "0.8.1",
+    "input_toml": "[input]\n    read1 = 'input_read1.fq.gz'\n\n[output]\n    prefix = 'output'\n    report_json=true\n\n[[step]]\n    action = 'Report'\n    name = 'start'\n\n\n[[step]]\n    action = 'Head'\n    n = 100\n\n[[step]]\n    action = 'Report'\n    name = 'pre_multiplex'\n\n[[step]]\n    action = 'ExtractRegex'\n    source = \"name:read1\"\n    query = \"\\\\d(..) \"\n    replacement = \"$1\"\n    out_label = 'demult'\n\n\n[[step]]\n  action = 'StoreTagsInTable'\n\n[[step]]\n    action = 'Demultiplex'\n    in_label = 'demult'\n    output_unmatched = true\n\tbarcodes = 'demultiplex'\n\n[barcodes.demultiplex]\n    CT = 'aaaa'\n    GG = 'gggg'\n\n[[step]]\n    action = 'Head'\n    n = 10\n\n[[step]]\n    action = 'Report' # max 10 output reads\n    name = 'post_multiplex'\n",
+    "working_directory": "/home/user/demultiplex"
+  },
+  "report_order": [
+    "start",
+    "pre_multiplex",
+    "post_multiplex"
+  ]
+}

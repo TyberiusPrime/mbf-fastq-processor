@@ -1,0 +1,15 @@
+[input]
+    read1 = "input_read1.fq"
+
+[options.debug_failures]
+  fail_output_after_bytes = 0
+  fail_output_error = "RawOs"
+  fail_output_raw_os_code = 122# quota exceeded
+
+
+[[step]]
+    action = "Head"
+    n = 2
+
+[output]
+    prefix = "output"

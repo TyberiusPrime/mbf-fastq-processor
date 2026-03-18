@@ -424,7 +424,7 @@ impl OutputFileConfig {
                 self.do_compressed_hash,
                 self.compression_level,
                 self.simulated_failure.as_ref(),
-            )?),
+            )?), // cov:excl-line
             FileFormat::Fastq => {
                 OutputFileHandle::Fastq(OutputWriter::File(HashedAndCompressedWriter::new(
                     file_handle,
@@ -434,7 +434,7 @@ impl OutputFileConfig {
                     self.compression_level,
                     self.compression_threads,
                     self.simulated_failure.clone(),
-                )?))
+                )?)) // cov:excl-line
             }
             FileFormat::Fasta => {
                 OutputFileHandle::Fasta(OutputWriter::File(HashedAndCompressedWriter::new(
@@ -445,7 +445,7 @@ impl OutputFileConfig {
                     self.compression_level,
                     self.compression_threads,
                     self.simulated_failure.clone(),
-                )?))
+                )?)) // cov:excl-line
             }
             // cov:excl-start
             FileFormat::None => unreachable!("Cannot create output file with format 'None'"),
@@ -507,7 +507,9 @@ impl OutputFileConfig {
                 self.directory.display()
             )
             // cov:excl-stop
-        })? {
+        })?
+        // cov:excl-line
+        {
             let entry = entry.with_context(|| {
                 // cov:excl-start
                 format!(
@@ -515,7 +517,7 @@ impl OutputFileConfig {
                     self.directory.display()
                 )
                 // cov:excl-stop
-            })?;
+            })?; // cov:excl-line
             let path = entry.path();
             old_files.push(path);
         }
@@ -560,7 +562,7 @@ impl OutputFileConfig {
                             new_filename.display()
                         )
                         // cov:excl-stop
-                    })?;
+                    })?; // cov:excl-line
                 }
             }
         }
@@ -582,7 +584,7 @@ fn build_bam_output<'a>(
         None,
         None,
         simulated_failure.cloned(),
-    )?;
+    )?; // cov:excl-line
 
     let bgzf_writer = match compression_level {
         Some(level) => {
@@ -674,7 +676,7 @@ impl OutputReports {
                         // cov:excl-start
                         format!("Could not open output file: {}", filename.display())
                         // cov:excl-stop
-                    })?,
+                    })?, // cov:excl-line
                 ))
             } else {
                 None
@@ -687,7 +689,7 @@ impl OutputReports {
                         // cov:excl-start
                         format!("Could not open output file: {}", filename.display())
                         // cov:excl-stop
-                    })?,
+                    })?, // cov:excl-line
                 ))
             } else {
                 None
@@ -730,7 +732,7 @@ fn open_one_set_of_output_files(
                             false,
                             output_config.compression_level,
                             output_config.compression_threads,
-                        )?)
+                        )?) // cov:excl-line
                     } else if let Some(interleaved_segments) = &output_config.interleave {
                         //interleaving is handled by outputing both to the read1 output
                         ////interleaving requires read2 to be set, checked in validation
@@ -756,7 +758,7 @@ fn open_one_set_of_output_files(
                             // so the you end up with with the same number of files if you mix
                             // interleaved and non-interleaved output
                             output_config.chunksize.map(|x| x * interleave_count),
-                        )?)
+                        )?) // cov:excl-line
                     } else {
                         None
                     };
@@ -848,7 +850,7 @@ pub fn open_output_files(
             report_html,
             report_json,
             allow_overwrite,
-        )?,
+        )?, // cov:excl-line
         None =>
         // cov:excl-start
         {
@@ -885,7 +887,7 @@ pub fn open_output_files(
                         output_directory,
                         Some(output_key),
                         allow_overwrite,
-                    )?));
+                    )?)); // cov:excl-line
                     res.insert(*tag, output);
                 }
             }
@@ -927,7 +929,7 @@ pub fn output_block(
                     interleave_order,
                     Some(*tag),
                     buffer_size,
-                )?;
+                )?; // cov:excl-line
             }
         }
     }
@@ -972,7 +974,7 @@ fn output_block_demultiplex(
             buffer_size,
             tag,
             block.output_tags.as_ref(),
-        )?;
+        )?; // cov:excl-line
     }
     Ok(())
 }
@@ -1144,7 +1146,7 @@ fn output_block_interleaved(
                 blocks_to_interleave,
                 demultiplex_tag,
                 output_tags,
-            )?;
+            )?; // cov:excl-line
             buffer.clear();
             Ok(())
         }

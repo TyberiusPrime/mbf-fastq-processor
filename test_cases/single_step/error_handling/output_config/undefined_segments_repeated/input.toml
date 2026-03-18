@@ -1,0 +1,8 @@
+[input]
+	read1 = 'input_uncompressed_1.fq'
+	read2 = 'input_uncompressed_2.fq'
+
+[output]
+	prefix = 'output'
+	compression = 'gz'
+    output = ['no-such-segment', 'read1', 'read1',' no-such-segment']

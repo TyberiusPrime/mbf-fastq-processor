@@ -5,7 +5,7 @@ read2 = ['input_read2.fq.zst', 'input_read1.fq.zst']
 
 [options]
 accept_duplicate_files = true
-buffer_size=1024
+buffer_size=52
 block_size=12
 
 [output]

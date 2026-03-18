@@ -7,7 +7,7 @@ use mbf_fastq_processor_config::{
     default_block_size, default_buffer_size, default_output_buffer_size,
     default_spot_check_read_pairing,
 };
-use mbf_fastq_processor_dna::dna::{all_iupac_or_underscore, iupac_overlapping};
+use mbf_fastq_processor_dna::dna::iupac_overlapping;
 use mbf_fastq_processor_io::io::{self, DetectedInputFormat};
 use mbf_fastq_processor_io::{CompressionFormat, FileFormat};
 use schemars::JsonSchema;
@@ -234,7 +234,7 @@ impl PartialConfig {
                             } // cov:excl-line
                         }
                     }
-                }
+                } // cov:excl-line
             }
             for (_filename, spans) in seen_files {
                 if spans.len() > 1 {
@@ -323,10 +323,13 @@ impl PartialConfig {
                 spans.push((tv_report_json.span(), "Set to true?".to_string()));
             }
             if spans.is_empty() {
-                spans.push((
-                    self.output.span(),
-                    "Missing report_html | report_json = true?".to_string(),
-                ));
+                // cov:excl-start
+                unreachable!("report_html or report_json was true")
+                // cov:excl-stop
+                // spans.push((
+                //     self.output.span(),
+                //     "Missing report_html | report_json = true?".to_string(),
+                // ));
             }
             self.output.state = TomlValueState::Custom { spans };
             self.output.help =
@@ -507,14 +510,15 @@ impl PartialConfig {
                 if let Some(barcodes) = tv_barcodes.as_mut()
                     && let Some(barcodes) = barcodes.barcode_to_name.as_mut()
                 {
-                    for key in &mut barcodes.keys {
-                        if let Some(key_str) = key.as_ref()
-                            && !all_iupac_or_underscore(key_str.as_bytes())
-                        {
-                            key.state = TomlValueState::new_validation_failed("Invalid value");
-                            key.help = Some("Barcode contains non-IUPAC / spacer characters. Only A,C,G,T, IUPAC ambiguity codes and '_' are allowed.".to_string());
-                        }
-                    }
+                    // tested in VerifyPartialBarcodes
+                    // for key in &mut barcodes.keys {
+                    //     if let Some(key_str) = key.as_ref()
+                    //         && !all_iupac_or_underscore(key_str.as_bytes())
+                    //     {
+                    //         key.state = TomlValueState::new_validation_failed("Invalid value");
+                    //         key.help = Some("Barcode contains non-IUPAC / spacer characters. Only A,C,G,T, IUPAC ambiguity codes and '_' are allowed.".to_string());
+                    //     }
+                    // }
                     if barcodes.map.is_empty() {
                         tv_barcodes.state = TomlValueState::new_validation_failed(
                             "At least one barcode mapping must be provided",
@@ -603,7 +607,7 @@ impl PartialConfig {
                                 segment_names.insert(segment.clone(), tv_segment);
                             }
                         }
-                    }
+                    } // cov:excl-line
                 }
                 StructuredInput::Segmented { .. } => {
                     if let Some(segments) = input.segments.as_mut() {
@@ -1456,7 +1460,7 @@ impl Config {
                                   ), */
                             }
                         }
-                    }
+                    } // cov:excl-line
                 }
             }
         }

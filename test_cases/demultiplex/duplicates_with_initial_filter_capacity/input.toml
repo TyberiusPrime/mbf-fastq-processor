@@ -1,0 +1,41 @@
+[input]
+    read1 = 'input_read1.fq.zst'
+
+
+[[step]]
+    action='ExtractRegion'
+    anchor = "Start"
+    segment = 'read1'
+    start = 0
+    length = 1
+    out_label = 'x'
+
+
+[[step]]
+    action = 'Demultiplex'
+    in_label = 'x'
+	barcodes = 'd'
+    output_unmatched = true
+
+[barcodes.d]
+    C = 'rc'
+    A = 'ra'
+    G = 'rg'
+
+[[step]]
+	action = 'TagDuplicates'
+	source = 'read1'
+	out_label = 'dup'
+	false_positive_rate = 0.0001
+    seed = 12
+    # same outcome, but triggers the other code path in calculate_filter_capacity
+    initial_filter_capacity = 100_000
+
+
+[[step]]
+	action = 'StoreTagInComment'
+	in_label='dup'
+
+[output]
+    prefix = 'output'
+	compression='Zst'

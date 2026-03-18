@@ -1,0 +1,37 @@
+Error Details ==
+Error 1/2
+   ╭─config.toml
+   ┆
+ 7 │ [[step]]
+ 8 │     action = 'Demultiplex'
+   ┆              ──────┬──────
+   ┆                    │
+   ┆                    ╰─────── In this step
+   ┆
+ 9 │     barcodes = "no_such_barcodes"
+10 │     output_unmatched = false
+   ┆                             ┬
+   ┆                             │
+   ┆                             ╰─ Missing required key: 'in_label'.
+───╯
+Hint: See https://doc_url.example/version-stripped-from-test/docs/redirects/Demultiplex
+      Or run: `mbf-fastq-processor template Demultiplex` for more information.
+
+Error 2/2
+  ╭─config.toml
+  ┆
+7 │ [[step]]
+8 │     action = 'Demultiplex'
+  ┆              ──────┬──────
+  ┆                    │
+  ┆                    ╰─────── In this step
+9 │     barcodes = "no_such_barcodes"
+  ┆                ─────────┬────────
+  ┆                         │
+  ┆                         ╰───────── Unknown barcode section
+──╯
+Hint: There is no valid [barcodes.<barcodes_name>] section in your TOML. Add one.
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/Demultiplex
+      Or run: `mbf-fastq-processor template Demultiplex` for more information.
+
+

@@ -1,0 +1,9 @@
+[input]
+    segs = 'sample_data/ten_reads.fq'
+    interleaved = ['read1','read2']
+
+[barcodes.read1]
+  AGT = "ATC"
+
+[output]
+    prefix = 'output'

@@ -2,10 +2,6 @@
     read1 = 'input_read1.fq'
 
 [[step]]
-    action = 'Head'
-    n = 2
-
-[[step]]
     action = 'CalcBaseContent'
     out_label = 'at_content'
     bases_to_count = 'AT'

@@ -1,0 +1,39 @@
+[input]
+    read1 = 'input_read1.fq'
+    read2 = 'input_read1.fq'
+
+[options]
+  accept_duplicate_files = true
+
+[[step]]
+    action = 'CalcQualifiedBases'
+	out_label = 'qb'
+    threshold='C'
+	op = 'above'
+  segment = 'all'
+
+[[step]]
+	action = 'CalcLength'
+	segment = 'all'
+	out_label = 'length'
+
+[[step]]
+	action = 'EvalExpression'
+	out_label = 'qbr'
+	expression = 'qb / length'
+	result_type= 'numeric'
+
+
+# [[step]]
+# 	action = 'StoreTagsInTable'
+# infix = 'debug'
+
+[[step]]
+	action = "FilterByNumericTag"
+	in_label = 'qbr'
+    min_value = 0.019
+	keep_or_remove = 'keep'
+
+
+[output]
+    prefix = 'output'

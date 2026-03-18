@@ -215,6 +215,7 @@ impl WorkpoolCoordinator {
                             }
                             Err(_) => {
                                 // Output pipe crashed?
+                                // cov:excl-start
                                 self
                                     .error_collector
                                     .lock()
@@ -224,6 +225,7 @@ impl WorkpoolCoordinator {
                                             .to_string(),
                                     );
                                 break;
+                                // cov:excl-stop
                             }
                         }
                     }
@@ -592,12 +594,14 @@ fn process_work_item(
                 .values()
                 .map(std::vec::Vec::len)
                 .all_equal();
+            // cov:excl-start
             assert!(
                 all_tag_lengths_equal,
                 "Unequal tag lengths after stage {:?}:. Tags: {:?}. This is a bug!. \n\
                 Best case it needs to declare must_see_all_tags=true in TagUser::get_tag_usage()",
                 stage.transformation, result_block.tags
             );
+            // cov:excl-stop
             if let Some(tag_len) = result_block.tags.values().next().map(std::vec::Vec::len) {
                 //cov:excl-start
                 assert!(

@@ -1,0 +1,14 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'CalcComplexity'
+    out_label = 'low_complexity_ratio'
+
+[[step]]
+    action = 'StoreTagInComment'
+    in_label = 'low_complexity_ratio'
+
+
+[output]
+    prefix = 'output'
