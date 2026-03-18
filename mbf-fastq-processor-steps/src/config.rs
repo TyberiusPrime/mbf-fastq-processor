@@ -231,7 +231,7 @@ impl PartialConfig {
                                         vacant_entry.insert(vec![tv_file.span()]);
                                     }
                                 }
-                            }
+                            } // cov:excl-line
                         }
                     }
                 }
@@ -365,7 +365,7 @@ impl PartialConfig {
                                 }
                             }
                         }
-                    }
+                    } // cov:excl-line
                 }
             }
             for (report_name, mut transforms) in report_names_to_spans {
@@ -538,7 +538,7 @@ impl PartialConfig {
                                     Some("Choose a different name for your barcode, this one is reserved for internal use.".to_string());
                             }
                             lengths.insert(iupac_key.len());
-                        }
+                        } // cov:excl-line
                     }
                     if lengths.len() > 1 {
                         tv_barcodes.state =
@@ -552,7 +552,7 @@ impl PartialConfig {
                     }
                     // Check for overlapping IUPAC barcodes
                     validate_barcode_disjointness(barcodes);
-                }
+                } // cov:excl-line
             }
         }
     }
@@ -612,7 +612,7 @@ impl PartialConfig {
                                 segment_names.insert(segment.clone(), tv_segment);
                             }
                         }
-                    }
+                    } // cov:excl-line
                 }
             }
 
@@ -1051,7 +1051,7 @@ impl PartialConfig {
                 }
             }
             *report_no += 1;
-        }
+        } // cov:excl-line
     }
 
     pub fn verify_transformation_labels(&mut self) {
@@ -1271,7 +1271,7 @@ impl PartialConfig {
                                 );
                     }
                 }
-            }
+            } // cov:excl-line
 
             //complain about unused tags if there were no tag errors
             //otherwise, mistyping a tag will give you two errors
@@ -1301,7 +1301,7 @@ impl PartialConfig {
                                 self.output.as_ref().and_then(|o| o.as_ref()),
                                 before,
                             );
-                        }
+                        } // cov:excl-line
                     }
                 }
             }

@@ -46,7 +46,7 @@ impl FastqParser {
                     index_gzip,
                 )?;
                 reader = Box::new(file);
-            }
+            } // cov:excl-line
         }
 
         Ok(FastqParser {

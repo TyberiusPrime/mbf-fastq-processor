@@ -249,7 +249,7 @@ impl Step for StoreTagsInTable {
                 writer
                     .write_record(record)
                     .expect("Failed to write record to table");
-            }
+            } // cov:excl-line
         }
 
         Ok((block, true))

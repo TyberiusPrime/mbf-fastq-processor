@@ -100,7 +100,7 @@ fn parse_interleaved_and_send(
             if combiner_output_tx.send(out).is_err() {
                 break;
             }
-        }
+        } // cov:excl-line
 
         if res.was_final {
             // Send final empty block

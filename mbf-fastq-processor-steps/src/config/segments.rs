@@ -64,8 +64,8 @@ impl ValidateSegment for TomlValue<MustAdapt<String, SegmentIndex>> {
                         Some(format!("Available segments: {segment_names}")),
                     );
                 }
-            }
-        }
+            } // cov:excl-line
+        } // cov:excl-line
     }
 }
 

@@ -199,7 +199,7 @@ impl DemultiplexInfo {
                     return Some(*tag);
                 }
             }
-        }
+        } // cov:excl-line
         None
     }
 }

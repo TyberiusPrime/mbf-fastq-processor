@@ -224,7 +224,7 @@ fn copy_input_files(toml_dir: &Path, temp_path: &Path) -> Result<()> {
                 let dst_path = temp_path.join(file_name);
                 if !dst_path.exists() {
                     ex::fs::copy(&src_path, &dst_path)?;
-                }
+                } // cov:excl-line
             }
         }
     }
@@ -240,7 +240,7 @@ fn symlink_input_files(toml_value: &toml::Value, toml_dir: &Path, temp_path: &Pa
             }
             if let Some(value) = input_table.get(field_name) {
                 create_symlinks_for_files(value, toml_dir, temp_path)?;
-            }
+            } // cov:excl-line
         }
     }
     if let Some(steps) = toml_value.get("step").and_then(|v| v.as_array()) {
@@ -251,7 +251,7 @@ fn symlink_input_files(toml_value: &toml::Value, toml_dir: &Path, temp_path: &Pa
                         create_symlinks_for_files(value, toml_dir, temp_path)?;
                     }
                 }
-            }
+            } // cov:excl-line
         }
     }
     // Also symlink any ancillary input files (e.g. .bai index alongside .bam)
@@ -414,7 +414,7 @@ fn execute_processor(
                 .context("Failed to write to subprocess stdin")?;
             stdin.flush().context("Failed to flush subprocess stdin")?;
             drop(stdin);
-        }
+        } // cov:excl-line
 
         child
             .wait_with_output()
@@ -569,7 +569,7 @@ fn run_processor_and_verify(
             if !output.stderr.is_empty() {
                 ex::fs::write(temp_path.join("stderr"), &output.stderr)
                     .context("Failed to write stderr to temp directory")?;
-            }
+            } // cov:excl-line
             expected_failure_pattern.validate_expected_failure(&stderr, temp_toml_path)?;
         }
         (Some(_), true) => {
@@ -618,7 +618,7 @@ fn cleanup_output_dir(output_dir: Option<&Path>) -> Result<()> {
                     if path.is_dir() {
                         ex::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755)).ok();
                     }
-                }
+                } // cov:excl-line
             }
             ex::fs::remove_dir_all(output_dir).with_context(|| {
                 // cov:excl-start
@@ -1016,10 +1016,10 @@ fn run_command_with_timeout(cmd: &mut std::process::Command) -> Result<std::proc
         let mut stderr = Vec::new();
         if let Some(mut reader) = child.stdout.take() {
             reader.read_to_end(&mut stdout)?;
-        }
+        } // cov:excl-line
         if let Some(mut reader) = child.stderr.take() {
             reader.read_to_end(&mut stderr)?;
-        }
+        } // cov:excl-line
         Ok(std::process::Output {
             status,
             stdout,

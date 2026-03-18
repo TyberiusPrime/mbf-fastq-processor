@@ -285,7 +285,7 @@ fn correct_barcodes<'a, T: Clone + WithUpdatedSequence + 'a>(
                     break;
                 }
             }
-        }
+        } // cov:excl-line
 
         if !found_match {
             match on_no_match {

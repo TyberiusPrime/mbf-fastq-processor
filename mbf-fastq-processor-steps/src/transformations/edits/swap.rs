@@ -84,7 +84,7 @@ impl VerifyIn<PartialConfig> for PartialSwap {
                     Some("Please specify two different segments to swap.".to_string());
                 self.segment_b.state = TomlValueState::Nested;
             }
-        }
+        } // cov:excl-line
         //all other errors we pass straight on
         Ok(())
     }

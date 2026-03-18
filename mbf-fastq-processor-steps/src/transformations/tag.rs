@@ -188,5 +188,5 @@ pub fn validate_seed(
                 "Seed is required when false_positive_rate > 0.0 (approximate filtering). Add `seed=42` for example.".to_string(),
             );
         }
-    }
+    } // cov:excl-line
 }

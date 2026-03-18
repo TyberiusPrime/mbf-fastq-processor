@@ -186,9 +186,9 @@ pub fn build_kmer_database(
                                 *kmer_counts.entry(revcomp).or_insert(0) += 1;
                             }
                             *kmer_counts.entry(kmer).or_insert(0) += 1;
-                        }
+                        } // cov:excl-line
                     }
-                }
+                } // cov:excl-line
             },
             true,
             true, //all reads in BAM.

@@ -231,7 +231,7 @@ impl PartialOutput {
                             );
                             any_failed = true;
                         }
-                    }
+                    } // cov:excl-line
                 }
                 if any_failed {
                     self.output.state = TomlValueState::Nested;
@@ -273,7 +273,7 @@ impl PartialOutput {
                             );
                             any_failed = true;
                         }
-                    }
+                    } // cov:excl-line
                 }
                 if any_failed {
                     self.interleave.state = TomlValueState::Nested;

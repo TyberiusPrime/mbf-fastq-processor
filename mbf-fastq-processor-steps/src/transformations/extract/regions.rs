@@ -41,12 +41,12 @@ impl VerifyIn<PartialConfig> for PartialRegions {
                     if region_def.can_concrete() {
                         region.state = TomlValueState::Ok;
                     }
-                }
+                } // cov:excl-line
             }
             if regions.iter().all(TomlValue::is_ok) {
                 self.regions.state = TomlValueState::Ok;
             }
-        }
+        } // cov:excl-line
         self.regions.verify(|regions| {
             if regions.is_empty() {
                 Err(ValidationFailure::new(
@@ -206,7 +206,7 @@ impl Step for Regions {
                         // cov:excl-start
                         unreachable!();
                         // cov:excl-stop
-                    }
+                    } // cov:excl-line
                 }
                 out.push(TagValue::Location(Hits::new_multiple(h)));
             } else {

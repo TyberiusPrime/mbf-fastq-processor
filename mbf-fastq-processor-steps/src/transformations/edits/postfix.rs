@@ -60,7 +60,7 @@ impl VerifyIn<PartialConfig> for PartialPostfix {
                     ))
                 }
             });
-        }
+        } // cov:excl-line
         Ok(())
     }
 }

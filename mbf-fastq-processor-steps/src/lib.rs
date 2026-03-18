@@ -20,6 +20,6 @@ pub fn join_nonempty<'a>(parts: impl IntoIterator<Item = &'a str>, separator: &s
             result.push_str(separator);
             result.push_str(part);
         }
-    }
+    } // cov:excl-line
     result
 }

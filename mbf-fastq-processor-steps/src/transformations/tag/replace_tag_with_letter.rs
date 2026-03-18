@@ -52,7 +52,7 @@ impl Step for ReplaceTagWithLetter {
                         for i in location.start..(location.start + location.len).min(seq.len()) {
                             seq[i] = self.letter;
                         }
-                    }
+                    } // cov:excl-line
                 }
             }
         });

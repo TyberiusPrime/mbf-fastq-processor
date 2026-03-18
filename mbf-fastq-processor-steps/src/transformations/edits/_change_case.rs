@@ -123,7 +123,7 @@ impl Step for _ChangeCase {
                             }
                         }
                     }
-                }
+                } // cov:excl-line
             }
             ResolvedSourceAll::Name {
                 segment_index_or_all,

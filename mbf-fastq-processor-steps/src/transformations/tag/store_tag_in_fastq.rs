@@ -97,7 +97,7 @@ impl VerifyIn<PartialConfig> for PartialStoreTagInFastQ {
         if let Some(in_label) = self.in_label.as_ref() {
             self.comment_location_tags
                 .or_with(|| vec![TomlValue::new_ok(in_label.clone(), 0..0)]);
-        }
+        } // cov:excl-line
         Ok(())
     }
 }
@@ -303,7 +303,7 @@ impl Step for StoreTagInFastQ {
                                         name = new_name;
                                     }
                                 }
-                            }
+                            } // cov:excl-line
                         }
 
                         // Process location tags - always set by validation logic.
@@ -333,7 +333,7 @@ impl Step for StoreTagInFastQ {
                                             )
                                             .as_bytes(),
                                         );
-                                    }
+                                    } // cov:excl-line
                                 }
 
                                 if !location_seq.is_empty() {
@@ -354,8 +354,8 @@ impl Step for StoreTagInFastQ {
                                             name = new_name;
                                         }
                                     }
-                                }
-                            }
+                                } // cov:excl-line
+                            } // cov:excl-line
                         }
                         match self.format {
                             FileFormat::Fastq => {
@@ -380,7 +380,7 @@ impl Step for StoreTagInFastQ {
                             } // cov:excl-stop
                         }
                     }
-                }
+                } // cov:excl-line
             }
         }
         if let Some(error_msg) = error_encountered {

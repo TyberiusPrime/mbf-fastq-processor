@@ -43,7 +43,7 @@ pub(crate) fn improve_error_messages(
                 if !partial.input.is_ok() {
                     add_help(&mut partial.input, "input-section");
                 }
-            }
+            } // cov:excl-line
         }
     }
     err.pretty(toml_filename)

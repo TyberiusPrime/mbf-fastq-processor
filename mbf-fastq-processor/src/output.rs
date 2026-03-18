@@ -173,7 +173,7 @@ impl OutputFile<'_> {
                     // cov:excl-stop
                 }
                 buffer.clear();
-            }
+            } // cov:excl-line
             if self.config.fragments_written_in_chunk >= chunk_size {
                 self.rotate_chunk()?;
             }

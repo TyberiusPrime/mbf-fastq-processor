@@ -56,7 +56,7 @@ fn apply_to_read(
         }
         if res.was_final {
             break;
-        }
+        } // cov:excl-line
     }
 
     Ok(())

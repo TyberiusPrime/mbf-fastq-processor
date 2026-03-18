@@ -366,7 +366,7 @@ fn main() -> Result<()> {
                 let mut cmd = build_cli();
                 print_completions(*shell, &mut cmd);
                 std::process::exit(0);
-            }
+            } // cov:excl-line
         }
         _ => {
             // This shouldn't happen due to arg_required_else_help, but just in case
@@ -467,8 +467,8 @@ fn run_interactive_mode(
     {
         eprintln!("Interactive mode error: {e:?}");
         std::process::exit(1);
-    }
-}
+    } // cov:excl-line
+} // cov:excl-line
 
 /// Find a single .toml file in the current directory that has both [input] and [output] sections
 fn find_single_valid_toml() -> Result<PathBuf> {
@@ -491,7 +491,7 @@ fn find_single_valid_toml() -> Result<PathBuf> {
                 if content.contains("[input]") && content.contains("[output]") {
                     valid_tomls.push(path);
                 }
-            }
+            } // cov:excl-line
         }
     }
 

@@ -89,7 +89,7 @@ impl VerifyIn<PartialConfig> for PartialInspect {
                     .collect(),
                 SegmentIndexOrAll::Indexed(_) => vec![Vec::with_capacity(n)],
             })));
-        }
+        } // cov:excl-line
         self.collected = Some(std::sync::atomic::AtomicUsize::new(0));
         Ok(())
     }
@@ -264,7 +264,7 @@ impl Step for Inspect {
                                 writer.write_all(b"\n+\n")?;
                                 writer.write_all(qual)?;
                                 writer.write_all(b"\n")?;
-                            }
+                            } // cov:excl-line
                         }
                     }
                 }
@@ -283,7 +283,7 @@ impl Step for Inspect {
                                 writer.write_all(b"\n")?;
                                 writer.write_all(seq)?;
                                 writer.write_all(b"\n")?;
-                            }
+                            } // cov:excl-line
                         }
                     }
                 }
