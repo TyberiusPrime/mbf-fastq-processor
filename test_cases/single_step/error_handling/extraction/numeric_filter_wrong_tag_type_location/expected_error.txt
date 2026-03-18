@@ -1,0 +1,23 @@
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+12 │ [[step]]
+13 │     action = 'FilterByNumericTag'
+   ┆              ──────────┬─────────
+   ┆                        │
+   ┆                        ╰────────── In this step
+   ┆
+14 │     keep_or_remove = 'Keep'
+15 │     in_label = 'is_duplicate'
+   ┆                ───────┬──────
+   ┆                       │
+   ┆                       ╰─────── Incompatible tag type
+───╯
+Hint: This transform requires tag 'is_duplicate' to be one of the following types: [Numeric],
+      but it is actually of type 'Location'.
+      Either switch to FilterByTag, or change the tag you are filtering on.
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/FilterByNumericTag
+      Or run: `mbf-fastq-processor template FilterByNumericTag` for more information.
+
+

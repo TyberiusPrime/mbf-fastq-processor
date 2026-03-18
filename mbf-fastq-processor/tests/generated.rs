@@ -305,6 +305,16 @@ fn test_cases_x_error_handling_x_bam_x_disk_full_bam() {
 }
 
 #[test]
+fn test_cases_x_error_handling_x_declared_tag_an_int() {
+    println!("Test case is in: test_cases/error_handling/declared_tag_an_int");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/declared_tag_an_int"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_error_handling_x_duplicate_tag_name() {
     println!("Test case is in: test_cases/error_handling/duplicate_tag_name");
     run_test(
@@ -3025,6 +3035,21 @@ fn test_cases_x_single_step_x_error_handling_x_extraction_x_numeric_filter_wrong
     run_test(
         std::path::Path::new(
             "../test_cases/single_step/error_handling/extraction/numeric_filter_wrong_tag_type",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_extraction_x_numeric_filter_wrong_tag_type_location()
+{
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/extraction/numeric_filter_wrong_tag_type_location"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/error_handling/extraction/numeric_filter_wrong_tag_type_location",
         ),
         "input.toml",
         1,

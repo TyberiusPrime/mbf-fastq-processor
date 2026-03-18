@@ -1,0 +1,14 @@
+[input]
+  read1 = 'input_read1.fq'
+
+
+[[step]]
+  action = "EvalExpression"
+  expr = "5"
+  out_label = 55
+  result_type = 'numeric'
+
+
+[output]
+  prefix = 'output'
+  

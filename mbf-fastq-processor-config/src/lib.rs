@@ -156,7 +156,9 @@ pub struct UsedTag<'a> {
 impl UsedTag<'_> {
     pub fn add_help(mut self, line: impl AsRef<str>) -> Self {
         self.further_help = match self.further_help.take() {
+            //cov:excl-start
             Some(existing) => Some(format!("{}\n{}", existing, line.as_ref())),
+            // cov:excl-stop
             None => Some(line.as_ref().to_string()),
         };
         self
@@ -380,7 +382,13 @@ impl ToDeclaredTag for TomlValue<TagLabel> {
                 toml_source_span: span,
             })
         } else {
-            None
+            // cov:excl-start
+            // with the current layout, get_tag_usage is only called
+            // when the step is ok, and that's only true if the declared_tag is ok,
+            // and as_ref() then works.
+            // this will complain if it's ever triggered.
+            unreachable!("If now reachable, replace with returning None");
+            // cov:excl-stop
         }
     }
 }

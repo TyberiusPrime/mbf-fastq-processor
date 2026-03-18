@@ -1,0 +1,19 @@
+[input]
+    'read1' = 'input_read1.fq'
+
+[[step]]
+    action = 'ExtractRegion'
+    start = 0
+    len = 5
+    anchor ='start'
+    source = 'read1'
+    out_label = 'is_duplicate'
+
+[[step]]
+    action = 'FilterByNumericTag'
+    keep_or_remove = 'Keep'
+    in_label = 'is_duplicate'
+    min_value = 1.0
+
+[output]
+    prefix = 'output'

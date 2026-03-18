@@ -1,0 +1,21 @@
+Error Details ==
+Error 1/1
+  ╭─config.toml
+  ┆
+5 │ [[step]]
+6 │   action = "EvalExpression"
+  ┆            ────────┬───────
+  ┆                    │
+  ┆                    ╰──────── In this step
+  ┆
+7 │   expr = "5"
+8 │   out_label = 55
+  ┆               ─┬
+  ┆                │
+  ┆                ╰─ Wrong type: expected string, found integer.
+──╯
+Hint: This value has the wrong type.
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/EvalExpression
+      Or run: `mbf-fastq-processor template EvalExpression` for more information.
+
+
