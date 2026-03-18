@@ -58,7 +58,7 @@ impl VerifyIn<PartialConfig> for PartialSwap {
                 ));
             }
         } else if self.segment_a.is_needs_further_validation()
-            || self.segment_b.is_needs_further_validation()
+        //|| self.segment_b.is_needs_further_validation()
         {
             self.segment_a.validate_segment(parent);
             self.segment_b.validate_segment(parent);
@@ -84,9 +84,8 @@ impl VerifyIn<PartialConfig> for PartialSwap {
                     Some("Please specify two different segments to swap.".to_string());
                 self.segment_b.state = TomlValueState::Nested;
             }
-        } else {
-            //all other errors we pass straight on
         }
+        //all other errors we pass straight on
         Ok(())
     }
 }

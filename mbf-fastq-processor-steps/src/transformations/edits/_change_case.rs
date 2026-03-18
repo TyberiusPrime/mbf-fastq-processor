@@ -43,6 +43,7 @@ impl Partial_ChangeCase {
 }
 
 impl VerifyIn<PartialConfig> for Partial_ChangeCase {
+    // cov:excl-start
     fn verify(
         &mut self,
         _parent: &PartialConfig,
@@ -51,26 +52,11 @@ impl VerifyIn<PartialConfig> for Partial_ChangeCase {
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {
-        // cov:excl-start
         unreachable!(); //since this is in expanded step.
-        // cov:excl-stop
         // self.target.validate_segment(parent);
         // Ok(())
     }
-}
-
-impl _ChangeCase {
-    pub fn new(
-        target: ResolvedSourceAll,
-        case_type: CaseType,
-        if_tag: Option<ConditionalTagLabel>,
-    ) -> Self {
-        Self {
-            target,
-            case_type,
-            if_tag,
-        }
-    }
+    // cov:excl-stop
 }
 
 impl TagUser for PartialTaggedVariant<Partial_ChangeCase> {

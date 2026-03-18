@@ -25,16 +25,16 @@ impl VerifyIn<PartialConfig> for PartialCutStart {
         Self: Sized + toml_pretty_deser::Visitor,
     {
         self.segment.validate_segment(parent);
-        self.n.verify(|v| {
-            if *v == 0 {
-                Err(ValidationFailure::new(
-                    "n must be > 0",
-                    Some("Set to a positive integer."),
-                ))
-            } else {
-                Ok(())
-            }
-        });
+        // self.n.verify(|v| { cutting 0 is fine, if no-opy.
+        //     if *v == 0 {
+        //         Err(ValidationFailure::new(
+        //             "n must be > 0",
+        //             Some("Set to a positive integer."),
+        //         ))
+        //     } else {
+        //         Ok(())
+        //     }
+        // });
         Ok(())
     }
 }

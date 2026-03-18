@@ -5151,6 +5151,16 @@ fn test_cases_x_single_step_x_error_handling_x_swap_x_swap_auto_detect_too_many_
 }
 
 #[test]
+fn test_cases_x_single_step_x_error_handling_x_swap_x_swap_broken_a() {
+    println!("Test case is in: test_cases/single_step/error_handling/swap/swap_broken_a");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/error_handling/swap/swap_broken_a"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_error_handling_x_swap_x_swap_partial_specification_a_only() {
     println!(
         "Test case is in: test_cases/single_step/error_handling/swap/swap_partial_specification_a_only"

@@ -59,9 +59,7 @@ impl Step for Rename {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let Some(first_segment) = block.segments.first() else {
-            return Ok((block, true));
-        };
+        let first_segment = block.segments.first().expect("no segments!?");
 
         let read_count = first_segment.entries.len();
         if read_count == 0 {

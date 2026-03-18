@@ -62,7 +62,7 @@ impl VerifyIn<PartialConfig> for PartialPrefix {
                     ))
                 }
             });
-        }
+        } // cov:excl-line
         Ok(())
     }
 }

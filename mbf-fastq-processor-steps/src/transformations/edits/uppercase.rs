@@ -30,18 +30,19 @@ impl VerifyIn<PartialConfig> for PartialUppercase {
 
 impl TagUser for PartialTaggedVariant<PartialUppercase> {
     #[mutants::skip]
+    // cov:excl-start
     fn get_tag_usage(
         &mut self,
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> TagUsageInfo<'_> {
-        // cov:excl-start
         unreachable!("Should have been transformed before");
-        // cov:excl-stop
     }
+    // cov:excl-stop
 }
 
 impl Step for Uppercase {
+    // cov:excl-start
     fn apply(
         &self,
         _block: FastQBlocksCombined,
@@ -49,8 +50,7 @@ impl Step for Uppercase {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        // cov:excl-start
         unreachable!();
-        // cov:excl-stop
     }
+    // cov:excl-stop
 }

@@ -1,0 +1,19 @@
+Error Details ==
+Error 1/1
+  ╭─config.toml
+  ┆
+5 │ [[step]]
+6 │     action = 'Swap'
+  ┆              ───┬──
+  ┆                 │
+  ┆                 ╰─── In this step
+7 │     segment_a = 'read3'
+  ┆                 ───┬───
+  ┆                    │
+  ┆                    ╰──── Segment not present in [input] section
+──╯
+Hint: Did you mean: 'read1' or 'read2'?
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/Swap
+      Or run: `mbf-fastq-processor template Swap` for more information.
+
+
