@@ -106,10 +106,10 @@ impl ChainedParser {
                         self.buffer_size,
                         self.input_thread_count,
                         &self.options,
-                    )?;
+                    )?; // cov:excl-line
                     self.current = Some(parser);
                 }
-                None => return Ok(false),
+                None => return Ok(false), // cov:excl-line -- see below
             }
         }
         Ok(true)
@@ -120,6 +120,10 @@ impl ChainedParser {
     #[allow(clippy::cast_sign_loss)]
     pub fn parse(&mut self) -> Result<ChainParseResult> {
         if !self.ensure_parser()? {
+            // cov:excl-start
+            // this would only happen if we alled empty inputs.
+            // but since this is a lower level, we still handle it
+            // even though it doesn't happen in mbf-fastq-processor
             return Ok(ChainParseResult {
                 fastq_block: FastQBlock {
                     block: Vec::new(),
@@ -128,6 +132,7 @@ impl ChainedParser {
                 was_final: true,
                 expected_read_count: self.expected_read_count,
             });
+            // cov:excl-stop
         }
 
         let mut res = self
@@ -191,8 +196,8 @@ impl ChainedParser {
                                 total_input_file_size,
                                 expected_reads
                             ); */
-                        }
-                    }
+                        } // cov:excl-line
+                    } // cov:excl-line
                 }
             }
         }

@@ -95,14 +95,6 @@ impl VerifyIn<PartialConfig> for PartialInspect {
     }
 }
 
-impl Clone for Inspect {
-    fn clone(&self) -> Self {
-        // cov:excl-start
-        panic!("No cloning needs_serial steps")
-        // cov:excl-stop
-    }
-}
-
 // cov:excl-start
 #[allow(clippy::missing_fields_in_debug)]
 impl std::fmt::Debug for Inspect {
@@ -242,7 +234,7 @@ impl Step for Inspect {
             self.compression_level,
             None, // compression_threads
             None,
-        )?;
+        )?; // cov:excl-line
         if !collector.is_empty() {
             let reads_to_write = collected.min(self.n);
             match self.format {
@@ -292,7 +284,7 @@ impl Step for Inspect {
                     panic!("Bam not valid - should have been cought in verify");
                 } // cov:excl-stop
             }
-        }
+        } // cov:excl-line
 
         writer.finish();
         Ok(None)

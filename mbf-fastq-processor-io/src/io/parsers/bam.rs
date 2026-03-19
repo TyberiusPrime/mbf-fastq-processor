@@ -20,6 +20,7 @@ pub struct BamParser {
     include_unmapped: bool,
     record: Record,
     filename: PathBuf,
+    any_seen: bool,
 }
 
 pub fn bam_read_count_from_index(
@@ -81,7 +82,7 @@ pub fn bam_read_count_from_index(
                 Err(error) => {
                     //treat it as a soft error
                     eprintln!(
-                        "Failed to read BAM index {} for {}: {error} - returning an expected read count of zero",
+                        "Warning: Failed to read BAM index {} for {}: {error} - returning an expected read count of zero",
                         index_path.display(),
                         path.display()
                     );
@@ -114,6 +115,7 @@ impl BamParser {
             include_unmapped,
             record: Record::default(),
             filename,
+            any_seen: false,
         })
     }
 
@@ -125,9 +127,11 @@ impl BamParser {
 
 impl Parser for BamParser {
     #[mutants::skip] // only used to estimate read count for duplicate filters
+    // cov:excl-start
     fn bytes_per_base(&self) -> f64 {
         1.0 // about right
     }
+    // cov:excl-stop
 
     fn parse(&mut self) -> Result<ParseResult> {
         let mut block = FastQBlock {
@@ -137,6 +141,7 @@ impl Parser for BamParser {
 
         loop {
             if block.entries.len() >= self.target_reads_per_block {
+                self.any_seen = true;
                 return Ok(ParseResult {
                     fastq_block: block,
                     was_final: false,
@@ -149,7 +154,7 @@ impl Parser for BamParser {
             match state.read_record(&mut self.record)? {
                 0 => {
                     //nothing read.
-                    if block.entries.is_empty() {
+                    if block.entries.is_empty() && !self.any_seen {
                         bail!(
                             "An input file ({}) provided no reads. Please check your inputs.",
                             self.filename.display()
@@ -193,7 +198,7 @@ impl Parser for BamParser {
                         ),
                         block.append_element_from_iter(seq.iter(), seq.len()),
                         block.append_element_from_iter(qual.iter().map(|q| q + 33), qual.len()),
-                    )?;
+                    )?; // cov:excl-line
                     block.entries.push(read);
                 }
             }
@@ -302,11 +307,13 @@ mod tests {
         let path = PathBuf::from("../test_cases/sample_data/bam/input_read1.bam")
             .canonicalize()
             .unwrap();
+        // cov:excl-start
         assert!(
             std::fs::metadata(&path).is_ok(),
             "Test BAM file not found at {:?}",
             &path
         );
+        // cov:excl-stop
         assert_eq!(bam_read_count_from_index(&path, true, false), Some(0));
         assert_eq!(bam_read_count_from_index(&path, false, false), Some(0));
         assert_eq!(bam_read_count_from_index(&path, false, true), Some(2));

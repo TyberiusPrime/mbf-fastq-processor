@@ -3,6 +3,9 @@
 	options.bam_include_unmapped=true
 	options.bam_include_mapped=true
 
+[options]
+   block_size=1
+
 [output]
     prefix = 'output'
     format = 'fastq'

@@ -12,6 +12,7 @@ pub struct CutStart {
     #[tpd(adapt_in_verify(String))]
     segment: SegmentIndex,
     #[tpd(default)]
+    #[tpd(alias = "if_label")]
     if_tag: Option<ConditionalTagLabel>,
 }
 

@@ -75,7 +75,7 @@ impl PartialInputOptions {
                     }
                 }
             }
-            _ => {}
+            _ => {} // cov:excl-line
         }
     }
 }
@@ -167,7 +167,7 @@ impl InputFile {
                 target_reads_per_block,
                 buffer_size,
                 decompression_options,
-            )?)),
+            )?)), // cov:excl-line
             InputFile::Fasta(file, filename) => {
                 let fake_quality = options
                     .fasta_fake_quality
@@ -178,7 +178,7 @@ impl InputFile {
                     target_reads_per_block,
                     fake_quality,
                     decompression_options,
-                )?;
+                )?; // cov:excl-line
                 Ok(Box::new(parser))
             }
             InputFile::Bam(file, path) => {
@@ -195,7 +195,7 @@ impl InputFile {
                     include_mapped,
                     include_unmapped,
                     thread_count.0,
-                )?;
+                )?; // cov:excl-line
                 Ok(Box::new(parser))
             }
         }
@@ -222,7 +222,7 @@ pub fn total_file_size(readers: &Vec<InputFile>) -> Option<u64> {
                 total += metadata.len();
             }
             Err(_) => {
-                return None;
+                return None; // cov:excl-line
             }
         }
     }
@@ -340,6 +340,8 @@ pub fn find_rapidgzip_in_path() -> Option<PathBuf> {
         //if not on path, but this is a nix binary, refer to the nix store one our flake added for
         let nix_rapidgzip = option_env!("NIX_RAPIDGZIP");
         nix_rapidgzip.and_then(|p| {
+            // cov:excl-start
+            // does not happen in testing
             let path = PathBuf::from(p);
             if path.exists() {
                 Some(path)
@@ -349,6 +351,7 @@ pub fn find_rapidgzip_in_path() -> Option<PathBuf> {
                 None
             }
         })
+        // cov:excl-stop
     }
 }
 
@@ -386,7 +389,7 @@ pub fn spawn_rapidgzip(
     let mut child = cmd.spawn().context(format!(
         "Failed to spawn rapidgzip process for file: {}. Make sure you have a rapidgzip binary on your path.",
         filename.display()
-    ))?;
+    ))?; // cov:excl-line
 
     let stdout = child
         .stdout

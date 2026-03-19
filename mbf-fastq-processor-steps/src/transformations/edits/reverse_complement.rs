@@ -11,6 +11,7 @@ pub struct ReverseComplement {
     #[tpd(adapt_in_verify(String))]
     segment: SegmentIndex,
 
+    #[tpd(alias = "if_label")]
     if_tag: Option<ConditionalTagLabel>,
 }
 

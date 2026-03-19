@@ -21,6 +21,7 @@ pub struct Postfix {
     pub qual: BString,
     pub encoding: PhredEncoding,
 
+    #[tpd(alias = "if_label")]
     if_tag: Option<ConditionalTagLabel>,
 }
 

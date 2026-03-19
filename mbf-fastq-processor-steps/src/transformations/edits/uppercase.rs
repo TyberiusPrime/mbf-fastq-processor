@@ -11,6 +11,7 @@ pub struct Uppercase {
     #[tpd(adapt_in_verify(String))]
     pub target: ResolvedSourceAll,
 
+    #[tpd(alias = "if_label")]
     pub if_tag: Option<ConditionalTagLabel>,
 }
 

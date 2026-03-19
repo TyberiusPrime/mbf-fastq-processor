@@ -48,7 +48,7 @@ fn apply_to_read(
         default_buffer_size(),
         ThreadCount(1),
         &options,
-    )?;
+    )?; // cov:excl-line
     loop {
         let res = parser.parse()?;
         for read in res.fastq_block.entries {

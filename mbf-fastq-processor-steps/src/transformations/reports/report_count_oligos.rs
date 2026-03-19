@@ -21,6 +21,7 @@ pub struct _ReportCountOligos {
 
 impl VerifyIn<PartialConfig> for Partial_ReportCountOligos {
     #[mutants::skip]
+    // cov:excl-start
     fn verify(
         &mut self,
         _parent: &PartialConfig,
@@ -29,10 +30,9 @@ impl VerifyIn<PartialConfig> for Partial_ReportCountOligos {
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {
-        // cov:excl-start
         unreachable!("_ReportCountOligos is only created by ::new, so no verify");
-        // cov:excl-stop
     }
+    // cov:excl-stop
 }
 impl TagUser for PartialTaggedVariant<Box<Partial_ReportCountOligos>> {}
 

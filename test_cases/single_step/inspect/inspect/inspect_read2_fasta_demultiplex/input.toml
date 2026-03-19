@@ -1,0 +1,28 @@
+[input]
+    read1 = 'input_read1.fq.zst'
+    read2 = 'input_read2.fq.zst'
+
+[[step]]
+    action = 'Skip'
+    n = 10
+
+[[step]]
+  action=  'EvalExpression'
+  out_label = 'even'
+  result_type = 'bool'
+  expr = 'read_no % 2 == 0'
+
+[[step]]
+  action = 'Demultiplex'
+  in_label = 'even'
+
+[[step]]
+    action ='Inspect'
+    infix = 'tcepsni'
+    format = 'fasta'
+    n = 2
+    segment = 'read2'
+
+[output]
+    prefix = 'output'
+    format = 'None'

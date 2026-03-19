@@ -25,6 +25,7 @@ pub struct _ChangeCase {
     #[schemars(skip)]
     case_type: CaseType,
 
+    #[tpd(alias = "if_label")]
     pub if_tag: Option<ConditionalTagLabel>,
 }
 

@@ -8,6 +8,7 @@ use crate::transformations::prelude::*;
 #[derive(Debug)]
 pub struct Swap {
     #[tpd(default)]
+    #[tpd(alias = "if_label")]
     if_tag: Option<ConditionalTagLabel>,
 
     #[schemars(with = "String")]

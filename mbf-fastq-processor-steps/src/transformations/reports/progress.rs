@@ -116,14 +116,14 @@ impl Step for Progress {
                     .as_ref()
                     .expect("filename must be set when output_infix is provided"),
                 allow_overwrite,
-            )?;
+            )?; // cov:excl-line
 
             //create empty file so we are sure we can write there
             let _ = ex::fs::File::create(
                 self.filename
                     .as_ref()
                     .expect("filename must be set when output_infix is provided"),
-            )?;
+            )?; // cov:excl-line
         }
         self.start_time = Some(std::time::Instant::now());
         Ok(None)

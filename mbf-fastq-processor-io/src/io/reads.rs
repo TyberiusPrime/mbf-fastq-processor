@@ -37,10 +37,10 @@ pub enum FastQElement {
 }
 
 impl FastQElement {
-    #[must_use]
-    pub fn to_owned(&self, block: &[u8]) -> Self {
-        Self::Owned(self.get(block).to_vec())
-    }
+    // #[must_use]
+    // pub fn to_owned(&self, block: &[u8]) -> Self {
+    //     Self::Owned(self.get(block).to_vec())
+    // }
 
     #[must_use]
     pub fn get<'a>(&'a self, block: &'a [u8]) -> &'a [u8] {
@@ -291,14 +291,14 @@ impl FastQRead {
         Ok(res)
     }
 
-    #[must_use]
-    pub fn to_owned(&self, block: &[u8]) -> FastQRead {
-        FastQRead {
-            name: self.name.to_owned(block),
-            seq: self.seq.to_owned(block),
-            qual: self.qual.to_owned(block),
-        }
-    }
+    // #[must_use]
+    // pub fn to_owned(&self, block: &[u8]) -> FastQRead {
+    //     FastQRead {
+    //         name: self.name.to_owned(block),
+    //         seq: self.seq.to_owned(block),
+    //         qual: self.qual.to_owned(block),
+    //     }
+    // }
 
     #[track_caller]
     pub fn verify(&self) -> Result<()> {
@@ -1232,18 +1232,18 @@ impl FastQBlocksCombined {
             });
         }
         if let Some(output_tags) = &mut self.output_tags {
+            // cov:excl-start
             output_tags.resize_with(len, || {
-                // cov:excl-start
                 panic!("Read amplification not expected. Can't resize to larger")
-                // cov:excl-stop
             });
+            // cov:excl-stop
         }
         for tags in self.tags.values_mut() {
+            // cov:excl-start
             tags.resize_with(len, || {
-                // cov:excl-start
                 panic!("Read amplification not expected. Can't resize to larger")
-                // cov:excl-stop
             });
+            // cov:excl-stop
         }
     }
 
@@ -1251,9 +1251,13 @@ impl FastQBlocksCombined {
         for v in &mut self.segments {
             v.entries.drain(range.clone());
         }
-        if let Some(output_tags) = &mut self.output_tags {
-            output_tags.drain(range.clone());
+        if self.output_tags.is_some() {
+            panic!("Drain used on a demultiplexd block. I don't think that's sensible") // cov:excl-line
         }
+        // if let Some(output_tags) = &mut self.output_tags {
+        //     output_tags.drain(range.clone()); // cov:excl-line currently not being used, since we
+        //     // only use drain in the non-demultiplexing case, completeness and future use.
+        // }
     }
 
     pub fn apply_mut<F>(&mut self, f: F)
@@ -1530,10 +1534,15 @@ impl FastQBlocksCombined {
                                 }
                                 NewLocation::Keep => {}
                                 NewLocation::New(new) => *location = new,
-                                NewLocation::NewWithSeq(new_loc, new_seq) => {
-                                    *location = new_loc;
-                                    hit.sequence = new_seq;
-                                }
+                                // cov:excl-start
+                                NewLocation::NewWithSeq(_new_loc, _new_seq) => {
+                                    unreachable!(
+                                        "Shouldn't return a new seq when you haven't seen the old.\
+                                        you need to change the callback fucntion to also see the seq!"
+                                    )
+                                    // *location = new_loc;
+                                    // hit.sequence = new_seq;
+                                } // cov:excl-stop
                             }
                         }
                     }
@@ -2517,5 +2526,40 @@ mod test {
         assert_eq!(read2.name.get(&block2), b"read1");
         assert_eq!(read2.seq.get(&block2), b"AAAAAAAA");
         assert_eq!(read2.qual.get(&block2), b"IIIIIIII");
+    }
+
+    #[test]
+    fn test_owned_postfix() {
+        let mut seq1 = FastQElement::Owned(b"AAAAAAAA".to_vec());
+        seq1.postfix(b"TTT", &mut vec![]);
+        assert_eq!(seq1.get(&vec![]), b"AAAAAAAATTT");
+    }
+
+    #[test]
+    fn test_cloning() {
+        let mixed_block = FastQBlock {
+            block: b"@read1\nAAAAAAAA\n+\nIIIIIIII\n".to_vec(),
+            entries: vec![
+                FastQRead {
+                    name: FastQElement::Local(Position { start: 1, end: 6 }),
+                    seq: FastQElement::Local(Position { start: 7, end: 15 }),
+                    qual: FastQElement::Local(Position { start: 18, end: 26 }),
+                },
+                FastQRead {
+                    name: FastQElement::Owned(b"read2".to_vec()),
+                    seq: FastQElement::Owned(b"CCCCCCCC".to_vec()),
+                    qual: FastQElement::Owned(b"JJJJJJJJ".to_vec()),
+                },
+            ],
+        };
+        let cloned = mixed_block.clone();
+        assert_eq!(cloned.block, mixed_block.block);
+        assert_eq!(cloned.entries.len(), mixed_block.entries.len());
+        assert_eq!(cloned.entries[0].name.get(&cloned.block), b"read1");
+        assert_eq!(cloned.entries[0].seq.get(&cloned.block), b"AAAAAAAA");
+        assert_eq!(cloned.entries[0].qual.get(&cloned.block), b"IIIIIIII");
+        assert_eq!(cloned.entries[1].name.get(&vec![]), b"read2");
+        assert_eq!(cloned.entries[1].seq.get(&vec![]), b"CCCCCCCC");
+        assert_eq!(cloned.entries[1].qual.get(&vec![]), b"JJJJJJJJ");
     }
 }

@@ -1,0 +1,1 @@
+Warning: Failed to read BAM index input_ERR12828869_10k_1.head_500.bam.bai for input_ERR12828869_10k_1.head_500.bam: failed to fill whole buffer - returning an expected read count of zero

@@ -53,7 +53,7 @@ impl TagValue {
     pub fn as_numeric(&self) -> Option<f64> {
         match self {
             TagValue::Numeric(n) => Some(*n),
-            _ => None,
+            _ => None, // cov:excl-line
         }
     }
 
@@ -102,13 +102,6 @@ impl Hits {
                 len,
                 segment_index,
             }),
-            sequence,
-        }])
-    }
-
-    pub fn new_without_location(sequence: BString) -> Self {
-        Hits(vec![Hit {
-            location: None,
             sequence,
         }])
     }
@@ -230,7 +223,7 @@ pub fn find_iupac_with_indel(
 
     // Fast length checks to avoid unnecessary alignments.
     if reference.len() + max_indel_bases < query.len() {
-        return None;
+        return None; // cov:excl-line
     }
 
     let query_upper: Vec<u8> = query.iter().map(u8::to_ascii_uppercase).collect();
@@ -247,7 +240,7 @@ pub fn find_iupac_with_indel(
     let alignment = aligner.custom(&query_upper, &reference_upper);
 
     if alignment.operations.is_empty() {
-        return None;
+        return None; // cov:excl-line
     }
 
     //defensive code.
@@ -571,7 +564,7 @@ fn iupac_to_bases(c: u8) -> &'static [u8] {
         b'H' => b"ACT",
         b'V' => b"ACG",
         b'N' => b"ACGT",
-        b'_' => b"", // treat _ as ignored
+        b'_' => b"", // treat _ as ignored // cov:excl-line
         _ => panic!("non iupac string passed to iupac_to_bases"),
     }
 }

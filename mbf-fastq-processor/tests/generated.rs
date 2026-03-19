@@ -45,6 +45,16 @@ fn test_cases_x_demultiplex_x_chunked_output_demultiplex() {
 }
 
 #[test]
+fn test_cases_x_demultiplex_x_demultiplex_and_skip() {
+    println!("Test case is in: test_cases/demultiplex/demultiplex_and_skip");
+    run_test(
+        std::path::Path::new("../test_cases/demultiplex/demultiplex_and_skip"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_demultiplex_x_duplicates() {
     println!("Test case is in: test_cases/demultiplex/duplicates");
     run_test(
@@ -2479,6 +2489,16 @@ fn test_cases_x_single_step_x_edits_x_uppercase_sequence() {
     println!("Test case is in: test_cases/single_step/edits/uppercase_sequence");
     run_test(
         std::path::Path::new("../test_cases/single_step/edits/uppercase_sequence"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_edits_x_uppercase_sequence_conditional() {
+    println!("Test case is in: test_cases/single_step/edits/uppercase_sequence_conditional");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/edits/uppercase_sequence_conditional"),
         "input.toml",
         1,
     );
@@ -7332,6 +7352,20 @@ fn test_cases_x_single_step_x_filter_x_other_file_by_name_x_remove_bam_approxima
 }
 
 #[test]
+fn test_cases_x_single_step_x_filter_x_other_file_by_name_x_remove_bam_approximate_broken_bai() {
+    println!(
+        "Test case is in: test_cases/single_step/filter/other_file_by_name/remove_bam_approximate_broken_bai"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/filter/other_file_by_name/remove_bam_approximate_broken_bai",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_filter_x_other_file_by_name_x_remove_bam_approximate_no_bai() {
     println!(
         "Test case is in: test_cases/single_step/filter/other_file_by_name/remove_bam_approximate_no_bai"
@@ -7502,6 +7536,16 @@ fn test_cases_x_single_step_x_filter_x_other_file_by_tag() {
     println!("Test case is in: test_cases/single_step/filter/other_file_by_tag");
     run_test(
         std::path::Path::new("../test_cases/single_step/filter/other_file_by_tag"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_filter_x_other_file_by_tag_multi_regions() {
+    println!("Test case is in: test_cases/single_step/filter/other_file_by_tag_multi_regions");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/filter/other_file_by_tag_multi_regions"),
         "input.toml",
         1,
     );
@@ -7946,6 +7990,20 @@ fn test_cases_x_single_step_x_inspect_x_inspect_x_inspect_read2_fasta() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_inspect_x_inspect_x_inspect_read2_fasta_demultiplex() {
+    println!(
+        "Test case is in: test_cases/single_step/inspect/inspect/inspect_read2_fasta_demultiplex"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/inspect/inspect/inspect_read2_fasta_demultiplex",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_inspect_x_inspect_no_bam() {
     println!("Test case is in: test_cases/single_step/inspect/inspect_no_bam");
     run_test(
@@ -8072,6 +8130,16 @@ fn test_cases_x_single_step_x_reports_x_oligo_counts_2() {
     println!("Test case is in: test_cases/single_step/reports/oligo_counts_2");
     run_test(
         std::path::Path::new("../test_cases/single_step/reports/oligo_counts_2"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_reports_x_oligo_counts_demultiplex() {
+    println!("Test case is in: test_cases/single_step/reports/oligo_counts_demultiplex");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/reports/oligo_counts_demultiplex"),
         "input.toml",
         1,
     );

@@ -37,8 +37,9 @@ pub fn ensure_output_destination_available(
             // missing directory is handled by the marker file creation
             Ok(None)
         }
+        // cov:excl-start
         Err(err) => {
             Err(err).with_context(|| format!("Could not inspect existing path: {}", path.display()))
-        }
+        } // cov:excl-stop
     }
 }

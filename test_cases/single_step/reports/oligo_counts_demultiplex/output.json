@@ -1,0 +1,38 @@
+{
+  "__": {
+    "version": "0.8.1",
+    "cwd": "/home/user/single_step",
+    "input_files": {
+      "interleaved": null,
+      "read1": [
+        "input_read1.fq"
+      ],
+      "read2": [
+        "input_read2.fq"
+      ]
+    },
+    "repository": "https://tyberiusprime.github.io/mbf-fastq-processor/"
+  },
+  "xyz": {
+    "multiplexed": {
+      "count_oligos": {
+        "even=false": {
+          "CTCCTG": 0,
+          "TGG": 8
+        },
+        "even=true": {
+          "CTCCTG": 2,
+          "TGG": 16
+        }
+      }
+    }
+  },
+  "run_info": {
+    "program_version": "0.8.1",
+    "input_toml": "[input]\n    read1 = 'input_read1.fq'\n    read2 = 'input_read2.fq'\n\n[[step]]\n  action = 'EvalExpression'\n  out_label = 'even'\n  expr = 'read_no % 2 == 0'\n  result_type = 'bool'\n\n[[step]]\n  action = 'Demultiplex'\n  in_label = 'even'\n\n[[step]]\n    action = 'Report'\n    name = 'xyz'\n    count = false\n    base_statistics = false\n    duplicate_count_per_read = false\n    duplicate_count_per_fragment = false\n    length_distribution = false\n    count_oligos = ['CTCCTG', 'TGG']\n\n[output]\n    prefix = 'output'\n    report_json=true\n\tformat = 'None'\n",
+    "working_directory": "/home/user/single_step"
+  },
+  "report_order": [
+    "xyz"
+  ]
+}

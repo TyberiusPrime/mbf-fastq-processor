@@ -1,0 +1,26 @@
+[input]
+    read1 = 'input_read1.fq.zst'
+
+[[step]]
+  action = "ExtractRegions"
+  regions = [
+  { start = 0, length = 75, segment = 'read1', anchor = 'left', },
+  { start = 75, length = 75, segment = 'read1', anchor = 'left', }
+]
+  out_label = 'tag_seq_1'
+
+[[step]]
+    action = 'TagOtherFile'
+    source = 'tag:tag_seq_1'
+	out_label = "tag"
+    filename = 'input_ERR12828869_10k_1.head_500.fq'
+    false_positive_rate = 0
+    seed  = 42
+
+[[step]]
+	action = "FilterByTag"
+	in_label = "tag"
+    keep_or_remove = 'Keep'
+
+[output]
+    prefix = 'output'
