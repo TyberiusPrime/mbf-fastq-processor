@@ -1,0 +1,18 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'ExtractRegions'
+    out_label = 'barcode'
+    regions = [
+  { anchor = 'Left', start = 0, len=4, source='read1'},
+  { anchor = 'Left', start = 6, len=2, source='read1'},
+]
+
+[[step]]
+    action = 'StoreTagInFastQ'
+    in_label = 'barcode'
+
+[output]
+    prefix = 'output' # for the tag
+	output = [] # no read1 file.

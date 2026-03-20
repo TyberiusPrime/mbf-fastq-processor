@@ -208,7 +208,7 @@ impl Step for StoreTagInFastQ {
             false,
             false,
             allow_overwrite,
-        )?)));
+        )?))); // cov:excl-line
         Ok(None)
     }
 
@@ -346,10 +346,15 @@ impl Step for StoreTagInFastQ {
                                         self.comment_insert_char,
                                     );
                                     match new_name {
+                                        // cov:excl-start
+                                        // I don't exactly expect a location tag to contain the
+                                        // comment_insert_cahr or separator, but if it does, we
+                                        // should still report an error rather than silently
                                         Err(err) => {
                                             error_encountered = Some(format!("{err}"));
                                             break 'outer;
                                         }
+                                        // cov:excl-stop
                                         Ok(new_name) => {
                                             name = new_name;
                                         }

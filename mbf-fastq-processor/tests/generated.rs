@@ -1969,6 +1969,16 @@ fn test_cases_x_single_step_x_duplicates_x_dedup_all_segments() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_duplicates_x_dedup_all_segments_name() {
+    println!("Test case is in: test_cases/single_step/duplicates/dedup_all_segments_name");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/duplicates/dedup_all_segments_name"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_duplicates_x_dedup_exact() {
     println!("Test case is in: test_cases/single_step/duplicates/dedup_exact");
     run_test(
@@ -6903,11 +6913,54 @@ fn test_cases_x_single_step_x_extraction_x_store_tag_in_fastq_x_with_comments() 
 }
 
 #[test]
+fn test_cases_x_single_step_x_extraction_x_store_tag_in_fastq_x_with_comments_conflict_value_insert()
+ {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/store_tag_in_fastq/with_comments_conflict_value_insert"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/store_tag_in_fastq/with_comments_conflict_value_insert",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_extraction_x_store_tag_in_fastq_x_with_comments_conflict_value_sep() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/store_tag_in_fastq/with_comments_conflict_value_sep"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/store_tag_in_fastq/with_comments_conflict_value_sep",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_extraction_x_store_tag_in_fastq_x_with_location() {
     println!("Test case is in: test_cases/single_step/extraction/store_tag_in_fastq/with_location");
     run_test(
         std::path::Path::new(
             "../test_cases/single_step/extraction/store_tag_in_fastq/with_location",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_extraction_x_store_tag_in_fastq_x_with_location_multi() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/store_tag_in_fastq/with_location_multi"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/store_tag_in_fastq/with_location_multi",
         ),
         "input.toml",
         1,

@@ -26,9 +26,11 @@ pub struct EvalExpression {
     /// The arithmetic expression to evaluate
     /// Variables in the expression should match existing numeric tag names
     #[tpd(alias = "expr")]
+    #[tpd(alias = "query")]
     pub expression: String,
 
     #[tpd(alias = "output_type")]
+    #[tpd(alias = "out_type")]
     pub result_type: ResultType,
 
     #[tpd(skip)]

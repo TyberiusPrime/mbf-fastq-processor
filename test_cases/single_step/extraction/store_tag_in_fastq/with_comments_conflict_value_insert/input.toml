@@ -1,0 +1,24 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'ExtractIUPAC'
+    out_label = 'barcode'
+    anchor = 'Left'
+    search = 'ATCG'
+    max_mismatches = 0
+
+[[step]]
+    action = 'ExtractRegions'
+    out_label = 'umi'
+    regions = [{segment = 'name:read1', start = 0, length = 1, anchor="Start"}]
+
+[[step]]
+    action = 'StoreTagInFastQ'
+    in_label = 'barcode'
+    comment_tags = ['umi']
+    comment_separator = '|'
+    comment_insert_char = 'r'
+
+[output]
+    prefix = 'output'

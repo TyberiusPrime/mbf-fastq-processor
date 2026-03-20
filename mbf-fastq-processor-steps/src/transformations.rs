@@ -50,6 +50,9 @@ pub struct RegionDefinition {
     pub source: ResolvedSourceNoAll,
 
     pub start: isize,
+    #[tpd(alias = "len")]
+    #[tpd(alias = "count")]
+    #[tpd(alias = "n")]
     pub length: usize,
 
     /// Whether the start position is anchored to the start (default) or end of the region
@@ -597,7 +600,7 @@ pub fn read_name_canonical_prefix_strict(
 
 #[cfg(test)]
 mod tests {
-    use super::read_name_canonical_prefix;
+    use super::{read_name_canonical_prefix, read_name_canonical_prefix_strict};
 
     #[test]
     fn canonical_prefix_stops_at_first_separator() {
@@ -620,5 +623,37 @@ mod tests {
     #[test]
     fn missing_separator_configuration_defaults_to_exact_match() {
         assert_eq!(read_name_canonical_prefix(b"Exact", None), b"Exact");
+    }
+
+    #[test]
+    fn canonical_prefix_stops_at_first_separator_strict() {
+        assert_eq!(
+            read_name_canonical_prefix_strict(b"Sample_1_2", Some(b'_')),
+            Some(&b"Sample"[..])
+        );
+    }
+
+    #[test]
+    fn canonical_prefix_uses_full_name_when_separator_missing_strict() {
+        assert_eq!(
+            read_name_canonical_prefix_strict(b"Sample", None),
+            Some(&b"Sample"[..])
+        );
+    }
+
+    #[test]
+    fn custom_separator_is_respected_strict() {
+        assert_eq!(
+            read_name_canonical_prefix_strict(b"Run/42", Some(b'/')),
+            Some(&b"Run"[..])
+        );
+    }
+
+    #[test]
+    fn missing_separator_configuration_defaults_to_exact_match_strict() {
+        assert_eq!(
+            read_name_canonical_prefix_strict(b"Exact", None),
+            Some(&b"Exact"[..])
+        );
     }
 }

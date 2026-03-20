@@ -1,0 +1,16 @@
+@read1_has_barcode|barcode_location=read1:0-4,read1:6-8
+ATCG_TT
++
+~~~~~~~
+@read2_has_barcode|barcode_location=read1:0-4,read1:6-8
+ATCG_GG
++
+~~~~~~~
+@read3_no_barcode|barcode_location=read1:0-4,read1:6-8
+TTTT_CC
++
+~~~~~~~
+@read4_has_barcode|barcode_location=read1:0-4,read1:6-8
+ATCG_AA
++
+~~~~~~~

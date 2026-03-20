@@ -94,7 +94,7 @@ impl Step for QuantifyTag {
             false,
             false,
             allow_overwrite,
-        )?)));
+        )?))); // cov:excl-line
 
         Ok(None)
     }

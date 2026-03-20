@@ -114,9 +114,11 @@ impl Step for StoreTagLocationInComment {
                 //I really don't expect location to fail, but what if the user set's
                 //comment_separator to '-'?
                 match new_name {
+                    // cov:excl-start
                     Err(err) => {
                         *error_encountered.borrow_mut() = Some(format!("{err}"));
                     }
+                    // cov:excl-stop
                     Ok(new_name) => {
                         read.replace_name(&new_name);
                     }
@@ -124,7 +126,10 @@ impl Step for StoreTagLocationInComment {
             },
         );
         if let Some(error_msg) = error_encountered.borrow().as_ref() {
+            // cov:excl-start
+            // see above.
             return Err(anyhow::anyhow!("{error_msg}"));
+            // cov:excl-stop
         }
 
         Ok((block, true))

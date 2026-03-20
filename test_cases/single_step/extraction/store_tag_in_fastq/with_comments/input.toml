@@ -9,6 +9,16 @@
     max_mismatches = 0
 
 [[step]]
+  action = 'CalcLength'
+  out_label = 'da_len'
+
+[[step]]
+  action = 'EvalExpression'
+  query = 'read_no % 2 == 0'
+  out_label = 'even'
+  out_type = 'bool'
+
+[[step]]
     action = 'ExtractRegions'
     out_label = 'umi'
     regions = [{segment = 'read1', start = 4, length = 4, anchor="Start"}]
@@ -16,9 +26,25 @@
 [[step]]
     action = 'StoreTagInFastQ'
     in_label = 'barcode'
-    comment_tags = ['umi']
+    comment_tags = ['umi', 'barcode', 'da_len', 'even']
     comment_separator = '|'
     comment_insert_char = ' '
+
+
+[[step]]
+  action = 'ExtractIUPAC'
+  out_label = 'always'
+  anchor = 'left'
+  search = 'N'
+  max_mismatches = 0 
+
+[[step]]
+    action = 'StoreTagInFastQ'
+    in_label = 'always'
+    comment_tags = ['umi', 'barcode', 'da_len', 'even']
+    comment_separator = '|'
+    comment_insert_char = ' '
+
 
 [output]
     prefix = 'output'
