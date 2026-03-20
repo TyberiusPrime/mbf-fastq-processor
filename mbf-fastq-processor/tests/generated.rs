@@ -1055,6 +1055,16 @@ fn test_cases_x_integration_x_misc_x_head_with_index() {
 }
 
 #[test]
+fn test_cases_x_integration_x_tag_histogram_and_demultiplex() {
+    println!("Test case is in: test_cases/integration/tag_histogram_and_demultiplex");
+    run_test(
+        std::path::Path::new("../test_cases/integration/tag_histogram_and_demultiplex"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_integration_tests_x_calc_x_quantify_regions_multi() {
     println!("Test case is in: test_cases/integration_tests/calc/quantify_regions_multi");
     run_test(

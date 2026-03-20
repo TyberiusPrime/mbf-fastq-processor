@@ -1,0 +1,39 @@
+[input]
+    read1 = 'input_read1.fq'
+
+# Extract the first 2 bases as a barcode tag
+[[step]]
+    action = 'ExtractRegion'
+    anchor = "Left"
+    source = "read1"
+    start = 0
+    len = 2
+    out_label = 'barcode'
+
+# Report with a tag histogram of the barcode distribution before demultiplexing
+[[step]]
+    action = 'Report'
+    name = 'pre_demultiplex'
+    count = true
+    tag_histograms = ['barcode']
+
+[[step]]
+    action = 'Demultiplex'
+    in_label = 'barcode'
+    output_unmatched = true
+    barcodes = 'barcodes'
+
+[barcodes.barcodes]
+    AA = 'sample1'
+    GG = 'sample2'
+
+[[step]]
+    action = 'Report'
+    name = 'post_demultiplex'
+    count = true
+    tag_histograms = ['barcode']
+
+[output]
+    prefix = 'output'
+    report_json = true
+    report_html = true

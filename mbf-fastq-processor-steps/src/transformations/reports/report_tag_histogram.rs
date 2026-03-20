@@ -227,36 +227,41 @@ impl Step for Box<_ReportTagHistogram> {
     fn finalize(&self, demultiplex_info: &OptDemultiplex) -> Result<Option<FinalizeReportResult>> {
         let data = self.data.lock().expect("Lock poisoned");
         let mut contents = serde_json::Map::new();
-        let mut histogram_contents = serde_json::Map::new();
         let histogram_key = self.tag_name.clone();
 
         match demultiplex_info {
             OptDemultiplex::No => {
                 let histogram = data.get(&0).expect("no multiplex data found, but expected");
+                let mut histogram_contents = serde_json::Map::new();
                 histogram_contents.insert(histogram_key.0, histogram.clone().into());
+                contents.insert(
+                    "histogram".to_string(),
+                    serde_json::Value::Object(histogram_contents),
+                );
             }
 
             OptDemultiplex::Yes(demultiplex_info) => {
+                // Place histogram nested inside each barcode bucket so that after
+                // pipeline_workpool wraps everything in "multiplexed", the histogram
+                // lives alongside molecule_count inside the per-bucket object and the
+                // HTML template can find it via addSectionTable().
                 for (tag, name) in &demultiplex_info.tag_to_name {
-                    let mut local_histogram_contents = serde_json::Map::new();
                     let barcode_key = name.as_ref().map_or("no-barcode", |x| x.as_str());
                     let histogram = data
                         .get(tag)
                         .expect("no multiplex data found, but expected");
-                    local_histogram_contents
-                        .insert(histogram_key.0.clone(), histogram.clone().into());
-                    histogram_contents.insert(
+                    let mut inner = serde_json::Map::new();
+                    inner.insert(histogram_key.0.clone(), histogram.clone().into());
+                    let mut barcode_contents = serde_json::Map::new();
+                    barcode_contents
+                        .insert("histogram".to_string(), serde_json::Value::Object(inner));
+                    contents.insert(
                         barcode_key.to_string(),
-                        serde_json::Value::Object(local_histogram_contents),
+                        serde_json::Value::Object(barcode_contents),
                     );
                 }
             }
         }
-
-        contents.insert(
-            "histogram".to_string(),
-            serde_json::Value::Object(histogram_contents),
-        );
 
         Ok(Some(FinalizeReportResult {
             report_no: self.report_no,
