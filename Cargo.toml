@@ -49,7 +49,7 @@
 	human-panic = { version = "2.0.2", default-features = false }
 	indexmap = { version = "2.9.0", default-features = false, features=["serde"]}
 	json_value_merge = "2.0.1"
-	libc = "0.2"
+	nix = { version = "0.30", features = ["signal"] }
 	log = "0.4.28"
 	memchr = { version = "2.7.4", default-features = false }
     mutants = "0.0.3"

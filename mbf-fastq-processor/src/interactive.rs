@@ -20,7 +20,7 @@ use toml_edit::{DocumentMut, Item, Table, value};
 static SIGUSR1_RECEIVED: AtomicBool = AtomicBool::new(false);
 
 #[cfg(unix)]
-extern "C" fn sigusr1_handler(_signum: libc::c_int) {
+extern "C" fn sigusr1_handler(_signum: std::ffi::c_int) {
     SIGUSR1_RECEIVED.store(true, Ordering::Relaxed);
 }
 
@@ -107,10 +107,11 @@ pub fn run_interactive(
     #[cfg(unix)]
     // SAFETY: sigusr1_handler only writes to an AtomicBool, which is async-signal-safe.
     unsafe {
-        libc::signal(
-            libc::SIGUSR1,
-            sigusr1_handler as *const () as libc::sighandler_t,
-        );
+        nix::sys::signal::signal(
+            nix::sys::signal::Signal::SIGUSR1,
+            nix::sys::signal::SigHandler::Handler(sigusr1_handler),
+        )
+        .expect("Failed to install SIGUSR1 handler");
     }
 
     let toml_path = toml_path
