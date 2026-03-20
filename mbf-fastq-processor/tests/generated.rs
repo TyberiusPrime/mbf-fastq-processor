@@ -2433,6 +2433,16 @@ fn test_cases_x_single_step_x_edits_x_lowercase_tag() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_edits_x_merge_reads_x_dont_revcomp_segment2() {
+    println!("Test case is in: test_cases/single_step/edits/merge_reads/dont_revcomp_segment2");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/edits/merge_reads/dont_revcomp_segment2"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_edits_x_merge_reads_x_no_overlap_concatenate() {
     println!("Test case is in: test_cases/single_step/edits/merge_reads/no_overlap_concatenate");
     run_test(
