@@ -218,3 +218,11 @@ spent the disk space. Note that you may not use [Head]({{< relref "docs/referenc
 and `build_rapidgzip_index` together, since Head closes the input early, leading to the index not being
 created. To prevent this, an error will be reported when using 
 [Head]({{<relref "docs/reference/modification-steps/Head.md" >}})
+
+
+## Reading form stdin
+
+You can read fastq & fasta input from stdin using `--stdin--` as file name.
+
+For this to work, you must have only a single segment (or define interleaved input),
+and `--stdin--` must be the only 'file name' provided.

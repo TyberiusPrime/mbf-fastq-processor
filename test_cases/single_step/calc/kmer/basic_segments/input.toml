@@ -1,0 +1,22 @@
+[input]
+    read1 = 'input_read1.fq'
+    read2 = 'input_read1.fq'
+
+[options]
+  accept_duplicate_files = true
+
+[output]
+    prefix = 'output'
+
+[[step]]
+    action = 'CalcKmers'
+    out_label = 'kmer_count'
+    segment = 'all'
+    files = 'input_kmers.fa'
+    k = 4
+  # min_count = 1
+    canonical = false
+
+[[step]]
+    action = 'StoreTagInComment'
+    in_label = 'kmer_count'

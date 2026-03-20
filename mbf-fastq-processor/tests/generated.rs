@@ -1617,6 +1617,16 @@ fn test_cases_x_single_step_x_calc_x_kmer_x_basic_higher_min_count() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_calc_x_kmer_x_basic_segments() {
+    println!("Test case is in: test_cases/single_step/calc/kmer/basic_segments");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/calc/kmer/basic_segments"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_calc_x_kmer_x_files_as_sequence() {
     println!("Test case is in: test_cases/single_step/calc/kmer/files_as_sequence");
     run_test(
@@ -3997,6 +4007,26 @@ fn test_cases_x_single_step_x_error_handling_x_io_x_stdin_multiple_files() {
     println!("Test case is in: test_cases/single_step/error_handling/io/stdin_multiple_files");
     run_test(
         std::path::Path::new("../test_cases/single_step/error_handling/io/stdin_multiple_files"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_kmer_x_from_stdin() {
+    println!("Test case is in: test_cases/single_step/error_handling/kmer/from_stdin");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/error_handling/kmer/from_stdin"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_kmer_x_kmer_zero() {
+    println!("Test case is in: test_cases/single_step/error_handling/kmer/kmer_zero");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/error_handling/kmer/kmer_zero"),
         "input.toml",
         1,
     );

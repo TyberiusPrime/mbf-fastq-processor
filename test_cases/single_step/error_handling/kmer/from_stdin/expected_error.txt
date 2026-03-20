@@ -1,0 +1,22 @@
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+ 7 │ [[step]]
+ 8 │     action = 'CalcKmers'
+   ┆              ─────┬─────
+   ┆                   │
+   ┆                   ╰────── In this step
+   ┆
+ 9 │     out_label = 'kmer_count'
+10 │     segment = 'read1'
+11 │     files = '--stdin--'
+   ┆             ─────┬─────
+   ┆                  │
+   ┆                  ╰────── QuantifyKmers: K-mer database cannot be read from stdin
+───╯
+Hint: Please specify a file path for the k-mer database instead of using '--stdin--'.
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/CalcKmers
+      Or run: `mbf-fastq-processor template CalcKmers` for more information.
+
+

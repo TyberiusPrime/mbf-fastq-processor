@@ -92,7 +92,7 @@ impl<T: Write> Write for FailForTestWriter<T> {
 
 /// Wrapper for gzp's parallel writer to implement Send
 /// SAFETY: gzp parallel writers are internally thread-safe but don't implement Send
-/// due to trait object limitations. 
+/// due to trait object limitations.
 /// (All types for which Zwriter is implemented are Send,
 /// but ZWriter itself is not. the ZBuilder.from_writer ensures that it's Send
 /// though, I believe.

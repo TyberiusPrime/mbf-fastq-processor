@@ -63,7 +63,7 @@ impl VerifyIn<PartialConfig> for PartialKmers {
             if filenames.iter().any(|filepath| filepath.as_ref().expect("Should not be reached on wrong type for filename") == STDIN_MAGIC_PATH) {
                 return Err(ValidationFailure::new(
                     "QuantifyKmers: K-mer database cannot be read from stdin",
-                    Some("Please specify a file path for the k-mer database instead of using '-' or 'stdin'.")
+                    Some("Please specify a file path for the k-mer database instead of using '--stdin--'.")
                 ));
             }
             Ok(())
@@ -116,7 +116,7 @@ impl Step for Kmers {
             self.min_count,
             self.count_reverse_complement,
             input_info.use_rapidgzip,
-        )?;
+        )?; // cov:excl-line
         self.resolved_kmer_db = Some(db);
 
         Ok(None)
