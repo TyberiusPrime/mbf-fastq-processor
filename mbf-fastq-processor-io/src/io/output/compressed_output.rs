@@ -92,8 +92,15 @@ impl<T: Write> Write for FailForTestWriter<T> {
 
 /// Wrapper for gzp's parallel writer to implement Send
 /// SAFETY: gzp parallel writers are internally thread-safe but don't implement Send
-/// due to trait object limitations. This wrapper provides the Send impl.
+/// due to trait object limitations. 
+/// (All types for which Zwriter is implemented are Send,
+/// but ZWriter itself is not. the ZBuilder.from_writer ensures that it's Send
+/// though, I believe.
+///
+/// This wrapper provides the Send impl.
 struct SendableParallelWriter<T: Write>(Box<dyn ZWriter<T>>);
+
+unsafe impl Send for SendableParallelWriter<HashingFileWriter<BufWriter<ex::fs::File>>> {}
 
 impl<T: Write> Write for SendableParallelWriter<T> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
@@ -115,13 +122,6 @@ enum CompressedWriter<'a, T: Write + Send + 'static> {
     Raw(HashingFileWriter<BufWriter<T>>),
     GzipSingle(GzEncoder<HashingFileWriter<BufWriter<T>>>),
     GzipParallel(SendableParallelWriter<HashingFileWriter<BufWriter<T>>>),
-    Zstd(zstd::stream::Encoder<'a, HashingFileWriter<BufWriter<T>>>),
-}
-
-enum CompressedWriterSingleCore<'a, T: Write + Send + 'static> {
-    Raw(HashingFileWriter<BufWriter<T>>),
-    GzipSingle(GzEncoder<HashingFileWriter<BufWriter<T>>>),
-    //because gzp is not Send.
     Zstd(zstd::stream::Encoder<'a, HashingFileWriter<BufWriter<T>>>),
 }
 
@@ -162,46 +162,6 @@ impl<T: Write + Send + 'static> Write for CompressedWriter<'_, T> {
     }
 }
 
-impl<T: Write + Send + 'static> CompressedWriterSingleCore<'_, T> {
-    fn finish(self) -> HashingFileWriter<BufWriter<T>> {
-        match self {
-            CompressedWriterSingleCore::Raw(inner) => inner,
-            CompressedWriterSingleCore::GzipSingle(inner) => {
-                // cov:excl-start
-                inner
-                    .finish()
-                    .expect("compression finalization should not fail")
-                // cov:excl-stop
-            }
-            CompressedWriterSingleCore::Zstd(inner) => {
-                // cov:excl-start
-                inner
-                    .finish()
-                    .expect("compression finalization should not fail")
-                // cov:excl-stop
-            }
-        }
-    }
-}
-
-impl<T: Write + Send + 'static> Write for CompressedWriterSingleCore<'_, T> {
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        match self {
-            CompressedWriterSingleCore::Raw(inner) => inner.write(buf),
-            CompressedWriterSingleCore::GzipSingle(inner) => inner.write(buf),
-            CompressedWriterSingleCore::Zstd(inner) => inner.write(buf),
-        }
-    }
-
-    fn flush(&mut self) -> io::Result<()> {
-        match self {
-            CompressedWriterSingleCore::Raw(inner) => inner.flush(),
-            CompressedWriterSingleCore::GzipSingle(inner) => inner.flush(),
-            CompressedWriterSingleCore::Zstd(inner) => inner.flush(),
-        }
-    }
-}
-
 enum Compressed<'a, T: Write + Send + 'static> {
     Normal(CompressedWriter<'a, T>),
     FailForTest(FailForTestWriter<CompressedWriter<'a, T>>),
@@ -236,11 +196,7 @@ pub struct HashedAndCompressedWriter<'a, T: std::io::Write + Send + 'static> {
     compressed_writer: HashingFileWriter<Compressed<'a, T>>,
 }
 
-pub struct HashedAndCompressedWriterSingleCore<'a, T: std::io::Write + Send + 'static> {
-    compressed_writer: HashingFileWriter<CompressedWriterSingleCore<'a, T>>,
-}
-
-pub type OutputWriter = HashedAndCompressedWriterSingleCore<'static, ex::fs::File>;
+pub type OutputWriter = HashedAndCompressedWriter<'static, ex::fs::File>;
 // cov:excl-start
 impl std::fmt::Debug for OutputWriter {
     #[mutants::skip] // don't care that it's never used, it' s useful when you need to debug
@@ -359,112 +315,6 @@ impl<T: std::io::Write + Send + 'static> HashedAndCompressedWriter<'_, T> {
 }
 
 impl<T: std::io::Write + Send + 'static> std::io::Write for HashedAndCompressedWriter<'_, T> {
-    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        self.compressed_writer.write(buf)
-    }
-
-    fn flush(&mut self) -> std::io::Result<()> {
-        self.compressed_writer.flush()
-    }
-}
-
-impl<T: std::io::Write + Send + 'static> HashedAndCompressedWriterSingleCore<'_, T> {
-    pub fn new(
-        writer: T,
-        compression_format: CompressionFormat,
-        hash_uncompressed: bool,
-        hash_compressed: bool,
-        compression_level: Option<u8>,
-        failure: Option<&SimulatedWriteFailure>,
-    ) -> Result<Self> {
-        let mut compressed_hasher = if hash_compressed {
-            Some(sha2::Sha256::new())
-        } else {
-            None
-        };
-        let mut uncompressed_hasher = if hash_uncompressed {
-            Some(sha2::Sha256::new())
-        } else {
-            None
-        };
-
-        let base_writer = match compression_format {
-            CompressionFormat::Uncompressed => {
-                let file_writer = BufWriter::new(writer);
-                CompressedWriterSingleCore::Raw(HashingFileWriter {
-                    file_writer,
-                    hasher: compressed_hasher.take(),
-                })
-            }
-            CompressionFormat::Gzip => {
-                let file_writer = BufWriter::new(writer);
-                let hashing_writer = HashingFileWriter {
-                    file_writer,
-                    hasher: compressed_hasher.take(),
-                };
-
-                // Use parallel compression if threads > 1, otherwise use single-threaded
-                // Default to single threaded when threads not specified
-                let compression = match compression_level {
-                    Some(level) => flate2::Compression::new(u32::from(level).clamp(0, 9)),
-                    None => flate2::Compression::default(),
-                };
-                CompressedWriterSingleCore::GzipSingle(GzEncoder::new(hashing_writer, compression))
-            }
-            CompressionFormat::Zstd => {
-                let file_writer = BufWriter::new(writer);
-                let level = i32::from(compression_level.unwrap_or(5)).clamp(1, 22);
-                CompressedWriterSingleCore::Zstd(
-                    zstd::stream::Encoder::new(
-                        HashingFileWriter {
-                            file_writer,
-                            hasher: compressed_hasher.take(),
-                        },
-                        level,
-                    )
-                    .context("Failed to create zstd encoder")?,
-                )
-            }
-        };
-
-        assert!(
-            failure.is_none(),
-            "failure testing only implementd for multi core variant"
-        );
-        // let compressed = match failure {
-        //     Some(failure_cfg) => Compressed::FailForTest(failure_cfg.into_writer(base_writer)),
-        //     None => Compressed::Normal(base_writer),
-        // };
-
-        let compressed_writer = HashingFileWriter {
-            file_writer: base_writer,
-            hasher: uncompressed_hasher.take(),
-        };
-
-        Ok(Self { compressed_writer })
-    }
-
-    pub fn finish(self) -> (Option<String>, Option<String>) {
-        let (uncompressed_hasher, inner) = self
-            .compressed_writer
-            .finish()
-            .expect("writer finalization should not fail");
-        let inner_hashingwriter = inner.finish();
-        let (compressed_hasher, _filehandle) = inner_hashingwriter
-            .finish()
-            .expect("writer finalization should not fail");
-
-        let uncompressed_hash =
-            uncompressed_hasher.map(|hasher| format!("{:x}", hasher.finalize()));
-
-        let compressed_hash = compressed_hasher.map(|hasher| format!("{:x}", hasher.finalize()));
-        (uncompressed_hash, compressed_hash)
-    }
-}
-
-impl<T: std::io::Write + Send + 'static> std::io::Write
-    for HashedAndCompressedWriterSingleCore<'_, T>
-{
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         self.compressed_writer.write(buf)
     }

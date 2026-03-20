@@ -7,9 +7,7 @@ use bstr::BString;
 use indexmap::IndexMap;
 use mbf_fastq_processor_dna::dna::iupac_hamming_distance;
 use mbf_fastq_processor_io::CompressionFormat;
-use mbf_fastq_processor_io::io::compressed_output::{
-    HashedAndCompressedWriterSingleCore, OutputWriter,
-};
+use mbf_fastq_processor_io::io::compressed_output::{HashedAndCompressedWriter, OutputWriter};
 
 pub type Tag = u64;
 
@@ -320,12 +318,13 @@ impl OptDemultiplex {
                 let file_handle = ex::fs::File::create(&filename).with_context(|| {
                     format!("Could not open output file: {}", filename.display()) // cov:excl-line
                 })?; // cov:excl-line
-                let buffered_writer = HashedAndCompressedWriterSingleCore::new(
+                let buffered_writer = HashedAndCompressedWriter::new(
                     file_handle,
                     compression_format,
                     hash_uncompressed,
                     hash_compressed,
                     compression_level,
+                    Some(1),
                     None,
                 )?; // cov:excl-line
                 streams.insert(tag, Some(Box::new(buffered_writer)));
