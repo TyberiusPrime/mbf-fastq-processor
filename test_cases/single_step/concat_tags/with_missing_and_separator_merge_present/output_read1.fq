@@ -1,0 +1,16 @@
+@read1_both_tags|combined=read1!read1
+AAAACGTACGTTTT
++
+IIIIIIIIIIIIII
+@read2_missing_second|combined=read2
+AAAACGTACGCGCG
++
+IIIIIIIIIIIIII
+@read3_missing_first|combined=read3
+CGCGCGTACGTTTT
++
+IIIIIIIIIIIIII
+@read4_missing_both|combined=
+CGCGCGTACGCGCG
++
+IIIIIIIIIIIIII

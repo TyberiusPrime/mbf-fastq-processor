@@ -2,18 +2,18 @@ Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
-11 │ [[step]]
-12 │     action = 'ConcatTags'
+22 │ [[step]]
+23 │     action = 'ConcatTags'
    ┆              ──────┬─────
    ┆                    │
    ┆                    ╰────── In this step
-13 │     in_labels = ['tag1']
+24 │     in_labels = ['tag1']
    ┆                 ────┬───
    ┆                     │
    ┆                     ╰──── Must have at least two input labels
 ───╯
-Hint: Provide at least two tags to concatenate. Available: 
+Hint: Provide at least two tags to concatenate. Available: tag2
       See https://doc_url.example/version-stripped-from-test/docs/redirects/ConcatTags
-      Or run: `mbf-fastq-processor template ConcatTags`
+      Or run: `mbf-fastq-processor template ConcatTags` for more information.
 
 

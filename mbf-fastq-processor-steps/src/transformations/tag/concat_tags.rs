@@ -138,7 +138,8 @@ impl TagUser for PartialTaggedVariant<PartialConcatTags> {
                         Some(TagValueType::Location)
                     )
                 } else {
-                    true // skip invalid labels, they will be caught in validation
+                    // skip invalid labels, they will have been be caught in validation
+                    true // cov:excl-line
                 }
             });
             let output_type = if all_location {
@@ -248,11 +249,8 @@ impl Step for ConcatTags {
                     }
                 }
 
-                if combined_hits.is_empty() {
-                    output_tags.push(TagValue::Missing);
-                } else {
-                    output_tags.push(TagValue::Location(Hits::new_multiple(combined_hits)));
-                }
+                assert!(!combined_hits.is_empty()); // handled in case 4 // cov:excl-line
+                output_tags.push(TagValue::Location(Hits::new_multiple(combined_hits)));
             }
             // Case 2: All tags are String (or some are Missing)
             // Concatenate strings with separator
@@ -274,20 +272,17 @@ impl Step for ConcatTags {
                     }
                 }
 
-                if parts.is_empty() {
-                    output_tags.push(TagValue::Missing);
+                assert!(!parts.is_empty()); // handled in case 4 // cov:excl-line
+                let result = if let Some(sep) = &self.separator {
+                    parts.join(sep.as_bytes())
                 } else {
-                    let result = if let Some(sep) = &self.separator {
-                        parts.join(sep.as_bytes())
-                    } else {
-                        parts.concat()
-                    };
-                    output_tags.push(TagValue::String(result.into()));
-                }
+                    parts.concat()
+                };
+                output_tags.push(TagValue::String(result.into()));
             }
             // Case 3: Mixed Location and String
             // Convert all to strings and concatenate
-            else {
+            else if has_string && has_location {
                 let mut parts: Vec<Vec<u8>> = Vec::with_capacity(tag_vectors.len());
 
                 let tag_values = tag_vectors.iter().map(|vec| &vec[read_idx]);
@@ -300,26 +295,26 @@ impl Step for ConcatTags {
                         TagValue::String(s) => {
                             parts.push(s.to_vec());
                         }
-                        TagValue::Missing => {
-                            // Skip missing tags
-                        }
                         // cov:excl-start
-                        _ => unreachable!("Should only have Location, String, or Missing"),
+                        _ => unreachable!(
+                            "Should only have Location, String (missing can't be here either)"
+                        ),
                         // cov:excl-stop
                     }
                 }
 
-                if parts.is_empty() {
-                    output_tags.push(TagValue::Missing);
+                assert!(!parts.is_empty()); // handled in case 4
+                let parts_refs: Vec<&[u8]> = parts.iter().map(Vec::as_slice).collect();
+                let result = if let Some(sep) = &self.separator {
+                    parts_refs.join(sep.as_bytes())
                 } else {
-                    let parts_refs: Vec<&[u8]> = parts.iter().map(Vec::as_slice).collect();
-                    let result = if let Some(sep) = &self.separator {
-                        parts_refs.join(sep.as_bytes())
-                    } else {
-                        parts_refs.concat()
-                    };
-                    output_tags.push(TagValue::String(result.into()));
-                }
+                    parts_refs.concat()
+                };
+                output_tags.push(TagValue::String(result.into()));
+            } else {
+                //neither -> empty
+
+                output_tags.push(TagValue::Missing);
             }
         }
 

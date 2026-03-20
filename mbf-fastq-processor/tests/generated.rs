@@ -1115,16 +1115,6 @@ fn test_cases_x_new_x_bam_uncompressed_output() {
 }
 
 #[test]
-fn test_cases_x_new_x_concat_tags_too_few_labels() {
-    println!("Test case is in: test_cases/new/concat_tags_too_few_labels");
-    run_test(
-        std::path::Path::new("../test_cases/new/concat_tags_too_few_labels"),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
 fn test_cases_x_new_x_interleave_output_overlap() {
     println!("Test case is in: test_cases/new/interleave_output_overlap");
     run_test(
@@ -1697,6 +1687,16 @@ fn test_cases_x_single_step_x_compression_x_zstd_input_zst_output() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_concat_tags_x_concat_tags_too_few_labels() {
+    println!("Test case is in: test_cases/single_step/concat_tags/concat_tags_too_few_labels");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/concat_tags/concat_tags_too_few_labels"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_concat_tags_x_location_and_string_concat() {
     println!("Test case is in: test_cases/single_step/concat_tags/location_and_string_concat");
     run_test(
@@ -1793,6 +1793,44 @@ fn test_cases_x_single_step_x_concat_tags_x_three_tags() {
     println!("Test case is in: test_cases/single_step/concat_tags/three_tags");
     run_test(
         std::path::Path::new("../test_cases/single_step/concat_tags/three_tags"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_concat_tags_x_with_missing_and_separator() {
+    println!("Test case is in: test_cases/single_step/concat_tags/with_missing_and_separator");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/concat_tags/with_missing_and_separator"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_concat_tags_x_with_missing_and_separator_merge_present() {
+    println!(
+        "Test case is in: test_cases/single_step/concat_tags/with_missing_and_separator_merge_present"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/concat_tags/with_missing_and_separator_merge_present",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_concat_tags_x_with_missing_and_separator_merge_present_mixed() {
+    println!(
+        "Test case is in: test_cases/single_step/concat_tags/with_missing_and_separator_merge_present_mixed"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/concat_tags/with_missing_and_separator_merge_present_mixed",
+        ),
         "input.toml",
         1,
     );

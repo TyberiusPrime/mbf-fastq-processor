@@ -9,6 +9,17 @@
     max_mismatches = 0
 
 [[step]]
+    action = 'ExtractIUPAC'
+    search = "AAAA"
+    out_label = 'tag2'
+    anchor = 'Left'
+    max_mismatches = 0
+
+[[step]]
+  action=  'CalcLength'
+  out_label = 'll'
+
+[[step]]
     action = 'ConcatTags'
     in_labels = ['tag1']
     out_label = 'combined'
