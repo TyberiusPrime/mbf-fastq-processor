@@ -1395,6 +1395,40 @@ fn test_cases_x_output_x_output_compression_gzip_level() {
 }
 
 #[test]
+fn test_cases_x_output_x_output_compression_single_thread() {
+    println!("Test case is in: test_cases/output/output_compression_single_thread");
+    run_test(
+        std::path::Path::new("../test_cases/output/output_compression_single_thread"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_output_x_output_compression_single_thread_with_compression_level() {
+    println!(
+        "Test case is in: test_cases/output/output_compression_single_thread_with_compression_level"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/output/output_compression_single_thread_with_compression_level",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_output_x_output_compression_single_thread_zst() {
+    println!("Test case is in: test_cases/output/output_compression_single_thread_zst");
+    run_test(
+        std::path::Path::new("../test_cases/output/output_compression_single_thread_zst"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_output_x_output_different_suffix() {
     println!("Test case is in: test_cases/output/output_different_suffix");
     run_test(

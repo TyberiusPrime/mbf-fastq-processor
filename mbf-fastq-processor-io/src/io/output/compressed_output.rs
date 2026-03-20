@@ -10,7 +10,7 @@ use anyhow::{Context, Result};
 
 #[derive(Clone, Debug)]
 pub struct SimulatedWriteFailure {
-    pub remaining_bytes: Option<usize>,
+    pub remaining_bytes: usize,
     pub error: SimulatedWriteError,
 }
 
@@ -37,7 +37,7 @@ impl SimulatedWriteError {
 
 struct FailForTestWriter<T: Write> {
     inner: T,
-    remaining_bytes: Option<usize>,
+    remaining_bytes: usize,
     error: SimulatedWriteError,
     failure_emitted: bool,
 }
@@ -67,25 +67,21 @@ impl<T: Write> Write for FailForTestWriter<T> {
             return Err(self.make_error());
         }
 
-        if let Some(remaining) = self.remaining_bytes {
-            if remaining == 0 {
-                self.failure_emitted = true;
-                return Err(self.make_error());
-            }
-
-            let allowed = remaining.min(buf.len());
-            let written = self.inner.write(&buf[..allowed])?;
-            let new_remaining = remaining.saturating_sub(written);
-            self.remaining_bytes = Some(new_remaining);
-            if buf.len() > allowed {
-                self.failure_emitted = true;
-                return Err(self.make_error());
-            }
-
-            Ok(written)
-        } else {
-            self.inner.write(buf)
+        if self.remaining_bytes == 0 {
+            self.failure_emitted = true;
+            return Err(self.make_error());
         }
+
+        let allowed = self.remaining_bytes.min(buf.len());
+        let written = self.inner.write(&buf[..allowed])?;
+        let new_remaining = self.remaining_bytes.saturating_sub(written);
+        self.remaining_bytes = new_remaining;
+        if buf.len() > allowed {
+            self.failure_emitted = true;
+            return Err(self.make_error());
+        }
+
+        Ok(written)
     }
 
     #[mutants::skip]
@@ -291,28 +287,21 @@ impl<T: std::io::Write + Send + 'static> HashedAndCompressedWriter<'_, T> {
                 };
 
                 // Use parallel compression if threads > 1, otherwise use single-threaded
-                if let Some(threads) = compression_threads {
-                    if threads > 1 {
-                        // Use real multi-threaded gzip compression with gzp
-                        let mut builder = ZBuilder::<Gzip, _>::new().num_threads(threads);
+                if let Some(threads) = compression_threads
+                    && threads > 1
+                {
+                    // Use real multi-threaded gzip compression with gzp
+                    let mut builder = ZBuilder::<Gzip, _>::new().num_threads(threads);
 
-                        // Set compression level if provided
-                        builder = builder.compression_level(match compression_level {
-                            Some(level) => flate2::Compression::new(u32::from(level).clamp(0, 9)),
-                            None => flate2::Compression::default(),
-                        });
+                    // Set compression level if provided
+                    builder = builder.compression_level(match compression_level {
+                        Some(level) => flate2::Compression::new(u32::from(level).clamp(0, 9)),
+                        None => flate2::Compression::default(),
+                    });
 
-                        let parallel_writer = builder.from_writer(hashing_writer);
-                        let sendable_writer = SendableParallelWriter(parallel_writer);
-                        CompressedWriter::GzipParallel(sendable_writer)
-                    } else {
-                        // Single threaded fallback
-                        let compression = match compression_level {
-                            Some(level) => flate2::Compression::new(u32::from(level).clamp(0, 9)),
-                            None => flate2::Compression::default(),
-                        };
-                        CompressedWriter::GzipSingle(GzEncoder::new(hashing_writer, compression))
-                    }
+                    let parallel_writer = builder.from_writer(hashing_writer);
+                    let sendable_writer = SendableParallelWriter(parallel_writer);
+                    CompressedWriter::GzipParallel(sendable_writer)
                 } else {
                     // Default to single threaded when threads not specified
                     let compression = match compression_level {
@@ -522,7 +511,7 @@ mod tests {
     fn fail_for_test_writer_errors_after_budget() -> io::Result<()> {
         let cursor = Cursor::new(Vec::new());
         let failure = SimulatedWriteFailure {
-            remaining_bytes: Some(4),
+            remaining_bytes: 4,
             error: SimulatedWriteError::Other,
         };
 
@@ -556,7 +545,7 @@ mod tests {
     fn fail_for_test_writer_errors_after_budget_single_write() -> io::Result<()> {
         let cursor = Cursor::new(Vec::new());
         let failure = SimulatedWriteFailure {
-            remaining_bytes: Some(4),
+            remaining_bytes: 4,
             error: SimulatedWriteError::Other,
         };
 
