@@ -94,6 +94,10 @@ impl Step for Box<_ReportDuplicateFragmentCount> {
                 input_info,
                 demultiplex_info.len(),
             );
+            self.initial_filter_capacity
+                .lock()
+                .expect("lock poisened")
+                .replace(capacity);
 
             for tag in demultiplex_info.iter_tags() {
                 let data = data_lock.get_mut(&tag).expect("Tag checked during init");
@@ -107,7 +111,7 @@ impl Step for Box<_ReportDuplicateFragmentCount> {
 
         {
             let mut block_iter = block.get_pseudo_iter();
-            let pos = 0;
+            let mut pos = 0usize;
             let demultiplex_tags = block.output_tags.as_ref();
             while let Some(molecule) = block_iter.pseudo_next() {
                 let inner: Vec<_> = molecule
@@ -130,6 +134,7 @@ impl Step for Box<_ReportDuplicateFragmentCount> {
                 {
                     target.duplicate_count += 1;
                 }
+                pos += 1;
             }
         }
         Ok((block, true))

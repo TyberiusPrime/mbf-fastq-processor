@@ -975,6 +975,16 @@ fn test_cases_x_integration_x_complex_x_ten_segments_creative_transforms() {
 }
 
 #[test]
+fn test_cases_x_integration_x_duplicate_fragment_count_and_demultiplex() {
+    println!("Test case is in: test_cases/integration/duplicate_fragment_count_and_demultiplex");
+    run_test(
+        std::path::Path::new("../test_cases/integration/duplicate_fragment_count_and_demultiplex"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_integration_x_edge_cases_x_max_one_block_in_flight() {
     println!("Test case is in: test_cases/integration/edge_cases/max_one_block_in_flight");
     run_test(
@@ -8265,6 +8275,18 @@ fn test_cases_x_single_step_x_rename_x_rename_regex_shorter() {
     println!("Test case is in: test_cases/single_step/rename/rename_regex_shorter");
     run_test(
         std::path::Path::new("../test_cases/single_step/rename/rename_regex_shorter"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_reports_x_duplicate_fragment_count_is_stable() {
+    println!("Test case is in: test_cases/single_step/reports/duplicate_fragment_count_is_stable");
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/reports/duplicate_fragment_count_is_stable",
+        ),
         "input.toml",
         1,
     );

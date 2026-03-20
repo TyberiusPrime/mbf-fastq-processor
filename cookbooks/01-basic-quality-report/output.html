@@ -378,6 +378,26 @@
         headerContainer.appendChild(sectionHeader);
         headerContainer.appendChild(backButton);
         container.appendChild(headerContainer);
+
+        if (sectionData.multiplexed !== undefined) {
+          Object.entries(sectionData.multiplexed).forEach(([bucketKey, bucketData]) => {
+            if (typeof bucketData !== "object" || bucketData === null) {
+              return;
+            }
+            const bucketHeader = document.createElement("h3");
+            bucketHeader.textContent = bucketKey;
+            container.appendChild(bucketHeader);
+            container.appendChild(addSectionTable(bucketData));
+            container.appendChild(document.createElement("hr"));
+          });
+          return;
+        }
+
+        container.appendChild(addSectionTable(sectionData));
+        container.appendChild(document.createElement("hr"));
+      }
+
+      function addSectionTable(sectionData) {
         // Create table for the section with three columns: target, description, content
         const table = document.createElement("table");
         table.style.width = "95%";
@@ -392,6 +412,27 @@
           tdDesc.style.width = "1px";
           const tdContent = document.createElement("td");
           tdContent.textContent = render_number(sectionData.molecule_count);
+          tr.appendChild(tdTarget);
+          tr.appendChild(tdDesc);
+          tr.appendChild(tdContent);
+          table.appendChild(tr);
+        }
+        // Fragment duplicate count row, if present
+        if (sectionData.fragment_duplicate_count !== undefined) {
+          const dup = sectionData.fragment_duplicate_count;
+          let dupRel = "";
+          if (sectionData.molecule_count !== undefined && sectionData.molecule_count > 0) {
+            dupRel = " (" + ((dup / sectionData.molecule_count) * 100).toFixed(2) + "%)";
+          }
+          const tr = document.createElement("tr");
+          const tdTarget = document.createElement("th");
+          tdTarget.textContent = "-";
+          tdTarget.style.width = "1px";
+          const tdDesc = document.createElement("th");
+          tdDesc.textContent = "Fragment duplicate count";
+          tdDesc.style.width = "1px";
+          const tdContent = document.createElement("td");
+          tdContent.textContent = render_number(dup) + dupRel;
           tr.appendChild(tdTarget);
           tr.appendChild(tdDesc);
           tr.appendChild(tdContent);
@@ -547,8 +588,7 @@
             table.appendChild(tr);
           }
         }
-        container.appendChild(table);
-        container.appendChild(document.createElement("hr"));
+        return table;
       }
 
       window.addEventListener("resize", function () {

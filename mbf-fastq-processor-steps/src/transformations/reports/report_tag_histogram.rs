@@ -217,10 +217,10 @@ impl Step for Box<_ReportTagHistogram> {
                                 histogram.add_value(tag_value);
                             }
                         }
-                    }
+                    } // cov:excl-line
                 }
             }
-        }
+        } // cov:excl-line
         Ok((block, true))
     }
 

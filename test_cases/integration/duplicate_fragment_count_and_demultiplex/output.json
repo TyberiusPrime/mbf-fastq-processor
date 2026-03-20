@@ -1,0 +1,46 @@
+{
+  "__": {
+    "version": "_IGNORED_",
+    "cwd": "_IGNORED_",
+    "input_files": {
+      "interleaved": null,
+      "read1": [
+        "input_read1.fq"
+      ]
+    },
+    "repository": "_IGNORED_"
+  },
+  "pre_demultiplex": {
+    "molecule_count": 10,
+    "initial_filter_capacity": 16,
+    "actual_filter_capacity": 16,
+    "fragment_duplicate_count": 3
+  },
+  "post_demultiplex": {
+    "multiplexed": {
+      "no-barcode": {
+        "molecule_count": 2,
+        "fragment_duplicate_count": 0
+      },
+      "sample1": {
+        "molecule_count": 5,
+        "fragment_duplicate_count": 2
+      },
+      "sample2": {
+        "molecule_count": 3,
+        "fragment_duplicate_count": 1
+      },
+      "initial_filter_capacity": 8,
+      "actual_filter_capacity": 8
+    }
+  },
+  "run_info": {
+    "program_version": "_IGNORED_",
+    "input_toml": "_IGNORED_",
+    "working_directory": "_IGNORED_"
+  },
+  "report_order": [
+    "pre_demultiplex",
+    "post_demultiplex"
+  ]
+}

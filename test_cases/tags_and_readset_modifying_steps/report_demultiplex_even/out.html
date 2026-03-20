@@ -381,6 +381,9 @@
 
         if (sectionData.multiplexed !== undefined) {
           Object.entries(sectionData.multiplexed).forEach(([bucketKey, bucketData]) => {
+            if (typeof bucketData !== "object" || bucketData === null) {
+              return;
+            }
             const bucketHeader = document.createElement("h3");
             bucketHeader.textContent = bucketKey;
             container.appendChild(bucketHeader);
@@ -409,6 +412,27 @@
           tdDesc.style.width = "1px";
           const tdContent = document.createElement("td");
           tdContent.textContent = render_number(sectionData.molecule_count);
+          tr.appendChild(tdTarget);
+          tr.appendChild(tdDesc);
+          tr.appendChild(tdContent);
+          table.appendChild(tr);
+        }
+        // Fragment duplicate count row, if present
+        if (sectionData.fragment_duplicate_count !== undefined) {
+          const dup = sectionData.fragment_duplicate_count;
+          let dupRel = "";
+          if (sectionData.molecule_count !== undefined && sectionData.molecule_count > 0) {
+            dupRel = " (" + ((dup / sectionData.molecule_count) * 100).toFixed(2) + "%)";
+          }
+          const tr = document.createElement("tr");
+          const tdTarget = document.createElement("th");
+          tdTarget.textContent = "-";
+          tdTarget.style.width = "1px";
+          const tdDesc = document.createElement("th");
+          tdDesc.textContent = "Fragment duplicate count";
+          tdDesc.style.width = "1px";
+          const tdContent = document.createElement("td");
+          tdContent.textContent = render_number(dup) + dupRel;
           tr.appendChild(tdTarget);
           tr.appendChild(tdDesc);
           tr.appendChild(tdContent);
@@ -610,15 +634,15 @@
 
       const embeddedData = {
   "__": {
-    "version": "0.8.1",
-    "cwd": "/project/test_cases/tags_and_readset_modifying_steps/report_demultiplex_even",
+    "version": "_IGNORED_",
+    "cwd": "_IGNORED_",
     "input_files": {
       "interleaved": null,
       "read1": [
         "input_read1.fq"
       ]
     },
-    "repository": "https://tyberiusprime.github.io/mbf-fastq-processor/"
+    "repository": "_IGNORED_"
   },
   "before_demux": {
     "molecule_count": 10,
@@ -1787,9 +1811,9 @@
     }
   },
   "run_info": {
-    "program_version": "0.8.1",
-    "input_toml": "[input]\n  read1 = \"input_read1.fq\"\n\n[[step]]\n  action = \"EvalExpression\"\n  expression = \"read_no % 2 != 0\"\n  out_label = \"even\"\n  result_type = \"bool\"\n\n\n[[step]]\n  action = \"Report\"\n  name = \"before_demux\"\n  count = true\n  base_statistics = true\n  duplicate_count_per_read = true\n  length_distribution = true\n\n[[step]]\n  action = \"Demultiplex\"\n  in_label = \"even\"\n\n[[step]]\n  action = \"Report\"\n  name = \"after_demux\"\n  count = true\n  base_statistics = true\n  duplicate_count_per_read = true\n  length_distribution = true\n\n[output]\n  prefix = \"out\"\n  report_json = true\n  report_html = true\n",
-    "working_directory": "/project/test_cases/tags_and_readset_modifying_steps/report_demultiplex_even"
+    "program_version": "_IGNORED_",
+    "input_toml": "_IGNORED_",
+    "working_directory": "_IGNORED_"
   },
   "report_order": [
     "before_demux",
