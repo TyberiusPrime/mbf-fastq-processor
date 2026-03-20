@@ -6642,6 +6642,21 @@ fn test_cases_x_single_step_x_extraction_x_extract_region_x_empty_region_definit
 }
 
 #[test]
+fn test_cases_x_single_step_x_extraction_x_extract_region_x_extract_from_tag_with_cleared_location()
+{
+    println!(
+        "Test case is in: test_cases/single_step/extraction/extract_region/extract_from_tag_with_cleared_location"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/extract_region/extract_from_tag_with_cleared_location",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_extraction_x_extract_region_x_from_string_tag() {
     println!("Test case is in: test_cases/single_step/extraction/extract_region/from_string_tag");
     run_test(

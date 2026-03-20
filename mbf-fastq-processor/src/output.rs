@@ -506,9 +506,8 @@ impl OutputFileConfig {
                 "Could not read output directory for renaming files: {}",
                 self.directory.display()
             )
-            // cov:excl-stop
         })?
-        // cov:excl-line
+        // cov:excl-stop
         {
             let entry = entry.with_context(|| {
                 // cov:excl-start

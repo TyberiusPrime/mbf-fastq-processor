@@ -4,6 +4,7 @@ use std::collections::HashSet;
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::process::Stdio;
 
 use indexmap::IndexMap;
 
@@ -3703,5 +3704,268 @@ fn test_verify_compressed_size_difference_too_large() {
     assert!(
         stderr.contains("Compressed file size difference too large"),
         "Should report compressed size mismatch, got: {stderr}"
+    );
+}
+
+/// Send SIGUSR1 to the child process to wake it from its poll sleep.
+#[cfg(unix)]
+fn send_sigusr1(child: &std::process::Child) {
+    std::process::Command::new("kill")
+        .arg("-USR1")
+        .arg(child.id().to_string())
+        .status()
+        .unwrap();
+}
+
+/// Wait until `stdout_path` contains at least `run_number` run-completion markers.
+/// Uses the timestamp-bracket suffix " [" to distinguish the header lines from error bodies.
+/// "Processing completed successfully [time]" and "Processing failed [time]" each appear exactly
+/// once per run (the error body "Processing failed:\n..." uses ":" not "[").
+fn wait_for_interactive_run(stdout_path: &std::path::Path, run_number: usize) {
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(15);
+    loop {
+        assert!(
+            std::time::Instant::now() < deadline,
+            "Timeout waiting for interactive run {run_number}"
+        );
+        let content = std::fs::read_to_string(stdout_path).unwrap_or_default();
+        let completed = content
+            .matches("Processing completed successfully [")
+            .count()
+            + content.matches("Processing failed [").count();
+        if completed >= run_number {
+            return;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(20));
+    }
+}
+
+#[test]
+fn test_interactive() {
+    let dir = tempfile::tempdir().unwrap();
+    let temp_path = dir.path();
+    let config = temp_path.join("config.toml");
+    fs::write(
+        &config,
+        r"[input]
+            read1 = 'input_read1.fq'
+        [output]
+            prefix = 'output'
+",
+    )
+    .unwrap();
+    let mut input_file = fs::File::create(temp_path.join("input_read1.fq")).unwrap();
+    writeln!(input_file, "@read1\nACGT\n+\nIIII").unwrap();
+    writeln!(input_file, "@read2\nTGCA\n+\nIIII").unwrap();
+
+    let stdout_path = temp_path.join("stdout");
+    let stderr_path = temp_path.join("stderr");
+    let stdout_file = std::fs::File::create(&stdout_path).unwrap();
+    let stderr_file = std::fs::File::create(stderr_path).unwrap();
+
+    let mut cmd = std::process::Command::new(get_bin_path())
+        .arg("interactive")
+        .arg("--poll-interval")
+        .arg("100")
+        .arg("--max-runs")
+        .arg("6")
+        .current_dir(temp_path)
+        .stderr(Stdio::from(stderr_file))
+        .stdout(Stdio::from(stdout_file))
+        .spawn()
+        .unwrap();
+
+    wait_for_interactive_run(&stdout_path, 1); // wait for run 1 to complete
+
+    fs::write(
+        &config,
+        r"[input]
+            read1 = 'input_read1.fq'
+          [[step]]
+                action = 'prefix'
+                seq = 'nn'
+                qual = 'BB'
+        [output]
+            prefix = 'output'
+",
+    )
+    .unwrap();
+    #[cfg(unix)]
+    send_sigusr1(&cmd);
+    wait_for_interactive_run(&stdout_path, 2); // wait for run 2 to complete
+
+    fs::write(
+        &config,
+        r"[input]
+            read1 = ['input_read1.fq']
+            options = {}
+          [[step]]
+                action = 'prefix'
+                seq = 'nn'
+                # qual = 'BB'
+        [output]
+            prefix = 'output'
+",
+    )
+    .unwrap();
+    #[cfg(unix)]
+    send_sigusr1(&cmd);
+    wait_for_interactive_run(&stdout_path, 3); // wait for run 3 to complete
+
+    // Run 4: absolute path + interleaved key + Report step — covers has_report_step = true,
+    // key == "interleaved" skip, and !path.is_absolute() == false, all in one run
+    let abs_input = temp_path
+        .join("input_read1.fq")
+        .to_string_lossy()
+        .into_owned();
+    fs::write(
+        &config,
+        format!(
+            "[input]\n    read1 = '{abs_input}'\n    interleaved = ['read1', 'read2']\n\
+             [[step]]\n    action = 'Report'\n    name = 'my_report'\n    count = true\n\
+             [output]\n    prefix = 'output'\n"
+        ),
+    )
+    .unwrap();
+    #[cfg(unix)]
+    send_sigusr1(&cmd);
+    wait_for_interactive_run(&stdout_path, 4); // wait for run 4 to complete
+
+    // Run 5: integer-valued segment — covers `_ => bail!` (line 275) in make_paths_absolute
+    fs::write(
+        &config,
+        r"[input]
+            read1 = 23
+        [output]
+            prefix = 'output'
+",
+    )
+    .unwrap();
+    #[cfg(unix)]
+    send_sigusr1(&cmd);
+    wait_for_interactive_run(&stdout_path, 5); // wait for run 5 to complete
+
+    // Run 6: sub-table segment — covers `_ => bail!` (line 277) in make_paths_absolute
+    fs::write(
+        &config,
+        r"[input]
+            read1.path = 'input_read1.fq'
+        [output]
+            prefix = 'output'
+",
+    )
+    .unwrap();
+    #[cfg(unix)]
+    send_sigusr1(&cmd);
+    wait_for_interactive_run(&stdout_path, 6); // wait for run 6 to complete
+    cmd.wait().unwrap(); // wait for clean exit (flushes coverage data)
+    let stdout = std::fs::read_to_string(temp_path.join("stdout")).unwrap();
+
+    // println!("stdout:\n{stdout}");
+    // println!("stderr:\n{stderr}");
+    let pos_round_1 = stdout.find(
+        "Inspect Output:
+@read1
+ACGT
++
+IIII
+@read2
+TGCA
++
+IIII",
+    );
+    assert!(
+        pos_round_1.is_some(),
+        "Output should contain the full contents of input_read1.fq, got: {stdout}"
+    );
+    let pos_round_2 = stdout.find(
+        "Inspect Output:
+@read1
+nnACGT
++
+BBIIII
+@read2
+nnTGCA
++
+BBIIII",
+    );
+    assert!(
+        pos_round_2.is_some(),
+        "Output should contain the modified sequences and qualities, got: {stdout}"
+    );
+
+    let pos_round3 = stdout.find(
+        "Error 1/1
+   ╭─config.toml
+   ┆
+13 │           [[step]]
+14 │                 action = 'prefix'
+   ┆                          ────┬───
+   ┆                              │
+   ┆                              ╰──── In this step
+15 │                 seq = 'nn'
+   ┆                           ┬
+   ┆                           │
+   ┆                           ╰─ Missing required key: 'qual'.
+───╯",
+    );
+    assert!(
+        pos_round3.is_some(),
+        "Output should contain the error message about missing 'qual' key, got: {stdout}"
+    );
+    assert!(
+        pos_round_1.unwrap() < pos_round_2.unwrap() && pos_round_2.unwrap() < pos_round3.unwrap()
+    );
+}
+
+#[test]
+fn test_interactive_no_output() {
+    // Covers the display_success "No output" branch — triggered when processing succeeds
+    // but produces no inspect output. We filter all reads out with FilterByNumericTag
+    // (reads are 4 bases long, filter keeps only reads >= 100 bases → 0 reads reach Inspect).
+    let dir = tempfile::tempdir().unwrap();
+    let temp_path = dir.path();
+    let config = temp_path.join("config.toml");
+    let mut input_file = fs::File::create(temp_path.join("input_read1.fq")).unwrap();
+    writeln!(input_file, "@read1\nACGT\n+\nIIII").unwrap();
+    fs::write(
+        &config,
+        r"[input]
+            read1 = 'input_read1.fq'
+        [[step]]
+            action = 'CalcLength'
+            out_label = 'len'
+        [[step]]
+            action = 'FilterByNumericTag'
+            in_label = 'len'
+            min_value = 100
+            keep_or_remove = 'keep'
+        [output]
+            prefix = 'output'
+",
+    )
+    .unwrap();
+
+    let stdout_path = temp_path.join("stdout");
+    let stdout_file = std::fs::File::create(&stdout_path).unwrap();
+    let stderr_file = std::fs::File::create(temp_path.join("stderr")).unwrap();
+
+    let mut cmd = std::process::Command::new(get_bin_path())
+        .arg("interactive")
+        .arg("--poll-interval")
+        .arg("100")
+        .arg("--max-runs")
+        .arg("1")
+        .current_dir(temp_path)
+        .stdout(Stdio::from(stdout_file))
+        .stderr(Stdio::from(stderr_file))
+        .spawn()
+        .unwrap();
+
+    cmd.wait().unwrap();
+    let stdout = std::fs::read_to_string(&stdout_path).unwrap();
+    assert!(
+        stdout.contains("No output (processing completed without messages)"),
+        "Expected 'No output' message, got: {stdout}"
     );
 }

@@ -13,8 +13,28 @@ use bstr::BString;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, SystemTime};
 use toml_edit::{DocumentMut, Item, Table, value};
+
+static SIGUSR1_RECEIVED: AtomicBool = AtomicBool::new(false);
+
+#[cfg(unix)]
+extern "C" fn sigusr1_handler(_signum: libc::c_int) {
+    SIGUSR1_RECEIVED.store(true, Ordering::Relaxed);
+}
+
+/// Sleep for up to `duration_ms` milliseconds, but wake immediately if SIGUSR1 arrives.
+fn interruptible_sleep(duration_ms: u64) {
+    let step_ms = 10u64;
+    let steps = duration_ms / step_ms;
+    for _ in 0..steps {
+        if SIGUSR1_RECEIVED.swap(false, Ordering::Relaxed) {
+            return;
+        }
+        std::thread::sleep(Duration::from_millis(step_ms));
+    }
+}
 
 /// Get current local time as a formatted string
 fn get_local_time() -> String {
@@ -34,7 +54,7 @@ fn get_local_time() -> String {
     format!("{hours:02}:{minutes:02}:{seconds:02} UTC")
 }
 
-const POLL_INTERVAL_MS: u64 = 1000;
+const DEFAULT_POLL_INTERVAL_MS: u64 = 1000;
 const DEFAULT_HEAD_COUNT: u64 = 10_000;
 const DEFAULT_SAMPLE_COUNT: u64 = 15;
 const DEFAULT_INSPECT_COUNT: u64 = 15;
@@ -43,15 +63,22 @@ pub struct InteractiveConfig {
     pub head_count: u64,
     pub sample_count: u64,
     pub inspect_count: u64,
+    pub max_runs: Option<u64>,
 }
 
 impl InteractiveConfig {
     #[must_use]
-    pub fn new(head: Option<u64>, sample: Option<u64>, inspect: Option<u64>) -> Self {
+    pub fn new(
+        head: Option<u64>,
+        sample: Option<u64>,
+        inspect: Option<u64>,
+        max_runs: Option<u64>,
+    ) -> Self {
         Self {
             head_count: head.unwrap_or(DEFAULT_HEAD_COUNT),
             sample_count: sample.unwrap_or(DEFAULT_SAMPLE_COUNT),
             inspect_count: inspect.unwrap_or(DEFAULT_INSPECT_COUNT),
+            max_runs,
         }
     }
 }
@@ -62,17 +89,29 @@ pub fn run_interactive(
     head: Option<u64>,
     sample: Option<u64>,
     inspect: Option<u64>,
+    poll_interval_ms: Option<u64>,
+    max_runs: Option<u64>,
 ) -> Result<()> {
-    let config = InteractiveConfig::new(head, sample, inspect);
+    let poll_interval_ms = poll_interval_ms.unwrap_or(DEFAULT_POLL_INTERVAL_MS);
+    let config = InteractiveConfig::new(head, sample, inspect, max_runs);
 
     println!("Interactive mode starting...");
     println!("Watching: {}", toml_path.display());
-    println!("Polling every {POLL_INTERVAL_MS}ms");
+    println!("Polling every {poll_interval_ms}ms");
     println!("Processing first {} reads", config.head_count);
     println!("Sampling {} reads for display", config.sample_count);
     println!("Showing {} reads in output", config.inspect_count);
     println!("\n{}", "=".repeat(80));
     println!("Press Ctrl+C to exit\n");
+
+    #[cfg(unix)]
+    // SAFETY: sigusr1_handler only writes to an AtomicBool, which is async-signal-safe.
+    unsafe {
+        libc::signal(
+            libc::SIGUSR1,
+            sigusr1_handler as *const () as libc::sighandler_t,
+        );
+    }
 
     let toml_path = toml_path
         .canonicalize()
@@ -80,6 +119,7 @@ pub fn run_interactive(
 
     let mut last_content = b"".into();
     let mut first_run = true;
+    let mut run_count: u64 = 0;
     let temp_dir =
         std::env::temp_dir().join(format!("mbf-fastq-interactive-{}", std::process::id()));
     fs::create_dir_all(&temp_dir)
@@ -101,6 +141,7 @@ pub fn run_interactive(
                 println!("{}\n", "=".repeat(80));
             }
             first_run = false;
+            run_count += 1;
 
             match process_toml_interactive(&temp_dir, &last_content, &toml_path, &config) {
                 Ok(output) => {
@@ -110,9 +151,14 @@ pub fn run_interactive(
                     display_error(&e);
                 }
             }
+            let _ = std::io::Write::flush(&mut std::io::stdout());
+
+            if config.max_runs.is_some_and(|max| run_count >= max) {
+                return Ok(());
+            }
         }
 
-        std::thread::sleep(Duration::from_millis(POLL_INTERVAL_MS));
+        interruptible_sleep(poll_interval_ms);
     }
 }
 
@@ -150,8 +196,6 @@ fn process_toml_interactive(
     /* eprintln!("\n=== Modified TOML ===");
     eprintln!("{}", modified_content);
     eprintln!("=== End Modified TOML ===\n"); */
-    eprintln!("Temp dir: {}", temp_dir.display());
-
     fs::write(&temp_toml, modified_content)
         .with_context(|| format!("Failed to write temp TOML: {}", temp_toml.display()))?;
 
@@ -161,15 +205,14 @@ fn process_toml_interactive(
     // Run the processor on the modified TOML
     let output = Command::new(&exe_path)
         .arg("process")
+        .arg("--allow-overwrite")
         .arg(&temp_toml)
         .current_dir(temp_dir)
         .output()
         .with_context(|| format!("Failed to execute: {}", exe_path.display()))?;
 
     if output.status.success() {
-        // Extract stdout and stderr
         let stdout = String::from_utf8_lossy(&output.stdout);
-        let stderr = String::from_utf8_lossy(&output.stderr);
 
         /* //list all files in tempdir
         for entry in fs::read_dir(&temp_dir)? {
@@ -192,14 +235,11 @@ fn process_toml_interactive(
 
         // Combine for output
         let mut result = String::new();
-        if !stderr.is_empty() {
-            result.push_str(&stderr);
-        }
         if !stdout.is_empty() {
-            if !result.is_empty() {
-                result.push('\n');
-            }
+            // cov:excl-start
+            // normally, it's quiet on stdout...
             result.push_str(&stdout);
+            // cov:excl-stop
         }
         if !inspect_output.is_empty() {
             if !result.is_empty() {
@@ -207,7 +247,7 @@ fn process_toml_interactive(
             }
             result.push_str("Inspect Output:\n");
             result.push_str(&inspect_output);
-        }
+        } // cov:excl-line
         Ok(result)
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -367,9 +407,11 @@ fn display_success(output: &str) {
 
     // Find and highlight the Inspect output
     if let Some(inspect_start) = output.find("Inspect:") {
+        // cov:excl-start
         let inspect_output = &output[inspect_start..];
         println!("\nSample Output:\n");
         println!("{inspect_output}");
+        // cov:excl-stop
     } else {
         // If no Inspect found, show all output
         if output.trim().is_empty() {

@@ -36,6 +36,7 @@ workspace = true
 	flate2 = {workspace = true}
 	human-panic = {workspace = true}
     indexmap = {workspace = true}
+    libc = {workspace = true}
     itertools = "0.14.0"
 	json_value_merge = {workspace = true}
     mbf-fastq-processor-io = {path = "../mbf-fastq-processor-io"}

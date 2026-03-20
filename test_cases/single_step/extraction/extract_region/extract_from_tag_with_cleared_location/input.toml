@@ -1,0 +1,34 @@
+[input]
+    read1 = 'input_read1.fq'
+
+# Creates a Location tag for reads containing AAAA
+[[step]]
+    action = 'ExtractIUPAC'
+    search = "AAAA"
+    out_label = 'anchor'
+    anchor = 'Left'
+    max_mismatches = 0
+
+# Trim at anchor, keep_tag=false clears hit.location to None
+[[step]]
+    action = 'TrimAtTag'
+    in_label = 'anchor'
+    direction = 'Start'
+    keep_tag = false
+
+# Extract from tag:anchor.
+# read1: anchor is Location but hit.location=None (cleared by TrimAtTag) -> Missing
+# read2: anchor is Missing -> Missing
+[[step]]
+    action = 'ExtractRegions'
+    out_label = 'extracted'
+    regions = [
+        { source = 'tag:anchor', start = 0, length = 2, anchor = 'Start' }
+    ]
+
+[[step]]
+    action = 'StoreTagInComment'
+    in_label = 'extracted'
+
+[output]
+    prefix = 'output'

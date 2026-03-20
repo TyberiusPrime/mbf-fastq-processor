@@ -173,6 +173,20 @@ This command is used by the test runner but can also be run manually to verify t
                         .help("Number of reads to display in inspect output (default: 15)")
                         .value_name("N")
                         .value_parser(clap::value_parser!(u64)),
+                )
+                .arg(
+                    Arg::new("poll_interval")
+                        .long("poll-interval")
+                        .help("Polling interval in milliseconds (default: 1000)")
+                        .value_name("MS")
+                        .value_parser(clap::value_parser!(u64)),
+                )
+                .arg(
+                    Arg::new("max_runs")
+                        .long("max-runs")
+                        .help("Exit after processing N times (useful for testing)")
+                        .value_name("N")
+                        .value_parser(clap::value_parser!(u64)),
                 ),
         )
         .subcommand(
@@ -359,7 +373,9 @@ fn main() -> Result<()> {
             let head = sub_matches.get_one::<u64>("head").copied();
             let sample = sub_matches.get_one::<u64>("sample").copied();
             let inspect = sub_matches.get_one::<u64>("inspect").copied();
-            run_interactive_mode(&toml_path, head, sample, inspect);
+            let poll_interval = sub_matches.get_one::<u64>("poll_interval").copied();
+            let max_runs = sub_matches.get_one::<u64>("max_runs").copied();
+            run_interactive_mode(&toml_path, head, sample, inspect, poll_interval, max_runs);
         }
         Some(("completions", sub_matches)) => {
             if let Some(shell) = sub_matches.get_one::<Shell>("shell") {
@@ -461,10 +477,17 @@ fn run_interactive_mode(
     head: Option<u64>,
     sample: Option<u64>,
     inspect: Option<u64>,
+    poll_interval: Option<u64>,
+    max_runs: Option<u64>,
 ) {
-    if let Err(e) =
-        mbf_fastq_processor::interactive::run_interactive(toml_path, head, sample, inspect)
-    {
+    if let Err(e) = mbf_fastq_processor::interactive::run_interactive(
+        toml_path,
+        head,
+        sample,
+        inspect,
+        poll_interval,
+        max_runs,
+    ) {
         eprintln!("Interactive mode error: {e:?}");
         std::process::exit(1);
     } // cov:excl-line

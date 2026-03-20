@@ -462,20 +462,25 @@ fn extract_from_resolved_source(
                                     (None, None)
                                 }
                             } else {
+                                // cov:excl-start
+                                unreachable!(
+                                    "Something has started to produce empty hits. Fix it or decide what to do"
+                                );
+                                // cov:excl-stop
                                 // has no hits. Fall back to string value if possible
-                                let seq = hits.joined_sequence(None);
-                                (
-                                    extract_from_sequence(
-                                        &seq,
-                                        0,
-                                        seq.len(),
-                                        start,
-                                        length,
-                                        anchor,
-                                    )
-                                    .map(|x| x.0),
-                                    None,
-                                )
+                                // let seq = hits.joined_sequence(None);
+                                // (
+                                //     extract_from_sequence(
+                                //         &seq,
+                                //         0,
+                                //         seq.len(),
+                                //         start,
+                                //         length,
+                                //         anchor,
+                                //     )
+                                //     .map(|x| x.0),
+                                //     None,
+                                // )
                             }
                         }
                         TagValue::String(string_val) => {
@@ -496,10 +501,14 @@ fn extract_from_resolved_source(
                         _ => (None, None),
                     }
                 } else {
-                    (None, None)
+                    // cov:excl-start
+                    unreachable!("Tags must always match block len");
+                    // cov:excl-stop
                 }
             } else {
-                (None, None)
+                // cov:excl-start
+                unreachable!("Tag presence should have been verified before!");
+                // cov:excl-stop
             }
         }
         ResolvedSourceNoAll::Name {
