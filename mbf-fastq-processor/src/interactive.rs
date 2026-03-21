@@ -157,7 +157,7 @@ pub fn run_interactive(
             if config.max_runs.is_some_and(|max| run_count >= max) {
                 return Ok(());
             }
-        }
+        } // cov:excl-line
 
         interruptible_sleep(poll_interval_ms);
     }
@@ -244,7 +244,10 @@ fn process_toml_interactive(
         }
         if !inspect_output.is_empty() {
             if !result.is_empty() {
+                // cov:excl-start
+                //same stdout argument
                 result.push_str("\n\n");
+                // cov:excl-stop
             }
             result.push_str("Inspect Output:\n");
             result.push_str(&inspect_output);
@@ -265,7 +268,7 @@ fn modify_toml_for_interactive(
     // 1. Make input paths absolute
     if let Some(input_table) = doc.get_mut("input").and_then(|v| v.as_table_mut()) {
         make_paths_absolute(input_table, toml_dir)?;
-    }
+    } // cov:excl-line
 
     // 2. Inject Head and FilterReservoirSample at the beginning of steps
     // 3. Inject Inspect at the end of steps
@@ -412,8 +415,8 @@ fn display_success(output: &str) {
         let inspect_output = &output[inspect_start..];
         println!("\nSample Output:\n");
         println!("{inspect_output}");
-        // cov:excl-stop
     } else {
+        // cov:excl-stop - yes this is the right place..
         // If no Inspect found, show all output
         if output.trim().is_empty() {
             println!("\n✓ No output (processing completed without messages)");
