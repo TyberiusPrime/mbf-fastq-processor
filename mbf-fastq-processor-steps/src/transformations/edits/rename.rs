@@ -1,8 +1,8 @@
+use bstr::ByteSlice;
+
 use crate::transformations::prelude::*;
 use mbf_fastq_processor_config::{tpd_adapt_bstring, tpd_adapt_regex};
 use std::sync::atomic::Ordering;
-
-use bstr::ByteSlice;
 
 /// Rename (and/or renumber) reads by applying a regex
 #[derive(JsonSchema)]

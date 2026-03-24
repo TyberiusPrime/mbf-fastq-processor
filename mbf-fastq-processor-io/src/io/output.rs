@@ -1,8 +1,4 @@
 use anyhow::{Context, Result};
-use std::sync::Arc;
-
-use super::reads::{WrappedFastQRead, WrappedFastQReadCommon};
-use crate::io::output::compressed_output::HashedAndCompressedWriter;
 use bstr::BString;
 use noodles::sam::alignment::{
     RecordBuf,
@@ -11,6 +7,10 @@ use noodles::sam::alignment::{
     record_buf::{QualityScores as SamQualityScores, Sequence as SamSequence},
 };
 use noodles::{bam, bgzf, sam};
+use std::sync::Arc;
+
+use crate::io::output::compressed_output::HashedAndCompressedWriter;
+use crate::io::reads::{WrappedFastQRead, WrappedFastQReadCommon};
 
 pub mod compressed_output;
 

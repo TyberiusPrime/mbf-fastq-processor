@@ -1,6 +1,5 @@
-use crate::transformations::prelude::*;
-
 use super::extract_numeric_tags_plus_all;
+use crate::transformations::prelude::*;
 use mbf_fastq_processor_config::tpd_adapt_u8_from_byte_or_char;
 use mbf_fastq_processor_io::io::WrappedFastQRead;
 

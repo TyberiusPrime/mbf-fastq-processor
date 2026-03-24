@@ -1,5 +1,4 @@
 use mbf_fastq_processor_dna::dna::HitRegion;
-
 use crate::transformations::prelude::*;
 
 /// Cut a fixed number of bases from the start of reads

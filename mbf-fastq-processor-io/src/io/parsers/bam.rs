@@ -1,15 +1,14 @@
-use std::path::{Path, PathBuf};
-
-use super::{ParseResult, Parser};
-use crate::io::{FastQBlock, FastQRead};
 use anyhow::{Result, bail};
 use bstr::ByteSlice;
 use ex::fs::File;
+use noodles::bam::bai;
 use noodles::bam::{self, record::Record};
 use noodles::bgzf;
-
-use noodles::bam::bai;
 use noodles::csi::binning_index::{BinningIndex, ReferenceSequence};
+use std::path::{Path, PathBuf};
+
+use crate::io::parsers::{ParseResult, Parser};
+use crate::io::{FastQBlock, FastQRead};
 
 type BamReader = bam::io::Reader<bgzf::io::MultithreadedReader<File>>;
 

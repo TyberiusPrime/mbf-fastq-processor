@@ -1,7 +1,6 @@
+use crate::transformations::calc::extract_numeric_tags_plus_all;
 use crate::transformations::prelude::*;
 use mbf_fastq_processor_config::tpd_adapt_bstring_uppercase;
-
-use super::extract_numeric_tags_plus_all;
 
 /// Quantify base occurrence rate or count
 #[derive(Clone, JsonSchema)]

@@ -1,8 +1,6 @@
-use crate::transformations::prelude::*;
-
-use mbf_fastq_processor_config::{dna::Anchor, tpd_adapt_iupac_bstring};
-
 use super::extract_region_tags;
+use crate::transformations::prelude::*;
+use mbf_fastq_processor_config::{dna::Anchor, tpd_adapt_iupac_bstring};
 
 /// Extract an IUPAC-described sequence while tolerating insertions and deletions.
 /// Useful for adapters where small indels are expected.

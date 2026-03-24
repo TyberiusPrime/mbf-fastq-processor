@@ -1,11 +1,12 @@
 use anyhow::{Context, Result, bail};
 use ex::fs;
-use mbf_fastq_processor_io::STDIN_MAGIC_PATH;
 use regex::Regex;
 use std::borrow::Cow;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
+
+use mbf_fastq_processor_io::STDIN_MAGIC_PATH;
 
 pub fn verify_outputs(
     toml_file: &Path,

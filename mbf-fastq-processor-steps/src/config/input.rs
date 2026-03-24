@@ -1,8 +1,7 @@
-use std::collections::{BTreeMap, HashSet};
-
 use anyhow::Result;
 use indexmap::IndexMap;
 use schemars::JsonSchema;
+use std::collections::{BTreeMap, HashSet};
 use toml_pretty_deser::{Visitor, prelude::*};
 
 use mbf_fastq_processor_config::{SegmentLabel, StringOrVecString, default_comment_insert_char};

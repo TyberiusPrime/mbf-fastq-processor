@@ -1,8 +1,6 @@
-use mbf_fastq_processor_io::io::WrappedFastQRead;
-
-use crate::transformations::prelude::*;
-
 use super::common::{PerReadReportData, Q_LOOKUP, Q20_Q30_LOOKUP};
+use crate::transformations::prelude::*;
+use mbf_fastq_processor_io::io::WrappedFastQRead;
 
 #[derive(Debug, Default, Clone, serde::Serialize)]
 pub struct BaseStatisticsPart1 {

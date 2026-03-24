@@ -1,7 +1,6 @@
+use super::extract_region_tags;
 use crate::transformations::prelude::*;
 use mbf_fastq_processor_config::{StringOrVecString, dna::Anchor, tpd_adapt_iupac_bstring};
-
-use super::extract_region_tags;
 
 /// Extract a IUPAC described sequence from the read. E.g. an adapter.
 /// Can be at the start (anchor = Left, the end (anchor = Right),

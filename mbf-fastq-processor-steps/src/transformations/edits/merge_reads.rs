@@ -1,9 +1,9 @@
-use mbf_fastq_processor_dna::dna::{TagValue, reverse_complement};
-
-use crate::transformations::prelude::*;
-use mbf_fastq_processor_io::io::WrappedFastQReadMut;
 use std::borrow::Cow;
 use std::cell::RefCell;
+
+use crate::transformations::prelude::*;
+use mbf_fastq_processor_dna::dna::{TagValue, reverse_complement};
+use mbf_fastq_processor_io::io::WrappedFastQReadMut;
 
 /// Algorithm to use for scoring overlaps and resolving mismatches
 #[derive(Clone, PartialEq, Eq, JsonSchema)]

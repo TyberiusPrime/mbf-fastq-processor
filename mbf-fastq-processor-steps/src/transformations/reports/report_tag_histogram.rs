@@ -1,5 +1,6 @@
-use crate::transformations::prelude::*;
 use std::collections::BTreeMap;
+
+use crate::transformations::prelude::*;
 
 /// Histogram data structure that can handle both String and Numeric tags
 #[derive(Debug, Clone)]

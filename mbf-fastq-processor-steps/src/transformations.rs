@@ -1,26 +1,23 @@
 #![allow(non_camel_case_types)] // to make derived Partial_* shut up
 
+use anyhow::Result;
 use bstr::BString;
 use enum_dispatch::enum_dispatch;
 use indexmap::IndexMap;
-use mbf_fastq_processor_io::io::{FastQBlocksCombined, reads::WrappedFastQReadCommon};
 use prelude::TagMetadata;
-use schemars::JsonSchema;
-use toml_pretty_deser::prelude::*;
-
-use std::path::Path;
-
-use anyhow::Result;
-
-use crate::demultiplex::{DemultiplexBarcodes, OptDemultiplex};
 use rand::SeedableRng;
 use scalable_cuckoo_filter::ScalableCuckooFilter;
+use schemars::JsonSchema;
+use std::path::Path;
+use toml_pretty_deser::prelude::*;
 
+use crate::demultiplex::{DemultiplexBarcodes, OptDemultiplex};
 use mbf_fastq_processor_config::{
     DeclaredTag, RemovedTags, TagLabel, UsedTag,
     dna::TagValue,
     segments::{ResolvedSourceNoAll, SegmentIndex},
 };
+use mbf_fastq_processor_io::io::{FastQBlocksCombined, reads::WrappedFastQReadCommon};
 
 pub(crate) mod calc;
 pub(crate) mod convert;

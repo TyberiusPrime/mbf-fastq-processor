@@ -1,5 +1,6 @@
-use crate::transformations::prelude::*;
 use indexmap::IndexMap;
+
+use crate::transformations::prelude::*;
 use mbf_fastq_processor_dna::dna::TagValue;
 
 ///Create multiple output files based on a tag

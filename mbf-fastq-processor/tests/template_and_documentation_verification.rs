@@ -1,6 +1,5 @@
 #![allow(clippy::unwrap_used)]
 use indexmap::IndexMap;
-use mbf_fastq_processor::config::config_from_string;
 use regex::Regex;
 use schemars::schema_for;
 use std::collections::HashSet;
@@ -11,6 +10,8 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::OnceLock;
 use tempfile::tempdir;
+
+use mbf_fastq_processor::config::config_from_string;
 
 static STRUCT_REGEX: OnceLock<Regex> = OnceLock::new();
 static TRANSFORMATION_SCHEMA: OnceLock<serde_json::Value> = OnceLock::new();

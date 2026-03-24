@@ -1,13 +1,13 @@
-use crate::transformations::prelude::*;
-
 use fasteval::{Compiler, Evaler, Parser, Slab};
-use mbf_fastq_processor_dna::dna::TagValue;
 use std::{
     cell::RefCell,
     collections::{BTreeMap, BTreeSet},
     rc::Rc,
     sync::atomic::Ordering,
 };
+
+use crate::transformations::prelude::*;
+use mbf_fastq_processor_dna::dna::TagValue;
 
 #[derive(Debug)]
 struct CompiledExpression {

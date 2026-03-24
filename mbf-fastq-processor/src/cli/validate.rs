@@ -1,9 +1,11 @@
-use crate::{cli::improve_error_messages, config::Config};
 use anyhow::{Context, Result};
 use ex::fs;
-use mbf_fastq_processor_io::STDIN_MAGIC_PATH;
 use std::path::Path;
 use toml_pretty_deser::prelude::*;
+
+use mbf_fastq_processor_io::STDIN_MAGIC_PATH;
+
+use crate::{cli::improve_error_messages, config::Config};
 
 pub fn validate_config(toml_file: &Path) -> Result<Vec<String>> {
     let raw_config = ex::fs::read_to_string(toml_file)

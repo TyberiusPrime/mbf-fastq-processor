@@ -6,9 +6,8 @@ use std::process::{Command, Stdio};
 use std::{fs, io::Read, path::Path};
 use toml_pretty_deser::prelude::*;
 
-use super::parsers;
-use super::reads::SegmentsCombined;
-use crate::io::parsers::ThreadCount;
+use crate::io::parsers::{self, ThreadCount};
+use crate::io::reads::SegmentsCombined;
 use crate::{CompressionFormat, STDIN_MAGIC_PATH};
 use mbf_fastq_processor_config::{default_comment_insert_char, tpd_adapt_u8_from_byte_or_char};
 

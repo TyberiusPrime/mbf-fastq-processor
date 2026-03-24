@@ -1,12 +1,9 @@
-use mbf_fastq_processor_io::io::WrappedFastQRead;
-
-use crate::transformations::prelude::*;
-
 use std::cell::RefCell;
 
 use super::super::reports::common::{PHRED33OFFSET, Q_LOOKUP};
-
 use super::extract_numeric_tags_plus_all;
+use crate::transformations::prelude::*;
+use mbf_fastq_processor_io::io::WrappedFastQRead;
 
 const PHRED33_MAX: u8 = 126;
 

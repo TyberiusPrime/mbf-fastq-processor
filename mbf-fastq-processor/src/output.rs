@@ -1,5 +1,5 @@
 use anyhow::{Context, Result, anyhow};
-use mbf_fastq_processor_steps::join_nonempty;
+use noodles::{bam, bgzf, sam};
 use std::collections::BTreeMap;
 use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
@@ -10,13 +10,13 @@ use crate::config::CheckedConfig;
 use crate::demultiplex::OptDemultiplex;
 use crate::transformations::FinalizeReportResult;
 use mbf_fastq_processor_io::ensure_output_destination_available;
+use mbf_fastq_processor_io::{CompressionFormat, FileFormat};
 use mbf_fastq_processor_io::io::{
     self,
     compressed_output::{HashedAndCompressedWriter, SimulatedWriteFailure},
     reads::WrappedFastQReadCommon,
 };
-use mbf_fastq_processor_io::{CompressionFormat, FileFormat};
-use noodles::{bam, bgzf, sam};
+use mbf_fastq_processor_steps::join_nonempty;
 
 pub struct OutputRunMarker {
     pub path: PathBuf,

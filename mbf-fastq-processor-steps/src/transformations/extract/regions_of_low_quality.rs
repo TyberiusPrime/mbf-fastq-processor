@@ -1,6 +1,5 @@
-use crate::transformations::prelude::*;
-
 use super::extract_region_tags;
+use crate::transformations::prelude::*;
 use mbf_fastq_processor_config::{
     dna::{Hit, HitRegion, Hits},
     tpd_adapt_u8_from_byte_or_char,

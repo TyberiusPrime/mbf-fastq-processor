@@ -1,6 +1,5 @@
-use crate::transformations::prelude::*;
-
 use super::super::KeepOrRemove;
+use crate::transformations::prelude::*;
 
 /// Filter reads by threshold on a (numeric) tag
 

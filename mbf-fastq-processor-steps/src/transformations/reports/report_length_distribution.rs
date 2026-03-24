@@ -1,8 +1,6 @@
-use mbf_fastq_processor_io::io::WrappedFastQRead;
-
-use crate::transformations::prelude::*;
-
 use super::common::PerReadReportData;
+use crate::transformations::prelude::*;
+use mbf_fastq_processor_io::io::WrappedFastQRead;
 
 #[derive(Default, Clone)]
 #[tpd(no_verify)]

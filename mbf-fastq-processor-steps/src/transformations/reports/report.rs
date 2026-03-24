@@ -1,6 +1,5 @@
-use mbf_fastq_processor_config::NonAmbigousDNA;
-
 use crate::transformations::prelude::*;
+use mbf_fastq_processor_config::NonAmbigousDNA;
 
 /// Include a report at this position
 #[derive(JsonSchema)]

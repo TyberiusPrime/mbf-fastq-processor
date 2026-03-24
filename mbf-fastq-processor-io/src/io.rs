@@ -1,11 +1,5 @@
 use anyhow::Result;
-use std::{ops::Range, path::Path};
-
-pub mod fileformats;
-pub mod input;
-pub mod output;
-pub mod parsers;
-pub mod reads;
+use std::path::Path;
 
 use crate::get_number_of_cores;
 use crate::io::input::InputOptions;
@@ -22,6 +16,11 @@ pub use reads::{
 pub use output::compressed_output;
 pub use output::{BamOutput, write_read_to_bam};
 pub use parsers::bam_read_count_from_index;
+
+pub mod input;
+pub mod output;
+pub mod parsers;
+pub mod reads;
 
 /// Given a fastq or bam file, run a call back on all reads
 fn apply_to_read(

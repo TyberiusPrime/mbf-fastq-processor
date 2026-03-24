@@ -1,10 +1,8 @@
-use crate::{TagLabel, TagValueType, ToUsedTags, UsedTag};
-
-use std::{cell::RefCell, rc::Rc};
-
 use schemars::JsonSchema;
+use std::{cell::RefCell, rc::Rc};
 use toml_pretty_deser::prelude::*;
 
+use crate::{TagLabel, TagValueType, ToUsedTags, UsedTag};
 pub use mbf_fastq_processor_dna::segments::SegmentIndex;
 
 #[derive(Debug, Clone, Eq, PartialEq, Copy, JsonSchema)]

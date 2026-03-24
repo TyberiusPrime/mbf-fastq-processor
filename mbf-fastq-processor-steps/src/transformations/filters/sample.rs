@@ -1,7 +1,7 @@
-use crate::transformations::prelude::*;
+use rand::Rng;
 
 use super::super::extend_seed;
-use rand::Rng;
+use crate::transformations::prelude::*;
 
 /// Sample reads by probability. Cheap.
 #[derive(Clone, JsonSchema)]

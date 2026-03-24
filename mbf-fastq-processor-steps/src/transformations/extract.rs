@@ -1,3 +1,13 @@
+use bstr::BString;
+
+use super::prelude::DemultiplexTag;
+use mbf_fastq_processor_config::{
+    TagLabel,
+    dna::{Hits, TagValue},
+    segments::{SegmentIndex, SegmentIndexOrAll},
+};
+use mbf_fastq_processor_io::io::{FastQBlocksCombined, WrappedFastQRead};
+
 mod iupac;
 mod iupac_suffix;
 mod iupac_with_indel;
@@ -11,27 +21,17 @@ mod regions;
 mod regions_of_low_quality;
 pub mod tag;
 
-use bstr::BString;
 pub use iupac::{IUPAC, PartialIUPAC};
 pub use iupac_suffix::{IUPACSuffix, PartialIUPACSuffix};
 pub use iupac_with_indel::{IUPACWithIndel, PartialIUPACWithIndel};
 pub use longest_poly_x::{LongestPolyX, PartialLongestPolyX};
 pub use low_quality_end::{LowQualityEnd, PartialLowQualityEnd};
 pub use low_quality_start::{LowQualityStart, PartialLowQualityStart};
-use mbf_fastq_processor_io::io::{FastQBlocksCombined, WrappedFastQRead};
 pub use poly_tail::{PartialPolyTail, PolyTail};
 pub use regex::{PartialRegex, Regex};
 pub use region::{PartialRegion, Region};
 pub use regions::{PartialRegions, Regions};
 pub use regions_of_low_quality::{PartialRegionsOfLowQuality, RegionsOfLowQuality};
-
-use mbf_fastq_processor_config::{
-    TagLabel,
-    dna::{Hits, TagValue},
-    segments::{SegmentIndex, SegmentIndexOrAll},
-};
-
-use super::prelude::DemultiplexTag;
 
 pub(crate) fn extract_region_tags(
     block: &mut FastQBlocksCombined,

@@ -1,3 +1,6 @@
+use anyhow::{Result, bail};
+use bstr::{BStr, BString};
+use toml_pretty_deser::{TomlValue, TomlValueState};
 // Common functionality shared by multiple tag transformations
 
 // Individual transformation modules
@@ -12,8 +15,6 @@ pub mod store_tag_in_sequence;
 pub mod store_tag_location_in_comment;
 pub mod store_tags_in_table;
 
-use anyhow::{Result, bail};
-use bstr::{BStr, BString};
 use mbf_fastq_processor_config::{TagLabel, dna::TagValue};
 // Re-exports
 pub use concat_tags::{ConcatTags, PartialConcatTags};
@@ -31,7 +32,6 @@ pub use store_tag_location_in_comment::{
     PartialStoreTagLocationInComment, StoreTagLocationInComment,
 };
 pub use store_tags_in_table::{PartialStoreTagsInTable, StoreTagsInTable};
-use toml_pretty_deser::{TomlValue, TomlValueState};
 
 use crate::config::SegmentIndexOrAll;
 

@@ -2,9 +2,8 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::transformations::prelude::*;
-use mbf_fastq_processor_io::CompressionFormat;
-
 use mbf_fastq_processor_config::{default_region_separator, tpd_adapt_bstring};
+use mbf_fastq_processor_io::CompressionFormat;
 
 type OutputHandles = Arc<Mutex<DemultiplexedData<Option<csv::Writer<Box<OutputWriter>>>>>>;
 type InLabels = Vec<TagLabel>;

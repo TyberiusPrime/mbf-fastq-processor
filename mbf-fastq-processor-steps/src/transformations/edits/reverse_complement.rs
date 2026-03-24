@@ -1,6 +1,5 @@
-use mbf_fastq_processor_dna::dna::{HitRegion, reverse_complement_iupac};
-
 use crate::transformations::prelude::*;
+use mbf_fastq_processor_dna::dna::{HitRegion, reverse_complement_iupac};
 
 /// Reverse complement a read
 #[derive(Clone, JsonSchema)]

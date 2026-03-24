@@ -1,5 +1,4 @@
 use crate::transformations::prelude::*;
-
 use crate::transformations::tag::calculate_filter_capacity;
 use mbf_fastq_processor_io::io::WrappedFastQRead;
 

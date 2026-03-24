@@ -1,12 +1,11 @@
 #![allow(clippy::unwrap_used)]
 
+use indexmap::IndexMap;
 use std::collections::HashSet;
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
-
-use indexmap::IndexMap;
 
 #[test]
 fn test_cookbooks_in_sync() {

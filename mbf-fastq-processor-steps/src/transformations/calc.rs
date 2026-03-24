@@ -1,3 +1,5 @@
+use mbf_fastq_processor_io::io::{FastQBlocksCombined, WrappedFastQRead};
+
 mod base_content;
 mod complexity;
 mod expected_error;
@@ -19,7 +21,6 @@ use mbf_fastq_processor_config::{
     dna::TagValue,
     segments::{SegmentIndex, SegmentIndexOrAll},
 };
-use mbf_fastq_processor_io::io::{FastQBlocksCombined, WrappedFastQRead};
 pub use n_count::{NCount, PartialNCount};
 pub use qualified_bases::{PartialQualifiedBases, QualifiedBases};
 

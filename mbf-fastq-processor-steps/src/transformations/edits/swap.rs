@@ -1,5 +1,4 @@
 use mbf_fastq_processor_dna::dna::HitRegion;
-
 use crate::transformations::prelude::*;
 
 /// Swap two segments

@@ -1,11 +1,10 @@
+use bstr::ByteVec;
 use std::{cell::RefCell, collections::HashSet, rc::Rc};
-
-use crate::transformations::prelude::*;
+use toml_pretty_deser::Visitor;
 
 use super::super::{PartialRegionDefinition, RegionDefinition, extract_regions};
-use bstr::ByteVec;
+use crate::transformations::prelude::*;
 use mbf_fastq_processor_dna::dna::{Hits, TagValue};
-use toml_pretty_deser::Visitor;
 
 /// Extract regions by coordinates
 /// that is by (segment|source, 0-based start, length)

@@ -1,3 +1,4 @@
+use anyhow::{Context, Result};
 /// Handles transparent compressed file writing
 /// and optional hashing at both the compressed and uncompressed levels.
 use flate2::write::GzEncoder;
@@ -6,7 +7,6 @@ use sha2::Digest;
 use std::io::{self, BufWriter, Write};
 
 use crate::CompressionFormat;
-use anyhow::{Context, Result};
 
 #[derive(Clone, Debug)]
 pub struct SimulatedWriteFailure {

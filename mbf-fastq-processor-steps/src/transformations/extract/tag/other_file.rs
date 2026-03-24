@@ -1,15 +1,14 @@
-use crate::transformations::extract::extract_bool_tags_from_tag;
-use crate::transformations::{prelude::*, read_name_canonical_prefix};
-
 use std::cell::Cell;
 use std::collections::HashSet;
 
 use super::super::extract_bool_tags;
 use super::ApproxOrExactFilter;
+use crate::transformations::extract::extract_bool_tags_from_tag;
 use crate::transformations::tag::initial_filter_elements;
-
+use crate::transformations::{prelude::*, read_name_canonical_prefix};
 use mbf_fastq_processor_config::tpd_adapt_u8_from_byte_or_char;
 use mbf_fastq_processor_io::io::{apply_to_read_names, apply_to_read_sequences};
+
 /// Tag whether reads are in another file (by sequence)
 #[derive(Clone, JsonSchema)]
 #[tpd]

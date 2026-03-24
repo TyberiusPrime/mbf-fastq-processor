@@ -1,10 +1,10 @@
+use anyhow::{Context, Result};
+use bstr::BString;
+use indexmap::IndexMap;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use crate::join_nonempty;
-use anyhow::{Context, Result};
-use bstr::BString;
-use indexmap::IndexMap;
 use mbf_fastq_processor_dna::dna::iupac_hamming_distance;
 use mbf_fastq_processor_io::CompressionFormat;
 use mbf_fastq_processor_io::io::compressed_output::{HashedAndCompressedWriter, OutputWriter};

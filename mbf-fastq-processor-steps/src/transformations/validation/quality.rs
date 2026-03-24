@@ -1,5 +1,5 @@
-use crate::config::PhredEncoding;
 use crate::transformations::prelude::*;
+use mbf_fastq_processor_config::fileformats::PhredEncoding;
 
 /// Validate that quality scores are within Sanger (PHRED 33) range.
 #[derive(Clone, JsonSchema)]

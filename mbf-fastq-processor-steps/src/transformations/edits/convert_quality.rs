@@ -1,6 +1,5 @@
 use crate::transformations::prelude::*;
-
-use crate::config::PhredEncoding;
+use mbf_fastq_processor_config::fileformats::PhredEncoding;
 
 /// Convert PHRED scores between encodings
 #[derive(Clone, JsonSchema)]

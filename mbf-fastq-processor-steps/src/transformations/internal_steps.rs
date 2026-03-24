@@ -1,8 +1,8 @@
-use super::prelude::*;
 use rand::{Rng, SeedableRng};
 use serde_json::json;
 use std::thread;
 
+use super::prelude::*;
 /// A transformation that delays processing
 /// by a random amount.
 /// Used to inject chaos into test cases.

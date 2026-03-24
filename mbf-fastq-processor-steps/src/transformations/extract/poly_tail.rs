@@ -1,6 +1,5 @@
-use crate::transformations::prelude::*;
-
 use super::extract_region_tags;
+use crate::transformations::prelude::*;
 use mbf_fastq_processor_config::tpd_adapt_extract_base_or_dot;
 
 /// Extract ends that are homo-polymers into a tag

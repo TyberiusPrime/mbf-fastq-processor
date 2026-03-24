@@ -1,8 +1,8 @@
+use anyhow::Result;
 use std::path::PathBuf;
 
 use crate::io::input::InputOptions;
 use crate::io::{FastQBlock, InputFile};
-use anyhow::Result;
 
 mod bam;
 mod fasta;

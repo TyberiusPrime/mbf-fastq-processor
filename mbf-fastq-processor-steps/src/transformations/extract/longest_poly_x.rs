@@ -1,8 +1,6 @@
-use crate::transformations::prelude::*;
-
-use mbf_fastq_processor_config::{dna::Hits, tpd_adapt_extract_base_or_dot};
-
 use super::extract_region_tags;
+use crate::transformations::prelude::*;
+use mbf_fastq_processor_config::{dna::Hits, tpd_adapt_extract_base_or_dot};
 
 /// Find the longest polyX
 ///

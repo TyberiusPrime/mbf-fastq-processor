@@ -1,5 +1,6 @@
-use crate::transformations::prelude::*;
 use std::sync::atomic::Ordering;
+
+use crate::transformations::prelude::*;
 
 pub(crate) fn default_sample_stride() -> u64 {
     1000

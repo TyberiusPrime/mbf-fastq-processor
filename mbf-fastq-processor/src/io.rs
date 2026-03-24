@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+
 use mbf_fastq_processor_io::io::{InputFiles, SegmentsCombined, open_input_file, total_file_size};
 
 pub fn open_input_files(input_config: &crate::config::Input) -> Result<InputFiles> {

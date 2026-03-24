@@ -1,9 +1,6 @@
-use crate::transformations::prelude::*;
-
-use crate::transformations::prelude::ValidateSegment;
-
 use super::{apply_in_place_wrapped_with_tag, store_tag_in_comment};
-
+use crate::transformations::prelude::ValidateSegment;
+use crate::transformations::prelude::*;
 use mbf_fastq_processor_config::{
     default_comment_insert_char, default_comment_separator, tpd_adapt_u8_from_byte_or_char,
 };

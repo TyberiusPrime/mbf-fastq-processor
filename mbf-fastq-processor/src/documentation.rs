@@ -2,6 +2,7 @@
 //so we opted to parse the template.toml instead
 
 use std::borrow::Cow;
+
 /// Get the template for any step or section in template.toml
 #[must_use]
 pub fn get_template(step: Option<&str>) -> Option<Cow<'static, str>> {

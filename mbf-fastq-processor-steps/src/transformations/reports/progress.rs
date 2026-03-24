@@ -1,11 +1,11 @@
-use crate::transformations::prelude::*;
-
-use super::common::{default_progress_n, thousands_format};
 use std::{
     io::Write,
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
 };
+
+use super::common::{default_progress_n, thousands_format};
+use crate::transformations::prelude::*;
 
 fn format_seconds_to_hhmmss(seconds: u64) -> String {
     let hours = seconds / 3600;

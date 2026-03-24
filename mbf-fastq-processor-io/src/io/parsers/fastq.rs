@@ -1,12 +1,13 @@
-use super::{ParseResult, Parser};
-use crate::io::{
-    FastQBlock, FastQElement, FastQRead, Position,
-    input::{DecompressionOptions, spawn_rapidgzip},
-};
 use anyhow::{Context, Result, bail};
 use bstr::BString;
 use niffler;
 use std::{io::Read, path::PathBuf};
+
+use crate::io::parsers::{ParseResult, Parser};
+use crate::io::{
+    FastQBlock, FastQElement, FastQRead, Position,
+    input::{DecompressionOptions, spawn_rapidgzip},
+};
 
 pub struct FastqParser {
     current_reader: Box<dyn Read + Send>,

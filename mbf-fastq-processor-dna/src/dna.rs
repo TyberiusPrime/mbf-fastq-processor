@@ -1,12 +1,12 @@
-use crate::segments::SegmentIndex;
 use bio::alignment::{
     AlignmentOperation,
     pairwise::{Aligner, MIN_SCORE, Scoring},
 };
 use bstr::{BString, ByteVec};
-
 use schemars::JsonSchema;
 use toml_pretty_deser::prelude::*;
+
+use crate::segments::SegmentIndex;
 
 pub use triple_accel::hamming;
 

@@ -1,7 +1,7 @@
 use indexmap::IndexMap;
-use mbf_fastq_processor_dna::dna::{contains_iupac_ambigous, hamming, iupac_hamming_distance};
 
 use crate::transformations::prelude::*;
+use mbf_fastq_processor_dna::dna::{contains_iupac_ambigous, hamming, iupac_hamming_distance};
 
 /// Correct a tag (extracted region) to known barcodes
 

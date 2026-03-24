@@ -1,6 +1,9 @@
 #![allow(clippy::struct_field_names)]
-use crate::config::{PartialConfig, StructuredInput};
 use anyhow::{Context, Result};
+use schemars::JsonSchema;
+use toml_pretty_deser::prelude::*;
+
+use crate::config::{PartialConfig, StructuredInput};
 use mbf_fastq_processor_config::{
     default_block_size, default_buffer_size, default_output_buffer_size,
     default_spot_check_read_pairing,
@@ -8,8 +11,6 @@ use mbf_fastq_processor_config::{
 use mbf_fastq_processor_io::io::output::compressed_output::{
     SimulatedWriteError, SimulatedWriteFailure,
 };
-use schemars::JsonSchema;
-use toml_pretty_deser::prelude::*;
 
 #[derive(Clone, Default, JsonSchema)]
 #[tpd(no_verify)]

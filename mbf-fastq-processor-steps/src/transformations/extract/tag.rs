@@ -1,13 +1,17 @@
-mod duplicates;
-mod other_file;
+use std::collections::HashSet;
 
 use crate::transformations::{
     FragmentEntry, FragmentEntryForCuckooFilter, OurCuckCooFilter, reproducible_cuckoofilter,
 };
+// we settled on the cuckoo filter  after doing experiments/memory_usage_hashset_vs_radis
+//
+//
+mod duplicates;
+mod other_file;
+
 pub use duplicates::{Duplicates, PartialDuplicates};
 pub use other_file::{OtherFile, PartialOtherFile};
-use std::collections::HashSet;
-// we settled on the cuckoo filter  after doing experiments/memory_usage_hashset_vs_radis
+
 #[derive(Debug, Clone)]
 pub enum ApproxOrExactFilter {
     Exact(HashSet<Vec<u8>>),

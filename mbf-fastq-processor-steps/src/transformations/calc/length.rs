@@ -1,8 +1,7 @@
 use toml_pretty_deser::PartialTaggedVariant;
 
-use crate::transformations::prelude::*;
-
 use super::extract_numeric_tags_plus_all;
+use crate::transformations::prelude::*;
 
 /// Convert read length into a tag
 

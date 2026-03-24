@@ -1,12 +1,12 @@
 use anyhow::{Context, Result, bail};
 use std::path::Path;
+use toml_pretty_deser::prelude::*;
 
 use crate::cli::improve_error_messages;
 use crate::config::CheckedConfig;
 use crate::config::Config;
 use crate::output::OutputRunMarker;
 use crate::pipeline;
-use toml_pretty_deser::prelude::*;
 
 pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> Result<()> {
     let output_directory = output_directory.to_owned();

@@ -1,7 +1,6 @@
+use super::extract_region_tags;
 use crate::transformations::prelude::*;
 use mbf_fastq_processor_config::{dna::iupac_hamming_distance, tpd_adapt_iupac_bstring};
-
-use super::extract_region_tags;
 
 /// Extract a IUPAC sequence (or a prefix of it) at the end of a read into a tag.
 #[derive(Clone, JsonSchema)]

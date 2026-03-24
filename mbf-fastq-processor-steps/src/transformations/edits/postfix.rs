@@ -1,7 +1,7 @@
-use crate::config::PhredEncoding;
 use crate::transformations::prelude::*;
-
-use mbf_fastq_processor_config::{tpd_adapt_bstring, tpd_adapt_dna_bstring_plus_n};
+use mbf_fastq_processor_config::{
+    fileformats::PhredEncoding, tpd_adapt_bstring, tpd_adapt_dna_bstring_plus_n,
+};
 
 /// Add a fixed sequence to the end of reads
 #[derive(Clone, JsonSchema)]

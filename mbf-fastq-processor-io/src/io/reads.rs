@@ -1,14 +1,14 @@
 use anyhow::{Result, bail};
 use bstr::BString;
 use indexmap::IndexMap;
+use std::ops::Range;
+
 use mbf_fastq_processor_config::{TagLabel, segments::SegmentIndexOrAll};
 use mbf_fastq_processor_dna::dna::{
     Anchor, HitRegion, Hits, TagValue, find_iupac, find_iupac_with_indel, hamming,
     reverse_complement_iupac,
 };
 use mbf_fastq_processor_dna::segments::SegmentIndex;
-
-use super::Range;
 
 pub type DemultiplexTag = u64;
 /// Read in memory representation.

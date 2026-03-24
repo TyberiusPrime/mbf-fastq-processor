@@ -1,9 +1,9 @@
+use schemars::JsonSchema;
 use std::collections::HashSet;
+use toml_pretty_deser::prelude::*;
 
 use mbf_fastq_processor_config::offer_alternatives;
 use mbf_fastq_processor_io::{CompressionFormat, FileFormat};
-use schemars::JsonSchema;
-use toml_pretty_deser::prelude::*;
 
 #[must_use]
 pub fn default_ix_separator() -> String {

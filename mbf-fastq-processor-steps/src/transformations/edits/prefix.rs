@@ -1,7 +1,7 @@
-use crate::config::PhredEncoding;
 use crate::transformations::prelude::*;
-
-use mbf_fastq_processor_config::{dna::HitRegion, tpd_adapt_bstring, tpd_adapt_dna_bstring_plus_n};
+use mbf_fastq_processor_config::{
+    dna::HitRegion, fileformats::PhredEncoding, tpd_adapt_bstring, tpd_adapt_dna_bstring_plus_n,
+};
 
 /// add a fixed prefix to the start of reads
 #[derive(Clone, JsonSchema)]

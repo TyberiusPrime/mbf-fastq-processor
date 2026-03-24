@@ -1,8 +1,3 @@
-use super::{ParseResult, Parser};
-use crate::io::{
-    FastQBlock, FastQRead,
-    input::{DecompressionOptions, spawn_rapidgzip},
-};
 use anyhow::{Context, Result};
 use bio::io::fasta::{self, FastaRead, Record as FastaRecord};
 use ex::fs::File;
@@ -10,6 +5,12 @@ use niffler;
 use std::{
     io::{BufReader, Read},
     path::PathBuf,
+};
+
+use crate::io::parsers::{ParseResult, Parser};
+use crate::io::{
+    FastQBlock, FastQRead,
+    input::{DecompressionOptions, spawn_rapidgzip},
 };
 
 type BoxedFastaReader = fasta::Reader<BufReader<Box<dyn Read + Send>>>;

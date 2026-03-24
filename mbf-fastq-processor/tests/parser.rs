@@ -1,7 +1,7 @@
 #![allow(clippy::unwrap_used)]
+use bstr::ByteSlice;
 use std::path::{Path, PathBuf};
 
-use bstr::ByteSlice;
 use mbf_fastq_processor_io::io::{FastQBlock, parsers::ThreadCount};
 
 #[test]

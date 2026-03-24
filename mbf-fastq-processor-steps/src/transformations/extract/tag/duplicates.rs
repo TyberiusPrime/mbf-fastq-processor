@@ -1,13 +1,11 @@
-use mbf_fastq_processor_io::io::WrappedFastQRead;
-
-use crate::transformations::prelude::*;
-
 use std::cell::RefCell;
 
 use super::super::extract_bool_tags_plus_all;
 use super::ApproxOrExactFilter;
 use crate::transformations::extract::extract_bool_tags_from_tag;
+use crate::transformations::prelude::*;
 use crate::transformations::{read_name_canonical_prefix, tag::calculate_filter_capacity};
+use mbf_fastq_processor_io::io::WrappedFastQRead;
 
 #[derive(Clone, JsonSchema)]
 #[tpd]

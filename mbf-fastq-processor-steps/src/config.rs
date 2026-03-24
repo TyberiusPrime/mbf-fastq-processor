@@ -22,7 +22,6 @@ mod output;
 mod segments;
 
 pub use input::{Input, PartialInput, StructuredInput};
-pub use io::fileformats::PhredEncoding;
 pub use mbf_fastq_processor_config::segments::{
     ResolvedSourceAll, ResolvedSourceNoAll, SegmentIndex, SegmentIndexOrAll, SegmentOrNameIndex,
 };
