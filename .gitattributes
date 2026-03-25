@@ -17,3 +17,7 @@
 *.yml text eol=binary
 *.progress text eol=binary
 stdout text eol=binary
+/docs/** linguist-documentation=true
+/cookbooks/** linguist-documentation=true
+/dev/** linguist-detectable=true
+/test_cases/** linguist-detectable=true
