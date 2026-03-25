@@ -13,14 +13,14 @@ mod gc_content;
 pub use base_content::{BaseContent, PartialBaseContent};
 pub use complexity::{Complexity, PartialComplexity};
 pub use expected_error::{ExpectedError, PartialExpectedError};
-pub use gc_content::{GCContent, PartialGCContent};
-pub use kmers::{Kmers, PartialKmers};
-pub use length::{Length, PartialLength};
 use fastqrab_config::{
     TagLabel,
     dna::TagValue,
     segments::{SegmentIndex, SegmentIndexOrAll},
 };
+pub use gc_content::{GCContent, PartialGCContent};
+pub use kmers::{Kmers, PartialKmers};
+pub use length::{Length, PartialLength};
 pub use n_count::{NCount, PartialNCount};
 pub use qualified_bases::{PartialQualifiedBases, QualifiedBases};
 

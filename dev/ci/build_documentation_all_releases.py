@@ -204,7 +204,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     script_path = Path(__file__).resolve()
-    repo_root = script_path.parent.parent
+    repo_root = script_path.parent.parent.parent
     output_root = repo_root / "docs" / "public"
 
     ensure_clean_output(output_root)

@@ -4,10 +4,10 @@ use std::path::Path;
 use crate::get_number_of_cores;
 use crate::io::input::InputOptions;
 use crate::io::parsers::ThreadCount;
+use fastqrab_config::{default_block_size, default_buffer_size};
 pub use input::{
     DetectedInputFormat, InputFile, InputFiles, open_file, open_input_file, total_file_size,
 };
-use fastqrab_config::{default_block_size, default_buffer_size};
 pub use reads::{
     FastQBlock, FastQBlocksCombined, FastQElement, FastQRead, Position, SegmentsCombined,
     WrappedFastQRead, WrappedFastQReadMut, longest_suffix_that_is_a_prefix,

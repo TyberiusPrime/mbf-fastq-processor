@@ -91,7 +91,7 @@ pub fn get_cookbook_by_name(name: &str) -> Option<&'static Cookbook> {
 
 """
 
-out_path = Path("mbf-fastq-processor/src/cookbooks.rs")
+out_path = Path("fastqrab/src/cookbooks.rs")
 out_path.write_text(out)
 
 subprocess.check_call(["cargo", "fmt", "--", str(out_path)])

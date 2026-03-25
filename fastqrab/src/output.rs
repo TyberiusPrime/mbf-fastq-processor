@@ -606,10 +606,8 @@ fn build_bam_output<'a>(
 }
 
 fn create_unaligned_bam_header() -> sam::Header {
-    sam::Header::from_str(
-        "@HD\tVN:1.6\tSO:unsorted\n@PG\tID:fastqrab\tPN:fastqrab\n",
-    )
-    .expect("static BAM header must parse")
+    sam::Header::from_str("@HD\tVN:1.6\tSO:unsorted\n@PG\tID:fastqrab\tPN:fastqrab\n")
+        .expect("static BAM header must parse")
 }
 
 #[derive(Default)]

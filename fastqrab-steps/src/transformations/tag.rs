@@ -18,11 +18,9 @@ pub mod store_tags_in_table;
 use fastqrab_config::{TagLabel, dna::TagValue};
 // Re-exports
 pub use concat_tags::{ConcatTags, PartialConcatTags};
+use fastqrab_io::io::{FastQBlocksCombined, WrappedFastQReadMut, bam_read_count_from_index};
 pub use forget_all_tags::{ForgetAllTags, PartialForgetAllTags};
 pub use forget_tag::{ForgetTag, PartialForgetTag};
-use fastqrab_io::io::{
-    FastQBlocksCombined, WrappedFastQReadMut, bam_read_count_from_index,
-};
 pub use quantify_tag::{PartialQuantifyTag, QuantifyTag};
 pub use replace_tag_with_letter::{PartialReplaceTagWithLetter, ReplaceTagWithLetter};
 pub use store_tag_in_comment::{PartialStoreTagInComment, StoreTagInComment};

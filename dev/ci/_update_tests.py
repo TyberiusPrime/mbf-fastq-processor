@@ -45,7 +45,7 @@ for test_path in ["test_cases", "cookbooks"]:
     }}
     """
 
-out_path = Path("mbf-fastq-processor/tests/generated.rs")
+out_path = Path("fastqrab/tests/generated.rs")
 out_path.parent.mkdir(parents=True, exist_ok=True)
 out_path.write_text(out)
 

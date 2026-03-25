@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Release script for mbf-fastq-processor
+Release script for fastqrab
 
 This script:
 1. Verifies there are no uncommitted changes
@@ -178,7 +178,7 @@ def create_release(new_version):
 
 
 def main():
-    print("🚀 mbf-fastq-processor Release Script")
+    print("🚀 fastqrab Release Script")
     print("=====================================")
 
     try:

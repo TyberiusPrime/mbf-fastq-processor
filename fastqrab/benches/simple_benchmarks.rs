@@ -69,8 +69,7 @@ fn run_benchmark_pipeline(config: &BenchmarkConfig) -> std::time::Duration {
     fs::write(&toml_path, &toml_content).expect("Failed to write TOML file");
 
     let start = std::time::Instant::now();
-    fastqrab::run(&toml_path, temp_dir.path(), false)
-        .expect("Failed to run fastqrab");
+    fastqrab::run(&toml_path, temp_dir.path(), false).expect("Failed to run fastqrab");
     start.elapsed()
 }
 

@@ -8,8 +8,8 @@ use fastqrab_io::io::{FastQBlock, parsers::ThreadCount};
 fn test_fastq_bufsize_variations_windows_file() {
     let filename = "../test_cases/sample_data/zstd/input_read1.fq.zst";
     //verify we have \r\n in that
-    let contents: Vec<u8> = fastqrab::decompress_file(Path::new(filename))
-        .expect("failed to read test file");
+    let contents: Vec<u8> =
+        fastqrab::decompress_file(Path::new(filename)).expect("failed to read test file");
     let query = b"\r\n";
     assert!(contents.contains_str(query));
 
@@ -27,10 +27,8 @@ fn test_bufsize_variations(input_fastq_filename: &str, bufsize_range: &[usize]) 
         dbg!(bufsize);
         let file = ex::fs::File::open(filename).unwrap();
 
-        let input_file = fastqrab_io::io::input::InputFile::Fastq(
-            file,
-            Some(PathBuf::from(filename)),
-        );
+        let input_file =
+            fastqrab_io::io::input::InputFile::Fastq(file, Some(PathBuf::from(filename)));
         let mut p = input_file
             .get_parser(
                 10000,

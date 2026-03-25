@@ -1496,10 +1496,7 @@ fn test_every_link_docs_target_has_a_redirect_page() {
         }
     }
 
-    let src_roots = [
-        Path::new("src"),
-        Path::new("../fastqrab-steps/src"),
-    ];
+    let src_roots = [Path::new("src"), Path::new("../fastqrab-steps/src")];
     let mut literal_targets: Vec<(String, PathBuf)> = Vec::new();
     for root in &src_roots {
         if !root.exists() {

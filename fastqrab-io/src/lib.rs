@@ -2,9 +2,7 @@ use anyhow::Context;
 
 pub mod io;
 
-pub use fastqrab_config::{
-    CompressionFormat, FileFormat, STDIN_MAGIC_PATH, get_number_of_cores,
-};
+pub use fastqrab_config::{CompressionFormat, FileFormat, STDIN_MAGIC_PATH, get_number_of_cores};
 
 pub fn ensure_output_destination_available(
     path: &std::path::Path,

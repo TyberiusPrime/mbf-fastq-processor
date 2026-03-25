@@ -12,7 +12,7 @@ from doc_utils import generate_cookbook_docs, copy_template_toml, copy_sample_re
 
 def main() -> int:
     script_path = Path(__file__).resolve()
-    repo_root = script_path.parent.parent
+    repo_root = script_path.parent.parent.parent
     docs_dir = repo_root / "docs"
     cookbooks_src = repo_root / "cookbooks"
 

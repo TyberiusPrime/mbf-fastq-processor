@@ -1,7 +1,6 @@
 use crate::transformations::{PartialTransformation, Transformation};
 use anyhow::{Result, anyhow, bail};
 use bstr::BString;
-use indexmap::IndexMap;
 use fastqrab_config::{RemovedTags, TagLabel, TagValueType, dna};
 use fastqrab_config::{
     default_block_size, default_buffer_size, default_output_buffer_size,
@@ -10,6 +9,7 @@ use fastqrab_config::{
 use fastqrab_dna::dna::iupac_overlapping;
 use fastqrab_io::io::{self, DetectedInputFormat};
 use fastqrab_io::{CompressionFormat, FileFormat};
+use indexmap::IndexMap;
 use schemars::JsonSchema;
 use std::cell::RefCell;
 use std::collections::{BTreeMap, HashSet};
@@ -21,12 +21,12 @@ pub mod options;
 mod output;
 mod segments;
 
-pub use input::{Input, PartialInput, StructuredInput};
 pub use fastqrab_config::segments::{
     ResolvedSourceAll, ResolvedSourceNoAll, SegmentIndex, SegmentIndexOrAll, SegmentOrNameIndex,
 };
 pub use fastqrab_config::{offer_alternatives, validate_tag_name};
 use fastqrab_io::get_number_of_cores;
+pub use input::{Input, PartialInput, StructuredInput};
 
 pub use options::{Options, PartialOptions};
 pub use output::{Output, PartialOutput, validate_compression_level_u8};
