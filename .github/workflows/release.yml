@@ -1,7 +1,7 @@
 name: Release Workflow
 env:
   # The project name specified in your Cargo.toml
-  PROJECT_NAME: mbf-fastq-processor
+  PROJECT_NAME: fastqrab
   GITHUB_ACTIONS: true
 
 on:
@@ -47,11 +47,11 @@ jobs:
         run: nix build .#test
 
       - name: Build
-        run: nix build .#mbf-fastq-processor_other_linux -o result-linux
+        run: nix build .#fastqrab_other_linux -o result-linux
 
       - name: Build Docker image
         run: |
-          nix build .#mbf-fastq-processor-docker -o result-docker
+          nix build .#fastqrab-docker -o result-docker
           docker load < result-docker
 
       - name: Log in to GitHub Container Registry
@@ -68,8 +68,8 @@ jobs:
         run: |
           set -euo pipefail
           owner_lc=$(echo "$OWNER" | tr '[:upper:]' '[:lower:]')
-          image="ghcr.io/${owner_lc}/mbf-fastq-processor"
-          base="mbf-fastq-processor:latest"
+          image="ghcr.io/${owner_lc}/fastqrab"
+          base="fastqrab:latest"
 
           docker tag "$base" "$image:${REF_NAME}"
           docker push "$image:${REF_NAME}"
@@ -87,7 +87,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: linux-binary
-          path: ./result-linux/bin/mbf-fastq-processor
+          path: ./result-linux/bin/fastqrab
 
 
   build_platforms:
@@ -206,13 +206,13 @@ jobs:
           mkdir -p release-binaries
 
           # Rename Linux binary (x86_64-unknown-linux-musl, but patched to work on gnu systems)
-          cp artifacts/linux-binary/mbf-fastq-processor release-binaries/mbf-fastq-processor-x86_64-unknown-linux-gnu
+          cp artifacts/linux-binary/fastqrab release-binaries/fastqrab-x86_64-unknown-linux-gnu
 
           # Rename macOS binary
-          cp artifacts/macos-arm64-binary/mbf-fastq-processor release-binaries/mbf-fastq-processor-aarch64-apple-darwin
+          cp artifacts/macos-arm64-binary/fastqrab release-binaries/fastqrab-aarch64-apple-darwin
 
           # Rename Windows binary
-          cp artifacts/win-amd64-binary/mbf-fastq-processor.exe release-binaries/mbf-fastq-processor-x86_64-pc-windows-msvc.exe
+          cp artifacts/win-amd64-binary/fastqrab.exe release-binaries/fastqrab-x86_64-pc-windows-msvc.exe
 
           # Display renamed binaries
           ls -lh release-binaries/
@@ -221,6 +221,6 @@ jobs:
         uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2.5.0
         with:
           files: |
-            release-binaries/mbf-fastq-processor-x86_64-unknown-linux-gnu
-            release-binaries/mbf-fastq-processor-aarch64-apple-darwin
-            release-binaries/mbf-fastq-processor-x86_64-pc-windows-msvc.exe
+            release-binaries/fastqrab-x86_64-unknown-linux-gnu
+            release-binaries/fastqrab-aarch64-apple-darwin
+            release-binaries/fastqrab-x86_64-pc-windows-msvc.exe

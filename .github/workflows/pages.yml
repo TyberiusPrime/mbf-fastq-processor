@@ -57,7 +57,7 @@ jobs:
           TZ: America/Los_Angeles
           STEPS_PAGES_OUTPUTS_BASE_URL: ${{ steps.pages.outputs.base_url }}
         run: |
-          python3 dev/build_documentation_all_releases.py --base-url "${STEPS_PAGES_OUTPUTS_BASE_URL}"
+          python3 dev/ci/build_documentation_all_releases.py --base-url "${STEPS_PAGES_OUTPUTS_BASE_URL}"
       - name: Upload artifact
         uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
         with:

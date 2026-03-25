@@ -1,7 +1,7 @@
 name: Build PR Binaries
 
 env:
-  PROJECT_NAME: mbf-fastq-processor
+  PROJECT_NAME: fastqrab
   GITHUB_ACTIONS: true
 
 on:
