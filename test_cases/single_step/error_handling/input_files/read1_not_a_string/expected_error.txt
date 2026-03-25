@@ -10,7 +10,7 @@ Error 1/2
 ──╯
 Hint: This value has the wrong type.
       See https://doc_url.example/version-stripped-from-test/docs/redirects/input-section
-      Or run: `mbf-fastq-processor template input-section` for more information.
+      Or run: `fastqrab template input-section` for more information.
 
 Error 2/2
   ╭─config.toml

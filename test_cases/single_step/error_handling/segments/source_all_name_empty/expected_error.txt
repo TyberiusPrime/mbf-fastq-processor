@@ -14,6 +14,6 @@ Error 1/1
 ──╯
 Hint: Please provide a segment name after 'name:', for there were multiple segments to choose from.
       See https://doc_url.example/version-stripped-from-test/docs/redirects/Uppercase
-      Or run: `mbf-fastq-processor template Uppercase`
+      Or run: `fastqrab template Uppercase` for more information.
 
 

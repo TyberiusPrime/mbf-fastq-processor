@@ -7,6 +7,6 @@ Error 1/1
   ┆               ╰─────── Wrong type: expected table or inline table, found string.
 ──╯
 Hint: See https://doc_url.example/version-stripped-from-test/docs/redirects/input-section
-      Or run: `mbf-fastq-processor template input-section`
+      Or run: `fastqrab template input-section` for more information.
 
 

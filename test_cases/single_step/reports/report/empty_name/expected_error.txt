@@ -13,6 +13,6 @@ Error 1/1
    ┆             ╰─ Name must not be empty
 ───╯
 Hint: See https://doc_url.example/version-stripped-from-test/docs/redirects/Report
-      Or run: `mbf-fastq-processor template Report`
+      Or run: `fastqrab template Report` for more information.
 
 

@@ -1,7 +1,7 @@
 #baseURL = 'https://tyberiusprime@github.io/pypipegraph2'
 #canonifyURLs = true
 languageCode = 'en-us'
-title = 'mbf-fastq-processor documentation'
+title = 'fastqrab documentation'
 theme = "hugo-book"
 disablePathToLower = true
 

@@ -10,7 +10,7 @@ Tags are identified by labels (arbitrary names following the pattern `[a-zA-Z_][
 
 ## Tag Types
 
-mbf-fastq-processor supports four tag types:
+fastqrab supports four tag types:
 
 (None of the subsequent step listings below are exhaustive).
 

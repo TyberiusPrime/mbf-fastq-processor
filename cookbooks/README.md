@@ -1,6 +1,6 @@
 # FastQ Processor Cookbooks
 
-This directory contains practical, real-world examples of using mbf-fastq-processor for common bioinformatics tasks.
+This directory contains practical, real-world examples of using fastqrab for common bioinformatics tasks.
 
 ## What are Cookbooks?
 
@@ -20,7 +20,7 @@ To run any cookbook:
 
 ```bash
 cd cookbooks/[cookbook-name]
-mbf-fastq-processor process input.toml
+fastqrab process input.toml
 ```
 
 Compare your output with the files in `reference_output/` to verify correct execution.

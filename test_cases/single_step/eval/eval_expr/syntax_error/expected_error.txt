@@ -17,6 +17,6 @@ Error 1/1
 ───╯
 Hint: Inner error message UnparsedTokensRemaining(")")
       See https://doc_url.example/version-stripped-from-test/docs/redirects/EvalExpression
-      Or run: `mbf-fastq-processor template EvalExpression`
+      Or run: `fastqrab template EvalExpression` for more information.
 
 

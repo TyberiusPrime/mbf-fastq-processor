@@ -1,0 +1,227 @@
+use crate::transformations::calc::extract_numeric_tags_plus_all;
+use crate::transformations::prelude::*;
+use fastqrab_config::tpd_adapt_bstring_uppercase;
+
+/// Quantify base occurrence rate or count
+#[derive(Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
+pub struct BaseContent {
+    pub out_label: TagLabel,
+
+    #[schemars(with = "String")]
+    #[tpd(adapt_in_verify(String))]
+    segment: SegmentIndexOrAll,
+
+    pub relative: bool,
+
+    #[schemars(with = "String")]
+    #[tpd(with = "tpd_adapt_bstring_uppercase")]
+    pub bases_to_count: BString,
+
+    #[tpd(default)]
+    #[schemars(with = "String")]
+    #[tpd(with = "tpd_adapt_bstring_uppercase")]
+    pub bases_to_ignore: BString,
+
+    #[tpd(skip)]
+    #[schemars(skip)]
+    bases_to_count_lookup: Vec<bool>,
+    #[tpd(skip)]
+    #[schemars(skip)]
+    bases_to_ignore_lookup: Vec<bool>,
+}
+
+fn build_lookup(bases: &BString) -> Vec<bool> {
+    let mut lookup = vec![false; 256];
+
+    for ch in bases.as_slice() {
+        let idx = *ch as usize;
+        lookup[idx] = true;
+    }
+    lookup
+}
+
+impl VerifyIn<PartialConfig> for PartialBaseContent {
+    fn verify(
+        &mut self,
+        parent: &PartialConfig,
+        _options: &VerifyOptions,
+    ) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        self.relative.or(true);
+        self.segment.validate_segment(parent);
+
+        self.bases_to_count.verify(|v| {
+            if v.is_empty() {
+                return Err(ValidationFailure::new(
+                    "Must contain at least one letter (base)",
+                    None,
+                ));
+            }
+
+            Ok(())
+        });
+        self.bases_to_ignore.verify(|v| {
+            if !self.relative.as_ref().is_some_and(|x| *x) {
+                return Err(ValidationFailure::new(
+                    "Bases can only be ignored in relative=true mode",
+                    Some("Either set relative=false or remove the bases_to_ignore field"),
+                ));
+            }
+            for letter in v.iter() {
+                if !letter.is_ascii_alphabetic() {
+                    return Err(ValidationFailure::new(
+                        "Only ASCII letters are allowed as bases".to_string(),
+                        Some(format!("Invalid character: '{}'", *letter as char)),
+                    ));
+                }
+            }
+            Ok(())
+        });
+        //safe to do after verify. Verify only verifies if they're set, this then afterwards set it
+        //to empty string
+        self.bases_to_ignore.or_with(BString::default);
+
+        if let Some(bases_to_count) = self.bases_to_count.as_ref() {
+            self.bases_to_count_lookup = Some(build_lookup(bases_to_count));
+        }
+        if let Some(bases_to_ignore) = self.bases_to_ignore.as_ref() {
+            self.bases_to_ignore_lookup = Some(build_lookup(bases_to_ignore));
+        }
+        Ok(())
+    }
+}
+
+impl PartialBaseContent {
+    pub fn new(
+        out_label: TomlValue<TagLabel>,
+        segment: TomlValue<MustAdapt<String, SegmentIndexOrAll>>,
+        relative: bool,
+        bases_to_count: BString,
+        bases_to_ignore: BString,
+    ) -> PartialBaseContent {
+        Self {
+            out_label,
+            segment,
+            relative: TomlValue::new_ok_unplaced(relative),
+            bases_to_count_lookup: Some(build_lookup(&bases_to_count)),
+            bases_to_ignore_lookup: Some(build_lookup(&bases_to_ignore)),
+            bases_to_count: TomlValue::new_ok_unplaced(bases_to_count),
+            bases_to_ignore: TomlValue::new_ok_unplaced(bases_to_ignore),
+        }
+    }
+}
+
+impl BaseContent {
+    fn sequence_totals(
+        sequence: &[u8],
+        bases_to_count: &[bool],
+        bases_to_ignore: &[bool],
+    ) -> (usize, usize) {
+        let mut considered = 0usize;
+        let mut counted = 0usize;
+
+        for &base in sequence {
+            let idx = base.to_ascii_uppercase() as usize;
+            if bases_to_ignore[idx] {
+                continue;
+            }
+            considered += 1;
+            if bases_to_count[idx] {
+                counted += 1;
+            }
+        }
+
+        (considered, counted)
+    }
+
+    fn percentage(counted: usize, considered: usize) -> f64 {
+        if considered == 0 {
+            0.0
+        } else {
+            #[allow(clippy::cast_precision_loss)]
+            {
+                (counted as f64 / considered as f64) * 100.0
+            }
+        }
+    }
+}
+
+impl TagUser for PartialTaggedVariant<PartialBaseContent> {
+    fn get_tag_usage(
+        &mut self,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
+        _segment_order: &[String],
+    ) -> TagUsageInfo<'_> {
+        let inner = self
+            .toml_value
+            .as_mut()
+            .expect("get_tag_usage should only be called after successful verification");
+        TagUsageInfo {
+            declared_tag: inner.out_label.to_declared_tag(TagValueType::Numeric),
+            ..Default::default()
+        }
+    }
+}
+
+impl Step for BaseContent {
+    #[allow(clippy::cast_precision_loss)]
+    fn apply(
+        &self,
+        mut block: FastQBlocksCombined,
+        _input_info: &InputInfo,
+        _block_no: usize,
+        _demultiplex_info: &OptDemultiplex,
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
+        let segment = self.segment;
+        let bases_to_count_single = self.bases_to_count_lookup.clone();
+        let bases_to_ignore_single = self.bases_to_ignore_lookup.clone();
+        let bases_to_count_all = self.bases_to_count_lookup.clone();
+        let bases_to_ignore_all = self.bases_to_ignore_lookup.clone();
+        let relative = self.relative;
+
+        extract_numeric_tags_plus_all(
+            segment,
+            &self.out_label,
+            move |read| {
+                let sequence = read.seq();
+                let (considered, counted) = Self::sequence_totals(
+                    sequence,
+                    &bases_to_count_single,
+                    &bases_to_ignore_single,
+                );
+                if relative {
+                    Self::percentage(counted, considered)
+                } else {
+                    counted as f64
+                }
+            },
+            move |reads| {
+                let mut total_considered = 0usize;
+                let mut total_counted = 0usize;
+
+                for read in reads {
+                    let (considered, counted) = Self::sequence_totals(
+                        read.seq(),
+                        &bases_to_count_all,
+                        &bases_to_ignore_all,
+                    );
+                    total_considered += considered;
+                    total_counted += counted;
+                }
+
+                if relative {
+                    Self::percentage(total_counted, total_considered)
+                } else {
+                    total_counted as f64
+                }
+            },
+            &mut block,
+        );
+
+        Ok((block, true))
+    }
+}

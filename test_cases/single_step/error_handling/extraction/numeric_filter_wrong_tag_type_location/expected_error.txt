@@ -18,6 +18,6 @@ Hint: This transform requires tag 'is_duplicate' to be one of the following type
       but it is actually of type 'Location'.
       Either switch to FilterByTag, or change the tag you are filtering on.
       See https://doc_url.example/version-stripped-from-test/docs/redirects/FilterByNumericTag
-      Or run: `mbf-fastq-processor template FilterByNumericTag` for more information.
+      Or run: `fastqrab template FilterByNumericTag` for more information.
 
 

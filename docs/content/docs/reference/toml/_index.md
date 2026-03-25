@@ -5,13 +5,13 @@ title: TOML format
 
 # TOML file format
 
-mbf-fastq-processor pipelines are defined in a single [TOML](https://toml.io/en/) 1.0 formatted document.
+fastqrab pipelines are defined in a single [TOML](https://toml.io/en/) 1.0 formatted document.
 The format favours explicitness: every field is named, order is preserved, and unknown keys are rejected with a descriptive error.
 
 ## Canonical template
 
 The repository maintains an [authoritative configuration scaffold](template.toml) (the same
-content emitted by `mbf-fastq-processor template`).
+content emitted by `fastqrab template`).
 
 The contents are included [below](#maximal-example-template) for reference easy consumption in an LLM.
 
@@ -98,7 +98,7 @@ fastp \
 Which is reasonably clear, until you get to the one-letter-options. In this case, they
 turn on 'merge mode' ('-m', which you might have guessed) and disable some default processing steps ('-A -G -Q -L').
 
-Here's the mbf-fastq-processor equivalent, which we think as being more maintainable:
+Here's the fastqrab equivalent, which we think as being more maintainable:
 
 ```toml
 [input]

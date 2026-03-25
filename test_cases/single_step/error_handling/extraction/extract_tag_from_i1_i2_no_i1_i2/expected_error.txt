@@ -18,7 +18,7 @@ Error 1/2
 ───╯
 Hint: Did you mean: 'read1' or 'read2'?
       See https://doc_url.example/version-stripped-from-test/docs/redirects/ExtractIUPAC
-      Or run: `mbf-fastq-processor template ExtractIUPAC` for more information.
+      Or run: `fastqrab template ExtractIUPAC` for more information.
 
 Error 2/2
    ╭─config.toml
@@ -39,6 +39,6 @@ Error 2/2
 ───╯
 Hint: Did you mean: 'read2' or 'read1'?
       See https://doc_url.example/version-stripped-from-test/docs/redirects/ExtractIUPAC
-      Or run: `mbf-fastq-processor template ExtractIUPAC` for more information.
+      Or run: `fastqrab template ExtractIUPAC` for more information.
 
 

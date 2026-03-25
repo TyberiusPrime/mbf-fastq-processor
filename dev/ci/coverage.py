@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Coverage collection script for mbf_fastq_processor
+Coverage collection script for fastqrab
 
 This script runs cargo llvm-cov and generates coverage reports in multiple formats.
 
@@ -200,7 +200,7 @@ def check_genhtml():
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Generate coverage reports for mbf_fastq_processor"
+        description="Generate coverage reports for fastqrab"
     )
     parser.add_argument("--html", action="store_true", help="Generate HTML coverage report")
     parser.add_argument("--lcov", action="store_true", help="Generate LCOV coverage report")

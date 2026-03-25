@@ -3,7 +3,7 @@ title: Introduction
 type: docs
 ---
 
-# mbf-fastq-processor
+# fastqrab
 
 {{< columns >}}
 Reproducible, memory safe FASTQ transformations.
@@ -34,9 +34,9 @@ reads in a file format called
 ## Quickstart
 
 1. Prepare a configuration file `input.toml` (see example below).
-2. Run `mbf-fastq-processor template >input.toml` to create a configuration file.
+2. Run `fastqrab template >input.toml` to create a configuration file.
    Edit as necessary.
-3. Run `mbf-fastq-processor process input.toml` (or `cargo run --release -- process input.toml` during development).
+3. Run `fastqrab process input.toml` (or `cargo run --release -- process input.toml` during development).
 4. Inspect generated FASTQ files or HTML/JSON reports (the [Inspect]({{< relref "docs/reference/report-steps/Inspect.md" >}}) step helps surface summaries).
 
 ```toml
@@ -58,7 +58,7 @@ reads in a file format called
 ```
 
 ```bash
-mbf-fastq-processor input.toml
+fastqrab input.toml
 ```
 
 Or run the published container (bind-mount your working directory to `/work`):

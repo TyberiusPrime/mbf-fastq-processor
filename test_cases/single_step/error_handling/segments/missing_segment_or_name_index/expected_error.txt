@@ -16,6 +16,6 @@ Error 1/1
 ──╯
 Hint: Did you mean: 'read1'?
       See https://doc_url.example/version-stripped-from-test/docs/redirects/ExtractRegex
-      Or run: `mbf-fastq-processor template ExtractRegex`
+      Or run: `fastqrab template ExtractRegex` for more information.
 
 

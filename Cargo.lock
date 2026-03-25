@@ -646,6 +646,119 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4f4cdac9e4065d7c48e30770f8665b8cef9a3a73a63a4056a33a5f395bc7cf75"
 
 [[package]]
+name = "fastqrab"
+version = "0.8.1"
+dependencies = [
+ "allocation-counter",
+ "anyhow",
+ "bstr",
+ "clap",
+ "clap_complete",
+ "criterion",
+ "crossbeam",
+ "ex",
+ "fastqrab-io",
+ "fastqrab-steps",
+ "flate2",
+ "human-panic",
+ "indexmap",
+ "itertools 0.14.0",
+ "json_value_merge",
+ "mutants 0.0.3",
+ "niffler",
+ "nix",
+ "noodles",
+ "regex",
+ "schemars",
+ "serde_json",
+ "tempfile",
+ "toml",
+ "toml-pretty-deser",
+ "toml_edit",
+ "wait-timeout",
+ "walkdir",
+]
+
+[[package]]
+name = "fastqrab-config"
+version = "0.8.1"
+dependencies = [
+ "anyhow",
+ "bstr",
+ "fastqrab-dna",
+ "mutants 0.0.3",
+ "num_cpus",
+ "regex",
+ "schemars",
+ "serde",
+ "toml-pretty-deser",
+ "toml_edit",
+]
+
+[[package]]
+name = "fastqrab-dna"
+version = "0.8.1"
+dependencies = [
+ "bio",
+ "bstr",
+ "schemars",
+ "toml-pretty-deser",
+ "triple_accel",
+]
+
+[[package]]
+name = "fastqrab-io"
+version = "0.8.1"
+dependencies = [
+ "anyhow",
+ "bio",
+ "bstr",
+ "ex",
+ "fastqrab-config",
+ "fastqrab-dna",
+ "flate2",
+ "gzp",
+ "indexmap",
+ "memchr",
+ "mutants 0.0.3",
+ "niffler",
+ "noodles",
+ "schemars",
+ "serde",
+ "sha2",
+ "tempfile",
+ "toml-pretty-deser",
+ "zstd",
+]
+
+[[package]]
+name = "fastqrab-steps"
+version = "0.8.1"
+dependencies = [
+ "anyhow",
+ "bio",
+ "bstr",
+ "csv",
+ "enum_dispatch",
+ "ex",
+ "fasteval",
+ "fastqrab-config",
+ "fastqrab-dna",
+ "fastqrab-io",
+ "indexmap",
+ "memchr",
+ "mutants 0.0.3",
+ "rand 0.9.2",
+ "rand_chacha 0.9.0",
+ "regex",
+ "scalable_cuckoo_filter",
+ "schemars",
+ "serde",
+ "serde_json",
+ "toml-pretty-deser",
+]
+
+[[package]]
 name = "fastrand"
 version = "2.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1072,119 +1185,6 @@ checksum = "a06de3016e9fae57a36fd14dba131fccf49f74b40b7fbdb472f96e361ec71a08"
 dependencies = [
  "autocfg",
  "rawpointer",
-]
-
-[[package]]
-name = "mbf-fastq-processor"
-version = "0.8.1"
-dependencies = [
- "allocation-counter",
- "anyhow",
- "bstr",
- "clap",
- "clap_complete",
- "criterion",
- "crossbeam",
- "ex",
- "flate2",
- "human-panic",
- "indexmap",
- "itertools 0.14.0",
- "json_value_merge",
- "mbf-fastq-processor-io",
- "mbf-fastq-processor-steps",
- "mutants 0.0.3",
- "niffler",
- "nix",
- "noodles",
- "regex",
- "schemars",
- "serde_json",
- "tempfile",
- "toml",
- "toml-pretty-deser",
- "toml_edit",
- "wait-timeout",
- "walkdir",
-]
-
-[[package]]
-name = "mbf-fastq-processor-config"
-version = "0.8.1"
-dependencies = [
- "anyhow",
- "bstr",
- "mbf-fastq-processor-dna",
- "mutants 0.0.3",
- "num_cpus",
- "regex",
- "schemars",
- "serde",
- "toml-pretty-deser",
- "toml_edit",
-]
-
-[[package]]
-name = "mbf-fastq-processor-dna"
-version = "0.8.1"
-dependencies = [
- "bio",
- "bstr",
- "schemars",
- "toml-pretty-deser",
- "triple_accel",
-]
-
-[[package]]
-name = "mbf-fastq-processor-io"
-version = "0.8.1"
-dependencies = [
- "anyhow",
- "bio",
- "bstr",
- "ex",
- "flate2",
- "gzp",
- "indexmap",
- "mbf-fastq-processor-config",
- "mbf-fastq-processor-dna",
- "memchr",
- "mutants 0.0.3",
- "niffler",
- "noodles",
- "schemars",
- "serde",
- "sha2",
- "tempfile",
- "toml-pretty-deser",
- "zstd",
-]
-
-[[package]]
-name = "mbf-fastq-processor-steps"
-version = "0.8.1"
-dependencies = [
- "anyhow",
- "bio",
- "bstr",
- "csv",
- "enum_dispatch",
- "ex",
- "fasteval",
- "indexmap",
- "mbf-fastq-processor-config",
- "mbf-fastq-processor-dna",
- "mbf-fastq-processor-io",
- "memchr",
- "mutants 0.0.3",
- "rand 0.9.2",
- "rand_chacha 0.9.0",
- "regex",
- "scalable_cuckoo_filter",
- "schemars",
- "serde",
- "serde_json",
- "toml-pretty-deser",
 ]
 
 [[package]]

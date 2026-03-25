@@ -6,7 +6,7 @@ not-a-transformation: true
 
 # LLM Configuration Generation Guide
 
-This guide is optimized for Large Language Models to generate valid `mbf-fastq-processor` configurations. It provides structured information with explicit types, constraints, and patterns.
+This guide is optimized for Large Language Models to generate valid `fastqrab` configurations. It provides structured information with explicit types, constraints, and patterns.
 
 ## Configuration Structure
 

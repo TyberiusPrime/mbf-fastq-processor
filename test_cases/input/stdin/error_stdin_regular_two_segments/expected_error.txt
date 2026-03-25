@@ -13,6 +13,6 @@ Error 1/1
 ──╯
 Hint: Using '--stdin--' requires exactly one segment (and possibly interleaved).
       See https://doc_url.example/version-stripped-from-test/docs/redirects/input-section
-      Or run: `mbf-fastq-processor template input-section` for more information.
+      Or run: `fastqrab template input-section` for more information.
 
 

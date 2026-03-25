@@ -6,7 +6,7 @@ title: "Concepts"
 
 # High level
 
-mbf-fastq-processor ingests any number of FASTQ files, applies a user-defined sequence of steps, and emits transformed FASTQs and/or structured reports.
+fastqrab ingests any number of FASTQ files, applies a user-defined sequence of steps, and emits transformed FASTQs and/or structured reports.
 
 ```
 FASTQ segments  ('reads')
@@ -32,7 +32,7 @@ Values in the TOML file are explicit by design. Where defaults exist, they are d
 
 ## Input files
 
-mbf-fastq-processor reads uncompressed, gzipped, or zstd-compressed FASTQ files ([and other file formats]({{< relref "docs/reference/input-section.md" >}}#file-formats)). Multiple files can be concatenated per segment. Every segment must supply the same number of reads to preserve fragment pairing.
+fastqrab reads uncompressed, gzipped, or zstd-compressed FASTQ files ([and other file formats]({{< relref "docs/reference/input-section.md" >}}#file-formats)). Multiple files can be concatenated per segment. Every segment must supply the same number of reads to preserve fragment pairing.
 
 Interleaved FASTQ files are also supported—declare a single source and enumerate segment names via `interleaved = [...]` (see the [input section reference]({{< relref "docs/reference/input-section.md" >}})).
 
@@ -52,7 +52,7 @@ Every step sees whole fragments so paired segments stay in lock-step: if you fil
 
 Many steps accept a `segment` argument to restrict their work to a specific input stream, while still retaining awareness of the whole fragment. Some steps also support a more flexible `source` parameter that can read from segment sequences, read names, or tag values.
 
-Tag-generating steps must be paired with consumers. mbf-fastq-processor will error if a label is produced but never used, helping you catch typos early.
+Tag-generating steps must be paired with consumers. fastqrab will error if a label is produced but never used, helping you catch typos early.
 
 ## Core Concepts
 
@@ -69,7 +69,7 @@ Steps are the building blocks of your pipeline. They fall into five categories:
 Steps execute sequentially in the order specified, and the same step type can appear multiple times.
 
 ### [Segments]({{< relref "docs/concepts/segments.md" >}})
-Segments represent the different reads from a single DNA fragment (e.g., `read1`, `read2`, `index1`). Modern sequencers can produce multiple segments per fragment, and mbf-fastq-processor keeps them synchronized throughout processing.
+Segments represent the different reads from a single DNA fragment (e.g., `read1`, `read2`, `index1`). Modern sequencers can produce multiple segments per fragment, and fastqrab keeps them synchronized throughout processing.
 
 Key points:
 - Segment names are user-defined in the `[input]` section

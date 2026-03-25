@@ -16,6 +16,6 @@ Error 1/1
 ──╯
 Hint: This value has the wrong type.
       See https://doc_url.example/version-stripped-from-test/docs/redirects/EvalExpression
-      Or run: `mbf-fastq-processor template EvalExpression` for more information.
+      Or run: `fastqrab template EvalExpression` for more information.
 
 

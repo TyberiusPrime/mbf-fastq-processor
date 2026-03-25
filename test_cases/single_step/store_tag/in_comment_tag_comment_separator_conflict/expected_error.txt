@@ -20,7 +20,7 @@ Error 1/2
 ───╯
 Hint: Tag labels cannot contain the comment_separator 't'. You probably want a comment separator that's not in a-zA-Z0-9
       See https://doc_url.example/version-stripped-from-test/docs/redirects/StoreTagInComment
-      Or run: `mbf-fastq-processor template StoreTagInComment` for more information.
+      Or run: `fastqrab template StoreTagInComment` for more information.
 
 Error 2/2
    ╭─config.toml
@@ -44,6 +44,6 @@ Error 2/2
 ───╯
 Hint: Tag labels cannot contain the comment_insert_char 'g'. You probably want an insert char that's not in a-zA-Z0-9
       See https://doc_url.example/version-stripped-from-test/docs/redirects/StoreTagInComment
-      Or run: `mbf-fastq-processor template StoreTagInComment` for more information.
+      Or run: `fastqrab template StoreTagInComment` for more information.
 
 

@@ -1,5 +1,5 @@
 [workspace]
-	members = ["mbf-fastq-processor", "mbf-fastq-processor-dna", "mbf-fastq-processor-config", "mbf-fastq-processor-io", "mbf-fastq-processor-steps"]
+	members = ["fastqrab", "fastqrab-dna", "fastqrab-config", "fastqrab-io", "fastqrab-steps"]
     resolver = "2"
 
 [workspace.lints.clippy]
@@ -71,10 +71,10 @@
     triple_accel = "0.4.0"
 	zstd = { version = "0.13.2", default-features = false }
 
-    mbf-fastq-processor-config= {path="mbf-fastq-processor-config"}
-    mbf-fastq-processor-dna = {path="mbf-fastq-processor-dna"}
-    mbf-fastq-processor-io = {path="mbf-fastq-processor-io"}
-    mbf-fastq-processor-steps = {path="mbf-fastq-processor-steps"}
+    fastqrab-config= {path="fastqrab-config"}
+    fastqrab-dna = {path="fastqrab-dna"}
+    fastqrab-io = {path="fastqrab-io"}
+    fastqrab-steps = {path="fastqrab-steps"}
 
 
 [profile.release]

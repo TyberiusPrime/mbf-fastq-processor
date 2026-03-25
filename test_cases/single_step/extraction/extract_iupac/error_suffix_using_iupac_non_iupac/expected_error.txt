@@ -16,6 +16,6 @@ Error 1/1
 ──╯
 Hint: Allowed letters are A G T C I R Y S W K M B D H V N 
       See https://doc_url.example/version-stripped-from-test/docs/redirects/ExtractIUPACSuffix
-      Or run: `mbf-fastq-processor template ExtractIUPACSuffix` for more information.
+      Or run: `fastqrab template ExtractIUPACSuffix` for more information.
 
 

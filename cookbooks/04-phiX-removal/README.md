@@ -102,7 +102,7 @@ This cookbook demonstrates three equivalent ways to filter PhiX-contaminated rea
 ```bash
 # Run the pipeline
 cd 04-phiX-removal
-mbf-fastq-processor input.toml
+fastqrab input.toml
 
 # Check the results
 head output_without_phix_kmer_analysis.tsv      # View k-mer counts
@@ -115,7 +115,7 @@ To try the EvalExpression + Demultiplex approach that separates reads into two f
 
 ```bash
 # Run the alternative pipeline
-mbf-fastq-processor input_demultiplex.toml
+fastqrab input_demultiplex.toml
 
 # Check the results
 head output_kmer_analysis.tsv                     # View k-mer counts

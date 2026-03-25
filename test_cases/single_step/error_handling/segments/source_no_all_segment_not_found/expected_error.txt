@@ -18,6 +18,6 @@ Error 1/1
 ───╯
 Hint: Available segments: [read1, read2]
       See https://doc_url.example/version-stripped-from-test/docs/redirects/ExtractRegion
-      Or run: `mbf-fastq-processor template ExtractRegion`
+      Or run: `fastqrab template ExtractRegion` for more information.
 
 

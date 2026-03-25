@@ -15,7 +15,7 @@ Error 1/2
    ┆                             ╰─ Missing required key: 'in_label'.
 ───╯
 Hint: See https://doc_url.example/version-stripped-from-test/docs/redirects/Demultiplex
-      Or run: `mbf-fastq-processor template Demultiplex` for more information.
+      Or run: `fastqrab template Demultiplex` for more information.
 
 Error 2/2
   ╭─config.toml
@@ -32,6 +32,6 @@ Error 2/2
 ──╯
 Hint: There is no valid [barcodes.<barcodes_name>] section in your TOML. Add one.
       See https://doc_url.example/version-stripped-from-test/docs/redirects/Demultiplex
-      Or run: `mbf-fastq-processor template Demultiplex` for more information.
+      Or run: `fastqrab template Demultiplex` for more information.
 
 

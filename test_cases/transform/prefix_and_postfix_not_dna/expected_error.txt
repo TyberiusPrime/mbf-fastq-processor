@@ -13,7 +13,7 @@ Error 1/2
   ┆              ╰─── Invalid DNA base: 'X' (ascii: 88). Allowed letters are A, C, G, T and N.
 ──╯
 Hint: See https://doc_url.example/version-stripped-from-test/docs/redirects/Prefix
-      Or run: `mbf-fastq-processor template Prefix` for more information.
+      Or run: `fastqrab template Prefix` for more information.
 
 Error 2/2
    ╭─config.toml
@@ -29,6 +29,6 @@ Error 2/2
    ┆              ╰─── Invalid DNA base: 'Y' (ascii: 89). Allowed letters are A, C, G, T and N.
 ───╯
 Hint: See https://doc_url.example/version-stripped-from-test/docs/redirects/Postfix
-      Or run: `mbf-fastq-processor template Postfix` for more information.
+      Or run: `fastqrab template Postfix` for more information.
 
 

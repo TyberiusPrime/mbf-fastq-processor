@@ -94,7 +94,7 @@ Output files may be (preexisting) named pipes (FIFOs).
 
 ## Overwrite protection
 
-If any output file already exists, mbf-fastq-processor will refuse to overwrite them.
+If any output file already exists, fastqrab will refuse to overwrite them.
 
 Except when the incompletion marker (see below) is present.
 

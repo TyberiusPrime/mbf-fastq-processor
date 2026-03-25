@@ -1,0 +1,1 @@
+pub use fastqrab_config::fileformats::PhredEncoding;

@@ -5,7 +5,7 @@ weight: 1
 # Philosophy
 
 
-Mbf-fastq-processor transforms (DNA) sequencing reads for downstream analysis.
+fastqrab transforms (DNA) sequencing reads for downstream analysis.
 
 Its focus are on
  - correctness
@@ -19,7 +19,7 @@ Its focus are on
 
 We strive to do the right thing, always.
 
-To that end, Mbf-fastq-processor is tested with more than 500
+To that end, fastqrab is tested with more than 500
 end-to-end, input-to-output tests, both during development and via
 continuous integration.
 
@@ -34,11 +34,11 @@ We allow ourselves one, perhaps useful, exception:
 
 The reports (JSON and HTML ) by default leak information about the runtime environment,
 such as the exact input configuration, the names of the input files,
-the working directory and the version of mbf-fastq-processor used.
+the working directory and the version of fastqrab used.
 
 ## A lack of surprises
 
-mbf-fastq-processor does exactly what you define in it's configuration TOML to your reads.
+fastqrab does exactly what you define in it's configuration TOML to your reads.
 
 It does not trim, filter, or mangle them in any way without an explicit `[[step]]`.
 
@@ -55,14 +55,14 @@ Every error message should contain actionable advice where to look next.
 
 Every error message should contain as much information as necessary.
 
-mbf-fastq-processor tests everything it can about your configuration
+fastqrab tests everything it can about your configuration
 before actually starting to read your data, and if an error is detected
 during run, it terminates swiftly. And the implementation can detect
 more than one configuration error at once.
 
 We also clearly distinguish between unrecoverable-but-foreseen errors
 (invalid configurations, broken input files) and bugs - invalid conditions
-where mbf-fastq-processor's internal contracts were broken.
+where fastqrab's internal contracts were broken.
 
 The later still produce a 'friendly panic' message with instructions
 on how to get help.
@@ -79,10 +79,3 @@ While we're not continuously measuring performance, we have
 [a benchmark framework]({{< relref "docs/development/benchmarking.md" >}})
 in place and include [performance benchmark results]({{< relref "docs/reference/benchmark-section.md" >}}#results),
 so users have an idea what to expect.
-
-
-
-
-
-
-

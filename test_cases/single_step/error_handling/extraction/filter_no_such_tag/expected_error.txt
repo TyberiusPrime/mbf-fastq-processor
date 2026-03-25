@@ -16,6 +16,6 @@ Error 1/1
 ───╯
 Hint: Did you mean: 'other' or 'something'?
       See https://doc_url.example/version-stripped-from-test/docs/redirects/FilterByTag
-      Or run: `mbf-fastq-processor template FilterByTag`
+      Or run: `fastqrab template FilterByTag` for more information.
 
 

@@ -11,6 +11,6 @@ Error 1/1
 ──╯
 Hint: All known accepted values have been used.
       See https://doc_url.example/version-stripped-from-test/docs/redirects/_ChangeCase
-      Or run: `mbf-fastq-processor template _ChangeCase`
+      Or run: `fastqrab template _ChangeCase` for more information.
 
 

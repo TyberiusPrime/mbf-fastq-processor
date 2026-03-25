@@ -19,6 +19,6 @@ Error 1/1
 ───╯
 Hint: See https://doc_url.example/version-stripped-from-test/docs/redirects/barcodes
       See https://doc_url.example/version-stripped-from-test/docs/redirects/HammingCorrect
-      Or run: `mbf-fastq-processor template HammingCorrect` for more information.
+      Or run: `fastqrab template HammingCorrect` for more information.
 
 

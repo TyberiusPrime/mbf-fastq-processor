@@ -23,7 +23,7 @@ At least one segment must be declared.
 
 Additional points:
 
-- mbf-fastq-processor handles an arbitrary number of [segments per read]({{< relref "docs/concepts/segments.md" >}})
+- fastqrab handles an arbitrary number of [segments per read]({{< relref "docs/concepts/segments.md" >}})
 - Segment names are user-defined and case sensitive. 
   Common conventions include `read1`, `read2`, `index1`, and `index2`. 
   They must conform to `[a-zA-Z0-9_]+$`.
@@ -35,7 +35,7 @@ Additional points:
 
 ## File Formats
 
-mbf-fastq-processor supports multiple input formats with automatic detection
+fastqrab supports multiple input formats with automatic detection
 and transparent decompression.
 
 ### Supported Formats
@@ -194,7 +194,7 @@ Input files may be named pipes (FIFOs) - but only FASTQ formated data is support
 
 ## Rapidgzip
 
-mbf-fastq-processor can use [rapidgzip](https://github.com/mxmlnkn/rapidgzip), a gzip decompression
+fastqrab can use [rapidgzip](https://github.com/mxmlnkn/rapidgzip), a gzip decompression
 program that enables multi-core decompression of arbitrary gzip files instead of it's build-in gzip
 decompressor.
 
@@ -212,7 +212,7 @@ Rapidgzip can be even faster when there's an index next to the gzip file telling
 the block starts. We auto-detect and use such an index if it's named `$input_file.rapidgzip_index`.
 
 If `options.build_rapidgzip_index` is set, the index is created if it doesn't
-exist. It's placed next to the file. If you expect to run mbf-fastq-processor
+exist. It's placed next to the file. If you expect to run fastqrab
 multiple times on the same input (such as in development) you might want to
 spent the disk space. Note that you may not use [Head]({{< relref "docs/reference/modification-steps/Head.md" >}}) 
 and `build_rapidgzip_index` together, since Head closes the input early, leading to the index not being

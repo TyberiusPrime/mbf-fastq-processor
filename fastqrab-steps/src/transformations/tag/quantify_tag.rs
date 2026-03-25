@@ -1,0 +1,180 @@
+use std::collections::BTreeMap;
+
+use crate::transformations::prelude::*;
+use fastqrab_config::{default_region_separator, tpd_adapt_bstring};
+use fastqrab_io::CompressionFormat;
+
+type QuantifyTagCollector = Arc<Mutex<DemultiplexedData<BTreeMap<Vec<u8>, usize>>>>;
+
+/// Write a histogram of tag values to a JSON file.
+#[derive(Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
+pub struct QuantifyTag {
+    pub infix: String,
+    pub in_label: TagLabel,
+
+    #[schemars(with = "String")]
+    #[tpd(with = "tpd_adapt_bstring")]
+    region_separator: BString,
+
+    #[tpd(skip, default)]
+    #[schemars(skip)]
+    pub collector: Option<QuantifyTagCollector>,
+
+    #[tpd(skip, default)]
+    #[schemars(skip)]
+    pub output_streams: Option<Arc<Mutex<DemultiplexedOutputFiles>>>,
+}
+
+impl VerifyIn<PartialConfig> for PartialQuantifyTag {
+    fn verify(
+        &mut self,
+        _parent: &PartialConfig,
+        _options: &VerifyOptions,
+    ) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        self.region_separator.or_with(default_region_separator);
+        Ok(())
+    }
+}
+
+impl TagUser for PartialTaggedVariant<PartialQuantifyTag> {
+    fn get_tag_usage(
+        &mut self,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
+        _segment_order: &[String],
+    ) -> TagUsageInfo<'_> {
+        let inner = self
+            .toml_value
+            .as_mut()
+            .expect("get_tag_usage should only be called after successful verification");
+        TagUsageInfo {
+            used_tags: vec![inner.in_label.to_used_tag(&[TagValueType::Location][..])],
+            ..Default::default()
+        }
+    }
+}
+
+impl Step for QuantifyTag {
+    fn transmits_premature_termination(&self) -> bool {
+        false
+    }
+    #[mutants::skip] //better to have the pipeline know about it than blocking in our 
+    //internal lock
+    fn needs_serial(&self) -> bool {
+        true
+    }
+
+    fn init(
+        &mut self,
+        _input_info: &InputInfo,
+        output_prefix: &str,
+        output_directory: &Path,
+        output_ix_separator: &str,
+        demultiplex_info: &OptDemultiplex,
+        allow_overwrite: bool,
+    ) -> Result<Option<DemultiplexBarcodes>> {
+        let mut collector = DemultiplexedData::new();
+        for tag in demultiplex_info.iter_tags() {
+            collector.insert(tag, BTreeMap::new());
+        }
+        self.collector = Some(Arc::new(Mutex::new(collector)));
+        self.output_streams = Some(Arc::new(Mutex::new(demultiplex_info.open_output_streams(
+            output_directory,
+            output_prefix,
+            &self.infix,
+            "qr.json",
+            output_ix_separator,
+            CompressionFormat::Uncompressed,
+            None,
+            false,
+            false,
+            allow_overwrite,
+        )?))); // cov:excl-line
+
+        Ok(None)
+    }
+
+    fn apply(
+        &self,
+        block: FastQBlocksCombined,
+        _input_info: &InputInfo,
+        _block_no: usize,
+        _demultiplex_info: &OptDemultiplex,
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
+        let mut collector = self
+            .collector
+            .as_ref()
+            .expect("collector should have been set in init")
+            .lock()
+            .expect("Lock poisoned");
+        let hits = block
+            .tags
+            .get(&self.in_label)
+            .expect("Tag not found. Should have been caught in validation");
+        if let Some(demultiplex_tags) = &block.output_tags {
+            for (tag_val, demultiplex_tag) in hits.iter().zip(demultiplex_tags) {
+                if let Some(hit) = tag_val.as_sequence() {
+                    *collector
+                        .get_mut(demultiplex_tag)
+                        .expect("value must exist in histogram_values")
+                        .entry(hit.joined_sequence(Some(&self.region_separator)))
+                        .or_insert(0) += 1;
+                }
+            }
+        } else {
+            for tag_val in hits {
+                if let Some(hit) = tag_val.as_sequence() {
+                    *collector
+                        .get_mut(&0)
+                        .expect("value must exist in histogram_values")
+                        .entry(hit.joined_sequence(Some(&self.region_separator)))
+                        .or_insert(0) += 1;
+                }
+            }
+        }
+
+        Ok((block, true))
+    }
+
+    fn finalize(&self, _demultiplex_info: &OptDemultiplex) -> Result<Option<FinalizeReportResult>> {
+        use std::io::Write;
+        let collector = self
+            .collector
+            .as_ref()
+            .expect("collector should have been set in init")
+            .lock()
+            .expect("Lock poisoned");
+        let output_streams = self
+            .output_streams
+            .as_ref()
+            .expect("output streams should have been set in init")
+            .lock()
+            .expect("Lock poisoned")
+            .take();
+        for (tag, stream) in output_streams {
+            if let Some(mut stream) = stream {
+                let mut str_collector: Vec<(String, usize)> = collector
+                    .get(&tag)
+                    .expect("value must exist in histogram_values")
+                    .iter()
+                    .map(|(k, v)| (String::from_utf8_lossy(k).to_string(), *v))
+                    .collect();
+                //sort by count descending, then alphabetically by string
+                str_collector.sort_by(|a, b| {
+                    b.1.cmp(&a.1)
+                        .then_with(|| a.0.to_lowercase().cmp(&b.0.to_lowercase()))
+                });
+                // we want something that keeps the order
+                let str_collector: indexmap::IndexMap<String, usize> =
+                    str_collector.into_iter().collect();
+                let json = serde_json::to_string_pretty(&str_collector)?;
+                stream.write_all(json.as_bytes())?;
+            }
+        }
+        Ok(None)
+    }
+}

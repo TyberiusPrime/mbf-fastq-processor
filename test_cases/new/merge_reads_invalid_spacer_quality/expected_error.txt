@@ -21,6 +21,6 @@ Error 1/1
 ───╯
 Hint: Set a valid value.
       See https://doc_url.example/version-stripped-from-test/docs/redirects/MergeReads
-      Or run: `mbf-fastq-processor template MergeReads`
+      Or run: `fastqrab template MergeReads` for more information.
 
 

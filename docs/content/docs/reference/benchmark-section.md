@@ -6,7 +6,7 @@ weight: 110
 
 
 For profiling and benchmarking (individual) steps, 
-mbf-fastq-processor has a special benchmark mode.
+fastqrab has a special benchmark mode.
 
 This mode focuses on benchmarking the steps,
 and avoids (most) input and output runtime.

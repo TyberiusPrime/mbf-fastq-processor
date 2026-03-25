@@ -174,7 +174,7 @@ def review(stderr_file: Path, expected_file: Path, test_dir: Path,
 def main():
     # Locate test_cases from the project root (script lives in dev/)
     script_dir = Path(__file__).resolve().parent
-    base_dir = script_dir.parent / "test_cases"
+    base_dir = script_dir.parent.parent / "test_cases"
     if not base_dir.exists():
         sys.exit(f"Error: test_cases not found at {base_dir}")
 

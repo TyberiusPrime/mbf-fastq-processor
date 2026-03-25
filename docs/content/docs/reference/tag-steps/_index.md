@@ -12,7 +12,7 @@ Extraction and downsteam steps are tied together with arbitrary 'labels', which 
 This allows you to efficiently perform multiple actions with one search, for example
 trim adapter tags and keep only reads that contain the adapter.
 
-mbf-fastq-processor errors early if a step introduces a label that is never used or removed by later transformations.
+fastqrab errors early if a step introduces a label that is never used or removed by later transformations.
 
 
 Tags generating steps are split into three sections, depending on their output:

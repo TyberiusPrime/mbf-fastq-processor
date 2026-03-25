@@ -4,7 +4,7 @@ weight: 130
 
 # Performance Benchmarking
 
-mbf-fastq-processor includes a comprehensive benchmarking suite for measuring and analyzing the performance of individual transformation steps.
+fastqrab includes a comprehensive benchmarking suite for measuring and analyzing the performance of individual transformation steps.
 
 ## Overview
 
@@ -59,7 +59,7 @@ Example configuration:
 
 ### 1. Define the Benchmark
 
-Add your step to `mbf-fastq-processor/benches/simple_benchmarks.rs`
+Add your step to `fastqrab/benches/simple_benchmarks.rs`
 
 ### 2. Run the New Benchmark
 ```bash

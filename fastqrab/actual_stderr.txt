@@ -1,0 +1,14 @@
+running 3 tests
+test pipeline::tests::test_checked_f64_to_u16 ... ok
+test cli::verify::test::test_calculate_size_difference_percent ... ok
+test cli::verify::test::test_decompress_file ... FAILED
+
+failures:
+
+---- cli::verify::test::test_decompress_file stdout ----
+
+thread 'cli::verify::test::test_decompress_file' (1426326) panicked at fastqrab/src/cli/verify.rs:1008:9:
+explicit panic
+
+failures:
+    cli::verify::test::test_decompress_file

@@ -6,7 +6,7 @@ BookFlatSection = true
 
 ## Why are there so few defaults?
 
-mbf-fastq-processor is following the python mantra 'explicit is better than implicit'.
+fastqrab is following the python mantra 'explicit is better than implicit'.
 
 It's presumptuous to assume our user's use case, and mismatches between an assumed
 and actual use case lead to unwelcome surprises that the user might only discover 
@@ -37,7 +37,7 @@ The FASTQ 'standard' ([Cock et al.](https://pmc.ncbi.nlm.nih.gov/articles/PMC284
 allows for 'wrapped' sequence and quality lines, which contain newlines that are omitted
 when parsing the file.
 
-mbf-fastq-processor does currently not support such wrapped FASTQ files.
+fastqrab does currently not support such wrapped FASTQ files.
 
 This variation seems to be very rare in the wild, at least for sequencing data - it might 
 be different if you look at assemblies with quality data attached?
@@ -59,7 +59,7 @@ a seed for it's randomness. Unfortunately, that seed is not the only (nuisance) 
 the outcome. The order of reads (both in the reference and your FASTQ file), the initial size of the 
 filter, the growth rate and the false positive rate also influence the outcome. 
 
-mbf-fastq-processor automatically chooses the initial size (aligned read count for index BAM files
+fastqrab automatically chooses the initial size (aligned read count for index BAM files
 as reference, 10 million otherwise) and the growth rate. You influence the input files and the chosen 
 false positive rate.
 
@@ -88,7 +88,7 @@ The effect of the false positive rate at 100 million reads is roughly:
 
 
 ## BAM output missing @PG header
-mbf-fastq-processor is not putting an @PG header into it's BAM files.
+fastqrab is not putting an @PG header into it's BAM files.
 That is by design. 
 
 One the one hand, our configuration file driven workflow really does not fit 
@@ -103,7 +103,7 @@ Having it leads to hash instability of BAM files
 
 ## Security
 
-mbf-fastq-processor is MIT licensed - no warranties of any kind.
+fastqrab is MIT licensed - no warranties of any kind.
 
 That being said, we use cargo-deny to check our dependencies for known issues
 (integrated into our release workflow).

@@ -18,6 +18,6 @@ Error 1/1
 ───╯
 Hint: Please specify a positive integer value for k (e.g., k = 5 for 5-mers).
       See https://doc_url.example/version-stripped-from-test/docs/redirects/CalcKmers
-      Or run: `mbf-fastq-processor template CalcKmers` for more information.
+      Or run: `fastqrab template CalcKmers` for more information.
 
 

@@ -3,7 +3,7 @@ not-a-transformation: true
 ---
 # Out of scope
 
-Things mbf-fastq-processor will explicitly not do and that won't be implemented.
+Things fastqrab will explicitly not do and that won't be implemented.
 
 ## Anything based on averaging phred scores
 
@@ -37,4 +37,3 @@ Apparently no formal spec.
 
 While it's tempting to leverage the fastq parsing for an aligner,
 aligning molecules to references is out of scope for the 1.0 target.
-

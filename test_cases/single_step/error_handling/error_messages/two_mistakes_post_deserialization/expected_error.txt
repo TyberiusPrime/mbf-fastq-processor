@@ -18,7 +18,7 @@ Error 1/2
 ──╯
 Hint: 'seq' and 'qual' must be the same length
       See https://doc_url.example/version-stripped-from-test/docs/redirects/Prefix
-      Or run: `mbf-fastq-processor template Prefix` for more information.
+      Or run: `fastqrab template Prefix` for more information.
 
 Error 2/2
    ╭─config.toml
@@ -39,6 +39,6 @@ Error 2/2
 ───╯
 Hint: 'seq' and 'qual' must be the same length
       See https://doc_url.example/version-stripped-from-test/docs/redirects/Postfix
-      Or run: `mbf-fastq-processor template Postfix` for more information.
+      Or run: `fastqrab template Postfix` for more information.
 
 

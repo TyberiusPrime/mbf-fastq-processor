@@ -15,6 +15,6 @@ Error 1/1
    ┆                ╰─── Inspect step supports only 'fastq' or 'fasta' formats
 ───╯
 Hint: See https://doc_url.example/version-stripped-from-test/docs/redirects/Inspect
-      Or run: `mbf-fastq-processor template Inspect`
+      Or run: `fastqrab template Inspect` for more information.
 
 

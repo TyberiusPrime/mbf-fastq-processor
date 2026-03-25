@@ -7,7 +7,7 @@ title: "Parser Architecture"
 
 ## Overview
 
-mbf-fastq-processor uses a custom-built parser designed for high performance and correctness when processing FASTQ.
+fastqrab uses a custom-built parser designed for high performance and correctness when processing FASTQ.
 The parser's design emphasizes:
 
 1. **Zero-copy parsing** where possible to minimize memory allocations
@@ -31,7 +31,7 @@ However, **FASTQ files are almost always compressed in practice**. This creates 
 - **Decompression is inherently a copy operation**: Data must be decompressed from the file into a buffer
 - **Block-based decompression**: Compression algorithms work on blocks, requiring buffer management
 
-Given this reality, mbf-fastq-processor takes a pragmatic approach: **use minimal-copy techniques **.
+Given this reality, fastqrab takes a pragmatic approach: **use minimal-copy techniques **.
 
 ## Hybrid Zero-Copy Architecture
 
@@ -91,7 +91,7 @@ This design achieves near-zero-copy performance (after decompression) for the co
 
 ### Automatic Format Detection
 
-mbf-fastq-processor automatically detects file formats by examining magic bytes (`src/io/input.rs`):
+fastqrab automatically detects file formats by examining magic bytes (`src/io/input.rs`):
 
 ```rust
 pub enum InputFile {

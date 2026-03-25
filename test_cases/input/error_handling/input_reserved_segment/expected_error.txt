@@ -10,6 +10,6 @@ Error 1/1
 ──╯
 Hint: Segment names starting with '_internal_' are reserved and cannot be used as a segment name. Choose something else.
       See https://doc_url.example/version-stripped-from-test/docs/redirects/input-section
-      Or run: `mbf-fastq-processor template input-section` for more information.
+      Or run: `fastqrab template input-section` for more information.
 
 

@@ -20,12 +20,12 @@ These look like this
 ```bash
 Well, this is embarrassing.
 
-mbf-fastq-processor had a problem and crashed. To help us diagnose the problem you can send us a crash report.
+fastqrab had a problem and crashed. To help us diagnose the problem you can send us a crash report.
 
 We have generated a report file at "/tmp/nix-shell.ty6dWk/report-89ffc0f3-8076-4f55-83f0-c0a5d2fb3b55.toml".
 ```
 
-This kind of error message, which wraps a rust 'panic' only happens if mbf-fastq-processor has managed
+This kind of error message, which wraps a rust 'panic' only happens if fastqrab has managed
 to get into an impossible or unforeseen state.
 
 That's always a bug (even on invalid input, the issue should be trapped by non-panic code).
@@ -60,10 +60,9 @@ While we have a large set of transformations, at times you need something specia
 
 We have chosen not to add a generic 'insert-javascript-to-mangle-reads-here' transformation,
 because it's difficult to make performant - and getting the transformations that turn out to be good
-ideas into mbf-fastq-processor would be hindered by the language mismatch between the core
+ideas into fastqrab would be hindered by the language mismatch between the core
 transformations (rust) and the user ones.
 
 Instead, our documentation 
 contains a 
 [guide on implementing a new transformation]({{< relref "docs/development/custom_transformation.md" >}}).
-

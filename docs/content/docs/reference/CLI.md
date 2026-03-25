@@ -4,16 +4,16 @@ not-a-transformation: true
 ---
 # Command line interface
 
-mbf-fastq-processor is configured exclusively through a TOML document. The CLI is therefore intentionally minimal and focuses on selecting the configuration and the working directory.
+fastqrab is configured exclusively through a TOML document. The CLI is therefore intentionally minimal and focuses on selecting the configuration and the working directory.
 
 ## Usage
 
 ```text
-mbf-fastq-processor process [config.toml]  [--allow-overwrite]
-mbf-fastq-processor template
-mbf-fastq-processor verify [config.toml] [--output-dir <OUTPUT_DIR>]
-mbf-fastq-processor interactive [config.toml]
-mbf-fastq-processor completions <SHELL>
+fastqrab process [config.toml]  [--allow-overwrite]
+fastqrab template
+fastqrab verify [config.toml] [--output-dir <OUTPUT_DIR>]
+fastqrab interactive [config.toml]
+fastqrab completions <SHELL>
 ```
 
 
@@ -30,7 +30,7 @@ The config.toml argument can be left off iff there's one .toml in the current di
 By default, existence of any output file will lead to an early abort, 
 before any processing happens (other output files might have been created with 0 bytes at this point though). If you pass --allow-overwrite (or if an output.incomplete file exists), existing output files are overwritten instead.
 
-The output.incomplete file exists until the successful exit of mbf-fastq-processor.
+The output.incomplete file exists until the successful exit of fastqrab.
 This way you can detect incomplete runs by the existence of that file.
 
 
@@ -58,13 +58,13 @@ as the configuration file.
 
 This is useful for:
 - Testing that your pipeline produces expected results
-- Regression testing during development (many of mbf-fastq-processor's test cases use this exact facility)
+- Regression testing during development (many of fastqrab's test cases use this exact facility)
 - Validating that changes don't affect output
 
 #### Usage
 
 ```bash
-mbf-fastq-processor verify [config.toml] [--output-dir <OUTPUT_DIR>] [--unsafe-call-prep-sh]
+fastqrab verify [config.toml] [--output-dir <OUTPUT_DIR>] [--unsafe-call-prep-sh]
 ```
 
 If no configuration file is specified, the tool will auto-detect a single .toml
@@ -95,7 +95,7 @@ file in the current directory if that file contains both `[input]` and `[output]
 The `--output-dir` option specifies a directory to copy the actual outputs to if verification fails:
 
 ```bash
-mbf-fastq-processor verify config.toml --output-dir ./debug_output
+fastqrab verify config.toml --output-dir ./debug_output
 ```
 
 When verification fails with this option:
@@ -148,25 +148,25 @@ Generate shell completion scripts for command-line auto-completion in various sh
 
 Add to `~/.bashrc`:
 ```bash
-source <(mbf-fastq-processor completions bash)
+source <(fastqrab completions bash)
 ```
 
 Or for environment-based approach (auto-updates):
 ```bash
-eval "$(COMPLETE=bash mbf-fastq-processor)"
+eval "$(COMPLETE=bash fastqrab)"
 ```
 
 **Fish**
 
 Save to Fish completions directory:
 ```fish
-mbf-fastq-processor completions fish > ~/.config/fish/completions/mbf-fastq-processor.fish
+fastqrab completions fish > ~/.config/fish/completions/fastqrab.fish
 ```
 
 Or add to `~/.config/fish/config.fish` for environment-based approach:
 ```fish
-if command -v mbf-fastq-processor > /dev/null
-    COMPLETE=fish mbf-fastq-processor | source
+if command -v fastqrab > /dev/null
+    COMPLETE=fish fastqrab | source
 end
 ```
 
@@ -174,19 +174,19 @@ end
 
 Add to `~/.zshrc`:
 ```zsh
-source <(mbf-fastq-processor completions zsh)
+source <(fastqrab completions zsh)
 ```
 
 Or for environment-based approach:
 ```zsh
-eval "$(COMPLETE=zsh mbf-fastq-processor)"
+eval "$(COMPLETE=zsh fastqrab)"
 ```
 
 **PowerShell**
 
 Add to your PowerShell profile:
 ```powershell
-mbf-fastq-processor completions powershell | Out-String | Invoke-Expression
+fastqrab completions powershell | Out-String | Invoke-Expression
 ```
 
 #### Features
@@ -198,4 +198,3 @@ Shell completions provide:
 - Shell-specific syntax and behavior
 
 After installing completions, restart your shell or source the configuration file for changes to take effect.
-

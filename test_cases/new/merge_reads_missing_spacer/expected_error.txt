@@ -22,6 +22,6 @@ Error 1/1
 ───╯
 Hint: concatenate_spacer is required when no_overlap_strategy = 'concatenate'. Please specify a spacer sequence (e.g., concatenate_spacer = "NNNN").
       See https://doc_url.example/version-stripped-from-test/docs/redirects/MergeReads
-      Or run: `mbf-fastq-processor template MergeReads`
+      Or run: `fastqrab template MergeReads` for more information.
 
 

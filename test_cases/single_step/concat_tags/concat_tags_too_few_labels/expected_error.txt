@@ -14,6 +14,6 @@ Error 1/1
 ───╯
 Hint: Provide at least two tags to concatenate. Available: tag2
       See https://doc_url.example/version-stripped-from-test/docs/redirects/ConcatTags
-      Or run: `mbf-fastq-processor template ConcatTags` for more information.
+      Or run: `fastqrab template ConcatTags` for more information.
 
 

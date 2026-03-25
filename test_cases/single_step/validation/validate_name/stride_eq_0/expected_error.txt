@@ -14,6 +14,6 @@ Error 1/1
 ──╯
 Hint: sample_stride = n means every n-th read is checked, so choose a number > 0
       See https://doc_url.example/version-stripped-from-test/docs/redirects/ValidateName
-      Or run: `mbf-fastq-processor template ValidateName` for more information.
+      Or run: `fastqrab template ValidateName` for more information.
 
 

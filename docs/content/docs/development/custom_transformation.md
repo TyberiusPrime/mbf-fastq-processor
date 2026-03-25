@@ -26,7 +26,7 @@ To add a test case, we need to add a folder with an input.toml
 somewhere below the `test_cases` directory. The input files
 used by the test case must be named 'input*', while the output prefix can be anything,
 though most existing test cases simply use 'output'. Our test runner will then verify
-that mbf-fastq-processor is producing exactly that output.
+that fastqrab is producing exactly that output.
 
 Create a folder `mkdir test_cases/single_step/funky_case/basic -p`.
 We are going to use an existing short FASTQ file as the input,
@@ -73,7 +73,7 @@ Now run `cargo test` and you should receive the following (expected) failure:
 ---- test_cases_x_single_step_x_funky_case_x_basic stdout ----
 Test case is in: test_cases/single_step/funky_case/basic
 
-thread 'test_cases_x_single_step_x_funky_case_x_basic' panicked at mbf-fastq-processor/tests/test_runner.rs:35:9:
+thread 'test_cases_x_single_step_x_funky_case_x_basic' panicked at fastqrab/tests/test_runner.rs:35:9:
 Test failed ../test_cases/single_step/funky_case/basic Verification failed:
 stderr: Verification failed:
 
@@ -105,7 +105,7 @@ We're going to start with the last step.
 
 ### Add a transformation to the central enum that lists all transformations
 
-Edit the file mbf-fastq-processor/src/transformations.rs using your favorite editor.
+Edit the file fastqrab/src/transformations.rs using your favorite editor.
 
 You are looking for 
 ```rust
@@ -139,7 +139,7 @@ We are going to tell the `edits` module that it has a submodule `funky_case`,
 and reexport one type called `FunkyCase' from `funky_case` so that the 
 rest of the rust code can use it.
 
-Open `mbf-fastq-processor/src/transformations/edits.rs` and add
+Open `fastqrab/src/transformations/edits.rs` and add
 
 ```rust
 mod funky_case; // declare that we have a module funky_case(.rs)
@@ -155,7 +155,7 @@ To be usable, your struct needs to be included in the large `Transformation` enu
 which we accomplished in the previous steps.
 
 Now it's time to actually write the struct. Create a new file
-`mbf-fastq-processor/src/transformations/edits/funky_case.rs`
+`fastqrab/src/transformations/edits/funky_case.rs`
 and put the following minimal example into it;
 
 ```rust
@@ -191,7 +191,7 @@ Our test case however will now fail with a different message:
 ---- test_cases_x_single_step_x_funky_case_x_basic stdout ----
 Test case is in: test_cases/single_step/funky_case/basic
 
-thread 'test_cases_x_single_step_x_funky_case_x_basic' panicked at mbf-fastq-processor/tests/test_runner.rs:35:9:
+thread 'test_cases_x_single_step_x_funky_case_x_basic' panicked at fastqrab/tests/test_runner.rs:35:9:
 Test failed ../test_cases/single_step/funky_case/basic Verification failed:
 stderr: Verification failed:
 
@@ -227,7 +227,7 @@ You can simply compare them with diff
 To actually change the reads, we are going to use a function
 that takes a callback that modifies each read in turn.
 
-Replace the contents of `mbf-fastq-processor/src/transformations/edits/funky_case.rs` with this
+Replace the contents of `fastqrab/src/transformations/edits/funky_case.rs` with this
 ```rust
 use crate::transformations::prelude::*;
 
@@ -271,26 +271,26 @@ and it will fail later on with the tests that verify our documentation:
 ```
 ---- test_every_transformation_has_documentation stdout ----
 
-thread 'test_every_transformation_has_documentation' panicked at mbf-fastq-processor/tests/template_and_documentation_verification.rs:937:9:
+thread 'test_every_transformation_has_documentation' panicked at fastqrab/tests/template_and_documentation_verification.rs:937:9:
 The following transformations are missing documentation files:
 FunkyCase
 note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 ---- test_every_transformation_has_benchmark stdout ----
 
-thread 'test_every_transformation_has_benchmark' panicked at mbf-fastq-processor/tests/template_and_documentation_verification.rs:1322:9:
+thread 'test_every_transformation_has_benchmark' panicked at fastqrab/tests/template_and_documentation_verification.rs:1322:9:
 The following transformations are missing benchmarks in simple_benchmarks.rs:
 FunkyCase
 
 ---- test_llm_guide_covers_all_transformations stdout ----
 
-thread 'test_llm_guide_covers_all_transformations' panicked at mbf-fastq-processor/tests/template_and_documentation_verification.rs:1136:9:
+thread 'test_llm_guide_covers_all_transformations' panicked at fastqrab/tests/template_and_documentation_verification.rs:1136:9:
 LLM guide validation failed:
 Transformation 'FunkyCase' is not documented in llm-guide.md
 
 ---- test_every_step_has_a_template_section stdout ----
 
-thread 'test_every_step_has_a_template_section' panicked at mbf-fastq-processor/tests/template_and_documentation_verification.rs:820:5:
+thread 'test_every_step_has_a_template_section' panicked at fastqrab/tests/template_and_documentation_verification.rs:820:5:
 Template validation failed:
 The following transformations are missing in template.toml:
 FunkyCase
@@ -346,7 +346,7 @@ Let it find the new test (`./dev/update_generated.sh`) and watch both of them fa
 --- test_cases_x_single_step_x_funky_case_x_basic stdout ----
 Test case is in: test_cases/single_step/funky_case/basic
 
-thread 'test_cases_x_single_step_x_funky_case_x_basic' panicked at mbf-fastq-processor/tests/test_runner.rs:35:9:
+thread 'test_cases_x_single_step_x_funky_case_x_basic' panicked at fastqrab/tests/test_runner.rs:35:9:
 Test failed ../test_cases/single_step/funky_case/basic Verification failed:
 stderr: Verification failed:
 
@@ -468,7 +468,7 @@ haven't added the options yet:
 ---- test_cases_x_single_step_x_funky_case_x_if_tag_segment stdout ----
 Test case is in: test_cases/single_step/funky_case/if_tag_segment
 
-thread 'test_cases_x_single_step_x_funky_case_x_if_tag_segment' panicked at mbf-fastq-processor/tests/test_runner.rs:35:9:
+thread 'test_cases_x_single_step_x_funky_case_x_if_tag_segment' panicked at fastqrab/tests/test_runner.rs:35:9:
 Test failed ../test_cases/single_step/funky_case/if_tag_segment Verification failed:
 stderr: Verification failed:
 
@@ -486,7 +486,7 @@ Caused by:
 ```
 
 
-Open `mbf-fastq-processor/src/transformations/edits/funky_case.rs` and modify it to
+Open `fastqrab/src/transformations/edits/funky_case.rs` and modify it to
 
 ```rust
 use crate::transformations::prelude::*;
@@ -580,12 +580,12 @@ At this stage you have a working 'Step' (verify with `cargo test`) that has all
 the usual amenities, but lacks documentation.
 
 To add this is left as an exercise for the reader,
-but you'll need to edit `mbf-fastq-processor/src/template.toml`,
+but you'll need to edit `fastqrab/src/template.toml`,
 `docs/content/docs/reference/llm-guide.md` and 
 add a file `docs/content/docs/reference/modification-steps/FunkyCase.md` 
 which need to include a valid TOML block with `action = "FunkyCase"` and all available options documented.
 
 You'll also need to add a microbenchmark to 
-`mbf-fastq-processor/benches/simple_benchmarks.rs`.
+`fastqrab/benches/simple_benchmarks.rs`.
 
-Congratulations, you just wrote your first transformation for mbf-fastq-processor!
+Congratulations, you just wrote your first transformation for fastqrab!

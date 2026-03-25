@@ -15,7 +15,7 @@ Error 1/6
    ┆               ╰─── Quality values must be in the range (33..126) ('Sanger/Illumina1.8 (PHRED+33)')
 ───╯
 Hint: See https://doc_url.example/version-stripped-from-test/docs/redirects/Prefix
-      Or run: `mbf-fastq-processor template Prefix` for more information.
+      Or run: `fastqrab template Prefix` for more information.
 
 Error 2/6
    ╭─config.toml
@@ -36,7 +36,7 @@ Error 2/6
 ───╯
 Hint: 'seq' and 'qual' must be the same length
       See https://doc_url.example/version-stripped-from-test/docs/redirects/Prefix
-      Or run: `mbf-fastq-processor template Prefix` for more information.
+      Or run: `fastqrab template Prefix` for more information.
 
 Error 3/6
    ╭─config.toml
@@ -54,7 +54,7 @@ Error 3/6
    ┆               ╰─── Quality values must be in the range (33..126) ('Sanger/Illumina1.8 (PHRED+33)')
 ───╯
 Hint: See https://doc_url.example/version-stripped-from-test/docs/redirects/Prefix
-      Or run: `mbf-fastq-processor template Prefix` for more information.
+      Or run: `fastqrab template Prefix` for more information.
 
 Error 4/6
    ╭─config.toml
@@ -72,7 +72,7 @@ Error 4/6
    ┆               ╰─── Quality values must be in the range (59..126) ('Solexa (PHRED+64)')
 ───╯
 Hint: See https://doc_url.example/version-stripped-from-test/docs/redirects/Postfix
-      Or run: `mbf-fastq-processor template Postfix` for more information.
+      Or run: `fastqrab template Postfix` for more information.
 
 Error 5/6
    ╭─config.toml
@@ -93,7 +93,7 @@ Error 5/6
 ───╯
 Hint: 'seq' and 'qual' must be the same length
       See https://doc_url.example/version-stripped-from-test/docs/redirects/Postfix
-      Or run: `mbf-fastq-processor template Postfix` for more information.
+      Or run: `fastqrab template Postfix` for more information.
 
 Error 6/6
    ╭─config.toml
@@ -111,6 +111,6 @@ Error 6/6
    ┆               ╰─── Quality values must be in the range (59..126) ('Solexa (PHRED+64)')
 ───╯
 Hint: See https://doc_url.example/version-stripped-from-test/docs/redirects/Postfix
-      Or run: `mbf-fastq-processor template Postfix` for more information.
+      Or run: `fastqrab template Postfix` for more information.
 
 

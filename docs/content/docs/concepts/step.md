@@ -10,7 +10,7 @@ Every step operates on complete fragments (molecules), ensuring that paired segm
 
 ## Step Categories
 
-mbf-fastq-processor organizes steps into five functional categories:
+fastqrab organizes steps into five functional categories:
 
 ### Modification Steps
 

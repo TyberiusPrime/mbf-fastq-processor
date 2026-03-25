@@ -24,7 +24,10 @@
         pkgs = import nixpkgs { inherit system overlays; };
         rust = pkgs.rust-bin.stable."1.93.1".default.override {
           targets = [ "x86_64-unknown-linux-musl" ];
-          extensions = [ "llvm-tools-preview"  "rust-analyzer"];
+          extensions = [
+            "llvm-tools-preview"
+            "rust-analyzer"
+          ];
         };
 
         # Override the version used in naersk
@@ -37,8 +40,8 @@
       in
       rec {
         # `nix build`
-        packages.mbf-fastq-processor = naersk-lib.buildPackage {
-          pname = "mbf-fastq-processor";
+        packages.fastqrab = naersk-lib.buildPackage {
+          pname = "fastqrab";
           root = ./.;
           nativeBuildInputs = with pkgs; [
             pkg-config
@@ -57,13 +60,10 @@
           COMMIT_HASH = self.rev or (pkgs.lib.removeSuffix "-dirty" self.dirtyRev or "unknown-not-in-git");
           NIX_RAPIDGZIP = "${pkgs.rapidgzip}/bin/rapidgzip";
 
-          # copyBinsFilter = ''
-          #   select(.reason == "compiler-artifact" and .executable != null and .profile.test == false and .target.name != "mbf-fastq-processor-test-runner")
-          # '';
         };
-        packages.mbf-fastq-processor_other_linux =
+        packages.fastqrab_other_linux =
           (naersk-lib.buildPackage {
-            pname = "mbf-fastq-processor";
+            pname = "fastqrab";
             root = ./.;
             nativeBuildInputs = with pkgs; [
               pkg-config
@@ -76,22 +76,19 @@
             release = true;
             CARGO_PROFILE_RELEASE_debug = "0";
             COMMIT_HASH = self.rev or (pkgs.lib.removeSuffix "-dirty" self.dirtyRev or "unknown-not-in-git");
-            # copyBinsFilter = ''
-            #   select(.reason == "compiler-artifact" and .executable != null and .profile.test == false and .target.name != "mbf-fastq-processor-test-runner")
-            # '';
           }).overrideAttrs
             {
               # make it compatible with other linuxes. It's statically linked anyway
               postInstall = ''
-                patchelf $out/bin/mbf-fastq-processor --set-interpreter "/lib64/ld-linux-x86-64.so.2"
+                patchelf $out/bin/fastqrab --set-interpreter "/lib64/ld-linux-x86-64.so.2"
               '';
             };
-        packages.mbf-fastq-processor-docker =
+        packages.fastqrab-docker =
           let
-            binary = packages.mbf-fastq-processor_other_linux;
+            binary = packages.fastqrab_other_linux;
           in
           pkgs.dockerTools.buildLayeredImage {
-            name = "mbf-fastq-processor";
+            name = "fastqrab";
             tag = "latest";
             # provide a minimal base with glibc and a busybox shell
             contents = [
@@ -101,14 +98,14 @@
             ];
             config = {
               Env = [ "PATH=/usr/local/bin:/bin" ];
-              Entrypoint = [ "/bin/mbf-fastq-processor" ];
+              Entrypoint = [ "/bin/fastqrab" ];
               WorkingDir = "/work";
             };
           };
         packages.check = naersk-lib.buildPackage {
           src = ./.;
           mode = "check";
-          name = "mbf-fastq-processor";
+          name = "fastqrab";
           nativeBuildInputs = with pkgs; [
             pkg-config
             cmake
@@ -121,7 +118,7 @@
         };
         packages.test = naersk-lib.buildPackage {
           # not using naersk test mode, it eats the binaries, we need that binary
-          pname = "mbf-fastq-processor";
+          pname = "fastqrab";
           root = ./.;
           nativeBuildInputs = with pkgs; [
             pkg-config
@@ -145,7 +142,7 @@
             # run the friendly panic test, expect a non 0 return code.
             # capture stderr
 
-            result=$( { cargo run --release --bin mbf-fastq-processor -- --test-friendly-panic 1>/dev/null; } 2>&1 ) || status=$? : "${"status:=0"}"
+            result=$( { cargo run --release --bin fastqrab -- --test-friendly-panic 1>/dev/null; } 2>&1 ) || status=$? : "${"status:=0"}"
             if [ "$status" -eq 0 ]; then
               echo "Unexpected success"
               exit 1
@@ -170,61 +167,13 @@
 
           '';
 
-          # src = ./.;
-          # buildInputs = with pkgs; [openssl ];
-          # mode = "test";
-          # nativeBuildInputs = with pkgs; [pkg-config cargo-nextest];
-          # cargoTestCommands = old: ["cargo nextest run $cargo_test_options --no-fail-fast"];
-          # copySources = ["tests" "test_cases" "dev"];
-          # copyBins = true;
-
-          # override = {
-          #   buildPhase = ":";
-          #   postCheck = ''
-          #      # make sure that the friendly panic test outputs a friendly panic
-          #      ls -la
-          #     cargo build --release
-          #      if [ $? -ne 0 ]; then
-          #          echo "Error: Command failed with non-zero status code"
-          #          exit 1
-          #      fi
-          #      result=`cargo run --release -- --friendly-panic-test`
-
-          #      # Check if stderr contains 'this is embarrasing'
-          #      if grep -q "this is embarrasing" <(echo "$result"); then
-          #          echo "Error: 'this is embarrasing' found in stderr"
-          #          exit 1
-          #      fi
-
-          #      # now run our actual test cases
-          #      cat Cargo.toml
-          #     cargo run --release --bin mbf-fastq-processor-test-runner test_cases
-          #   '';
-          # };
-          # doCheck = true;
         };
-        # haven't been able to get this to work
-        # packages.coverage = naersk-lib.buildPackage {
-        #   src = ./.;
-        #   buildInputs = with pkgs; [openssl ];
-        #   mode = "test";
-        #   nativeBuildInputs = with pkgs; [pkg-config cargo-nextest cargo-llvm-cov];
-        #   cargoTestCommands = old: ["cargo llvm-cov nextest --no-tests=fail --run-ignored all"];
-        #   override = {
-        #     buildPhase = ":";
-        #     postCheck = ''
-        #       cp  target/llvm-cov/html $out/ -r
-        #       '';
-        #   };
-        #   doCheck = true;
-        # };
-        #cargoTestCommands = old: ["cargo llvm-cov --html nextest --verbose $cargo_test_options"];
 
-        defaultPackage = packages.mbf-fastq-processor;
+        defaultPackage = packages.fastqrab;
 
         # `nix run`
-        apps.mbf-fastq-processor = utils.lib.mkApp { drv = packages.mbf-fastq-processor; };
-        defaultApp = apps.mbf-fastq-processor;
+        apps.fastqrab = utils.lib.mkApp { drv = packages.fastqrab; };
+        defaultApp = apps.fastqrab;
 
         # `nix develop`
         devShell = pkgs.mkShell {

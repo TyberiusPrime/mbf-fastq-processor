@@ -21,9 +21,8 @@ and the prefixes must match exactly.
 For example, use `readname_end_char = "_"` for typical older Illumina _1/_2 suffixes.
 
 Note that this validation requires at least two input segments so there is a
-name to compare against, mbf-fastq-processor will return an error otherwise.
+name to compare against, fastqrab will return an error otherwise.
 
 
 See also: [`ValidateReadPairing`]({{< relref "docs/reference/validation-steps/ValidateReadPairing.md" >}}) 
 which confirms read names are within a hamming distance of each other.
-
