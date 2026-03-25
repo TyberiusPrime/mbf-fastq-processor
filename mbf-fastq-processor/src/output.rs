@@ -10,12 +10,12 @@ use crate::config::CheckedConfig;
 use crate::demultiplex::OptDemultiplex;
 use crate::transformations::FinalizeReportResult;
 use mbf_fastq_processor_io::ensure_output_destination_available;
-use mbf_fastq_processor_io::{CompressionFormat, FileFormat};
 use mbf_fastq_processor_io::io::{
     self,
     compressed_output::{HashedAndCompressedWriter, SimulatedWriteFailure},
     reads::WrappedFastQReadCommon,
 };
+use mbf_fastq_processor_io::{CompressionFormat, FileFormat};
 use mbf_fastq_processor_steps::join_nonempty;
 
 pub struct OutputRunMarker {

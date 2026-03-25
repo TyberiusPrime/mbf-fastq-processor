@@ -1,6 +1,2 @@
 [build]
 rustflags = ["-Clink-arg=-fuse-ld=mold"]
-
-# [resolver]
-# feature-unification = "workspace"
-

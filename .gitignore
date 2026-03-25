@@ -33,6 +33,7 @@ tests/failures
 docs/content/docs/how-to/cookbooks/[^_]*.md
 docs/content/docs/reference/toml/template.toml
 docs/static/cookbooks/
+dev/docs/public/
 
 # Coverage reports
 coverage-html/
