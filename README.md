@@ -2,16 +2,18 @@
 
 The multi-tool of FASTQ (pre-)processing.
 
-It filters, samples, slices, dices, analysis, demultiplexes  and generally
-does all the things you might want to do with a set of FASTQ files.
+It filters, samples, slices, dices, quantifies, demultiplexes and validates
+FASTQ reads in any way you choose.
 
-It's chief concern is correctness ... correctness and flexibility ... flexibility and correctness.
+Define your own specific read transformation pipeline out of well-tested
+building blocks, in a self-documenting, easily audited configuration file
+format.
 
-It's two concerns are correctness and flexibility ... and speed.
+Read processing is fast, reliable and well tested (we have 100% test coverage
+and more than 800 end-to-end test cases).
 
-It's three main objectives are correctness, flexibility, speed and reproducible results.
+Supports input/output in FASTQ/FASTA/BAM.
 
-It's four... no amongst it's objectives are such element as...
 
 ## Getting started right away
 
@@ -49,7 +51,15 @@ Further examples can be found in the [cookbook section](https://tyberiusprime.gi
 ## Full list of FastQ manipulations supported
 
 Please refer to the 'step' sections of our [reference
-documentation](https://tyberiusprime.github.io/mbf-fastq-processor/main/docs/reference/filter-steps/)
+documentation](https://tyberiusprime.github.io/mbf-fastq-processor/main/docs/reference/)
+
+Briefly, you can 
+[extract information out of reads (into 'tags')](https://tyberiusprime.github.io/mbf-fastq-processor/main/docs/reference/tag-steps/), 
+[filter reads](https://tyberiusprime.github.io/mbf-fastq-processor/main/docs/reference/filter-steps/),
+[modify their sequence and quality data](https://tyberiusprime.github.io/mbf-fastq-processor/main/docs/reference/modification-steps/),
+[validate them](https://tyberiusprime.github.io/mbf-fastq-processor/main/docs/reference/validation-steps/),
+[generate statistics on them](https://tyberiusprime.github.io/mbf-fastq-processor/main/docs/reference/report-steps/),
+and [split the output (demultiplex)](https://tyberiusprime.github.io/mbf-fastq-processor/main/docs/reference/Demultiplex/).
 
 ## Status
 

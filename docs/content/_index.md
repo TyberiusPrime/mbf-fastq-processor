@@ -73,7 +73,7 @@ You will find `output_read1.fq` alongside a [sample HTML report](html/example_re
 
 - Read the [Concepts]({{< relref "docs/concepts/_index.md" >}}) chapter first for a mental model of molecules, segments, and processing steps.
 - Dive into the [Reference]({{< relref "docs/reference/_index.md" >}}) for exhaustive step-by-step configuration details.
-- When you are ready to compose real pipelines, consult the (work-in-progress) [How-Tos]({{< relref "docs/how-to/cookbooks/_index.md" >}}) for applied recipes and integrations.
+- When you are ready to compose real pipelines, consult the [Cookbooks]({{< relref "docs/how-to/cookbooks/_index.md" >}}) for applied recipes and integrations.
 
 
 ## Development
