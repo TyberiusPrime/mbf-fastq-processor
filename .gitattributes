@@ -19,5 +19,6 @@
 stdout text eol=binary
 /docs/** linguist-documentation=true
 /cookbooks/** linguist-documentation=true
-/dev/** linguist-detectable=true
-/test_cases/** linguist-detectable=true
+/dev/** linguist-detectable=false
+/test_cases/** linguist-detectable=false
+/experiments/** linguist-detectable=false
