@@ -1549,3 +1549,51 @@ fn test_every_link_docs_target_has_a_redirect_page() {
         literal_targets.len()
     );
 }
+
+ 
+ #[test]
+fn test_flake_rust_version_matches_msrv() {
+    // Verify that the Rust version used in flake.nix exactly matches the MSRV declared in Cargo.toml.
+    // This ensures we actually build and test on the minimum supported version.
+
+    // Read Cargo.toml and extract rust-version
+    let cargo_toml_path = Path::new("../Cargo.toml");
+    let cargo_content = fs::read_to_string(cargo_toml_path).expect("Failed to read Cargo.toml");
+
+    let msrv = cargo_content
+        .lines()
+        .find(|line| line.trim().starts_with("rust-version"))
+        .and_then(|line| {
+            let after_eq = line.split('=').nth(1)?;
+            let trimmed = after_eq.trim().trim_matches('"');
+            Some(trimmed.to_string())
+        })
+        .expect("Could not find rust-version in Cargo.toml");
+
+    // Read flake.nix and extract Rust version
+    let flake_path = Path::new("../flake.nix");
+    let flake_content = fs::read_to_string(flake_path).expect("Failed to read flake.nix");
+
+    // Look for pattern like: rust = pkgs.rust-bin.stable."1.90.0".default
+    let flake_rust_version = flake_content
+        .lines()
+        .find(|line| line.contains("rust-bin.stable.") && line.contains("default"))
+        .and_then(|line| {
+            // Extract version between quotes after "stable."
+            let after_stable = line.split("stable.").nth(1)?;
+            let version_start = after_stable.find('"')? + 1;
+            let after_first_quote = &after_stable[version_start..];
+            let version_end = after_first_quote.find('"')?;
+            Some(after_first_quote[..version_end].to_string())
+        })
+        .expect("Could not find rust-bin.stable version in flake.nix");
+
+    assert_eq!(
+        flake_rust_version, msrv,
+        "flake.nix uses Rust {flake_rust_version} but Cargo.toml declares rust-version = \"{msrv}\". \
+         These must match to ensure we build and test on the declared MSRV."
+    );
+
+    println!("✓ flake.nix Rust version and MSRV both set to {msrv}");
+}
+
