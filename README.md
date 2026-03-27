@@ -1,4 +1,4 @@
-# mbf-fastq-processor
+# fastqrab [![Günther, the fastqrab](docs/content/docs/concepts/mascot/guenther_tiny.jpg)](https://tyberiusprime.github.io/mbf-fastq-processor/main/docs/concepts/mascot/)
 
 The multi-tool of FASTQ (pre-)processing.
 
@@ -26,7 +26,7 @@ or
 
 ### 2. Run Your First Pipeline 
 
-Generate a basic quality report configuration from our example cookbook entry 01:
+Generate a basic quality report configuration from our first example cookbook:
 
 `$ABOVE cookbook 01 > my-first-pipeline.toml`
 
