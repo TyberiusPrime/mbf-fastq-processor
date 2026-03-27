@@ -4,5 +4,5 @@ status: open
 demultiplex extension?
 
 I mean, it len + filterByNumeric with keep_or_remove = 'keep', and a restricted output -> 
-write a cookbok
+write a cookbook
 

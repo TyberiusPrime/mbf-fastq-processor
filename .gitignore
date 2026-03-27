@@ -45,3 +45,5 @@ heaptrack.*
 mutants.out/
 mutants.out.old/
 *.incompleted
+opencode.json
+.serena
