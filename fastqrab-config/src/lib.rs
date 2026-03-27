@@ -18,7 +18,7 @@ pub const STDIN_MAGIC_PATH: &str = "--stdin--";
 #[must_use]
 #[mutants::skip]
 pub fn get_number_of_cores() -> usize {
-    std::env::var("MBF_FASTQ_PROCESSOR_NUM_CPUS")
+    std::env::var("FASTQRAB_PROCESSOR_NUM_CPUS")
         .ok()
         .and_then(|s| s.parse::<usize>().ok())
         .unwrap_or_else(num_cpus::get)

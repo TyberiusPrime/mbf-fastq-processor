@@ -6,5 +6,5 @@ theme = "hugo-book"
 disablePathToLower = true
 
 [params]
-  BookRepo = 'https://github.com/TyberiusPrime/mbf-fastq-processor'
+  BookRepo = 'https://github.com/TyberiusPrime/fastqrab'
   BookTheme = 'light'

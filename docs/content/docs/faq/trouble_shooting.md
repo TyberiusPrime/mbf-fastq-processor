@@ -11,7 +11,7 @@ weight: 1
 Well, that's below our targets, we want our error messages to tell
 you enough for you to be able to fix it.
 
-Please file a bug report in our [issue tracker](https://github.com/tyberiusPrime/mbf-fastq-processor/issues).
+Please file a bug report in our [issue tracker](https://github.com/tyberiusPrime/fastqrab/issues).
 
 ## I received a friendly panic message
 
@@ -30,7 +30,7 @@ to get into an impossible or unforeseen state.
 
 That's always a bug (even on invalid input, the issue should be trapped by non-panic code).
 
-Please review the temp file it's created and [attach it to an issue](https://github.com/tyberiusPrime/mbf-fastq-processor/issues/new).
+Please review the temp file it's created and [attach it to an issue](https://github.com/tyberiusPrime/fastqrab/issues/new).
 
 Ideally of course with a minimal data set that reproduces the crash,
 but just the traceback will tell us quite a bit.
@@ -40,7 +40,7 @@ but just the traceback will tell us quite a bit.
 
 Please prepare a minimal example for us to run, and what output you'd expect
 and [submit an
-issue](https://github.com/tyberiusPrime/mbf-fastq-processor/issues/new).
+issue](https://github.com/tyberiusPrime/fastqrab/issues/new).
 
 We'll then see if it's a bug, or a documentation issue.
 

@@ -7,12 +7,12 @@ The easiest way to get started with working on fastqrab
 is to clone the repository:
 
 ```bash
-jj git clone --colocate https://github.com/TyberiusPrime/mbf-fastq-processor
+jj git clone --colocate https://github.com/TyberiusPrime/fastqrab
 ```
 
 or  
 ```bash 
-git clone  https://github.com/TyberiusPrime/mbf-fastq-processor
+git clone  https://github.com/TyberiusPrime/fastqrab
 ```
 if you're not yet convinced that [Jujutsu](https://docs.jj-vcs.dev/latest/) is the better git.
 
@@ -67,4 +67,4 @@ In addition to the config options in the
 [input-section]({{< relref "docs/reference/input-section.md" >}})
 or in the [Options section]({{< relref "docs/reference/Options.md" >}}),
 you can influence the number of cores used for the automatic decisions on 
-thread counts by setting the `MBF_FASTQ_PROCESSOR_NUM_CPUS` environment variable.
+thread counts by setting the `FASTQRAB_PROCESSOR_NUM_CPUS` environment variable.
