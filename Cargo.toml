@@ -54,7 +54,7 @@
 	memchr = { version = "2.7.4", default-features = false }
     mutants = "0.0.3"
 	niffler = "3.0"
-	noodles = { version = "0.101.0", features = ["bam", "bgzf", "csi", "sam"] }
+	noodles = { version = "0.108.0", features = ["bam", "bgzf", "csi", "sam"] }
 	num_cpus = "1.16"
 	rand_chacha = { version = "0.9", default-features = false }
 	rand = { version = "0.9.1", default-features = false }
@@ -75,6 +75,8 @@
     fastqrab-dna = {path="fastqrab-dna"}
     fastqrab-io = {path="fastqrab-io"}
     fastqrab-steps = {path="fastqrab-steps"}
+
+    bytes= { version = "1.11.1" }  # https://github.com/advisories/GHSA-434x-w66g-qw3r
 
 
 [profile.release]
