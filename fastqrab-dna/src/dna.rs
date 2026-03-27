@@ -2,8 +2,9 @@ use bio::alignment::{
     AlignmentOperation,
     pairwise::{Aligner, MIN_SCORE, Scoring},
 };
-use bstr::{BString, ByteVec};
+use bstr::{BStr, BString, ByteVec};
 use schemars::JsonSchema;
+use std::borrow::Cow;
 use toml_pretty_deser::prelude::*;
 
 use crate::segments::SegmentIndex;
@@ -85,6 +86,21 @@ impl TagValue {
                 Some(out)
             }
             _ => None,
+        }
+    }
+    pub fn to_bstr<'a>(&'a self) -> Cow<'a, BStr> {
+        match &self {
+            TagValue::Missing => Cow::Borrowed(BStr::new(b"")),
+            TagValue::Location(hits) => Cow::Owned(hits.joined_sequence(None).into()),
+            TagValue::String(bstring) => Cow::Borrowed(BStr::new(&bstring[..])),
+            TagValue::Numeric(val) => Cow::Owned(val.to_string().into()),
+            TagValue::Bool(val) => {
+                if *val {
+                    Cow::Borrowed(BStr::new(b"1"))
+                } else {
+                    Cow::Borrowed(BStr::new(b"0"))
+                }
+            }
         }
     }
 }

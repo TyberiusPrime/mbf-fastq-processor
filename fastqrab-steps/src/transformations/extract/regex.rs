@@ -1,6 +1,10 @@
-use super::extract_region_tags;
-use super::extract_string_tags;
+use std::cell::RefCell;
+use std::rc::Rc;
+
+use super::extract_region_tags_using_tags;
+use super::extract_string_tags_using_tags;
 use crate::transformations::prelude::*;
+use bstr::ByteSlice;
 use fastqrab_config::{dna::Hits, tpd_adapt_bstring, tpd_adapt_regex};
 
 fn regex_replace_with_self() -> BString {
@@ -67,6 +71,42 @@ impl TagUser for PartialTaggedVariant<PartialRegex> {
             .toml_value
             .as_mut()
             .expect("get_tag_usage should only be called after successful verification");
+
+        let mut used_tags = Vec::new();
+        if let Some(replacement) = inner.replacement.as_ref() {
+            let replacement = replacement.clone();
+            let re = regex::bytes::Regex::new(r"\[\[(?P<tag>[^\]]+)\]\]")
+                .expect("hardcoded regex must compile");
+            let toml_source = Rc::new(RefCell::new((
+                &mut inner.replacement.state,
+                &mut inner.replacement.help,
+            )));
+            for hit in re.captures_iter(replacement.as_bytes()) {
+                let tag = hit
+                    .name("tag")
+                    .expect("Regex should always match")
+                    .as_bytes();
+                let tag = TagLabel(
+                    std::str::from_utf8(tag)
+                        .expect("Tag was not utf8, but toml is always utf8?)")
+                        .to_string(),
+                );
+                // we already chek these for 'being present', just like any other
+                // tag.
+                used_tags.push(Some(UsedTag {
+                    name: tag,
+                    accepted_tag_types: &[
+                        TagValueType::String,
+                        TagValueType::Location,
+                        TagValueType::Numeric,
+                        TagValueType::Bool,
+                    ],
+                    toml_source: toml_source.clone(),
+                    further_help: None,
+                }));
+            }
+        }
+
         TagUsageInfo {
             declared_tag: inner.out_label.to_declared_tag(
                 if inner
@@ -82,6 +122,7 @@ impl TagUser for PartialTaggedVariant<PartialRegex> {
                     TagValueType::Location
                 },
             ),
+            used_tags: used_tags,
             ..Default::default()
         }
     }
@@ -99,42 +140,68 @@ impl Step for Regex {
         let segment_index = segment_or_name.get_segment_index();
 
         if segment_or_name.is_name() {
-            extract_string_tags(&mut block, segment_index, &self.out_label, |read| {
-                // Choose source based on whether it's name or sequence
-                let source = read.name();
+            extract_string_tags_using_tags(
+                &mut block,
+                segment_index,
+                &self.out_label,
+                |read, read_no, block_tags| {
+                    // Choose source based on whether it's name or sequence
+                    let source = read.name();
 
-                let re_hit = self.search.captures(source);
-                if let Some(hit) = re_hit {
-                    let mut replacement = Vec::new();
-                    //let g = hit.get(0).expect("Regex should always match");
-                    hit.expand(&self.replacement, &mut replacement);
-                    Some(replacement.into())
-                } else {
-                    None
-                }
-            });
+                    let re_hit = self.search.captures(source);
+                    if let Some(hit) = re_hit {
+                        let mut replacement = Vec::new();
+                        //let g = hit.get(0).expect("Regex should always match");
+                        hit.expand(&self.replacement, &mut replacement);
+                        for (tag_name, tags) in block_tags {
+                            // only those we listed in use_tags.
+                            let query = format!("[[{tag_name}]]");
+                            let value = tags[read_no].to_bstr();
+                            replacement = replacement.replace(query, value.as_bytes())
+                        }
+                        Some(replacement.into())
+                    } else {
+                        None
+                    }
+                },
+            );
         } else {
-            extract_region_tags(&mut block, segment_index, &self.out_label, |read| {
-                // Choose source based on whether it's name or sequence
-                let source = read.seq();
+            extract_region_tags_using_tags(
+                &mut block,
+                segment_index,
+                &self.out_label,
+                |read, read_no, block_tags| {
+                    // Choose source based on whether it's name or sequence
+                    let source = read.seq();
 
-                let re_hit = self.search.captures(source);
-                if let Some(hit) = re_hit {
-                    let mut replacement = Vec::new();
-                    let g = hit.get(0).expect("Regex should always match");
-                    hit.expand(&self.replacement, &mut replacement);
-                    Some(Hits::new(
-                        g.start(),
-                        g.end() - g.start(),
-                        segment_index,
-                        replacement.into(),
-                    ))
-                } else {
-                    None
-                }
-            });
+                    let re_hit = self.search.captures(source);
+                    if let Some(hit) = re_hit {
+                        let mut replacement = Vec::new();
+                        let g = hit.get(0).expect("Regex should always match");
+                        //dbg!(&self.replacement);
+                        hit.expand(&self.replacement, &mut replacement);
+                        //dbg!(bstr::BStr::new(&replacement));
+                        for (tag_name, tags) in block_tags {
+                            // only those we listed in use_tags.
+                            let query = format!("[[{tag_name}]]");
+                            let value = tags[read_no].to_bstr();
+                            // dbg!(&query, &tags[read_no], &value);
+                            //  dbg!(bstr::BStr::new(&replacement));
+                            replacement = replacement.replace(query, value.as_bytes());
+                            //dbg!(bstr::BStr::new(&replacement));
+                        }
+                        Some(Hits::new(
+                            g.start(),
+                            g.end() - g.start(),
+                            segment_index,
+                            replacement.into(),
+                        ))
+                    } else {
+                        None
+                    }
+                },
+            );
         }
-
         Ok((block, true))
     }
 }

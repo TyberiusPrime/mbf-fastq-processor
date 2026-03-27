@@ -430,6 +430,9 @@ Extract using regular expression.
 - `'read1'`, `'read2'`, etc.: Extract from sequence
 - `'name:read1'`: Extract from read name
 
+** replacement
+[[tag]] for inserting another already defined tag.
+
 ### ExtractRegions (Advanced)
 
 Extract multiple regions with flexible source and anchoring options. Supports extracting from segments, tags, or read names. Replaces the deprecated ExtractAnchor.

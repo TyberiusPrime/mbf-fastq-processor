@@ -1,0 +1,22 @@
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+29 │ [[step]]
+30 │     action = 'ExtractRegex'
+   ┆              ───────┬──────
+   ┆                     │
+   ┆                     ╰─────── In this step
+   ┆
+31 │     out_label = 'test'
+32 │     search = '(..)[AGC]N'
+33 │     replacement = '${1}[[tag1]]-[[polynosuchtail]]'
+   ┆                   ────────────────┬────────────────
+   ┆                                   │
+   ┆                                   ╰───────────────── No such tag: 'polynosuchtail'
+───╯
+Hint: Did you mean: 'polytail' or 'tag1'?
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/ExtractRegex
+      Or run: `fastqrab template ExtractRegex` for more information.
+
+

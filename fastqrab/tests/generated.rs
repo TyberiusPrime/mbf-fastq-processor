@@ -6566,6 +6566,44 @@ fn test_cases_x_single_step_x_extraction_x_extract_regex_x_regex_len_table() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_extraction_x_extract_regex_x_tag_replacement() {
+    println!("Test case is in: test_cases/single_step/extraction/extract_regex/tag_replacement");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/extraction/extract_regex/tag_replacement"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_extraction_x_extract_regex_x_tag_replacement_no_suchtag() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/extract_regex/tag_replacement_no_suchtag"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/extract_regex/tag_replacement_no_suchtag",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_extraction_x_extract_regex_x_tag_replacement_string_source() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/extract_regex/tag_replacement_string_source"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/extract_regex/tag_replacement_string_source",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_extraction_x_extract_regex_underscores() {
     println!("Test case is in: test_cases/single_step/extraction/extract_regex_underscores");
     run_test(

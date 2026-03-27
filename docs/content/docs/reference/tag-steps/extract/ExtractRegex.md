@@ -23,3 +23,5 @@ See the [regex documentation](https://docs.rs/regex/latest/regex/#syntax) for de
 
 Note that you need to 'double up' on backslashes for character classes inside the search string.
 
+The replacement supports replacing other tag's values into your string. Use `[[tag]]` to achieve that.
+

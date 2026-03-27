@@ -14,6 +14,9 @@ read1 = 'input_read1.fq'
   action= 'Lowercase'
   target = 'tag:tag1'
 
+[[step]]
+  action = "StoreTagsInTable"
+  infix = 'debug'
 
 [[step]]
     action = 'ExtractPolyTail'
@@ -27,7 +30,7 @@ read1 = 'input_read1.fq'
     action = 'ExtractRegex'
     out_label = 'test'
     search = '(..)[AGC]N'
-    replacement = '${1}[[tag1]]-[[polytail]]'
+    replacement = '${1}[[tag1]]-[[polynosuchtail]]'
     source = 'read1'
 
 

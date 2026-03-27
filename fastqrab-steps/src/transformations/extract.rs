@@ -1,4 +1,7 @@
+use std::cell::RefCell;
+
 use bstr::BString;
+use indexmap::IndexMap;
 
 use super::prelude::DemultiplexTag;
 use fastqrab_config::{
@@ -52,19 +55,61 @@ pub(crate) fn extract_region_tags(
     block.tags.insert(label.clone(), out);
 }
 
-pub(crate) fn extract_string_tags(
+// pub(crate) fn extract_string_tags(
+//     block: &mut FastQBlocksCombined,
+//     segment: SegmentIndex,
+//     label: &TagLabel,
+//     f: impl Fn(&mut WrappedFastQRead) -> Option<BString>,
+// ) {
+//     let mut out = Vec::new();
+//
+//     let f2 = |read: &mut WrappedFastQRead| {
+//         out.push(match f(read) {
+//             Some(hits) => TagValue::String(hits),
+//             None => TagValue::Missing,
+//         });
+//     };
+//     block.segments[segment.get_index()].apply(f2);
+//
+//     block.tags.insert(label.clone(), out);
+// }
+
+pub(crate) fn extract_region_tags_using_tags(
     block: &mut FastQBlocksCombined,
     segment: SegmentIndex,
     label: &TagLabel,
-    f: impl Fn(&mut WrappedFastQRead) -> Option<BString>,
+    f: impl Fn(&mut WrappedFastQRead, usize, &IndexMap<TagLabel, Vec<TagValue>>) -> Option<Hits>,
 ) {
     let mut out = Vec::new();
 
+    let mut read_no = RefCell::new(0usize);
     let f2 = |read: &mut WrappedFastQRead| {
-        out.push(match f(read) {
+        out.push(match f(read, *read_no.borrow(), &mut block.tags) {
+            Some(hits) => TagValue::Location(hits),
+            None => TagValue::Missing,
+        });
+        *read_no.get_mut() += 1;
+    };
+    block.segments[segment.get_index()].apply(f2);
+
+    block.tags.insert(label.clone(), out);
+}
+
+pub(crate) fn extract_string_tags_using_tags(
+    block: &mut FastQBlocksCombined,
+    segment: SegmentIndex,
+    label: &TagLabel,
+    f: impl Fn(&mut WrappedFastQRead, usize, &IndexMap<TagLabel, Vec<TagValue>>) -> Option<BString>,
+) {
+    let mut out = Vec::new();
+    let mut read_no = RefCell::new(0usize);
+
+    let f2 = |read: &mut WrappedFastQRead| {
+        out.push(match f(read, *read_no.borrow(), &mut block.tags) {
             Some(hits) => TagValue::String(hits),
             None => TagValue::Missing,
         });
+        *read_no.get_mut() += 1;
     };
     block.segments[segment.get_index()].apply(f2);
 

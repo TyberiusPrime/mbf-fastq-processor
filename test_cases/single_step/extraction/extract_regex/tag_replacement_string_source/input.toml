@@ -14,7 +14,6 @@ read1 = 'input_read1.fq'
   action= 'Lowercase'
   target = 'tag:tag1'
 
-
 [[step]]
     action = 'ExtractPolyTail'
     out_label = 'polytail'
@@ -26,9 +25,9 @@ read1 = 'input_read1.fq'
 [[step]]
     action = 'ExtractRegex'
     out_label = 'test'
-    search = '(..)[AGC]N'
-    replacement = '${1}[[tag1]]-[[polytail]]'
-    source = 'read1'
+    search = '[0-9]+'
+    replacement = '${0}-[[tag1]]-[[polytail]]'
+    source = 'name:read1'
 
 
 [[step]]
