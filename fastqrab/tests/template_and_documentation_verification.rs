@@ -1550,8 +1550,7 @@ fn test_every_link_docs_target_has_a_redirect_page() {
     );
 }
 
- 
- #[test]
+#[test]
 fn test_flake_rust_version_matches_msrv() {
     // Verify that the Rust version used in flake.nix exactly matches the MSRV declared in Cargo.toml.
     // This ensures we actually build and test on the minimum supported version.
@@ -1596,4 +1595,3 @@ fn test_flake_rust_version_matches_msrv() {
 
     println!("✓ flake.nix Rust version and MSRV both set to {msrv}");
 }
-

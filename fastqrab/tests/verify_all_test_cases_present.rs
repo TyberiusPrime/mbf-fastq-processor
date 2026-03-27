@@ -62,10 +62,17 @@ fn all_test_cases_are_generated() {
         }
     }
     for test_fn in expected_tests {
-        assert!(
-            generated.contains(&test_fn),
-            "Missing test function: {test_fn}. Rerun ./dev/update_generated.sh",
-        );
+        if !generated.contains(&test_fn) {
+            std::process::Command::new("bash")
+                .arg("./dev/ci/update_generated.sh")
+                .current_dir("..")
+                .status()
+                .expect("Failed to run update_generated.sh when test cases were missing");
+            assert!(
+                false,
+                "Missing test function: {test_fn}. Rerunning ./dev/ci/update_generated.sh, should just work if you try again",
+            );
+        }
     }
 }
 
