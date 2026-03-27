@@ -26,10 +26,10 @@ reads in a file format called
 
 ## Install
 
-- Pre-compiled releases available for Linux and windows from the [releases page](https://github.com/TyberiusPrime/mbf-fastq-processor/releases)
+- Pre-compiled releases available for Linux and windows from the [releases page](https://github.com/TyberiusPrime/fastqrab/releases)
 - To build Rust toolchain 1.86+ and zlib / libzstd development files are required
 - Alternatively, a nix flake is provided for a fully reproducible environment
-- Container image: `ghcr.io/tyberiusprime/mbf-fastq-processor:latest` (works with Docker or Podman)
+- Container image: `ghcr.io/tyberiusprime/fastqrab:latest` (works with Docker or Podman)
 
 ## Quickstart
 
@@ -64,7 +64,7 @@ fastqrab input.toml
 Or run the published container (bind-mount your working directory to `/work`):
 
 ```bash
-docker run --rm -v "$(pwd)":/work ghcr.io/tyberiusprime/mbf-fastq-processor:latest process input.toml
+docker run --rm -v "$(pwd)":/work ghcr.io/tyberiusprime/fastqrab:latest process input.toml
 ```
 
 You will find `output_read1.fq` alongside a [sample HTML report](html/example_report.html) at `output_qc.html`.

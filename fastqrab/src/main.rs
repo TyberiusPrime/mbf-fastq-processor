@@ -34,7 +34,7 @@ fn build_cli() -> Command {
     3. fastqrab process pipeline.toml
 
 Docs:
-    Visit https://tyberiusprime.github.io/mbf-fastq-processor/ for in depth documentation
+    Visit https://tyberiusprime.github.io/fastqrab/ for in depth documentation
     following the Diátaxis framework.
 ",
         )
@@ -313,8 +313,8 @@ fn main() -> Result<()> {
             )
         )
             //.authors("My Company Support <support@mycompany.com>")
-            .homepage("https://github.com/TyberiusPrime/mbf-fastq-processor")
-            .support("Open a github issue at https://github.com/TyberiusPrime/mbf-fastq-processor/issues/new and attach the crash report.")
+            .homepage("https://github.com/TyberiusPrime/fastqrab")
+            .support("Open a github issue at https://github.com/TyberiusPrime/fastqrab/issues/new and attach the crash report.")
     );
     }
 

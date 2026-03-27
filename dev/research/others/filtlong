@@ -10,7 +10,7 @@ interesting features
 - read splitting at regions that don't match a kmer in the reference for 500 bp...
 - trim bases at start/end that do not match a kmer in the reference
 
-I think you could do both by running mbf-fastq-processor twice,
+I think you could do both by running fastqrab twice,
 once for the read length distribution, once for the filtering.
 There's also some phred quality based filtering?
 

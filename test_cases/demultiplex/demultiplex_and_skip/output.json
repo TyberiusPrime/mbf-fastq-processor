@@ -8,7 +8,7 @@
         "input_read1.fq.gz"
       ]
     },
-    "repository": "https://tyberiusprime.github.io/mbf-fastq-processor/"
+    "repository": "https://tyberiusprime.github.io/fastqrab/"
   },
   "start": {
     "molecule_count": 1250

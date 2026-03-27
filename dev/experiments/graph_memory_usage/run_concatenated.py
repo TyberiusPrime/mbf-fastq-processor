@@ -8,7 +8,7 @@ REPS: List[int] = [1, 2, 4, 8, 9,10,11,12,13,14,15, 16, 160]
 
 WORKDIR = Path(__file__).resolve().parent
 PROJECT_ROOT = WORKDIR.parents[1]
-TARGET_BIN = PROJECT_ROOT / "target" / "release" / "mbf-fastq-processor"
+TARGET_BIN = PROJECT_ROOT / "target" / "release" / "fastqrab"
 BASE_FASTQ_COMPRESSED = (
     PROJECT_ROOT
     / "test_cases"

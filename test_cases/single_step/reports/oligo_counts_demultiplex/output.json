@@ -11,7 +11,7 @@
         "input_read2.fq"
       ]
     },
-    "repository": "https://tyberiusprime.github.io/mbf-fastq-processor/"
+    "repository": "https://tyberiusprime.github.io/fastqrab/"
   },
   "xyz": {
     "multiplexed": {

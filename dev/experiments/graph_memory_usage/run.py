@@ -10,7 +10,7 @@ REPS = [1, 2, 4, 8,9,10, 16, 160, 320]
 
 WORKDIR = Path(__file__).resolve().parent
 PROJECT_ROOT = WORKDIR.parents[1]
-TARGET_BIN = PROJECT_ROOT / "target" / "release" / "mbf-fastq-processor"
+TARGET_BIN = PROJECT_ROOT / "target" / "release" / "fastqrab"
 
 
 def ensure_binary() -> None:

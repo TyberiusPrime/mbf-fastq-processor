@@ -177,7 +177,7 @@ Based on popularity and impact, I'd suggest implementing these in order:
     Dual Index Demultiplexing - Standard Illumina workflow
     Comprehensive Multi-Stage QC - Shows best practices
 
-These would provide broad coverage of common bioinformatics workflows while showcasing mbf-fastq-processor's capabilities.
+These would provide broad coverage of common bioinformatics workflows while showcasing fastqrab's capabilities.
 
 
 - fastp default invocation

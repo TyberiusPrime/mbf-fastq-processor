@@ -39,7 +39,7 @@ for ii in range(reps):
     tf.write(input_toml + f"seed = {ii * 2 + 100}")
     tf.flush()
     out = subprocess.check_output(
-        ["../../target/release/mbf-fastq-processor", "process", tf.name]
+        ["../../target/release/fastqrab", "process", tf.name]
     ).decode()
     lines = out.strip().split("\n")
     read_names = lines[::4]

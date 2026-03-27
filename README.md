@@ -1,4 +1,4 @@
-# fastqrab [![Günther, the fastqrab](docs/content/docs/concepts/mascot/guenther_tiny.jpg)](https://tyberiusprime.github.io/mbf-fastq-processor/main/docs/concepts/mascot/)
+# fastqrab [![Günther, the fastqrab](docs/content/docs/concepts/mascot/guenther_tiny.jpg)](https://tyberiusprime.github.io/fastqrab/main/docs/concepts/mascot/)
 
 The multi-tool of FASTQ (pre-)processing.
 
@@ -18,11 +18,11 @@ Supports input/output in FASTQ/FASTA/BAM.
 ## Getting started right away
 
 ### 1. Define temporary run command
-`ABOVE="nix run github:TyberiusPrime/mbf-fastq-processor"` 
+`ABOVE="nix run github:TyberiusPrime/fastqrab"` 
 
 or
 
-`ABOVE="docker run --rm ghcr.io/tyberiusprime/mbf-fastq-processor:latest"`
+`ABOVE="docker run --rm ghcr.io/tyberiusprime/fastqrab:latest"`
 
 ### 2. Run Your First Pipeline 
 
@@ -44,22 +44,22 @@ Run it:
 
 ## Documentation
 
-We have [extensive documentation](https://tyberiusprime.github.io/mbf-fastq-processor/main) following the Diátaxis framework.
+We have [extensive documentation](https://tyberiusprime.github.io/fastqrab/main) following the Diátaxis framework.
 
-Further examples can be found in the [cookbook section](https://tyberiusprime.github.io/mbf-fastq-processor/main/docs/how-to/cookbooks/).
+Further examples can be found in the [cookbook section](https://tyberiusprime.github.io/fastqrab/main/docs/how-to/cookbooks/).
 
 ## Full list of FastQ manipulations supported
 
 Please refer to the 'step' sections of our [reference
-documentation](https://tyberiusprime.github.io/mbf-fastq-processor/main/docs/reference/)
+documentation](https://tyberiusprime.github.io/fastqrab/main/docs/reference/)
 
 Briefly, you can 
-[extract information out of reads (into 'tags')](https://tyberiusprime.github.io/mbf-fastq-processor/main/docs/reference/tag-steps/), 
-[filter reads](https://tyberiusprime.github.io/mbf-fastq-processor/main/docs/reference/filter-steps/),
-[modify their sequence and quality data](https://tyberiusprime.github.io/mbf-fastq-processor/main/docs/reference/modification-steps/),
-[validate them](https://tyberiusprime.github.io/mbf-fastq-processor/main/docs/reference/validation-steps/),
-[generate statistics on them](https://tyberiusprime.github.io/mbf-fastq-processor/main/docs/reference/report-steps/),
-and [split the output (demultiplex)](https://tyberiusprime.github.io/mbf-fastq-processor/main/docs/reference/Demultiplex/).
+[extract information out of reads (into 'tags')](https://tyberiusprime.github.io/fastqrab/main/docs/reference/tag-steps/), 
+[filter reads](https://tyberiusprime.github.io/fastqrab/main/docs/reference/filter-steps/),
+[modify their sequence and quality data](https://tyberiusprime.github.io/fastqrab/main/docs/reference/modification-steps/),
+[validate them](https://tyberiusprime.github.io/fastqrab/main/docs/reference/validation-steps/),
+[generate statistics on them](https://tyberiusprime.github.io/fastqrab/main/docs/reference/report-steps/),
+and [split the output (demultiplex)](https://tyberiusprime.github.io/fastqrab/main/docs/reference/Demultiplex/).
 
 ## Status
 
@@ -78,7 +78,10 @@ Currently not packaged by any distribution.
 
 Windows and MacOS binaries are build for each release - be advised that these do not see much testing.
 
-It's written in [rust](https://rust-lang.org/), so `cargo build --release` should work as long as you have zstd and cmake around. The nix flake does offer a fully reproducible build and development environment. Same goes for `cargo install mbf-fastq-processor`.
+It's written in [rust](https://rust-lang.org/), so `cargo build --release`
+should work as long as you have zstd and cmake around.  Same goes for `cargo
+install fastqrab`. The nix flake does offer
+a fully reproducible build and development environment.
 
 ### Shell Completions
 
@@ -86,43 +89,43 @@ Shell completions are available for bash, fish, zsh, powershell, and elvish. Aft
 
 ```bash
 # Bash - add to ~/.bashrc
-source <(mbf-fastq-processor completions bash)
+source <(fastqrab completions bash)
 
 # Fish - save to completions directory
-mbf-fastq-processor completions fish > ~/.config/fish/completions/mbf-fastq-processor.fish
+fastqrab completions fish > ~/.config/fish/completions/fastqrab.fish
 
 # Zsh - add to ~/.zshrc
-source <(mbf-fastq-processor completions zsh)
+source <(fastqrab completions zsh)
 ```
 
-See the [CLI documentation](https://tyberiusprime.github.io/mbf-fastq-processor/main/docs/reference/cli/) for more details.
+See the [CLI documentation](https://tyberiusprime.github.io/fastqrab/main/docs/reference/cli/) for more details.
 
 ### Container image
 
-A ready-to-run OCI image is published with each tag at `ghcr.io/tyberiusprime/mbf-fastq-processor`.
+A ready-to-run OCI image is published with each tag at `ghcr.io/tyberiusprime/fastqrab`.
 
 ```bash
 # Docker
-docker pull ghcr.io/tyberiusprime/mbf-fastq-processor:latest
-docker run --rm ghcr.io/tyberiusprime/mbf-fastq-processor:latest --help
+docker pull ghcr.io/tyberiusprime/fastqrab:latest
+docker run --rm ghcr.io/tyberiusprime/fastqrab:latest --help
 
 # Podman
-podman pull ghcr.io/tyberiusprime/mbf-fastq-processor:latest
-podman run --rm ghcr.io/tyberiusprime/mbf-fastq-processor:latest --help
+podman pull ghcr.io/tyberiusprime/fastqrab:latest
+podman run --rm ghcr.io/tyberiusprime/fastqrab:latest --help
 ```
 
 Mount your working directory to feed a pipeline configuration:
 
 ```bash
-docker run --rm -v "$(pwd)":/work ghcr.io/tyberiusprime/mbf-fastq-processor:latest process input.toml
+docker run --rm -v "$(pwd)":/work ghcr.io/tyberiusprime/fastqrab:latest process input.toml
 ```
 
 ## Usage
 
-Refer to the [full documentation](https://tyberiusprime.github.io/mbf-fastq-processor/) or the
+Refer to the [full documentation](https://tyberiusprime.github.io/fastqrab/) or the
 binaries help page (shown when run without arguments) for details.
 
-CLI: `mbf-fastq-processor process input.toml`
+CLI: `fastqrab process input.toml`
 
 We use a [TOML](https://toml.io/en/) file for configuration,
 because command lines are too limited and prone to misunderstandings.
@@ -198,7 +201,7 @@ the full set of supported sections, comments, and examples.
 ### Cookbooks
 
 Looking for practical examples? Check out the [`cookbooks/`](cookbooks/) directory for complete,
-runnable examples demonstrating common use cases, or [visit them in the documentation](https://tyberiusprime.github.io/mbf-fastq-processor/main/docs/how-to/cookbooks/):
+runnable examples demonstrating common use cases, or [visit them in the documentation](https://tyberiusprime.github.io/fastqrab/main/docs/how-to/cookbooks/):
 
 - **Basic Quality Report** - Generate comprehensive quality metrics from FastQ files
 - **UMI Extraction** - Extract and handle Unique Molecular Identifiers
@@ -212,9 +215,9 @@ Each cookbook includes:
 
 Run any cookbook with:
 ```bash
-git clone https://github.com/tyberiusprime/mbf-fastq-processor
+git clone https://github.com/tyberiusprime/fastqrab
 cd cookbooks/[cookbook-name]
-mbf-fastq-processor process input.toml
+fastqrab process input.toml
 ```
 
 ## Citations
