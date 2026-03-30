@@ -797,6 +797,38 @@ fn test_cases_x_input_x_stdin_x_stdin_regular() {
 }
 
 #[test]
+fn test_cases_x_input_x_stdin_config_x_error_stdin_config_with_stdin_fastq() {
+    println!("Test case is in: test_cases/input/stdin_config/error_stdin_config_with_stdin_fastq");
+    run_test(
+        std::path::Path::new(
+            "../test_cases/input/stdin_config/error_stdin_config_with_stdin_fastq",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_input_x_stdin_config_x_stdin_config_process() {
+    println!("Test case is in: test_cases/input/stdin_config/stdin_config_process");
+    run_test(
+        std::path::Path::new("../test_cases/input/stdin_config/stdin_config_process"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_input_x_stdin_config_x_stdin_config_validate_error() {
+    println!("Test case is in: test_cases/input/stdin_config/stdin_config_validate_error");
+    run_test(
+        std::path::Path::new("../test_cases/input/stdin_config/stdin_config_validate_error"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_input_validation_x_empty_bam_in_middle() {
     println!("Test case is in: test_cases/input_validation/empty_bam_in_middle");
     run_test(

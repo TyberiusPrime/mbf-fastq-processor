@@ -9,7 +9,7 @@ fastqrab is configured exclusively through a TOML document. The CLI is therefore
 ## Usage
 
 ```text
-fastqrab process [config.toml]  [--allow-overwrite]
+fastqrab process [config.toml|-]  [--allow-overwrite]
 fastqrab template
 fastqrab verify [config.toml] [--output-dir <OUTPUT_DIR>]
 fastqrab interactive [config.toml]
@@ -19,10 +19,20 @@ fastqrab completions <SHELL>
 
 ### Process
 
-Process FASTQ as described in <config.toml>.(see the [TOML format reference]({{< relref "docs/reference/toml" >}})). 
+Process FASTQ as described in <config.toml>.(see the [TOML format reference]({{< relref "docs/reference/toml" >}})).
 Relative paths are resolved against the current shell directory.
 
-The config.toml argument can be left off iff there's one .toml in the current directory, and it contains an [input] and an [output] section
+The config.toml argument can be left off iff there's one .toml in the current directory, and it contains an [input] and an [output] section.
+
+Passing `-` instead of a file path reads the configuration from standard input:
+
+```bash
+cat my_pipeline.toml | fastqrab process -
+# or
+fastqrab process - < my_pipeline.toml
+```
+
+Note: reading the configuration from stdin (`-`) is **incompatible** with using `--stdin--` as an input file in that same configuration, since stdin can only be used for one purpose at a time. Use a configuration file on disk in that case.
 
 
 
@@ -112,13 +122,16 @@ This is particularly useful for:
 
 #### Stdin Support
 
-When your configuration uses stdin input (by specifying `--stdin--` as an input file), the verify command can simulate stdin input by reading from a file named `stdin` in the same directory as your configuration file.
+**FASTQ from stdin:** When your configuration uses stdin input (by specifying `--stdin--` as an input file), the verify command can simulate stdin input by reading from a file named `stdin` in the same directory as your configuration file.
 
 For example, if your `config.toml` contains:
 ```toml
 [input]
 read1 = '--stdin--'
 ```
+Place a file named `stdin` in the same directory containing the FASTQ data to pipe to the subprocess.
+
+**Config from stdin:** To test a pipeline that reads its configuration from stdin, place an empty file named `stdin_config` in the test directory. The verify command will then invoke `fastqrab process -` and pipe `config.toml` as its stdin.
 
 ### Interactive
 

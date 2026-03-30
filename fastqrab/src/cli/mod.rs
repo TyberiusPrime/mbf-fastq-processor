@@ -1,4 +1,6 @@
+use anyhow::{Context, Result};
 use fastqrab_steps::link_docs;
+use std::path::Path;
 use toml_pretty_deser::TomlValue;
 
 use crate::config::PartialConfig;
@@ -6,6 +8,35 @@ use crate::config::PartialConfig;
 pub mod process;
 pub mod validate;
 pub mod verify;
+
+/// Read the raw config from a file path or from stdin if path is `-`.
+pub(crate) fn read_config_raw(path: &Path) -> Result<String> {
+    if path == Path::new("-") {
+        use std::io::Read;
+        let mut content = String::new();
+        std::io::stdin()
+            .read_to_string(&mut content)
+            .context("Failed to read configuration from stdin")?;
+        Ok(content)
+    } else {
+        ex::fs::read_to_string(path)
+            .with_context(|| format!("Could not read toml file: {}", path.to_string_lossy()))
+    }
+}
+
+/// Return true if any input file in the parsed config is the stdin magic path.
+pub(crate) fn config_uses_stdin_fastq(input: &crate::config::StructuredInput) -> bool {
+    use fastqrab_io::STDIN_MAGIC_PATH;
+    match input {
+        crate::config::StructuredInput::Interleaved { files, .. } => {
+            files.iter().any(|f| f == STDIN_MAGIC_PATH)
+        }
+        crate::config::StructuredInput::Segmented { segment_files, .. } => segment_files
+            .values()
+            .flatten()
+            .any(|f| f == STDIN_MAGIC_PATH),
+    }
+}
 
 pub(crate) fn improve_error_messages(
     toml_filename: &str,

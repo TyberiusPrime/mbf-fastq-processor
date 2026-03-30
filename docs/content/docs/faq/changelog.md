@@ -46,6 +46,7 @@
 
 ### Other
 - verify command: validates a pipeline produces expected output; auto-detects config, captures stdout/stderr
+- configuration toml can now be read from stdin (incompatible with reads from stdin).
 - Shell autocompletion for bash, fish, and zsh
 - benchmark mode and per-step benchmark harness
 - template command: shows help on error

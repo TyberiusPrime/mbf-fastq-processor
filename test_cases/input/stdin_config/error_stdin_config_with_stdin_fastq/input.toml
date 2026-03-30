@@ -1,0 +1,9 @@
+[input]
+    read1 = '--stdin--'
+
+[[step]]
+    action = 'Head'
+    n = 1
+
+[output]
+    prefix = 'output'

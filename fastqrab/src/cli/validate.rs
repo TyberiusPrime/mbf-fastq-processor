@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use ex::fs;
 use std::path::Path;
 use toml_pretty_deser::prelude::*;
@@ -8,8 +8,7 @@ use fastqrab_io::STDIN_MAGIC_PATH;
 use crate::{cli::improve_error_messages, config::Config};
 
 pub fn validate_config(toml_file: &Path) -> Result<Vec<String>> {
-    let raw_config = ex::fs::read_to_string(toml_file)
-        .with_context(|| format!("Could not read toml file: {}", toml_file.to_string_lossy()))?;
+    let raw_config = crate::cli::read_config_raw(toml_file)?;
     let result = Config::tpd_from_toml(&raw_config, FieldMatchMode::AnyCase, VecMode::SingleOk);
     let checked = match result {
         Ok(config) => config,
@@ -22,8 +21,22 @@ pub fn validate_config(toml_file: &Path) -> Result<Vec<String>> {
         }
     };
     let checked = checked.check_for_validation()?;
+    if toml_file == Path::new("-") && crate::cli::config_uses_stdin_fastq(&checked.input.structured)
+    {
+        anyhow::bail!(
+            "Cannot read configuration from stdin ('-') when the configuration also uses stdin \
+             ('{}') for FASTQ input. Use a config file on disk instead.",
+            STDIN_MAGIC_PATH
+        );
+    }
 
-    let toml_dir = toml_file.parent().unwrap_or_else(|| Path::new("."));
+    let current_dir_buf;
+    let toml_dir = if toml_file == Path::new("-") {
+        current_dir_buf = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
+        current_dir_buf.as_path()
+    } else {
+        toml_file.parent().unwrap_or_else(|| Path::new("."))
+    };
 
     let mut warnings = Vec::new();
 

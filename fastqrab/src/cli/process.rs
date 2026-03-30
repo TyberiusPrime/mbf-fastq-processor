@@ -1,4 +1,4 @@
-use anyhow::{Context, Result, bail};
+use anyhow::{Result, bail};
 use std::path::Path;
 use toml_pretty_deser::prelude::*;
 
@@ -10,8 +10,7 @@ use crate::pipeline;
 
 pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> Result<()> {
     let output_directory = output_directory.to_owned();
-    let raw_config = ex::fs::read_to_string(toml_file)
-        .with_context(|| format!("Could not read toml file: {}", toml_file.to_string_lossy()))?;
+    let raw_config = crate::cli::read_config_raw(toml_file)?;
     let result = Config::tpd_from_toml(&raw_config, FieldMatchMode::AnyCase, VecMode::SingleOk);
     let parsed = match result {
         Ok(config) => config,
@@ -29,6 +28,14 @@ pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> 
         }
     };
     let checked = parsed.check()?;
+    if toml_file == Path::new("-") && crate::cli::config_uses_stdin_fastq(&checked.input.structured)
+    {
+        bail!(
+            "Cannot read configuration from stdin ('-') when the configuration also uses stdin \
+             ('{}') for FASTQ input. Use a config file on disk instead.",
+            fastqrab_io::STDIN_MAGIC_PATH
+        );
+    }
     let marker_prefix = checked
         .output
         .as_ref()

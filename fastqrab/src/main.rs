@@ -45,7 +45,7 @@ Docs:
                 .about("Process FASTQ files using a configuration file")
                 .arg(
                     Arg::new("config")
-                        .help("Path to the TOML configuration file")
+                        .help("Path to the TOML configuration file, or '-' to read from stdin")
                         .required(false)
                         .value_name("CONFIG_TOML")
                         .value_hint(ValueHint::FilePath),
@@ -89,7 +89,7 @@ Docs:
                 .about("Validate a configuration file without processing")
                 .arg(
                     Arg::new("config")
-                        .help("Path to the TOML configuration file to validate")
+                        .help("Path to the TOML configuration file to validate, or '-' to read from stdin")
                         .required(false)
                         .value_name("CONFIG_TOML")
                         .value_hint(ValueHint::FilePath),
@@ -369,6 +369,13 @@ fn main() -> Result<()> {
             verify_config_file(&toml_path, output_dir.map(PathBuf::from), unsafe_prep);
         }
         Some(("interactive", sub_matches)) => {
+            if sub_matches
+                .get_one::<String>("config")
+                .is_some_and(|s| s == "-")
+            {
+                eprintln!("Error: interactive mode cannot read configuration from stdin.");
+                std::process::exit(1);
+            }
             let toml_path = handle_toml_arg(sub_matches.get_one::<String>("config"));
             let head = sub_matches.get_one::<u64>("head").copied();
             let sample = sub_matches.get_one::<u64>("sample").copied();

@@ -71,7 +71,12 @@ pub fn verify_outputs(
     )?;
 
     let current_exe = std::env::current_exe().context("Failed to get current executable path")?;
-    let stdin_file = detect_stdin_file(&raw_config, &toml_dir);
+    let stdin_config = toml_dir.join("stdin_config").exists();
+    let stdin_file = if stdin_config {
+        Some(temp_toml_path.clone())
+    } else {
+        detect_stdin_file(&raw_config, &toml_dir)
+    };
 
     if test_script.exists() {
         run_test_script_and_check(&test_script, &temp_path, &current_exe)?;
@@ -81,6 +86,7 @@ pub fn verify_outputs(
             expected_failure,
             expected_validation_error.as_ref(),
             stdin_file,
+            stdin_config,
             &temp_path,
             &temp_toml_path,
             uses_stdout,
@@ -544,6 +550,7 @@ fn run_processor_and_verify(
     expected_failure: Option<&ExpectedFailure>,
     expected_validation_error: Option<&ExpectedFailure>,
     stdin_file: Option<PathBuf>,
+    stdin_config: bool,
     temp_path: &Path,
     temp_toml_path: &Path,
     uses_stdout: bool,
@@ -559,7 +566,7 @@ fn run_processor_and_verify(
         } else {
             "validate"
         })
-        .arg("config.toml")
+        .arg(if stdin_config { "-" } else { "config.toml" })
         .current_dir(temp_path);
 
     let output = execute_processor(&mut command, stdin_file)?;

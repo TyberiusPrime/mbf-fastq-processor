@@ -1,0 +1,8 @@
+[input]
+    read1 = "input_read1.fq"
+
+[[step]]
+    action = "Heaad"
+
+[output]
+    prefix = "output"

@@ -4026,3 +4026,127 @@ fn test_interactive_no_output() {
         "Expected 'No output' message, got: {stdout}"
     );
 }
+
+const MINIMAL_CONFIG: &str = r"[input]
+read1 = 'input.fq'
+
+[[step]]
+action = 'Head'
+n = 1
+
+[output]
+prefix = 'output'
+";
+
+const MINIMAL_FASTQ: &str = "@read1\nACGT\n+\nIIII\n@read2\nTTTT\n+\nHHHH\n";
+
+#[test]
+fn test_process_config_from_stdin() {
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    fs::write(temp_path.join("input.fq"), MINIMAL_FASTQ).unwrap();
+
+    let mut cmd = std::process::Command::new(get_bin_path())
+        .arg("process")
+        .arg("-")
+        .current_dir(temp_path)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+
+    cmd.stdin.take().unwrap().write_all(MINIMAL_CONFIG.as_bytes()).unwrap();
+    let output = cmd.wait_with_output().unwrap();
+
+    let stderr = std::str::from_utf8(&output.stderr).unwrap();
+    assert!(output.status.success(), "process - failed: {stderr}");
+
+    let result = fs::read_to_string(temp_path.join("output_read1.fq")).unwrap();
+    assert!(result.contains("@read1"), "expected read1 in output, got: {result}");
+    assert!(!result.contains("@read2"), "Head n=1 should not include read2");
+}
+
+#[test]
+fn test_validate_config_from_stdin_valid() {
+    let mut cmd = std::process::Command::new(get_bin_path())
+        .arg("validate")
+        .arg("-")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+
+    cmd.stdin.take().unwrap().write_all(MINIMAL_CONFIG.as_bytes()).unwrap();
+    let output = cmd.wait_with_output().unwrap();
+
+    let stdout = std::str::from_utf8(&output.stdout).unwrap();
+    let stderr = std::str::from_utf8(&output.stderr).unwrap();
+    assert!(output.status.success(), "validate - failed: {stderr}");
+    assert!(stdout.contains("✓ Configuration is valid"), "got: {stdout}");
+}
+
+#[test]
+fn test_validate_config_from_stdin_invalid() {
+    let bad_config = "[input]\nread1 = 'input.fq'\n\n[[step]]\naction = 'Heaad'\n\n[output]\nprefix = 'output'\n";
+
+    let mut cmd = std::process::Command::new(get_bin_path())
+        .arg("validate")
+        .arg("-")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+
+    cmd.stdin.take().unwrap().write_all(bad_config.as_bytes()).unwrap();
+    let output = cmd.wait_with_output().unwrap();
+
+    let stderr = std::str::from_utf8(&output.stderr).unwrap();
+    assert!(!output.status.success(), "expected failure for invalid config");
+    assert!(
+        stderr.contains("Heaad"),
+        "expected error about 'Heaad', got: {stderr}"
+    );
+}
+
+#[test]
+fn test_process_stdin_config_incompatible_with_stdin_fastq() {
+    let stdin_config = "[input]\nread1 = '--stdin--'\n\n[[step]]\naction = 'Head'\nn = 1\n\n[output]\nprefix = 'output'\n";
+
+    let mut cmd = std::process::Command::new(get_bin_path())
+        .arg("process")
+        .arg("-")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+
+    cmd.stdin.take().unwrap().write_all(stdin_config.as_bytes()).unwrap();
+    let output = cmd.wait_with_output().unwrap();
+
+    let stderr = std::str::from_utf8(&output.stderr).unwrap();
+    assert!(!output.status.success(), "expected failure");
+    assert!(
+        stderr.contains("Cannot read configuration from stdin"),
+        "expected incompatibility error, got: {stderr}"
+    );
+}
+
+#[test]
+fn test_interactive_rejects_stdin_config() {
+    let output = std::process::Command::new(get_bin_path())
+        .arg("interactive")
+        .arg("-")
+        .output()
+        .unwrap();
+
+    let stderr = std::str::from_utf8(&output.stderr).unwrap();
+    assert!(!output.status.success(), "expected failure");
+    assert!(
+        stderr.contains("interactive mode cannot read configuration from stdin"),
+        "got: {stderr}"
+    );
+}
