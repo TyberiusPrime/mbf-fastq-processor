@@ -164,12 +164,12 @@ pub enum Anchor {
 
 pub fn find_iupac(
     reference: &[u8],
-    query: &[u8],
+    pattern: &[u8],
     anchor: Anchor,
     max_mismatches: u8,
     segment: SegmentIndex,
 ) -> Option<Hits> {
-    if reference.len() < query.len() {
+    if reference.len() < pattern.len() {
         return None;
     }
 
@@ -177,35 +177,35 @@ pub fn find_iupac(
     // N in the PATTERN is treated as a wildcard, N in the REFERENCE is an uncertain base.
     match anchor {
         Anchor::Left => {
-            let hd = iupac_hamming_distance(query, &reference[..query.len()]);
+            let hd = iupac_hamming_distance(pattern, &reference[..pattern.len()]);
             if hd <= max_mismatches as usize {
                 return Some(Hits::new(
                     0,
-                    query.len(),
+                    pattern.len(),
                     segment,
-                    reference[..query.len()].into(),
+                    reference[..pattern.len()].into(),
                 ));
             }
         }
         Anchor::Right => {
-            let start = reference.len() - query.len();
-            let hd = iupac_hamming_distance(query, &reference[start..]);
+            let start = reference.len() - pattern.len();
+            let hd = iupac_hamming_distance(pattern, &reference[start..]);
             if hd <= max_mismatches as usize {
                 return Some(Hits::new(
                     start,
-                    query.len(),
+                    pattern.len(),
                     segment,
                     reference[start..].into(),
                 ));
             }
         }
         Anchor::Anywhere => {
-            return iupac_find_best(query, reference, max_mismatches as usize).map(|start| {
+            return iupac_find_best(pattern, reference, max_mismatches as usize).map(|start| {
                 Hits::new(
                     start,
-                    query.len(),
+                    pattern.len(),
                     segment,
-                    reference[start..start + query.len()].into(),
+                    reference[start..start + pattern.len()].into(),
                 )
             });
         }
@@ -314,15 +314,15 @@ pub fn find_iupac_with_indel(
 /// Optimized pure Rust implementation with early exit on perfect matches.
 /// Returns the start position of the best match, or None if no match within `max_mismatches`.
 #[inline]
-pub fn iupac_find_best(query: &[u8], reference: &[u8], max_mismatches: usize) -> Option<usize> {
-    let query_len = query.len();
+pub fn iupac_find_best(pattern: &[u8], reference: &[u8], max_mismatches: usize) -> Option<usize> {
+    let query_len = pattern.len();
     let mut best_pos = None;
     let mut best_so_far = max_mismatches + 1;
 
     for start in 0..=reference.len() - query_len {
         // Use optimized distance check with early exit
         let hd = iupac_hamming_distance_with_limit(
-            query,
+            pattern,
             &reference[start..start + query_len],
             best_so_far,
         );
@@ -487,13 +487,13 @@ pub fn iupac_hamming_distance(iupac_reference: &[u8], atcg_query: &[u8]) -> usiz
 /// Returns the distance, or a value >= limit if the limit is exceeded.
 #[inline]
 fn iupac_hamming_distance_with_limit(
-    iupac_reference: &[u8],
+    iupac_pattern: &[u8],
     atcg_query: &[u8],
     limit: usize,
 ) -> usize {
     let mut dist = 0;
 
-    for (a, b) in iupac_reference.iter().zip(atcg_query.iter()) {
+    for (a, b) in iupac_pattern.iter().zip(atcg_query.iter()) {
         // Quick check for exact match (most common case in clean data)
         if a == b {
             continue;
@@ -520,9 +520,11 @@ fn iupac_hamming_distance_with_limit(
                 | (b'D' | b'd', b'A' | b'G' | b'T' | b'a' | b'g' | b't')
                 | (b'H' | b'h', b'A' | b'C' | b'T' | b'a' | b'c' | b't')
                 | (b'V' | b'v', b'A' | b'C' | b'G' | b'a' | b'c' | b'g')
-                | (b'N' | b'n', _)
+                | (
+                    b'N' | b'n',
+                    b'A' | b'C' | b'G' | b'T' | b'a' | b'c' | b'g' | b't' | b'N' | b'n'
+                )
         );
-
         if !is_match {
             dist += 1;
             // Early exit if we've exceeded the limit
