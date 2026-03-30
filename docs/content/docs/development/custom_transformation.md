@@ -10,7 +10,7 @@ This guide assumes you have basic linux command line knowledge, and that you
 can edit text files (source code).
 
 
-We are going to start by devising a test case, making sure it fails, 
+We are going to start by devising a test case, making sure it fails,
 and then step by step adding all the parts we need. This will illustrate
 all the infrastructure the project has to support you in this.
 
@@ -86,7 +86,7 @@ Caused by:
        - step[0].action: Unknown variant `FunkyCase`. Did you mean one of `Rename`, `Truncate`, `CutStart`?
 	To list available steps, run the `list-steps` command
        in `action`
-       
+
 
 note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 ```
@@ -94,7 +94,7 @@ note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 ## Adding the transformation in all the right places
 
-We need to do three things: 
+We need to do three things:
 
 - Write a [struct](https://doc.rust-lang.org/book/ch05-00-structs.html) & [trait](https://doc.rust-lang.org/book/ch10-02-traits.html) implementation of our transformation in a new rust file
 - Hook it into [rust's module system](https://doc.rust-lang.org/book/ch07-02-defining-modules-to-control-scope-and-privacy.html)
@@ -105,9 +105,9 @@ We're going to start with the last step.
 
 ### Add a transformation to the central enum that lists all transformations
 
-Edit the file fastqrab/src/transformations.rs using your favorite editor.
+Edit the file fastqrab-steps/src/transformations.rs using your favorite editor.
 
-You are looking for 
+You are looking for
 ```rust
 pub enum Transformation {
     //Edits
@@ -128,62 +128,90 @@ pub enum Transformation {
     ...
 ```
 
-`edits::` in this case refers to a module below the `transformation` module, 
-which brings os to our next step:
+`edits::` in this case refers to a module below the `transformation` module,
+which brings us to our next step:
 
 
 ### Hook a step into the module system.
 
 
 We are going to tell the `edits` module that it has a submodule `funky_case`,
-and reexport one type called `FunkyCase' from `funky_case` so that the 
-rest of the rust code can use it.
+and reexport two types from `funky_case` so that the
+rest of the rust code can use it: the concrete `FunkyCase` type used at runtime,
+and the `PartialFunkyCase` type used during TOML parsing.
 
-Open `fastqrab/src/transformations/edits.rs` and add
+Open `fastqrab-steps/src/transformations/edits.rs` and add
 
 ```rust
 mod funky_case; // declare that we have a module funky_case(.rs)
 
-pub use funky_case::FunkyCase; //export our struct
+pub use funky_case::{FunkyCase, PartialFunkyCase}; // export our types
 ```
 
 ### Write the transformation
 
-A transformation is a struct that implements the 'Step' trait.
+Every transformation consists of three parts:
+
+- A struct with the `#[tpd]` attribute macro (which generates the `PartialFunkyCase` type used for TOML parsing)
+- An `impl VerifyIn<PartialConfig> for PartialFunkyCase` block for config-time validation
+- An `impl Step for FunkyCase` block for the actual runtime logic
+
+Additionally, the TOML framework requires that each step declares which tags it reads,
+via `impl TagUser for PartialTaggedVariant<PartialFunkyCase>`.
 
 To be usable, your struct needs to be included in the large `Transformation` enum listing all steps,
 which we accomplished in the previous steps.
 
 Now it's time to actually write the struct. Create a new file
-`fastqrab/src/transformations/edits/funky_case.rs`
-and put the following minimal example into it;
+`fastqrab-steps/src/transformations/edits/funky_case.rs`
+and put the following minimal example into it:
 
 ```rust
 use crate::transformations::prelude::*;
 
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub struct FunkyCase {
+#[derive(Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
+pub struct FunkyCase {}
+
+impl VerifyIn<PartialConfig> for PartialFunkyCase {
+    fn verify(
+        &mut self,
+        _parent: &PartialConfig,
+        _options: &VerifyOptions,
+    ) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        Ok(())
+    }
+}
+
+impl TagUser for PartialTaggedVariant<PartialFunkyCase> {
+    fn get_tag_usage(
+        &mut self,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
+        _segment_order: &[String],
+    ) -> TagUsageInfo<'_> {
+        TagUsageInfo::default()
+    }
 }
 
 impl Step for FunkyCase {
     fn apply(
         &self,
-        mut block: FastQBlocksCombined, // that's where the read data lives
-        _input_info: &InputInfo,        //ignore for now
-        _block_no: usize,               //ignore for now
+        block: FastQBlocksCombined, // that's where the read data lives
+        _input_info: &InputInfo,    //ignore for now
+        _block_no: usize,           //ignore for now
         _demultiplex_info: &OptDemultiplex, //ignore for now
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         //this doesn't do anything.
-
         Ok((block, true))
     }
 }
 ```
 
-At this point `cargo check` should show no error (but a warning about `mut block` not
-needing the mut because it's not being changed. Ignore that for now, we're going to
-to alter reads soon).
+At this point `cargo check` should show no errors.
 
 Our test case however will now fail with a different message:
 
@@ -211,7 +239,7 @@ You can simply compare them with diff
 
 ```
 >cd test_cases/single_step/funky_case/basic
-> diff actual/funky_read1.fq funky_read1.fq 
+> diff actual/funky_read1.fq funky_read1.fq
 2c2
 < AGTCAGTCAGTCAGTC
 ---
@@ -227,13 +255,37 @@ You can simply compare them with diff
 To actually change the reads, we are going to use a function
 that takes a callback that modifies each read in turn.
 
-Replace the contents of `fastqrab/src/transformations/edits/funky_case.rs` with this
+Replace the contents of `fastqrab-steps/src/transformations/edits/funky_case.rs` with this
 ```rust
 use crate::transformations::prelude::*;
 
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct FunkyCase {}
+
+impl VerifyIn<PartialConfig> for PartialFunkyCase {
+    fn verify(
+        &mut self,
+        _parent: &PartialConfig,
+        _options: &VerifyOptions,
+    ) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        Ok(())
+    }
+}
+
+impl TagUser for PartialTaggedVariant<PartialFunkyCase> {
+    fn get_tag_usage(
+        &mut self,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
+        _segment_order: &[String],
+    ) -> TagUsageInfo<'_> {
+        TagUsageInfo::default()
+    }
+}
 
 impl Step for FunkyCase {
     fn apply(
@@ -245,19 +297,15 @@ impl Step for FunkyCase {
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         //apply funky casing to all reads
         block.apply_in_place_wrapped(
-            SegmentIndex(0),  // in segment one, see below for configurabitlity
-            |read| { // a lambda function taking a WrappedFastQRead mutable reference
-            let mut lower = true; //so we can alternate
-            for char in read.seq_mut().iter_mut() { //for every character in the sequence
-                if lower {
-                    *char = char.to_ascii_lowercase()
-                } else {
-                    *char = char.to_ascii_uppercase()
+            SegmentIndex(0),  // in segment one, see below for configurability
+            |read| { // a lambda function taking a WrappedFastQReadMut mutable reference
+                let mut lower = true; //so we can alternate
+                for b in read.seq_mut().iter_mut() { //for every character in the sequence
+                    *b = if lower { b.to_ascii_lowercase() } else { b.to_ascii_uppercase() };
+                    lower = !lower;
                 }
-                lower = !lower;
-            }
-        }, 
-        None // if_tag support, see below
+            },
+            None, // if_tag support, see below
         );
 
         Ok((block, true))
@@ -300,11 +348,11 @@ FunkyCase
 
 We'll add this later, for now let's make FunkyCase configurable.
 
-We want it to work on any segment (not just the first one), support `if_tag` like 
-all the other read editing transformations and allow starting with either a lower or upper 
+We want it to work on any segment (not just the first one), support `if_tag` like
+all the other read editing transformations and allow starting with either a lower or upper
 case letter.
 
-Let's start with adding a mandatory boolean flag that decides whether 
+Let's start with adding a mandatory boolean flag that decides whether
 we start with a lowercase letter or not.
 
 Edit our test case and add the flag:
@@ -323,7 +371,7 @@ Edit our test case and add the flag:
 
 Then copy the test case for the reverse case:
 `cp  test_cases/single_step/funky_case/basic test_cases/single_step/funky_case/upper_first -r`
-and edit `start_with_lower = true` to `start_with_lower = false` in that test case's input.tom.
+and edit `start_with_lower = true` to `start_with_lower = false` in that test case's input.toml.
 
 Don't forget to change the expected output by replacing
 `test_cases/single_step/funky_case/upper_first/funky_read.fq`
@@ -339,7 +387,7 @@ HHHHHHHHHHHHHHHH
 ```
 
 Let it find the new test (`./dev/update_generated.sh`) and watch both of them fail with
-`cargo test`: 
+`cargo test`:
 
 ```
 # shown for only one of them.
@@ -364,10 +412,34 @@ Go back to `funky_case.rs` and replace it with
 ```rust
 use crate::transformations::prelude::*;
 
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct FunkyCase {
     start_with_lower: bool,
+}
+
+impl VerifyIn<PartialConfig> for PartialFunkyCase {
+    fn verify(
+        &mut self,
+        _parent: &PartialConfig,
+        _options: &VerifyOptions,
+    ) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        Ok(())
+    }
+}
+
+impl TagUser for PartialTaggedVariant<PartialFunkyCase> {
+    fn get_tag_usage(
+        &mut self,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
+        _segment_order: &[String],
+    ) -> TagUsageInfo<'_> {
+        TagUsageInfo::default()
+    }
 }
 
 impl Step for FunkyCase {
@@ -380,17 +452,12 @@ impl Step for FunkyCase {
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         //apply funky casing to all reads
         block.apply_in_place_wrapped(
-            SegmentIndex(0), // in segment one, see below for configurabitlity
+            SegmentIndex(0), // in segment one, see below for configurability
             |read| {
-                // a lambda function taking a WrappedFastQRead mutable reference
                 let mut lower = self.start_with_lower; //so we can alternate
-                for char in read.seq_mut().iter_mut() {
+                for b in read.seq_mut().iter_mut() {
                     //for every character in the sequence
-                    if lower {
-                        *char = char.to_ascii_lowercase()
-                    } else {
-                        *char = char.to_ascii_uppercase()
-                    }
+                    *b = if lower { b.to_ascii_lowercase() } else { b.to_ascii_uppercase() };
                     lower = !lower;
                 }
             },
@@ -414,7 +481,7 @@ it to work on a subset of reads.
 
 We're going to do both at once now.
 
-Duplicate the basic test case once more: 
+Duplicate the basic test case once more:
 ```
 cp  test_cases/single_step/funky_case/basic test_cases/single_step/funky_case/if_tag_segment -r
 ```
@@ -486,56 +553,61 @@ Caused by:
 ```
 
 
-Open `fastqrab/src/transformations/edits/funky_case.rs` and modify it to
+Open `fastqrab-steps/src/transformations/edits/funky_case.rs` and replace it with the
+full version that has segment and `if_tag` support:
 
 ```rust
 use crate::transformations::prelude::*;
 
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct FunkyCase {
     start_with_lower: bool,
 
-    #[serde(default)] // accept omission iff exactly one Segment is definied in config
-    segment: SegmentOrAll,
+    #[schemars(with = "String")]
+    #[tpd(adapt_in_verify(String))]
+    segment: SegmentIndex,
 
-    #[serde(default)]
-    #[serde(skip)] // do not read this from configuration
-    segment_index: Option<SegmentIndexOrAll>, // the internal representation after validation
+    #[tpd(default)]
+    if_tag: Option<ConditionalTagLabel>,
+}
 
-    #[serde(default)]
-    if_tag: Option<ConditionalTagLabel>, // defaults to 'None' if omitted
+impl VerifyIn<PartialConfig> for PartialFunkyCase {
+    fn verify(
+        &mut self,
+        parent: &PartialConfig,
+        _options: &VerifyOptions,
+    ) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        // validate that the named segment exists in the input config
+        self.segment.validate_segment(parent);
+        Ok(())
+    }
+}
+
+impl TagUser for PartialTaggedVariant<PartialFunkyCase> {
+    fn get_tag_usage(
+        &mut self,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
+        _segment_order: &[String],
+    ) -> TagUsageInfo<'_> {
+        let inner = self
+            .toml_value
+            .as_mut()
+            .expect("get_tag_usage should only be called after successful verification");
+
+        TagUsageInfo {
+            used_tags: vec![inner.if_tag.to_used_tag(&[][..])],
+            must_see_all_tags: true,
+            ..Default::default()
+        }
+    }
 }
 
 impl Step for FunkyCase {
-    fn uses_tags(
-        //inform the framework about the tags the step uses
-        &self,
-        _tags_available: &IndexMap<TagLabel, TagMetadata>, //only relevant for Steps that have no
-                                                         //user-defined set of tags to process
-    ) -> Option<Vec<(String, &[TagValueType])>> {
-        // runs during config validation
-        self.if_tag.as_ref().map(|tag_str| {
-            let cond_tag = ConditionalTag::from_string(tag_str.clone());
-            vec![(
-                cond_tag.tag.clone(),
-                &[
-                    TagValueType::Bool,
-                    TagValueType::String,
-                    TagValueType::Location,
-                ][..],
-            )]
-        })
-    }
-
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        // runs during config validation
-        // convert the segment name to our internal index representation
-        // also makes sure we have a valid segment
-        self.segment_index = Some(self.segment.validate(input_def)?);
-        Ok(())
-    }
-
     fn apply(
         &self,
         mut block: FastQBlocksCombined, // that's where the read data lives
@@ -543,32 +615,21 @@ impl Step for FunkyCase {
         _block_no: usize,               //ignore for now
         _demultiplex_info: &OptDemultiplex, //ignore for now
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        // we need to generate a bool vector for the if_tag condition
-        let condition = self.if_tag.as_ref().map(|tag_str| {
-            let cond_tag = ConditionalTag::from_string(tag_str.clone());
-            get_bool_vec_from_tag(&block, &cond_tag)
-        });
+        let condition = self
+            .if_tag
+            .as_ref()
+            .map(|tag| get_bool_vec_from_tag(&block, tag));
 
-        //apply funky casing to all reads with if_tag
-        block.apply_in_place_wrapped_plus_all(
-            // also accept 'all', and then apply to all segments
-            // by calling the function multiple times
-            self.segment_index
-                .expect("Segment index set in validate_segments"), 
+        block.apply_in_place_wrapped(
+            self.segment,
             |read| {
-                // a lambda function taking a `WrappedFastQRead` mutable reference
-                let mut lower = self.start_with_lower; //so we can alternate
-                for char in read.seq_mut().iter_mut() {
-                    //for every character in the sequence
-                    if lower {
-                        *char = char.to_ascii_lowercase()
-                    } else {
-                        *char = char.to_ascii_uppercase()
-                    }
+                let mut lower = self.start_with_lower;
+                for b in read.seq_mut().iter_mut() {
+                    *b = if lower { b.to_ascii_lowercase() } else { b.to_ascii_uppercase() };
                     lower = !lower;
                 }
             },
-            condition.as_deref(), // if_tag support
+            condition.as_deref(),
         );
 
         Ok((block, true))
@@ -581,11 +642,11 @@ the usual amenities, but lacks documentation.
 
 To add this is left as an exercise for the reader,
 but you'll need to edit `fastqrab/src/template.toml`,
-`docs/content/docs/reference/llm-guide.md` and 
-add a file `docs/content/docs/reference/modification-steps/FunkyCase.md` 
+`docs/content/docs/reference/llm-guide.md` and
+add a file `docs/content/docs/reference/modification-steps/FunkyCase.md`
 which need to include a valid TOML block with `action = "FunkyCase"` and all available options documented.
 
-You'll also need to add a microbenchmark to 
+You'll also need to add a microbenchmark to
 `fastqrab/benches/simple_benchmarks.rs`.
 
 Congratulations, you just wrote your first transformation for fastqrab!
