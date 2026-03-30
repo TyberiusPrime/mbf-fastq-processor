@@ -32,9 +32,13 @@ must deliver the same output bits. Every time.
 
 We allow ourselves one, perhaps useful, exception:
 
-The reports (JSON and HTML ) by default leak information about the runtime environment,
+The reports (JSON and HTML ) by default leak information about the run-time environment,
 such as the exact input configuration, the names of the input files,
 the working directory and the version of fastqrab used.
+
+For version changes, post 1.0 we will consider anything that changes
+the uncompressed output (given fixed input files) a bug. If we have to
+change existing steps, we will introduce versioning on them.
 
 ## A lack of surprises
 
@@ -44,7 +48,7 @@ It does not trim, filter, or mangle them in any way without an explicit `[[step]
 
 And every knob that is not absolutely obvious must be set explicitly in the configuration.
 
-This makes getting started harder (but the user's going to be copy/pasting configuration
+This makes getting started harder (though the user's going to be copy/pasting configuration
 anyway), but prevents situations where an update changed a default and now your
 output is different and you have no idea where to start looking.
 

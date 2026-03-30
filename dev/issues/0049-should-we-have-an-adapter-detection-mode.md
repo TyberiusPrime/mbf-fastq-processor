@@ -1,4 +1,4 @@
-status: open
+status: closed
 # should we have an adapter detection mode?
 
 I'm unwilling to hook it up for auto-trim, but

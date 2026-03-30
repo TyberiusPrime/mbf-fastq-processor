@@ -1,4 +1,4 @@
-status: open
+status: closed
 # document 'adapters you might want to cut'. Fastp appearantly has an automatic mode?
 
 BGI:

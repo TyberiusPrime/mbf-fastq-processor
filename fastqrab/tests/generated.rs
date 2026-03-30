@@ -9444,3 +9444,13 @@ fn test_cases_x_08_x_length_x_filtering() {
         1,
     );
 }
+
+#[test]
+fn test_cases_x_09_x_fastp_x_equivalent() {
+    println!("Test case is in: cookbooks/09-fastp-equivalent");
+    run_test(
+        std::path::Path::new("../cookbooks/09-fastp-equivalent"),
+        "input.toml",
+        1,
+    );
+}

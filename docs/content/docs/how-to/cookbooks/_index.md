@@ -16,3 +16,4 @@ Complete, runnable examples demonstrating common use cases.
 - [06-adapter-trimming](06-adapter-trimming) - Cookbook 06: Adapter Trimming with PolyA Tail Removal
 - [07-demultiplexing](07-demultiplexing) - Cookbook 07: Demultiplexing by Inline Barcode
 - [08-length-filtering](08-length-filtering) - Cookbook 08: Read Length Filtering and Truncation
+- [09-fastp-equivalent](09-fastp-equivalent) - Cookbook 09: Fastp-Equivalent Workflow

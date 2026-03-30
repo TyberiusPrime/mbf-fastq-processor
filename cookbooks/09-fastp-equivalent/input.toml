@@ -1,0 +1,84 @@
+[input]
+  r1 = 'R1.fq'
+
+
+
+# equivalent to -g | --trim_poly_g
+# first we must find out where they are
+[[step]]
+    action = "ExtractPolyTail"
+    out_label = "polyG"
+    min_length = 10 # --poly_g_min_len, default is 10 in fastp
+    base = "G" 
+    max_mismatch_rate = 0.125 # not configurable in fastp, but 1/8 is what it uses internally.
+    max_consecutive_mismatches = 5 # not configurable in fastp
+
+# then cut them off.
+[[step]]
+  action = 'TrimAtTag'
+  in_label = 'polyG'
+  direction ='end'
+  keep_tag = false
+
+# --adapter_sequence AGAT...
+# ( auto detected in fastp after a a few thousand reads.) 
+[[step]]
+  action = 'ExtractIUPAC'
+  out_label='adapter'
+  query = "AGATCGGAAGAGCACACGTCTGAACTCCAGTCA"
+  anchor = 'anywhere'
+  max_mismatches = 5
+
+[[step]]
+  action = 'TrimAtTag'
+  in_label = 'adapter'
+  direction ='end'
+  keep_tag = false
+
+# fastp first cuts, then calculates the qualities!
+
+
+# -- qualified_quality_phred  15
+[[step]]
+  action = 'CalcQualifiedBases'
+  out_label = 'qual_base_rate'
+  threshold = 48 # our qualities are in FASTQ-space, not in phred spacep
+  operator = ">="
+  relative = true # we want a rate.
+
+
+[[step]]
+  action = 'CalcNCount'
+  out_label = 'n_count'
+  relative = false
+
+[[step]]
+  action = 'FilterByNumericTag'
+  max_value = 6
+  keep_or_remove='keep'
+  in_label = 'n_count'
+ 
+
+[[step]]
+  action = 'FilterByNumericTag'
+  min_value = 0.60
+  keep_or_remove='keep'
+  in_label = 'qual_base_rate'
+  
+
+[[step]]
+  action = 'CalcLength'
+  out_label = 'length_r1'
+
+[[step]]
+  action = 'FilterByNumericTag'
+  min_value = 15
+  keep_or_remove='keep'
+  in_label = 'length_r1'
+ 
+
+
+
+[output]
+  prefix = 'output'
+

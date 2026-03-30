@@ -57,6 +57,12 @@ pub const COOKBOOKS: &[Cookbook] = &[
         readme: include_str!("../../cookbooks/08-length-filtering/README.md"),
         toml: include_str!("../..//cookbooks/08-length-filtering/input.toml"),
     },
+    Cookbook {
+        number: 9,
+        name: "09-fastp-equivalent",
+        readme: include_str!("../../cookbooks/09-fastp-equivalent/README.md"),
+        toml: include_str!("../..//cookbooks/09-fastp-equivalent/input.toml"),
+    },
 ];
 
 /// Get all cookbook names and their paths
