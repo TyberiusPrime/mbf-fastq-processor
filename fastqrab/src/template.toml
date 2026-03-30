@@ -136,7 +136,7 @@
 #    replacement = "$1"  # optional standard regex replacement syntax
 #    source = "read1" # An input segment (to read from sequence), or name:<segment> to read from a read name.
 
-# The replacement supports replacing other tag's values into your string. Use `[[tag]]` to achieve that.
+## The replacement supports replacing other tag's values into your string. Use `[[tag]]` to achieve that.
 
 
 # ==== ExtractRegion ====
