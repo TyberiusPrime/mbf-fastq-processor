@@ -1,3 +1,18 @@
+<a href="{{"docs/concepts/mascot" | relURL}}">
+  <img src="{{"guenther_tiny.jpg" | relURL}}" width=150 height=150 style="background-color:black"
+    alt="Guenther the mascot of fast crab"
+  >
+</a>
+  <div class="theme-toggle-container">
+    <label class="theme-toggle" for="theme-toggle">
+      <input type="checkbox" id="theme-toggle" aria-label="Toggle dark mode">
+      <span class="toggle-slider">
+        <span class="toggle-icon sun">☀️</span>
+        <span class="toggle-icon moon">🌙</span>
+      </span>
+    </label>
+  </div>
+
 {{ if default true .Site.Params.BookSearch }}
 <div class="book-search hidden">
   <input type="text" id="book-search-input" placeholder="{{ i18n "Search" }} (press / to focus)" aria-label="{{ i18n "Search" }}" maxlength="64" data-hotkeys="s/" />
