@@ -4,7 +4,8 @@
 
 
 [[step]]
-    action = 'CalcNCount'
+    action = 'CalcNContent'
+    relative = false
 	out_label = 'nn'
 
 [[step]]

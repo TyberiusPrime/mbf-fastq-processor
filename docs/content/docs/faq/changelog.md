@@ -15,6 +15,8 @@
 - New step: ExtractIUPACSuffix added
 - OtherFile unified: OtherFileByName and OtherFileBySequence merged into one step
 - ExtractAnchor merged into ExtractRegions
+- NCount -> NContent to be inline with GCContent
+- NContent/GCContent now support (and require) relative (counts or rate?)
 
 ### Step changes
 

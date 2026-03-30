@@ -15,7 +15,8 @@
     keep_tag = false
 
 [[step]]
-    action = 'CalcNCount'
+    action = 'CalcNContent'
+    relative = false
     out_label = 'n_count'
 
 [[step]]

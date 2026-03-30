@@ -279,10 +279,10 @@ fn benchmark_key_steps(c: &mut Criterion) {
             thread_count,
         ),
         BenchmarkConfig::new(
-            "CalcNCount",
+            "CalcNContent",
             r#"[[step]]
-    action = "CalcNCount"
-    out_label = "n_count"
+    action = "CalcNContent"
+    out_label = "n_content"
     segment = "read1"
 
 [[step]]

@@ -2,11 +2,11 @@ Error Details ==
 Error 1/2
    ╭─config.toml
    ┆
-44 │ [[step]]
-45 │     action = 'Report'
-46 │     name = 'test_histogram'
-47 │     count = false
-48 │     tag_histograms = ['prefix_7', 'gc_content', 'read_length__', 'regex', 'read_no_lt_4', 'string_value']
+45 │ [[step]]
+46 │     action = 'Report'
+47 │     name = 'test_histogram'
+48 │     count = false
+49 │     tag_histograms = ['prefix_7', 'gc_content', 'read_length__', 'regex', 'read_no_lt_4', 'string_value']
    ┆                       ─────┬────
    ┆                            │
    ┆                            ╰────────────────────────────────────────────────────────────────────────────── No such tag: 'prefix_7'
@@ -18,11 +18,11 @@ Hint: Did you mean: 'prefix_5', 'regex', or 'read_length'?
 Error 2/2
    ╭─config.toml
    ┆
-44 │ [[step]]
-45 │     action = 'Report'
-46 │     name = 'test_histogram'
-47 │     count = false
-48 │     tag_histograms = ['prefix_7', 'gc_content', 'read_length__', 'regex', 'read_no_lt_4', 'string_value']
+45 │ [[step]]
+46 │     action = 'Report'
+47 │     name = 'test_histogram'
+48 │     count = false
+49 │     tag_histograms = ['prefix_7', 'gc_content', 'read_length__', 'regex', 'read_no_lt_4', 'string_value']
    ┆                                                 ───────┬───────
    ┆                                                        │
    ┆                                                        ╰────────────────────────────────────────────────── No such tag: 'read_length__'

@@ -2,7 +2,8 @@
     read1 = 'input_read1.fq'
 
 [[step]]
-    action = 'CalcNCount'
+    action = 'CalcNContent'
+    relative = false
     segment = 'read1'
     out_label = 'n_count'
 

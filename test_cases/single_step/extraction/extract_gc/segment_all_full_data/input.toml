@@ -10,26 +10,31 @@
 
 [[step]]
     action = 'CalcGCContent'
+    relative = true
     out_label = 'total_gc'
     segment = 'All'
 
 [[step]]
     action = 'CalcGCContent'
+    relative = true
     out_label = 'read1_gc'
     segment = 'read1'
 
 [[step]]
     action = 'CalcGCContent'
+    relative = true
     out_label = 'read2_gc'
     segment = 'read2'
 
 [[step]]
     action = 'CalcGCContent'
+    relative = true
     out_label = 'index1_gc'
     segment = 'index1'
 
 [[step]]
     action = 'CalcGCContent'
+    relative = true
     out_label = 'index2_gc'
     segment = 'index2'
 

@@ -6,10 +6,12 @@
     n = 2
 
 [[step]]
-    action = 'CalcNCount'
+    action = 'CalcNContent'
+    relative = false
     out_label = 'total_n'
 [[step]]
-    action = 'CalcNCount'
+    action = 'CalcNContent'
+    relative = false
     out_label = 'read1_n'
 [[step]]
 	action = "StoreTagInComment"

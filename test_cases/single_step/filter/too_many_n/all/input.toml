@@ -9,7 +9,8 @@
 
 
 [[step]]
-    action = 'CalcNCount'
+    action = 'CalcNContent'
+    relative = false
 	segment = 'all'
 	out_label = 'nn'
 

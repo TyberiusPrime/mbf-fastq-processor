@@ -5,7 +5,7 @@ mod complexity;
 mod expected_error;
 mod kmers;
 mod length;
-mod n_count;
+mod n_content;
 mod qualified_bases;
 
 mod gc_content;
@@ -21,7 +21,7 @@ use fastqrab_config::{
 pub use gc_content::{GCContent, PartialGCContent};
 pub use kmers::{Kmers, PartialKmers};
 pub use length::{Length, PartialLength};
-pub use n_count::{NCount, PartialNCount};
+pub use n_content::{NContent, PartialNContent};
 pub use qualified_bases::{PartialQualifiedBases, QualifiedBases};
 
 pub(crate) fn extract_numeric_tags<F>(

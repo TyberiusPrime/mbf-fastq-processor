@@ -289,8 +289,10 @@ pub enum Transformation {
     ExtractRegions(extract::Regions),
     CalcLength(calc::Length),
     CalcBaseContent(calc::BaseContent),
+    #[tpd(alias = "CalcGCCount")]
     CalcGCContent(calc::GCContent),
-    CalcNCount(calc::NCount),
+    #[tpd(alias = "CalcNCount")]
+    CalcNContent(calc::NContent),
     CalcComplexity(calc::Complexity),
     CalcQualifiedBases(calc::QualifiedBases),
     CalcExpectedError(calc::ExpectedError),

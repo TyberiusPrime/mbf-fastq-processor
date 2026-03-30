@@ -236,12 +236,13 @@
 #    k = 21  # Kmer length
 #    min_count = 2  # (optional, default: 1) Minimum occurrences (forward+reverse if count_reverse_complement is set) in reference to include kmer
 
-# ==== CalcNCount ====
+# ==== CalcNContent ====
 ## Calc the number of Ns in a read (wrapper around ExtractBaseContent).
 # [[step]]
-#    action = "CalcNCount"
+#    action = "CalcNContent"
 #    out_label = "ncount"
 #    segment = "read1" # Any of your input segments, or 'All'
+#    relative = false # whether to output counts (false) or a rate (true)
 
 # ==== CalcBaseContent ====
 ## Calc the percentage of specified bases, ignoring any bases you choose.
@@ -259,6 +260,7 @@
 #    action = "CalcGCContent"
 #    out_label = "gc_content"
 #    segment = "read1" # Any of your input segments, or 'All'
+#    relative = false # whether to output counts (false) or a rate (true)
 
 # ==== CalcQualifiedBases ====
 ## Count number of high-quality bases
@@ -268,6 +270,7 @@
 #    op = 'below' # Do we count phred scores better (below) or worse (above) than the threshold?
 #    segment = "read1" # Any of your input segments, or 'All'
 #    out_label = "tag_name"
+#    relative = false # whether to output counts (false) or a rate (true)
 
 ## op also takes the values
 ## * worse / above / > / gt

@@ -24,6 +24,7 @@
 # Calculate GC content for each read
 [[step]]
     action = 'CalcGCContent'
+    relative = true
     segment = 'read1'
     out_label= 'gc_content'
 

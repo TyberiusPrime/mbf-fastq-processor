@@ -643,6 +643,7 @@ impl PartialConfig {
         }
     }
 
+    ///expansion of transforms into their final form
     pub fn expand_transformations(&mut self) {
         self.transform.sync_nested_state(); // since we normally would only update this once
         // verify is done, but we need accurate info
@@ -747,7 +748,10 @@ impl PartialConfig {
                                             crate::transformations::calc::PartialBaseContent::new(
                                                 step_config.out_label,
                                                 step_config.segment,
-                                                true,
+                                                *step_config
+                                                    .relative
+                                                    .as_ref()
+                                                    .expect("was required"),
                                                 BString::from("GC"),
                                                 BString::from("N"),
                                             ),
@@ -757,7 +761,7 @@ impl PartialConfig {
                                 ));
                             }
                         }
-                        PartialTransformation::CalcNCount(step_config) => {
+                        PartialTransformation::CalcNContent(step_config) => {
                             let tag_span = step_config.tag_span.clone();
                             if let Some(step_config) = step_config.toml_value.take().into_inner() {
                                 push_new(PartialTransformation::CalcBaseContent(
@@ -766,7 +770,10 @@ impl PartialConfig {
                                             crate::transformations::calc::PartialBaseContent::new(
                                                 step_config.out_label,
                                                 step_config.segment,
-                                                false,
+                                                *step_config
+                                                    .relative
+                                                    .as_ref()
+                                                    .expect("was required"),
                                                 BString::from("N"),
                                                 BString::default(),
                                             ),

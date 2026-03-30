@@ -4056,15 +4056,25 @@ fn test_process_config_from_stdin() {
         .spawn()
         .unwrap();
 
-    cmd.stdin.take().unwrap().write_all(MINIMAL_CONFIG.as_bytes()).unwrap();
+    cmd.stdin
+        .take()
+        .unwrap()
+        .write_all(MINIMAL_CONFIG.as_bytes())
+        .unwrap();
     let output = cmd.wait_with_output().unwrap();
 
     let stderr = std::str::from_utf8(&output.stderr).unwrap();
     assert!(output.status.success(), "process - failed: {stderr}");
 
     let result = fs::read_to_string(temp_path.join("output_read1.fq")).unwrap();
-    assert!(result.contains("@read1"), "expected read1 in output, got: {result}");
-    assert!(!result.contains("@read2"), "Head n=1 should not include read2");
+    assert!(
+        result.contains("@read1"),
+        "expected read1 in output, got: {result}"
+    );
+    assert!(
+        !result.contains("@read2"),
+        "Head n=1 should not include read2"
+    );
 }
 
 #[test]
@@ -4078,7 +4088,11 @@ fn test_validate_config_from_stdin_valid() {
         .spawn()
         .unwrap();
 
-    cmd.stdin.take().unwrap().write_all(MINIMAL_CONFIG.as_bytes()).unwrap();
+    cmd.stdin
+        .take()
+        .unwrap()
+        .write_all(MINIMAL_CONFIG.as_bytes())
+        .unwrap();
     let output = cmd.wait_with_output().unwrap();
 
     let stdout = std::str::from_utf8(&output.stdout).unwrap();
@@ -4100,11 +4114,18 @@ fn test_validate_config_from_stdin_invalid() {
         .spawn()
         .unwrap();
 
-    cmd.stdin.take().unwrap().write_all(bad_config.as_bytes()).unwrap();
+    cmd.stdin
+        .take()
+        .unwrap()
+        .write_all(bad_config.as_bytes())
+        .unwrap();
     let output = cmd.wait_with_output().unwrap();
 
     let stderr = std::str::from_utf8(&output.stderr).unwrap();
-    assert!(!output.status.success(), "expected failure for invalid config");
+    assert!(
+        !output.status.success(),
+        "expected failure for invalid config"
+    );
     assert!(
         stderr.contains("Heaad"),
         "expected error about 'Heaad', got: {stderr}"
@@ -4124,7 +4145,11 @@ fn test_process_stdin_config_incompatible_with_stdin_fastq() {
         .spawn()
         .unwrap();
 
-    cmd.stdin.take().unwrap().write_all(stdin_config.as_bytes()).unwrap();
+    cmd.stdin
+        .take()
+        .unwrap()
+        .write_all(stdin_config.as_bytes())
+        .unwrap();
     let output = cmd.wait_with_output().unwrap();
 
     let stderr = std::str::from_utf8(&output.stderr).unwrap();

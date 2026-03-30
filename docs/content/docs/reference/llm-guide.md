@@ -121,6 +121,7 @@ Keep reads with at least 100 high-quality bases.
     threshold = 'C'       # Phred+33 encoding: 'C' = Phred 34
     op = 'below'          # Count bases with quality >= threshold
     out_label = 'hq_bases'
+    relative = true
 
 [[step]]
     action = 'FilterByNumericTag'
@@ -218,6 +219,7 @@ Filter based on multiple conditions: GC content and length.
     action = 'CalcGCContent'
     segment = 'read1'
     out_label = 'gc'
+    relative = true
 
 [[step]]
     action = 'CalcLength'
@@ -589,6 +591,7 @@ Calculate GC percentage (0.0-1.0).
     action = 'CalcGCContent'
     segment = 'read1'              # TYPE: segment name or 'All', REQUIRED
     out_label = 'gc'               # TYPE: string, REQUIRED
+    relative = true                # TYPE: bool, REQUIRED
 ```
 
 ### CalcBaseContent
@@ -609,7 +612,7 @@ Calculate custom base percentage.
 - `true`: Returns percentage (0.0-1.0)
 - `false`: Returns absolute count (bases_to_ignore not allowed)
 
-### CalcNCount
+### CalcNContent
 
 Count N bases (wrapper around CalcBaseContent).
 
@@ -618,6 +621,7 @@ Count N bases (wrapper around CalcBaseContent).
     action = 'CalcNCount'
     segment = 'read1'              # TYPE: segment name or 'All', REQUIRED
     out_label = 'n_count'          # TYPE: string, REQUIRED
+    relative = true                # TYPE: bool, REQUIRED
 ```
 
 ### CalcQualifiedBases
@@ -631,6 +635,7 @@ Count bases above/below quality threshold.
     threshold = 'C'                # TYPE: char (Phred+33), REQUIRED
     op = 'below'                   # TYPE: string, REQUIRED
     out_label = 'hq_bases'         # TYPE: string, REQUIRED
+    relative = true                # TYPE: bool, REQUIRED
 ```
 
 **op VALUES**:
@@ -706,6 +711,7 @@ Calculate arithmetic expression combining tags.
     action = 'CalcGCContent'
     segment = 'read1'
     out_label = 'gc'
+    relative = true
 
 [[step]]
     action = 'CalcLength'
@@ -757,6 +763,7 @@ Calculate arithmetic expression combining tags.
     action = 'CalcGCContent'
     segment = 'read1'
     out_label = 'gc'
+    relative = true
 
 [[step]]
     action = 'CalcLength'
@@ -769,6 +776,7 @@ Calculate arithmetic expression combining tags.
     threshold = 'I'                # Phred+33 char for Q40
     op = 'above'
     out_label = 'hq_bases'
+    relative = true
 
 [[step]]
     action = 'CalcBaseContent'

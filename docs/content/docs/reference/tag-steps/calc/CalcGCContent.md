@@ -8,6 +8,7 @@ title: Calc GC Content
     action = "CalcGCContent"
     segment = "read1" # Any of your input segments, or 'All'
     out_label = "gc"
+    relative = true   # a rate (true) or a count (false)
 ```
 
 Count what percentage of bases are GC (as opposed to AT).

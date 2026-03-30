@@ -7,6 +7,7 @@
 
 [[step]]
     action = 'CalcGCContent'
+    relative = true
     out_label = 'gc_content'
 [[step]]
     action = 'StoreTagInComment'

@@ -42,6 +42,9 @@ pub struct QualifiedBases {
     #[tpd(alias = "op")]
     pub operator: Operator,
 
+    #[tpd(alias = "rate")]
+    pub relative: bool,
+
     #[schemars(with = "String")]
     #[tpd(adapt_in_verify(String))]
     segment: SegmentIndexOrAll,
@@ -92,6 +95,7 @@ impl Step for QualifiedBases {
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let op = self.operator;
+        let relative = self.relative;
         let threshold = self.threshold;
         let one_read = |read: &WrappedFastQRead| {
             let it = read.qual().iter();
@@ -101,7 +105,11 @@ impl Step for QualifiedBases {
                 Operator::AboveOrEqual => it.map(|x| usize::from(*x >= threshold)).sum(),
                 Operator::BelowOrEqual => it.map(|x| usize::from(*x <= threshold)).sum(),
             };
-            count as f64
+            if relative {
+                count as f64 / read.len() as f64
+            } else {
+                count as f64
+            }
         };
 
         extract_numeric_tags_plus_all(

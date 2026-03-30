@@ -2,14 +2,14 @@ Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
-14 │ [[step]]
-15 │     action = 'EvalExpression'
+15 │ [[step]]
+16 │     action = 'EvalExpression'
    ┆              ────────┬───────
    ┆                      │
    ┆                      ╰──────── In this step
    ┆
-16 │     out_label = 'n_rate'
-17 │     expression = ''
+17 │     out_label = 'n_rate'
+18 │     expression = ''
    ┆                  ─┬
    ┆                   │
    ┆                   ╰─ expression cannot be empty

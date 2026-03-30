@@ -6,7 +6,8 @@
     n = 2
 
 [[step]]
-    action = 'CalcNCount'
+    action = 'CalcNContent'
+    relative = false
     out_label = 'n_count'
 
 [[step]]

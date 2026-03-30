@@ -5,27 +5,32 @@
     index2 = 'input_index2.fq'
 
 [[step]]
-    action = 'CalcNCount'
+    action = 'CalcNContent'
+    relative = false
     out_label = 'total_n'
     segment = 'All'
 
 [[step]]
-    action = 'CalcNCount'
+    action = 'CalcNContent'
+    relative = false
     out_label = 'read1_n'
     segment = 'read1'
 
 [[step]]
-    action = 'CalcNCount'
+    action = 'CalcNContent'
+    relative = false
     out_label = 'read2_n'
     segment = 'read2'
 
 [[step]]
-    action = 'CalcNCount'
+    action = 'CalcNContent'
+    relative = false
     out_label = 'index1_n'
     segment = 'index1'
 
 [[step]]
-    action = 'CalcNCount'
+    action = 'CalcNContent'
+    relative = false
     out_label = 'index2_n'
     segment = 'index2'
 

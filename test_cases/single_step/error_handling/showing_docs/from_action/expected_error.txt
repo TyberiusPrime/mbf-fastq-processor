@@ -8,8 +8,9 @@ Error 1/1
   ┆                       │
   ┆                       ╰────────── In this step
   ┆
-6 │     out_label = 'qb'
-7 │     op = 'nosuchop'
+6 │     relative = false
+7 │     out_label = 'qb'
+8 │     op = 'nosuchop'
   ┆          ─────┬────
   ┆               │
   ┆               ╰───── Invalid enum variant: 'nosuchop'

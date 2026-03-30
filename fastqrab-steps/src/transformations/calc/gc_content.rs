@@ -9,6 +9,8 @@ pub struct GCContent {
     #[schemars(with = "String")]
     #[tpd(adapt_in_verify(String))]
     pub segment: SegmentIndexOrAll,
+    #[tpd(alias = "rate")]
+    pub relative: bool,
 }
 
 impl VerifyIn<PartialConfig> for PartialGCContent {

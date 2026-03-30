@@ -3,6 +3,7 @@
 
 [[step]]
     action= 'CalcQualifiedBases'
+    relative = false
     out_label = 'qb'
     op = 'nosuchop'
     threshold = 5

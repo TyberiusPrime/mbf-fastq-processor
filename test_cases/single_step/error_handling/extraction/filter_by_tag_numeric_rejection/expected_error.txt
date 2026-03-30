@@ -2,14 +2,14 @@ Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
- 8 │ [[step]]
- 9 │     action = 'FilterByTag'
+ 9 │ [[step]]
+10 │     action = 'FilterByTag'
    ┆              ──────┬──────
    ┆                    │
    ┆                    ╰─────── In this step
    ┆
-10 │     keep_or_remove = 'Keep'
-11 │     in_label = 'gc_content'
+11 │     keep_or_remove = 'Keep'
+12 │     in_label = 'gc_content'
    ┆                ──────┬─────
    ┆                      │
    ┆                      ╰────── Incompatible tag type

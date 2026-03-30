@@ -2,12 +2,12 @@ Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
- 9 │ [[step]]
-10 │     action = 'StoreTagInSequence'
+10 │ [[step]]
+11 │     action = 'StoreTagInSequence'
    ┆              ──────────┬─────────
    ┆                        │
    ┆                        ╰────────── In this step
-11 │     in_label = 'gc_content'
+12 │     in_label = 'gc_content'
    ┆                ──────┬─────
    ┆                      │
    ┆                      ╰────── Incompatible tag type

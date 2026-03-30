@@ -2,15 +2,15 @@ Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
-14 │ [[step]]
-15 │     action = 'EvalExpression'
+15 │ [[step]]
+16 │     action = 'EvalExpression'
    ┆              ────────┬───────
    ┆                      │
    ┆                      ╰──────── In this step
    ┆
-16 │     out_label = 'n_rate'
-17 │     expression = 'len_read1 + 23)'
-18 │     result_type = 'numeric'
+17 │     out_label = 'n_rate'
+18 │     expression = 'len_read1 + 23)'
+19 │     result_type = 'numeric'
    ┆                            ┬
    ┆                            │
    ┆                            ╰─ Syntax error

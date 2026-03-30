@@ -4,6 +4,7 @@
 
 [[step]]
     action = 'CalcQualifiedBases'
+    relative = false
 	out_label = 'qb'
     threshold='C'
 	op = 'above'

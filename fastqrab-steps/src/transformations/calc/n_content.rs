@@ -4,14 +4,17 @@ use crate::transformations::prelude::*;
 #[derive(Clone, JsonSchema)]
 #[tpd]
 #[derive(Debug)]
-pub struct NCount {
+pub struct NContent {
     pub out_label: TagLabel,
     #[schemars(with = "String")]
     #[tpd(adapt_in_verify(String))]
     pub segment: SegmentIndexOrAll,
+
+    #[tpd(alias = "rate")]
+    pub relative: bool,
 }
 
-impl VerifyIn<PartialConfig> for PartialNCount {
+impl VerifyIn<PartialConfig> for PartialNContent {
     fn verify(
         &mut self,
         parent: &PartialConfig,
@@ -26,7 +29,7 @@ impl VerifyIn<PartialConfig> for PartialNCount {
 }
 
 // cov:excl-start
-impl TagUser for PartialTaggedVariant<PartialNCount> {
+impl TagUser for PartialTaggedVariant<PartialNContent> {
     #[mutants::skip]
     fn get_tag_usage(
         &mut self,
@@ -37,7 +40,7 @@ impl TagUser for PartialTaggedVariant<PartialNCount> {
     }
 }
 
-impl Step for NCount {
+impl Step for NContent {
     fn apply(
         &self,
         _block: FastQBlocksCombined,
@@ -45,7 +48,7 @@ impl Step for NCount {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        bail!("ExtractNCount is converted into ExtractBaseContent during expansion")
+        bail!("ExtractNContent is converted into ExtractBaseContent during expansion")
     }
 }
 // cov:excl-stop

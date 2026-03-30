@@ -1,4 +1,4 @@
-#CalcQualifiedBases
+# CalcQualifiedBases
 
 
 ```toml
@@ -10,6 +10,7 @@
     op = 'worse' # see below.
     segment = "read1" # Any of your input segments, or 'All'
     out_label = "tag_name"
+    relative = true   # a rate (true) or a count (false)
 ```
 
 Calculate the number of bases that are 'qualified', that is 
