@@ -27,6 +27,7 @@ pub struct StoreTagsInTable {
     output_handles: Option<OutputHandles>,
 
     #[allow(dead_code)] //only used in deser
+    #[tpd(alias = "tags")]
     in_labels: Option<Vec<TagLabel>>,
 
     #[tpd(skip)]
