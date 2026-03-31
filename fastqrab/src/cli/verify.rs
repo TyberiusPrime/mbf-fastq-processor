@@ -415,17 +415,19 @@ fn execute_processor(
             .spawn()
             .context("Failed to spawn fastqrab subprocess")?;
 
-        if let Some(mut stdin) = child.stdin.take() {
-            stdin
-                .write_all(&stdin_content)
-                .context("Failed to write to subprocess stdin")?;
-            stdin.flush().context("Failed to flush subprocess stdin")?;
-            drop(stdin);
-        } // cov:excl-line
+        // Write stdin in a separate thread to avoid deadlock when the subprocess
+        // fills its stdout/stderr buffers before consuming all stdin, or exits
+        // early (e.g., on error), causing EPIPE on the write side.
+        let mut stdin = child.stdin.take().expect("stdin is piped");
+        let stdin_thread = std::thread::spawn(move || {
+            let _ = stdin.write_all(&stdin_content); // ignore EPIPE if process exits early
+        });
 
-        child
+        let output = child
             .wait_with_output()
-            .context("Failed to wait for subprocess completion")
+            .context("Failed to wait for subprocess completion")?;
+        let _ = stdin_thread.join();
+        Ok(output)
     } else {
         command
             .output()
