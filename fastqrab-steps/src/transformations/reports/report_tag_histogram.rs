@@ -8,7 +8,8 @@ pub enum HistogramData {
     /// String values mapped to their counts
     String(BTreeMap<String, usize>),
     /// Numeric values bucketed into bins (value -> count)
-    Numeric(BTreeMap<i64, usize>),
+    Integer(BTreeMap<i64, usize>),
+    ZeroToOne(BTreeMap<NonNaN, usize>),
     /// Boolean values (false count, true count)
     Bool(usize, usize),
 }
@@ -38,13 +39,23 @@ impl HistogramData {
             }
             TagValue::Numeric(n) => {
                 // Round to nearest integer for bucketing
-                let bucket = n.round() as i64;
-                if let HistogramData::Numeric(map) = self {
-                    *map.entry(bucket).or_insert(0) += 1;
-                } else {
-                    // cov:excl-start
-                    unreachable!();
-                    // cov:excl-stop
+                match self {
+                    HistogramData::Integer(map) => {
+                        let bucket = n.round() as i64;
+                        *map.entry(bucket).or_insert(0) += 1;
+                    }
+                    HistogramData::ZeroToOne(map) => {
+                        let bucket = (n * 100.).round() / 100.0;
+                        let bucket: NonNaN = bucket
+                            .try_into()
+                            .expect("NaN value for histogram - not supported");
+                        *map.entry(bucket).or_insert(0) += 1;
+                    }
+                    _ => {
+                        // cov:excl-start
+                        unreachable!();
+                        // cov:excl-stop
+                    }
                 }
             }
             TagValue::Bool(b) => {
@@ -80,7 +91,10 @@ impl From<HistogramData> for serde_json::Value {
         match value {
             HistogramData::String(map) => map.iter().map(|(k, v)| (k.clone(), *v)).collect(),
             //json only does string keys
-            HistogramData::Numeric(map) => map.iter().map(|(k, v)| (k.to_string(), *v)).collect(),
+            HistogramData::Integer(map) => map.iter().map(|(k, v)| (k.to_string(), *v)).collect(),
+            HistogramData::ZeroToOne(map) => {
+                map.iter().map(|(k, v)| (format!("{:.2}", k), *v)).collect()
+            }
 
             HistogramData::Bool(false_count, true_count) => {
                 let mut map = serde_json::Map::new();
@@ -173,7 +187,15 @@ impl Step for Box<_ReportTagHistogram> {
                     TagValueType::Location | TagValueType::String => {
                         HistogramData::String(BTreeMap::new())
                     }
-                    TagValueType::Numeric(_) => HistogramData::Numeric(BTreeMap::new()),
+                    TagValueType::Numeric((lower, upper)) => {
+                        if lower == Some(NonNaN::new(0.0).expect("Can't fail"))
+                            && upper == Some(NonNaN::new(1.0).expect("can't fail"))
+                        {
+                            HistogramData::ZeroToOne(BTreeMap::new())
+                        } else {
+                            HistogramData::Integer(BTreeMap::new())
+                        }
+                    }
                     TagValueType::Bool => HistogramData::Bool(0, 0),
                     // _ => {
                     //     return Err(anyhow::anyhow!(

@@ -144,7 +144,7 @@ impl BaseContent {
         } else {
             #[allow(clippy::cast_precision_loss)]
             {
-                (counted as f64 / considered as f64) * 100.0
+                counted as f64 / considered as f64
             }
         }
     }

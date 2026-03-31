@@ -28,6 +28,12 @@
     segment = 'read1'
     out_label= 'gc_content'
 
+[[step]]
+    action = 'CalcGCContent'
+    relative = false
+    segment = 'read1'
+    out_label= 'gc_content_absolute'
+
 # Create boolean tag based on length
 [[step]]
     action = 'CalcLength'
@@ -46,7 +52,7 @@
     action = 'Report'
     name = 'test_histogram'
     count = false
-    tag_histograms = ['prefix_5', 'gc_content', 'read_length', 'regex', 'read_no_lt_4', 'string_value']
+    tag_histograms = ['prefix_5', 'gc_content', 'gc_content_absolute', 'read_length', 'regex', 'read_no_lt_4', 'string_value']
 
 [output]
     prefix = 'output'

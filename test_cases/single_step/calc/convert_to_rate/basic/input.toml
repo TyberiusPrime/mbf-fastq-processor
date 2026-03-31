@@ -1,0 +1,28 @@
+[input]
+    read1 = 'input.fq'
+
+[[step]]
+    action = 'CalcBaseContent'
+    out_label = 'a_count'
+    bases_to_count = 'A'
+    relative = false
+    segment = 'read1'
+
+[[step]]
+    action = 'CalcBaseContent'
+    out_label = 'a_count_Rel'
+    bases_to_count = 'A'
+    relative = true
+    segment = 'read1'
+
+[[step]]
+    action = 'ConvertToRate'
+    in_label = 'a_count'
+    out_label = 'a_rate'
+
+[[step]]
+    action = 'StoreTagsInTable'
+
+[output]
+    prefix = 'output'
+    output = []

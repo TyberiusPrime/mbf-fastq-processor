@@ -1,8 +1,8 @@
-@read1|quality_score=50.5000
+@read1|quality_score=1
 GCAT
 +
 IIII
-@read2|quality_score=67.1667
+@read2|quality_score=1.1667
 GCGCAT
 +
 IIIIII
