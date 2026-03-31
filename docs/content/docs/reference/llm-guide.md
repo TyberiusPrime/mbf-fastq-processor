@@ -121,7 +121,7 @@ Keep reads with at least 100 high-quality bases.
     threshold = 'C'       # Phred+33 encoding: 'C' = Phred 34
     op = 'below'          # Count bases with quality >= threshold
     out_label = 'hq_bases'
-    relative = true
+    relative = false
 
 [[step]]
     action = 'FilterByNumericTag'
