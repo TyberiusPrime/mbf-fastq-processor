@@ -137,11 +137,11 @@ impl TagUser for PartialTaggedVariant<PartialDemultiplex> {
 
         TagUsageInfo {
             used_tags: vec![inner.in_label.to_used_tag(
-                &[
+                vec![
                     TagValueType::Bool,
                     TagValueType::String,
                     TagValueType::Location,
-                ][..],
+                ],
             )],
             ..Default::default()
         }

@@ -12,7 +12,9 @@ Error 1/1
    ┆                    │
    ┆                    ╰───── Incompatible tag type
 ───╯
-Hint: This transform requires tag 'barcode' to be one of the following types: [Location],
+Hint: This transform requires tag 'barcode' to be one of the following types: ['Location'],
       but it is actually of type 'String'.
       See https://doc_url.example/version-stripped-from-test/docs/redirects/StoreTagLocationInComment
+      Or run: `fastqrab template StoreTagLocationInComment` for more information.
+
 

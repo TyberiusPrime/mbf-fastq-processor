@@ -126,12 +126,12 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagInComment> {
             .expect("get_tag_usage should only be called after successful verification");
         TagUsageInfo {
             used_tags: vec![inner.in_label.to_used_tag(
-                &[
+                vec![
                     TagValueType::Bool,
                     TagValueType::String,
                     TagValueType::Location,
-                    TagValueType::Numeric,
-                ][..],
+                    TagValueType::Numeric((None, None)),
+                ],
             )],
             ..Default::default()
         }

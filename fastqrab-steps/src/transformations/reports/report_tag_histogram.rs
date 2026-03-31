@@ -134,12 +134,12 @@ impl TagUser for PartialTaggedVariant<Box<Partial_ReportTagHistogram>> {
         }
         TagUsageInfo {
             used_tags: vec![inner.tag_name.to_used_tag(
-                &[
+                vec![
                     TagValueType::String,
-                    TagValueType::Numeric,
+                    TagValueType::Numeric((None, None)),
                     TagValueType::Bool,
                     TagValueType::Location,
-                ][..],
+                ],
             )],
             ..Default::default()
         }
@@ -175,7 +175,7 @@ impl Step for Box<_ReportTagHistogram> {
                     TagValueType::Location | TagValueType::String => {
                         HistogramData::String(BTreeMap::new())
                     }
-                    TagValueType::Numeric => HistogramData::Numeric(BTreeMap::new()),
+                    TagValueType::Numeric(_) => HistogramData::Numeric(BTreeMap::new()),
                     TagValueType::Bool => HistogramData::Bool(0, 0),
                     // _ => {
                     //     return Err(anyhow::anyhow!(

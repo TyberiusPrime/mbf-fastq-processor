@@ -69,7 +69,7 @@ impl TagUser for PartialTaggedVariant<Partial_ChangeCase> {
             .toml_value
             .as_mut()
             .expect("get_tag_usage should only be called after successful verification");
-        let mut used_tags = vec![inner.if_tag.to_used_tag(&[][..])];
+        let mut used_tags = vec![inner.if_tag.to_used_tag(vec![])];
         used_tags.extend(inner.target.to_used_tags());
 
         TagUsageInfo {

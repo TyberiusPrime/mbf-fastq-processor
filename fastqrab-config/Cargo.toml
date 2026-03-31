@@ -24,6 +24,7 @@ exclude.workspace = true
 	toml_edit = {workspace = true}
 	num_cpus = {workspace = true}
 	fastqrab-dna = {workspace = true}
+    typed_floats = {workspace = true}
 
 [lints]
 workspace = true

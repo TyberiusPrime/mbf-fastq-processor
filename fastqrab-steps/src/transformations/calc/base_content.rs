@@ -161,7 +161,16 @@ impl TagUser for PartialTaggedVariant<PartialBaseContent> {
             .as_mut()
             .expect("get_tag_usage should only be called after successful verification");
         TagUsageInfo {
-            declared_tag: inner.out_label.to_declared_tag(TagValueType::Numeric),
+            declared_tag: inner.out_label.to_declared_tag(TagValueType::Numeric(
+                if inner.relative.as_ref().is_some_and(|x| *x) {
+                    (
+                        Some(NonNaN::new(0.0).expect("can't fail")),
+                        Some(NonNaN::new(1.0).expect("can't fail")),
+                    )
+                } else {
+                    (None, None)
+                },
+            )),
             ..Default::default()
         }
     }

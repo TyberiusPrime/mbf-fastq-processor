@@ -14,7 +14,9 @@ Error 1/1
    ┆                      │
    ┆                      ╰────── Incompatible tag type
 ───╯
-Hint: This transform requires tag 'gc_content' to be one of the following types: [Bool, String, Location],
-      but it is actually of type 'Numeric'.
+Hint: This transform requires tag 'gc_content' to be one of the following types: ['Boolean', 'String', 'Location'],
+      but it is actually of type 'Numeric (0..=1)'.
       See https://doc_url.example/version-stripped-from-test/docs/redirects/FilterByTag
+      Or run: `fastqrab template FilterByTag` for more information.
+
 

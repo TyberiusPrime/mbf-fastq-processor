@@ -14,7 +14,9 @@ Error 1/1
    ┆                                │
    ┆                                ╰────────────── Incompatible tag type
 ───╯
-Hint: This transform requires tag 'not_a_location_tag' to be one of the following types: [String, Location],
-      but it is actually of type 'Numeric'.
+Hint: This transform requires tag 'not_a_location_tag' to be one of the following types: ['String', 'Location'],
+      but it is actually of type 'Numeric (0..)'.
       See https://doc_url.example/version-stripped-from-test/docs/redirects/EvalExpression
+      Or run: `fastqrab template EvalExpression` for more information.
+
 

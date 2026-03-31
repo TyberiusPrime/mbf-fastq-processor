@@ -41,7 +41,7 @@ impl TagUser for PartialTaggedVariant<PartialTruncate> {
             .expect("get_tag_usage should only be called after successful verification");
 
         TagUsageInfo {
-            used_tags: vec![inner.if_tag.to_used_tag(&[][..])],
+            used_tags: vec![inner.if_tag.to_used_tag(vec![])],
             must_see_all_tags: true,
             ..Default::default()
         }

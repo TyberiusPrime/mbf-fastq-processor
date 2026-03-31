@@ -138,7 +138,7 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagInFastQ> {
             .as_ref()
             .expect("in_label should have been set in verification")
             .clone();
-        let mut used_tags = vec![inner.in_label.to_used_tag(&[TagValueType::Location][..])];
+        let mut used_tags = vec![inner.in_label.to_used_tag(vec![TagValueType::Location])];
         used_tags.extend(
             inner
                 .comment_tags
@@ -148,12 +148,12 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagInFastQ> {
                 .filter(|tag| *tag.as_ref().expect("parent was ok") != in_label)
                 .map(|x| {
                     x.to_used_tag(
-                        &[
+                        vec![
                             TagValueType::Bool,
                             TagValueType::String,
                             TagValueType::Location,
-                            TagValueType::Numeric,
-                        ][..],
+                            TagValueType::Numeric((None, None)),
+                        ],
                     )
                 }),
         );
@@ -171,7 +171,7 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagInFastQ> {
                 .any(|ut| ut.as_ref().is_some_and(|ut| ut.name == *tag))
             {
                 //prevent duplicates
-                used_tags.push(tv_tag.to_used_tag(&[TagValueType::Location][..]));
+                used_tags.push(tv_tag.to_used_tag(vec![TagValueType::Location]));
             }
         }
         TagUsageInfo {

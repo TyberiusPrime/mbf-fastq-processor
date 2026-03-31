@@ -6,6 +6,7 @@ use std::cell::RefCell;
 use std::fmt;
 use std::rc::Rc;
 use toml_pretty_deser::{TomlValue, TomlValueState, ValidationFailure};
+use typed_floats::tf64::NonNaN;
 
 pub use fastqrab_dna::dna;
 pub mod fileformats;
@@ -136,19 +137,32 @@ pub enum StringOrVecString {
     Vec(Vec<String>),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum TagValueType {
     //Todo: should this be a struct with 4 bools?
     Location, // string + in-sequence-location
     String,   // just a piece of text
-    Numeric,
+    Numeric((Option<NonNaN>, Option<NonNaN>)),
     Bool,
+}
+
+impl PartialEq for TagValueType {
+
+    fn eq(&self, other: &TagValueType) -> bool {
+        match (self, other) {
+            (TagValueType::Location, TagValueType::Location) |
+            (TagValueType::String, TagValueType::String) |
+            (TagValueType::Bool, TagValueType::Bool) |
+            (TagValueType::Numeric(_), TagValueType::Numeric(_)) => true,
+             _ => false,
+        }
+    }
 }
 
 #[derive(Debug)]
 pub struct UsedTag<'a> {
     pub name: TagLabel,
-    pub accepted_tag_types: &'a [TagValueType],
+    pub accepted_tag_types: Vec<TagValueType>,
     pub toml_source: Rc<RefCell<(&'a mut TomlValueState, &'a mut Option<String>)>>,
     pub further_help: Option<String>,
 }
@@ -166,7 +180,7 @@ impl UsedTag<'_> {
 }
 
 pub trait ToUsedTag {
-    fn to_used_tag<'a>(&'a mut self, accepted_tag_types: &'a [TagValueType])
+    fn to_used_tag<'a>(&'a mut self, accepted_tag_types: Vec<TagValueType>)
     -> Option<UsedTag<'a>>;
 }
 
@@ -206,7 +220,12 @@ impl std::fmt::Display for TagValueType {
         match self {
             TagValueType::Location => write!(f, "Location"),
             TagValueType::String => write!(f, "String"),
-            TagValueType::Numeric => write!(f, "Numeric"),
+            TagValueType::Numeric((lower, upper)) => match (lower, upper) {
+                (None, None) => write!(f, "Numeric"),
+                (None, Some(upper)) => write!(f, "Numeric (..={upper})"),
+                (Some(lower), None) => write!(f, "Numeric ({lower}..)"),
+                (Some(lower), Some(upper)) => write!(f, "Numeric ({lower}..={upper})"),
+            },
             TagValueType::Bool => write!(f, "Boolean"),
         }
     }
@@ -412,11 +431,11 @@ impl ToDeclaredTag for TomlValue<Option<TagLabel>> {
 impl ToUsedTag for TomlValue<TagLabel> {
     fn to_used_tag<'a>(
         &'a mut self,
-        accepted_tag_types: &'a [TagValueType],
+        accepted_tag_types: Vec<TagValueType>,
     ) -> Option<UsedTag<'a>> {
         Some(UsedTag {
             name: self.as_ref().expect("parent was ok?").clone(),
-            accepted_tag_types,
+            accepted_tag_types: accepted_tag_types.to_vec(),
             toml_source: Rc::new(RefCell::new((&mut self.state, &mut self.help))),
             further_help: None,
         })
@@ -450,7 +469,7 @@ impl ToUsedTag for TomlValue<Option<ConditionalTagLabel>> {
     #[track_caller]
     fn to_used_tag<'a>(
         &'a mut self,
-        accepted_tag_types: &'a [TagValueType],
+        accepted_tag_types: Vec<TagValueType>,
     ) -> Option<UsedTag<'a>> {
         assert!(
             accepted_tag_types.is_empty(),
@@ -460,7 +479,7 @@ impl ToUsedTag for TomlValue<Option<ConditionalTagLabel>> {
         if let Some(ct) = ct {
             Some(UsedTag {
                 name: ct.tag.clone(),
-                accepted_tag_types: &[
+                accepted_tag_types: vec![
                     TagValueType::Bool,
                     TagValueType::Location,
                     TagValueType::String,

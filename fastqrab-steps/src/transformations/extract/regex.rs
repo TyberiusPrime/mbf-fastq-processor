@@ -95,10 +95,10 @@ impl TagUser for PartialTaggedVariant<PartialRegex> {
                 // tag.
                 used_tags.push(Some(UsedTag {
                     name: tag,
-                    accepted_tag_types: &[
+                    accepted_tag_types: vec![
                         TagValueType::String,
                         TagValueType::Location,
-                        TagValueType::Numeric,
+                        TagValueType::Numeric((None, None)),
                         TagValueType::Bool,
                     ],
                     toml_source: toml_source.clone(),

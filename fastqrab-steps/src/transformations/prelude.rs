@@ -37,9 +37,10 @@ pub(crate) use std::path::Path;
 pub(crate) const ANY_TAG_TYPE: &[TagValueType] = &[
     TagValueType::String,
     TagValueType::Bool,
-    TagValueType::Numeric,
+    TagValueType::Numeric((None, None)),
     TagValueType::Location,
 ];
 
 pub use indexmap::IndexMap;
 pub use toml_pretty_deser::prelude::*;
+pub use typed_floats::tf64::NonNaN;

@@ -14,8 +14,10 @@ Error 1/1
    ┆                       │
    ┆                       ╰─────── Incompatible tag type
 ───╯
-Hint: This transform requires tag 'is_duplicate' to be one of the following types: [Numeric],
+Hint: This transform requires tag 'is_duplicate' to be one of the following types: ['Numeric (1..)'],
       but it is actually of type 'Boolean'.
       Either switch to FilterByTag, or change the tag you are filtering on.
       See https://doc_url.example/version-stripped-from-test/docs/redirects/FilterByNumericTag
+      Or run: `fastqrab template FilterByNumericTag` for more information.
+
 

@@ -136,7 +136,7 @@ impl TagUser for PartialTaggedVariant<Box<PartialEvalExpression>> {
                     if !segment_order.iter().any(|x| x == suffix) {
                         used_tags.push(Some(UsedTag {
                             name: TagLabel(suffix.to_string()),
-                            accepted_tag_types: &[TagValueType::String, TagValueType::Location][..],
+                            accepted_tag_types: vec![TagValueType::String, TagValueType::Location],
                             toml_source: toml_source.clone(),
                             further_help: None,
                         }));
@@ -146,12 +146,12 @@ impl TagUser for PartialTaggedVariant<Box<PartialEvalExpression>> {
                 } else {
                     used_tags.push(Some(UsedTag {
                         name: TagLabel(name.clone()),
-                        accepted_tag_types: &[
+                        accepted_tag_types: vec![
                             TagValueType::Bool,
-                            TagValueType::Numeric,
+                            TagValueType::Numeric((None, None)),
                             TagValueType::String,
                             TagValueType::Location,
-                        ][..],
+                        ],
                         toml_source: toml_source.clone(),
                         further_help: None,
                     }));
@@ -163,7 +163,7 @@ impl TagUser for PartialTaggedVariant<Box<PartialEvalExpression>> {
             used_tags,
             declared_tag: inner.out_label.to_declared_tag(
                 match inner.result_type.as_ref().expect("parent was ok?") {
-                    ResultType::Numeric => TagValueType::Numeric,
+                    ResultType::Numeric => TagValueType::Numeric((None, None)),
                     ResultType::Bool => TagValueType::Bool,
                 },
             ),

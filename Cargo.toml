@@ -37,6 +37,7 @@
 	anyhow = { version = "1.0.89", default-features = false }
 	bio = "3.0"
 	bstr = { version = "1.12.0", default-features = false, features=["alloc"] }
+    bytes= { version = "1.11.1" }  # https://github.com/advisories/GHSA-434x-w66g-qw3r
 	clap_complete = "4.5"
 	clap = { version = "4.5", default-features = false, features = ["error-context", "help", "std", "usage"] }
 	crossbeam = "0.8.4"
@@ -49,11 +50,11 @@
 	human-panic = { version = "2.0.2", default-features = false }
 	indexmap = { version = "2.9.0", default-features = false, features=["serde"]}
 	json_value_merge = "2.0.1"
-	nix = { version = "0.30", features = ["signal"] }
 	log = "0.4.28"
 	memchr = { version = "2.7.4", default-features = false }
     mutants = "0.0.3"
 	niffler = "3.0"
+	nix = { version = "0.30", features = ["signal"] }
 	noodles = { version = "0.108.0", features = ["bam", "bgzf", "csi", "sam"] }
 	num_cpus = "1.16"
 	rand_chacha = { version = "0.9", default-features = false }
@@ -69,6 +70,7 @@
 	toml-pretty-deser = {version="0.3.0"}
 	toml = { version = "0.9.5", features = ["parse"], default-features = false }
     triple_accel = "0.4.0"
+    typed_floats = "1.0.7"
 	zstd = { version = "0.13.2", default-features = false }
 
     fastqrab-config= {path="fastqrab-config"}
@@ -76,7 +78,6 @@
     fastqrab-io = {path="fastqrab-io"}
     fastqrab-steps = {path="fastqrab-steps"}
 
-    bytes= { version = "1.11.1" }  # https://github.com/advisories/GHSA-434x-w66g-qw3r
 
 
 [profile.release]

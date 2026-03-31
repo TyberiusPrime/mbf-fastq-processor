@@ -1148,11 +1148,15 @@ impl PartialConfig {
                                 any_tag_errors = true;
                                 *toml_source.borrow_mut().0 =
                                     TomlValueState::new_validation_failed("Incompatible tag type");
+                                let str_supposed_tag_types = tag_types
+                                    .iter()
+                                    .map(|t| format!("'{t}'"))
+                                    .collect::<Vec<_>>()
+                                    .join(", ");
                                 let mut help_str = format!(
-                                    "This transform requires tag '{label}' to be one of the following types: {supposed_tag_types:?},\n\
+                                    "This transform requires tag '{label}' to be one of the following types: [{str_supposed_tag_types}],\n\
                                         but it is actually of type '{actual_tag_type}'.",
                                     label = tag_name,
-                                    supposed_tag_types = tag_types,
                                     actual_tag_type = metadata.tag_type
                                 );
                                 if let Some(further_help) = used_tag_info.further_help.as_ref() {

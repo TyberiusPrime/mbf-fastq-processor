@@ -79,7 +79,7 @@ impl ToUsedTags for TomlValue<MustAdapt<String, ResolvedSourceNoAll>> {
             for (tag_name, accepted_tag_types) in tags {
                 res.push(Some(UsedTag {
                     name: tag_name,
-                    accepted_tag_types,
+                    accepted_tag_types: accepted_tag_types.to_vec(),
                     toml_source: toml_source.clone(),
                     further_help: None,
                 }));
@@ -159,7 +159,7 @@ impl ToUsedTags for TomlValue<MustAdapt<String, ResolvedSourceAll>> {
             for (tag_name, accepted_tag_types) in tags {
                 res.push(Some(UsedTag {
                     name: tag_name,
-                    accepted_tag_types,
+                    accepted_tag_types: accepted_tag_types.to_vec(),
                     toml_source: toml_source.clone(),
                     further_help: None,
                 }));

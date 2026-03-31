@@ -104,7 +104,7 @@ impl TagUser for PartialTaggedVariant<PartialRegions> {
                         }
                         used_tags.push(Some(UsedTag {
                             name: entry.0,
-                            accepted_tag_types: entry.1,
+                            accepted_tag_types: entry.1.to_vec(),
                             toml_source: toml_source.clone(),
                             further_help: None,
                         }));

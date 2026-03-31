@@ -149,7 +149,7 @@ impl TagUser for PartialTaggedVariant<PartialConcatTags> {
             };
             let used_tags: Vec<_> = tv_in_labels
                 .iter_mut()
-                .map(|x| x.to_used_tag(&[TagValueType::Location, TagValueType::String]))
+                .map(|x| x.to_used_tag(vec![TagValueType::Location, TagValueType::String]))
                 .collect();
 
             TagUsageInfo {

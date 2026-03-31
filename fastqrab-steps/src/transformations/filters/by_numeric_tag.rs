@@ -45,11 +45,21 @@ impl TagUser for PartialTaggedVariant<PartialByNumericTag> {
             .toml_value
             .as_mut()
             .expect("get_tag_usage should only be called after successful verification");
+        let min_non_nan: Option<NonNaN> = inner
+            .min_value
+            .value
+            .and_then(|opt| opt.map(NonNaN::new).transpose().ok())
+            .flatten();
+        let max_non_nan: Option<NonNaN> = inner
+            .max_value
+            .value
+            .and_then(|opt| opt.map(NonNaN::new).transpose().ok())
+            .flatten();
         TagUsageInfo {
             used_tags: vec![
                 inner
                     .in_label
-                    .to_used_tag(&[TagValueType::Numeric][..])
+                    .to_used_tag(vec![TagValueType::Numeric((min_non_nan, max_non_nan))])
                     .map(|used_tag| {
                         used_tag.add_help(
                             "Either switch to FilterByTag, or change the tag you are filtering on.",

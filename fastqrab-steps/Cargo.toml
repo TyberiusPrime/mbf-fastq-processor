@@ -38,3 +38,4 @@ toml-pretty-deser = {workspace = true}
 fastqrab-config = {workspace = true}
 fastqrab-dna = {workspace = true}
 fastqrab-io = {workspace = true}
+typed_floats.workspace = true

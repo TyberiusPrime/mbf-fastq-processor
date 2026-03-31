@@ -139,7 +139,7 @@ impl TagUser for PartialTaggedVariant<PartialHammingCorrect> {
             used_tags: vec![
                 inner
                     .in_label
-                    .to_used_tag(&[TagValueType::String, TagValueType::Location][..]),
+                    .to_used_tag(vec![TagValueType::String, TagValueType::Location]),
             ],
             ..Default::default()
         }

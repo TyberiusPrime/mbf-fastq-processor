@@ -107,7 +107,7 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagsInTable> {
                 .map(|(tag, _metadata)| {
                     Some(UsedTag {
                         name: tag.clone(),
-                        accepted_tag_types: ANY_TAG_TYPE,
+                        accepted_tag_types: ANY_TAG_TYPE.to_vec(),
                         toml_source: toml_source.clone(),
                         further_help: None,
                     })
