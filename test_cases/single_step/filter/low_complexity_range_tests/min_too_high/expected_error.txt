@@ -1,0 +1,21 @@
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+ 8 │ [[step]]
+ 9 │     action = 'FilterByNumericTag'
+   ┆              ──────────┬─────────
+   ┆                        │
+   ┆                        ╰────────── In this step
+   ┆
+10 │     in_label = 'low_complexity_ratio'
+11 │     min_value = 10.1
+   ┆                 ──┬─
+   ┆                   │
+   ┆                   ╰── Out of range
+───╯
+Hint: Supply a value between 0..=1
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/FilterByNumericTag
+      Or run: `fastqrab template FilterByNumericTag` for more information.
+
+

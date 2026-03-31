@@ -136,13 +136,11 @@ impl TagUser for PartialTaggedVariant<PartialDemultiplex> {
             .expect("Was ok before, now might not be ok, but should be still set");
 
         TagUsageInfo {
-            used_tags: vec![inner.in_label.to_used_tag(
-                vec![
-                    TagValueType::Bool,
-                    TagValueType::String,
-                    TagValueType::Location,
-                ],
-            )],
+            used_tags: vec![inner.in_label.to_used_tag(vec![
+                TagValueType::Bool,
+                TagValueType::String,
+                TagValueType::Location,
+            ])],
             ..Default::default()
         }
     }

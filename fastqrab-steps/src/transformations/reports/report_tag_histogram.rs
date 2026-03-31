@@ -133,14 +133,12 @@ impl TagUser for PartialTaggedVariant<Box<Partial_ReportTagHistogram>> {
             //if that's happening at all for our dynamically generated one.
         }
         TagUsageInfo {
-            used_tags: vec![inner.tag_name.to_used_tag(
-                vec![
-                    TagValueType::String,
-                    TagValueType::Numeric((None, None)),
-                    TagValueType::Bool,
-                    TagValueType::Location,
-                ],
-            )],
+            used_tags: vec![inner.tag_name.to_used_tag(vec![
+                TagValueType::String,
+                TagValueType::Numeric((None, None)),
+                TagValueType::Bool,
+                TagValueType::Location,
+            ])],
             ..Default::default()
         }
     }

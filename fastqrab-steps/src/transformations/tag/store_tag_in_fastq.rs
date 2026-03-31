@@ -147,14 +147,12 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagInFastQ> {
                 .iter_mut()
                 .filter(|tag| *tag.as_ref().expect("parent was ok") != in_label)
                 .map(|x| {
-                    x.to_used_tag(
-                        vec![
-                            TagValueType::Bool,
-                            TagValueType::String,
-                            TagValueType::Location,
-                            TagValueType::Numeric((None, None)),
-                        ],
-                    )
+                    x.to_used_tag(vec![
+                        TagValueType::Bool,
+                        TagValueType::String,
+                        TagValueType::Location,
+                        TagValueType::Numeric((None, None)),
+                    ])
                 }),
         );
 

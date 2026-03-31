@@ -1,0 +1,16 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'CalcComplexity'
+    out_label = 'low_complexity_ratio'
+
+[[step]]
+    action = 'FilterByNumericTag'
+    in_label = 'low_complexity_ratio'
+    min_value = 10.1
+    keep_or_remove = 'Keep'
+
+
+[output]
+    prefix = 'output'

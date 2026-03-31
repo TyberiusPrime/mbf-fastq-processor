@@ -1,0 +1,19 @@
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+14 │ [[step]]
+15 │     action = 'FilterByNumericTag'
+   ┆              ──────────┬─────────
+   ┆                        │
+   ┆                        ╰────────── In this step
+16 │     max_value = -4
+   ┆                 ─┬
+   ┆                  │
+   ┆                  ╰─ Out of range
+───╯
+Hint: Supply a value between 0..=inf
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/FilterByNumericTag
+      Or run: `fastqrab template FilterByNumericTag` for more information.
+
+

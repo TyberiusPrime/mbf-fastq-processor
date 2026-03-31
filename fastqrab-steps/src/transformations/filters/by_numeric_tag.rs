@@ -38,28 +38,43 @@ impl VerifyIn<PartialConfig> for PartialByNumericTag {
 impl TagUser for PartialTaggedVariant<PartialByNumericTag> {
     fn get_tag_usage(
         &mut self,
-        _tags_available: &IndexMap<TagLabel, TagMetadata>,
+        tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> TagUsageInfo<'_> {
         let inner = self
             .toml_value
             .as_mut()
             .expect("get_tag_usage should only be called after successful verification");
-        let min_non_nan: Option<NonNaN> = inner
-            .min_value
-            .value
-            .and_then(|opt| opt.map(NonNaN::new).transpose().ok())
-            .flatten();
-        let max_non_nan: Option<NonNaN> = inner
-            .max_value
-            .value
-            .and_then(|opt| opt.map(NonNaN::new).transpose().ok())
-            .flatten();
+        if let Some(in_label) = inner.in_label.as_ref()
+            && let Some(TagValueType::Numeric((declared_lower, declared_upper))) =
+                tags_available.get(in_label).map(|x| x.tag_type)
+        {
+            let declared_lower: f64 = declared_lower
+                .map(|x| x.into())
+                .unwrap_or(f64::NEG_INFINITY);
+            let declared_upper: f64 = declared_upper.map(|x| x.into()).unwrap_or(f64::INFINITY);
+            if let Some(Some(lower_threshold)) = inner.min_value.as_ref() {
+                if *lower_threshold < declared_lower || *lower_threshold > declared_upper {
+                    inner.min_value.state = TomlValueState::new_validation_failed("Out of range");
+                    inner.min_value.help = Some(format!(
+                        "Supply a value between {declared_lower}..={declared_upper}"
+                    ));
+                }
+            } else if let Some(Some(upper_threshold)) = inner.max_value.as_ref() {
+                if *upper_threshold < declared_lower || *upper_threshold > declared_upper {
+                    inner.max_value.state = TomlValueState::new_validation_failed("Out of range");
+                    inner.max_value.help = Some(format!(
+                        "Supply a value between {declared_lower}..={declared_upper}"
+                    ));
+                }
+            }
+        }
+
         TagUsageInfo {
             used_tags: vec![
                 inner
                     .in_label
-                    .to_used_tag(vec![TagValueType::Numeric((min_non_nan, max_non_nan))])
+                    .to_used_tag(vec![TagValueType::Numeric((None, None))])
                     .map(|used_tag| {
                         used_tag.add_help(
                             "Either switch to FilterByTag, or change the tag you are filtering on.",

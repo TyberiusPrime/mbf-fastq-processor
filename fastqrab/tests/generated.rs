@@ -7467,6 +7467,16 @@ fn test_cases_x_single_step_x_filter_x_empty_x_segments() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_filter_x_len_threshold_too_low() {
+    println!("Test case is in: test_cases/single_step/filter/len_threshold_too_low");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/filter/len_threshold_too_low"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_filter_x_low_complexity_x_all_segments() {
     println!("Test case is in: test_cases/single_step/filter/low_complexity/all_segments");
     run_test(
@@ -7501,6 +7511,62 @@ fn test_cases_x_single_step_x_filter_x_low_complexity_x_empty_read_all() {
     println!("Test case is in: test_cases/single_step/filter/low_complexity/empty_read_all");
     run_test(
         std::path::Path::new("../test_cases/single_step/filter/low_complexity/empty_read_all"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_filter_x_low_complexity_range_tests_x_max_too_high() {
+    println!(
+        "Test case is in: test_cases/single_step/filter/low_complexity_range_tests/max_too_high"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/filter/low_complexity_range_tests/max_too_high",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_filter_x_low_complexity_range_tests_x_max_too_low() {
+    println!(
+        "Test case is in: test_cases/single_step/filter/low_complexity_range_tests/max_too_low"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/filter/low_complexity_range_tests/max_too_low",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_filter_x_low_complexity_range_tests_x_min_too_high() {
+    println!(
+        "Test case is in: test_cases/single_step/filter/low_complexity_range_tests/min_too_high"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/filter/low_complexity_range_tests/min_too_high",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_filter_x_low_complexity_range_tests_x_min_too_low() {
+    println!(
+        "Test case is in: test_cases/single_step/filter/low_complexity_range_tests/min_too_low"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/filter/low_complexity_range_tests/min_too_low",
+        ),
         "input.toml",
         1,
     );

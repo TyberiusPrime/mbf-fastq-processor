@@ -21,13 +21,11 @@ impl TagUser for PartialTaggedVariant<PartialByTag> {
             .as_mut()
             .expect("get_tag_usage should only be called after successful verification");
         TagUsageInfo {
-            used_tags: vec![inner.in_label.to_used_tag(
-                vec![
-                    TagValueType::Bool,
-                    TagValueType::String,
-                    TagValueType::Location,
-                ],
-            )],
+            used_tags: vec![inner.in_label.to_used_tag(vec![
+                TagValueType::Bool,
+                TagValueType::String,
+                TagValueType::Location,
+            ])],
             must_see_all_tags: true, // for filtering them down
             ..Default::default()
         }

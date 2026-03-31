@@ -146,19 +146,6 @@ pub enum TagValueType {
     Bool,
 }
 
-impl PartialEq for TagValueType {
-
-    fn eq(&self, other: &TagValueType) -> bool {
-        match (self, other) {
-            (TagValueType::Location, TagValueType::Location) |
-            (TagValueType::String, TagValueType::String) |
-            (TagValueType::Bool, TagValueType::Bool) |
-            (TagValueType::Numeric(_), TagValueType::Numeric(_)) => true,
-             _ => false,
-        }
-    }
-}
-
 #[derive(Debug)]
 pub struct UsedTag<'a> {
     pub name: TagLabel,
@@ -180,8 +167,7 @@ impl UsedTag<'_> {
 }
 
 pub trait ToUsedTag {
-    fn to_used_tag<'a>(&'a mut self, accepted_tag_types: Vec<TagValueType>)
-    -> Option<UsedTag<'a>>;
+    fn to_used_tag<'a>(&'a mut self, accepted_tag_types: Vec<TagValueType>) -> Option<UsedTag<'a>>;
 }
 
 pub trait ToUsedTags {
@@ -211,7 +197,13 @@ pub enum RemovedTags<'a> {
 }
 impl TagValueType {
     pub fn compatible(self, other: TagValueType) -> bool {
-        self == other
+        match (self, other) {
+            (TagValueType::Location, TagValueType::Location)
+            | (TagValueType::String, TagValueType::String)
+            | (TagValueType::Bool, TagValueType::Bool)
+            | (TagValueType::Numeric(_), TagValueType::Numeric(_)) => true,
+            _ => false,
+        }
     }
 }
 
@@ -429,10 +421,7 @@ impl ToDeclaredTag for TomlValue<Option<TagLabel>> {
 }
 
 impl ToUsedTag for TomlValue<TagLabel> {
-    fn to_used_tag<'a>(
-        &'a mut self,
-        accepted_tag_types: Vec<TagValueType>,
-    ) -> Option<UsedTag<'a>> {
+    fn to_used_tag<'a>(&'a mut self, accepted_tag_types: Vec<TagValueType>) -> Option<UsedTag<'a>> {
         Some(UsedTag {
             name: self.as_ref().expect("parent was ok?").clone(),
             accepted_tag_types: accepted_tag_types.to_vec(),
@@ -467,10 +456,7 @@ impl TryFrom<&str> for ConditionalTagLabel {
 }
 impl ToUsedTag for TomlValue<Option<ConditionalTagLabel>> {
     #[track_caller]
-    fn to_used_tag<'a>(
-        &'a mut self,
-        accepted_tag_types: Vec<TagValueType>,
-    ) -> Option<UsedTag<'a>> {
+    fn to_used_tag<'a>(&'a mut self, accepted_tag_types: Vec<TagValueType>) -> Option<UsedTag<'a>> {
         assert!(
             accepted_tag_types.is_empty(),
             "accepted_tag_types not used for ConditionalTagLabel"

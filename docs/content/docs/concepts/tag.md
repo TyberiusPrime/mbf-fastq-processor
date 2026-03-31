@@ -55,6 +55,10 @@ Store just a sequence string without positional information.
 
 Store floating-point or integer values representing computed metrics.
 
+Some steps declare ranges on the tag (lower..=upper, left & right inclusive, e.g. 
+- [CalcGCContent]({{< relref "docs/reference/tag-steps/calc/CalcGCContent.md" >}}) declares 0..=1 
+if relative=true). The thresholds in FilterbyNumericTag are then checked against these limits.
+
 **Created by:**
 - [CalcMeanQuality]({{< relref "docs/reference/tag-steps/calc/CalcMeanQuality.md" >}}) – Average quality score
 - [CalcGCContent]({{< relref "docs/reference/tag-steps/calc/CalcGCContent.md" >}}) – GC percentage
