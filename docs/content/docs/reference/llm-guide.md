@@ -582,6 +582,25 @@ Calculate sequence length.
     out_label = 'length'           # TYPE: string, REQUIRED
 ```
 
+### ConvertToRate
+
+Divide an existing numeric tag by the read length to produce a rate (0..=1).
+
+```toml
+[[step]]
+    action = 'CalcBaseContent'
+    segment = 'read1'
+    bases_to_count = 'A'
+    relative = false
+    out_label = 'a_count'          # absolute A-base count
+
+[[step]]
+    action = 'ConvertToRate'
+    in_label = 'a_count'           # TYPE: string (existing numeric tag), REQUIRED
+    segment = 'read1'              # TYPE: segment name or 'All', REQUIRED (default if single-read)
+    out_label = 'a_rate'           # TYPE: string, REQUIRED
+```
+
 ### CalcGCContent
 
 Calculate GC percentage (0.0-1.0).

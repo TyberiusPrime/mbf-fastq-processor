@@ -2,6 +2,7 @@ use fastqrab_io::io::{FastQBlocksCombined, WrappedFastQRead};
 
 mod base_content;
 mod complexity;
+mod convert_to_rate;
 mod expected_error;
 mod kmers;
 mod length;
@@ -12,6 +13,7 @@ mod gc_content;
 
 pub use base_content::{BaseContent, PartialBaseContent};
 pub use complexity::{Complexity, PartialComplexity};
+pub use convert_to_rate::{ConvertToRate, PartialConvertToRate};
 pub use expected_error::{ExpectedError, PartialExpectedError};
 use fastqrab_config::{
     TagLabel,

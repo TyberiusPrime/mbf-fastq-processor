@@ -225,6 +225,14 @@
 #    out_label = "mytag"
 #    segment = "read1" # Segment
 
+# ==== ConvertToRate ====
+## Divide a numeric tag by the read length to produce a rate (0..=1)
+# [[step]]
+#    action = "ConvertToRate"
+#    in_label = "mytag"      # Existing numeric tag to divide
+#    out_label = "a_rate"    # Output tag label
+#    segment = "read1"       # Segment to measure length from, or 'All' for total length (default: only segment if single-read)
+
 # ==== CalcKmers ====
 ## Count how many kmers from a read match those in a database built from reference sequences
 # [[step]]

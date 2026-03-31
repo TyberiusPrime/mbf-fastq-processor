@@ -133,6 +133,26 @@ fn benchmark_key_steps(c: &mut Criterion) {
             thread_count,
         ),
         BenchmarkConfig::new(
+            "ConvertToRate",
+            r#"[[step]]
+    action = "CalcBaseContent"
+    out_label = "a_count"
+    bases_to_count = "A"
+    relative = false
+    segment = "read1"
+
+[[step]]
+    action = "ConvertToRate"
+    in_label = "a_count"
+    out_label = "a_rate"
+    segment = "read1"
+
+[[step]]
+    action = "ForgetAllTags""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
             "CutStart",
             r#"[[step]]
     action = "CutStart"

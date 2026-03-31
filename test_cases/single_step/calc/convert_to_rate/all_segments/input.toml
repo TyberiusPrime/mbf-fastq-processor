@@ -1,0 +1,29 @@
+options.accept_duplicate_files = true
+
+[input]
+    read1 = 'input.fq'
+    read2 = 'input.fq'
+
+[[step]]
+    action = 'CalcBaseContent'
+    out_label = 'a_count'
+    bases_to_count = 'A'
+    relative = false
+    segment = 'All'
+
+[[step]]
+    action = 'ConvertToRate'
+    in_label = 'a_count'
+    out_label = 'a_rate'
+    segment = 'All'
+
+[[step]]
+    action = 'ForgetTag'
+    in_label = 'a_count'
+
+[[step]]
+    action = 'StoreTagsInTable'
+
+[output]
+    prefix = 'output'
+    output = []

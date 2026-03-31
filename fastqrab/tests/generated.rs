@@ -1571,6 +1571,26 @@ fn test_cases_x_single_step_x_auto_x_detect_x_on_x_stderr() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_calc_x_convert_to_rate_x_all_segments() {
+    println!("Test case is in: test_cases/single_step/calc/convert_to_rate/all_segments");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/calc/convert_to_rate/all_segments"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_calc_x_convert_to_rate_x_basic() {
+    println!("Test case is in: test_cases/single_step/calc/convert_to_rate/basic");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/calc/convert_to_rate/basic"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_calc_x_expected_error_x_basic() {
     println!("Test case is in: test_cases/single_step/calc/expected_error/basic");
     run_test(

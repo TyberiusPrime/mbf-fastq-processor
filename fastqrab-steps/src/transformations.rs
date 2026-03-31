@@ -297,6 +297,7 @@ pub enum Transformation {
     CalcQualifiedBases(calc::QualifiedBases),
     CalcExpectedError(calc::ExpectedError),
     CalcKmers(calc::Kmers),
+    ConvertToRate(calc::ConvertToRate),
     //
     ConvertRegionsToLength(convert::RegionsToLength),
     #[tpd(alias = "EvaluateExpression")]
