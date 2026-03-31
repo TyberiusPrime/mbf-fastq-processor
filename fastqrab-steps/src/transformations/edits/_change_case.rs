@@ -64,17 +64,17 @@ impl TagUser for PartialTaggedVariant<Partial_ChangeCase> {
         &mut self,
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
-    ) -> TagUsageInfo<'_> {
-        let inner = self
-            .toml_value
-            .as_mut()
-            .expect("get_tag_usage should only be called after successful verification");
-        let mut used_tags = vec![inner.if_tag.to_used_tag(vec![])];
-        used_tags.extend(inner.target.to_used_tags());
+    ) -> Option<TagUsageInfo<'_>> {
+        if let Some(inner) = self.toml_value.as_mut() {
+            let mut used_tags = vec![inner.if_tag.to_used_tag(&[])];
+            used_tags.extend(inner.target.to_used_tags());
 
-        TagUsageInfo {
-            used_tags,
-            ..Default::default()
+            Some(TagUsageInfo {
+                used_tags,
+                ..Default::default()
+            })
+        } else {
+            None
         }
     }
 }

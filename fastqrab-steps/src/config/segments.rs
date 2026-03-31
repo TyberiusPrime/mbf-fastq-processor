@@ -214,7 +214,9 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceNoAll>> {
                                     Some("Please provide a name after 'tag:'."),
                                 ))
                             } else {
-                                Ok(ResolvedSourceNoAll::Tag(TagLabel(trimmed.to_string())))
+                                Ok(ResolvedSourceNoAll::Tag(TagLabel::Normal(
+                                    trimmed.to_string(),
+                                )))
                             }
                         } else if let Some(segment_name) = source.strip_prefix("name:") {
                             let trimmed = segment_name.trim();
@@ -321,7 +323,9 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceAll>> {
                                     Some("Please provide a name after 'tag:'."),
                                 ))
                             } else {
-                                Ok(ResolvedSourceAll::Tag(TagLabel(trimmed.to_string())))
+                                Ok(ResolvedSourceAll::Tag(TagLabel::Normal(
+                                    trimmed.to_string(),
+                                )))
                             }
                         } else if let Some(segment_name) = source.strip_prefix("name:") {
                             let trimmed = segment_name.trim();

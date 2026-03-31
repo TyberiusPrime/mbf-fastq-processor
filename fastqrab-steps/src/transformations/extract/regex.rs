@@ -66,64 +66,63 @@ impl TagUser for PartialTaggedVariant<PartialRegex> {
         &mut self,
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
-    ) -> TagUsageInfo<'_> {
-        let inner = self
-            .toml_value
-            .as_mut()
-            .expect("get_tag_usage should only be called after successful verification");
-
-        let mut used_tags = Vec::new();
-        if let Some(replacement) = inner.replacement.as_ref() {
-            let replacement = replacement.clone();
-            let re = regex::bytes::Regex::new(r"\[\[(?P<tag>[^\]]+)\]\]")
-                .expect("hardcoded regex must compile");
-            let toml_source = Rc::new(RefCell::new((
-                &mut inner.replacement.state,
-                &mut inner.replacement.help,
-            )));
-            for hit in re.captures_iter(replacement.as_bytes()) {
-                let tag = hit
-                    .name("tag")
-                    .expect("Regex should always match")
-                    .as_bytes();
-                let tag = TagLabel(
-                    std::str::from_utf8(tag)
-                        .expect("Tag was not utf8, but toml is always utf8?)")
-                        .to_string(),
-                );
-                // we already chek these for 'being present', just like any other
-                // tag.
-                used_tags.push(Some(UsedTag {
-                    name: tag,
-                    accepted_tag_types: vec![
-                        TagValueType::String,
-                        TagValueType::Location,
-                        TagValueType::Numeric((None, None)),
-                        TagValueType::Bool,
-                    ],
-                    toml_source: toml_source.clone(),
-                    further_help: None,
-                }));
+    ) -> Option<TagUsageInfo<'_>> {
+        if let Some(inner) = self.toml_value.as_mut() {
+            let mut used_tags = Vec::new();
+            if let Some(replacement) = inner.replacement.as_ref() {
+                let replacement = replacement.clone();
+                let re = regex::bytes::Regex::new(r"\[\[(?P<tag>[^\]]+)\]\]")
+                    .expect("hardcoded regex must compile");
+                let toml_source = Rc::new(RefCell::new((
+                    &mut inner.replacement.state,
+                    &mut inner.replacement.help,
+                )));
+                for hit in re.captures_iter(replacement.as_bytes()) {
+                    let tag = hit
+                        .name("tag")
+                        .expect("Regex should always match")
+                        .as_bytes();
+                    let tag = TagLabel::Normal(
+                        std::str::from_utf8(tag)
+                            .expect("Tag was not utf8, but toml is always utf8?)")
+                            .to_string(),
+                    );
+                    // we already chek these for 'being present', just like any other
+                    // tag.
+                    used_tags.push(Some(UsedTag {
+                        name: tag,
+                        accepted_tag_types: &[
+                            TagValueType::String,
+                            TagValueType::Location,
+                            TagValueType::Numeric((None, None)),
+                            TagValueType::Bool,
+                        ],
+                        toml_source: toml_source.clone(),
+                        further_help: None,
+                    }));
+                }
             }
-        }
 
-        TagUsageInfo {
-            declared_tag: inner.out_label.to_declared_tag(
-                if inner
-                    .source
-                    .as_ref()
-                    .expect("parent was ok")
-                    .as_ref_post()
-                    .expect("not in PostVerify")
-                    .is_name()
-                {
-                    TagValueType::String
-                } else {
-                    TagValueType::Location
-                },
-            ),
-            used_tags: used_tags,
-            ..Default::default()
+            Some(TagUsageInfo {
+                declared_tag: inner.out_label.to_declared_tag(
+                    if inner
+                        .source
+                        .as_ref()
+                        .expect("parent was ok")
+                        .as_ref_post()
+                        .expect("not in PostVerify")
+                        .is_name()
+                    {
+                        TagValueType::String
+                    } else {
+                        TagValueType::Location
+                    },
+                ),
+                used_tags: used_tags,
+                ..Default::default()
+            })
+        } else {
+            None
         }
     }
 }

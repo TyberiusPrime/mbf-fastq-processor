@@ -30,15 +30,6 @@ impl VerifyIn<PartialConfig> for PartialLowercase {
 }
 
 impl TagUser for PartialTaggedVariant<PartialLowercase> {
-    // cov:excl-start
-    fn get_tag_usage(
-        &mut self,
-        _tags_available: &IndexMap<TagLabel, TagMetadata>,
-        _segment_order: &[String],
-    ) -> TagUsageInfo<'_> {
-        unreachable!("Should have been transformed before");
-    }
-    // cov:excl-stop
 }
 
 impl Step for Lowercase {

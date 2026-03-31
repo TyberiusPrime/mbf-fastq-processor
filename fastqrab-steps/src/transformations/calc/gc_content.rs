@@ -34,7 +34,7 @@ impl TagUser for PartialTaggedVariant<PartialGCContent> {
         &mut self,
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
-    ) -> TagUsageInfo<'_> {
+    ) -> Option<TagUsageInfo<'_>> {
         unreachable!("Should have been swapped in expansion")
     }
 }

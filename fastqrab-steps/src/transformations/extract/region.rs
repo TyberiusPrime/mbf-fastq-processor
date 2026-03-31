@@ -41,7 +41,7 @@ impl TagUser for PartialTaggedVariant<PartialRegion> {
         &mut self,
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
-    ) -> TagUsageInfo<'_> {
+    ) -> Option<TagUsageInfo<'_>> {
         unreachable!("Should have been turned into Regions already")
     }
 }

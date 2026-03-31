@@ -111,16 +111,16 @@ impl TagUser for PartialTaggedVariant<PartialOtherFile> {
         &mut self,
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
-    ) -> TagUsageInfo<'_> {
-        let inner = self
-            .toml_value
-            .as_mut()
-            .expect("get_tag_usage should only be called after successful verification");
-        let used_tags = inner.source.to_used_tags();
-        TagUsageInfo {
-            declared_tag: inner.out_label.to_declared_tag(TagValueType::Bool),
-            used_tags,
-            ..Default::default()
+    ) -> Option<TagUsageInfo<'_>> {
+        if let Some(inner) = self.toml_value.as_mut() {
+            let used_tags = inner.source.to_used_tags();
+            Some(TagUsageInfo {
+                declared_tag: inner.out_label.to_declared_tag(TagValueType::Bool),
+                used_tags,
+                ..Default::default()
+            })
+        } else {
+            None
         }
     }
     fn verify_others(

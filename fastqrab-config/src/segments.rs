@@ -5,7 +5,7 @@ use toml_pretty_deser::prelude::*;
 use crate::{TagLabel, TagValueType, ToUsedTags, UsedTag};
 pub use fastqrab_dna::segments::SegmentIndex;
 
-#[derive(Debug, Clone, Eq, PartialEq, Copy, JsonSchema)]
+#[derive(Debug, Clone, Eq, PartialEq, Copy, JsonSchema, Hash)]
 pub enum SegmentIndexOrAll {
     All,
     Indexed(usize),
@@ -79,7 +79,7 @@ impl ToUsedTags for TomlValue<MustAdapt<String, ResolvedSourceNoAll>> {
             for (tag_name, accepted_tag_types) in tags {
                 res.push(Some(UsedTag {
                     name: tag_name,
-                    accepted_tag_types: accepted_tag_types.to_vec(),
+                    accepted_tag_types: &accepted_tag_types[..],
                     toml_source: toml_source.clone(),
                     further_help: None,
                 }));
@@ -159,7 +159,7 @@ impl ToUsedTags for TomlValue<MustAdapt<String, ResolvedSourceAll>> {
             for (tag_name, accepted_tag_types) in tags {
                 res.push(Some(UsedTag {
                     name: tag_name,
-                    accepted_tag_types: accepted_tag_types.to_vec(),
+                    accepted_tag_types: &accepted_tag_types[..],
                     toml_source: toml_source.clone(),
                     further_help: None,
                 }));

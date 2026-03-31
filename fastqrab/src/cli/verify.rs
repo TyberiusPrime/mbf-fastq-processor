@@ -675,7 +675,7 @@ pub(crate) fn compare_files(expected: &Path, actual: &Path, input_dir: &Path) ->
         .extension()
         .is_some_and(|ext| ext == "json" || ext == "html" || ext == "progress")
     {
-        println!("applying normalization to {}", expected.display());
+        //println!("applying normalization to {}", expected.display());
         let expected_str = String::from_utf8_lossy(&expected_bytes);
         let actual_str = String::from_utf8_lossy(&actual_bytes);
 

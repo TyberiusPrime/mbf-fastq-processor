@@ -173,8 +173,8 @@ pub trait TagUser {
         &mut self,
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
-    ) -> TagUsageInfo<'_> {
-        TagUsageInfo::default()
+    ) -> Option<TagUsageInfo<'_>> {
+        Some(TagUsageInfo::default())
     }
 
     // we can not do this in the regular verify,

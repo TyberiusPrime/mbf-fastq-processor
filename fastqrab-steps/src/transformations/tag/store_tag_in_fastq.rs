@@ -128,53 +128,53 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagInFastQ> {
         &mut self,
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
-    ) -> TagUsageInfo<'_> {
-        let inner = self
-            .toml_value
-            .as_mut()
-            .expect("get_tag_usage should only be called after successful verification");
-        let in_label = inner
-            .in_label
-            .as_ref()
-            .expect("in_label should have been set in verification")
-            .clone();
-        let mut used_tags = vec![inner.in_label.to_used_tag(vec![TagValueType::Location])];
-        used_tags.extend(
-            inner
-                .comment_tags
+    ) -> Option<TagUsageInfo<'_>> {
+        if let Some(inner) = self.toml_value.value.as_mut() {
+            let in_label = inner
+                .in_label
+                .as_ref()
+                .expect("in_label should have been set in verification")
+                .clone();
+            let mut used_tags = vec![inner.in_label.to_used_tag(&[TagValueType::Location])];
+            used_tags.extend(
+                inner
+                    .comment_tags
+                    .as_mut()
+                    .expect("parent was ok")
+                    .iter_mut()
+                    .filter(|tag| *tag.as_ref().expect("parent was ok") != in_label)
+                    .map(|x| {
+                        x.to_used_tag(&[
+                            TagValueType::Bool,
+                            TagValueType::String,
+                            TagValueType::Location,
+                            TagValueType::Numeric((None, None)),
+                        ])
+                    }),
+            );
+
+            // Add location tags (deduplicated) - defaults to main label if not specified
+            for tv_tag in inner
+                .comment_location_tags
                 .as_mut()
                 .expect("parent was ok")
                 .iter_mut()
-                .filter(|tag| *tag.as_ref().expect("parent was ok") != in_label)
-                .map(|x| {
-                    x.to_used_tag(vec![
-                        TagValueType::Bool,
-                        TagValueType::String,
-                        TagValueType::Location,
-                        TagValueType::Numeric((None, None)),
-                    ])
-                }),
-        );
-
-        // Add location tags (deduplicated) - defaults to main label if not specified
-        for tv_tag in inner
-            .comment_location_tags
-            .as_mut()
-            .expect("parent was ok")
-            .iter_mut()
-        {
-            let tag = tv_tag.as_ref().expect("parent was ok");
-            if !used_tags
-                .iter()
-                .any(|ut| ut.as_ref().is_some_and(|ut| ut.name == *tag))
             {
-                //prevent duplicates
-                used_tags.push(tv_tag.to_used_tag(vec![TagValueType::Location]));
+                let tag = tv_tag.as_ref().expect("parent was ok");
+                if !used_tags
+                    .iter()
+                    .any(|ut| ut.as_ref().is_some_and(|ut| ut.name == *tag))
+                {
+                    //prevent duplicates
+                    used_tags.push(tv_tag.to_used_tag(&[TagValueType::Location]));
+                }
             }
-        }
-        TagUsageInfo {
-            used_tags,
-            ..Default::default()
+            Some(TagUsageInfo {
+                used_tags,
+                ..Default::default()
+            })
+        } else {
+            None
         }
     }
 }
@@ -288,7 +288,7 @@ impl Step for StoreTagInFastQ {
                                 };
                                 let new_name = store_tag_in_comment(
                                     &name,
-                                    tag.0.as_bytes(),
+                                    tag.as_ref().as_bytes(),
                                     &tag_bytes,
                                     self.comment_separator,
                                     self.comment_insert_char,

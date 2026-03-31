@@ -155,23 +155,23 @@ impl TagUser for PartialTaggedVariant<PartialBaseContent> {
         &mut self,
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
-    ) -> TagUsageInfo<'_> {
-        let inner = self
-            .toml_value
-            .as_mut()
-            .expect("get_tag_usage should only be called after successful verification");
-        TagUsageInfo {
-            declared_tag: inner.out_label.to_declared_tag(TagValueType::Numeric(
-                if inner.relative.as_ref().is_some_and(|x| *x) {
-                    (
-                        Some(NonNaN::new(0.0).expect("can't fail")),
-                        Some(NonNaN::new(1.0).expect("can't fail")),
-                    )
-                } else {
-                    (None, None)
-                },
-            )),
-            ..Default::default()
+    ) -> Option<TagUsageInfo<'_>> {
+        if let Some(inner) = self.toml_value.as_mut() {
+            Some(TagUsageInfo {
+                declared_tag: inner.out_label.to_declared_tag(TagValueType::Numeric(
+                    if inner.relative.as_ref().is_some_and(|x| *x) {
+                        (
+                            Some(NonNaN::new(0.0).expect("can't fail")),
+                            Some(NonNaN::new(1.0).expect("can't fail")),
+                        )
+                    } else {
+                        (None, None)
+                    },
+                )),
+                ..Default::default()
+            })
+        } else {
+            None
         }
     }
 }

@@ -41,6 +41,7 @@ workspace = true
 	json_value_merge = {workspace = true}
     fastqrab-io = {workspace = true}
     fastqrab-steps = {workspace = true}
+    fastqrab-config = {workspace = true}
 	mutants = {workspace = true}
 	niffler = {workspace = true}
 	noodles = {workspace = true}

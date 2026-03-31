@@ -91,7 +91,7 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
                 }
                 None => {
                     self.barcodes.help = Some(offer_alternatives(
-                        &barcodes_to_use.0,
+                        barcodes_to_use.as_ref(),
                         &barcodes_data.map.keys().collect::<Vec<_>>(),
                     ));
 
@@ -129,19 +129,19 @@ impl TagUser for PartialTaggedVariant<PartialHammingCorrect> {
         &mut self,
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
-    ) -> TagUsageInfo<'_> {
-        let inner = self
-            .toml_value
-            .as_mut()
-            .expect("get_tag_usage should only be called after successful verification");
-        TagUsageInfo {
-            declared_tag: inner.out_label.to_declared_tag(TagValueType::Location),
-            used_tags: vec![
-                inner
-                    .in_label
-                    .to_used_tag(vec![TagValueType::String, TagValueType::Location]),
-            ],
-            ..Default::default()
+    ) -> Option<TagUsageInfo<'_>> {
+        if let Some(inner) = self.toml_value.as_mut() {
+            Some(TagUsageInfo {
+                declared_tag: inner.out_label.to_declared_tag(TagValueType::Location),
+                used_tags: vec![
+                    inner
+                        .in_label
+                        .to_used_tag(&[TagValueType::String, TagValueType::Location]),
+                ],
+                ..Default::default()
+            })
+        } else {
+            None
         }
     }
 }

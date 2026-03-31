@@ -65,64 +65,63 @@ impl TagUser for PartialTaggedVariant<PartialRegions> {
         &mut self,
         tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
-    ) -> TagUsageInfo<'_> {
-        let inner = self
-            .toml_value
-            .as_mut()
-            .expect("get_tag_usage should only be called after successful verification");
-        let mut used_tags = vec![];
-        let mut seen = HashSet::new();
-        let mut all_location = true;
-        let mut any_tags = false;
-        let regions = inner.regions.as_mut().expect("Parent was ok?");
-        let mut all_segments = true;
-        for tv_region in regions.iter_mut() {
-            let region = tv_region.as_ref().expect("Parent was ok?");
-            let source = region
-                .source
-                .as_ref()
-                .expect("parent was ok")
-                .as_ref_post()
-                .expect("Not PostVerify");
+    ) -> Option<TagUsageInfo<'_>> {
+        if let Some(inner) = self.toml_value.as_mut() {
+            let mut used_tags = vec![];
+            let mut seen = HashSet::new();
+            let mut all_location = true;
+            let mut any_tags = false;
+            let regions = inner.regions.as_mut().expect("Parent was ok?");
+            let mut all_segments = true;
+            for tv_region in regions.iter_mut() {
+                let region = tv_region.as_ref().expect("Parent was ok?");
+                let source = region
+                    .source
+                    .as_ref()
+                    .expect("parent was ok")
+                    .as_ref_post()
+                    .expect("Not PostVerify");
 
-            if !matches!(source, crate::config::ResolvedSourceNoAll::Segment(_)) {
-                all_segments = false;
-            }
-            if let Some(source_tags) = source.get_tags() {
-                any_tags = true;
-                let toml_source =
-                    Rc::new(RefCell::new((&mut tv_region.state, &mut tv_region.help)));
-                for entry in source_tags {
-                    if seen.insert(entry.0.clone()) {
-                        //only add unseen tags
-                        if let Some(provided_tag_types) = tags_available.get(&entry.0) {
-                            if !matches!(provided_tag_types.tag_type, TagValueType::Location) {
+                if !matches!(source, crate::config::ResolvedSourceNoAll::Segment(_)) {
+                    all_segments = false;
+                }
+                if let Some(source_tags) = source.get_tags() {
+                    any_tags = true;
+                    let toml_source =
+                        Rc::new(RefCell::new((&mut tv_region.state, &mut tv_region.help)));
+                    for entry in source_tags {
+                        if seen.insert(entry.0.clone()) {
+                            //only add unseen tags
+                            if let Some(provided_tag_types) = tags_available.get(&entry.0) {
+                                if !matches!(provided_tag_types.tag_type, TagValueType::Location) {
+                                    all_location = false;
+                                }
+                            } else {
                                 all_location = false;
                             }
-                        } else {
-                            all_location = false;
+                            used_tags.push(Some(UsedTag {
+                                name: entry.0,
+                                accepted_tag_types: entry.1,
+                                toml_source: toml_source.clone(),
+                                further_help: None,
+                            }));
                         }
-                        used_tags.push(Some(UsedTag {
-                            name: entry.0,
-                            accepted_tag_types: entry.1.to_vec(),
-                            toml_source: toml_source.clone(),
-                            further_help: None,
-                        }));
                     }
                 }
             }
-        }
-        let output_tag_type = if (any_tags && all_location) || all_segments {
-            TagValueType::Location
+            let output_tag_type = if (any_tags && all_location) || all_segments {
+                TagValueType::Location
+            } else {
+                TagValueType::String
+            };
+            inner.output_tag_type = Some(output_tag_type);
+            Some(TagUsageInfo {
+                declared_tag: inner.out_label.to_declared_tag(output_tag_type),
+                used_tags,
+                ..Default::default()
+            })
         } else {
-            TagValueType::String
-        };
-        inner.output_tag_type = Some(output_tag_type);
-
-        TagUsageInfo {
-            declared_tag: inner.out_label.to_declared_tag(output_tag_type),
-            used_tags,
-            ..Default::default()
+            None
         }
     }
 }

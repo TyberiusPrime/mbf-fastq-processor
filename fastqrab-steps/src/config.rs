@@ -20,6 +20,7 @@ mod input;
 pub mod options;
 mod output;
 mod segments;
+mod tag_labels;
 
 pub use fastqrab_config::segments::{
     ResolvedSourceAll, ResolvedSourceNoAll, SegmentIndex, SegmentIndexOrAll, SegmentOrNameIndex,
@@ -31,6 +32,7 @@ pub use input::{Input, PartialInput, StructuredInput};
 pub use options::{Options, PartialOptions};
 pub use output::{Output, PartialOutput, validate_compression_level_u8};
 pub use segments::ValidateSegment;
+pub use tag_labels::ValidateTagLabel;
 
 #[derive(Debug)]
 pub struct TagMetadata {
@@ -647,10 +649,11 @@ impl PartialConfig {
     pub fn expand_transformations(&mut self) {
         self.transform.sync_nested_state(); // since we normally would only update this once
         // verify is done, but we need accurate info
-        if self.transform.is_ok() {
+        if self.transform.value.is_some() {
             let transform_span = self.transform.span();
-            if let Some(mut transforms) = self.transform.take().into_inner() {
-                //which also means all childs are ok.
+            if let Some(mut transforms) = self.transform.value.take() {
+                //childs may or may not be ok - if they need to lookup up tags, segment_order
+                //in get_used_tags they may not be ok yet.
 
                 let expanded_transforms: RefCell<Vec<TomlValue<PartialTransformation>>> =
                     RefCell::new(Vec::new());
@@ -667,8 +670,8 @@ impl PartialConfig {
                 self.expand_spot_checks(&mut push_new, &transforms);
 
                 for mut t in transforms.drain(..) {
-                    match t.as_mut().expect("parent was ok") {
-                        PartialTransformation::ExtractRegion(step_config) => {
+                    match t.as_mut() {
+                        Some(PartialTransformation::ExtractRegion(step_config)) => {
                             let tag_span = step_config.tag_span.clone();
                             let step_config = step_config
                                 .toml_value
@@ -702,7 +705,7 @@ impl PartialConfig {
                                 },
                             ));
                         }
-                        PartialTransformation::Report(report_config) => {
+                        Some(PartialTransformation::Report(report_config)) => {
                             Self::expand_reports(
                                 &mut push_new,
                                 &mut push_existing,
@@ -713,7 +716,7 @@ impl PartialConfig {
                             );
                         }
 
-                        PartialTransformation::_InternalReadCount(step_config) => {
+                        Some(PartialTransformation::_InternalReadCount(step_config)) => {
                             let tag_span = step_config.tag_span.clone();
                             if let Some(step_config) = step_config.toml_value.take().into_inner() {
                                 res_report_labels.push(
@@ -721,8 +724,7 @@ impl PartialConfig {
                                         .out_label
                                         .as_ref()
                                         .expect("parent was ok")
-                                        .0
-                                        .clone(),
+                                        .to_string(),
                                 );
                                 let step_config: Box<_> =
                                     Box::new(crate::transformations::Partial_InternalReadCount {
@@ -739,7 +741,7 @@ impl PartialConfig {
                                 ));
                             }
                         }
-                        PartialTransformation::CalcGCContent(step_config) => {
+                        Some(PartialTransformation::CalcGCContent(step_config)) => {
                             let tag_span = step_config.tag_span.clone();
                             if let Some(step_config) = step_config.toml_value.take().into_inner() {
                                 push_new(PartialTransformation::CalcBaseContent(
@@ -761,7 +763,7 @@ impl PartialConfig {
                                 ));
                             }
                         }
-                        PartialTransformation::CalcNContent(step_config) => {
+                        Some(PartialTransformation::CalcNContent(step_config)) => {
                             let tag_span = step_config.tag_span.clone();
                             if let Some(step_config) = step_config.toml_value.take().into_inner() {
                                 push_new(PartialTransformation::CalcBaseContent(
@@ -783,31 +785,26 @@ impl PartialConfig {
                                 ));
                             }
                         }
-                        PartialTransformation::FilterEmpty(step_config) => {
+                        Some(PartialTransformation::FilterEmpty(step_config)) => {
                             let tag_span = step_config.tag_span.clone();
                             if let Some(step_config) = step_config.toml_value.take().into_inner() {
                                 // Replace FilterEmpty with CalcLength + FilterByNumericTag
-                                let length_tag_label = TagLabel(format!(
-                                    "_internal_length_{}",
-                                    expanded_transforms.borrow().len()
-                                ));
-                                push_new(PartialTransformation::CalcLength(PartialTaggedVariant {
-                                    toml_value: TomlValue::new_ok_unplaced(
-                                        crate::transformations::calc::PartialLength {
-                                            out_label: TomlValue::new_ok_unplaced(
-                                                length_tag_label.clone(),
-                                            ),
-                                            segment: step_config.segment,
-                                        },
-                                    ),
-                                    tag_span: tag_span.clone(),
-                                }));
+                                let segment_index = *step_config
+                                    .segment
+                                    .as_ref()
+                                    .expect("parent was ok")
+                                    .as_ref_post()
+                                    .expect("parent was ok");
                                 push_new(PartialTransformation::FilterByNumericTag(
                                     PartialTaggedVariant {
                                         toml_value: TomlValue::new_ok_unplaced(
                                             crate::transformations::filters::PartialByNumericTag {
-                                                in_label: TomlValue::new_ok_unplaced(
-                                                    length_tag_label,
+                                                in_label: TomlValue::new_ok(
+                                                    MustAdapt::PostVerify(TagLabel::Length(
+                                                        segment_index,
+                                                        format!("len_not_visible_to_user",),
+                                                    )),
+                                                    step_config.segment.span(),
                                                 ),
                                                 min_value: TomlValue::new_ok_unplaced(Some(1.0)), // Non-empty means length >= 1
                                                 max_value: TomlValue::new_ok_unplaced(None),
@@ -821,7 +818,7 @@ impl PartialConfig {
                                 ));
                             }
                         }
-                        PartialTransformation::ConvertQuality(step_config) => {
+                        Some(PartialTransformation::ConvertQuality(step_config)) => {
                             let tag_span = step_config.tag_span.clone();
                             if let Some(step_config) = step_config.toml_value.as_ref() {
                                 //implies a check beforehand
@@ -845,7 +842,7 @@ impl PartialConfig {
                                 push_existing(t);
                             }
                         }
-                        PartialTransformation::Lowercase(step_config) => {
+                        Some(PartialTransformation::Lowercase(step_config)) => {
                             let tag_span = step_config.tag_span.clone();
                             if let Some(step_config) = step_config.toml_value.take().into_inner() {
                                 push_new(PartialTransformation::_ChangeCase(
@@ -862,7 +859,7 @@ impl PartialConfig {
                                 ));
                             }
                         }
-                        PartialTransformation::Uppercase(step_config) => {
+                        Some(PartialTransformation::Uppercase(step_config)) => {
                             let tag_span = step_config.tag_span.clone();
                             if let Some(step_config) = step_config.toml_value.take().into_inner() {
                                 push_new(PartialTransformation::_ChangeCase(
@@ -1068,12 +1065,13 @@ impl PartialConfig {
         use crate::transformations::TagUser;
         let mut allowed_tags_per_stage: Vec<Vec<TagLabel>> = Vec::new();
         let mut tags_available: IndexMap<TagLabel, TagMetadata> = IndexMap::new();
-        if let Some(transformations) = self.transform.as_mut()
+        if let Some(transformations) = self.transform.value.as_mut() //the trafos have no final
+        //looked up tags yet.
             && let Some(input) = self.input.as_ref()
         {
             let mut just_trafos = transformations
                 .iter_mut()
-                .map(|t| t.as_mut().expect("parent was ok"))
+                .filter_map(|t| t.value.as_mut())
                 .collect::<Vec<_>>();
             let mut all_tags_ever: IndexMap<String, std::ops::Range<usize>> = IndexMap::new();
             let segment_order = input.get_segment_order();
@@ -1085,7 +1083,14 @@ impl PartialConfig {
                 //         errors.push(e.context(format!("[step {step_no} ({t})]:")));
                 //         continue; // skip further processing of this transform if validation failed
                 //     }
-                let tag_info = trafo.get_tag_usage(&tags_available, segment_order);
+                let tag_info = match trafo.get_tag_usage(&tags_available, segment_order) {
+                    Some(t) => t,
+                    None => {
+                        any_tag_errors = true;
+                        //break;
+                        continue;
+                    }
+                };
                 match tag_info.removed_tags {
                     RemovedTags::None => {}
                     RemovedTags::All => {
@@ -1105,8 +1110,11 @@ impl PartialConfig {
                                     "No such tag: '{tag_name}'",
                                 ));
                                 toml_source.help = Some(offer_alternatives(
-                                    &tag_name.0,
-                                    &tags_available.keys().map(|x| &x.0).collect::<Vec<_>>(),
+                                    tag_name.as_ref(),
+                                    &tags_available
+                                        .keys()
+                                        .map(|x| x.as_ref())
+                                        .collect::<Vec<_>>(),
                                 ));
                                 continue; //no point on doing anything else with this tag
                             }
@@ -1121,72 +1129,93 @@ impl PartialConfig {
                 }
                 for used_tag_info in tag_info.used_tags.iter().filter_map(|x| x.as_ref()) {
                     let tag_name = &used_tag_info.name;
-                    let tag_types = &used_tag_info.accepted_tag_types;
-                    let toml_source = &used_tag_info.toml_source;
-                    //no need to check if empty, empty will never be present
-                    let entry = tags_available.get_mut(tag_name);
-                    match entry {
-                        Some(metadata) => {
-                            metadata.used = true;
-                            if tag_types
-                                .iter()
-                                .any(|tag_type| tag_type.compatible(metadata.tag_type))
-                            {
-                                if !tag_info.must_see_all_tags {
-                                    //otherwise, we already have the tag in the list.
-                                    if tags_used_here.contains(tag_name) {
-                                        // cov:excl-start
-                                        panic!(
-                                            "tag declared twice in our code, fix that! {tag_name}"
-                                        );
-                                        // cov:excl-stop
-                                    } else {
-                                        tags_used_here.push(tag_name.clone());
-                                    }
-                                }
-                            } else {
-                                any_tag_errors = true;
-                                *toml_source.borrow_mut().0 =
-                                    TomlValueState::new_validation_failed("Incompatible tag type");
-                                let str_supposed_tag_types = tag_types
+                    if !tag_name.is_virtual() {
+                        let tag_types = &used_tag_info.accepted_tag_types;
+                        let toml_source = &used_tag_info.toml_source;
+                        //no need to check if empty, empty will never be present
+                        let entry = tags_available.get_mut(tag_name);
+                        match entry {
+                            Some(metadata) => {
+                                metadata.used = true;
+                                if tag_types
                                     .iter()
-                                    .map(|t| format!("'{t}'"))
-                                    .collect::<Vec<_>>()
-                                    .join(", ");
-                                let mut help_str = format!(
-                                    "This transform requires tag '{label}' to be one of the following types: [{str_supposed_tag_types}],\n\
+                                    .any(|tag_type| tag_type.compatible(metadata.tag_type))
+                                {
+                                    if !tag_info.must_see_all_tags {
+                                        //otherwise, we already have the tag in the list.
+                                        if tags_used_here.contains(tag_name) {
+                                            // cov:excl-start
+                                            panic!(
+                                                "tag declared twice in our code, fix that! {tag_name}"
+                                            );
+                                            // cov:excl-stop
+                                        } else {
+                                            tags_used_here.push(tag_name.clone());
+                                        }
+                                    }
+                                } else {
+                                    any_tag_errors = true;
+                                    *toml_source.borrow_mut().0 =
+                                        TomlValueState::new_validation_failed(
+                                            "Incompatible tag type",
+                                        );
+                                    let str_supposed_tag_types = tag_types
+                                        .iter()
+                                        .map(|t| format!("'{t}'"))
+                                        .collect::<Vec<_>>()
+                                        .join(", ");
+                                    let mut help_str = format!(
+                                        "This transform requires tag '{label}' to be one of the following types: [{str_supposed_tag_types}],\n\
                                         but it is actually of type '{actual_tag_type}'.",
-                                    label = tag_name,
-                                    actual_tag_type = metadata.tag_type
-                                );
-                                if let Some(further_help) = used_tag_info.further_help.as_ref() {
-                                    help_str.push_str(&format!("\n{further_help}"));
-                                }
+                                        label = tag_name,
+                                        actual_tag_type = metadata.tag_type
+                                    );
+                                    if let Some(further_help) = used_tag_info.further_help.as_ref()
+                                    {
+                                        help_str.push_str(&format!("\n{further_help}"));
+                                    }
 
-                                *toml_source.borrow_mut().1 = Some(help_str);
+                                    *toml_source.borrow_mut().1 = Some(help_str);
+                                }
                             }
-                        }
-                        None => {
-                            any_tag_errors = true;
-                            *toml_source.borrow_mut().0 = TomlValueState::new_validation_failed(
-                                format!("No such tag: '{tag_name}'"),
-                            );
-                            if all_tags_ever.contains_key(&tag_name.0) {
-                                *toml_source.borrow_mut().1 = Some(format!(
-                                    "Tag '{tag_name}' was generated by a previous step, but it is not available at this point.\n\
+                            None => {
+                                any_tag_errors = true;
+                                *toml_source.borrow_mut().0 = TomlValueState::new_validation_failed(
+                                    format!("No such tag: '{tag_name}'"),
+                                );
+                                if all_tags_ever.contains_key(tag_name.as_ref()) {
+                                    *toml_source.borrow_mut().1 = Some(format!(
+                                        "Tag '{tag_name}' was generated by a previous step, but it is not available at this point.\n\
                                         This likely means that it was removed (forgotten) by an intermediate step.\n{}",
-                                    offer_alternatives(
-                                        &tag_name.0,
-                                        &tags_available.keys().map(|x| &x.0).collect::<Vec<_>>()
-                                    )
-                                ));
-                            } else {
-                                *toml_source.borrow_mut().1 = Some(offer_alternatives(
-                                    &tag_name.0,
-                                    &tags_available.keys().map(|x| &x.0).collect::<Vec<_>>(),
-                                ));
+                                        offer_alternatives(
+                                            tag_name.as_ref(),
+                                            &tags_available
+                                                .keys()
+                                                .map(|x| x.as_ref())
+                                                .collect::<Vec<_>>()
+                                        )
+                                    ));
+                                } else {
+                                    *toml_source.borrow_mut().1 = Some(offer_alternatives(
+                                        tag_name.as_ref(),
+                                        &tags_available
+                                            .keys()
+                                            .map(|x| x.as_ref())
+                                            .collect::<Vec<_>>(),
+                                    ));
+                                }
                             }
                         }
+                    } else {
+                        if let Some(source_tag) = tag_name.source_tag() {
+                            if let Some(entry) =
+                            //todo get rid of the alloc?
+                                tags_available.get_mut(&TagLabel::Normal(source_tag.to_string()))
+                            {
+                                entry.used = true;
+                            }
+                        }
+                        tags_used_here.push(tag_name.clone());
                     }
                 }
                 allowed_tags_per_stage.push(tags_used_here);
@@ -1206,7 +1235,8 @@ impl PartialConfig {
                             "Rename either tag, or add a ForgetTag step inbetween.".to_string(),
                         );
                     } else {
-                        all_tags_ever.insert(dt.name.0.clone(), dt.toml_source_span.clone());
+                        all_tags_ever
+                            .insert(dt.name.as_ref().to_string(), dt.toml_source_span.clone());
                         tags_available.insert(
                             dt.name.clone(),
                             TagMetadata {

@@ -72,7 +72,7 @@ impl VerifyIn<PartialConfig> for PartialStoreTagInComment {
             //truly paranoia, tag labels are a-zA-Z0-9_, but the user might have set the
             //separators/insert chars to one of them, I suppose
             if let Some(sep) = self.comment_separator.as_ref().copied()
-                && in_label.0.bytes().any(|x| x == sep)
+                && in_label.as_ref().bytes().any(|x| x == sep)
             {
                 let spans = vec![
                     (
@@ -91,7 +91,7 @@ impl VerifyIn<PartialConfig> for PartialStoreTagInComment {
                 ));
             }
             if let Some(ins) = self.comment_insert_char.as_ref().copied()
-                && in_label.0.bytes().any(|x| x == ins)
+                && in_label.as_ref().bytes().any(|x| x == ins)
             {
                 let spans = vec![
                     (
@@ -119,19 +119,19 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagInComment> {
         &mut self,
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
-    ) -> TagUsageInfo<'_> {
-        let inner = self
-            .toml_value
-            .as_mut()
-            .expect("get_tag_usage should only be called after successful verification");
-        TagUsageInfo {
-            used_tags: vec![inner.in_label.to_used_tag(vec![
-                TagValueType::Bool,
-                TagValueType::String,
-                TagValueType::Location,
-                TagValueType::Numeric((None, None)),
-            ])],
-            ..Default::default()
+    ) -> Option<TagUsageInfo<'_>> {
+        if let Some(inner) = self.toml_value.value.as_mut() {
+            Some(TagUsageInfo {
+                used_tags: vec![inner.in_label.to_used_tag(&[
+                    TagValueType::Bool,
+                    TagValueType::String,
+                    TagValueType::Location,
+                    TagValueType::Numeric((None, None)),
+                ])],
+                ..Default::default()
+            })
+        } else {
+            None
         }
     }
 
@@ -213,7 +213,7 @@ impl Step for StoreTagInComment {
 
                 let new_name = store_tag_in_comment(
                     read.name(),
-                    self.in_label.0.as_bytes(),
+                    self.in_label.as_ref().as_bytes(),
                     &tag_value,
                     self.comment_separator,
                     self.comment_insert_char,

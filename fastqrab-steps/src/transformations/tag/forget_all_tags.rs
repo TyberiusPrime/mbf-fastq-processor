@@ -15,11 +15,11 @@ impl TagUser for PartialTaggedVariant<PartialForgetAllTags> {
         &mut self,
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
-    ) -> TagUsageInfo<'_> {
-        TagUsageInfo {
+    ) -> Option<TagUsageInfo<'_>> {
+        Some(TagUsageInfo {
             removed_tags: RemovedTags::All,
             ..Default::default()
-        }
+        })
     }
 }
 

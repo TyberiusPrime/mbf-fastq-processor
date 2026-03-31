@@ -13,6 +13,7 @@ use crate::{
     demultiplex::OptDemultiplex,
     transformations::{self, Step},
 };
+use fastqrab_config::{TagLabel, dna::TagValue};
 use fastqrab_io::io;
 
 pub struct WorkItem {
@@ -548,6 +549,70 @@ fn process_work_item(
     let block_no = work_item.block_no;
     let expected_read_count = work_item.expected_read_count;
     let stage = &stages[stage_index];
+
+    //now calculate virtual tags.
+    for tag in &stage.allowed_tags {
+        match tag {
+            TagLabel::Length(segment_index, _) => {
+                let read_lengths = {
+                    match segment_index {
+                        fastqrab_steps::config::SegmentIndexOrAll::All => {
+                            let mut read_lengths =
+                                vec![0; work_item.block.segments[0].entries.len()];
+                            for segment in &work_item.block.segments {
+                                for (ii, read) in segment.entries.iter().enumerate() {
+                                    let read_len = read.seq.len();
+                                    read_lengths[ii] += read_len;
+                                }
+                            }
+                            read_lengths
+                        }
+                        fastqrab_steps::config::SegmentIndexOrAll::Indexed(index) => {
+                            let mut read_lengths = Vec::new();
+                            for entry in &work_item.block.segments[*index].entries {
+                                read_lengths.push(entry.seq.len());
+                            }
+                            read_lengths
+                        }
+                    }
+                };
+                let read_lengths: Vec<TagValue> = read_lengths
+                    .into_iter()
+                    .map(|x| TagValue::Numeric(x as f64))
+                    .collect();
+                work_item.block.tags.insert(tag.clone(), read_lengths);
+            }
+            TagLabel::Normal(_) => {}
+            TagLabel::TagLength(tag_name, _) => {
+                let tag_lengths: Vec<TagValue> = work_item
+                    .block
+                    .tags
+                    .get(&TagLabel::Normal(tag_name.clone()))
+                    .expect("Tag not present. Should have been caught in validation. Bug")
+                    .iter()
+                    .map(|tagvalue| {
+                        match tagvalue {
+                            TagValue::Missing => 0,
+                            TagValue::Location(hits) => hits.0.iter().map(|hit| hit.sequence.len()).sum(),
+                            TagValue::String(bstring) => bstring.len(),
+                            TagValue::Numeric(_) => unreachable!("len of a numeric tag not defined. Should have been caught in validation"),
+                            TagValue::Bool(_) => unreachable!("len of a bool tag not defined. Should have been caught in validation"),
+                        }
+                    })
+                    .map(|number| TagValue::Numeric(number as f64))
+                    .collect();
+                assert!(
+                    tag_lengths.len() == work_item.block.segments[0].entries.len(),
+                    "Tag lengths don't match read count. This is a bug in the stage's declared allowed_tags. Tag: {:?}, tag lengths: {}, read count: {}",
+                    tag,
+                    tag_lengths.len(),
+                    work_item.block.segments[0].entries.len()
+                );
+                work_item.block.tags.insert(tag.clone(), tag_lengths);
+            }
+            TagLabel::ReadNo => todo!(),
+        }
+    }
     let unused_tags: Vec<_> = work_item
         .block
         .tags
@@ -588,6 +653,11 @@ fn process_work_item(
     match result {
         Ok((mut result_block, stage_continue)) => {
             result_block.tags.extend(unused_tags);
+            for tag in &stage.allowed_tags {
+                if tag.is_virtual() {
+                    result_block.tags.swap_remove(tag);
+                }
+            }
             //make sure all tags have the same length
             let all_tag_lengths_equal = result_block
                 .tags

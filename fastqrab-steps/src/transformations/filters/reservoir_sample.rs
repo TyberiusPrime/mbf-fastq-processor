@@ -54,11 +54,11 @@ impl TagUser for PartialTaggedVariant<PartialReservoirSample> {
         &mut self,
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
-    ) -> TagUsageInfo<'_> {
-        TagUsageInfo {
+    ) -> Option<TagUsageInfo<'_>> {
+        Some(TagUsageInfo {
             must_see_all_tags: true,
             ..Default::default()
-        }
+        })
     }
 }
 

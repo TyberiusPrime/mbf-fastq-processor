@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::transformations::prelude::*;
+use fasteval::error;
 use fastqrab_config::{default_region_separator, tpd_adapt_bstring};
 use fastqrab_io::CompressionFormat;
 
@@ -28,6 +29,7 @@ pub struct StoreTagsInTable {
 
     #[allow(dead_code)] //only used in deser
     #[tpd(alias = "tags")]
+    #[tpd(adapt_in_verify(String))]
     in_labels: Option<Vec<TagLabel>>,
 
     #[tpd(skip)]
@@ -38,7 +40,7 @@ pub struct StoreTagsInTable {
 impl VerifyIn<PartialConfig> for PartialStoreTagsInTable {
     fn verify(
         &mut self,
-        _parent: &PartialConfig,
+        parent: &PartialConfig,
         _options: &VerifyOptions,
     ) -> std::result::Result<(), ValidationFailure>
     where
@@ -53,20 +55,7 @@ impl VerifyIn<PartialConfig> for PartialStoreTagsInTable {
         //     }
         // });
         self.region_separator.or_with(default_region_separator);
-        if let Some(Some(in_labels)) = self.in_labels.as_ref() {
-            self.final_in_labels = Some(
-                in_labels
-                    .iter()
-                    .map(|tv| {
-                        tv.as_ref()
-                            .expect("Parent was ok, child should be as well")
-                            .clone()
-                    })
-                    .collect(),
-            );
-        } else {
-            // final-in_labels set in get_tag_usage
-        }
+
         Ok(())
     }
 }
@@ -75,46 +64,80 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagsInTable> {
     fn get_tag_usage(
         &mut self,
         tags_available: &IndexMap<TagLabel, TagMetadata>,
-        _segment_order: &[String],
-    ) -> TagUsageInfo<'_> {
-        if tags_available.is_empty() {
-            self.toml_value.state = TomlValueState::ValidationFailed {
+        segment_order: &[String],
+    ) -> Option<TagUsageInfo<'_>> {
+
+        if let Some(inner) = self.toml_value.value.as_mut() {
+            match inner.in_labels.value.as_mut() {
+                Some(Some(in_labels)) => {
+                    //they're not ok yet...
+                    for tag in in_labels.iter_mut() {
+                        tag.validate_tag_label(tags_available, segment_order);
+                    }
+                    if in_labels.is_empty() {
+                        inner.in_labels.state = TomlValueState::ValidationFailed {
+                            message: "in_labels may not be an empty list".to_string(),
+                        };
+                        inner.in_labels.help =
+                            Some("Set to a non-empty list of tag labels.".to_string());
+                        inner.final_in_labels = Some(Vec::new());
+                        return None;
+                    }
+                    inner.final_in_labels = Some(
+                        in_labels
+                            .iter()
+                            .filter_map(|x| x.as_ref())
+                            .filter_map(|x| x.as_ref_post())
+                            .map(|tv| tv.clone())
+                            .collect(),
+                    );
+                }
+                Some(None) | None => {
+                    if tags_available.is_empty() {
+                        self.toml_value.state = TomlValueState::ValidationFailed {
                 message: "StoreTagsInTable needs at least one tag to be set before it in the transformation chain.".to_string(),
-            };
-            return TagUsageInfo {
-                ..Default::default()
-            };
-        }
-        let inner = self
-            .toml_value
-            .as_mut()
-            .expect("get_tag_usage should only be called after successful verification");
+                };
+                        inner.final_in_labels = Some(Vec::new());
+                        return None;
+                    }
+                    let mut final_in_labels: Vec<_> = tags_available.keys().cloned().collect();
+                    final_in_labels.sort_unstable();
+                    inner.final_in_labels = Some(final_in_labels);
+                }
+            }
 
-        if inner.final_in_labels.is_none() {
-            let mut final_in_labels: Vec<_> = tags_available.keys().cloned().collect();
-            final_in_labels.sort_unstable();
-            inner.final_in_labels = Some(final_in_labels);
-        }
-
-        let toml_source = Rc::new(RefCell::new((
-            &mut self.toml_value.state,
-            &mut self.toml_value.help,
-        )));
-        TagUsageInfo {
-            must_see_all_tags: true, // while this means the apply() sees them all, it does not
-            // register them as 'used tags'
-            used_tags: tags_available //we still need to name them, so they don't appear unused
+            let final_in_labels: Vec<_> = inner
+                .final_in_labels
+                .as_ref()
+                .expect("set just above")
                 .iter()
-                .map(|(tag, _metadata)| {
+                .map(|tag_label| tag_label.clone())
+                .collect();
+
+            let toml_source = Rc::new(RefCell::new((
+                &mut self.toml_value.state,
+                &mut self.toml_value.help,
+            )));
+            let used_tags = final_in_labels
+                .into_iter()
+                .map(|tag| {
                     Some(UsedTag {
-                        name: tag.clone(),
-                        accepted_tag_types: ANY_TAG_TYPE.to_vec(),
+                        name: tag,
+                        accepted_tag_types: ANY_TAG_TYPE,
                         toml_source: toml_source.clone(),
                         further_help: None,
                     })
                 })
-                .collect(),
-            ..Default::default()
+                .collect();
+
+            Some(TagUsageInfo {
+                must_see_all_tags: true, // while this means the apply() sees them all, it does not
+                // register them as 'used tags'
+                used_tags,
+                ..Default::default()
+            })
+        } else {
+            None
         }
     }
 }
@@ -187,7 +210,7 @@ impl Step for StoreTagsInTable {
             {
                 let mut header = vec!["ReadName"];
                 for tag in tag_list {
-                    header.push(&tag.0);
+                    header.push(tag.as_ref());
                 }
 
                 for (_demultiplex_tag, writer) in self

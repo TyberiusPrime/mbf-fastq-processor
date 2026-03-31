@@ -3,7 +3,6 @@ use std::{
     cell::RefCell,
     collections::{BTreeMap, BTreeSet},
     rc::Rc,
-    sync::atomic::Ordering,
 };
 
 use crate::transformations::prelude::*;
@@ -39,7 +38,7 @@ pub struct EvalExpression {
 
     #[tpd(skip)]
     #[schemars(skip)]
-    next_index: std::sync::atomic::AtomicU64, // for read_no
+    var_name_to_tag: BTreeMap<String, TagLabel>,
 }
 
 impl VerifyIn<PartialConfig> for PartialEvalExpression {
@@ -83,8 +82,6 @@ impl VerifyIn<PartialConfig> for PartialEvalExpression {
             }
         }
 
-        self.next_index = Some(std::sync::atomic::AtomicU64::new(0));
-
         Ok(())
     }
 }
@@ -114,60 +111,72 @@ pub enum ResultType {
 impl TagUser for PartialTaggedVariant<Box<PartialEvalExpression>> {
     fn get_tag_usage(
         &mut self,
-        _tags_available: &IndexMap<TagLabel, TagMetadata>,
+        tags_available: &IndexMap<TagLabel, TagMetadata>,
         segment_order: &[String],
-    ) -> TagUsageInfo<'_> {
-        let inner = self
-            .toml_value
-            .as_mut()
-            .expect("get_tag_usage should only be called after successful verification");
-        // Extract variable names and declare them as numeric tags
-        // Since we support both numeric and bool tags in expressions,
-        // we use TagValueType::Any for flexibility
-        let var_names = &inner.compiled.as_ref().expect("expected ok").var_names;
-        let used_tags = {
-            let mut used_tags = Vec::new();
-            let toml_source = Rc::new(RefCell::new((
-                &mut inner.expression.state,
-                &mut inner.expression.help,
-            )));
-            for name in var_names {
-                if let Some(suffix) = name.strip_prefix("len_") {
-                    if !segment_order.iter().any(|x| x == suffix) {
-                        used_tags.push(Some(UsedTag {
-                            name: TagLabel(suffix.to_string()),
-                            accepted_tag_types: vec![TagValueType::String, TagValueType::Location],
-                            toml_source: toml_source.clone(),
-                            further_help: None,
-                        }));
+    ) -> Option<TagUsageInfo<'_>> {
+        if let Some(inner) = self.toml_value.value.as_mut() {
+            // Extract variable names and declare them as numeric tags
+            // Since we support both numeric and bool tags in expressions,
+            // we use TagValueType::Any for flexibility
+            let var_names = &inner.compiled.as_ref().expect("expected ok").var_names;
+            let mut var_name_to_tag = BTreeMap::new();
+            let used_tags = {
+                let mut used_tags = Vec::new();
+                let expr_span = inner.expression.span();
+                let toml_source = Rc::new(RefCell::new((
+                    &mut inner.expression.state,
+                    &mut inner.expression.help,
+                )));
+
+                for name in var_names {
+                    let mut tv: TomlValue<MustAdapt<String, TagLabel>> = TomlValue {
+                        state: TomlValueState::NeedsFurtherValidation,
+                        span: expr_span.clone(),
+                        value: Some(MustAdapt::PreVerify(name.clone())),
+                        context: None,
+                        help: None,
+                    };
+                    tv.validate_tag_label(tags_available, segment_order);
+                    match tv.value.take().expect("just set") {
+                        MustAdapt::PreVerify(_) => {
+                            *toml_source.borrow_mut().0 = tv.state;
+                            *toml_source.borrow_mut().1 = tv.help;
+                            inner.var_name_to_tag = Some(var_name_to_tag);
+                            return None;
+                        }
+                        MustAdapt::PostVerify(tag_label) => {
+                            let accepted_tag_types = &[
+                                TagValueType::Bool,
+                                TagValueType::Numeric((None, None)),
+                                TagValueType::String,
+                                TagValueType::Location,
+                            ];
+                            var_name_to_tag.insert(name.clone(), tag_label.clone());
+                            used_tags.push(Some(UsedTag {
+                                name: tag_label,
+                                accepted_tag_types,
+                                toml_source: toml_source.clone(),
+                                further_help: None,
+                            }));
+                        }
                     }
-                } else if name == "read_no" {
-                    // read_no is virtual, no tag needed
-                } else {
-                    used_tags.push(Some(UsedTag {
-                        name: TagLabel(name.clone()),
-                        accepted_tag_types: vec![
-                            TagValueType::Bool,
-                            TagValueType::Numeric((None, None)),
-                            TagValueType::String,
-                            TagValueType::Location,
-                        ],
-                        toml_source: toml_source.clone(),
-                        further_help: None,
-                    }));
                 }
-            }
-            used_tags
-        };
-        TagUsageInfo {
-            used_tags,
-            declared_tag: inner.out_label.to_declared_tag(
-                match inner.result_type.as_ref().expect("parent was ok?") {
-                    ResultType::Numeric => TagValueType::Numeric((None, None)),
-                    ResultType::Bool => TagValueType::Bool,
-                },
-            ),
-            ..Default::default()
+
+                used_tags
+            };
+            inner.var_name_to_tag = Some(var_name_to_tag);
+            Some(TagUsageInfo {
+                used_tags,
+                declared_tag: inner.out_label.to_declared_tag(
+                    match inner.result_type.as_ref().expect("parent was ok?") {
+                        ResultType::Numeric => TagValueType::Numeric((None, None)),
+                        ResultType::Bool => TagValueType::Bool,
+                    },
+                ),
+                ..Default::default()
+            })
+        } else {
+            None
         }
     }
 }
@@ -178,7 +187,7 @@ impl Step for Box<EvalExpression> {
     fn apply(
         &self,
         mut block: FastQBlocksCombined,
-        input_info: &crate::transformations::InputInfo,
+        _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
@@ -190,70 +199,22 @@ impl Step for Box<EvalExpression> {
 
         // Get all tag data for the variables we need
         let mut tag_data: Vec<(&str, &Vec<TagValue>)> = Vec::new();
-        let mut virtual_tags: Vec<(&str, Vec<TagValue>)> = Vec::new();
-
-        let first_segment = block.segments.first().expect("No segment!?");
-        let read_count = first_segment.entries.len();
-        let base_index = self
-            .next_index
-            .fetch_add(read_count as u64, Ordering::Relaxed);
 
         for var_name in var_names {
-            if var_name.starts_with("len_") {
-                let mut tag_values = Vec::new();
-                let suffix = TagLabel(
-                    var_name
-                        .split_once('_')
-                        .expect("var_name must have underscore separator")
-                        .1
-                        .to_string(),
-                );
-                if let Some(segment_index) =
-                    input_info.segment_order.iter().position(|x| *x == suffix.0)
-                {
-                    #[allow(clippy::cast_precision_loss)]
-                    for read in &block.segments[segment_index].entries {
-                        tag_values.push(TagValue::Numeric(read.seq.len() as f64));
-                    }
-                } else {
-                    let str_tag_values = block.tags.get(&suffix).expect(
-                        "Named tag requested but not found. should have been caught earlier. Bug",
-                    );
-                    #[allow(clippy::cast_precision_loss)]
-                    for tag_value in str_tag_values {
-                        let len = match tag_value {
-                            TagValue::String(s) => s.len() as f64,
-                            TagValue::Location(locs) => locs.covered_len() as f64,
-                            TagValue::Missing => 0.0,
-                            // cov:excl-start
-                            _ => panic!(
-                                "EvalExpression: 'len_{suffix}' (a derived length variable) expects String or Location tag type, but found other type. This should have been caught earlier. Bug",
-                            ),
-                            // cov:excl-stop
-                        };
-                        tag_values.push(TagValue::Numeric(len));
-                    }
-                }
-                virtual_tags.push((var_name.as_str(), tag_values));
-            } else if var_name == "read_no" {
-                let mut tag_values = Vec::new();
-                for read_idx in 0..block.len() {
-                    tag_values.push(TagValue::Numeric((base_index + read_idx as u64) as f64));
-                }
-                virtual_tags.push((var_name.as_str(), tag_values));
-            } else if let Some(tag_values) = block.tags.get(&TagLabel(var_name.clone())) {
+            let tag = self.var_name_to_tag.get(var_name).expect("variable name should have a corresponding tag label - should have been set in get_tag_usage");
+            if let Some(tag_values) = block.tags.get(tag) {
                 tag_data.push((var_name.as_str(), tag_values));
             } else {
                 // cov:excl-start
                 panic!(
-                    "EvalExpression: variable '{}' in expression '{}' does not match any available tag. This should have been caught earlier. Bug",
-                    var_name, self.expression
+                    "EvalExpression: variable '{}' (tag: {:?}) in expression '{}' does not match any available tag. This should have been caught earlier. Bug. Available tags:{:?}",
+                    var_name,
+                    tag,
+                    self.expression,
+                    block.tags.keys()
                 );
                 // cov:excl-stop
             }
-        }
-        for (var_name, tag_values) in &virtual_tags {
-            tag_data.push((var_name, tag_values));
         }
 
         // Evaluate expression for each read

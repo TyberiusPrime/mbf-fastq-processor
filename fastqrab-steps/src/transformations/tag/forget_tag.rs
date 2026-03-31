@@ -14,17 +14,17 @@ impl TagUser for PartialTaggedVariant<PartialForgetTag> {
         &mut self,
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
-    ) -> TagUsageInfo<'_> {
-        let inner = self
-            .toml_value
-            .as_mut()
-            .expect("get_tag_usage should only be called after successful verification");
-        TagUsageInfo {
-            removed_tags: RemovedTags::Some(vec![(
-                inner.in_label.as_ref().expect("parent was ok").clone(),
-                &mut inner.in_label,
-            )]),
-            ..Default::default()
+    ) -> Option<TagUsageInfo<'_>> {
+        if let Some(inner) = self.toml_value.as_mut() {
+            Some(TagUsageInfo {
+                removed_tags: RemovedTags::Some(vec![(
+                    inner.in_label.as_ref().expect("parent was ok").clone(),
+                    &mut inner.in_label,
+                )]),
+                ..Default::default()
+            })
+        } else {
+            None
         }
     }
 }

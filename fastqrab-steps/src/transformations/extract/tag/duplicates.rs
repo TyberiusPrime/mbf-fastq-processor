@@ -48,18 +48,17 @@ impl TagUser for PartialTaggedVariant<PartialDuplicates> {
         &mut self,
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
-    ) -> TagUsageInfo<'_> {
-        let inner = self
-            .toml_value
-            .as_mut()
-            .expect("get_tag_usage should only be called after successful verification");
-        let mut used_tags = vec![];
-        used_tags.extend(inner.source.to_used_tags());
-
-        TagUsageInfo {
-            used_tags,
-            declared_tag: inner.out_label.to_declared_tag(TagValueType::Bool),
-            ..Default::default()
+    ) -> Option<TagUsageInfo<'_>> {
+        if let Some(inner) = self.toml_value.as_mut() {
+            let mut used_tags = vec![];
+            used_tags.extend(inner.source.to_used_tags());
+            Some(TagUsageInfo {
+                used_tags,
+                declared_tag: inner.out_label.to_declared_tag(TagValueType::Bool),
+                ..Default::default()
+            })
+        } else {
+            None
         }
     }
 }

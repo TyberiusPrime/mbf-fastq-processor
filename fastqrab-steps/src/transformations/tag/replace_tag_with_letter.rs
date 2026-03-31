@@ -20,14 +20,14 @@ impl TagUser for PartialTaggedVariant<PartialReplaceTagWithLetter> {
         &mut self,
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
-    ) -> TagUsageInfo<'_> {
-        let inner = self
-            .toml_value
-            .as_mut()
-            .expect("get_tag_usage should only be called after successful verification");
-        TagUsageInfo {
-            used_tags: vec![inner.in_label.to_used_tag(vec![TagValueType::Location])],
-            ..Default::default()
+    ) -> Option<TagUsageInfo<'_>> {
+        if let Some(inner) = self.toml_value.value.as_mut() {
+            Some(TagUsageInfo {
+                used_tags: vec![inner.in_label.to_used_tag(&[TagValueType::Location])],
+                ..Default::default()
+            })
+        } else {
+            None
         }
     }
 }
@@ -48,7 +48,7 @@ impl Step for ReplaceTagWithLetter {
 
                         // Replace the sequence bases in the specified region with the replacement letter
                         let seq = read.seq_mut();
-                        //robust agaistt out-of-bounds, just in case
+                        //robust against out-of-bounds, just in case
                         for i in location.start..(location.start + location.len).min(seq.len()) {
                             seq[i] = self.letter;
                         }

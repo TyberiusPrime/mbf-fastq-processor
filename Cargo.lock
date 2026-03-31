@@ -644,6 +644,7 @@ dependencies = [
  "criterion",
  "crossbeam",
  "ex",
+ "fastqrab-config",
  "fastqrab-io",
  "fastqrab-steps",
  "flate2",
@@ -2182,9 +2183,9 @@ dependencies = [
 
 [[package]]
 name = "toml-pretty-deser"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d08bf0668d7e75ba4ae3c6db1e551089d16156d3cfb5bfe3da11a2bec78bc310"
+checksum = "43c7e8ef18a62cd54ad83ea3f6e456e3a4c63c90547344b1fb04d68fa7e3690f"
 dependencies = [
  "codesnake",
  "indexmap",
@@ -2197,9 +2198,9 @@ dependencies = [
 
 [[package]]
 name = "toml-pretty-deser-macros"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b7843ed429203e3af6c618193991fdf9c06e966adbcd189ac47383053d06fba9"
+checksum = "93259759c48789717c0cc34422f68b02e88498f9b005bed25df74b7113e67556"
 dependencies = [
  "proc-macro2 1.0.106",
  "quote 1.0.45",

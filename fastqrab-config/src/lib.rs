@@ -5,7 +5,7 @@ use schemars::JsonSchema;
 use std::cell::RefCell;
 use std::fmt;
 use std::rc::Rc;
-use toml_pretty_deser::{TomlValue, TomlValueState, ValidationFailure};
+use toml_pretty_deser::{MustAdapt, TomlValue, TomlValueState, ValidationFailure};
 use typed_floats::tf64::NonNaN;
 
 pub use fastqrab_dna::dna;
@@ -13,6 +13,8 @@ pub mod fileformats;
 pub mod segments;
 
 use toml_pretty_deser::prelude::tpd;
+
+use crate::segments::SegmentIndexOrAll;
 
 pub const STDIN_MAGIC_PATH: &str = "--stdin--";
 
@@ -149,7 +151,7 @@ pub enum TagValueType {
 #[derive(Debug)]
 pub struct UsedTag<'a> {
     pub name: TagLabel,
-    pub accepted_tag_types: Vec<TagValueType>,
+    pub accepted_tag_types: &'a [TagValueType],
     pub toml_source: Rc<RefCell<(&'a mut TomlValueState, &'a mut Option<String>)>>,
     pub further_help: Option<String>,
 }
@@ -167,7 +169,8 @@ impl UsedTag<'_> {
 }
 
 pub trait ToUsedTag {
-    fn to_used_tag<'a>(&'a mut self, accepted_tag_types: Vec<TagValueType>) -> Option<UsedTag<'a>>;
+    fn to_used_tag<'a>(&'a mut self, accepted_tag_types: &'a [TagValueType])
+    -> Option<UsedTag<'a>>;
 }
 
 pub trait ToUsedTags {
@@ -358,25 +361,71 @@ pub fn tpd_adapt_extract_base_or_dot(mut input: TomlValue<String>) -> TomlValue<
     })
 }
 
-#[derive(Clone, Debug, JsonSchema, PartialEq, Eq, Hash, Ord, PartialOrd)]
+#[derive(Clone, Debug, JsonSchema, PartialEq, Eq)]
 #[schemars(with = "String")]
-pub struct TagLabel(pub String);
+pub enum TagLabel {
+    Normal(String),
+    Length(SegmentIndexOrAll, String),
+    TagLength(String, String),
+    ReadNo,
+}
 
+impl TagLabel {
+    pub fn is_virtual(&self) -> bool {
+        matches!(
+            self,
+            TagLabel::Length(_, _) | TagLabel::ReadNo | TagLabel::TagLength(_, _)
+        )
+    }
+
+    pub fn source_tag(&self) -> Option<&String> {
+        match self {
+            TagLabel::Normal(_) => None,
+            TagLabel::Length(segment_index_or_all, _) => None,
+            TagLabel::TagLength(source_tag, _) => Some(source_tag),
+            TagLabel::ReadNo => None,
+        }
+    }
+}
+
+impl PartialOrd for TagLabel {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.as_ref().cmp(other.as_ref()))
+    }
+}
+impl Ord for TagLabel {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.as_ref().cmp(&other.as_ref())
+    }
+}
+
+impl std::hash::Hash for TagLabel {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.as_ref().hash(state);
+    }
+}
 impl fmt::Display for TagLabel {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.0.fmt(f)
+        self.as_ref().fmt(f)
     }
 }
 
 impl std::borrow::Borrow<str> for TagLabel {
     fn borrow(&self) -> &str {
-        &self.0
+        self.as_ref()
+        // match self {
+        //     TagLabel::Normal(s) | TagLabel::Length(_, s) | TagLabel::TagLength(_, s) => s.as_str(),
+        //     TagLabel::ReadNo => "ReadNo",
+        // }
     }
 }
 
 impl AsRef<str> for TagLabel {
     fn as_ref(&self) -> &str {
-        &self.0
+        match self {
+            TagLabel::Normal(s) | TagLabel::Length(_, s) | TagLabel::TagLength(_, s) => s.as_str(),
+            TagLabel::ReadNo => "ReadNo",
+        }
     }
 }
 
@@ -421,10 +470,31 @@ impl ToDeclaredTag for TomlValue<Option<TagLabel>> {
 }
 
 impl ToUsedTag for TomlValue<TagLabel> {
-    fn to_used_tag<'a>(&'a mut self, accepted_tag_types: Vec<TagValueType>) -> Option<UsedTag<'a>> {
+    fn to_used_tag<'a>(
+        &'a mut self,
+        accepted_tag_types: &'a [TagValueType],
+    ) -> Option<UsedTag<'a>> {
         Some(UsedTag {
             name: self.as_ref().expect("parent was ok?").clone(),
-            accepted_tag_types: accepted_tag_types.to_vec(),
+            accepted_tag_types: accepted_tag_types,
+            toml_source: Rc::new(RefCell::new((&mut self.state, &mut self.help))),
+            further_help: None,
+        })
+    }
+}
+impl ToUsedTag for TomlValue<MustAdapt<String, TagLabel>> {
+    fn to_used_tag<'a>(
+        &'a mut self,
+        accepted_tag_types: &'a [TagValueType],
+    ) -> Option<UsedTag<'a>> {
+        Some(UsedTag {
+            name: self
+                .as_ref()
+                .expect("parent was ok?")
+                .as_ref_post()
+                .expect("validate_tag_label should have been called before")
+                .clone(),
+            accepted_tag_types: &accepted_tag_types[..],
             toml_source: Rc::new(RefCell::new((&mut self.state, &mut self.help))),
             further_help: None,
         })
@@ -456,7 +526,10 @@ impl TryFrom<&str> for ConditionalTagLabel {
 }
 impl ToUsedTag for TomlValue<Option<ConditionalTagLabel>> {
     #[track_caller]
-    fn to_used_tag<'a>(&'a mut self, accepted_tag_types: Vec<TagValueType>) -> Option<UsedTag<'a>> {
+    fn to_used_tag<'a>(
+        &'a mut self,
+        accepted_tag_types: &'a [TagValueType],
+    ) -> Option<UsedTag<'a>> {
         assert!(
             accepted_tag_types.is_empty(),
             "accepted_tag_types not used for ConditionalTagLabel"
@@ -465,11 +538,11 @@ impl ToUsedTag for TomlValue<Option<ConditionalTagLabel>> {
         if let Some(ct) = ct {
             Some(UsedTag {
                 name: ct.tag.clone(),
-                accepted_tag_types: vec![
+                accepted_tag_types: &[
                     TagValueType::Bool,
                     TagValueType::Location,
                     TagValueType::String,
-                ],
+                ][..],
                 toml_source: Rc::new(RefCell::new((&mut self.state, &mut self.help))),
                 further_help: None,
             })
@@ -537,7 +610,7 @@ impl TryFrom<&str> for TagLabel {
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match validate_tag_name(value) {
-            Ok(()) => Ok(TagLabel(value.to_string())),
+            Ok(()) => Ok(TagLabel::Normal(value.to_string())),
             Err(e) => Err(e.to_string()),
         }
     }

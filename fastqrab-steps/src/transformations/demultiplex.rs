@@ -37,7 +37,7 @@ impl VerifyIn<PartialConfig> for PartialDemultiplex {
             if let Some(Some(barcodes)) = parent.barcodes.value.as_ref() {
                 //error sections are
                 //ok...
-                if let Some(barcodes_ref) = barcodes.map.get(barcodes_name.0.as_str()) {
+                if let Some(barcodes_ref) = barcodes.map.get(barcodes_name.as_ref()) {
                     if let Some(resolved) = barcodes_ref
                         .as_ref()
                         .and_then(|x| x.barcode_to_name.as_ref())
@@ -57,7 +57,7 @@ impl VerifyIn<PartialConfig> for PartialDemultiplex {
                     }
                 } else {
                     self.barcodes.help = Some(offer_alternatives(
-                        &barcodes_name.0,
+                        barcodes_name.as_ref(),
                         &barcodes
                             .keys
                             .iter()
@@ -84,11 +84,11 @@ impl VerifyIn<PartialConfig> for PartialDemultiplex {
             if let Some(label) = self.in_label.as_ref() {
                 synthetic_barcodes.insert(
                     BString::from("false"),
-                    format!("{label}=false", label = label.0),
+                    format!("{label}=false", label = label.as_ref()),
                 );
                 synthetic_barcodes.insert(
                     BString::from("true"),
-                    format!("{label}=true", label = label.0),
+                    format!("{label}=true", label = label.as_ref()),
                 );
                 self.resolved_barcodes = Some(synthetic_barcodes);
                 self.output_unmatched.value = Some(Some(false));
@@ -104,44 +104,45 @@ impl TagUser for PartialTaggedVariant<PartialDemultiplex> {
         &mut self,
         tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
-    ) -> TagUsageInfo<'_> {
-        let inner = self
-            .toml_value
-            .as_ref()
-            .expect("get_tag_usage should only be called after successful verification");
+    ) -> Option<TagUsageInfo<'_>> {
+        if let Some(inner) = self.toml_value.as_ref() {
+            // Multiple demultiplex steps are now supported
+            // Each demultiplex step defines a bit region for its variants
+            // When demultiplexing, they are combined with OR logic
+            let upstream_label_type = tags_available
+                .get(inner.in_label.as_ref().expect("parent was ok"))
+                .map(|meta| &meta.tag_type);
+            let upstream_label_is_bool = matches!(upstream_label_type, Some(TagValueType::Bool));
+            if !upstream_label_is_bool
+                && inner
+                    .output_unmatched
+                    .as_ref()
+                    .expect("parent was ok")
+                    .is_none()
+            {
+                self.toml_value.state = TomlValueState::new_validation_failed(
+                    "output_unmatched must be set when using barcodes for demultiplex.",
+                );
+                self.toml_value.help = Some("Add output_unmatched=true (or false)".to_string());
+            }
+            let inner = self
+                .toml_value
+                .value
+                .as_mut()
+                .expect("Was ok before, now might not be ok, but should be still set");
 
-        // Multiple demultiplex steps are now supported
-        // Each demultiplex step defines a bit region for its variants
-        // When demultiplexing, they are combined with OR logic
-        let upstream_label_type = tags_available
-            .get(inner.in_label.as_ref().expect("parent was ok"))
-            .map(|meta| &meta.tag_type);
-        let upstream_label_is_bool = matches!(upstream_label_type, Some(TagValueType::Bool));
-        if !upstream_label_is_bool
-            && inner
-                .output_unmatched
-                .as_ref()
-                .expect("parent was ok")
-                .is_none()
-        {
-            self.toml_value.state = TomlValueState::new_validation_failed(
-                "output_unmatched must be set when using barcodes for demultiplex.",
-            );
-            self.toml_value.help = Some("Add output_unmatched=true (or false)".to_string());
-        }
-        let inner = self
-            .toml_value
-            .value
-            .as_mut()
-            .expect("Was ok before, now might not be ok, but should be still set");
-
-        TagUsageInfo {
-            used_tags: vec![inner.in_label.to_used_tag(vec![
-                TagValueType::Bool,
-                TagValueType::String,
-                TagValueType::Location,
-            ])],
-            ..Default::default()
+            Some(TagUsageInfo {
+                used_tags: vec![inner.in_label.to_used_tag(
+                    &[
+                        TagValueType::Bool,
+                        TagValueType::String,
+                        TagValueType::Location,
+                    ][..],
+                )],
+                ..Default::default()
+            })
+        } else {
+            None
         }
     }
 }

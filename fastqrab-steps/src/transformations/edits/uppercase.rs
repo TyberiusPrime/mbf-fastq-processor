@@ -31,15 +31,14 @@ impl VerifyIn<PartialConfig> for PartialUppercase {
 
 impl TagUser for PartialTaggedVariant<PartialUppercase> {
     #[mutants::skip]
-    // cov:excl-start
     fn get_tag_usage(
         &mut self,
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
-    ) -> TagUsageInfo<'_> {
-        unreachable!("Should have been transformed before");
+    ) -> Option<TagUsageInfo<'_>> {
+        //unreachable!("Should have been transformed before");
+        Some(TagUsageInfo::default())
     }
-    // cov:excl-stop
 }
 
 impl Step for Uppercase {

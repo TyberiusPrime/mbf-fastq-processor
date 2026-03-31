@@ -134,26 +134,27 @@ impl TagUser for PartialTaggedVariant<Box<Partial_ReportTagHistogram>> {
         &mut self,
         tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
-    ) -> TagUsageInfo<'_> {
-        let inner = self
-            .toml_value
-            .as_mut()
-            .expect("get_tag_usage should only be called after successful verification");
-        if let Some(tag_meta) = tags_available.get(inner.tag_name.as_ref().expect("parent was ok?"))
-        {
-            inner.tag_type = Some(tag_meta.tag_type);
+    ) -> Option<TagUsageInfo<'_>> {
+        if let Some(inner) = self.toml_value.as_mut() {
+            if let Some(tag_meta) =
+                tags_available.get(inner.tag_name.as_ref().expect("parent was ok?"))
+            {
+                inner.tag_type = Some(tag_meta.tag_type);
+            } else {
+                //no need to set it, missing tag will fail before the 'tag_type not set in verify'
+                //if that's happening at all for our dynamically generated one.
+            }
+            Some(TagUsageInfo {
+                used_tags: vec![inner.tag_name.to_used_tag(&[
+                    TagValueType::String,
+                    TagValueType::Numeric((None, None)),
+                    TagValueType::Bool,
+                    TagValueType::Location,
+                ])],
+                ..Default::default()
+            })
         } else {
-            //no need to set it, missing tag will fail before the 'tag_type not set in verify'
-            //if that's happening at all for our dynamically generated one.
-        }
-        TagUsageInfo {
-            used_tags: vec![inner.tag_name.to_used_tag(vec![
-                TagValueType::String,
-                TagValueType::Numeric((None, None)),
-                TagValueType::Bool,
-                TagValueType::Location,
-            ])],
-            ..Default::default()
+            None
         }
     }
 }
@@ -254,7 +255,8 @@ impl Step for Box<_ReportTagHistogram> {
             OptDemultiplex::No => {
                 let histogram = data.get(&0).expect("no multiplex data found, but expected");
                 let mut histogram_contents = serde_json::Map::new();
-                histogram_contents.insert(histogram_key.0, histogram.clone().into());
+                histogram_contents
+                    .insert(histogram_key.as_ref().to_string(), histogram.clone().into());
                 contents.insert(
                     "histogram".to_string(),
                     serde_json::Value::Object(histogram_contents),
@@ -272,7 +274,7 @@ impl Step for Box<_ReportTagHistogram> {
                         .get(tag)
                         .expect("no multiplex data found, but expected");
                     let mut inner = serde_json::Map::new();
-                    inner.insert(histogram_key.0.clone(), histogram.clone().into());
+                    inner.insert(histogram_key.as_ref().to_string(), histogram.clone().into());
                     let mut barcode_contents = serde_json::Map::new();
                     barcode_contents
                         .insert("histogram".to_string(), serde_json::Value::Object(inner));

@@ -33,23 +33,23 @@ impl TagUser for PartialTaggedVariant<PartialConvertToRate> {
         &mut self,
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
-    ) -> TagUsageInfo<'_> {
-        let inner = self
-            .toml_value
-            .as_mut()
-            .expect("get_tag_usage should only be called after successful verification");
-        TagUsageInfo {
-            used_tags: vec![
-                inner
-                    .in_label
-                    .to_used_tag(vec![TagValueType::Numeric((None, None))]),
-            ],
-            declared_tag: inner.out_label.to_declared_tag(TagValueType::Numeric((
-                Some(NonNaN::new(0.0).expect("can't fail")),
-                Some(NonNaN::new(1.0).expect("can't fail")),
-            ))),
-            must_see_all_tags: true,
-            ..Default::default()
+    ) -> Option<TagUsageInfo<'_>> {
+        if let Some(inner) = self.toml_value.as_mut() {
+            Some(TagUsageInfo {
+                used_tags: vec![
+                    inner
+                        .in_label
+                        .to_used_tag(&[TagValueType::Numeric((None, None))][..]),
+                ],
+                declared_tag: inner.out_label.to_declared_tag(TagValueType::Numeric((
+                    Some(NonNaN::new(0.0).expect("can't fail")),
+                    Some(NonNaN::new(1.0).expect("can't fail")),
+                ))),
+                must_see_all_tags: true,
+                ..Default::default()
+            })
+        } else {
+            None
         }
     }
 }

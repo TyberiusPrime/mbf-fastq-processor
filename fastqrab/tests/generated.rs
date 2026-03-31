@@ -7615,6 +7615,26 @@ fn test_cases_x_single_step_x_filter_x_max_len() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_filter_x_max_len_implicit_tag_x_all_segments() {
+    println!("Test case is in: test_cases/single_step/filter/max_len_implicit_tag/all_segments");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/filter/max_len_implicit_tag/all_segments"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_filter_x_max_len_implicit_tag_x_basic() {
+    println!("Test case is in: test_cases/single_step/filter/max_len_implicit_tag/basic");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/filter/max_len_implicit_tag/basic"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_filter_x_min_len() {
     println!("Test case is in: test_cases/single_step/filter/min_len");
     run_test(

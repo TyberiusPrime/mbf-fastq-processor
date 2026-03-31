@@ -46,14 +46,14 @@ impl TagUser for PartialTaggedVariant<PartialIUPAC> {
         &mut self,
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
-    ) -> TagUsageInfo<'_> {
-        let inner = self
-            .toml_value
-            .as_mut()
-            .expect("get_tag_usage should only be called after successful verification");
-        TagUsageInfo {
-            declared_tag: inner.out_label.to_declared_tag(TagValueType::Location),
-            ..Default::default()
+    ) -> Option<TagUsageInfo<'_>> {
+        if let Some(inner) = self.toml_value.as_mut() {
+            Some(TagUsageInfo {
+                declared_tag: inner.out_label.to_declared_tag(TagValueType::Location),
+                ..Default::default()
+            })
+        } else {
+            None
         }
     }
 }

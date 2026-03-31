@@ -88,76 +88,71 @@ impl TagUser for PartialTaggedVariant<PartialConcatTags> {
         &mut self,
         tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
-    ) -> TagUsageInfo<'_> {
-        let inner = self
-            .toml_value
-            .as_mut()
-            .expect("get_tag_usage should only be called after successful verification");
-
-        let in_labels: Vec<TagLabel> = {
-            let tv_in_labels = inner.in_labels.as_ref().expect("Parent was ok?");
-            tv_in_labels
-                .iter()
-                .filter_map(|v| v.value.as_ref())
-                .cloned()
-                .collect()
-        };
-        if in_labels.len() < 2 {
-            //we do this here so we can make suggestions.
-            let mut available: Vec<String> = tags_available
-                .iter()
-                .filter_map(|(tag_name, tag_meta)| {
-                    if !in_labels.contains(tag_name)
-                        && matches!(
-                            tag_meta.tag_type,
-                            TagValueType::Location | TagValueType::String
-                        )
-                    {
-                        Some(tag_name.to_string())
-                    } else {
-                        None
-                    }
-                })
-                .collect();
-            available.sort_unstable();
-
-            inner.in_labels.state = TomlValueState::ValidationFailed {
-                message: "Must have at least two input labels".to_string(),
+    ) -> Option<TagUsageInfo<'_>> {
+        if let Some(inner) = self.toml_value.value.as_mut()
+            && let Some(tv_in_labels) = inner.in_labels.value.as_mut()
+        {
+            let in_labels: Vec<TagLabel> = {
+                tv_in_labels
+                    .iter()
+                    .filter_map(|v| v.value.as_ref())
+                    .cloned()
+                    .collect()
             };
-            inner.in_labels.help = Some(format!(
-                "Provide at least two tags to concatenate. Available: {}",
-                available.join(", ")
-            ));
-            TagUsageInfo::default()
-        } else {
-            let tv_in_labels = inner.in_labels.as_mut().expect("Parent was ok?");
-            let all_location = tv_in_labels.iter().all(|v| {
-                if let Some(lv) = v.value.as_ref() {
+            if in_labels.len() < 2 {
+                //we do this here so we can make suggestions.
+                let mut available: Vec<String> = tags_available
+                    .iter()
+                    .filter_map(|(tag_name, tag_meta)| {
+                        if !in_labels.contains(tag_name)
+                            && matches!(
+                                tag_meta.tag_type,
+                                TagValueType::Location | TagValueType::String
+                            )
+                        {
+                            Some(tag_name.to_string())
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+                available.sort_unstable();
+
+                inner.in_labels.state = TomlValueState::ValidationFailed {
+                    message: "Must have at least two input labels".to_string(),
+                };
+                inner.in_labels.help = Some(format!(
+                    "Provide at least two tags to concatenate. Available: {}",
+                    available.join(", ")
+                ));
+                None
+            } else {
+                let all_location = in_labels.iter().all(|v| {
                     matches!(
-                        tags_available.get(lv).map(|meta| &meta.tag_type),
+                        tags_available.get(v).map(|meta| &meta.tag_type),
                         Some(TagValueType::Location)
                     )
+                });
+                let output_type = if all_location {
+                    TagValueType::Location
                 } else {
-                    // skip invalid labels, they will have been be caught in validation
-                    true // cov:excl-line
-                }
-            });
-            let output_type = if all_location {
-                TagValueType::Location
-            } else {
-                TagValueType::String
-            };
-            let used_tags: Vec<_> = tv_in_labels
-                .iter_mut()
-                .map(|x| x.to_used_tag(vec![TagValueType::Location, TagValueType::String]))
-                .collect();
+                    TagValueType::String
+                };
+                let used_tags: Vec<_> = tv_in_labels
+                    .iter_mut()
+                    .filter(|x| x.is_ok())
+                    .map(|x| x.to_used_tag(&[TagValueType::Location, TagValueType::String]))
+                    .collect();
 
-            TagUsageInfo {
-                used_tags,
-                declared_tag: inner.out_label.to_declared_tag(output_type),
-                must_see_all_tags: true,
-                ..Default::default()
+                Some(TagUsageInfo {
+                    used_tags,
+                    declared_tag: inner.out_label.to_declared_tag(output_type),
+                    must_see_all_tags: true,
+                    ..Default::default()
+                })
             }
+        } else {
+            None
         }
     }
 }

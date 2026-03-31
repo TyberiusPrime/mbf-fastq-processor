@@ -9,23 +9,19 @@ use fastqrab_io::io::WrappedFastQRead;
 #[derive(Debug)]
 pub enum Operator {
     #[tpd(alias = ">")]
-    #[tpd(alias = "Above")]
     #[tpd(alias = "Worse")]
     #[tpd(alias = "gt")]
     Above,
     #[tpd(alias = "<")]
-    #[tpd(alias = "Below")]
     #[tpd(alias = "Better")]
     #[tpd(alias = "lt")]
     Below,
     #[tpd(alias = ">=")]
-    #[tpd(alias = "Worse_or_equal")]
-    #[tpd(alias = "Wbove_or_equal")]
+    #[tpd(alias = "WorseOrEqual")]
     #[tpd(alias = "gte")]
     AboveOrEqual,
     #[tpd(alias = "<=")]
-    #[tpd(alias = "Better_or_equal")]
-    #[tpd(alias = "Below_or_equal")]
+    #[tpd(alias = "BetterOrEqual")]
     #[tpd(alias = "lte")]
     BelowOrEqual,
 }
@@ -69,23 +65,23 @@ impl TagUser for PartialTaggedVariant<PartialQualifiedBases> {
         &mut self,
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
-    ) -> TagUsageInfo<'_> {
-        let inner = self
-            .toml_value
-            .as_mut()
-            .expect("get_tag_usage should only be called after successful verification");
-        TagUsageInfo {
-            declared_tag: inner.out_label.to_declared_tag(TagValueType::Numeric(
-                if inner.relative.as_ref().is_some_and(|x| *x) {
-                    (
-                        Some(NonNaN::new(0.0).expect("can't fail")),
-                        Some(NonNaN::new(1.0).expect("can't fail")),
-                    )
-                } else {
-                    (None, None)
-                },
-            )),
-            ..Default::default()
+    ) -> Option<TagUsageInfo<'_>> {
+        if let Some(inner) = self.toml_value.as_mut() {
+            Some(TagUsageInfo {
+                declared_tag: inner.out_label.to_declared_tag(TagValueType::Numeric(
+                    if inner.relative.as_ref().is_some_and(|x| *x) {
+                        (
+                            Some(NonNaN::new(0.0).expect("can't fail")),
+                            Some(NonNaN::new(1.0).expect("can't fail")),
+                        )
+                    } else {
+                        (None, None)
+                    },
+                )),
+                ..Default::default()
+            })
+        } else {
+            None
         }
     }
 }

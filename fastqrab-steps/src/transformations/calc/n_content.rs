@@ -35,7 +35,7 @@ impl TagUser for PartialTaggedVariant<PartialNContent> {
         &mut self,
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
-    ) -> TagUsageInfo<'_> {
+    ) -> Option<TagUsageInfo<'_>> {
         unreachable!("Should have been swapped for BaseCount in expansion");
     }
 }

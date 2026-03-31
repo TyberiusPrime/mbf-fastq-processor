@@ -65,7 +65,7 @@ impl TagUser for PartialTaggedVariant<PartialReport> {
         &mut self,
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
-    ) -> TagUsageInfo<'_> {
+    ) -> Option<TagUsageInfo<'_>> {
         unreachable!(
             "Report should not be used as a tagged variant - should be expanded into individual parts before"
         );

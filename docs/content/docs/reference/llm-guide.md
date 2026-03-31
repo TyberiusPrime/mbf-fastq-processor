@@ -1239,7 +1239,7 @@ Save all tags to TSV file.
     infix = 'tags'                 # TYPE: string, REQUIRED
     compression = 'Raw'            # TYPE: 'Raw'|'Gzip'|'Zstd', REQUIRED
     region_separator = '_'         # TYPE: char, DEFAULT: '_'
-    in_labels = ['umi', 'barcode'] # TYPE: array, OPTIONAL (omit for all tags)
+    in_labels = ['umi'] # TYPE: array, OPTIONAL (omit for all tags)
 ```
 
 **OUTPUT**: `{prefix}_{infix}.tsv`
