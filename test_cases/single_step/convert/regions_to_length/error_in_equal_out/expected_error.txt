@@ -1,5 +1,5 @@
-Error Details ==
-Error 1/1
+# == Error Details ==
+Error 1/2
    ╭─config.toml
    ┆
 12 │ [[step]]
@@ -18,4 +18,21 @@ Error 1/1
 ───╯
 Hint: 'out_label' must differ from 'in_label' to avoid overwriting the source tag.
       See https://doc_url.example/version-stripped-from-test/docs/redirects/ConvertRegionsToLength
+      Or run: `fastqrab template ConvertRegionsToLength` for more information.
 
+Error 2/2
+   ╭─config.toml
+   ┆
+17 │ [[step]]
+18 │     action = 'StoreTagInComment'
+   ┆              ─────────┬─────────
+   ┆                       │
+   ┆                       ╰────────── In this step
+19 │     in_label = 'region_len'
+   ┆                ──────┬─────
+   ┆                      │
+   ┆                      ╰────── No such tag: 'region_len'
+───╯
+Hint: Did you mean: 'mytag'?
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/StoreTagInComment
+      Or run: `fastqrab template StoreTagInComment` for more information.

@@ -68,24 +68,23 @@ impl ResolvedSourceNoAll {
 
 impl ToUsedTags for TomlValue<MustAdapt<String, ResolvedSourceNoAll>> {
     fn to_used_tags(&mut self) -> Vec<Option<UsedTag<'_>>> {
-        let resolved = self
-            .as_ref()
-            .expect("Called on non-ok value")
-            .as_ref_post()
-            .expect("called on a non-transformed resource");
-        let mut res = Vec::new();
-        if let Some(tags) = resolved.get_tags() {
-            let toml_source = Rc::new(RefCell::new((&mut self.state, &mut self.help)));
-            for (tag_name, accepted_tag_types) in tags {
-                res.push(Some(UsedTag {
-                    name: tag_name,
-                    accepted_tag_types: &accepted_tag_types[..],
-                    toml_source: toml_source.clone(),
-                    further_help: None,
-                }));
+        if let Some(resolved) = self.as_ref().and_then(|x| x.as_ref_post()) {
+            let mut res = Vec::new();
+            if let Some(tags) = resolved.get_tags() {
+                let toml_source = Rc::new(RefCell::new((&mut self.state, &mut self.help)));
+                for (tag_name, accepted_tag_types) in tags {
+                    res.push(Some(UsedTag {
+                        name: tag_name,
+                        accepted_tag_types: &accepted_tag_types[..],
+                        toml_source: toml_source.clone(),
+                        further_help: None,
+                    }));
+                }
             }
+            res
+        } else {
+            vec![None]
         }
-        res
     }
 }
 
@@ -148,23 +147,22 @@ impl ResolvedSourceAll {
 
 impl ToUsedTags for TomlValue<MustAdapt<String, ResolvedSourceAll>> {
     fn to_used_tags(&mut self) -> Vec<Option<UsedTag<'_>>> {
-        let resolved = self
-            .as_ref()
-            .expect("Called on non-ok value")
-            .as_ref_post()
-            .expect("called on a non-transformed resource");
-        let mut res = Vec::new();
-        if let Some(tags) = resolved.get_tags() {
-            let toml_source = Rc::new(RefCell::new((&mut self.state, &mut self.help)));
-            for (tag_name, accepted_tag_types) in tags {
-                res.push(Some(UsedTag {
-                    name: tag_name,
-                    accepted_tag_types: &accepted_tag_types[..],
-                    toml_source: toml_source.clone(),
-                    further_help: None,
-                }));
+        if let Some(resolved) = self.as_ref().and_then(|x| x.as_ref_post()) {
+            let mut res = Vec::new();
+            if let Some(tags) = resolved.get_tags() {
+                let toml_source = Rc::new(RefCell::new((&mut self.state, &mut self.help)));
+                for (tag_name, accepted_tag_types) in tags {
+                    res.push(Some(UsedTag {
+                        name: tag_name,
+                        accepted_tag_types: &accepted_tag_types[..],
+                        toml_source: toml_source.clone(),
+                        further_help: None,
+                    }));
+                }
             }
+            res
+        } else {
+            vec![None]
         }
-        res
     }
 }

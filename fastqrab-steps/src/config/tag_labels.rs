@@ -4,7 +4,7 @@ use toml_pretty_deser::{
     MustAdapt, TomlValue, TomlValueState, ValidationFailure, suggest_alternatives,
 };
 
-use crate::config::{PartialConfig, TagMetadata};
+use crate::config::{TagMetadata};
 
 pub trait ValidateTagLabel {
     fn validate_tag_label(

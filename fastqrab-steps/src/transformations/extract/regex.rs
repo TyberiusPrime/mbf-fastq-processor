@@ -108,10 +108,8 @@ impl TagUser for PartialTaggedVariant<PartialRegex> {
                     if inner
                         .source
                         .as_ref()
-                        .expect("parent was ok")
-                        .as_ref_post()
-                        .expect("not in PostVerify")
-                        .is_name()
+                        .and_then(|x| x.as_ref_post())
+                        .is_some_and(|x| x.is_name())
                     {
                         TagValueType::String
                     } else {

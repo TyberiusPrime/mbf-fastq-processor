@@ -18,5 +18,9 @@
     segment = 'index2'
     max_mismatches = 0
 
+
+[[step]]
+  action = 'forget-ALLTAGS'
+
 [output]
     prefix = 'output'

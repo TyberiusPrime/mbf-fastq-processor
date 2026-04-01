@@ -34,11 +34,11 @@
 
 [[step]]
 	action = "StoreTagInComment"
-	in_label = "barcodes_extracted"
+	in_label = "barcode_extracted"
 
 [[step]]
 	action = 'FilterByTag'
-	in_label = 'barcodes_extracted'
+	in_label = 'barcode_extracted'
 	keep_or_remove = 'keep'
 
 

@@ -614,7 +614,8 @@ fn process_work_item(
                 let start = work_item.block.segments[0].first_read_sequential_number;
                 let end = work_item.block.segments[0].first_read_sequential_number
                     + work_item.block.segments[0].entries.len();
-                let read_nos: Vec<TagValue> = (start..end).map(|x| TagValue::Numeric(x as f64)).collect();
+                let read_nos: Vec<TagValue> =
+                    (start..end).map(|x| TagValue::Numeric(x as f64)).collect();
                 work_item.block.tags.insert(tag.clone(), read_nos);
             }
         }

@@ -94,7 +94,7 @@ impl ChainedParser {
             expected_read_count: None,
             first_block_done: false,
             total_input_file_size,
-            reads_so_far: 0
+            reads_so_far: 0,
         }
     }
 
@@ -130,7 +130,7 @@ impl ChainedParser {
                 fastq_block: FastQBlock {
                     block: Vec::new(),
                     entries: Vec::new(),
-                    first_read_sequential_number: self.reads_so_far
+                    first_read_sequential_number: self.reads_so_far,
                 },
                 was_final: true,
                 expected_read_count: self.expected_read_count,

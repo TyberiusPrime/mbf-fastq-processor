@@ -1232,7 +1232,7 @@ impl PartialConfig {
                                     TagLabel::ReadNo | TagLabel::Length(_, _) => {}
                                     TagLabel::TagLength(_source_tag, _) => {
                                         if !entry.tag_type.compatible(TagValueType::Location)
-                                            || entry.tag_type.compatible(TagValueType::String)
+                                            && !entry.tag_type.compatible(TagValueType::String)
                                         {
                                             let toml_source = &used_tag_info.toml_source;
                                             Self::_set_type_error(

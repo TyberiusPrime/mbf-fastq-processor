@@ -8,5 +8,7 @@
     bases_to_ignore = 'N'
     relative = false
 
+[[step]]
+  action = 'forgetAllTags'
 [output]
     prefix = 'output'

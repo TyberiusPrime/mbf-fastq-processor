@@ -381,7 +381,7 @@ impl TagLabel {
     pub fn source_tag(&self) -> Option<&String> {
         match self {
             TagLabel::Normal(_) => None,
-            TagLabel::Length(segment_index_or_all, _) => None,
+            TagLabel::Length(_segment_index_or_all, _) => None,
             TagLabel::TagLength(source_tag, _) => Some(source_tag),
             TagLabel::ReadNo => None,
         }
@@ -442,13 +442,9 @@ impl ToDeclaredTag for TomlValue<TagLabel> {
                 toml_source_span: span,
             })
         } else {
-            // cov:excl-start
-            // with the current layout, get_tag_usage is only called
-            // when the step is ok, and that's only true if the declared_tag is ok,
-            // and as_ref() then works.
-            // this will complain if it's ever triggered.
-            unreachable!("If now reachable, replace with returning None");
-            // cov:excl-stop
+            // Since the virtual tag introduction, we do reach this on invalid TagLabes.
+            None
+            // cov:excl-end
         }
     }
 }
@@ -474,12 +470,16 @@ impl ToUsedTag for TomlValue<TagLabel> {
         &'a mut self,
         accepted_tag_types: &'a [TagValueType],
     ) -> Option<UsedTag<'a>> {
-        Some(UsedTag {
-            name: self.as_ref().expect("parent was ok?").clone(),
-            accepted_tag_types: accepted_tag_types,
-            toml_source: Rc::new(RefCell::new((&mut self.state, &mut self.help))),
-            further_help: None,
-        })
+        if let Some(name) = self.as_ref() {
+            Some(UsedTag {
+                name: name.clone(),
+                accepted_tag_types: accepted_tag_types,
+                toml_source: Rc::new(RefCell::new((&mut self.state, &mut self.help))),
+                further_help: None,
+            })
+        } else {
+            None
+        }
     }
 }
 impl ToUsedTag for TomlValue<MustAdapt<String, TagLabel>> {

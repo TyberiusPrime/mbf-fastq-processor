@@ -1,5 +1,4 @@
-Error Details ==
-Error 1/1
+Error 1/2
   ╭─config.toml
   ┆
 4 │ [[step]]
@@ -17,4 +16,18 @@ Error 1/1
 ──╯
 Hint: Did you mean: Below, Above, or '>' (='Above')?
       See https://doc_url.example/version-stripped-from-test/docs/redirects/CalcQualifiedBases
+      Or run: `fastqrab template CalcQualifiedBases` for more information.
+      Make sure to either use, or forget (using ForgetTag) all your tags.
 
+Error 2/2
+  ╭─config.toml
+  ┆
+4 │ [[step]]
+5 │     action= 'CalcQualifiedBases'
+6 │     relative = false
+7 │     out_label = 'qb'
+  ┆                 ──┬─
+  ┆                   │
+  ┆                   ╰── Unused tag
+──╯
+Hint: Make sure to either use, or forget (using ForgetTag) all your tags.

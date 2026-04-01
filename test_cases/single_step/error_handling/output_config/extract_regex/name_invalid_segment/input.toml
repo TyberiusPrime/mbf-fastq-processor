@@ -8,5 +8,8 @@
     search = 'ABC'
     replacement = '$1'
 
+[[step]]
+  action = 'ForgetAllTags'
+
 [output]
     prefix = 'output'

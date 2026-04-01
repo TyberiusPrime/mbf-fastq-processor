@@ -66,9 +66,8 @@ impl TagUser for PartialTaggedVariant<PartialReport> {
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> Option<TagUsageInfo<'_>> {
-        unreachable!(
-            "Report should not be used as a tagged variant - should be expanded into individual parts before"
-        );
+        //reachable if report failed to validate
+        Some(TagUsageInfo::default())
     }
 
     //report name dupliaction is being done in config verify_reports

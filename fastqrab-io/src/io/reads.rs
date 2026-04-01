@@ -669,7 +669,7 @@ impl FastQBlock {
             outputs.push(FastQBlock {
                 block: self.block.clone(),
                 entries: Vec::new(),
-                first_read_sequential_number: self.first_read_sequential_number
+                first_read_sequential_number: self.first_read_sequential_number,
             });
         }
         for (ii, entry) in self.entries.into_iter().enumerate() {
@@ -2100,7 +2100,7 @@ mod test {
         let block = super::FastQBlock {
             block: b"@hello\nagtc\n+\nBBBB".into(),
             entries: vec![],
-            first_read_sequential_number: 0
+            first_read_sequential_number: 0,
         };
         assert!(block.is_empty());
         let block = super::FastQBlock {
@@ -2110,7 +2110,7 @@ mod test {
                 seq: super::FastQElement::Owned(b"agtc".into()),
                 qual: super::FastQElement::Owned(b"BBBB".into()),
             }],
-            first_read_sequential_number: 0
+            first_read_sequential_number: 0,
         };
         assert!(!block.is_empty());
     }
@@ -2210,7 +2210,7 @@ mod test {
                         seq: FastQElement::Owned(b"agtc".to_vec()),
                         qual: FastQElement::Owned(b"ABCD".to_vec()),
                     }],
-            first_read_sequential_number: 0
+                    first_read_sequential_number: 0,
                 },
                 FastQBlock::empty(),
                 FastQBlock::empty(),
@@ -2237,7 +2237,7 @@ mod test {
                         seq: FastQElement::Owned(b"agtc".to_vec()),
                         qual: FastQElement::Owned(b"ABCD".to_vec()),
                     }],
-                    first_read_sequential_number: 0
+                    first_read_sequential_number: 0,
                 },
                 FastQBlock {
                     block: b"hello/2".to_vec(),
@@ -2246,7 +2246,7 @@ mod test {
                         seq: FastQElement::Owned(b"agtc".to_vec()),
                         qual: FastQElement::Owned(b"ABCD".to_vec()),
                     }],
-                    first_read_sequential_number: 0
+                    first_read_sequential_number: 0,
                 },
                 FastQBlock::empty(),
                 FastQBlock::empty(),
@@ -2272,7 +2272,7 @@ mod test {
                         seq: FastQElement::Owned(b"agtc".to_vec()),
                         qual: FastQElement::Owned(b"ABCD".to_vec()),
                     }],
-                    first_read_sequential_number: 0
+                    first_read_sequential_number: 0,
                 },
                 FastQBlock {
                     block: b"hello/2".to_vec(),
@@ -2281,7 +2281,7 @@ mod test {
                         seq: FastQElement::Owned(b"agtc".to_vec()),
                         qual: FastQElement::Owned(b"ABCD".to_vec()),
                     }],
-                    first_read_sequential_number: 0
+                    first_read_sequential_number: 0,
                 },
                 FastQBlock {
                     block: b"hello/i1".to_vec(),
@@ -2290,7 +2290,7 @@ mod test {
                         seq: FastQElement::Owned(b"agtc".to_vec()),
                         qual: FastQElement::Owned(b"ABCD".to_vec()),
                     }],
-                    first_read_sequential_number: 0
+                    first_read_sequential_number: 0,
                 },
                 FastQBlock::empty(),
             ],
@@ -2315,7 +2315,7 @@ mod test {
                         seq: FastQElement::Owned(b"agtc".to_vec()),
                         qual: FastQElement::Owned(b"ABCD".to_vec()),
                     }],
-                    first_read_sequential_number: 0
+                    first_read_sequential_number: 0,
                 },
                 FastQBlock {
                     block: b"hello/2".to_vec(),
@@ -2324,7 +2324,7 @@ mod test {
                         seq: FastQElement::Owned(b"agtc".to_vec()),
                         qual: FastQElement::Owned(b"ABCD".to_vec()),
                     }],
-                    first_read_sequential_number: 0
+                    first_read_sequential_number: 0,
                 },
                 FastQBlock {
                     block: b"hello/i1".to_vec(),
@@ -2333,7 +2333,7 @@ mod test {
                         seq: FastQElement::Owned(b"agtc".to_vec()),
                         qual: FastQElement::Owned(b"ABCD".to_vec()),
                     }],
-                    first_read_sequential_number: 0
+                    first_read_sequential_number: 0,
                 },
                 FastQBlock {
                     block: b"hello/i2".to_vec(),
@@ -2342,7 +2342,7 @@ mod test {
                         seq: FastQElement::Owned(b"agtc".to_vec()),
                         qual: FastQElement::Owned(b"ABCD".to_vec()),
                     }],
-                    first_read_sequential_number: 0
+                    first_read_sequential_number: 0,
                 },
             ],
             output_tags: Some(vec![]),
@@ -2570,7 +2570,7 @@ mod test {
                     qual: FastQElement::Owned(b"JJJJJJJJ".to_vec()),
                 },
             ],
-                    first_read_sequential_number: 0
+            first_read_sequential_number: 0,
         };
         let cloned = mixed_block.clone();
         assert_eq!(cloned.block, mixed_block.block);

@@ -5707,6 +5707,16 @@ fn test_cases_x_single_step_x_eval_x_location_len() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_eval_x_location_len_with_replacement() {
+    println!("Test case is in: test_cases/single_step/eval/location_len_with_replacement");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/eval/location_len_with_replacement"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_eval_x_segment_len() {
     println!("Test case is in: test_cases/single_step/eval/segment_len");
     run_test(

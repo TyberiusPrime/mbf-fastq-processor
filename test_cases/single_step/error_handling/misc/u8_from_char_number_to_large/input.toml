@@ -5,5 +5,8 @@
 	out_label = 'sx'
     min_qual = 300
 
+[[step]]
+  action = 'forget-all-tags'
+
 [output]
     prefix = 'output'

@@ -1,5 +1,4 @@
-Error Details ==
-Error 1/1
+Error 1/2
    ╭─config.toml
    ┆
 15 │ [[step]]
@@ -17,5 +16,26 @@ Error 1/1
 Hint: Provide an expression to evaluate
       See https://doc_url.example/version-stripped-from-test/docs/redirects/EvalExpression
       Or run: `fastqrab template EvalExpression` for more information.
+      Make sure to either use, or forget (using ForgetTag) all your tags.
 
-
+Error 2/2
+   ╭─config.toml
+   ┆
+ 4 │ [[step]]
+ 5 │     action = 'CalcNContent'
+ 6 │     relative = false
+ 7 │     segment = 'read1'
+ 8 │     out_label = 'n_count'
+   ┆                 ────┬────
+   ┆                     │
+   ┆                     ╰───── Unused tag
+   ┆
+10 │ [[step]]
+11 │     action = 'CalcLength'
+12 │     segment = 'read1'
+13 │     out_label = 'length'
+   ┆                 ────┬───
+   ┆                     │
+   ┆                     ╰──── Unused tag
+───╯
+Hint: Make sure to either use, or forget (using ForgetTag) all your tags.

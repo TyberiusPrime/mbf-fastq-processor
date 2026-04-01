@@ -6,5 +6,8 @@
     out_label = 'base'
     bases_to_count = ''
 
+[[step]]
+  action = 'ForgetAllTags'
+
 [output]
     prefix = 'output'

@@ -2,7 +2,6 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::transformations::prelude::*;
-use fasteval::error;
 use fastqrab_config::{default_region_separator, tpd_adapt_bstring};
 use fastqrab_io::CompressionFormat;
 
@@ -40,7 +39,7 @@ pub struct StoreTagsInTable {
 impl VerifyIn<PartialConfig> for PartialStoreTagsInTable {
     fn verify(
         &mut self,
-        parent: &PartialConfig,
+        _parent: &PartialConfig,
         _options: &VerifyOptions,
     ) -> std::result::Result<(), ValidationFailure>
     where
@@ -66,7 +65,6 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagsInTable> {
         tags_available: &IndexMap<TagLabel, TagMetadata>,
         segment_order: &[String],
     ) -> Option<TagUsageInfo<'_>> {
-
         if let Some(inner) = self.toml_value.value.as_mut() {
             match inner.in_labels.value.as_mut() {
                 Some(Some(in_labels)) => {
