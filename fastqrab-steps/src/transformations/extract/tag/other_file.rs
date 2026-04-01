@@ -112,7 +112,7 @@ impl TagUser for PartialTaggedVariant<PartialOtherFile> {
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> Option<TagUsageInfo<'_>> {
-        if let Some(inner) = self.toml_value.as_mut() {
+        if let Some(inner) = self.toml_value.value.as_mut() {
             let used_tags = inner.source.to_used_tags();
             Some(TagUsageInfo {
                 declared_tag: inner.out_label.to_declared_tag(TagValueType::Bool),

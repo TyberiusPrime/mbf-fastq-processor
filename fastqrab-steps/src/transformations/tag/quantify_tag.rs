@@ -47,7 +47,7 @@ impl TagUser for PartialTaggedVariant<PartialQuantifyTag> {
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> Option<TagUsageInfo<'_>> {
-        if let Some(inner) = self.toml_value.as_mut() {
+        if let Some(inner) = self.toml_value.value.as_mut() {
             Some(TagUsageInfo {
                 used_tags: vec![inner.in_label.to_used_tag(&[TagValueType::Location])],
                 ..Default::default()

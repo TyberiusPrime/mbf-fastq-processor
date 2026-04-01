@@ -36,7 +36,7 @@ impl TagUser for PartialTaggedVariant<PartialLowQualityStart> {
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> Option<TagUsageInfo<'_>> {
-        if let Some(inner) = self.toml_value.as_mut() {
+        if let Some(inner) = self.toml_value.value.as_mut() {
             Some(TagUsageInfo {
                 declared_tag: inner.out_label.to_declared_tag(TagValueType::Location),
                 ..Default::default()

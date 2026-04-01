@@ -6,5 +6,8 @@
     out_label = 'test'
     segment = 'read2'
 
+[[step]]
+  action = 'StoreTagsInTable'
+
 [output]
     prefix = 'output'

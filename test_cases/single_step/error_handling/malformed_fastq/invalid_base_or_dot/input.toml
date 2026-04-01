@@ -8,6 +8,9 @@
     max_mismatch_rate = 0.3
     max_consecutive_mismatches = 1
 
+[[step]]
+  action = 'StoreTagsInTable'
+
 [output]
     prefix = 'output'
 

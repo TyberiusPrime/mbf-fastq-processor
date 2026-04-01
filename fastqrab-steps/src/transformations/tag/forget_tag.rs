@@ -15,7 +15,7 @@ impl TagUser for PartialTaggedVariant<PartialForgetTag> {
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> Option<TagUsageInfo<'_>> {
-        if let Some(inner) = self.toml_value.as_mut() {
+        if let Some(inner) = self.toml_value.value.as_mut() {
             Some(TagUsageInfo {
                 removed_tags: RemovedTags::Some(vec![(
                     inner.in_label.as_ref().expect("parent was ok").clone(),

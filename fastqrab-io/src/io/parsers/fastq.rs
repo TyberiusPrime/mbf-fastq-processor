@@ -55,6 +55,7 @@ impl FastqParser {
             current_block: Some(FastQBlock {
                 block: Vec::new(),
                 entries: Vec::new(),
+            first_read_sequential_number: 0,
             }),
             buf_size,
             target_reads_per_block,

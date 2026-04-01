@@ -135,7 +135,7 @@ impl TagUser for PartialTaggedVariant<Box<Partial_ReportTagHistogram>> {
         tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> Option<TagUsageInfo<'_>> {
-        if let Some(inner) = self.toml_value.as_mut() {
+        if let Some(inner) = self.toml_value.value.as_mut() {
             if let Some(tag_meta) =
                 tags_available.get(inner.tag_name.as_ref().expect("parent was ok?"))
             {

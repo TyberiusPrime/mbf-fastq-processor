@@ -105,6 +105,7 @@ mod tests {
         FastQBlock {
             block: Vec::new(),
             entries: vec![read],
+            first_read_sequential_number: 0
         }
     }
 

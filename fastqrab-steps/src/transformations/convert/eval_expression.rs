@@ -118,52 +118,58 @@ impl TagUser for PartialTaggedVariant<Box<PartialEvalExpression>> {
             // Extract variable names and declare them as numeric tags
             // Since we support both numeric and bool tags in expressions,
             // we use TagValueType::Any for flexibility
-            let var_names = &inner.compiled.as_ref().expect("expected ok").var_names;
+            //
             let mut var_name_to_tag = BTreeMap::new();
-            let used_tags = {
-                let mut used_tags = Vec::new();
-                let expr_span = inner.expression.span();
-                let toml_source = Rc::new(RefCell::new((
-                    &mut inner.expression.state,
-                    &mut inner.expression.help,
-                )));
+            let used_tags = if let Some(compiled) = inner.compiled.as_ref() {
+                let var_names = &compiled.var_names;
+                {
+                    let mut used_tags = Vec::new();
+                    let expr_span = inner.expression.span();
+                    let toml_source = Rc::new(RefCell::new((
+                        &mut inner.expression.state,
+                        &mut inner.expression.help,
+                    )));
 
-                for name in var_names {
-                    let mut tv: TomlValue<MustAdapt<String, TagLabel>> = TomlValue {
-                        state: TomlValueState::NeedsFurtherValidation,
-                        span: expr_span.clone(),
-                        value: Some(MustAdapt::PreVerify(name.clone())),
-                        context: None,
-                        help: None,
-                    };
-                    tv.validate_tag_label(tags_available, segment_order);
-                    match tv.value.take().expect("just set") {
-                        MustAdapt::PreVerify(_) => {
-                            *toml_source.borrow_mut().0 = tv.state;
-                            *toml_source.borrow_mut().1 = tv.help;
-                            inner.var_name_to_tag = Some(var_name_to_tag);
-                            return None;
-                        }
-                        MustAdapt::PostVerify(tag_label) => {
-                            let accepted_tag_types = &[
-                                TagValueType::Bool,
-                                TagValueType::Numeric((None, None)),
-                                TagValueType::String,
-                                TagValueType::Location,
-                            ];
-                            var_name_to_tag.insert(name.clone(), tag_label.clone());
-                            used_tags.push(Some(UsedTag {
-                                name: tag_label,
-                                accepted_tag_types,
-                                toml_source: toml_source.clone(),
-                                further_help: None,
-                            }));
+                    for name in var_names {
+                        let mut tv: TomlValue<MustAdapt<String, TagLabel>> = TomlValue {
+                            state: TomlValueState::NeedsFurtherValidation,
+                            span: expr_span.clone(),
+                            value: Some(MustAdapt::PreVerify(name.clone())),
+                            context: None,
+                            help: None,
+                        };
+                        tv.validate_tag_label(tags_available, segment_order);
+                        match tv.value.take().expect("just set") {
+                            MustAdapt::PreVerify(_) => {
+                                *toml_source.borrow_mut().0 = tv.state;
+                                *toml_source.borrow_mut().1 = tv.help;
+                                inner.var_name_to_tag = Some(var_name_to_tag);
+                                return None;
+                            }
+                            MustAdapt::PostVerify(tag_label) => {
+                                let accepted_tag_types = &[
+                                    TagValueType::Bool,
+                                    TagValueType::Numeric((None, None)),
+                                    TagValueType::String,
+                                    TagValueType::Location,
+                                ];
+                                var_name_to_tag.insert(name.clone(), tag_label.clone());
+                                used_tags.push(Some(UsedTag {
+                                    name: tag_label,
+                                    accepted_tag_types,
+                                    toml_source: toml_source.clone(),
+                                    further_help: None,
+                                }));
+                            }
                         }
                     }
-                }
 
-                used_tags
+                    used_tags
+                }
+            } else {
+                Default::default()
             };
+
             inner.var_name_to_tag = Some(var_name_to_tag);
             Some(TagUsageInfo {
                 used_tags,

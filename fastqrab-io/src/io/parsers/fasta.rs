@@ -75,6 +75,7 @@ impl Parser for FastaParser {
         let mut block = FastQBlock {
             block: Vec::new(),
             entries: Vec::new(),
+            first_read_sequential_number: 0,
         };
         let mut qual = vec![self.fake_quality_char; 100];
 

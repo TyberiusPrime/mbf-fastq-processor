@@ -8,14 +8,14 @@
 	search = "AG[T]+"
 	out_label = 'regexp_one'
 	source = 'read1'
-  #$replacement = "N"
+    replacement = "N"
 
 
 [[step]]
 	action = 'EvalExpression'
 	out_label = 'both'
 	expression = '''
-		len_regexp_one >= 5
+		len_regexp_one >= 1
 	'''
     result_type = 'bool'
 

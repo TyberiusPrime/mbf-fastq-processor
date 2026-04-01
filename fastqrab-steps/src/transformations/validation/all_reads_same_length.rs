@@ -48,7 +48,7 @@ impl TagUser for PartialTaggedVariant<PartialValidateAllReadsSameLength> {
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> Option<TagUsageInfo<'_>> {
-        if let Some(inner) = self.toml_value.as_mut() {
+        if let Some(inner) = self.toml_value.value.as_mut() {
             let mut used_tags = vec![];
             used_tags.extend(inner.source.to_used_tags());
             Some(TagUsageInfo {

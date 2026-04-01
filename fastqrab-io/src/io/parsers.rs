@@ -39,6 +39,7 @@ pub struct ChainedParser {
     expected_read_count: Option<usize>,
     first_block_done: bool,
     total_input_file_size: Option<u64>,
+    reads_so_far: usize,
 }
 
 pub struct ChainParseResult {
@@ -93,6 +94,7 @@ impl ChainedParser {
             expected_read_count: None,
             first_block_done: false,
             total_input_file_size,
+            reads_so_far: 0
         }
     }
 
@@ -128,6 +130,7 @@ impl ChainedParser {
                 fastq_block: FastQBlock {
                     block: Vec::new(),
                     entries: Vec::new(),
+                    first_read_sequential_number: self.reads_so_far
                 },
                 was_final: true,
                 expected_read_count: self.expected_read_count,
@@ -216,6 +219,8 @@ impl ChainedParser {
         //     // or if for some reason (zst?)
         //     // we check the empty bam file thing in the bam parser
         // }
+        res.fastq_block.first_read_sequential_number = self.reads_so_far;
+        self.reads_so_far += res.fastq_block.entries.len();
         Ok(ChainParseResult {
             fastq_block: res.fastq_block,
             was_final: res.was_final,

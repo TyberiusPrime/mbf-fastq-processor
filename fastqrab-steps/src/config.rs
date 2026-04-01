@@ -14,6 +14,7 @@ use schemars::JsonSchema;
 use std::cell::RefCell;
 use std::collections::{BTreeMap, HashSet};
 use std::path::Path;
+use std::rc::Rc;
 use toml_pretty_deser::prelude::*;
 
 mod input;
@@ -1061,6 +1062,32 @@ impl PartialConfig {
         } // cov:excl-line
     }
 
+    fn _set_type_error(
+        toml_source: &Rc<RefCell<(&mut TomlValueState, &mut Option<String>)>>,
+        tag_name: &str,
+        tag_types: &[TagValueType],
+        actual_tag_type: &TagValueType,
+        further_help: Option<&String>,
+    ) {
+        *toml_source.borrow_mut().0 =
+            TomlValueState::new_validation_failed("Incompatible tag type");
+        let str_supposed_tag_types = tag_types
+            .iter()
+            .map(|t| format!("'{t}'"))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let mut help_str = format!(
+            "This transform requires tag '{label}' to be one of the following types: [{str_supposed_tag_types}],\n\
+                                        but it is actually of type '{actual_tag_type}'.",
+            label = tag_name,
+        );
+        if let Some(further_help) = further_help.as_ref() {
+            help_str.push_str(&format!("\n{further_help}"));
+        }
+
+        *toml_source.borrow_mut().1 = Some(help_str);
+    }
+
     pub fn verify_transformation_labels(&mut self) {
         use crate::transformations::TagUser;
         let mut allowed_tags_per_stage: Vec<Vec<TagLabel>> = Vec::new();
@@ -1155,27 +1182,13 @@ impl PartialConfig {
                                     }
                                 } else {
                                     any_tag_errors = true;
-                                    *toml_source.borrow_mut().0 =
-                                        TomlValueState::new_validation_failed(
-                                            "Incompatible tag type",
-                                        );
-                                    let str_supposed_tag_types = tag_types
-                                        .iter()
-                                        .map(|t| format!("'{t}'"))
-                                        .collect::<Vec<_>>()
-                                        .join(", ");
-                                    let mut help_str = format!(
-                                        "This transform requires tag '{label}' to be one of the following types: [{str_supposed_tag_types}],\n\
-                                        but it is actually of type '{actual_tag_type}'.",
-                                        label = tag_name,
-                                        actual_tag_type = metadata.tag_type
+                                    Self::_set_type_error(
+                                        toml_source,
+                                        &format!("{}", tag_name),
+                                        tag_types,
+                                        &metadata.tag_type,
+                                        used_tag_info.further_help.as_ref(),
                                     );
-                                    if let Some(further_help) = used_tag_info.further_help.as_ref()
-                                    {
-                                        help_str.push_str(&format!("\n{further_help}"));
-                                    }
-
-                                    *toml_source.borrow_mut().1 = Some(help_str);
                                 }
                             }
                             None => {
@@ -1209,10 +1222,29 @@ impl PartialConfig {
                     } else {
                         if let Some(source_tag) = tag_name.source_tag() {
                             if let Some(entry) =
-                            //todo get rid of the alloc?
-                                tags_available.get_mut(&TagLabel::Normal(source_tag.to_string()))
+                                //todo get rid of the alloc?
+                                tags_available
+                                    .get_mut(&TagLabel::Normal(source_tag.to_string()))
                             {
                                 entry.used = true;
+                                match tag_name {
+                                    TagLabel::Normal(_) => unreachable!(),
+                                    TagLabel::ReadNo | TagLabel::Length(_, _) => {}
+                                    TagLabel::TagLength(_source_tag, _) => {
+                                        if !entry.tag_type.compatible(TagValueType::Location)
+                                            || entry.tag_type.compatible(TagValueType::String)
+                                        {
+                                            let toml_source = &used_tag_info.toml_source;
+                                            Self::_set_type_error(
+                                                toml_source,
+                                                &format!("{}", source_tag),
+                                                &[TagValueType::String, TagValueType::Location],
+                                                &entry.tag_type,
+                                                used_tag_info.further_help.as_ref(),
+                                            );
+                                        }
+                                    }
+                                }
                             }
                         }
                         tags_used_here.push(tag_name.clone());

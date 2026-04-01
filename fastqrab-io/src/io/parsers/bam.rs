@@ -136,6 +136,7 @@ impl Parser for BamParser {
         let mut block = FastQBlock {
             block: Vec::new(),
             entries: Vec::new(),
+            first_read_sequential_number: 0,
         };
 
         loop {

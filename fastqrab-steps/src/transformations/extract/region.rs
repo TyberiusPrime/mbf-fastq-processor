@@ -42,7 +42,7 @@ impl TagUser for PartialTaggedVariant<PartialRegion> {
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> Option<TagUsageInfo<'_>> {
-        unreachable!("Should have been turned into Regions already")
+        Some(TagUsageInfo::default())
     }
 }
 // cov:excl-stop
