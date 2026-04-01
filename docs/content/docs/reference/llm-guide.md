@@ -295,6 +295,9 @@ Alternative to separate read1/read2 files:
 
 Steps execute in order. Tags created by one step can be used by subsequent steps.
 
+Virtual tags can be used in place of incoming tags. 
+Supported: len_<tag_name|segment_name>, location_<tag_name>, read_no (running read number)
+
 ### Step Categories
 
 1. **Extraction** - Create tags from sequences
@@ -1199,18 +1202,6 @@ Store tag in read name comment.
 
 **EXAMPLE**: `@read1 A00627:18:HGV7T` becomes `@read1|umi=ACGTACGT A00627:18:HGV7T`
 
-### StoreTagLocationInComment
-
-Store tag coordinates in comment (start-end, 0-based, half-open).
-
-```toml
-[[step]]
-    action = 'StoreTagLocationInComment'
-    in_label = 'adapter'           # TYPE: existing tag, REQUIRED
-    segment = 'read1'              # TYPE: segment name or 'All', DEFAULT: 'read1'
-    comment_insert_char = ' '      # TYPE: char, DEFAULT: ' '
-    comment_separator = '|'        # TYPE: char, DEFAULT: '|'
-```
 
 ### StoreTagInFastQ
 
@@ -1222,8 +1213,7 @@ Save tag content to separate FASTQ file.
     in_label = 'umi'               # TYPE: existing tag, REQUIRED
     compression = 'Gzip'           # TYPE: 'Raw'|'Gzip'|'Zstd', REQUIRED
     compression_level = 6          # TYPE: usize, OPTIONAL (gzip: 0-9, zstd: 1-22)
-    comment_tags = []              # TYPE: array of tag names, DEFAULT: []
-    comment_location_tags = ['umi'] # TYPE: array, DEFAULT: [in_label]
+    comment_tags = ['location_umi']              # TYPE: array of tag names, DEFAULT: []
     comment_insert_char = ' '      # TYPE: char, DEFAULT: ' '
     comment_separator = '|'        # TYPE: char, DEFAULT: '|'
     region_separator = '_'         # TYPE: char, DEFAULT: '_'

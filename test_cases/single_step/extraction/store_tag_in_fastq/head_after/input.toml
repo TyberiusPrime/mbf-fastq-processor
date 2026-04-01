@@ -22,6 +22,7 @@
 [[step]]
     action = 'StoreTagInFastQ'
     in_label= "barcode"
+    comment_labels = ['location_barcode']
 
 [[step]]
   action = 'Head'

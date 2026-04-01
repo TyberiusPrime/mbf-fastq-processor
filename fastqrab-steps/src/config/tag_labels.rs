@@ -4,10 +4,10 @@ use toml_pretty_deser::{
     MustAdapt, TomlValue, TomlValueState, ValidationFailure, suggest_alternatives,
 };
 
-use crate::config::{TagMetadata};
+use crate::config::TagMetadata;
 
 pub trait ValidateTagLabel {
-    fn validate_tag_label(
+    fn validate_incoming_tag_label(
         &mut self,
         tags_available: &IndexMap<TagLabel, TagMetadata>,
         segment_order: &[String],
@@ -15,7 +15,7 @@ pub trait ValidateTagLabel {
 }
 
 impl ValidateTagLabel for TomlValue<MustAdapt<String, TagLabel>> {
-    fn validate_tag_label(
+    fn validate_incoming_tag_label(
         &mut self,
         tags_available: &IndexMap<TagLabel, TagMetadata>,
         segment_order: &[String],
@@ -50,18 +50,13 @@ impl ValidateTagLabel for TomlValue<MustAdapt<String, TagLabel>> {
                                 let mut available: Vec<String> =
                                     segment_order.iter().map(|x| format!("len_{x}")).collect();
                                 available.push("len_all".to_string());
-                                available.extend(
-                                    tags_available
-                                        .keys()
-                                        .filter_map(|k| {
-                                            if let TagLabel::Normal(name) = k {
-                                                Some(name.clone())
-                                            } else {
-                                                None
-                                            }
-                                        })
-                                        .collect::<Vec<String>>(),
-                                );
+                                available.extend(tags_available.keys().filter_map(|k| {
+                                    if let TagLabel::Normal(name) = k {
+                                        Some(name.clone())
+                                    } else {
+                                        None
+                                    }
+                                }));
 
                                 Err(ValidationFailure::new(
                                     "Unknown length tag label".to_string(),
@@ -71,6 +66,34 @@ impl ValidateTagLabel for TomlValue<MustAdapt<String, TagLabel>> {
                                     )),
                                 ))
                             }
+                        }
+                    } else if let Some(incoming_tag_name) = value.strip_prefix("location_") {
+                        if tags_available.keys().any(|tag_label| match tag_label {
+                            TagLabel::Normal(name) => name == incoming_tag_name,
+                            _ => false,
+                        }) {
+                            Ok(TagLabel::TagLocation {
+                                source: incoming_tag_name.to_string(),
+                                definition: value.to_string(),
+                            })
+                        } else {
+                            let available: Vec<String> = tags_available
+                                .keys()
+                                .filter_map(|k| {
+                                    if let TagLabel::Normal(name) = k {
+                                        Some(name.clone())
+                                    } else {
+                                        None
+                                    }
+                                })
+                                .collect();
+                            Err(ValidationFailure::new(
+                                "Unknown location tag label".to_string(),
+                                Some(format!(
+                                    "'{incoming_tag_name}' is not a tag name. Choose an existing name.\n{}",
+                                    suggest_alternatives(incoming_tag_name, &available)
+                                )),
+                            ))
                         }
                     } else {
                         match validate_tag_name(value) {

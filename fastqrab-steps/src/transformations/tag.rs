@@ -12,7 +12,6 @@ pub mod replace_tag_with_letter;
 pub mod store_tag_in_comment;
 pub mod store_tag_in_fastq;
 pub mod store_tag_in_sequence;
-pub mod store_tag_location_in_comment;
 pub mod store_tags_in_table;
 
 use fastqrab_config::{TagLabel, dna::TagValue};
@@ -26,9 +25,6 @@ pub use replace_tag_with_letter::{PartialReplaceTagWithLetter, ReplaceTagWithLet
 pub use store_tag_in_comment::{PartialStoreTagInComment, StoreTagInComment};
 pub use store_tag_in_fastq::{PartialStoreTagInFastQ, StoreTagInFastQ};
 pub use store_tag_in_sequence::{PartialStoreTagInSequence, StoreTagInSequence};
-pub use store_tag_location_in_comment::{
-    PartialStoreTagLocationInComment, StoreTagLocationInComment,
-};
 pub use store_tags_in_table::{PartialStoreTagsInTable, StoreTagsInTable};
 
 use crate::config::SegmentIndexOrAll;

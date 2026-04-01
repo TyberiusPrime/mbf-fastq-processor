@@ -45,7 +45,7 @@ impl TagUser for PartialTaggedVariant<PartialByNumericTag> {
         if let Some(inner) = self.toml_value.value.as_mut() {
             inner
                 .in_label
-                .validate_tag_label(tags_available, segment_order);
+                .validate_incoming_tag_label(tags_available, segment_order);
             if let Some(in_label) = inner.in_label.as_ref().and_then(|x| x.as_ref_post())
                 && let Some(TagValueType::Numeric((declared_lower, declared_upper))) =
                     tags_available.get(in_label).map(|x| x.tag_type)

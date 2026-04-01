@@ -12,8 +12,8 @@
 [[step]]
     action ='ReverseComplement'
 [[step]]
-	action='StoreTagLocationInComment'
-	in_label = 'tag'
+	action='StoreTagInComment'
+	in_label = 'location_tag'
 
 [[step]]
 	action='Lowercase'

@@ -138,7 +138,7 @@ impl TagUser for PartialTaggedVariant<Box<PartialEvalExpression>> {
                             context: None,
                             help: None,
                         };
-                        tv.validate_tag_label(tags_available, segment_order);
+                        tv.validate_incoming_tag_label(tags_available, segment_order);
                         match tv.value.take().expect("just set") {
                             MustAdapt::PreVerify(_) => {
                                 *toml_source.borrow_mut().0 = tv.state;

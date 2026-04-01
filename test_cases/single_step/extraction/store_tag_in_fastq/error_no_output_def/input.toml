@@ -18,9 +18,8 @@
 [[step]]
     action = 'StoreTagInFastQ'
     in_label = 'barcode'
-    comment_tags = ["barcode"]
+    comment_tags = []
     comment_location_tags = ["barcode", "barcode2"]
-
 
 
 [[step]]

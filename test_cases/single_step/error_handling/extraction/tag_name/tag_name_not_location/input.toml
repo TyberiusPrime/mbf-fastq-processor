@@ -1,0 +1,24 @@
+[input]
+    read1 = 'input_read1.fq'
+[[step]]
+  action ="ExtractIupac"
+  outLabel = 'hit1'
+  query = "AGTC"
+  anchor = 'anywhere'
+  max_mismatches = 0
+
+[[step]]
+	action = "ExtractRegion"
+    anchor = "Left"
+	source = "read1"
+	start = 0
+	len = 4
+	out_label = "location_hit1"
+
+
+[[step]]    
+  action = 'forgetAllTags'
+
+[output]
+    prefix = 'output'
+    format = 'None'

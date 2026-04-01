@@ -70,7 +70,7 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagsInTable> {
                 Some(Some(in_labels)) => {
                     //they're not ok yet...
                     for tag in in_labels.iter_mut() {
-                        tag.validate_tag_label(tags_available, segment_order);
+                        tag.validate_incoming_tag_label(tags_available, segment_order);
                     }
                     if in_labels.is_empty() {
                         inner.in_labels.state = TomlValueState::ValidationFailed {

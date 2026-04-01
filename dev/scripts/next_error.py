@@ -40,6 +40,7 @@ def main():
 
     print(f"\nOpening fish shell in: {test_case_dir}\n")
     os.chdir(test_case_dir)
+    os.system('cargo run -- verify --output-dir=actual')
     os.execvp("fish", ["fish"])
 
 

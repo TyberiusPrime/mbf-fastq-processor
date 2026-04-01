@@ -1,0 +1,18 @@
+Error 1/1
+   ╭─config.toml
+   ┆
+11 │ [[step]]
+12 │     action = 'StoreTagInFastQ'
+   ┆              ────────┬────────
+   ┆                      │
+   ┆                      ╰───────── In this step
+   ┆
+13 │     in_label = 'barcode'
+14 │     comment_tags = ["barcode"]
+   ┆                     ────┬────
+   ┆                         │
+   ┆                         ╰────── InLabel repeated in comment_tags
+───╯
+Hint: The same tag cannot be used as both the in_label and a comment tag. Remove from comment_tags?
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/StoreTagInFastQ
+      Or run: `fastqrab template StoreTagInFastQ` for more information.

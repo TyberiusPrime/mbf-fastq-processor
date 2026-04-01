@@ -25,8 +25,8 @@
     in_label = 'combined'
 
 [[step]]
-    action = 'StoreTagLocationInComment'
-    in_label = 'combined'
+    action = 'StoreTagInComment'
+    in_label = 'location_combined'
 
 
 [output]

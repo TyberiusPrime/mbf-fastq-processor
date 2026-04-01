@@ -140,8 +140,8 @@ impl TagUser for PartialTaggedVariant<PartialOtherFile> {
             //if there's a StoreTagInComment before us
             //and our fastq_readname_end_char is != their comment_insert_char
             for trafo in transformations_before_this_one.iter().rev() {
-                if let Some(PartialTransformation::StoreTagInComment(info)) = trafo.as_ref()
-                    && let Some(info) = info.toml_value.as_ref()
+                if let Some(PartialTransformation::StoreTagInComment(info)) = trafo.value.as_ref()
+                    && let Some(info) = info.toml_value.value.as_ref()
                     && let Some(info_comment_char) = info.comment_separator.as_ref()
                     && let Some(read_comment_character) = input_def
                         .options

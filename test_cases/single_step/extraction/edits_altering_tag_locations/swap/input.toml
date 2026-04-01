@@ -32,14 +32,14 @@
 	segment_b = 'read2'
 
 [[step]]
-	action = 'StoreTagLocationInComment'
+	action = 'StoreTagInComment'
 	segment = 'All'
-	in_label = 'tagr1'
+	in_label = 'location_tagr1'
 
 [[step]]
-	action = 'StoreTagLocationInComment'
+	action = 'StoreTagInComment'
 	segment = 'All'
-	in_label = 'tagr2'
+	in_label = 'location_tagr2'
 
 [[step]]
 	action = 'StoreTagInComment'

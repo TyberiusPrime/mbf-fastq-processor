@@ -30,6 +30,7 @@ use fastqrab_io::io::WrappedFastQReadMut;
 #[tpd]
 #[derive(Debug)]
 pub struct StoreTagInComment {
+    #[tpd(adapt_in_verify(String))]
     in_label: TagLabel,
     #[tpd(adapt_in_verify(String))]
     #[schemars(with = "String")]
@@ -68,11 +69,11 @@ impl VerifyIn<PartialConfig> for PartialStoreTagInComment {
             .or_with(default_comment_insert_char);
 
         // Validate in_label doesn't contain reserved characters
-        if let Some(in_label) = self.in_label.as_ref() {
+        if let Some(in_label) = self.in_label.value.as_ref().and_then(|x| x.as_ref_pre()) {
             //truly paranoia, tag labels are a-zA-Z0-9_, but the user might have set the
             //separators/insert chars to one of them, I suppose
             if let Some(sep) = self.comment_separator.as_ref().copied()
-                && in_label.as_ref().bytes().any(|x| x == sep)
+                && in_label.bytes().any(|x| x == sep)
             {
                 let spans = vec![
                     (
@@ -91,7 +92,7 @@ impl VerifyIn<PartialConfig> for PartialStoreTagInComment {
                 ));
             }
             if let Some(ins) = self.comment_insert_char.as_ref().copied()
-                && in_label.as_ref().bytes().any(|x| x == ins)
+                && in_label.bytes().any(|x| x == ins)
             {
                 let spans = vec![
                     (
@@ -117,10 +118,13 @@ impl VerifyIn<PartialConfig> for PartialStoreTagInComment {
 impl TagUser for PartialTaggedVariant<PartialStoreTagInComment> {
     fn get_tag_usage(
         &mut self,
-        _tags_available: &IndexMap<TagLabel, TagMetadata>,
-        _segment_order: &[String],
+        tags_available: &IndexMap<TagLabel, TagMetadata>,
+        segment_order: &[String],
     ) -> Option<TagUsageInfo<'_>> {
         if let Some(inner) = self.toml_value.value.as_mut() {
+            inner
+                .in_label
+                .validate_incoming_tag_label(tags_available, segment_order);
             Some(TagUsageInfo {
                 used_tags: vec![inner.in_label.to_used_tag(&[
                     TagValueType::Bool,
@@ -134,53 +138,6 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagInComment> {
             None
         }
     }
-
-    //this is nice, but it doesn't play ball with swap,
-    // fn verify_others(
-    //     &mut self,
-    //     input_def: Option<&crate::config::PartialInput>,
-    //     output_def: Option<&crate::config::PartialOutput>,
-    //     _transformations_before_this_one: &[TomlValue<PartialTransformation>],
-    // ) {
-    //     let inner = self
-    //         .toml_value
-    //         .as_mut()
-    //         .expect("get_tag_usage should only be called after successful verification");
-    //     match inner.segment.as_ref().and_then(MustAdapt::as_ref_post) {
-    //         Some(SegmentIndexOrAll::Indexed(idx)) => {
-    //             if let Some(input_def) = input_def.as_ref() {
-    //                 let name = &input_def.get_segment_order()[*idx];
-    //                 let available_output_segments = {
-    //                     if let Some(output_def) = output_def.as_ref() {
-    //                         let mut res = Vec::new();
-    //                         if let Some(Some(interleaved)) = output_def.interleave.as_ref() {
-    //                             res.extend(interleaved.iter().filter_map(|x| x.as_ref()).cloned());
-    //                         }
-    //                         if let Some(Some(output)) = &output_def.output.as_ref() {
-    //                             res.extend(output.iter().filter_map(|x| x.as_ref()).cloned());
-    //                         }
-    //                         res
-    //                     } else {
-    //                         //bail!("Using StoreTagInComment when not outputting anything is pointless"
-    //                         //actually, the only time this will happen is in a report only run.
-    //                         //and if the user requests it (maybe commented out the output?)
-    //                         //who are we to complain
-    //                         vec![name.clone()]
-    //                         //todo: Think hard and long if this is the right behaviour
-    //                     }
-    //                 };
-    //                 if !available_output_segments.contains(name) {
-    //                     inner.segment.state =
-    //                         TomlValueState::new_validation_failed("Invalid output segment");
-    //                     inner.segment.help = Some(format!(
-    //                         "StoreTagInComment is configured to write comments to '{name}', but the output does not contain '{name}'. Available: {available_output_segments:?}",
-    //                     ));
-    //                 }
-    //             }
-    //         }
-    //         Some(SegmentIndexOrAll::All) | None => {}
-    //     }
-    // }
 }
 
 impl Step for StoreTagInComment {

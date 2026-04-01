@@ -35,3 +35,4 @@
 [[step]]
     action = 'StoreTagInFastQ'
     in_label = 'sequence'
+    commentLabels = 'location_sequence'

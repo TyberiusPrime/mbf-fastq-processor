@@ -148,6 +148,29 @@ impl Hits {
         }
         total
     }
+
+    pub fn location(&self, segment_order: &[String]) -> BString {
+        let mut seq = BString::new("".into());
+        let mut first = true;
+        for hit in &self.0 {
+            if let Some(location) = hit.location.as_ref() {
+                if !first {
+                    seq.push(b',');
+                }
+                first = false;
+                seq.extend_from_slice(
+                    format!(
+                        "{}:{}-{}",
+                        segment_order[location.segment_index.get_index()],
+                        location.start,
+                        location.start + location.len
+                    )
+                    .as_bytes(),
+                );
+            }
+        }
+        seq
+    }
 }
 
 /// Where to search

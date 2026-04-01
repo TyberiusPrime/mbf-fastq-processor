@@ -18,16 +18,14 @@ use fastqrab_io::{CompressionFormat, FileFormat};
 #[tpd]
 #[derive(Debug)]
 pub struct StoreTagInFastQ {
+    #[tpd(adapt_in_verify(String))]
     in_label: TagLabel,
 
     // Optional read name comment fields (like StoreTagInComment)
-    #[tpd(default)]
-    comment_tags: Vec<TagLabel>,
+    #[tpd(adapt_in_verify(String))]
+    #[tpd(alias = "comment_labels")]
+    comment_tags: Option<Vec<TagLabel>>,
     //
-    // Optional location tags to add to read names
-    //#[tpd(default)]
-    comment_location_tags: Vec<TagLabel>,
-
     #[tpd(with = "tpd_adapt_u8_from_byte_or_char")]
     comment_separator: u8,
 
@@ -95,80 +93,46 @@ impl VerifyIn<PartialConfig> for PartialStoreTagInFastQ {
                 ),
             ));
         }
-        if let Some(in_label) = self.in_label.as_ref() {
-            self.comment_location_tags
-                .or_with(|| vec![TomlValue::new_ok(in_label.clone(), 0..0)]);
-        } // cov:excl-line
         Ok(())
     }
 }
 
-/* #[allow(clippy::missing_fields_in_debug)]
-impl std::fmt::Debug for StoreTagInFastQ {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("StoreTagInFastQ")
-            .field("label", &self.in_label)
-            .field("infix", &self.infix)
-            .field("segment", &self.segment)
-            .field("segment_index", &self.segment_index)
-            .field("comment_tags", &self.comment_tags)
-            .field("comment_location_tags", &self.comment_location_tags)
-            .field("comment_separator", &self.comment_separator)
-            .field("comment_insert_char", &self.comment_insert_char)
-            .field("region_separator", &self.region_separator)
-            .field("format", &self.format)
-            .field("compression", &self.compression)
-            .field("compression_level", &self.compression_level)
-            .finish()
-    }
-} */
-
 impl TagUser for PartialTaggedVariant<PartialStoreTagInFastQ> {
     fn get_tag_usage(
         &mut self,
-        _tags_available: &IndexMap<TagLabel, TagMetadata>,
-        _segment_order: &[String],
+        tags_available: &IndexMap<TagLabel, TagMetadata>,
+        segment_order: &[String],
     ) -> Option<TagUsageInfo<'_>> {
         if let Some(inner) = self.toml_value.value.as_mut() {
+            inner
+                .in_label
+                .validate_incoming_tag_label(tags_available, segment_order);
             let in_label = inner
                 .in_label
-                .as_ref()
-                .expect("in_label should have been set in verification")
-                .clone();
-            let mut used_tags = vec![inner.in_label.to_used_tag(&[TagValueType::Location])];
-            used_tags.extend(
-                inner
-                    .comment_tags
-                    .as_mut()
-                    .expect("parent was ok")
-                    .iter_mut()
-                    .filter(|tag| *tag.as_ref().expect("parent was ok") != in_label)
-                    .map(|x| {
-                        x.to_used_tag(&[
+                .to_used_tag(&[TagValueType::Location, TagValueType::String]);
+
+            let mut used_tags = vec![in_label];
+            if let Some(Some(comment_tags)) = inner.comment_tags.value.as_mut() {
+                for tag in comment_tags.iter_mut() {
+                    tag.validate_incoming_tag_label(tags_available, segment_order);
+                    if let Some(this_tag) = tag.as_ref().and_then(|x| x.as_ref_post())
+                        && used_tags[0].as_ref().is_some_and(|x| x.name == *this_tag)
+                    {
+                        tag.state = TomlValueState::new_validation_failed(
+                            "InLabel repeated in comment_tags",
+                        );
+                        tag.help = Some("The same tag cannot be used as both the in_label and a comment tag. Remove from comment_tags?".to_string());
+                    } else {
+                        used_tags.push(tag.to_used_tag(&[
                             TagValueType::Bool,
                             TagValueType::String,
                             TagValueType::Location,
                             TagValueType::Numeric((None, None)),
-                        ])
-                    }),
-            );
-
-            // Add location tags (deduplicated) - defaults to main label if not specified
-            for tv_tag in inner
-                .comment_location_tags
-                .as_mut()
-                .expect("parent was ok")
-                .iter_mut()
-            {
-                let tag = tv_tag.as_ref().expect("parent was ok");
-                if !used_tags
-                    .iter()
-                    .any(|ut| ut.as_ref().is_some_and(|ut| ut.name == *tag))
-                {
-                    //prevent duplicates
-                    used_tags.push(tv_tag.to_used_tag(&[TagValueType::Location]));
+                        ]));
+                    }
                 }
             }
+
             Some(TagUsageInfo {
                 used_tags,
                 ..Default::default()
@@ -215,7 +179,7 @@ impl Step for StoreTagInFastQ {
     fn apply(
         &self,
         block: FastQBlocksCombined,
-        input_info: &InputInfo,
+        _input_info: &InputInfo,
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<(FastQBlocksCombined, bool)> {
@@ -262,105 +226,51 @@ impl Step for StoreTagInFastQ {
                     {
                         //if we have demultiplex & no-unmatched-output, this happens
                         let mut name = wrapped.name().to_vec();
-                        for tag in &self.comment_tags {
-                            if let Some(tag_value) = block
-                                .tags
-                                .get(tag)
-                                .expect("tag must exist in block")
-                                .get(ii)
-                            {
-                                let tag_bytes: Vec<u8> = match tag_value {
-                                    TagValue::Location(hits) => {
-                                        hits.joined_sequence(Some(&self.region_separator))
-                                    }
-                                    TagValue::String(value) => value.to_vec(),
-                                    TagValue::Numeric(n) => {
-                                        format_numeric_for_comment(*n).into_bytes()
-                                    }
-                                    TagValue::Bool(n) => {
-                                        if *n {
-                                            "1".into()
-                                        } else {
-                                            "0".into()
+                        if let Some(comment_tags) = self.comment_tags.as_ref() {
+                            for tag in comment_tags {
+                                if let Some(tag_value) = block
+                                    .tags
+                                    .get(tag)
+                                    .expect("tag must exist in block")
+                                    .get(ii)
+                                {
+                                    let tag_bytes: Vec<u8> = match tag_value {
+                                        TagValue::Location(hits) => {
+                                            hits.joined_sequence(Some(&self.region_separator))
                                         }
-                                    }
-                                    TagValue::Missing => Vec::new(),
-                                };
-                                let new_name = store_tag_in_comment(
-                                    &name,
-                                    tag.as_ref().as_bytes(),
-                                    &tag_bytes,
-                                    self.comment_separator,
-                                    self.comment_insert_char,
-                                );
-                                match new_name {
-                                    Err(err) => {
-                                        error_encountered = Some(format!("{err}"));
-                                        break 'outer;
-                                    }
-                                    Ok(new_name) => {
-                                        name = new_name;
-                                    }
-                                }
-                            } // cov:excl-line
-                        }
-
-                        // Process location tags - always set by validation logic.
-                        for location_tag in &self.comment_location_tags {
-                            if let Some(tag_value) = block
-                                .tags
-                                .get(location_tag)
-                                .expect("location tag must exist in block. uses_tag mistake?")
-                                .get(ii)
-                                && let Some(hits) = tag_value.as_sequence()
-                            {
-                                let mut location_seq: Vec<u8> = Vec::new();
-                                let mut first = true;
-                                for hit in &hits.0 {
-                                    if let Some(location) = hit.location.as_ref() {
-                                        if !first {
-                                            location_seq.push(b',');
+                                        TagValue::String(value) => value.to_vec(),
+                                        TagValue::Numeric(n) => {
+                                            format_numeric_for_comment(*n).into_bytes()
                                         }
-                                        first = false;
-                                        location_seq.extend_from_slice(
-                                            format!(
-                                                "{}:{}-{}",
-                                                input_info.segment_order
-                                                    [location.segment_index.get_index()],
-                                                location.start,
-                                                location.start + location.len
-                                            )
-                                            .as_bytes(),
-                                        );
-                                    } // cov:excl-line
-                                }
-
-                                if !location_seq.is_empty() {
-                                    let location_label = format!("{location_tag}_location");
+                                        TagValue::Bool(n) => {
+                                            if *n {
+                                                "1".into()
+                                            } else {
+                                                "0".into()
+                                            }
+                                        }
+                                        TagValue::Missing => Vec::new(),
+                                    };
                                     let new_name = store_tag_in_comment(
                                         &name,
-                                        location_label.as_bytes(),
-                                        &location_seq,
+                                        tag.as_ref().as_bytes(),
+                                        &tag_bytes,
                                         self.comment_separator,
                                         self.comment_insert_char,
                                     );
                                     match new_name {
-                                        // cov:excl-start
-                                        // I don't exactly expect a location tag to contain the
-                                        // comment_insert_cahr or separator, but if it does, we
-                                        // should still report an error rather than silently
                                         Err(err) => {
                                             error_encountered = Some(format!("{err}"));
                                             break 'outer;
                                         }
-                                        // cov:excl-stop
                                         Ok(new_name) => {
                                             name = new_name;
                                         }
                                     }
                                 } // cov:excl-line
-                            } // cov:excl-line
+                            }
                         }
+
                         match self.format {
                             FileFormat::Fastq => {
                                 writer.write_all(b"@")?;

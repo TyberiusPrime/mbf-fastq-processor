@@ -150,7 +150,7 @@ These knobs are required when the corresponding file types are present and ignor
 - Format detection is automatic and based on magic bytes: BAM (`BAM\x01`), FASTA (`>`), and FASTQ (`@`).
 - The read_comment_char is used for input reads
     (e.g. when [`TagDeduplicate`]({{< relref "docs/reference/tag-steps/tag/TagDuplicates.md" >}}) with a name: source).
-    The output steps ([`StoreTagInComment`]({{< relref "docs/reference/tag-steps/using/StoreTagInComment.md" >}}), [`StoreTagLocationInComment`]({{< relref "docs/reference/tag-steps/using/StoreTagLocationInComment.md" >}})) default to this setting, but allow overwriting.
+    The output step ([`StoreTagInComment`]({{< relref "docs/reference/tag-steps/using/StoreTagInComment.md" >}}) default to this setting, but allow overwriting.
 
 ## Interleaved input
 

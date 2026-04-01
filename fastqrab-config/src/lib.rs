@@ -367,6 +367,7 @@ pub enum TagLabel {
     Normal(String),
     Length(SegmentIndexOrAll, String),
     TagLength(String, String),
+    TagLocation { source: String, definition: String },
     ReadNo,
 }
 
@@ -374,7 +375,10 @@ impl TagLabel {
     pub fn is_virtual(&self) -> bool {
         matches!(
             self,
-            TagLabel::Length(_, _) | TagLabel::ReadNo | TagLabel::TagLength(_, _)
+            TagLabel::Length(_, _)
+                | TagLabel::ReadNo
+                | TagLabel::TagLength(_, _)
+                | TagLabel::TagLocation { .. }
         )
     }
 
@@ -383,6 +387,7 @@ impl TagLabel {
             TagLabel::Normal(_) => None,
             TagLabel::Length(_segment_index_or_all, _) => None,
             TagLabel::TagLength(source_tag, _) => Some(source_tag),
+            TagLabel::TagLocation { source, .. } => Some(source),
             TagLabel::ReadNo => None,
         }
     }
@@ -423,7 +428,10 @@ impl std::borrow::Borrow<str> for TagLabel {
 impl AsRef<str> for TagLabel {
     fn as_ref(&self) -> &str {
         match self {
-            TagLabel::Normal(s) | TagLabel::Length(_, s) | TagLabel::TagLength(_, s) => s.as_str(),
+            TagLabel::Normal(s)
+            | TagLabel::Length(_, s)
+            | TagLabel::TagLength(_, s)
+            | TagLabel::TagLocation { definition: s, .. } => s.as_str(),
             TagLabel::ReadNo => "ReadNo",
         }
     }
@@ -487,17 +495,16 @@ impl ToUsedTag for TomlValue<MustAdapt<String, TagLabel>> {
         &'a mut self,
         accepted_tag_types: &'a [TagValueType],
     ) -> Option<UsedTag<'a>> {
-        Some(UsedTag {
-            name: self
-                .as_ref()
-                .expect("parent was ok?")
-                .as_ref_post()
-                .expect("validate_tag_label should have been called before")
-                .clone(),
-            accepted_tag_types: &accepted_tag_types[..],
-            toml_source: Rc::new(RefCell::new((&mut self.state, &mut self.help))),
-            further_help: None,
-        })
+        if let Some(name) = self.as_ref().and_then(|x| x.as_ref_post()) {
+            Some(UsedTag {
+                name: name.clone(),
+                accepted_tag_types: &accepted_tag_types[..],
+                toml_source: Rc::new(RefCell::new((&mut self.state, &mut self.help))),
+                further_help: None,
+            })
+        } else {
+            None
+        }
     }
 }
 
@@ -598,10 +605,18 @@ pub fn validate_tag_name(tag_name: &str) -> Result<()> {
             );
         }
     }
-    if tag_name.starts_with("len_") {
-        bail!(
-            "Cannot start with reserved prefix 'len_'. This prefix is reserved for length-related internal tags. Please choose a different value that doesn't start with 'len_'."
-        );
+    for (reserved_prefix, reason) in &[
+        ("len_", "virtual tags computing the length of tags/segments"),
+        (
+            "location_",
+            "virtual tags deriving the location of other tags",
+        ),
+    ] {
+        if tag_name.starts_with(reserved_prefix) {
+            bail!(
+                "Cannot start with reserved prefix '{reserved_prefix}'. This prefix is reserved for {reason}. Please choose a different value that doesn't start with '{reserved_prefix}'."
+            );
+        }
     }
     Ok(())
 }
@@ -737,6 +752,7 @@ mod test {
         assert!(validate_tag_name("tag:name").is_err());
         assert!(validate_tag_name("len_123").is_err());
         assert!(validate_tag_name("len_shu").is_err());
+        assert!(validate_tag_name("location_shu").is_err());
         assert!(validate_tag_name("ReadName").is_err());
         assert!(validate_tag_name("read_no").is_err());
     }

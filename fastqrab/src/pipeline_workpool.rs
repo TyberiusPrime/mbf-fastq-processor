@@ -601,14 +601,27 @@ fn process_work_item(
                     })
                     .map(|number| TagValue::Numeric(number as f64))
                     .collect();
-                assert!(
-                    tag_lengths.len() == work_item.block.segments[0].entries.len(),
-                    "Tag lengths don't match read count. This is a bug in the stage's declared allowed_tags. Tag: {:?}, tag lengths: {}, read count: {}",
-                    tag,
-                    tag_lengths.len(),
-                    work_item.block.segments[0].entries.len()
-                );
                 work_item.block.tags.insert(tag.clone(), tag_lengths);
+            }
+            TagLabel::TagLocation {
+                source,
+                definition: _,
+            } => {
+                let tag_locations: Vec<TagValue> = work_item
+                    .block
+                    .tags
+                    .get(&TagLabel::Normal(source.clone()))
+                    .expect("Tag not present. Should have been caught in validation. Bug")
+                    .iter()
+                    .map(|tagvalue| match tagvalue {
+                        TagValue::Missing => TagValue::String("".into()),
+                        TagValue::Location(hits) => {
+                            TagValue::String(hits.location(&input_info.segment_order))
+                        }
+                        _ => unreachable!("Should have been caught in validation"),
+                    })
+                    .collect();
+                work_item.block.tags.insert(tag.clone(), tag_locations);
             }
             TagLabel::ReadNo => {
                 let start = work_item.block.segments[0].first_read_sequential_number;

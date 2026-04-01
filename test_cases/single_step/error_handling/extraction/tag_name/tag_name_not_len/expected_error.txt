@@ -1,4 +1,4 @@
-Error Details ==
+ == Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
@@ -17,6 +17,6 @@ Error 1/1
    ┆                      │
    ┆                      ╰────── Invalid label
 ───╯
-Hint: Cannot start with reserved prefix 'len_'. This prefix is reserved for length-related internal tags. Please choose a different value that doesn't start with 'len_'.
+Hint: Cannot start with reserved prefix 'len_'. This prefix is reserved for virtual tags computing the length of tags/segments. Please choose a different value that doesn't start with 'len_'.
       See https://doc_url.example/version-stripped-from-test/docs/redirects/ExtractRegion
-
+      Or run: `fastqrab template ExtractRegion` for more information.

@@ -2183,9 +2183,9 @@ dependencies = [
 
 [[package]]
 name = "toml-pretty-deser"
-version = "0.3.1"
+version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43c7e8ef18a62cd54ad83ea3f6e456e3a4c63c90547344b1fb04d68fa7e3690f"
+checksum = "e018d89a08d676823091ffc5c550a9e5678122bb2b52624d6fab838755bcf8db"
 dependencies = [
  "codesnake",
  "indexmap",

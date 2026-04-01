@@ -1,0 +1,21 @@
+Error 1/1
+   ╭─config.toml
+   ┆
+10 │ [[step]]
+11 │     action = "ExtractRegion"
+   ┆              ───────┬───────
+   ┆                     │
+   ┆                     ╰──────── In this step
+   ┆
+12 │     anchor = "Left"
+13 │ 	source = "read1"
+14 │ 	start = 0
+15 │ 	len = 4
+16 │     out_label = "location_hit1"
+   ┆                 ───────┬───────
+   ┆                        │
+   ┆                        ╰──────── Invalid label
+───╯
+Hint: Cannot start with reserved prefix 'location_'. This prefix is reserved for virtual tags deriving the location of other tags. Please choose a different value that doesn't start with 'location_'.
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/ExtractRegion
+      Or run: `fastqrab template ExtractRegion` for more information.

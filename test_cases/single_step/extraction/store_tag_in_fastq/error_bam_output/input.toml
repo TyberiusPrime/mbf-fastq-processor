@@ -11,8 +11,7 @@
 [[step]]
     action = 'StoreTagInFastQ'
     in_label = 'barcode'
-    comment_tags = ["barcode"]
-  format = "BAM"
+    format = "BAM"
 
 
 [output]

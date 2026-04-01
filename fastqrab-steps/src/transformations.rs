@@ -322,7 +322,6 @@ pub enum Transformation {
     ForgetTag(tag::ForgetTag),
     StoreTagInComment(tag::StoreTagInComment),
     StoreTagInFastQ(tag::StoreTagInFastQ),
-    StoreTagLocationInComment(tag::StoreTagLocationInComment),
     StoreTagsInTable(tag::StoreTagsInTable),
     // //other
     QuantifyTag(tag::QuantifyTag),

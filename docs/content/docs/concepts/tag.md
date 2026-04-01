@@ -1,12 +1,26 @@
 # Tag / Label
 
-A tag is a piece of fragment-derived metadata that one step in the pipeline produces, and other steps may consume, transform, or export.
+A regular tag is a piece of fragment-derived metadata that one step in the pipeline
+produces, and other steps may consume, transform, or export.
 
-## Overview
+A virtual tag is an on-the-fly create tag that exists just
+for this step and disappears right afterwards.
 
-Tags enable sophisticated workflows by decoupling data extraction from data usage. Instead of hardcoding logic like "trim adapters AND filter by adapter presence" into a single step, you extract adapter locations as a tag, then use that tag in multiple downstream operations.
+## Overview - Regular tags
 
-Tags are identified by labels (arbitrary names following the pattern `[a-zA-Z_][a-zA-Z0-9_]*`) and carry typed values that describe properties of each fragment.
+Tags enable sophisticated workflows by decoupling data extraction from data
+usage. Instead of hardcoding logic like "trim adapters AND filter by adapter
+presence" into a single step, you extract adapter locations as a tag, then use
+that tag in multiple downstream operations.
+
+Tags are identified by labels (arbitrary names following the pattern
+`[a-zA-Z_][a-zA-Z0-9_]*`) and carry typed values that describe properties of each
+fragment.
+
+Virtual tags are identified by having a specif 'xyz_' prefix. See [below](#virtual_tags).
+You can not declare a tag with that prefix as out_label of any step.
+
+(The tag 'ReadName' is also reserved for usage in StoreTagsInTable's index column)
 
 ## Tag Types
 
@@ -86,7 +100,7 @@ Store true/false flags indicating fragment properties.
 
 ## Tag Lifecycle
 
-Tags follow a strict lifecycle enforced by the processor:
+Tags follow a strict life-cycle enforced by the processor:
 
 1. **Definition**: A step with `out_label` creates a tag
 2. **Consumption**: Steps with `in_label` or `in_labels` read the tag
@@ -120,11 +134,24 @@ Tag labels must:
 - `ReadName` (reserved)
 - `len_adapter` (reserved prefix)
 
-## Advanced Usage
+## Virtual tags
 
-### Virtual Tags in EvalExpression
 
-When using [EvalExpression]({{< relref "docs/reference/tag-steps/convert/EvalExpression.md" >}}), you can reference tag lengths with `len_<tagname>`:
+Any place you can use a tag, you can also use virtual tags.
+
+The following virtual tags are supported:
+
+* read_no - the sequential number of the molecule in the input.
+* len_<segment|all> - the length of the read (or the molecule) at this step in the pipeline. 
+* len_<tag_name> - the length of a tag's string value (for location tags, that's after regex replacement etc).
+  (requires a string or location typed tag)
+* location_<tag_name> - the location of a (location) tag, as string typed segment:start..end (left inclusive, right exclusive, 0 based)
+
+### Example Len Tags in EvalExpression
+
+When using [EvalExpression]({{< relref
+"docs/reference/tag-steps/convert/EvalExpression.md" >}}), you can reference
+tag lengths with `len_<tagname>`:
 
 ```toml
 [[step]]

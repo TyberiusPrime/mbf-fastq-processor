@@ -26,7 +26,7 @@
 [[step]]
     action = 'StoreTagInFastQ'
     in_label = 'barcode'
-    comment_tags = ['umi', 'barcode', 'da_len', 'even']
+    comment_tags = ['umi','da_len', 'even']
     comment_separator = '|'
     comment_insert_char = ' '
 
@@ -41,7 +41,7 @@
 [[step]]
     action = 'StoreTagInFastQ'
     in_label = 'always'
-    comment_tags = ['umi', 'barcode', 'da_len', 'even']
+    comment_tags = ['umi', 'barcode', 'da_len', 'even', 'location_always']
     comment_separator = '|'
     comment_insert_char = ' '
 

@@ -51,14 +51,14 @@
     if_tag = "is_read_even"
 
 [[step]]
-	action = 'StoreTagLocationInComment'
+	action = 'StoreTagInComment'
+	in_label = 'location_tagr1'
 	segment = 'All'
-	in_label = 'tagr1'
 
 [[step]]
-	action = 'StoreTagLocationInComment'
+	action = 'StoreTagInComment'
+	in_label = 'location_tagr2'
 	segment = 'All'
-	in_label = 'tagr2'
 
 [[step]]
 	action = 'StoreTagInComment'

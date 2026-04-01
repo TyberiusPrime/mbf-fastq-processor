@@ -1,20 +1,17 @@
-Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
 27 │ [[step]]
-28 │     action = 'StoreTagLocationInComment'
-   ┆              ─────────────┬─────────────
-   ┆                           │
-   ┆                           ╰────────────── In this step
-29 │     in_label = 'combined'
-   ┆                ─────┬────
-   ┆                     │
-   ┆                     ╰───── Incompatible tag type
+28 │     action = 'StoreTagInComment'
+   ┆              ─────────┬─────────
+   ┆                       │
+   ┆                       ╰────────── In this step
+29 │     in_label = 'location_combined'
+   ┆                ─────────┬─────────
+   ┆                         │
+   ┆                         ╰────────── Incompatible tag type
 ───╯
 Hint: This transform requires tag 'combined' to be one of the following types: ['Location'],
       but it is actually of type 'String'.
-      See https://doc_url.example/version-stripped-from-test/docs/redirects/StoreTagLocationInComment
-      Or run: `fastqrab template StoreTagLocationInComment` for more information.
-
-
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/StoreTagInComment
+      Or run: `fastqrab template StoreTagInComment` for more information.

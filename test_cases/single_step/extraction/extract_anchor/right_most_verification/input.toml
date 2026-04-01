@@ -27,8 +27,8 @@
 #     in_label = 'test'
 #     keep_or_remove = 'Keep'
 [[step]]
-    action = 'StoreTagLocationInComment'
-    in_label = 'anchor_tag'
+    action = 'StoreTagInComment'
+    in_label = 'location_anchor_tag'
 
 [[step]]
     action = 'StoreTagInComment'
@@ -36,8 +36,8 @@
 
 
 [[step]]
-    action = 'StoreTagLocationInComment'
-    in_label = 'test'
+    action = 'StoreTagInComment'
+    in_label = 'location_test'
 
 [[step]]
     action = 'StoreTagInComment'

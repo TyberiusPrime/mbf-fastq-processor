@@ -1,0 +1,30 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'Head'
+    n = 4
+
+[[step]]
+    action = 'ExtractIUPAC'
+    out_label = 'barcode1'
+    search = 'CTC'
+    anchor = 'Left'
+    max_mismatches = 0
+
+[[step]]
+    action = 'ExtractIUPAC'
+    out_label = 'barcode2'
+    search = 'CAA'
+    anchor = 'Anywhere'
+    max_mismatches = 0
+
+[[step]]
+    action = 'StoreTagsInTable'
+    infix = 'tags'
+    tags= ['barcode1','barcode2','len_barcode1','len_barcode2', 'read_no', 'location_barcode1','location_barcode2']
+#format = 'TSV'
+
+[output]
+    prefix = 'output'
+	format = 'None'

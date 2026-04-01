@@ -11,8 +11,8 @@
     max_consecutive_mismatches = 1
 
 [[step]]
-    action = 'StoreTagLocationInComment'
-    in_label = 'poly_a'
+    action = 'StoreTagInComment'
+    in_label = 'location_poly_a'
     segment = 'read1'
 
 [output]

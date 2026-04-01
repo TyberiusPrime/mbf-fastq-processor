@@ -1,8 +1,8 @@
-@read3|sequence_location=read1:2-6
+@read3|location_sequence=read1:2-6
 CTAG
 +
 ~~~~
-@read6|sequence_location=read1:2-6
+@read6|location_sequence=read1:2-6
 TAGC
 +
 ~~~~

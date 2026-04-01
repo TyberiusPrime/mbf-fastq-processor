@@ -474,10 +474,10 @@ impl PartialConfig {
                 o.report_html.as_ref().copied().unwrap_or(false)
                     || o.report_json.as_ref().copied().unwrap_or(false)
             });
-        let has_tag_output = self.transform.as_ref().is_some_and(|transforms| {
+        let has_tag_output = self.transform.value.as_ref().is_some_and(|transforms| {
             transforms.iter().any(|t| {
                 matches!(
-                    t.as_ref(),
+                    t.value.as_ref(),
                     Some(
                         PartialTransformation::StoreTagInFastQ(..)
                             | PartialTransformation::StoreTagsInTable(..)
@@ -1173,7 +1173,7 @@ impl PartialConfig {
                                         if tags_used_here.contains(tag_name) {
                                             // cov:excl-start
                                             panic!(
-                                                "tag declared twice in our code, fix that! {tag_name}"
+                                                "tag declared twice in used_tags, fix that! {tag_name}"
                                             );
                                             // cov:excl-stop
                                         } else {
@@ -1239,6 +1239,18 @@ impl PartialConfig {
                                                 toml_source,
                                                 &format!("{}", source_tag),
                                                 &[TagValueType::String, TagValueType::Location],
+                                                &entry.tag_type,
+                                                used_tag_info.further_help.as_ref(),
+                                            );
+                                        }
+                                    }
+                                    TagLabel::TagLocation { .. } => {
+                                        if !entry.tag_type.compatible(TagValueType::Location) {
+                                            let toml_source = &used_tag_info.toml_source;
+                                            Self::_set_type_error(
+                                                toml_source,
+                                                &format!("{}", source_tag),
+                                                &[TagValueType::Location],
                                                 &entry.tag_type,
                                                 used_tag_info.further_help.as_ref(),
                                             );

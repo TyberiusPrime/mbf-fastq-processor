@@ -29,8 +29,8 @@
     # No segment_a/segment_b specified - should auto-detect
 
 [[step]]
-  action = "StoreTagLocationInComment"
-  in_label = 'da_region'
+  action = "StoreTagInComment"
+  in_label = 'location_da_region'
 
 [[step]]
   action = "StoreTagInComment"

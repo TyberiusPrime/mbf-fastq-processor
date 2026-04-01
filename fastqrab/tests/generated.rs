@@ -3302,21 +3302,6 @@ fn test_cases_x_single_step_x_error_handling_x_extraction_x_extract_regex_x_labe
 }
 
 #[test]
-fn test_cases_x_single_step_x_error_handling_x_extraction_x_extract_region_from_name_but_storing_location()
- {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/extraction/extract_region_from_name_but_storing_location"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/extraction/extract_region_from_name_but_storing_location",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
 fn test_cases_x_single_step_x_error_handling_x_extraction_x_extract_tag_from_i1_i2_no_i1_i2() {
     println!(
         "Test case is in: test_cases/single_step/error_handling/extraction/extract_tag_from_i1_i2_no_i1_i2"
@@ -3470,6 +3455,20 @@ fn test_cases_x_single_step_x_error_handling_x_extraction_x_tag_name_x_tag_name_
     run_test(
         std::path::Path::new(
             "../test_cases/single_step/error_handling/extraction/tag_name/tag_name_not_len",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_extraction_x_tag_name_x_tag_name_not_location() {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/extraction/tag_name/tag_name_not_location"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/error_handling/extraction/tag_name/tag_name_not_location",
         ),
         "input.toml",
         1,
@@ -7094,6 +7093,21 @@ fn test_cases_x_single_step_x_extraction_x_store_tag_in_fastq_x_no_location() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_extraction_x_store_tag_in_fastq_x_repeat_between_inlabel_and_comment()
+{
+    println!(
+        "Test case is in: test_cases/single_step/extraction/store_tag_in_fastq/repeat_between_inlabel_and_comment"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/store_tag_in_fastq/repeat_between_inlabel_and_comment",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_extraction_x_store_tag_in_fastq_x_with_comments() {
     println!("Test case is in: test_cases/single_step/extraction/store_tag_in_fastq/with_comments");
     run_test(
@@ -7226,6 +7240,20 @@ fn test_cases_x_single_step_x_extraction_x_store_tags_in_table_x_in_tsv_validate
     run_test(
         std::path::Path::new(
             "../test_cases/single_step/extraction/store_tags_in_table/in_tsv_validate_compression",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_extraction_x_store_tags_in_table_x_in_tsv_virtual_tags() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/store_tags_in_table/in_tsv_virtual_tags"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/store_tags_in_table/in_tsv_virtual_tags",
         ),
         "input.toml",
         1,
