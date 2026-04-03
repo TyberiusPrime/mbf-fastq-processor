@@ -891,7 +891,7 @@ impl PartialConfig {
                 unreachable!()
                 // cov:excl-stop
             }
-        }
+        } // cov:excl-line
     }
 
     fn expand_spot_checks<F: FnMut(PartialTransformation)>(

@@ -49,7 +49,7 @@ impl TagUser for PartialTaggedVariant<PartialConvertToRate> {
                 ..Default::default()
             })
         } else {
-            None
+            None // cov:excl-line
         }
     }
 }

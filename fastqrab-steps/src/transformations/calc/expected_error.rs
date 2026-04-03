@@ -59,7 +59,7 @@ impl TagUser for PartialTaggedVariant<PartialExpectedError> {
                 ..Default::default()
             })
         } else {
-            None
+            None // cov:excl-line
         }
     }
 }

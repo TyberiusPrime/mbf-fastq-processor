@@ -103,7 +103,7 @@ impl TagUser for PartialTaggedVariant<PartialSwap> {
                 ..Default::default()
             })
         } else {
-            None
+            None // cov:excl-line
         }
     }
 }

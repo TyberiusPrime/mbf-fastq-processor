@@ -128,7 +128,7 @@ impl TagUser for PartialTaggedVariant<PartialRegions> {
                 ..Default::default()
             })
         } else {
-            None
+            None // cov:excl-line
         }
     }
 }

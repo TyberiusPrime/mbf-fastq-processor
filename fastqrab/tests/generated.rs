@@ -641,100 +641,30 @@ fn test_cases_x_input_x_error_handling_x_zero_blocksize() {
 }
 
 #[test]
-fn test_cases_x_input_x_interleaved_x_basic() {
-    println!("Test case is in: test_cases/input/interleaved/basic");
+fn test_cases_x_input_x_interleaved_x_double() {
+    println!("Test case is in: test_cases/input/interleaved/double");
     run_test(
-        std::path::Path::new("../test_cases/input/interleaved/basic"),
+        std::path::Path::new("../test_cases/input/interleaved/double"),
         "input.toml",
         1,
     );
 }
 
 #[test]
-fn test_cases_x_input_x_interleaved_x_error_mixing_formats() {
-    println!("Test case is in: test_cases/input/interleaved/error_mixing_formats");
+fn test_cases_x_input_x_interleaved_x_head() {
+    println!("Test case is in: test_cases/input/interleaved/head");
     run_test(
-        std::path::Path::new("../test_cases/input/interleaved/error_mixing_formats"),
+        std::path::Path::new("../test_cases/input/interleaved/head"),
         "input.toml",
         1,
     );
 }
 
 #[test]
-fn test_cases_x_input_x_interleaved_x_error_mixing_formats_fasta_fastq() {
-    println!("Test case is in: test_cases/input/interleaved/error_mixing_formats_fasta_fastq");
+fn test_cases_x_input_x_interleaved() {
+    println!("Test case is in: test_cases/input/interleaved");
     run_test(
-        std::path::Path::new("../test_cases/input/interleaved/error_mixing_formats_fasta_fastq"),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-fn test_cases_x_input_x_interleaved_x_error_mixing_formats_fasta_fastq_gz() {
-    println!("Test case is in: test_cases/input/interleaved/error_mixing_formats_fasta_fastq_gz");
-    run_test(
-        std::path::Path::new("../test_cases/input/interleaved/error_mixing_formats_fasta_fastq_gz"),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-fn test_cases_x_input_x_interleaved_x_error_mixing_stdin_and_normal_files() {
-    println!("Test case is in: test_cases/input/interleaved/error_mixing_stdin_and_normal_files");
-    run_test(
-        std::path::Path::new("../test_cases/input/interleaved/error_mixing_stdin_and_normal_files"),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-fn test_cases_x_input_x_interleaved_x_error_only_one_segment() {
-    println!("Test case is in: test_cases/input/interleaved/error_only_one_segment");
-    run_test(
-        std::path::Path::new("../test_cases/input/interleaved/error_only_one_segment"),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-fn test_cases_x_input_x_interleaved_x_gzip() {
-    println!("Test case is in: test_cases/input/interleaved/gzip");
-    run_test(
-        std::path::Path::new("../test_cases/input/interleaved/gzip"),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-fn test_cases_x_input_x_interleaved_x_must_have_even_block_size() {
-    println!("Test case is in: test_cases/input/interleaved/must_have_even_block_size");
-    run_test(
-        std::path::Path::new("../test_cases/input/interleaved/must_have_even_block_size"),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-fn test_cases_x_input_x_interleaved_x_test_premature_termination() {
-    println!("Test case is in: test_cases/input/interleaved/test_premature_termination");
-    run_test(
-        std::path::Path::new("../test_cases/input/interleaved/test_premature_termination"),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-fn test_cases_x_input_x_interleaved_x_two_files() {
-    println!("Test case is in: test_cases/input/interleaved/two_files");
-    run_test(
-        std::path::Path::new("../test_cases/input/interleaved/two_files"),
+        std::path::Path::new("../test_cases/input/interleaved"),
         "input.toml",
         1,
     );
@@ -823,6 +753,44 @@ fn test_cases_x_input_x_stdin_config_x_stdin_config_validate_error() {
     println!("Test case is in: test_cases/input/stdin_config/stdin_config_validate_error");
     run_test(
         std::path::Path::new("../test_cases/input/stdin_config/stdin_config_validate_error"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_input_x_stdin_config_interleaved_x_error_stdin_config_with_stdin_fastq() {
+    println!(
+        "Test case is in: test_cases/input/stdin_config_interleaved/error_stdin_config_with_stdin_fastq"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/input/stdin_config_interleaved/error_stdin_config_with_stdin_fastq",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_input_x_stdin_config_interleaved_x_stdin_config_process() {
+    println!("Test case is in: test_cases/input/stdin_config_interleaved/stdin_config_process");
+    run_test(
+        std::path::Path::new("../test_cases/input/stdin_config_interleaved/stdin_config_process"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_input_x_stdin_config_interleaved_x_stdin_config_validate_error() {
+    println!(
+        "Test case is in: test_cases/input/stdin_config_interleaved/stdin_config_validate_error"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/input/stdin_config_interleaved/stdin_config_validate_error",
+        ),
         "input.toml",
         1,
     );
@@ -5756,6 +5724,16 @@ fn test_cases_x_single_step_x_eval_x_threshold() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_eval_x_varname_all() {
+    println!("Test case is in: test_cases/single_step/eval/varname_all");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/eval/varname_all"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_extraction_x_polytail_x_error_max_mismatch_rate_too_high() {
     println!(
         "Test case is in: test_cases/single_step/extraction/PolyTail/error_max_mismatch_rate_too_high"
@@ -7168,6 +7146,20 @@ fn test_cases_x_single_step_x_extraction_x_store_tag_in_fastq_x_with_location_mu
     run_test(
         std::path::Path::new(
             "../test_cases/single_step/extraction/store_tag_in_fastq/with_location_multi",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_extraction_x_store_tags_in_table_x_empty_inlabels() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/store_tags_in_table/empty_inlabels"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/store_tags_in_table/empty_inlabels",
         ),
         "input.toml",
         1,

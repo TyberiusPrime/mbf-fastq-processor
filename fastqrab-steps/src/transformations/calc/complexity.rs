@@ -44,7 +44,7 @@ impl TagUser for PartialTaggedVariant<PartialComplexity> {
                 ..Default::default()
             })
         } else {
-            None
+            None // cov:excl-line
         }
     }
 }

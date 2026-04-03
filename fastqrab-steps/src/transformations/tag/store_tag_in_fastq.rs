@@ -138,7 +138,7 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagInFastQ> {
                 ..Default::default()
             })
         } else {
-            None
+            None // cov:excl-line
         }
     }
 }

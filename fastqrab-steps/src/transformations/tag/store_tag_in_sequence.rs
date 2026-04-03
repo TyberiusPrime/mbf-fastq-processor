@@ -26,7 +26,7 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagInSequence> {
                 ..Default::default()
             })
         } else {
-            None
+            None // cov:excl-line
         }
     }
 }

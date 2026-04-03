@@ -1,9 +1,10 @@
 #![allow(clippy::unwrap_used)]
 
+use bstr::{BString, ByteSlice};
 use indexmap::IndexMap;
 use std::collections::HashSet;
 use std::fs;
-use std::io::Write;
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
 
@@ -947,6 +948,52 @@ prefix = 'output'
         "Should have no warnings in stderr for stdin input, got: {stderr}"
     );
     assert!(cmd.status.success(), "Exit code should be 0");
+}
+
+#[test]
+fn test_validate_command_mixing_stdin() {
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+
+    let config_path = temp_path.join("segmented_stdin.toml");
+    let config = r"[input]
+read1 = '--stdin--'
+
+[[step]]
+action = 'Head'
+n = 2
+
+[output]
+prefix = 'output'
+";
+
+    let mut child = std::process::Command::new(get_bin_path())
+        .arg("validate")
+        .arg("-")
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .unwrap();
+    if let Some(mut stdin) = child.stdin.take() {
+        stdin.write_all(config.as_bytes()).unwrap();
+    }
+    let mut stdout = BString::new("".into());
+    let mut stderr = BString::new("".into());
+
+    if let Some(mut out) = child.stdout.take() {
+        out.read_to_end(&mut stdout).unwrap();
+    }
+    if let Some(mut err) = child.stderr.take() {
+        err.read_to_end(&mut stderr).unwrap();
+    }
+
+    let status = child.wait().unwrap(); // optionally inspect
+    assert!(
+        stderr.contains_str(b"Cannot read configuration from stdin ('-') when the configuration also uses stdin ('--stdin--') for FASTQ input. "),
+        "Should have error in stderr"
+    );
+    assert!(!status.success(), "Exit code should be != 0");
 }
 
 #[test]

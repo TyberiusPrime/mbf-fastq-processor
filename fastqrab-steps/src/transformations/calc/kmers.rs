@@ -99,7 +99,7 @@ impl TagUser for PartialTaggedVariant<PartialKmers> {
                 ..Default::default()
             })
         } else {
-            None
+            None // cov:excl-line
         }
     }
 }

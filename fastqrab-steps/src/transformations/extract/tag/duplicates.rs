@@ -58,7 +58,7 @@ impl TagUser for PartialTaggedVariant<PartialDuplicates> {
                 ..Default::default()
             })
         } else {
-            None
+            None // cov:excl-line
         }
     }
 }

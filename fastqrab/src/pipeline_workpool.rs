@@ -595,8 +595,8 @@ fn process_work_item(
                             TagValue::Missing => 0,
                             TagValue::Location(hits) => hits.0.iter().map(|hit| hit.sequence.len()).sum(),
                             TagValue::String(bstring) => bstring.len(),
-                            TagValue::Numeric(_) => unreachable!("len of a numeric tag not defined. Should have been caught in validation"),
-                            TagValue::Bool(_) => unreachable!("len of a bool tag not defined. Should have been caught in validation"),
+                            TagValue::Numeric(_) => unreachable!("len of a numeric tag not defined. Should have been caught in validation"), // cov:excl-line
+                            TagValue::Bool(_) => unreachable!("len of a bool tag not defined. Should have been caught in validation"), // cov:excl-line
                         }
                     })
                     .map(|number| TagValue::Numeric(number as f64))
@@ -618,7 +618,7 @@ fn process_work_item(
                         TagValue::Location(hits) => {
                             TagValue::String(hits.location(&input_info.segment_order))
                         }
-                        _ => unreachable!("Should have been caught in validation"),
+                        _ => unreachable!("Should have been caught in validation"), // cov:excl-line
                     })
                     .collect();
                 work_item.block.tags.insert(tag.clone(), tag_locations);

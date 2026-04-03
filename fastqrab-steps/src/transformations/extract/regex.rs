@@ -120,7 +120,7 @@ impl TagUser for PartialTaggedVariant<PartialRegex> {
                 ..Default::default()
             })
         } else {
-            None
+            None // cov:excl-line
         }
     }
 }

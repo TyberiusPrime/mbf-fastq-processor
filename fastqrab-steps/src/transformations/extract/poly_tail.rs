@@ -65,7 +65,7 @@ impl TagUser for PartialTaggedVariant<PartialPolyTail> {
                 ..Default::default()
             })
         } else {
-            None
+            None // cov:excl-line
         }
     }
 }

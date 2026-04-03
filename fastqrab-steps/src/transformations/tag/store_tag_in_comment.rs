@@ -110,7 +110,7 @@ impl VerifyIn<PartialConfig> for PartialStoreTagInComment {
                     BString::new(vec![ins])
                 ));
             }
-        }
+        } //cov:excl-line
         Ok(())
     }
 }
@@ -135,7 +135,7 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagInComment> {
                 ..Default::default()
             })
         } else {
-            None
+            None // cov:excl-line
         }
     }
 }

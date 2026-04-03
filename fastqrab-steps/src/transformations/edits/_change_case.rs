@@ -74,7 +74,7 @@ impl TagUser for PartialTaggedVariant<Partial_ChangeCase> {
                 ..Default::default()
             })
         } else {
-            None
+            None // cov:excl-line
         }
     }
 }

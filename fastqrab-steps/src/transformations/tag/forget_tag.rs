@@ -24,7 +24,7 @@ impl TagUser for PartialTaggedVariant<PartialForgetTag> {
                 ..Default::default()
             })
         } else {
-            None
+            None // cov:excl-line
         }
     }
 }

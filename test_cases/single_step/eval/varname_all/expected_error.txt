@@ -1,0 +1,27 @@
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+ 5 │ [[step]]
+ 6 │       action = 'EvalExpression'
+   ┆                ────────┬───────
+   ┆                        │
+   ┆                        ╰──────── In this step
+   ┆
+ 7 │ 	out_label = 'both'
+ 8 │       expression = '''
+   ┆                    ▲
+   ┆ ╭──────────────────╯
+ 9 │ │         ReadName + 2 + all
+   ┆ │
+10 │ │     '''
+   ┆ │       ▲
+   ┆ │       │
+   ┆ ╰───────┴─ Invalid label
+───╯
+Hint: Reserved value 'ReadName' cannot be used here. This name is reserved for the index column in StoreTagsInTable. Please choose a different value.
+      Reserved value 'all' cannot be used here. This name is reserved for it may be confused with the segment-identifier 'all'. Please choose a different value.
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/EvalExpression
+      Or run: `fastqrab template EvalExpression` for more information.
+
+

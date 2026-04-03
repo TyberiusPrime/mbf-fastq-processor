@@ -41,7 +41,7 @@ impl TagUser for PartialTaggedVariant<PartialReverseComplement> {
                 ..Default::default()
             })
         } else {
-            None
+            None // cov:excl-line
         }
     }
 }

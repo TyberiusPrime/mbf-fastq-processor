@@ -79,7 +79,7 @@ impl TagUser for PartialTaggedVariant<PartialPostfix> {
                 ..Default::default()
             })
         } else {
-            None
+            None // cov:excl-line
         }
     }
 }

@@ -95,7 +95,7 @@ impl TagUser for PartialTaggedVariant<PartialIUPACSuffix> {
                 ..Default::default()
             })
         } else {
-            None
+            None // cov:excl-line
         }
     }
 }

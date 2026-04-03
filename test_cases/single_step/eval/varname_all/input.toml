@@ -1,0 +1,20 @@
+[input]
+    read1 = 'input_read1.fq'
+
+
+[[step]]
+	action = 'EvalExpression'
+	out_label = 'both'
+	expression = '''
+		ReadName + 2 + all
+	'''
+    result_type = 'bool'
+
+[[step]]
+	action ='FilterByTag'
+	in_label = 'both'
+	keep_or_remove = 'keep'
+
+
+[output]
+    prefix = 'output'

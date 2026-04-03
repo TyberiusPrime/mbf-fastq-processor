@@ -81,7 +81,7 @@ impl TagUser for PartialTaggedVariant<PartialPrefix> {
                 ..Default::default()
             })
         } else {
-            None
+            None // cov:excl-line
         }
     }
 }

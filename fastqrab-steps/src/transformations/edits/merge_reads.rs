@@ -171,7 +171,7 @@ impl TagUser for PartialTaggedVariant<PartialMergeReads> {
                 ..Default::default()
             })
         } else {
-            None
+            None // cov:excl-line
         }
     }
 }

@@ -53,7 +53,7 @@ impl TagUser for PartialTaggedVariant<PartialQuantifyTag> {
                 ..Default::default()
             })
         } else {
-            None
+            None // cov:excl-line
         }
     }
 }

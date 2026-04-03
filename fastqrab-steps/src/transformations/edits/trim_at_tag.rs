@@ -34,7 +34,7 @@ impl TagUser for PartialTaggedVariant<PartialTrimAtTag> {
                 ..Default::default()
             })
         } else {
-            None
+            None // cov:excl-line
         }
     }
 

@@ -120,7 +120,7 @@ impl TagUser for PartialTaggedVariant<PartialOtherFile> {
                 ..Default::default()
             })
         } else {
-            None
+            None // cov:excl-line
         }
     }
     fn verify_others(

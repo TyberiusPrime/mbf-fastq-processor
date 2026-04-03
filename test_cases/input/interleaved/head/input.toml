@@ -1,0 +1,14 @@
+[input]
+  r = ['input_interleaved.fq', 'input_interleaved.fq', ]
+  interleaved = ['read1', 'read2']
+
+[options]
+accept_duplicate_files = true
+block_size=2
+
+[[step]]
+  action = 'head'
+  n = 3
+
+[output]
+  prefix = 'output'

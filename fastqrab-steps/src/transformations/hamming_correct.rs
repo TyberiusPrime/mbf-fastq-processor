@@ -141,7 +141,7 @@ impl TagUser for PartialTaggedVariant<PartialHammingCorrect> {
                 ..Default::default()
             })
         } else {
-            None
+            None // cov:excl-line
         }
     }
 }

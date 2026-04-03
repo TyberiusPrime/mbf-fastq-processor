@@ -154,7 +154,7 @@ impl TagUser for PartialTaggedVariant<Box<Partial_ReportTagHistogram>> {
                 ..Default::default()
             })
         } else {
-            None
+            None // cov:excl-line
         }
     }
 }

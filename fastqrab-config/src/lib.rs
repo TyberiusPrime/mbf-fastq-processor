@@ -399,9 +399,12 @@ impl PartialOrd for TagLabel {
     }
 }
 impl Ord for TagLabel {
+    //cov:excl-start  - necessary for  Vec<TagLabel> to support sort_unstable
+    //but not actually called apparently?
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.as_ref().cmp(&other.as_ref())
     }
+    //cov:excl-stop
 }
 
 impl std::hash::Hash for TagLabel {
@@ -486,7 +489,7 @@ impl ToUsedTag for TomlValue<TagLabel> {
                 further_help: None,
             })
         } else {
-            None
+            None // cov:excl-line
         }
     }
 }
@@ -596,6 +599,10 @@ pub fn validate_tag_name(tag_name: &str) -> Result<()> {
     for (forbidden, reason) in &[
         ("ReadName", "the index column in StoreTagsInTable"),
         ("read_no", "read numbering in EvalExpression"),
+        (
+            "all",
+            "it may be confused with the segment-identifier 'all'",
+        ),
     ] {
         if tag_name == *forbidden {
             // because that's what we store in the output tables as

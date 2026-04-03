@@ -152,7 +152,7 @@ impl TagUser for PartialTaggedVariant<PartialConcatTags> {
                 })
             }
         } else {
-            None
+            None // cov:excl-line
         }
     }
 }

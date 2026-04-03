@@ -88,7 +88,7 @@ impl TagUser for PartialTaggedVariant<PartialByNumericTag> {
                 ..Default::default()
             })
         } else {
-            None
+            None // cov:excl-line
         }
     }
 }

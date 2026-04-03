@@ -42,7 +42,7 @@ impl TagUser for PartialTaggedVariant<PartialTruncate> {
                 ..Default::default()
             })
         } else {
-            None
+            None // cov:excl-line
         }
     }
 }

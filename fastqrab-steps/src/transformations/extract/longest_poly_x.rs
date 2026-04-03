@@ -166,7 +166,7 @@ impl TagUser for PartialTaggedVariant<PartialLongestPolyX> {
                 ..Default::default()
             })
         } else {
-            None
+            None // cov:excl-line
         }
     }
 }

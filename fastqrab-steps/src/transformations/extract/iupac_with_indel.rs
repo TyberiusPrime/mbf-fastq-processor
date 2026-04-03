@@ -65,7 +65,7 @@ impl TagUser for PartialTaggedVariant<PartialIUPACWithIndel> {
                 ..Default::default()
             })
         } else {
-            None
+            None // cov:excl-line
         }
     }
 }

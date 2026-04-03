@@ -142,9 +142,16 @@ impl TagUser for PartialTaggedVariant<Box<PartialEvalExpression>> {
                         match tv.value.take().expect("just set") {
                             MustAdapt::PreVerify(_) => {
                                 *toml_source.borrow_mut().0 = tv.state;
-                                *toml_source.borrow_mut().1 = tv.help;
-                                inner.var_name_to_tag = Some(var_name_to_tag);
-                                return None;
+                                if let Some(help) = tv.help {
+                                    if toml_source.borrow().1.is_some() {
+                                        *toml_source.borrow_mut().1 = Some(format!(
+                                            "{}\n{help}",
+                                            toml_source.borrow().1.as_ref().unwrap()
+                                        ));
+                                    } else {
+                                        *toml_source.borrow_mut().1 = Some(help);
+                                    }
+                                }
                             }
                             MustAdapt::PostVerify(tag_label) => {
                                 let accepted_tag_types = &[
@@ -182,7 +189,7 @@ impl TagUser for PartialTaggedVariant<Box<PartialEvalExpression>> {
                 ..Default::default()
             })
         } else {
-            None
+            None // cov:excl-line
         }
     }
 }

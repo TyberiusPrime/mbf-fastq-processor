@@ -50,7 +50,7 @@ impl TagUser for PartialTaggedVariant<PartialCutEnd> {
                 ..Default::default()
             })
         } else {
-            None
+            None // cov:excl-line
         }
     }
 }

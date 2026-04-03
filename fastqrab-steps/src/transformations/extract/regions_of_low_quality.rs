@@ -57,7 +57,7 @@ impl TagUser for PartialTaggedVariant<PartialRegionsOfLowQuality> {
                 ..Default::default()
             })
         } else {
-            None
+            None // cov:excl-line
         }
     }
 }

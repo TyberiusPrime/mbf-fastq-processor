@@ -1,1 +1,0 @@
-Interleaved inputs must all have the same format.

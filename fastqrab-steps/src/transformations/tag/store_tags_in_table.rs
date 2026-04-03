@@ -74,10 +74,10 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagsInTable> {
                     }
                     if in_labels.is_empty() {
                         inner.in_labels.state = TomlValueState::ValidationFailed {
-                            message: "in_labels may not be an empty list".to_string(),
+                            message: "May not be an empty list".to_string(),
                         };
                         inner.in_labels.help =
-                            Some("Set to a non-empty list of tag labels.".to_string());
+                            Some("Set to a non-empty list of tag labels. Or leave off to store all (regular) tags.".to_string());
                         inner.final_in_labels = Some(Vec::new());
                         return None;
                     }
@@ -135,7 +135,7 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagsInTable> {
                 ..Default::default()
             })
         } else {
-            None
+            None // cov:excl-line
         }
     }
 }

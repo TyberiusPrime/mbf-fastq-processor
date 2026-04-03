@@ -56,7 +56,7 @@ impl TagUser for PartialTaggedVariant<PartialValidateAllReadsSameLength> {
                 ..Default::default()
             })
         } else {
-            None
+            None // cov:excl-line
         }
     }
 }

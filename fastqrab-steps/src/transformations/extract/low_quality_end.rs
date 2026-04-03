@@ -42,7 +42,7 @@ impl TagUser for PartialTaggedVariant<PartialLowQualityEnd> {
                 ..Default::default()
             })
         } else {
-            None
+            None // cov:excl-line
         }
     }
 }
