@@ -27,7 +27,9 @@ Where `{format_extension}` is:
 - `fq.zst` for zstd format
 
 
-Note that inspect will collect all reads in memory before writing them out.
+Note that inspect will collect all reads in memory before writing them out,
+which happens only after all reads are processed.
+
 When `segment = "all"` the collected reads are written in interleaved order
 (`read1`, `read2`, … per molecule).
 

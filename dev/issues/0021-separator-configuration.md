@@ -1,4 +1,4 @@
-status: open
+status: closed
 # Separator Configuration
 
 - **Question**: Do we need separators on `ExtractRegions`, or is store-in-comment sufficient?

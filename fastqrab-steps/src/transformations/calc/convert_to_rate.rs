@@ -45,7 +45,7 @@ impl TagUser for PartialTaggedVariant<PartialConvertToRate> {
                     Some(NonNaN::new(0.0).expect("can't fail")),
                     Some(NonNaN::new(1.0).expect("can't fail")),
                 ))),
-                must_see_all_tags: true,
+                //must_see_all_tags: true,
                 ..Default::default()
             })
         } else {

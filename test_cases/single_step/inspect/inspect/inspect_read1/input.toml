@@ -7,6 +7,19 @@
     n = 10
 
 [[step]]
+  action ='ExtractIUPAC'
+  anchor = 'anywhere'
+  query = 'ATG'
+  segment='read1'
+  max_mismatches = 1
+  out_label='a_tag'
+
+[[step]]
+  action ='CalcLength'
+  out_label='read1len'
+   segment='read1'
+
+[[step]]
     action ='Inspect'
     infix = 'tcepsni'
     n = 2

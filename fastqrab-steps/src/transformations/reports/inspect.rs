@@ -1,6 +1,9 @@
+use std::cell::RefCell;
 use std::io::Write;
+use std::rc::Rc;
 
 use crate::transformations::prelude::*;
+use fastqrab_io::io::WrappedFastQRead;
 use fastqrab_io::io::output::compressed_output::HashedAndCompressedWriter;
 use fastqrab_io::{CompressionFormat, FileFormat};
 
@@ -117,7 +120,33 @@ impl std::fmt::Debug for Inspect {
 // cov:excl-stop
 
 impl TagUser for PartialTaggedVariant<PartialInspect> {
-    //default is ok, no tags
+    fn get_tag_usage(
+        &mut self,
+        tags_available: &IndexMap<TagLabel, TagMetadata>,
+        _segment_order: &[String],
+    ) -> Option<TagUsageInfo<'_>> {
+        let final_in_labels: Vec<_> = tags_available.keys().cloned().collect();
+        let toml_source = Rc::new(RefCell::new((
+            &mut self.toml_value.state,
+            &mut self.toml_value.help,
+        )));
+        let used_tags = final_in_labels
+            .into_iter()
+            .map(|tag| {
+                Some(UsedTag {
+                    name: tag,
+                    accepted_tag_types: ANY_TAG_TYPE,
+                    toml_source: toml_source.clone(),
+                    further_help: None,
+                })
+            })
+            .collect();
+        Some(TagUsageInfo {
+            used_tags,
+            must_see_all_tags: true,
+            ..Default::default()
+        })
+    }
 }
 
 impl Step for Inspect {
@@ -180,6 +209,18 @@ impl Step for Inspect {
 
         let mut collector = self.collector.lock().expect("collector mutex poisoned");
         let mut iter = block.get_pseudo_iter_including_tag();
+        let name_read = |read: &WrappedFastQRead, read_idx: usize| {
+            let mut out = read.name().to_vec();
+            for (key, values) in block.tags.iter() {
+                let str_key: &str = key.as_ref();
+                out.push(b' ');
+                out.extend_from_slice(str_key.as_bytes());
+                out.push(b'=');
+                out.extend_from_slice(&values[read_idx].to_bstr())
+            }
+            out
+        };
+        let mut read_idx = 0;
         while let Some((read, tag)) = iter.pseudo_next() {
             if collected >= self.n {
                 break;
@@ -192,7 +233,7 @@ impl Step for Inspect {
                     {
                         let segment_read = &read.segments[segment_index];
                         collector[collector_idx].push((
-                            segment_read.name().to_vec(),
+                            name_read(segment_read, read_idx),
                             segment_read.seq().to_vec(),
                             segment_read.qual().to_vec(),
                             tag,
@@ -202,7 +243,7 @@ impl Step for Inspect {
                 SegmentIndexOrAll::Indexed(idx) => {
                     let segment_read = &read.segments[idx];
                     collector[0].push((
-                        segment_read.name().to_vec(),
+                        name_read(segment_read, read_idx),
                         segment_read.seq().to_vec(),
                         segment_read.qual().to_vec(),
                         tag,
@@ -211,6 +252,7 @@ impl Step for Inspect {
             }
 
             collected += 1; //count per molecule, not per segment
+            read_idx += 1;
         }
         self.collected
             .store(collected, std::sync::atomic::Ordering::Relaxed);
@@ -248,7 +290,7 @@ impl Step for Inspect {
                                 if let Some(demux_names) = &self.demultiplex_names
                                     && let Some(demux_name) = demux_names.get(tag)
                                 {
-                                    writer.write_all(b" Demultiplex=")?;
+                                    writer.write_all(b" _Demultiplex=")?;
                                     writer.write_all(demux_name.as_bytes())?;
                                 }
 

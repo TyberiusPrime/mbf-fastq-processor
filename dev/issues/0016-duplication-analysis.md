@@ -1,4 +1,4 @@
-status: open
+status: closed
 # Duplication quantification
 
 
@@ -21,4 +21,4 @@ That's going to be difficult without a second pass.
 Maybe we can have some memory mapped file in FIFO mode to store the reads that passed the filters,
 then do a second pass through those?
 
-
+Not targeted for 1.0

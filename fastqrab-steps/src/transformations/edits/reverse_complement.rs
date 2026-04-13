@@ -130,8 +130,7 @@ impl Step for ReverseComplement {
                 } // cov:excl-line    
             }
             ResolvedSourceAll::Name {
-                segment_index_or_all,
-                split_character,
+                ..
             } => unreachable!(),
         }
 

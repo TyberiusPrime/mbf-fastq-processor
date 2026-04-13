@@ -1,4 +1,4 @@
-status: open
+status: closed
 # Allocator ideas to combat n^2 problem
 
 right now, if we repeatedly grow a read,
@@ -23,3 +23,12 @@ Advantage: O(n) in both time and space.
 I think we can negate the overalloc by being smart about it,
 and most cases will end up with a fixed number of bytes added to a read,
 won't they (so constant growth, not necessarily constant final length.)
+
+
+-- 
+I actually think that's not what's happening.
+Vec allocation in rust is self-scaling, promising O(1) amortized push.,
+and we are growing the arena if necessary.
+
+We could query the steps for 'expected growth', 
+but it's a hyperoptimiziation.
