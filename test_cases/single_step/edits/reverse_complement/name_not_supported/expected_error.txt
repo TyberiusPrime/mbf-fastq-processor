@@ -1,0 +1,14 @@
+Error 1/1
+  ╭─config.toml
+  ┆
+6 │ [[step]]
+7 │     action = 'ReverseComplement'
+  ┆              ─────────┬─────────
+  ┆                       │
+  ┆                       ╰────────── In this step
+8 │     target = 'name:read1'
+  ┆              ──────┬─────
+  ┆                    │
+  ┆                    ╰────── Must not be 'name:' definition
+──╯
+Hint: ReverseComplement does not support name-based targeting

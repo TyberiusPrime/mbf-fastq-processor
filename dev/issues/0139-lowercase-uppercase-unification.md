@@ -1,4 +1,4 @@
-status: open
+status: closed
 # Lowercase/uppercase unification & friends.
 
 Make it take a source, and have just one for segments/tags..

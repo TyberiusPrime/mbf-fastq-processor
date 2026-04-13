@@ -13,6 +13,7 @@
 [[step]]
     action = 'ReverseComplement'
     if_tag = 'should_rc'
+    source = 'read1'
 
 [output]
     prefix = 'output'

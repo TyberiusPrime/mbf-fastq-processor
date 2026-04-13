@@ -1,0 +1,64 @@
+options.accept_duplicate_files = true
+
+[input]
+	read1 = 'input_read1.fq'
+	read2 = 'input_read1.fq'
+
+
+[[step]]
+	action = 'Head'
+	n = 2
+
+[[step]]
+  action = 'prefix'
+  segment = 'read2'
+  seq = 'AA'
+  qual = 'BB'
+
+
+[[step]]
+	action = 'ExtractIUPAC'
+	out_label = 'tag'
+	search = 'TCA'
+	anchor = 'Anywhere'
+	max_mismatches = 0
+    segment = 'read1'
+
+[[step]]
+	action = 'ExtractIUPAC'
+	out_label = 'tag_r2'
+	search = 'TCA'
+	anchor = 'Anywhere'
+    segment = 'read2'
+	max_mismatches = 0
+
+[[step]]
+    action ='ReverseComplement'
+    source = 'all'
+
+[[step]]
+	action='StoreTagInComment'
+	in_label = 'location_tag'
+
+[[step]]
+	action='StoreTagInComment'
+	in_label = 'location_tag_r2'
+
+[[step]]
+	action='Lowercase'
+	source = 'tag:tag'
+
+[[step]]
+	action = 'StoreTagInSequence'
+	in_label ='tag'
+
+[[step]]
+	action='Lowercase'
+	source = 'tag:tag_r2'
+
+[[step]]
+	action = 'StoreTagInSequence'
+	in_label ='tag_r2'
+
+[output]
+	prefix = 'output'

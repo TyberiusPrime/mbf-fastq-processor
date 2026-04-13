@@ -1,28 +1,32 @@
 [input]
 	read1 = 'input_read1.fq'
+
 [[step]]
 	action = 'Head'
 	n = 2
+
 [[step]]
 	action = 'ExtractIUPAC'
 	out_label = 'tag'
 	search = 'TCA'
 	anchor = 'Anywhere'
 	max_mismatches = 0
+
+
+[[step]]
+  action = 'CutStart'
+  n = 10
+
 [[step]]
     action ='ReverseComplement'
-    source = 'read1'
-[[step]]
-	action='StoreTagInComment'
-	in_label = 'location_tag'
+    source = 'tag:tag'
 
 [[step]]
 	action='Lowercase'
 	source = 'tag:tag'
 
 [[step]]
-	action = 'StoreTagInSequence'
-	in_label ='tag'
+	action = 'StoreTagsInTable'
 
 [output]
 	prefix = 'output'

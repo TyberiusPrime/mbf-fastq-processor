@@ -1,0 +1,24 @@
+[input]
+	read1 = 'input_read1.fq'
+
+[[step]]
+	action = 'Head'
+	n = 2
+
+[[step]]
+	action = 'ExtractRegion'
+	out_label = 'tag'
+    start = 0
+    len = 5
+    source = 'name:'
+    anchor = 'left'
+  
+[[step]]
+    action ='ReverseComplement'
+    source = 'tag:tag'
+
+[[step]]
+	action = 'StoreTagsInTable'
+
+[output]
+	prefix = 'output'

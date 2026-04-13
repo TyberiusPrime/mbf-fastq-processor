@@ -1,4 +1,7 @@
-#[derive(Debug, Clone, Eq, PartialEq, Copy)]
+use schemars::JsonSchema;
+
+#[derive(Debug, Clone, Eq, PartialEq, Copy, JsonSchema, Hash)]
+#[schemars(with = "usize")]
 pub struct SegmentIndex(pub usize);
 
 //in DNA because it's used by DNA types. rest of the segment varations are in config

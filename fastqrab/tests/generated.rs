@@ -2537,20 +2537,64 @@ fn test_cases_x_single_step_x_edits_x_merge_reads_x_vs_fastp_systematic_but_limi
 }
 
 #[test]
-fn test_cases_x_single_step_x_edits_x_reverse_complement() {
-    println!("Test case is in: test_cases/single_step/edits/reverse_complement");
+fn test_cases_x_single_step_x_edits_x_reverse_complement_x_basic() {
+    println!("Test case is in: test_cases/single_step/edits/reverse_complement/basic");
     run_test(
-        std::path::Path::new("../test_cases/single_step/edits/reverse_complement"),
+        std::path::Path::new("../test_cases/single_step/edits/reverse_complement/basic"),
         "input.toml",
         1,
     );
 }
 
 #[test]
-fn test_cases_x_single_step_x_edits_x_reverse_complement_conditional() {
-    println!("Test case is in: test_cases/single_step/edits/reverse_complement_conditional");
+fn test_cases_x_single_step_x_edits_x_reverse_complement_x_conditional() {
+    println!("Test case is in: test_cases/single_step/edits/reverse_complement/conditional");
     run_test(
-        std::path::Path::new("../test_cases/single_step/edits/reverse_complement_conditional"),
+        std::path::Path::new("../test_cases/single_step/edits/reverse_complement/conditional"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_edits_x_reverse_complement_x_name_not_supported() {
+    println!("Test case is in: test_cases/single_step/edits/reverse_complement/name_not_supported");
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/edits/reverse_complement/name_not_supported",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_edits_x_reverse_complement_x_tag() {
+    println!("Test case is in: test_cases/single_step/edits/reverse_complement/tag");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/edits/reverse_complement/tag"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_edits_x_reverse_complement_x_tag_lost_location() {
+    println!("Test case is in: test_cases/single_step/edits/reverse_complement/tag_lost_location");
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/edits/reverse_complement/tag_lost_location",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_edits_x_reverse_complement_x_tag_string_value() {
+    println!("Test case is in: test_cases/single_step/edits/reverse_complement/tag_string_value");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/edits/reverse_complement/tag_string_value"),
         "input.toml",
         1,
     );
@@ -5921,6 +5965,20 @@ fn test_cases_x_single_step_x_extraction_x_edits_altering_tag_locations_x_rev_co
     run_test(
         std::path::Path::new(
             "../test_cases/single_step/extraction/edits_altering_tag_locations/rev_complement",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_extraction_x_edits_altering_tag_locations_x_rev_complement_all() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/edits_altering_tag_locations/rev_complement_all"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/edits_altering_tag_locations/rev_complement_all",
         ),
         "input.toml",
         1,
