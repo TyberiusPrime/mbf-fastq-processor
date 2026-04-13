@@ -30,12 +30,7 @@
 
     # count how often these oligos occur.
     # no mismatches, no IUPAC
-	count_oligos = [
-		'AAAAAA',
-		'GATCGGAAGAGCACACGTCTGAACTCCAGTCAC',
-		'ATCTCGTATGCCGTCTTCTGCTTG',
-		'GGGGGGGGGGG',
-	]
+	count_oligos = {AAAAAA = 'AAAAAA', p5_adapter = 'GATCGGAAGAGCACACGTCTGAACTCCAGTCAC', p7_adapter = 'ATCTCGTATGCCGTCTTCTGCTTG', GGGGGGGGGGG = 'GGGGGGGGGGG'}
 
     # Histogram of gc content (rounded to nearest integer)
   # optional

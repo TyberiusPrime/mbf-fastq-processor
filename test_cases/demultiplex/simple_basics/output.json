@@ -402,8 +402,14 @@
     "actual_filter_capacity": 2048,
     "fragment_duplicate_count": 0,
     "count_oligos": {
-      "CTCC": 14,
-      "AAAA": 11
+      "CTCC": {
+        "sequence": "CTCC",
+        "count": 14
+      },
+      "AAAA": {
+        "sequence": "AAAA",
+        "count": 11
+      }
     },
     "histogram": {
       "demult": {
@@ -1621,16 +1627,34 @@
       "actual_filter_capacity": 1024,
       "count_oligos": {
         "no-barcode": {
-          "CTCC": 12,
-          "AAAA": 9
+          "CTCC": {
+            "sequence": "CTCC",
+            "count": 12
+          },
+          "AAAA": {
+            "sequence": "AAAA",
+            "count": 9
+          }
         },
         "aaaa": {
-          "CTCC": 2,
-          "AAAA": 1
+          "CTCC": {
+            "sequence": "CTCC",
+            "count": 2
+          },
+          "AAAA": {
+            "sequence": "AAAA",
+            "count": 1
+          }
         },
         "gggg": {
-          "CTCC": 0,
-          "AAAA": 1
+          "CTCC": {
+            "sequence": "CTCC",
+            "count": 0
+          },
+          "AAAA": {
+            "sequence": "AAAA",
+            "count": 1
+          }
         }
       }
     }

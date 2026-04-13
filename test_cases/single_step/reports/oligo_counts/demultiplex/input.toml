@@ -1,0 +1,28 @@
+[input]
+    read1 = 'input_read1.fq'
+    read2 = 'input_read2.fq'
+
+[[step]]
+  action = 'EvalExpression'
+  out_label = 'even'
+  expr = 'read_no % 2 == 0'
+  result_type = 'bool'
+
+[[step]]
+  action = 'Demultiplex'
+  in_label = 'even'
+
+[[step]]
+    action = 'Report'
+    name = 'xyz'
+    count = false
+    base_statistics = false
+    duplicate_count_per_read = false
+    duplicate_count_per_fragment = false
+    length_distribution = false
+    count_oligos = {CTCCTG = 'CTCCTG', TGG = 'TGG'}
+
+[output]
+    prefix = 'output'
+    report_json=true
+	format = 'None'

@@ -14,16 +14,14 @@
     "repository": "_IGNORED_"
   },
   "xyz": {
-    "multiplexed": {
-      "count_oligos": {
-        "even=false": {
-          "CTCCTG": 0,
-          "TGG": 8
-        },
-        "even=true": {
-          "CTCCTG": 2,
-          "TGG": 16
-        }
+    "count_oligos": {
+      "CTCCTG": {
+        "sequence": "CTCCTG",
+        "count": 0
+      },
+      "TGG": {
+        "sequence": "TGG",
+        "count": 12
       }
     }
   },

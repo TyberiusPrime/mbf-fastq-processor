@@ -14,11 +14,13 @@ Error 1/1
 10 │     duplicate_count_per_read = false
 11 │     duplicate_count_per_fragment = false
 12 │     length_distribution = false
-13 │     count_oligos = ['', 'TGG']
-   ┆                     ─┬
-   ┆                      │
-   ┆                      ╰───────── Invalid DNA sequence
+13 │     count_oligos = {bad = '', good = 'TGG'}
+   ┆                           ─┬
+   ┆                            │
+   ┆                            ╰──────────────── Invalid DNA sequence
 ───╯
 Hint: DNA sequence cannot be empty
       See https://doc_url.example/version-stripped-from-test/docs/redirects/Report
+      Or run: `fastqrab template Report` for more information.
+
 

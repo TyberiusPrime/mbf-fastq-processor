@@ -1,3 +1,4 @@
+Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
@@ -13,9 +14,13 @@ Error 1/1
 10 │     duplicate_count_per_read = false
 11 │     duplicate_count_per_fragment = false
 12 │     length_distribution = false
-13 │     count_oligos = ['NA', 'TGG']
-   ┆                     ──┬─
-   ┆                       │
-   ┆                       ╰────────── Invalid DNA sequence
+13 │     count_oligos = {bad = 'NA', good = 'TGG'}
+   ┆                           ──┬─
+   ┆                             │
+   ┆                             ╰───────────────── Invalid DNA sequence
 ───╯
 Hint: Invalid DNA base: N
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/Report
+      Or run: `fastqrab template Report` for more information.
+
+

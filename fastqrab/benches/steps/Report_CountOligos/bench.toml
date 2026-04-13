@@ -15,4 +15,4 @@ read1 = "../../../../test_cases/sample_data/fastp_606.fq.gz"
     action = "Report"
     name = "benchmark_report"
     count = false
-    count_oligos = ["AGTCTA", "CGATCG"]
+    count_oligos = {AGTCTA = "AGTCTA", CGATCG = "CGATCG"}

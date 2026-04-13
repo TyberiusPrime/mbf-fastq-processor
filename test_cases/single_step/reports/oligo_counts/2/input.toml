@@ -11,7 +11,8 @@
     duplicate_count_per_read = false
     duplicate_count_per_fragment = false
     length_distribution = false
-    count_oligos = ['CTCCTG', 'TGG']
+    count_oligos = {CTCCTG = 'CTCCTG', TGG = 'TGG'}
+    count_oligos_segment = 'read2'
 
 [output]
     prefix = 'output'

@@ -1,5 +1,6 @@
 use memchr::memmem;
 use serde_json::{Map, Value};
+use std::collections::BTreeMap;
 
 use crate::transformations::prelude::*;
 
@@ -8,9 +9,9 @@ use crate::transformations::prelude::*;
 #[derive(Debug)]
 pub struct _ReportCountOligos {
     pub report_no: usize,
-    #[schemars(with = "Vec<String>")]
+    #[schemars(with = "BTreeMap<String, String>")]
     #[tpd(skip)]
-    pub oligos: Vec<BString>,
+    pub oligos: IndexMap<String, BString>,
     #[tpd(skip)]
     #[schemars(skip)]
     pub counts: Arc<Mutex<DemultiplexedData<Vec<usize>>>>,
@@ -40,7 +41,7 @@ impl TagUser for PartialTaggedVariant<Box<Partial_ReportCountOligos>> {}
 impl Partial_ReportCountOligos {
     pub fn new(
         report_no: usize,
-        oligos: Vec<BString>,
+        oligos: IndexMap<String, BString>,
         segment: TomlValue<MustAdapt<String, SegmentIndexOrAll>>,
     ) -> Self {
         Self {
@@ -102,8 +103,8 @@ impl Step for Box<_ReportCountOligos> {
                 let seq = read.seq();
 
                 // Optimized search using memchr for faster substring matching
-                for (ii, oligo) in self.oligos.iter().enumerate() {
-                    if memmem::find(seq, oligo).is_some() {
+                for (ii, oligo) in self.oligos.values().enumerate() {
+                    if memmem::find(seq, oligo.as_slice()).is_some() {
                         counts
                             .get_mut(&demultiplex_tag)
                             .expect("demultiplex tag must exist in counts")[ii] += 1;
@@ -125,31 +126,27 @@ impl Step for Box<_ReportCountOligos> {
         }
         Ok((block, true))
     }
+
     fn finalize(&self, demultiplex_info: &OptDemultiplex) -> Result<Option<FinalizeReportResult>> {
         let mut contents = Map::new();
         let counts = self.counts.lock().expect("counts mutex poisoned");
-        //needs updating for demultiplex
         match demultiplex_info {
             OptDemultiplex::No => {
-                for (ii, oligo) in self.oligos.iter().enumerate() {
-                    contents.insert(
-                        oligo.to_string(),
-                        counts.get(&0).expect("default tag 0 must exist in counts")[ii].into(),
-                    );
+                for (ii, (name, seq)) in self.oligos.iter().enumerate() {
+                    let count = counts.get(&0).expect("default tag 0 must exist in counts")[ii];
+                    contents.insert(name.clone(), oligo_json_value(name, seq, count));
                 }
             }
 
             OptDemultiplex::Yes(demultiplex_info) => {
-                for (tag, name) in &demultiplex_info.tag_to_name {
-                    if let Some(name) = name {
+                for (tag, tag_name) in &demultiplex_info.tag_to_name {
+                    if let Some(tag_name) = tag_name {
                         let mut local = Map::new();
-                        for (ii, oligo) in self.oligos.iter().enumerate() {
-                            local.insert(
-                                oligo.to_string(),
-                                counts.get(tag).expect("tag must exist in counts")[ii].into(),
-                            );
+                        for (ii, (name, seq)) in self.oligos.iter().enumerate() {
+                            let count = counts.get(tag).expect("tag must exist in counts")[ii];
+                            local.insert(name.clone(), oligo_json_value(name, seq, count));
                         }
-                        contents.insert(name.clone(), local.into());
+                        contents.insert(tag_name.clone(), local.into());
                     }
                 }
             }
@@ -162,4 +159,15 @@ impl Step for Box<_ReportCountOligos> {
             contents: Value::Object(final_contents),
         }))
     }
+}
+
+/// Produce the JSON value for a single oligo count entry.
+/// Always emits `{"sequence": "...", "count": N}`.  When no explicit name was
+/// given the caller uses the sequence string as the key, so name and sequence
+/// will be the same — but the structure is identical either way.
+fn oligo_json_value(_name: &str, seq: &BString, count: usize) -> Value {
+    let mut obj = Map::new();
+    obj.insert("sequence".to_string(), seq.to_string().into());
+    obj.insert("count".to_string(), count.into());
+    Value::Object(obj)
 }

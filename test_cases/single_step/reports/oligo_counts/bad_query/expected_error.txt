@@ -1,0 +1,21 @@
+Error 1/1
+   ╭─config.toml
+   ┆
+ 6 │ [[step]]
+ 7 │     action = 'Report'
+   ┆              ────┬───
+   ┆                  │
+   ┆                  ╰──── In this step
+   ┆
+ 8 │     name = 'xyz'
+ 9 │     count = false
+10 │     base_statistics = false
+11 │     duplicate_count_per_read = false
+12 │     duplicate_count_per_fragment = false
+13 │     length_distribution = false
+14 │     count_oligos = {CTCCTG = 'CTCCTG', TGG = 'TNG'}
+   ┆                                              ──┬──
+   ┆                                                │
+   ┆                                                ╰──── Invalid DNA sequence
+───╯
+Hint: Invalid DNA base: N

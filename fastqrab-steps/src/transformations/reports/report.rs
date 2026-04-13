@@ -1,5 +1,6 @@
-use crate::transformations::prelude::*;
 use fastqrab_config::NonAmbigousDNA;
+
+use crate::transformations::prelude::*;
 
 /// Include a report at this position
 #[derive(JsonSchema)]
@@ -22,8 +23,8 @@ pub struct Report {
     #[tpd(default)]
     pub debug_reproducibility: bool,
 
-    #[schemars(with = "Option<Vec<String>>")]
-    pub count_oligos: Option<Vec<NonAmbigousDNA>>,
+    #[schemars(with = "Option<std::collections::BTreeMap<String, String>>")]
+    pub count_oligos: Option<IndexMap<String, NonAmbigousDNA>>,
 
     #[tpd(adapt_in_verify(String))]
     #[schemars(with = "String")]

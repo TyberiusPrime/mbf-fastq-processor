@@ -1,0 +1,50 @@
+{
+  "__": {
+    "version": "_IGNORED_",
+    "cwd": "_IGNORED_",
+    "input_files": {
+      "interleaved": null,
+      "read1": [
+        "input_read1.fq"
+      ],
+      "read2": [
+        "input_read2.fq"
+      ]
+    },
+    "repository": "_IGNORED_"
+  },
+  "xyz": {
+    "multiplexed": {
+      "count_oligos": {
+        "even=false": {
+          "CTCCTG": {
+            "sequence": "CTCCTG",
+            "count": 0
+          },
+          "TGG": {
+            "sequence": "TGG",
+            "count": 8
+          }
+        },
+        "even=true": {
+          "CTCCTG": {
+            "sequence": "CTCCTG",
+            "count": 2
+          },
+          "TGG": {
+            "sequence": "TGG",
+            "count": 16
+          }
+        }
+      }
+    }
+  },
+  "run_info": {
+    "program_version": "_IGNORED_",
+    "input_toml": "_IGNORED_",
+    "working_directory": "_IGNORED_"
+  },
+  "report_order": [
+    "xyz"
+  ]
+}

@@ -5,6 +5,20 @@
   },
   "xyz": {
     "molecule_count": 10,
+    "count_oligos": {
+      "AAAAAA": {
+        "sequence": "AAAAAA",
+        "count": 3
+      },
+      "p5_adapter": {
+        "sequence": "AGATCGGAAGAGC",
+        "count": 1
+      },
+      "p7_adapter": {
+        "sequence": "GATCGGAAGAGCAC",
+        "count": 0
+      }
+    },
     "read1": {
       "base_statistics": {
         "expected_errors_from_quality_curve": [

@@ -131,7 +131,7 @@ def copy_template_toml(src_dir: Path, docs_dir: Path) -> None:
         src_dir: Path to the directory containing src/template.toml
         docs_dir: Path to the docs directory
     """
-    template_src = src_dir / "src" / "template.toml"
+    template_src = src_dir / "fastqrab" / "src" / "template.toml"
     template_dst = (
         docs_dir / "content" / "docs" / "reference" / "toml" / "template.toml"
     )

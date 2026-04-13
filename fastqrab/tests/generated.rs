@@ -8556,30 +8556,40 @@ fn test_cases_x_single_step_x_reports_x_duplication_count_is_stable() {
 }
 
 #[test]
-fn test_cases_x_single_step_x_reports_x_oligo_counts() {
-    println!("Test case is in: test_cases/single_step/reports/oligo_counts");
+fn test_cases_x_single_step_x_reports_x_oligo_counts_x_2() {
+    println!("Test case is in: test_cases/single_step/reports/oligo_counts/2");
     run_test(
-        std::path::Path::new("../test_cases/single_step/reports/oligo_counts"),
+        std::path::Path::new("../test_cases/single_step/reports/oligo_counts/2"),
         "input.toml",
         1,
     );
 }
 
 #[test]
-fn test_cases_x_single_step_x_reports_x_oligo_counts_2() {
-    println!("Test case is in: test_cases/single_step/reports/oligo_counts_2");
+fn test_cases_x_single_step_x_reports_x_oligo_counts_x_bad_query() {
+    println!("Test case is in: test_cases/single_step/reports/oligo_counts/bad_query");
     run_test(
-        std::path::Path::new("../test_cases/single_step/reports/oligo_counts_2"),
+        std::path::Path::new("../test_cases/single_step/reports/oligo_counts/bad_query"),
         "input.toml",
         1,
     );
 }
 
 #[test]
-fn test_cases_x_single_step_x_reports_x_oligo_counts_demultiplex() {
-    println!("Test case is in: test_cases/single_step/reports/oligo_counts_demultiplex");
+fn test_cases_x_single_step_x_reports_x_oligo_counts_x_basic() {
+    println!("Test case is in: test_cases/single_step/reports/oligo_counts/basic");
     run_test(
-        std::path::Path::new("../test_cases/single_step/reports/oligo_counts_demultiplex"),
+        std::path::Path::new("../test_cases/single_step/reports/oligo_counts/basic"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_reports_x_oligo_counts_x_demultiplex() {
+    println!("Test case is in: test_cases/single_step/reports/oligo_counts/demultiplex");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/reports/oligo_counts/demultiplex"),
         "input.toml",
         1,
     );

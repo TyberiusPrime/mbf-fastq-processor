@@ -1026,16 +1026,19 @@ impl PartialConfig {
                 ));
             }
             if let Some(Some(count_oligos)) = config.count_oligos.take().into_inner() {
+                let oligos_map: IndexMap<String, bstr::BString> = count_oligos
+                    .map
+                    .into_iter()
+                    .filter_map(|(name, tv_seq)| {
+                        tv_seq.into_inner().map(|seq| (name, seq.0)) //already verified to be uppercase by NonAmbigousDNA
+                    })
+                    .collect();
                 push_new(PartialTransformation::_ReportCountOligos(
                     PartialTaggedVariant {
                         toml_value: TomlValue::new_ok_unplaced(Box::new(
                             reports::Partial_ReportCountOligos::new(
                                 *report_no,
-                                count_oligos
-                                    .into_iter()
-                                    .filter_map(toml_pretty_deser::TomlValue::into_inner)
-                                    .map(|x| x.0)
-                                    .collect(),
+                                oligos_map,
                                 config.count_oligos_segment.clone(),
                             ),
                         )),

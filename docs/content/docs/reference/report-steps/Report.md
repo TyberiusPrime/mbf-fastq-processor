@@ -21,7 +21,7 @@ to get e.g. before/after filtering reports.
     length_distribution = false # capture read length distribution
     duplicate_count_per_read = false # count duplicates using Cukoo filter on each read1/read2/index1/index2
     duplicate_count_per_fragment = false # count duplicates using Cukoo filter, on concatenated read1/read2/index1/index2
-    count_oligos = [] # if set, count these oligos in the segment. Full match only, no iupac
+    count_oligos = {name1 = "AGTC", name2 = "ACCCCC"} # map of name -> sequence. Full match only, no iupac
     count_oligos_segment = "all" # segment to count oligos in, can be 'all', 'read1', ...
     tag_histograms = ["mytag"] # Calculate a histogram for this tag
 ```

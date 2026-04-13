@@ -266,10 +266,22 @@
     "actual_filter_capacity": 16,
     "fragment_duplicate_count": 3,
     "count_oligos": {
-      "AAAAAA": 1,
-      "GATCGGAAGAGCACACGTCTGAACTCCAGTCAC": 0,
-      "ATCTCGTATGCCGTCTTCTGCTTG": 0,
-      "GGGGGGGGGGG": 1
+      "AAAAAA": {
+        "sequence": "AAAAAA",
+        "count": 1
+      },
+      "p5_adapter": {
+        "sequence": "GATCGGAAGAGCACACGTCTGAACTCCAGTCAC",
+        "count": 0
+      },
+      "p7_adapter": {
+        "sequence": "ATCTCGTATGCCGTCTTCTGCTTG",
+        "count": 0
+      },
+      "GGGGGGGGGGG": {
+        "sequence": "GGGGGGGGGGG",
+        "count": 1
+      }
     },
     "histogram": {
       "gc_content": {

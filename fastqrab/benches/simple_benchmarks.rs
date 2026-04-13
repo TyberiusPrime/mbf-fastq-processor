@@ -238,7 +238,7 @@ fn benchmark_key_steps(c: &mut Criterion) {
     action = "Report"
     name = "benchmark_report"
     count = false
-    count_oligos = ["AGTCTA", "CGATCG"]
+    count_oligos = {AGTCTA = "AGTCTA", CGATCG = "CGATCG"}
     "#,
             molecule_count,
             thread_count,

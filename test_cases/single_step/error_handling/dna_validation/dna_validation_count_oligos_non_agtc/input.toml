@@ -10,7 +10,7 @@
     duplicate_count_per_read = false
     duplicate_count_per_fragment = false
     length_distribution = false
-    count_oligos = ['NA', 'TGG']
+    count_oligos = {bad = 'NA', good = 'TGG'}
     count_oligos_segment = 'read1'
 
 [output]

@@ -5,19 +5,23 @@
     "input_files": {
       "interleaved": null,
       "read1": [
-        "input_read1.fq.zst"
+        "input_read1.fq"
       ],
       "read2": [
-        "input_read2.fq.zst"
+        "input_read2.fq"
       ]
     },
     "repository": "_IGNORED_"
   },
-  "report": {
+  "xyz": {
     "count_oligos": {
-      "AA": {
-        "sequence": "AA",
-        "count": 19801
+      "CTCCTG": {
+        "sequence": "CTCCTG",
+        "count": 2
+      },
+      "TGG": {
+        "sequence": "TGG",
+        "count": 24
       }
     }
   },
@@ -27,6 +31,6 @@
     "working_directory": "_IGNORED_"
   },
   "report_order": [
-    "report"
+    "xyz"
   ]
 }
