@@ -90,6 +90,14 @@ def generate_cookbook_docs(cookbooks_src: Path, docs_dir: Path) -> None:
         # page_content.append(f'weight = {ii}\n')
         page_content.append("+++\n\n")
 
+        # Copy any HTML files from reference_output into docs/static/html/cookbooks/
+        reference_output = cookbook_dir / "reference_output"
+        if reference_output.exists():
+            html_dest = docs_dir / "static" / "cookbooks" / cookbook_name
+            html_dest.mkdir(parents=True, exist_ok=True)
+            for html_file in reference_output.glob("*.html"):
+                shutil.copyfile(html_file, html_dest / f"{html_file.name}")
+
         # Add README content
         readme_text = readme.read_text(encoding="utf-8")
         page_content.append(readme_text)
@@ -107,9 +115,18 @@ def generate_cookbook_docs(cookbooks_src: Path, docs_dir: Path) -> None:
         page_content.append(input_toml.read_text(encoding="utf-8"))
         page_content.append("```\n")
 
+        page_content = "".join(page_content)
+
+        # fix links
+        page_content = re.sub(
+            "\\(./reference_output/",
+            f"(../../../../cookbooks/{cookbook_name}/",
+            page_content,
+        )
+
         # Write the Hugo page
         page_file = cookbooks_dest / f"{cookbook_name}.md"
-        page_file.write_text("".join(page_content), encoding="utf-8")
+        page_file.write_text(page_content, encoding="utf-8")
 
         # Add to index
         title_match = re.search(r"^#\s+(.+)$", readme_text, re.MULTILINE)

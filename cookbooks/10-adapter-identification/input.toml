@@ -1,0 +1,28 @@
+[input]
+    read1 = 'input/fastp_606.fq.gz'
+
+# Probe for common adapters using count_oligos.
+# count_oligos performs exact full-sequence matching — no mismatches, no IUPAC.
+# A count > 0 identifies reads that still carry adapter sequence.
+# See the adapters reference for the full list of sequences.
+[[step]]
+    action = 'Report'
+    name = 'adapter_check'
+    count = true
+
+    count_oligos = {
+        # https://support-docs.illumina.com/SHARE/AdapterSequences/adapter-sequences.htm
+        "Illumina Nextera/AmpliSeq"  = "CTGTCTCTTATACACATCT",
+        "Illumina TruSeq R1/miRNA"   = "AGATCGGAAGAGCACACGTCTGAACTCCAGTCA",
+        "Illumina TruSeq R2"         = "AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT",
+
+        # http://seqanswers.com/forums/showthread.php?t=87647 (2nd post)
+        "BGI Forward"                = "AAGTCGGAGGCCAAGCGGTCTTAGGAAGACAA",
+        "BGI Reverse"                = "AAGTCGGATCGTAGCCATGTCGTTCTGTGAGCCAAGGAGTTG",
+    }
+
+[output]
+    prefix = 'reference_output/output'
+    report_html = true
+    report_json = true
+    format = 'None'

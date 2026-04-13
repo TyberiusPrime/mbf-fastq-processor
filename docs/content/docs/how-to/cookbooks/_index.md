@@ -17,3 +17,4 @@ Complete, runnable examples demonstrating common use cases.
 - [07-demultiplexing](07-demultiplexing) - Cookbook 07: Demultiplexing by Inline Barcode
 - [08-length-filtering](08-length-filtering) - Cookbook 08: Read Length Filtering and Truncation
 - [09-fastp-equivalent](09-fastp-equivalent) - Cookbook 09: Fastp-Equivalent Workflow
+- [10-adapter-identification](10-adapter-identification) - Cookbook 10: Adapter Identification

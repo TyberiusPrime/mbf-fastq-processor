@@ -9622,3 +9622,13 @@ fn test_cases_x_09_x_fastp_x_equivalent() {
         1,
     );
 }
+
+#[test]
+fn test_cases_x_10_x_adapter_x_identification() {
+    println!("Test case is in: cookbooks/10-adapter-identification");
+    run_test(
+        std::path::Path::new("../cookbooks/10-adapter-identification"),
+        "input.toml",
+        1,
+    );
+}
