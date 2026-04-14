@@ -7032,6 +7032,34 @@ fn test_cases_x_single_step_x_extraction_x_remove_nonexistant_tag() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_extraction_x_store_tag_in_comment_x_insert_char_default() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/store_tag_in_comment/insert_char_default"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/store_tag_in_comment/insert_char_default",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_extraction_x_store_tag_in_comment_x_store_in_not_output_segment() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/store_tag_in_comment/store_in_not_output_segment"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/store_tag_in_comment/store_in_not_output_segment",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_extraction_x_store_tag_in_fastq_x_basic() {
     println!("Test case is in: test_cases/single_step/extraction/store_tag_in_fastq/basic");
     run_test(

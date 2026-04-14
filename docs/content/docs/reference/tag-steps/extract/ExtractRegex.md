@@ -15,13 +15,17 @@ Extract a regexp result. Stores an empty string if not found.
     source = "read1" # An input segment (to read from sequence), or name:<segment> to read from a read's name.
 ```
 
-This transformation searches for a regular expression pattern in the specified read and extracts the matching portion as a tag.
+This transformation searches for a regular expression pattern in the specified
+read and extracts the matching portion as a tag.
 
 The value actually 'extracted' is after replacement has been performed.
 
-See the [regex documentation](https://docs.rs/regex/latest/regex/#syntax) for details on the syntax supported.
+See the [regex documentation](https://docs.rs/regex/latest/regex/#syntax) for
+details on the syntax supported.
 
-Note that you need to 'double up' on backslashes for character classes inside the search string.
+Note that you need to 'double up' on backslashes for character classes inside
+the search string.
 
-The replacement supports replacing other tag's values into your string. Use `[[tag]]` to achieve that.
+The replacement supports replacing other tag's values into your string. Use
+`[[tag]]` to achieve that.
 

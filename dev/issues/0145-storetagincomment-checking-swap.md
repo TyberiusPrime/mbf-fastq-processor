@@ -1,4 +1,4 @@
-status: open
+status: closed
 # StoreTagInComment checking & swap
 
 There's a bug here where it will fail
