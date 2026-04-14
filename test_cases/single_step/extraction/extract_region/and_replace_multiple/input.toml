@@ -18,7 +18,7 @@
     source = 'tag:umi'
 
 [[step]]
-    action = 'StoreTagInSequence'
+    action = 'StoreTagBackInSequence'
     in_label = 'umi'
 
 [[step]]

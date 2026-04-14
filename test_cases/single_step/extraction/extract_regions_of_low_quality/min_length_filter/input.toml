@@ -12,7 +12,7 @@
   target = 'tag:low_quality'
 
 [[step]]
-  action = 'StoreTagInSequence'
+  action = 'StoreTagBackInSequence'
   in_label = "low_quality"
 
 [[step]]

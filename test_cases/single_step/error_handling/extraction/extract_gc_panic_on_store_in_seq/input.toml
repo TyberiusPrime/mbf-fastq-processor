@@ -8,7 +8,7 @@
     out_label = 'gc_content'
 
 [[step]]
-    action = 'StoreTagInSequence'
+    action = 'StoreTagBackInSequence'
     in_label = 'gc_content'
 
 [output]

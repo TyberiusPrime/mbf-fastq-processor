@@ -3,10 +3,10 @@ Error 1/1
    ╭─config.toml
    ┆
 10 │ [[step]]
-11 │     action = 'StoreTagInSequence'
-   ┆              ──────────┬─────────
-   ┆                        │
-   ┆                        ╰────────── In this step
+11 │     action = 'StoreTagBackInSequence'
+   ┆              ────────────┬───────────
+   ┆                          │
+   ┆                          ╰──────────── In this step
 12 │     in_label = 'gc_content'
    ┆                ──────┬─────
    ┆                      │
@@ -14,7 +14,7 @@ Error 1/1
 ───╯
 Hint: This transform requires tag 'gc_content' to be one of the following types: ['Location'],
       but it is actually of type 'Numeric (0..=1)'.
-      See https://doc_url.example/version-stripped-from-test/docs/redirects/StoreTagInSequence
-      Or run: `fastqrab template StoreTagInSequence` for more information.
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/StoreTagBackInSequence
+      Or run: `fastqrab template StoreTagBackInSequence` for more information.
 
 

@@ -13,7 +13,7 @@
 	source = 'tag:iupac_match'
 
 [[step]]
-	action = 'StoreTagInSequence'
+	action = 'StoreTagBackInSequence'
 	in_label = 'iupac_match'
 
 [[step]]

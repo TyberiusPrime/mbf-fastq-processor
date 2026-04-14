@@ -75,7 +75,7 @@ On Ryzen AI Max+ 395 using benchmark mode, 12 threads, 10 million (10k repeated)
 | 1186.90 | Report_duplicate_count_per_fragment |
 | 908.83 | HammingCorrect |
 | 905.40 | Demultiplex |
-| 859.17 | StoreTagInSequence |
+| 859.17 | StoreTagBackInSequence |
 | 743.61 | TrimAtTag |
 | 725.05 | QuantifyTag |
 | 704.68 | StoreTagLocationInComment |

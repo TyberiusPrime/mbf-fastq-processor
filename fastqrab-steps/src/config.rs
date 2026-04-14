@@ -1432,8 +1432,7 @@ impl PartialConfig {
                                 if let Some(hamming_config) =
                                     hamming_config.toml_value.value.as_ref()
                                 {
-                                    if let Some(barcodes_name) =
-                                        hamming_config.barcodes.as_ref()
+                                    if let Some(barcodes_name) = hamming_config.barcodes.as_ref()
                                         && barcodes_name == barcode_section_name
                                     {
                                         found_demultiplex_step = true;

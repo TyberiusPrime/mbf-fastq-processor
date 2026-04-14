@@ -511,11 +511,11 @@
 #    in_label = "mytag"  # Tag containing regions to replace
 #    letter = "N"  # Replacement character (defaults to 'N')
 
-# ==== StoreTagInSequence ====
+# ==== StoreTagBackInSequence ====
 ## Store the tag's replacement in the sequence,
 ## replacing the original sequence at that location.
 # [[step]]
-#    action = "StoreTagInSequence"
+#    action = "StoreTagBackInSequence"
 #    in_label = "mytag"
 #    ignore_missing = true # if false, an error is raised if the tag is missing
 
@@ -579,7 +579,7 @@
 #    #if_tag = "mytag"  # (optional) Only lowercase where this tag is true
 #
 ## For tags: use source = "tag:mytag" to lowercase tag content
-## You still want to StoreTagInSequence after this to actually change sequence
+## You still want to StoreTagBackInSequence after this to actually change sequence
 ## For names: use source = "name:read1" to lowercase read names
 ## Names only apply to names before the comment separator character
 
@@ -591,7 +591,7 @@
 #    #if_tag = "mytag"  # (optional) Only lowercase where this tag is true
 #
 ## For tags: use source = "tag:mytag" 
-## You still want to StoreTagInSequence after this to actually change sequence
+## You still want to StoreTagBackInSequence after this to actually change sequence
 ## For names: use source = "name:read1" 
 ## Names only apply to names before the comment separator character
 

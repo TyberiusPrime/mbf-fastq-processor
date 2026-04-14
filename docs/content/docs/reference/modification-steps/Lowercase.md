@@ -45,7 +45,7 @@ Optionally only applies if a [tag]({{< relref "docs/concepts/tag.md" >}}) is tru
     target = "tag:mytag"
 ```
 
-Follow with [StoreTagInSequence]({{< relref "docs/reference/tag-steps/using/StoreTagInSequence.md" >}}) to apply lowercase tag back onto the read.
+Follow with [StoreTagBackInSequence]({{< relref "docs/reference/tag-steps/using/StoreTagBackInSequence.md" >}}) to apply lowercase tag back onto the read.
 
 ### Lowercase read names
 ```toml
@@ -69,5 +69,3 @@ Follow with [StoreTagInSequence]({{< relref "docs/reference/tag-steps/using/Stor
     target = "read1"
     if_tag = "had_iupac"
 ```
-
-

@@ -57,11 +57,11 @@
 
 
 [[step]]
-	action = 'StoreTagInSequence'
+	action = 'StoreTagBackInSequence'
 	in_label = 'tagr1'
 
 [[step]]
-	action = 'StoreTagInSequence'
+	action = 'StoreTagBackInSequence'
 	in_label = 'tagr2'
 
 [output]

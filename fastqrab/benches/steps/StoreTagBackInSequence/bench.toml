@@ -19,5 +19,5 @@ read1 = "../../../../test_cases/sample_data/fastp_606.fq.gz"
     anchor = "Start"
 
 [[step]]
-    action = "StoreTagInSequence"
+    action = "StoreTagBackInSequence"
     in_label = "tag"

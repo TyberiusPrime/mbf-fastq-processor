@@ -43,7 +43,7 @@
 - Merge base statistics ~80% faster
 - ConcatTags ~15% faster
 - IUPAC matching: replaced Sassy with optimized pure-Rust implementation
-- Optimized SwapConditional, TrimAtTag, StoreTagInSequence, FilterReservoirSample, Rename
+- Optimized SwapConditional, TrimAtTag, StoreTagBackInSequence, FilterReservoirSample, Rename
 - Dynamic cuckoo filter sizing; initial_filter_capacity documented; read count estimation
 
 ### Other
@@ -87,4 +87,3 @@
 
 - Versioned documentation
 - First revision where very major feature is in place. Changelog starts here.
-

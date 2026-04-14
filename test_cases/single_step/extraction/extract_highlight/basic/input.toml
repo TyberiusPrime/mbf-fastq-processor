@@ -27,7 +27,7 @@
     source = 'tag:test'
 
 [[step]]
-    action = 'StoreTagInSequence'
+    action = 'StoreTagBackInSequence'
     in_label = 'test'
 
 [output]

@@ -49,7 +49,7 @@ options.accept_duplicate_files = true
 	source = 'tag:tag'
 
 [[step]]
-	action = 'StoreTagInSequence'
+	action = 'StoreTagBackInSequence'
 	in_label ='tag'
 
 [[step]]
@@ -57,7 +57,7 @@ options.accept_duplicate_files = true
 	source = 'tag:tag_r2'
 
 [[step]]
-	action = 'StoreTagInSequence'
+	action = 'StoreTagBackInSequence'
 	in_label ='tag_r2'
 
 [output]

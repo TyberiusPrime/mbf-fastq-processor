@@ -9,7 +9,7 @@
     replacement = 'AGTC'
 
 [[step]]
-    action = 'StoreTagInSequence'
+    action = 'StoreTagBackInSequence'
     in_label = 'test'
 
 [output]

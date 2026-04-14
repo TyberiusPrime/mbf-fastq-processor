@@ -28,7 +28,7 @@
 	source = 'tag:tag'
 
 [[step]]
-	action = 'StoreTagInSequence'
+	action = 'StoreTagBackInSequence'
 	in_label ='tag'
 	ignore_missing = true
 

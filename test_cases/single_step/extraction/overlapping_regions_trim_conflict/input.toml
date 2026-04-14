@@ -40,7 +40,7 @@
 	source = "tag:tag2"
 
 [[step]]
-	action = "StoreTagInSequence"
+	action = "StoreTagBackInSequence"
 	ignore_missing = false
 	in_label = "tag2"
 

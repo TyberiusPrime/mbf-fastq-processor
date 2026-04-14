@@ -1,4 +1,4 @@
-status: open
+status: done
 # FilterByOtherFile unfication
 
 This should be one step that takes a source,

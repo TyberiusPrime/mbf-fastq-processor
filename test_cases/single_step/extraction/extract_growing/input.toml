@@ -9,7 +9,7 @@
     replacement = '$0$0'
 
 [[step]]
-    action = 'StoreTagInSequence'
+    action = 'StoreTagBackInSequence'
     in_label = 'test'
 
 [output]

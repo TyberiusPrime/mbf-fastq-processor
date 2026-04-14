@@ -1073,13 +1073,13 @@ Replace tagged regions with a specific letter.
     letter = 'N'                   # TYPE: char, DEFAULT: 'N'
 ```
 
-### StoreTagInSequence
+### StoreTagBackInSequence
 
 Replace sequence at tag position with tag content.
 
 ```toml
 [[step]]
-    action = 'StoreTagInSequence'
+    action = 'StoreTagBackInSequence'
     in_label = 'corrected_barcode' # TYPE: existing tag, REQUIRED
     ignore_missing = true          # TYPE: bool, REQUIRED
 ```

@@ -2,13 +2,13 @@
 weight: 50
 ---
 
-# StoreTagInSequence
+# StoreTagBackInSequence
 
 Store the tag's replacement in the sequence, replacing the original sequence at that location.
 
 ```toml
 [[step]]
-    action = "StoreTagInSequence"
+    action = "StoreTagBackInSequence"
     in_label = "mytag"
     ignore_missing = true # if false, an error is raised if the tag is missing
 ```

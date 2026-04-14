@@ -69,11 +69,11 @@
 
 
 [[step]]
-	action = 'StoreTagInSequence'
+	action = 'StoreTagBackInSequence'
 	in_label = 'tagr1'
 
 [[step]]
-	action = 'StoreTagInSequence'
+	action = 'StoreTagBackInSequence'
 	in_label = 'tagr2'
 
 [[step]]
@@ -81,7 +81,7 @@
 	source = 'tag:tagr3'
 
 [[step]]
-	action = 'StoreTagInSequence'
+	action = 'StoreTagBackInSequence'
 	in_label = 'tagr3'
 
 

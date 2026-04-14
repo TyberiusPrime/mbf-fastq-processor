@@ -75,12 +75,12 @@
 	source = 'tag:check2'
 
 [[step]]
-	action = 'StoreTagInSequence'
+	action = 'StoreTagBackInSequence'
 	in_label = 'check1'
 	ignore_missing=true
 
 [[step]]
-	action = 'StoreTagInSequence'
+	action = 'StoreTagBackInSequence'
 	in_label = 'check2'
 	ignore_missing=true
 

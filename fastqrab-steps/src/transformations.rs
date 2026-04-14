@@ -313,7 +313,7 @@ pub enum Transformation {
     TagOtherFile(extract::tag::OtherFile),
     //
     // //edit
-    StoreTagInSequence(tag::StoreTagInSequence),
+    StoreTagBackInSequence(tag::StoreTagBackInSequence),
     ReplaceTagWithLetter(tag::ReplaceTagWithLetter),
     //
     // //store

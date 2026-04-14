@@ -834,7 +834,7 @@ fn benchmark_key_steps(c: &mut Criterion) {
         //             thread_count,
         //         ),
         BenchmarkConfig::new(
-            "StoreTagInSequence",
+            "StoreTagBackInSequence",
             r#"[[step]]
     action = "ExtractRegion"
     segment = "read1"
@@ -844,7 +844,7 @@ fn benchmark_key_steps(c: &mut Criterion) {
     anchor = "Start"
 
 [[step]]
-    action = "StoreTagInSequence"
+    action = "StoreTagBackInSequence"
     in_label = "tag"
 "#,
             molecule_count,

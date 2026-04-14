@@ -177,7 +177,7 @@ const ACTIONS_REQUIRING_GENERIC_TAG: &[&str] = &[
     "StoreTagInComment",
     "StoreTagLocationInComment",
     "StoreTagInFastQ",
-    "StoreTagInSequence",
+    "StoreTagBackInSequence",
     "ReplaceTagWithLetter",
     "QuantifyTag",
     "UppercaseTag",

@@ -9,7 +9,7 @@
     source = "read1"
 
 [[step]]
-    action = 'StoreTagInSequence'
+    action = 'StoreTagBackInSequence'
     in_label = 'test'
 
 [output]

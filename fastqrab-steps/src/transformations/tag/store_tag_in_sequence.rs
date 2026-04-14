@@ -8,13 +8,13 @@ use crate::transformations::prelude::*;
 #[derive(Clone, JsonSchema)]
 #[tpd(no_verify)]
 #[derive(Debug)]
-pub struct StoreTagInSequence {
+pub struct StoreTagBackInSequence {
     in_label: TagLabel,
     #[tpd(default)]
     ignore_missing: bool,
 }
 
-impl TagUser for PartialTaggedVariant<PartialStoreTagInSequence> {
+impl TagUser for PartialTaggedVariant<PartialStoreTagBackInSequence> {
     fn get_tag_usage(
         &mut self,
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
@@ -31,7 +31,7 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagInSequence> {
     }
 }
 
-impl Step for StoreTagInSequence {
+impl Step for StoreTagBackInSequence {
     #[allow(clippy::cast_precision_loss)]
     #[allow(clippy::cast_possible_truncation)]
     #[allow(clippy::cast_sign_loss)]
@@ -63,7 +63,7 @@ impl Step for StoreTagInSequence {
                                 //if we ignore missing locations, we just skip this region
                             } else {
                                 *error_encountered.borrow_mut() = Some(format!(
-                                    "StoreTagInSequence only works on regions with location data. Observed region: {region:?}\n\nSuggestion: Set ignore_missing=true to skip regions without location data, or check if location data was lost in previous transformations"
+                                    "StoreTagBackInSequence only works on regions with location data. Observed region: {region:?}\n\nSuggestion: Set ignore_missing=true to skip regions without location data, or check if location data was lost in previous transformations"
                                 ));
                                 return;
                             }

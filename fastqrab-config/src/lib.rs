@@ -493,6 +493,7 @@ impl ToUsedTag for TomlValue<TagLabel> {
         }
     }
 }
+
 impl ToUsedTag for TomlValue<MustAdapt<String, TagLabel>> {
     fn to_used_tag<'a>(
         &'a mut self,
