@@ -1,4 +1,4 @@
-status: open
+status: closed
 # consider the ability to output 'unpaired' reads when only read1/read2 has been filtered?
 
 demultiplex extension?

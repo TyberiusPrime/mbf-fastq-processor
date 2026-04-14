@@ -17,7 +17,8 @@ Store currently present tags as comments on read names.
 ```
 
 Comments are key=value pairs, separated by `comment_separator` which defaults to '|'. 
-They get inserted before the first `comment_insert_char`, which defaults to space.
+They get inserted before the first `comment_insert_char`, which defaults to 
+[`input.options.read_comment_char`]({{< relref "docs/reference/input-section.md#input-options" >}}).
 
 For example, a read name like:
 ```

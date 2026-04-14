@@ -1,4 +1,5 @@
 ---
+title: Store Tag In FASTQ
 weight: 54
 ---
 

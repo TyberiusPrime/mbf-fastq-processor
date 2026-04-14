@@ -65,8 +65,15 @@ impl VerifyIn<PartialConfig> for PartialStoreTagInComment {
         self.segment.validate_segment(parent);
         self.comment_separator.or_with(default_comment_separator);
         self.region_separator.or_with(default_region_separator);
-        self.comment_insert_char
-            .or_with(default_comment_insert_char);
+        self.comment_insert_char.or_with(|| {
+            parent
+                .input
+                .as_ref()
+                .and_then(|x| x.options.as_ref())
+                .and_then(|x| x.read_comment_character.as_ref())
+                .copied()
+                .unwrap_or_else(default_comment_insert_char)
+        });
 
         // Validate in_label doesn't contain reserved characters
         if let Some(in_label) = self.in_label.value.as_ref().and_then(|x| x.as_ref_pre()) {

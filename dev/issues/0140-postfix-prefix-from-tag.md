@@ -1,4 +1,4 @@
-status: open
+status: done
 # Postfix/prefix from tag
 
 Might be useful?
