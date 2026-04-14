@@ -191,7 +191,7 @@ const ACTIONS_REQUIRING_GENERIC_TAG: &[&str] = &[
     "ConcatTags",
 ];
 
-const ACTIONS_REQUIRING_TWO_TAGS: &[&str] = &["ConcatTags"];
+const ACTIONS_REQUIRING_TWO_TAGS: &[&str] = &["ConcatTags", "StoreTagInSequence"];
 
 const TAG_DECLARING_CONVERT_STEPS: &[&str] = &["ConvertToRate", "ConvertRegionsToLength"];
 

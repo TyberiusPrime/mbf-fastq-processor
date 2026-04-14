@@ -314,6 +314,7 @@ pub enum Transformation {
     //
     // //edit
     StoreTagBackInSequence(tag::StoreTagBackInSequence),
+    StoreTagInSequence(tag::StoreTagInSequence),
     ReplaceTagWithLetter(tag::ReplaceTagWithLetter),
     //
     // //store

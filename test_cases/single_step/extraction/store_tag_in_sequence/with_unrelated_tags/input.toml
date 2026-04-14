@@ -1,0 +1,86 @@
+[input]
+    read1 = 'input_read1.fq'
+
+# tag_before: entirely before the insertion point [0,3]
+[[step]]
+    action = 'ExtractRegion'
+    segment = 'read1'
+    start = 0
+    length = 3
+    out_label = 'tag_before'
+    anchor = 'Start'
+
+# tag_straddle: starts before and ends after insertion point [2,5]
+# location removed after insert, sequence preserved
+[[step]]
+    action = 'ExtractRegion'
+    segment = 'read1'
+    start = 2
+    length = 5
+    out_label = 'tag_straddle'
+    anchor = 'Start'
+
+# tag_val: value to insert [0,3] — same region as tag_before, kept unchanged
+[[step]]
+    action = 'ExtractRegion'
+    segment = 'read1'
+    start = 0
+    length = 3
+    out_label = 'tag_val'
+    anchor = 'Start'
+
+# tag_pos: defines the insertion position [3,3]
+# shifted forward by insert_len after the insert
+[[step]]
+    action = 'ExtractRegion'
+    segment = 'read1'
+    start = 3
+    length = 3
+    out_label = 'tag_pos'
+    anchor = 'Start'
+
+# tag_after: entirely after the insertion point [9,3]
+# shifted forward by insert_len after the insert
+[[step]]
+    action = 'ExtractRegion'
+    segment = 'read1'
+    start = 9
+    length = 3
+    out_label = 'tag_after'
+    anchor = 'Start'
+
+# Dump sequences + locations before the insertion for comparison
+[[step]]
+    action = 'StoreTagsInTable'
+    infix = 'before'
+    in_labels = [
+        'tag_before',  'location_tag_before',
+        'tag_straddle','location_tag_straddle',
+        'tag_val',     'location_tag_val',
+        'tag_pos',     'location_tag_pos',
+        'tag_after',   'location_tag_after',
+    ]
+
+# Insert tag_val (3 bases) before tag_pos's start (position 3)
+[[step]]
+    action = 'StoreTagInSequence'
+    in_value_label = 'tag_val'
+    in_position_label = 'tag_pos'
+    anchor = 'Start'
+
+# Dump sequences + locations after the insertion.
+# Sequences: unchanged.
+# Locations: tag_before/tag_val kept; tag_straddle removed; tag_pos/tag_after shifted +3.
+[[step]]
+    action = 'StoreTagsInTable'
+    infix = 'after'
+    in_labels = [
+        'tag_before',  'location_tag_before',
+        'tag_straddle','location_tag_straddle',
+        'tag_val',     'location_tag_val',
+        'tag_pos',     'location_tag_pos',
+        'tag_after',   'location_tag_after',
+    ]
+
+[output]
+    prefix = 'output'

@@ -1084,6 +1084,30 @@ Replace sequence at tag position with tag content.
     ignore_missing = true          # TYPE: bool, REQUIRED
 ```
 
+### StoreTagInSequence
+
+Insert a tag's sequence into a read at the position defined by another location tag.
+
+**USE WHEN**: Inserting a known sequence (UMI, barcode, adapter) at a specific site in a read.
+
+```toml
+[[step]]
+    action = "StoreTagInSequence"
+    in_value_label    = "mytag"  # TYPE: location or string tag, REQUIRED
+    in_position_label = "mytag2" # TYPE: location tag, REQUIRED
+    anchor = "Start"             # TYPE: 'Start'|'left'|'End'|'right', REQUIRED
+```
+
+**ANCHOR VALUES**:
+- `'Start'` / `'left'` — insert **before** the leftmost position of `in_position_label`
+- `'End'` / `'right'` — insert **after** the rightmost end of `in_position_label`
+
+**NOTES**:
+- Inserted bases receive quality `~` (Phred Q93, maximum Sanger quality)
+- Location tags after the insertion point are automatically shifted forward
+- Locations that straddle the insertion point lose their coordinate info (sequence preserved)
+- If either tag is `Missing` or has no location, the read is unchanged (no error)
+
 ### ReverseComplement
 
 Reverse complement a segment.

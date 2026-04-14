@@ -1,4 +1,4 @@
-status: open
+status: done
 # StoreTagInSequence at different tag's location
 
 This will enable a cookbook that takes UMI from read name

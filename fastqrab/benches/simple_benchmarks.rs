@@ -851,6 +851,33 @@ fn benchmark_key_steps(c: &mut Criterion) {
             thread_count,
         ),
         BenchmarkConfig::new(
+            "StoreTagInSequence",
+            r#"[[step]]
+    action = "ExtractRegion"
+    segment = "read1"
+    start = 0
+    length = 3
+    out_label = "val_tag"
+    anchor = "Start"
+
+[[step]]
+    action = "ExtractRegion"
+    segment = "read1"
+    start = 3
+    length = 3
+    out_label = "pos_tag"
+    anchor = "Start"
+
+[[step]]
+    action = "StoreTagInSequence"
+    in_value_label = "val_tag"
+    in_position_label = "pos_tag"
+    anchor = "Start"
+"#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
             "StoreTagLocationInComment",
             r#"[[step]]
     action = "ExtractRegion"

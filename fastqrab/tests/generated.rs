@@ -7221,6 +7221,56 @@ fn test_cases_x_single_step_x_extraction_x_store_tag_in_fastq_x_with_location_mu
 }
 
 #[test]
+fn test_cases_x_single_step_x_extraction_x_store_tag_in_sequence_x_basic() {
+    println!("Test case is in: test_cases/single_step/extraction/store_tag_in_sequence/basic");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/extraction/store_tag_in_sequence/basic"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_extraction_x_store_tag_in_sequence_x_end_anchor() {
+    println!("Test case is in: test_cases/single_step/extraction/store_tag_in_sequence/end_anchor");
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/store_tag_in_sequence/end_anchor",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_extraction_x_store_tag_in_sequence_x_with_unrelated_tags() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/store_tag_in_sequence/with_unrelated_tags"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/store_tag_in_sequence/with_unrelated_tags",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_extraction_x_store_tag_in_sequence_x_with_unrelated_tags_after() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/store_tag_in_sequence/with_unrelated_tags_after"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/store_tag_in_sequence/with_unrelated_tags_after",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_extraction_x_store_tags_in_table_x_empty_inlabels() {
     println!(
         "Test case is in: test_cases/single_step/extraction/store_tags_in_table/empty_inlabels"

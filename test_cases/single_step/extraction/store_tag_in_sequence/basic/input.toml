@@ -1,0 +1,30 @@
+[input]
+    read1 = 'input_read1.fq'
+
+# Extract the first 3 bases as the value to insert
+[[step]]
+    action = 'ExtractRegion'
+    segment = 'read1'
+    start = 0
+    length = 3
+    out_label = 'val_tag'
+    anchor = 'Start'
+
+# Extract bases 3-5 as the insertion position
+[[step]]
+    action = 'ExtractRegion'
+    segment = 'read1'
+    start = 3
+    length = 3
+    out_label = 'pos_tag'
+    anchor = 'Start'
+
+# Insert val_tag before pos_tag's start (position 3)
+[[step]]
+    action = 'StoreTagInSequence'
+    in_value_label = 'val_tag'
+    in_position_label = 'pos_tag'
+    anchor = 'Start'
+
+[output]
+    prefix = 'output'

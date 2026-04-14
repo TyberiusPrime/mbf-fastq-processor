@@ -520,6 +520,21 @@
 #    ignore_missing = true # if false, an error is raised if the tag is missing
 
 
+# ==== StoreTagInSequence ====
+## Insert a tag's string value into a read sequence at the position defined by another
+## location tag.
+## in_value_label must be a location or string tag (its sequence is inserted).
+## in_position_label must be a location tag (it defines where to insert).
+## anchor = "Start" / "left"  → insert before the leftmost position of in_position_label.
+## anchor = "End"   / "right" → insert after the rightmost end of in_position_label.
+## Quality scores for inserted bases are set to '~' (maximum Sanger quality).
+# [[step]]
+#    action = "StoreTagInSequence"
+#    in_value_label = "mytag"      # location or string tag to insert
+#    in_position_label = "mytag2"  # location tag defining the insert position
+#    anchor = "Start"              # or "End" / "left" / "right"
+
+
 # ==== StoreTagInComment ====
 
 ## Store currently present tags as comments on read names.

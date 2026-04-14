@@ -1,20 +1,43 @@
-use crate::transformations::prelude::*;
+use crate::transformations::{RegionAnchor, prelude::*};
 
-///Store the tag's 'sequence', probably modified by a previous step,
-///back into the reads' sequence.
+/// Insert a tag's string value into a read sequence at the position defined by another
+/// location tag.
 ///
-///Does work with `ExtractRegions` and multiple regions.
+/// `in_value_label` must be a location or string tag — its byte sequence (via `as_ref()` on
+/// the value) is the text inserted into the read.
+///
+/// `in_position_label` must be a location tag — it defines *where* to insert:
+///
+/// - `anchor = "Start"` (alias `"left"`) — inserts **before** the leftmost start of the
+///   location (the hit with the smallest `start` coordinate).
+/// - `anchor = "End"` (alias `"right"`) — inserts **after** the rightmost end of the
+///   location (the hit with the largest `start + len` value).
+///
+/// Quality scores for the inserted bases are set to `~` (Phred 93, maximum Sanger quality).
+///
+/// After insertion, all location tags on the same segment whose start position is ≥ the
+/// insertion point are shifted forward by the number of inserted bases.  Any location that
+/// straddles the insertion point (starts before it, ends after it) has its location
+/// information removed while its sequence data is preserved.
+///
+/// If either tag value is `Missing`, or the position tag carries no location information,
+/// the read is left unchanged.
 ///
 #[derive(Clone, JsonSchema)]
 #[tpd(no_verify)]
 #[derive(Debug)]
-pub struct StoreTagBackInSequence {
-    in_label: TagLabel,
-    #[tpd(default)]
-    ignore_missing: bool,
+pub struct StoreTagInSequence {
+    /// Location or string tag whose sequence to insert into the read.
+    in_value_label: TagLabel,
+    /// Location tag that defines the insertion position.
+    in_position_label: TagLabel,
+    /// Where to insert relative to the position tag:
+    /// `"Start"` / `"left"` inserts before the leftmost position;
+    /// `"End"` / `"right"` inserts after the rightmost end.
+    anchor: RegionAnchor,
 }
 
-impl TagUser for PartialTaggedVariant<PartialStoreTagBackInSequence> {
+impl TagUser for PartialTaggedVariant<PartialStoreTagInSequence> {
     fn get_tag_usage(
         &mut self,
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
@@ -22,7 +45,15 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagBackInSequence> {
     ) -> Option<TagUsageInfo<'_>> {
         if let Some(inner) = self.toml_value.value.as_mut() {
             Some(TagUsageInfo {
-                used_tags: vec![inner.in_label.to_used_tag(&[TagValueType::Location])],
+                used_tags: vec![
+                    inner
+                        .in_value_label
+                        .to_used_tag(&[TagValueType::Location, TagValueType::String]),
+                    inner
+                        .in_position_label
+                        .to_used_tag(&[TagValueType::Location]),
+                ],
+                must_see_all_tags: true,
                 ..Default::default()
             })
         } else {
@@ -31,10 +62,7 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagBackInSequence> {
     }
 }
 
-impl Step for StoreTagBackInSequence {
-    #[allow(clippy::cast_precision_loss)]
-    #[allow(clippy::cast_possible_truncation)]
-    #[allow(clippy::cast_sign_loss)]
+impl Step for StoreTagInSequence {
     fn apply(
         &self,
         mut block: FastQBlocksCombined,
@@ -42,95 +70,137 @@ impl Step for StoreTagBackInSequence {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        //#[derive(Eq, PartialEq, Debug)]
-        // enum WhatHappend {
-        //     SameSize,
-        //     Smaller,
-        //     Larger,
-        // }
+        // Per-read record of where an insertion happened (None = no insertion for this read)
+        struct InsertInfo {
+            segment_idx: usize,
+            insert_pos: usize,
+            insert_len: usize,
+        }
 
-        let mut what_happend = Vec::with_capacity(block.len());
+        let mut insert_infos: Vec<Option<InsertInfo>> = Vec::with_capacity(block.len());
         let error_encountered = std::cell::RefCell::new(Option::<String>::None);
 
-        block.apply_mut_with_tag(&self.in_label, |reads, tag_val| {
-            if let Some(hit) = tag_val.as_sequence() {
-                let mut kept_size  = true;
-                for region in &hit.0 {
-                    let location = region.location.as_ref();
-                    match location {
-                        None => {
-                            if self.ignore_missing {
-                                //if we ignore missing locations, we just skip this region
-                            } else {
-                                *error_encountered.borrow_mut() = Some(format!(
-                                    "StoreTagBackInSequence only works on regions with location data. Observed region: {region:?}\n\nSuggestion: Set ignore_missing=true to skip regions without location data, or check if location data was lost in previous transformations"
-                                ));
-                                return;
-                            }
-                        }
-                        Some(location) => {
+        block.apply_mut_with_tags(
+            &self.in_value_label,
+            &self.in_position_label,
+            |reads, value_tag, position_tag| {
+                // Obtain the bytes to insert from the value tag
+                let value_bstr = value_tag.to_bstr();
+                let insert_bytes: &[u8] = value_bstr.as_ref();
 
-                        let read = &mut reads[location.segment_index.get_index()];
-                        let seq = read.seq();
-                        let mut new_seq: Vec<u8> = Vec::new();
-                        new_seq.extend_from_slice(&seq[..location.start]);
-                        new_seq.extend_from_slice(&region.sequence);
-                        new_seq.extend_from_slice(&seq[location.start + location.len..]);
-
-                        let mut new_qual: Vec<u8> = Vec::new();
-                        new_qual.extend_from_slice(&read.qual()[..location.start]);
-                        if region.sequence.len() == location.len {
-                            //if the sequence is the same length as the location excised, we can just copy the quality
-                            new_qual.extend_from_slice(
-                                &read.qual()[location.start..location.start + location.len],
-                            );
-                            //size was kept
-                        } else {
-                            //otherwise, we need replace it with the average quality, repeated
-                            let avg_qual = if location.is_empty() {
-                                b'B'
-                            } else {
-                                let sum_qual = read.qual()
-                                    [location.start..location.start + location.len]
-                                    .iter()
-                                    .map(|&x| u32::from(x))
-                                    .sum::<u32>() ;
-                                let avg_qual = f64::from(sum_qual) / location.len as f64;
-                                avg_qual.round() as u8
-                            };
-                            new_qual.extend_from_slice(&vec![avg_qual; region.sequence.len()]);
-                            kept_size = region.sequence.len() <= location.len;
-                        }
-                        new_qual.extend_from_slice(&read.qual()[location.start + location.len..]);
-
-                        read.replace_seq(&new_seq, &new_qual);
-                        }
-                    }
+                if insert_bytes.is_empty() {
+                    insert_infos.push(None);
+                    return;
                 }
-                what_happend.push(kept_size);
-            } else {
-                what_happend.push(true);
-            }
-        });
 
-        // Check if any error was encountered during processing
+                // Find the location that defines the insert position
+                let hits = match position_tag.as_sequence() {
+                    Some(h) => h,
+                    None => {
+                        insert_infos.push(None);
+                        return;
+                    }
+                };
+
+                // Select the anchor hit region based on anchor direction
+                let anchor_region: Option<&HitRegion> = match self.anchor {
+                    RegionAnchor::Start => hits
+                        .0
+                        .iter()
+                        .filter_map(|h| h.location.as_ref())
+                        .min_by_key(|loc| loc.start),
+                    RegionAnchor::End => hits
+                        .0
+                        .iter()
+                        .filter_map(|h| h.location.as_ref())
+                        .max_by_key(|loc| loc.start + loc.len),
+                };
+
+                let region = match anchor_region {
+                    Some(r) => r,
+                    None => {
+                        // Position tag has no location info — skip
+                        insert_infos.push(None);
+                        return;
+                    }
+                };
+
+                let insert_pos = match self.anchor {
+                    RegionAnchor::Start => region.start,
+                    RegionAnchor::End => region.start + region.len,
+                };
+                let seg_idx = region.segment_index.get_index();
+
+                let read = &mut reads[seg_idx];
+                let seq = read.seq();
+
+                if insert_pos > seq.len() {
+                    *error_encountered.borrow_mut() = Some(format!(
+                        "StoreTagInSequence: insert position {insert_pos} exceeds read length \
+                        {} on segment {seg_idx}. Suggestion: verify the position tag \
+                        coordinates are within the read.",
+                        seq.len(),
+                    ));
+                    insert_infos.push(None);
+                    return;
+                }
+
+                let mut new_seq = Vec::with_capacity(seq.len() + insert_bytes.len());
+                new_seq.extend_from_slice(&seq[..insert_pos]);
+                new_seq.extend_from_slice(insert_bytes);
+                new_seq.extend_from_slice(&seq[insert_pos..]);
+
+                let qual = read.qual();
+                let mut new_qual = Vec::with_capacity(qual.len() + insert_bytes.len());
+                new_qual.extend_from_slice(&qual[..insert_pos]);
+                new_qual.extend_from_slice(&vec![b'~'; insert_bytes.len()]);
+                new_qual.extend_from_slice(&qual[insert_pos..]);
+
+                read.replace_seq(&new_seq, &new_qual);
+
+                insert_infos.push(Some(InsertInfo {
+                    segment_idx: seg_idx,
+                    insert_pos,
+                    insert_len: insert_bytes.len(),
+                }));
+            },
+        );
+
         if let Some(error_msg) = error_encountered.borrow().as_ref() {
             return Err(anyhow::anyhow!("{error_msg}"));
         }
 
-        block.filter_tag_locations_all_targets(
-            |_location: &HitRegion, pos: usize| -> NewLocation {
-                match &what_happend[pos] {
-                    true => NewLocation::Keep,
-                    false => {
-                        //now the fun part. TODO
-                        //Also todo: test cases
-                        //for now, I'll just filter them
-                        NewLocation::Remove
+        // Shift all location tags whose start is >= the insertion point, and
+        // invalidate any that straddle it (start before, end after).
+        let num_segments = block.segments.len();
+        for seg_idx in 0..num_segments {
+            let segment_index = SegmentIndex(seg_idx);
+            block.filter_tag_locations(
+                segment_index,
+                |location: &HitRegion, read_pos: usize, _seq: &BString, _read_len: usize| {
+                    match &insert_infos[read_pos] {
+                        Some(info) if info.segment_idx == seg_idx => {
+                            if location.start >= info.insert_pos {
+                                // Entirely after the insertion → shift forward
+                                NewLocation::New(HitRegion {
+                                    start: location.start + info.insert_len,
+                                    len: location.len,
+                                    segment_index: location.segment_index,
+                                })
+                            } else if location.start + location.len > info.insert_pos {
+                                // Straddles the insertion point → remove location info
+                                NewLocation::Remove
+                            } else {
+                                // Entirely before the insertion → unchanged
+                                NewLocation::Keep
+                            }
+                        }
+                        _ => NewLocation::Keep,
                     }
-                }
-            },
-        );
+                },
+                None,
+            );
+        }
 
         Ok((block, true))
     }
