@@ -5,5 +5,20 @@
 [barcodes.read1]
   AGT = "ATC"
 
+
+[[step]]
+  action = 'extractregion'  
+  segment = 'read1'
+  start =0
+  len = 3
+  anchor = 'left'
+  out_label = 'bc1'
+
 [output]
     prefix = 'output'
+
+[[step]]
+  action = 'demultiplex'
+  barcodes = 'read1'
+  in_label = 'bc1'
+  output_unmatched=false

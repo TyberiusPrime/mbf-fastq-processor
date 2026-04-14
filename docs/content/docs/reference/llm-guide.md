@@ -1294,19 +1294,9 @@ Split output by barcode or boolean tag.
 
 **OUTPUT FILES**: `{prefix}_{sample_name}_{segment}.{suffix}`
 
-### Barcode Definitions
 
-Referenced by HammingCorrect and Demultiplex.
-
-```toml
-[barcodes.my_barcodes]
-    'AAAAAAAA' = 'sample_1'        # barcode -> output_name
-    'CCCCCCCC' = 'sample_2'
-    'GGGGGGGG' = 'sample_1'        # Multiple barcodes can map to same sample
-    'TTTTTTTT' = 'sample_3'
-```
-
-**DEMUX WITH BOOLEAN TAGS**: Omit `barcodes` parameter in Demultiplex step. Creates two outputs: `{prefix}_true_*` and `{prefix}_false_*`.
+**DEMUX WITH BOOLEAN TAGS**: Omit `barcodes` parameter in Demultiplex step. 
+Creates two outputs: `{prefix}_true_*` and `{prefix}_false_*`.
 
 ## Validation Steps
 

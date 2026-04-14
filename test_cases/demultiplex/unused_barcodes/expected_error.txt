@@ -1,0 +1,26 @@
+Error Details ==
+Error 1/2
+   ╭─config.toml
+   ┆
+19 │ [barcodes.bc123]
+20 │     CT = 'ct'
+21 │     TT = 'tt'
+   ┆              ┬
+   ┆              │
+   ┆              ╰─ Barcode section not used in any Demultiplex or HammingCorrect step
+───╯
+Hint: Add a Demultiplex step, or remove this barcode section
+
+Error 2/2
+   ╭─config.toml
+   ┆
+23 │ [barcodes.bc46]
+24 │     AG = 'ag'
+25 │     AT = 'at'
+   ┆              ┬
+   ┆              │
+   ┆              ╰─ Barcode section not used in any Demultiplex or HammingCorrect step
+───╯
+Hint: Add a Demultiplex step, or remove this barcode section
+
+

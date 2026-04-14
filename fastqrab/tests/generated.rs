@@ -325,6 +325,16 @@ fn test_cases_x_demultiplex_x_two_barcodes() {
 }
 
 #[test]
+fn test_cases_x_demultiplex_x_unused_barcodes() {
+    println!("Test case is in: test_cases/demultiplex/unused_barcodes");
+    run_test(
+        std::path::Path::new("../test_cases/demultiplex/unused_barcodes"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_error_handling_x_bad_options_and_sources_lateron() {
     println!("Test case is in: test_cases/error_handling/bad_options_and_sources_lateron");
     run_test(

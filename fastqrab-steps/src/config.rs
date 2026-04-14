@@ -199,6 +199,7 @@ impl VerifyIn<TPDRoot> for PartialConfig {
         self.verify_head_rapidgzip_conflict();
         self.expand_transformations();
         self.verify_transformation_labels();
+        self.verify_barcodes_used();
         //todo: verify labels, barcodes, segment_names disjoint
 
         Ok(())
@@ -508,7 +509,7 @@ impl PartialConfig {
     fn verify_barcodes(&mut self) {
         // Check that barcode names are unique across all barcodes sections
         if let Some(Some(barcodes)) = self.barcodes.as_mut() {
-            for (_section_name, tv_barcodes) in &mut barcodes.map {
+            for (_barcode_section_name, tv_barcodes) in &mut barcodes.map {
                 if let Some(barcodes) = tv_barcodes.as_mut()
                     && let Some(barcodes) = barcodes.barcode_to_name.as_mut()
                 {
@@ -1394,6 +1395,64 @@ impl PartialConfig {
                             );
                         } // cov:excl-line
                     }
+                }
+            }
+        }
+    }
+
+    fn verify_barcodes_used(&mut self) {
+        // Check that barcode names are unique across all barcodes sections
+        if self.input.is_ok() {
+            // we clear transforms otherwise
+
+            if let Some(Some(barcodes)) = self.barcodes.as_mut() {
+                for (barcode_section_name, tv_barcodes) in &mut barcodes.map {
+                    // is there a Demultiplex step that uses this barcode definition?
+                    if let Some(steps) = self.transform.value.as_ref() {
+                        let mut found_demultiplex_step = false;
+                        for step in steps {
+                            if let Some(PartialTransformation::Demultiplex(demultiplex_config)) =
+                                step.value.as_ref()
+                            {
+                                if let Some(demultiplex_config) =
+                                    demultiplex_config.toml_value.value.as_ref()
+                                {
+                                    if let Some(Some(barcodes_name)) =
+                                        demultiplex_config.barcodes.as_ref()
+                                        && barcodes_name == barcode_section_name
+                                    {
+                                        found_demultiplex_step = true;
+                                        break;
+                                    }
+                                }
+                            } else if let Some(PartialTransformation::HammingCorrect(
+                                hamming_config,
+                            )) = step.value.as_ref()
+                            {
+                                if let Some(hamming_config) =
+                                    hamming_config.toml_value.value.as_ref()
+                                {
+                                    if let Some(barcodes_name) =
+                                        hamming_config.barcodes.as_ref()
+                                        && barcodes_name == barcode_section_name
+                                    {
+                                        found_demultiplex_step = true;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        if !found_demultiplex_step {
+                            tv_barcodes.state = TomlValueState::new_validation_failed(
+                                "Barcode section not used in any Demultiplex or HammingCorrect step",
+                            );
+                            tv_barcodes.help = Some(
+                                "Add a Demultiplex step, or remove this barcode section"
+                                    .to_string(),
+                            );
+                        }
+                    }
+                    // cov:excl-line
                 }
             }
         }

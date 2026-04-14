@@ -45,3 +45,18 @@
 [barcodes.barcodez]
     ATGA = 'label1'
     CTCC = 'label2'
+
+
+[[step]]
+  action = 'extractregion'
+  source = 'read1'
+  start = 0
+  len = 4
+  anchor ='left'
+  out_label = 'lbc1'
+
+[[step]]
+  action = 'Demultiplex'
+  in_label = 'corrected'
+  barcodes = 'barcodez'
+  output_unmatched = true

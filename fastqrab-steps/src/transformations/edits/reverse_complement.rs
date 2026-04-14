@@ -129,9 +129,7 @@ impl Step for ReverseComplement {
                     }
                 } // cov:excl-line    
             }
-            ResolvedSourceAll::Name {
-                ..
-            } => unreachable!(),
+            ResolvedSourceAll::Name { .. } => unreachable!(),
         }
 
         Ok((block, true))

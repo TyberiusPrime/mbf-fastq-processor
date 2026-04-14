@@ -1,0 +1,27 @@
+[input]
+    read1 = 'input_read1.fq.gz'
+
+[output]
+    prefix = 'output'
+
+[[step]]
+    action = 'ExtractRegion'
+    anchor = "Start"
+    source = 'read1'
+    start = 0
+    length = 2
+    out_label = 'a12'
+
+[[step]]
+	action = "StoreTagInComment"
+	in_label = 'a12'
+
+[barcodes.bc123]
+    CT = 'ct'
+    TT = 'tt'
+
+[barcodes.bc46]
+    AG = 'ag'
+    AT = 'at'
+
+

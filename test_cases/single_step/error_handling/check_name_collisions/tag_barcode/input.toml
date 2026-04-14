@@ -13,3 +13,18 @@
 
 [output]
     prefix = 'output'
+
+
+[[step]]
+  action = 'extractregion'
+  source = 'read1'
+  start = 0
+  len = 4
+  anchor ='left'
+  out_label = 'lbc1'
+
+[[step]]
+  action = 'Demultiplex'
+  in_label = 'lbc1'
+  barcodes = 'bc1'
+  output_unmatched = true

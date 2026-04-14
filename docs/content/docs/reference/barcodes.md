@@ -13,6 +13,7 @@ Each table is an independent named dictionary.  The name is chosen by the
 user and referenced from the step that consumes it.
 
 ```toml
+# ignore_in_test
 [barcodes.my_barcodes]
 AAAAAA = "sample-1"
 CCCCCC = "sample-2"
@@ -31,6 +32,7 @@ A `_` in a key separates regions when the tag being matched spans multiple
 extracted segments joined with `_`:
 
 ```toml
+# ignore_in_test
 [barcodes.dual_index]
 AAAAAA_TTTTTT = "sample-1"   # i7 = AAAAAA, i5 = TTTTTT
 CCCCCC_GGGGGG = "sample-2"
@@ -45,6 +47,7 @@ The name `no-barcode` is reserved and will be rejected.
 Multiple keys may map to the same value (barcode aliases):
 
 ```toml
+# ignore_in_test
 [barcodes.my_barcodes]
 AAAAAA = "sample-1"
 AAAAAC = "sample-1"   # treated identically to AAAAAA
@@ -66,6 +69,7 @@ Define as many `[barcodes.<name>]` sections as needed; each step refers to
 the one it needs by name:
 
 ```toml
+# ignore_in_test
 [barcodes.i7_barcodes]
 AAAAAA = "sample-1"
 CCCCCC = "sample-2"
