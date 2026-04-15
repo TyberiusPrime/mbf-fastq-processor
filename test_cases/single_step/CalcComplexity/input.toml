@@ -1,0 +1,12 @@
+[input]
+  r1 = 'input_read1.fq'
+
+[[step]]
+  action = 'CalcComplexity'
+  out_label = 'complexity'
+
+[[step]]
+  action = 'StoreTagInTable'
+
+[output]
+  prefix ='output'

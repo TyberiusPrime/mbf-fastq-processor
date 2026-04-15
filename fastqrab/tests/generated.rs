@@ -1665,6 +1665,16 @@ fn test_cases_x_output_x_stdout_output_interleaved() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_calccomplexity() {
+    println!("Test case is in: test_cases/single_step/CalcComplexity");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/CalcComplexity"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_auto_x_detect_x_on_x_stderr() {
     println!("Test case is in: test_cases/single_step/auto-detect-on-stderr");
     run_test(
