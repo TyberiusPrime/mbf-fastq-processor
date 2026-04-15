@@ -2,7 +2,11 @@ use anyhow::{Context, Result};
 /// Handles transparent compressed file writing
 /// and optional hashing at both the compressed and uncompressed levels.
 use flate2::write::GzEncoder;
-use gzp::{ZBuilder, ZWriter, deflate::Gzip};
+use gzp::{
+    ZWriter,
+    deflate::Gzip,
+    par::compress::{ParCompress, ParCompressBuilder},
+};
 use sha2::Digest;
 use std::io::{self, BufWriter, Write};
 
@@ -90,19 +94,11 @@ impl<T: Write> Write for FailForTestWriter<T> {
     }
 }
 
-/// Wrapper for gzp's parallel writer to implement Send
-/// SAFETY: gzp parallel writers are internally thread-safe but don't implement Send
-/// due to trait object limitations.
-/// (All types for which Zwriter is implemented are Send,
-/// but ZWriter itself is not. the ZBuilder.from_writer ensures that it's Send
-/// though, I believe.
-///
-/// This wrapper provides the Send impl.
-struct SendableParallelWriter<T: Write>(Box<dyn ZWriter<T>>);
+/// Thin wrapper around gzp's concrete parallel writer type.
+/// `Send` is derived automatically because all fields of `ParCompress` are `Send`.
+struct ParallelWriter<T: Write + Send + 'static>(ParCompress<'static, Gzip, T>);
 
-unsafe impl Send for SendableParallelWriter<HashingFileWriter<BufWriter<ex::fs::File>>> {}
-
-impl<T: Write> Write for SendableParallelWriter<T> {
+impl<T: Write + Send + 'static> Write for ParallelWriter<T> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.0.write(buf)
     }
@@ -112,7 +108,7 @@ impl<T: Write> Write for SendableParallelWriter<T> {
     }
 }
 
-impl<T: Write> ZWriter<T> for SendableParallelWriter<T> {
+impl<T: Write + Send + 'static> ZWriter<T> for ParallelWriter<T> {
     fn finish(&mut self) -> Result<T, gzp::GzpError> {
         self.0.finish()
     }
@@ -121,7 +117,7 @@ impl<T: Write> ZWriter<T> for SendableParallelWriter<T> {
 enum CompressedWriter<'a, T: Write + Send + 'static> {
     Raw(HashingFileWriter<BufWriter<T>>),
     GzipSingle(GzEncoder<HashingFileWriter<BufWriter<T>>>),
-    GzipParallel(SendableParallelWriter<HashingFileWriter<BufWriter<T>>>),
+    GzipParallel(ParallelWriter<HashingFileWriter<BufWriter<T>>>),
     Zstd(zstd::stream::Encoder<'a, HashingFileWriter<BufWriter<T>>>),
 }
 
@@ -246,17 +242,19 @@ impl<T: std::io::Write + Send + 'static> HashedAndCompressedWriter<'_, T> {
                 if let Some(threads) = compression_threads
                     && threads > 1
                 {
-                    // Use real multi-threaded gzip compression with gzp
-                    let mut builder = ZBuilder::<Gzip, _>::new().num_threads(threads);
-
-                    // Set compression level if provided
-                    builder = builder.compression_level(match compression_level {
+                    // Use real multi-threaded gzip compression with gzp.
+                    // Use ParCompressBuilder directly (not ZBuilder) to get the concrete
+                    // ParCompress type, which auto-derives Send without unsafe.
+                    let compression = match compression_level {
                         Some(level) => flate2::Compression::new(u32::from(level).clamp(0, 9)),
                         None => flate2::Compression::default(),
-                    });
-
-                    let parallel_writer = builder.from_writer(hashing_writer);
-                    let sendable_writer = SendableParallelWriter(parallel_writer);
+                    };
+                    let parallel_writer = ParCompressBuilder::<Gzip>::new()
+                        .num_threads(threads)
+                        .unwrap()
+                        .compression_level(compression)
+                        .from_writer(hashing_writer);
+                    let sendable_writer = ParallelWriter(parallel_writer);
                     CompressedWriter::GzipParallel(sendable_writer)
                 } else {
                     // Default to single threaded when threads not specified
