@@ -321,8 +321,11 @@ pub enum Transformation {
     ConcatTags(tag::ConcatTags),
     ForgetAllTags(tag::ForgetAllTags),
     ForgetTag(tag::ForgetTag),
+    #[tpd(alias = "StoreTagsInComment")]
     StoreTagInComment(tag::StoreTagInComment),
+    #[tpd(alias = "StoreTagsInFastQ")]
     StoreTagInFastQ(tag::StoreTagInFastQ),
+    #[tpd(alias = "StoreTagInTable")]
     StoreTagsInTable(tag::StoreTagsInTable),
     // //other
     QuantifyTag(tag::QuantifyTag),

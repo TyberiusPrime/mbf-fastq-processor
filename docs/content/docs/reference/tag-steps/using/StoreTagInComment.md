@@ -9,7 +9,7 @@ Store currently present tags as comments on read names.
 ```toml
 [[step]]
     action = "StoreTagInComment"
-    in_label = "mytag" # if set, only store this tag
+    in_labels = ["mytag"] # Store these tags. Not optional. May be a single string as well. Alias 'in_label'
     segment = "read1" # Any of your input segments, or 'All'
     comment_insert_char = " " # (optional) char at which to insert comments
     comment_separator = "|" # (optional) char to separate comments
@@ -31,5 +31,6 @@ becomes:
 
 This way, your added tags will survive STAR alignment (STAR always cuts at the first space).
 
-
 Numeric values are output at most in scientific notation with 4 significant digits.
+
+

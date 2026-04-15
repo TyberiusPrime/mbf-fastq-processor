@@ -1189,6 +1189,13 @@ pub struct FastQBlocksCombined {
 }
 
 impl FastQBlocksCombined {
+    pub fn iter_segment_indices(&self, idx: SegmentIndexOrAll) -> Vec<usize> {
+        match idx {
+            SegmentIndexOrAll::All => (0..self.segments.len()).collect(),
+            SegmentIndexOrAll::Indexed(idx) => vec![idx],
+        }
+    }
+
     /// create an empty one with the same options filled
     #[must_use]
     pub fn empty(&self) -> FastQBlocksCombined {

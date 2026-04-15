@@ -15,10 +15,9 @@ pub mod store_tag_in_fastq;
 pub mod store_tag_in_sequence;
 pub mod store_tags_in_table;
 
-use fastqrab_config::{TagLabel, dna::TagValue};
 // Re-exports
 pub use concat_tags::{ConcatTags, PartialConcatTags};
-use fastqrab_io::io::{FastQBlocksCombined, WrappedFastQReadMut, bam_read_count_from_index};
+use fastqrab_io::io::bam_read_count_from_index;
 pub use forget_all_tags::{ForgetAllTags, PartialForgetAllTags};
 pub use forget_tag::{ForgetTag, PartialForgetTag};
 pub use quantify_tag::{PartialQuantifyTag, QuantifyTag};
@@ -29,25 +28,23 @@ pub use store_tag_in_fastq::{PartialStoreTagInFastQ, StoreTagInFastQ};
 pub use store_tag_in_sequence::{PartialStoreTagInSequence, StoreTagInSequence};
 pub use store_tags_in_table::{PartialStoreTagsInTable, StoreTagsInTable};
 
-use crate::config::SegmentIndexOrAll;
-
-pub(crate) fn apply_in_place_wrapped_with_tag(
-    segment_index: &SegmentIndexOrAll,
-    label: &TagLabel,
-    block: &mut FastQBlocksCombined,
-    f: impl Fn(&mut WrappedFastQReadMut, &TagValue),
-) {
-    match segment_index {
-        SegmentIndexOrAll::Indexed(idx) => {
-            block.segments[*idx].apply_mut_with_tag(&block.tags, label, f);
-        }
-        SegmentIndexOrAll::All => {
-            for segment_block in &mut block.segments {
-                segment_block.apply_mut_with_tag(&block.tags, label, &f);
-            }
-        }
-    }
-}
+// pub(crate) fn apply_in_place_wrapped_with_tag(
+//     segment_index: &SegmentIndexOrAll,
+//     label: &TagLabel,
+//     block: &mut FastQBlocksCombined,
+//     f: impl Fn(&mut WrappedFastQReadMut, &TagValue),
+// ) {
+//     match segment_index {
+//         SegmentIndexOrAll::Indexed(idx) => {
+//             block.segments[*idx].apply_mut_with_tag(&block.tags, label, f);
+//         }
+//         SegmentIndexOrAll::All => {
+//             for segment_block in &mut block.segments {
+//                 segment_block.apply_mut_with_tag(&block.tags, label, &f);
+//             }
+//         }
+//     }
+// }
 
 pub const DEFAULT_INITIAL_FILTER_CAPACITY: usize = 134_217_728; // 2^27. Scaleable cuckoo filters
 // always need a power of 2, and we want to be north of a 'typical' danaset with 100 million reads

@@ -1,10 +1,9 @@
-use super::{apply_in_place_wrapped_with_tag, format_numeric_for_comment, store_tag_in_comment};
+use super::{format_numeric_for_comment, store_tag_in_comment};
 use crate::transformations::prelude::*;
 use fastqrab_config::{
     TagValueType, default_comment_insert_char, default_comment_separator, default_region_separator,
     tpd_adapt_bstring, tpd_adapt_u8_from_byte_or_char,
 };
-use fastqrab_io::io::WrappedFastQReadMut;
 
 /// Store currently present tags as comments on read names.
 /// Comments are key=value pairs, separated by `comment_separator`
@@ -30,8 +29,9 @@ use fastqrab_io::io::WrappedFastQReadMut;
 #[tpd]
 #[derive(Debug)]
 pub struct StoreTagInComment {
-    #[tpd(adapt_in_verify(String))]
-    in_label: TagLabel,
+    #[tpd(adapt_in_verify(String), alias = "in_label")]
+    in_labels: Vec<TagLabel>,
+
     #[tpd(adapt_in_verify(String))]
     #[schemars(with = "String")]
     segment: SegmentIndexOrAll,
@@ -75,49 +75,6 @@ impl VerifyIn<PartialConfig> for PartialStoreTagInComment {
                 .unwrap_or_else(default_comment_insert_char)
         });
 
-        // Validate in_label doesn't contain reserved characters
-        if let Some(in_label) = self.in_label.value.as_ref().and_then(|x| x.as_ref_pre()) {
-            //truly paranoia, tag labels are a-zA-Z0-9_, but the user might have set the
-            //separators/insert chars to one of them, I suppose
-            if let Some(sep) = self.comment_separator.as_ref().copied()
-                && in_label.bytes().any(|x| x == sep)
-            {
-                let spans = vec![
-                    (
-                        self.in_label.span(),
-                        "Tag label contains comment_separator".to_string(),
-                    ),
-                    (
-                        self.comment_separator.span(),
-                        "comment_separator defined here".to_string(),
-                    ),
-                ];
-                self.comment_separator.state = TomlValueState::Custom { spans };
-                self.comment_separator.help = Some(format!(
-                    "Tag labels cannot contain the comment_separator '{}'. You probably want a comment separator that's not in a-zA-Z0-9",
-                    BString::new(vec![sep])
-                ));
-            }
-            if let Some(ins) = self.comment_insert_char.as_ref().copied()
-                && in_label.bytes().any(|x| x == ins)
-            {
-                let spans = vec![
-                    (
-                        self.in_label.span(),
-                        "Tag label contains comment_insert_char".to_string(),
-                    ),
-                    (
-                        self.comment_insert_char.span(),
-                        "comment_insert_char defined here".to_string(),
-                    ),
-                ];
-                self.comment_insert_char.state = TomlValueState::Custom { spans };
-                self.comment_insert_char.help = Some(format!(
-                    "Tag labels cannot contain the comment_insert_char '{}'. You probably want an insert char that's not in a-zA-Z0-9",
-                    BString::new(vec![ins])
-                ));
-            }
-        } //cov:excl-line
         Ok(())
     }
 }
@@ -128,17 +85,68 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagInComment> {
         tags_available: &IndexMap<TagLabel, TagMetadata>,
         segment_order: &[String],
     ) -> Option<TagUsageInfo<'_>> {
-        if let Some(inner) = self.toml_value.value.as_mut() {
-            inner
-                .in_label
-                .validate_incoming_tag_label(tags_available, segment_order);
-            Some(TagUsageInfo {
-                used_tags: vec![inner.in_label.to_used_tag(&[
+        if let Some(inner) = self.toml_value.value.as_mut()
+            && let Some(in_labels) = inner.in_labels.value.as_mut()
+        {
+            for tag in in_labels.iter_mut() {
+                tag.validate_incoming_tag_label(tags_available, segment_order);
+                if let Some(tag_name) = tag.as_ref().and_then(|x| x.as_ref_post()) {
+                    let str_tag_name: &str = tag_name.as_ref();
+                    //truly paranoia, tag labels are a-zA-Z0-9_, but the user might have set the
+                    //separators/insert chars to one of them, I suppose
+                    if let Some(sep) = inner.comment_separator.as_ref().copied()
+                        && str_tag_name.bytes().any(|x| x == sep)
+                    {
+                        let spans = vec![
+                            (
+                                tag.span(),
+                                "Tag label contains comment_separator".to_string(),
+                            ),
+                            (
+                                inner.comment_separator.span(),
+                                "comment_separator defined here".to_string(),
+                            ),
+                        ];
+                        inner.comment_separator.state = TomlValueState::Custom { spans };
+                        inner.comment_separator.help = Some(format!(
+                            "Tag labels cannot contain the comment_separator '{}'. You probably want a comment separator that's not in a-zA-Z0-9",
+                            BString::new(vec![sep])
+                        ));
+                    }
+                    if let Some(ins) = inner.comment_insert_char.as_ref().copied()
+                        && str_tag_name.bytes().any(|x| x == ins)
+                    {
+                        let spans = vec![
+                            (
+                                tag.span(),
+                                "Tag label contains comment_insert_char".to_string(),
+                            ),
+                            (
+                                inner.comment_insert_char.span(),
+                                "comment_insert_char defined here".to_string(),
+                            ),
+                        ];
+                        inner.comment_insert_char.state = TomlValueState::Custom { spans };
+                        inner.comment_insert_char.help = Some(format!(
+                            "Tag labels cannot contain the comment_insert_char '{}'. You probably want an insert char that's not in a-zA-Z0-9",
+                            BString::new(vec![ins])
+                        ));
+                    }
+                } //cov:excl-line
+            }
+
+            let mut used_tags = Vec::new();
+            for in_label in in_labels {
+                in_label.validate_incoming_tag_label(tags_available, segment_order);
+                used_tags.push(in_label.to_used_tag(&[
                     TagValueType::Bool,
                     TagValueType::String,
                     TagValueType::Location,
                     TagValueType::Numeric((None, None)),
-                ])],
+                ]));
+            }
+            Some(TagUsageInfo {
+                used_tags,
                 ..Default::default()
             })
         } else {
@@ -156,42 +164,49 @@ impl Step for StoreTagInComment {
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let error_encountered = std::cell::RefCell::new(Option::<String>::None);
-        apply_in_place_wrapped_with_tag(
-            &self.segment,
-            &self.in_label,
-            &mut block,
-            |read: &mut WrappedFastQReadMut, tag_val: &TagValue| {
-                let tag_value: Vec<u8> = match tag_val {
-                    TagValue::Location(hits) => hits.joined_sequence(Some(&self.region_separator)),
-                    TagValue::String(value) => value.to_vec(),
-                    TagValue::Numeric(n) => format_numeric_for_comment(*n).into_bytes(),
-                    TagValue::Bool(n) => {
-                        if *n {
-                            "1".into()
-                        } else {
-                            "0".into()
-                        }
-                    }
-                    TagValue::Missing => Vec::new(),
-                };
 
-                let new_name = store_tag_in_comment(
-                    read.name(),
-                    self.in_label.as_ref().as_bytes(),
-                    &tag_value,
-                    self.comment_separator,
-                    self.comment_insert_char,
-                );
-                match new_name {
-                    Err(err) => {
+        let tag_list = &self.in_labels;
+
+        'outer: for segment_idx in block.iter_segment_indices(self.segment) {
+            for read_idx in 0..block.len() {
+                let mut read = block.segments[segment_idx].get_mut(read_idx);
+                let mut new_name: Result<Vec<u8>> = Ok(read.name().to_vec());
+                for tag_label in tag_list {
+                    let tag_val =
+                        &block.tags.get(tag_label).expect("Tags were checked before")[read_idx];
+                    let tag_value: Vec<u8> = match tag_val {
+                        TagValue::Location(hits) => {
+                            hits.joined_sequence(Some(&self.region_separator))
+                        }
+                        TagValue::String(value) => value.to_vec(),
+                        TagValue::Numeric(n) => format_numeric_for_comment(*n).into_bytes(),
+                        TagValue::Bool(n) => {
+                            if *n {
+                                "1".into()
+                            } else {
+                                "0".into()
+                            }
+                        }
+                        TagValue::Missing => Vec::new(),
+                    };
+                    let tag_name: &str = tag_label.as_ref();
+                    new_name = store_tag_in_comment(
+                        new_name.as_ref().expect("Err would have left the loop"),
+                        tag_name.as_bytes(),
+                        &tag_value,
+                        self.comment_separator,
+                        self.comment_insert_char,
+                    );
+                    if let Err(err) = new_name {
                         *error_encountered.borrow_mut() = Some(format!("{err}"));
-                    }
-                    Ok(new_name) => {
-                        read.replace_name(&new_name);
+                        break 'outer;
                     }
                 }
-            },
-        );
+                if let Ok(new_name) = new_name {
+                    read.replace_name(&new_name);
+                }
+            }
+        }
         if let Some(error_msg) = error_encountered.borrow().as_ref() {
             return Err(anyhow::anyhow!("{error_msg}"));
         }

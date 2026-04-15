@@ -952,10 +952,10 @@ prefix = 'output'
 
 #[test]
 fn test_validate_command_mixing_stdin() {
-    let temp_dir = tempfile::tempdir().unwrap();
-    let temp_path = temp_dir.path();
+    // let temp_dir = tempfile::tempdir().unwrap();
+    // let temp_path = temp_dir.path();
 
-    let config_path = temp_path.join("segmented_stdin.toml");
+    //let config_path = temp_path.join("segmented_stdin.toml");
     let config = r"[input]
 read1 = '--stdin--'
 

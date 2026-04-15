@@ -1,4 +1,5 @@
-Error 1/3
+Error Details ==
+Error 1/2
    ╭─config.toml
    ┆
  8 │ [[step]]
@@ -20,7 +21,7 @@ Hint: Must contain only letters, numbers, and underscores (a-zA-Z0-9_), found ',
       See https://doc_url.example/version-stripped-from-test/docs/redirects/ExtractRegion
       Or run: `fastqrab template ExtractRegion` for more information.
 
-Error 2/3
+Error 2/2
    ╭─config.toml
    ┆
 16 │ [[step]]
@@ -37,23 +38,4 @@ Hint: Must contain only letters, numbers, and underscores (a-zA-Z0-9_), found ',
       See https://doc_url.example/version-stripped-from-test/docs/redirects/StoreTagInComment
       Or run: `fastqrab template StoreTagInComment` for more information.
 
-Error 3/3
-   ╭─config.toml
-   ┆
-16 │ [[step]]
-17 │     action = 'StoreTagInComment'
-   ┆              ─────────┬─────────
-   ┆                       │
-   ┆                       ╰────────── In this step
-18 │     in_label = "my,tag"
-   ┆                ────┬───
-   ┆                    │
-   ┆                    ╰──── Tag label contains comment_separator
-19 │     comment_separator = ','
-   ┆                         ─┬─
-   ┆                          │
-   ┆                          ╰── comment_separator defined here
-───╯
-Hint: Tag labels cannot contain the comment_separator ','. You probably want a comment separator that's not in a-zA-Z0-9
-      See https://doc_url.example/version-stripped-from-test/docs/redirects/StoreTagInComment
-      Or run: `fastqrab template StoreTagInComment` for more information.
+

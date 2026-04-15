@@ -20,7 +20,7 @@
     max_mismatches = 0
 
 [[step]]
-    action = 'StoreTagsInTable'
+    action = 'StoreTagInTable'
     infix = 'tags'
 #format = 'TSV'
 

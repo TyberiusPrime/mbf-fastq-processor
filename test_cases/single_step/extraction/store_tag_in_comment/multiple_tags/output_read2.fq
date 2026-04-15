@@ -1,0 +1,8 @@
+@|val_tag=AAA|pos_tag=CCCRead1
+AAACCCGGG
++
+IIIIIIIII
+@|val_tag=TTT|pos_tag=GGGRead2
+TTTGGGCCC
++
+JJJJJJJJJ

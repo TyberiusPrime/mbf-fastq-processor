@@ -16,7 +16,7 @@
     max_mismatches = 0
 
 [[step]]
-    action = 'StoreTagInFastQ'
+    action = 'StoreTagsInFastQ'
     in_label = 'barcode'
     comment_tags = ['location_barcode', 'location_barcode2']
     format = "fasta"

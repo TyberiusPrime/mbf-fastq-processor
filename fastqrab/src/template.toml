@@ -559,7 +559,7 @@
 ## If you need them somewhere else, or an all reads, change the segment (to "All")
 # [[step]]
 #    action = "StoreTagInComment"
-#    in_label = "mytag" # if set, only store this tag
+#    in_labels = ["mytag"] # store these tags (may also be a string for one tag. Alias: 'in_label'
 #    segment = "read1" # Any of your input segments, or 'All'
 #    comment_insert_char = ' ' # (optional) char at which to insert comments
 #    comment_separator = '|' # (optional) char to separate comments

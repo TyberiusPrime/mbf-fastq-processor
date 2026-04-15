@@ -15,6 +15,8 @@ pub trait ValidateTagLabel {
 }
 
 impl ValidateTagLabel for TomlValue<MustAdapt<String, TagLabel>> {
+    /// validate a (virtual) tag based on segment names and co.
+    /// must be called in get_used_tags, not in verify
     fn validate_incoming_tag_label(
         &mut self,
         tags_available: &IndexMap<TagLabel, TagMetadata>,

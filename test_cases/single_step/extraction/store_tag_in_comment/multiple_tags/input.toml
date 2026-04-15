@@ -1,0 +1,35 @@
+options.accept_duplicate_files = true
+[input]
+    read1 = 'input_read1.fq'
+    read2 = 'input_read1.fq'
+
+options.read_comment_character = 'R'
+
+# Extract the first 3 bases as the value to insert
+[[step]]
+    action = 'ExtractRegion'
+    segment = 'read1'
+    start = 0
+    length = 3
+    out_label = 'val_tag'
+    anchor = 'Start'
+
+# Extract bases 3-5 as the insertion position
+[[step]]
+    action = 'ExtractRegion'
+    segment = 'read1'
+    start = 3
+    length = 3
+    out_label = 'pos_tag'
+    anchor = 'Start'
+
+# Insert val_tag before pos_tag's start (position 3)
+[[step]]
+    action = 'StoreTagsInComment'
+    in_labels = ['val_tag', 'pos_tag']
+    segment = 'read2'
+
+
+[output]
+    prefix = 'output'
+  output = ['read2']

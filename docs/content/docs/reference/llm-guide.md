@@ -1218,7 +1218,7 @@ Store tag in read name comment.
 [[step]]
     action = 'StoreTagInComment'
     segment = 'read1'              # TYPE: segment name or 'All', DEFAULT: 'read1'
-    in_label = 'umi'               # TYPE: string, OPTIONAL (omit for all tags)
+    in_labels = ['umi']               # TYPE: [string], REQUIRED. May also be a single string for just one tag. Alias: 'in_label'
     comment_insert_char = ' '      # TYPE: char, DEFAULT: ' '
     comment_separator = '|'        # TYPE: char, DEFAULT: '|'
     region_separator = '_'         # TYPE: char, DEFAULT: '_'
