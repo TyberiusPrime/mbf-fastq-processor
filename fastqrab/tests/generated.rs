@@ -6558,6 +6558,20 @@ fn test_cases_x_single_step_x_extraction_x_extract_longest_poly_x_x_error_mismat
 }
 
 #[test]
+fn test_cases_x_single_step_x_extraction_x_extract_longest_poly_x_x_min_length_below_read_length() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/extract_longest_poly_x/min_length_below_read_length"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/extract_longest_poly_x/min_length_below_read_length",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_extraction_x_extract_n_x_count_after_trim() {
     println!("Test case is in: test_cases/single_step/extraction/extract_n/count_after_trim");
     run_test(
