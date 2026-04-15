@@ -153,7 +153,7 @@ fn verify_coobooks_censored() {
                     != "user"
             {
                 panic!(
-                    "found not /home/user home path in {}: {}. Rerun ./dev/censor_cookbooks.py",
+                    "found not /home/user home path in {}: {}. Rerun ./dev/scripts/censor_cookbooks.py",
                     entry.path().display(),
                     hit.get(0).expect("Regex hit = group 0 present").as_str()
                 )

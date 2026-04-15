@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>fastqrab report</title>
 
+    <script type="application/json" id='data'>
+    "%DATA%"
+    </script>
     <script>
       function plot_read_length_distribution(data, container) {
         const inner_container = document.createElement("div");
@@ -674,7 +677,7 @@
         });
       });
 
-      const embeddedData = "%DATA%";
+      const embeddedData = JSON.parse(document.getElementById("data").textContent);
     </script>
     <script type="module">
       /*%CHART%*/

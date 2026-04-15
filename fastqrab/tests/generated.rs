@@ -913,6 +913,16 @@ fn test_cases_x_input_x_stdin_config_interleaved_x_stdin_config_validate_error()
 }
 
 #[test]
+fn test_cases_x_input_validation_x_broken_gz() {
+    println!("Test case is in: test_cases/input_validation/broken_gz");
+    run_test(
+        std::path::Path::new("../test_cases/input_validation/broken_gz"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_input_validation_x_empty_bam_in_middle() {
     println!("Test case is in: test_cases/input_validation/empty_bam_in_middle");
     run_test(

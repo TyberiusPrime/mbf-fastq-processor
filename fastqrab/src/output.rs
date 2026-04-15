@@ -1327,6 +1327,9 @@ pub fn output_html_report(
     output_file: &mut BufWriter<ex::fs::File>,
     json_report_string: &str,
 ) -> Result<()> {
+    if json_report_string.contains("</script>") {
+        panic!("JSON output contained </script> which will break html parsing."); // cov:excl-line
+    }
     let template = include_str!("./html/template.html");
     let chartjs = include_str!("./html/chart/chart.umd.min.js");
     let html = template

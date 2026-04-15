@@ -5,686 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>fastqrab report</title>
 
-    <script>
-      function plot_read_length_distribution(data, container) {
-        const inner_container = document.createElement("div");
-        inner_container.className = "chart-container";
-        inner_container.style.width = "100%";
-        inner_container.style.border = "1px solid black;";
-        const canvas = document.createElement("canvas");
-        inner_container.appendChild(canvas);
-        container.appendChild(inner_container);
-
-        const values = data;
-        const labels = values.map((_, index) => index); // X-axis labels (positions)
-
-        // Define the chart using Chart.js
-        new Chart(canvas, {
-          type: "line",
-          data: {
-            labels: labels, // X-axis labels
-            datasets: [
-              {
-                label: "Expected Error Rate",
-                data: values, // Y-axis values
-                borderColor: "orange", // Single color for the line
-                borderWidth: 2,
-                fill: false,
-                pointRadius: 3,
-                pointHoverRadius: 5,
-              },
-            ],
-          },
-          options: {
-            responsive: true,
-            plugins: {
-              legend: { display: true },
-              tooltip: {
-                callbacks: {
-                  title: (tooltipItems) => {
-                    return `Length: ${tooltipItems[0].label}`; // Show X-axis position in tooltip title
-                  },
-                  label: (tooltipItem) => {
-                    return `Value: ${tooltipItem.raw}`; // Show Y value in tooltip label
-                  },
-                },
-              },
-            },
-            scales: {
-              x: { title: { display: true, text: "Position" } },
-              y: { title: { display: true, text: "Read count" } },
-            },
-          },
-        });
-      }
-
-      function plot_per_position_counts(data, container) {
-        const labels = data.a.map((val, i) => i + 1);
-        const colorMap = {
-          A: "#109648",
-          C: "#255c99",
-          G: "#f7b32b",
-          T: "#d62839",
-          N: "black",
-        };
-        const datasets = Object.entries(data).map(([key, values]) => ({
-          label: key.toUpperCase(),
-          data: values,
-          borderColor: colorMap[key.toUpperCase()] || "grey",
-          borderWidth: 2,
-          fill: false,
-          pointRadius: 3,
-          pointHoverRadius: 5,
-        }));
-        const canvas = document.createElement("canvas");
-        container.appendChild(canvas);
-        new Chart(canvas, {
-          type: "line",
-          data: {
-            labels: labels,
-            datasets: datasets,
-          },
-          options: {
-            responsive: true,
-            plugins: {
-              legend: { display: true },
-              tooltip: {
-                callbacks: {
-                  title: (tooltipItems) => {
-                    return `Position: ${tooltipItems[0].label}`;
-                  },
-                  label: (tooltipItem) => {
-                    const datasets = tooltipItem.chart.data.datasets;
-                    const total = datasets.reduce(
-                      (sum, d) => sum + d.data[tooltipItem.dataIndex],
-                      0,
-                    );
-                    const percent = total
-                      ? ((tooltipItem.raw / total) * 100).toFixed(2)
-                      : 0;
-                    return `${tooltipItem.dataset.label}: ${tooltipItem.raw} (${percent}%)`;
-                  },
-                },
-              },
-            },
-            scales: {
-              x: { title: { display: true, text: "Position" } },
-              y: { title: { display: true, text: "Count" } },
-            },
-          },
-        });
-      }
-
-      function plot_expected_errors_from_quality_curve(data, container) {
-        const labels = data.map((_, index) => index + 1); // X-axis labels (positions)
-        const canvas = document.createElement("canvas");
-        container.appendChild(canvas);
-        new Chart(canvas, {
-          type: "line",
-          data: {
-            labels: labels,
-            datasets: [
-              {
-                label: "Expected Error Rate",
-                data: data,
-                borderColor: "orange",
-                borderWidth: 2,
-                fill: false,
-                pointRadius: 3,
-                pointHoverRadius: 5,
-              },
-            ],
-          },
-          options: {
-            responsive: true,
-            plugins: {
-              legend: { display: true },
-              tooltip: {
-                callbacks: {
-                  title: (tooltipItems) => {
-                    return `Position: ${tooltipItems[0].label}`;
-                  },
-                  label: (tooltipItem) => {
-                    return `Value: ${tooltipItem.raw}`;
-                  },
-                },
-              },
-            },
-            scales: {
-              x: { title: { display: true, text: "Position" } },
-              y: { title: { display: true, text: "Expected Error Rate" } },
-            },
-          },
-        });
-      }
-
-      function plot_tag_histogram(histogramData, container) {
-        const canvas = document.createElement("canvas");
-        container.appendChild(canvas);
-
-        // Extract labels and counts from the new direct mapping format
-        const labels = Object.keys(histogramData);
-        const counts = Object.values(histogramData);
-
-        // Handle empty label case (empty string key)
-        const processedLabels = labels.map(label => label === "" ? "(empty)" : label);
-
-        // Sort by count (descending) and limit to top 50 items for readability
-        const combined = labels.map((label, i) => ({
-          label: processedLabels[i],
-          count: counts[i]
-        })); // .sort((a, b) => b.count - a.count);
-
-        const maxItems = 100;
-        const limitedCombined = combined.slice(0, maxItems);
-        const finalLabels = limitedCombined.map(item => item.label);
-        const finalCounts = limitedCombined.map(item => item.count);
-
-        // Create horizontal bar chart (flipped axes)
-        new Chart(canvas, {
-          type: "bar",
-          data: {
-            labels: finalLabels, // Y-axis (vertical)
-            datasets: [
-              {
-                label: "Count",
-                data: finalCounts, // X-axis (horizontal)
-                backgroundColor: "rgba(54, 162, 235, 0.6)",
-                borderColor: "rgba(54, 162, 235, 1)",
-                borderWidth: 1,
-              },
-            ],
-          },
-          options: {
-            indexAxis: "y", // This flips the axes - bars go horizontally
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: { display: false },
-              tooltip: {
-                callbacks: {
-                  title: (tooltipItems) => {
-                    return `${tooltipItems[0].label}`;
-                  },
-                  label: (tooltipItem) => {
-                    return `Count: ${tooltipItem.raw.toLocaleString()}`;
-                  },
-                },
-              },
-            },
-            scales: {
-              x: {
-                title: { display: true, text: "Count" },
-                beginAtZero: true,
-                ticks: {
-                  callback: function(value) {
-                    return Number.isInteger(value) ? value : '';
-                  }
-                }
-              },
-              y: {
-                title: { display: true, text: "Value" },
-              },
-            },
-          },
-        });
-
-        // Set canvas height based on number of items
-        const itemHeight = 25;
-        const minHeight = 200;
-        const calculatedHeight = Math.max(
-          minHeight,
-          finalLabels.length * itemHeight,
-        );
-        canvas.style.height = `${calculatedHeight}px`;
-      }
-
-      function render_count_oligos(data) {
-        const t = document.createElement("table");
-        const headerRow = document.createElement("tr");
-        ["Count", "Name", "Sequence"].forEach((text) => {
-          const th = document.createElement("th");
-          th.textContent = text;
-          headerRow.appendChild(th);
-        });
-        t.appendChild(headerRow);
-        for (const [name, value] of Object.entries(data)) {
-          const tr = document.createElement("tr");
-          const tdName = document.createElement("td");
-          tdName.textContent = name;
-          const tdSeq = document.createElement("td");
-          tdSeq.textContent = value.sequence;
-          const tdCount = document.createElement("td");
-          tdCount.textContent = render_number(value.count);
-          tr.appendChild(tdCount);
-          tr.appendChild(tdName);
-          tr.appendChild(tdSeq);
-          t.appendChild(tr);
-        }
-        return t;
-      }
-
-      function create_table(entries) {
-        let table = document.createElement("table");
-        for (const [key, value] of Object.entries(entries)) {
-          let tr = document.createElement("tr");
-          let th = document.createElement("th");
-          th.textContent = key;
-          tr.appendChild(th);
-          let td = document.createElement("td");
-          if (value instanceof Node) {
-            td.appendChild(value);
-          } else {
-            td.textContent = value;
-          }
-          tr.appendChild(td);
-          table.appendChild(tr);
-        }
-        return table;
-      }
-
-      function format_input_files(input) {
-        const entries = {
-          Interleaved: input.interleaved,
-        };
-        if (input.read1) {
-          entries["Read1"] = input.read1.join(", ");
-        }
-        if (input.read2) {
-          entries["Read2"] = input.read2.join(", ");
-        }
-        if (input.index1) {
-          entries["Index1"] = input.index1.join(", ");
-        }
-        if (input.index2) {
-          entries["Index2"] = input.index2.join(", ");
-        }
-        return create_table(entries);
-      }
-
-      function addHead(data) {
-        const container = document.getElementById("charts-container");
-        let title = "fastqrab Report";
-        container.appendChild(document.createElement("h1")).textContent = title;
-        let section = "Summary";
-        container.appendChild(document.createElement("h2")).textContent =
-          section;
-
-        container.appendChild(
-          create_table({
-            Version: data.__.version,
-            "Working Directory": data.__.cwd,
-            "Input Files": format_input_files(data.__.input_files),
-          }),
-        );
-      }
-
-      function addNavigationLinks(reportOrder) {
-        if (reportOrder.length <= 1) {
-          return; // Don't add navigation for single report
-        }
-
-        const container = document.getElementById("charts-container");
-        const navSection = document.createElement("h2");
-        navSection.textContent = "Reports";
-        container.appendChild(navSection);
-
-        const navList = document.createElement("ul");
-        navList.style.listStyle = "none";
-        navList.style.padding = "0";
-        navList.style.display = "flex";
-        navList.style.flexWrap = "wrap";
-        navList.style.gap = "1em";
-
-        reportOrder.forEach((key) => {
-          const listItem = document.createElement("li");
-          const link = document.createElement("a");
-          link.href = `#section-${key}`;
-          link.textContent = key;
-          link.style.textDecoration = "none";
-          link.style.color = "#007acc";
-          link.style.padding = "0.5em 1em";
-          link.style.border = "1px solid #ccc";
-          link.style.borderRadius = "4px";
-          link.style.display = "block";
-          link.addEventListener("mouseover", () => {
-            link.style.backgroundColor = "#f0f0f0";
-          });
-          link.addEventListener("mouseout", () => {
-            link.style.backgroundColor = "transparent";
-          });
-          listItem.appendChild(link);
-          navList.appendChild(listItem);
-        });
-
-        container.appendChild(navList);
-        container.appendChild(document.createElement("hr"));
-      }
-
-      function render_number(number) {
-        return typeof number === "number" ? number.toLocaleString() : number;
-      }
-
-      function addSection(key, sectionData) {
-        const container = document.getElementById("charts-container");
-        // Add section title with anchor ID and back-to-top button
-        const headerContainer = document.createElement("div");
-        headerContainer.style.display = "flex";
-        headerContainer.style.alignItems = "center";
-        headerContainer.style.justifyContent = "space-between";
-        headerContainer.style.marginBottom = "0.5em";
-
-        const sectionHeader = document.createElement("h2");
-        sectionHeader.textContent = key;
-        sectionHeader.id = `section-${key}`;
-        sectionHeader.style.margin = "0";
-
-        const backButton = document.createElement("a");
-        backButton.href = "#";
-        backButton.textContent = "↑ Back to top";
-        backButton.style.textDecoration = "none";
-        backButton.style.color = "#007acc";
-        backButton.style.fontSize = "0.8em";
-        backButton.style.padding = "0.3em 0.8em";
-        backButton.style.border = "1px solid #ccc";
-        backButton.style.borderRadius = "4px";
-        backButton.style.backgroundColor = "#f9f9f9";
-        backButton.addEventListener("mouseover", () => {
-          backButton.style.backgroundColor = "#e6e6e6";
-        });
-        backButton.addEventListener("mouseout", () => {
-          backButton.style.backgroundColor = "#f9f9f9";
-        });
-        backButton.addEventListener("click", (e) => {
-          e.preventDefault();
-          window.scrollTo({ top: 0, behavior: "smooth" });
-        });
-
-        headerContainer.appendChild(sectionHeader);
-        headerContainer.appendChild(backButton);
-        container.appendChild(headerContainer);
-
-        if (sectionData.multiplexed !== undefined) {
-          Object.entries(sectionData.multiplexed).forEach(([bucketKey, bucketData]) => {
-            if (typeof bucketData !== "object" || bucketData === null) {
-              return;
-            }
-            const bucketHeader = document.createElement("h3");
-            bucketHeader.textContent = bucketKey;
-            container.appendChild(bucketHeader);
-            container.appendChild(addSectionTable(bucketData));
-            container.appendChild(document.createElement("hr"));
-          });
-          return;
-        }
-
-        container.appendChild(addSectionTable(sectionData));
-        container.appendChild(document.createElement("hr"));
-      }
-
-      function addSectionTable(sectionData) {
-        // Create table for the section with three columns: target, description, content
-        const table = document.createElement("table");
-        table.style.width = "95%";
-        // Molecule count row, if present
-        if (sectionData.molecule_count !== undefined) {
-          const tr = document.createElement("tr");
-          const tdTarget = document.createElement("th");
-          tdTarget.textContent = "-";
-          tdTarget.style.width = "1px";
-          const tdDesc = document.createElement("th");
-          tdDesc.textContent = "molecule count";
-          tdDesc.style.width = "1px";
-          const tdContent = document.createElement("td");
-          tdContent.textContent = render_number(sectionData.molecule_count);
-          tr.appendChild(tdTarget);
-          tr.appendChild(tdDesc);
-          tr.appendChild(tdContent);
-          table.appendChild(tr);
-        }
-        // Fragment duplicate count row, if present
-        if (sectionData.fragment_duplicate_count !== undefined) {
-          const dup = sectionData.fragment_duplicate_count;
-          let dupRel = "";
-          if (sectionData.molecule_count !== undefined && sectionData.molecule_count > 0) {
-            dupRel = " (" + ((dup / sectionData.molecule_count) * 100).toFixed(2) + "%)";
-          }
-          const tr = document.createElement("tr");
-          const tdTarget = document.createElement("th");
-          tdTarget.textContent = "-";
-          tdTarget.style.width = "1px";
-          const tdDesc = document.createElement("th");
-          tdDesc.textContent = "Fragment duplicate count";
-          tdDesc.style.width = "1px";
-          const tdContent = document.createElement("td");
-          tdContent.textContent = render_number(dup) + dupRel;
-          tr.appendChild(tdTarget);
-          tr.appendChild(tdDesc);
-          tr.appendChild(tdContent);
-          table.appendChild(tr);
-        }
-        // For each target (read1, read2, index1, index2)
-        ["read1", "read2", "index1", "index2"].forEach((target) => {
-          const rows = [];
-          if (sectionData[target]) {
-            // Add base_statistics summary rows if present
-            if (sectionData[target].base_statistics) {
-              const bs = sectionData[target].base_statistics;
-              if (bs.total_bases !== undefined) {
-                const tr = document.createElement("tr");
-                const tdDesc = document.createElement("th");
-                tdDesc.textContent = "Total bases";
-                const tdContent = document.createElement("td");
-                tdContent.textContent = render_number(bs.total_bases);
-                tr.appendChild(tdDesc);
-                tr.appendChild(tdContent);
-                rows.push(tr);
-              }
-              if (bs.gc_bases !== undefined && bs.total_bases) {
-                const rel =
-                  ((bs.gc_bases / bs.total_bases) * 100).toFixed(2) + "%";
-                const tr = document.createElement("tr");
-                const tdDesc = document.createElement("th");
-                tdDesc.textContent = "GC bases";
-                const tdContent = document.createElement("td");
-                tdContent.textContent = render_number(bs.gc_bases) + " (" + rel + ")";
-                tr.appendChild(tdDesc);
-                tr.appendChild(tdContent);
-                rows.push(tr);
-              }
-              if (bs.q20_bases !== undefined && bs.total_bases) {
-                const rel =
-                  ((bs.q20_bases / bs.total_bases) * 100).toFixed(2) + "%";
-                const tr = document.createElement("tr");
-                const tdDesc = document.createElement("th");
-                tdDesc.textContent = "Q20 bases";
-                const tdContent = document.createElement("td");
-                tdContent.textContent = render_number(bs.q20_bases) + " (" + rel + ")";
-                tr.appendChild(tdDesc);
-                tr.appendChild(tdContent);
-                rows.push(tr);
-              }
-              if (bs.q30_bases !== undefined && bs.total_bases) {
-                const rel =
-                  ((bs.q30_bases / bs.total_bases) * 100).toFixed(2) + "%";
-                const tr = document.createElement("tr");
-                const tdDesc = document.createElement("th");
-                tdDesc.textContent = "Q30 bases";
-                const tdContent = document.createElement("td");
-                tdContent.textContent = render_number(bs.q30_bases) + " (" + rel + ")";
-                tr.appendChild(tdDesc);
-                tr.appendChild(tdContent);
-                rows.push(tr);
-              }
-            }
-            if (sectionData[target].duplicate_count !== undefined) {
-              const dup = sectionData[target].duplicate_count;
-              let dupRel = "";
-              if (
-                sectionData.molecule_count !== undefined &&
-                sectionData.molecule_count > 0
-              ) {
-                dupRel =
-                  " (" +
-                  ((dup / sectionData.molecule_count) * 100).toFixed(2) +
-                  "%)";
-              }
-              const tr = document.createElement("tr");
-              const tdDesc = document.createElement("th");
-              tdDesc.textContent = "Duplicate count";
-              const tdContent = document.createElement("td");
-              tdContent.textContent = render_number(dup) + dupRel;
-              tr.appendChild(tdDesc);
-              tr.appendChild(tdContent);
-              rows.push(tr);
-            }
-          }
-          if (sectionData[target] && sectionData[target].length_distribution) {
-            const tr = document.createElement("tr");
-            const tdDesc = document.createElement("th");
-            tdDesc.textContent = "Read length distribution";
-            const tdContent = document.createElement("td");
-            plot_read_length_distribution(
-              sectionData[target].length_distribution,
-              tdContent,
-            );
-            tr.appendChild(tdDesc);
-            tr.appendChild(tdContent);
-            rows.push(tr);
-          }
-          if (sectionData[target] && sectionData[target].base_statistics) {
-            if (sectionData[target].base_statistics.per_position_counts) {
-              const tr = document.createElement("tr");
-              const tdDesc = document.createElement("th");
-              tdDesc.textContent = "Per position counts";
-              const tdContent = document.createElement("td");
-              plot_per_position_counts(
-                sectionData[target].base_statistics.per_position_counts,
-                tdContent,
-              );
-              tr.appendChild(tdDesc);
-              tr.appendChild(tdContent);
-              rows.push(tr);
-            }
-            if (
-              sectionData[target].base_statistics
-                .expected_errors_from_quality_curve
-            ) {
-              const tr = document.createElement("tr");
-              const tdDesc = document.createElement("th");
-              tdDesc.textContent = "Expected Errors from Quality Curve";
-              const tdContent = document.createElement("td");
-              plot_expected_errors_from_quality_curve(
-                sectionData[target].base_statistics
-                  .expected_errors_from_quality_curve,
-                tdContent,
-              );
-              tr.appendChild(tdDesc);
-              tr.appendChild(tdContent);
-              rows.push(tr);
-            }
-          }
-          if (rows.length > 0) {
-            const firstRow = rows[0];
-            const tdTarget = document.createElement("th");
-            tdTarget.textContent = target;
-            tdTarget.style.width = "1px";
-            tdTarget.rowSpan = rows.length;
-            firstRow.insertBefore(tdTarget, firstRow.firstChild);
-            rows.forEach((r) => table.appendChild(r));
-          }
-        });
-
-        // Check for count_oligos data
-        if (sectionData.count_oligos) {
-          const tr = document.createElement("tr");
-          const tdTarget = document.createElement("th");
-          tdTarget.textContent = "-";
-          tdTarget.style.width = "1px";
-          const tdDesc = document.createElement("th");
-          tdDesc.textContent = "Oligo counts";
-          tdDesc.style.width = "1px";
-          const tdContent = document.createElement("td");
-          tdContent.appendChild(render_count_oligos(sectionData.count_oligos));
-          tr.appendChild(tdTarget);
-          tr.appendChild(tdDesc);
-          tr.appendChild(tdContent);
-          table.appendChild(tr);
-        }
-
-        // Check for histogram data under the "histogram" key
-        if (sectionData.histogram) {
-          for (const [histogramName, histogramData] of Object.entries(sectionData.histogram)) {
-            const tr = document.createElement("tr");
-            const tdTarget = document.createElement("th");
-            tdTarget.textContent = "-";
-            tdTarget.style.width = "1px";
-            const tdDesc = document.createElement("th");
-            tdDesc.textContent = `Histogram: ${histogramName}`;
-            tdDesc.style.width = "1px";
-            const tdContent = document.createElement("td");
-            plot_tag_histogram(histogramData, tdContent);
-            tr.appendChild(tdTarget);
-            tr.appendChild(tdDesc);
-            tr.appendChild(tdContent);
-            table.appendChild(tr);
-          }
-        }
-        return table;
-      }
-
-      window.addEventListener("resize", function () {
-        //toggel background color between white and blue
-        //resize all canvases to 85% width
-        document.querySelectorAll("canvas").forEach((canvas) => {
-          canvas.style.width = "85%";
-        });
-      });
-
-      // Fetch data and generate charts on page load
-      document.addEventListener("DOMContentLoaded", function () {
-        // Add GitHub link if repository is available
-        if (embeddedData.__ && embeddedData.__.repository) {
-          const githubLink = document.getElementById("github-link");
-          githubLink.href = embeddedData.__.repository;
-          githubLink.style.display = "block";
-        }
-
-        addHead(embeddedData);
-        // Use report_order to maintain the order defined in TOML, fallback to Object.keys for backward compatibility
-        const reportOrder =
-          embeddedData.report_order ||
-          Object.keys(embeddedData).filter(
-            (key) =>
-              key !== "__" && key !== "run_info" && key !== "report_order",
-          );
-
-        // Add navigation links if multiple reports are present
-        addNavigationLinks(reportOrder);
-
-        reportOrder.forEach((key) => {
-          if (
-            key !== "__" &&
-            key !== "run_info" &&
-            key !== "report_order" &&
-            embeddedData[key]
-          ) {
-            addSection(key, embeddedData[key]);
-          }
-        });
-      });
-
-      const embeddedData = {
+    <script type="application/json" id='data'>
+    {
   "__": {
-    "version": "_IGNORED_",
-    "cwd": "_IGNORED_",
+    "version": "0.8.1",
+    "cwd": "/home/user/demultiplex",
     "input_files": {
       "interleaved": null,
       "read1": [
         "input_read1.fq.gz"
       ]
     },
-    "repository": "_IGNORED_"
+    "repository": "https://tyberiusprime.github.io/fastqrab/"
   },
   "start": {
     "molecule_count": 1250
@@ -2336,16 +1668,687 @@
     }
   },
   "run_info": {
-    "program_version": "_IGNORED_",
-    "input_toml": "_IGNORED_",
-    "working_directory": "_IGNORED_"
+    "program_version": "0.8.1",
+    "input_toml": "[input]\n    read1 = 'input_read1.fq.gz'\n\n[output]\n    prefix = 'output'\n    report_json=true\n    report_html=true\n\n[[step]]\n    action = 'Report'\n    name = 'start'\n\n\n[[step]]\n    action = 'Head'\n    n = 100\n\n\n[[step]]\n    action = 'ExtractRegion'\n    anchor = \"Left\"\n    source = \"read1\"\n    start = 0\n    len = 2\n    out_label = 'demult'\n\n[[step]]\n    action = 'Report'\n    name = 'pre_multiplex'\n    count = true # count reads at this position\n    base_statistics = true # include base distribution at each read position, q20, q30, total, gc bases\n    length_distribution = true # capture read length distribution\n    duplicate_count_per_read = true # count duplicates using Cukoo filter on each read1/read2/index1/index2\n    duplicate_count_per_fragment = true # count duplicates using Cukoo filter, on concatenated read1/read2/index1/index2\n    count_oligos = {CTCC = 'ctcc', AAAA = 'AAAA'} # if set, count these oligos in the segment. Full match only, no iupac\n    count_oligos_segment = \"all\" # segment to count oligos in, can be 'all', 'read1', ...\n    tag_histograms = [\"demult\"] # Calculate a histo\n\n[[step]]\n    action = 'Demultiplex'\n    in_label = 'demult'\n    output_unmatched = true\n\tbarcodes = 'demultiplex'\n\n[barcodes.demultiplex]\n    CT = 'aaaa'\n    TT = 'gggg'\n\n# [[step]]\n#     action = 'Head'\n#     n = 10\n\n[[step]]\n    action = 'Report' # max 10 output reads\n    name = 'post_multiplex'\n    count = true # count reads at this position\n    base_statistics = true # include base distribution at each read position, q20, q30, total, gc bases\n    length_distribution = true # capture read length distribution\n    duplicate_count_per_read = true # count duplicates using Cukoo filter on each read1/read2/index1/index2\n    duplicate_count_per_fragment = true # count duplicates using Cukoo filter, on concatenated read1/read2/index1/index2\n    count_oligos = {CTCC = 'ctcc', AAAA = 'AAAA'} # if set, count these oligos in the segment. Full match only, no iupac\n    count_oligos_segment = \"all\" # segment to count oligos in, can be 'all', 'read1', ...\n    tag_histograms = [\"demult\"] # Calculate a histo\n\n",
+    "working_directory": "/home/user/demultiplex"
   },
   "report_order": [
     "start",
     "pre_multiplex",
     "post_multiplex"
   ]
-};
+}
+    </script>
+    <script>
+      function plot_read_length_distribution(data, container) {
+        const inner_container = document.createElement("div");
+        inner_container.className = "chart-container";
+        inner_container.style.width = "100%";
+        inner_container.style.border = "1px solid black;";
+        const canvas = document.createElement("canvas");
+        inner_container.appendChild(canvas);
+        container.appendChild(inner_container);
+
+        const values = data;
+        const labels = values.map((_, index) => index); // X-axis labels (positions)
+
+        // Define the chart using Chart.js
+        new Chart(canvas, {
+          type: "line",
+          data: {
+            labels: labels, // X-axis labels
+            datasets: [
+              {
+                label: "Expected Error Rate",
+                data: values, // Y-axis values
+                borderColor: "orange", // Single color for the line
+                borderWidth: 2,
+                fill: false,
+                pointRadius: 3,
+                pointHoverRadius: 5,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { display: true },
+              tooltip: {
+                callbacks: {
+                  title: (tooltipItems) => {
+                    return `Length: ${tooltipItems[0].label}`; // Show X-axis position in tooltip title
+                  },
+                  label: (tooltipItem) => {
+                    return `Value: ${tooltipItem.raw}`; // Show Y value in tooltip label
+                  },
+                },
+              },
+            },
+            scales: {
+              x: { title: { display: true, text: "Position" } },
+              y: { title: { display: true, text: "Read count" } },
+            },
+          },
+        });
+      }
+
+      function plot_per_position_counts(data, container) {
+        const labels = data.a.map((val, i) => i + 1);
+        const colorMap = {
+          A: "#109648",
+          C: "#255c99",
+          G: "#f7b32b",
+          T: "#d62839",
+          N: "black",
+        };
+        const datasets = Object.entries(data).map(([key, values]) => ({
+          label: key.toUpperCase(),
+          data: values,
+          borderColor: colorMap[key.toUpperCase()] || "grey",
+          borderWidth: 2,
+          fill: false,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+        }));
+        const canvas = document.createElement("canvas");
+        container.appendChild(canvas);
+        new Chart(canvas, {
+          type: "line",
+          data: {
+            labels: labels,
+            datasets: datasets,
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { display: true },
+              tooltip: {
+                callbacks: {
+                  title: (tooltipItems) => {
+                    return `Position: ${tooltipItems[0].label}`;
+                  },
+                  label: (tooltipItem) => {
+                    const datasets = tooltipItem.chart.data.datasets;
+                    const total = datasets.reduce(
+                      (sum, d) => sum + d.data[tooltipItem.dataIndex],
+                      0,
+                    );
+                    const percent = total
+                      ? ((tooltipItem.raw / total) * 100).toFixed(2)
+                      : 0;
+                    return `${tooltipItem.dataset.label}: ${tooltipItem.raw} (${percent}%)`;
+                  },
+                },
+              },
+            },
+            scales: {
+              x: { title: { display: true, text: "Position" } },
+              y: { title: { display: true, text: "Count" } },
+            },
+          },
+        });
+      }
+
+      function plot_expected_errors_from_quality_curve(data, container) {
+        const labels = data.map((_, index) => index + 1); // X-axis labels (positions)
+        const canvas = document.createElement("canvas");
+        container.appendChild(canvas);
+        new Chart(canvas, {
+          type: "line",
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: "Expected Error Rate",
+                data: data,
+                borderColor: "orange",
+                borderWidth: 2,
+                fill: false,
+                pointRadius: 3,
+                pointHoverRadius: 5,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { display: true },
+              tooltip: {
+                callbacks: {
+                  title: (tooltipItems) => {
+                    return `Position: ${tooltipItems[0].label}`;
+                  },
+                  label: (tooltipItem) => {
+                    return `Value: ${tooltipItem.raw}`;
+                  },
+                },
+              },
+            },
+            scales: {
+              x: { title: { display: true, text: "Position" } },
+              y: { title: { display: true, text: "Expected Error Rate" } },
+            },
+          },
+        });
+      }
+
+      function plot_tag_histogram(histogramData, container) {
+        const canvas = document.createElement("canvas");
+        container.appendChild(canvas);
+
+        // Extract labels and counts from the new direct mapping format
+        const labels = Object.keys(histogramData);
+        const counts = Object.values(histogramData);
+
+        // Handle empty label case (empty string key)
+        const processedLabels = labels.map(label => label === "" ? "(empty)" : label);
+
+        // Sort by count (descending) and limit to top 50 items for readability
+        const combined = labels.map((label, i) => ({
+          label: processedLabels[i],
+          count: counts[i]
+        })); // .sort((a, b) => b.count - a.count);
+
+        const maxItems = 100;
+        const limitedCombined = combined.slice(0, maxItems);
+        const finalLabels = limitedCombined.map(item => item.label);
+        const finalCounts = limitedCombined.map(item => item.count);
+
+        // Create horizontal bar chart (flipped axes)
+        new Chart(canvas, {
+          type: "bar",
+          data: {
+            labels: finalLabels, // Y-axis (vertical)
+            datasets: [
+              {
+                label: "Count",
+                data: finalCounts, // X-axis (horizontal)
+                backgroundColor: "rgba(54, 162, 235, 0.6)",
+                borderColor: "rgba(54, 162, 235, 1)",
+                borderWidth: 1,
+              },
+            ],
+          },
+          options: {
+            indexAxis: "y", // This flips the axes - bars go horizontally
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  title: (tooltipItems) => {
+                    return `${tooltipItems[0].label}`;
+                  },
+                  label: (tooltipItem) => {
+                    return `Count: ${tooltipItem.raw.toLocaleString()}`;
+                  },
+                },
+              },
+            },
+            scales: {
+              x: {
+                title: { display: true, text: "Count" },
+                beginAtZero: true,
+                ticks: {
+                  callback: function(value) {
+                    return Number.isInteger(value) ? value : '';
+                  }
+                }
+              },
+              y: {
+                title: { display: true, text: "Value" },
+              },
+            },
+          },
+        });
+
+        // Set canvas height based on number of items
+        const itemHeight = 25;
+        const minHeight = 200;
+        const calculatedHeight = Math.max(
+          minHeight,
+          finalLabels.length * itemHeight,
+        );
+        canvas.style.height = `${calculatedHeight}px`;
+      }
+
+      function render_count_oligos(data) {
+        const t = document.createElement("table");
+        const headerRow = document.createElement("tr");
+        ["Count", "Name", "Sequence"].forEach((text) => {
+          const th = document.createElement("th");
+          th.textContent = text;
+          headerRow.appendChild(th);
+        });
+        t.appendChild(headerRow);
+        for (const [name, value] of Object.entries(data)) {
+          const tr = document.createElement("tr");
+          const tdName = document.createElement("td");
+          tdName.textContent = name;
+          const tdSeq = document.createElement("td");
+          tdSeq.textContent = value.sequence;
+          const tdCount = document.createElement("td");
+          tdCount.textContent = render_number(value.count);
+          tr.appendChild(tdCount);
+          tr.appendChild(tdName);
+          tr.appendChild(tdSeq);
+          t.appendChild(tr);
+        }
+        return t;
+      }
+
+      function create_table(entries) {
+        let table = document.createElement("table");
+        for (const [key, value] of Object.entries(entries)) {
+          let tr = document.createElement("tr");
+          let th = document.createElement("th");
+          th.textContent = key;
+          tr.appendChild(th);
+          let td = document.createElement("td");
+          if (value instanceof Node) {
+            td.appendChild(value);
+          } else {
+            td.textContent = value;
+          }
+          tr.appendChild(td);
+          table.appendChild(tr);
+        }
+        return table;
+      }
+
+      function format_input_files(input) {
+        const entries = {
+          Interleaved: input.interleaved,
+        };
+        if (input.read1) {
+          entries["Read1"] = input.read1.join(", ");
+        }
+        if (input.read2) {
+          entries["Read2"] = input.read2.join(", ");
+        }
+        if (input.index1) {
+          entries["Index1"] = input.index1.join(", ");
+        }
+        if (input.index2) {
+          entries["Index2"] = input.index2.join(", ");
+        }
+        return create_table(entries);
+      }
+
+      function addHead(data) {
+        const container = document.getElementById("charts-container");
+        let title = "fastqrab Report";
+        container.appendChild(document.createElement("h1")).textContent = title;
+        let section = "Summary";
+        container.appendChild(document.createElement("h2")).textContent =
+          section;
+
+        container.appendChild(
+          create_table({
+            Version: data.__.version,
+            "Working Directory": data.__.cwd,
+            "Input Files": format_input_files(data.__.input_files),
+          }),
+        );
+      }
+
+      function addNavigationLinks(reportOrder) {
+        if (reportOrder.length <= 1) {
+          return; // Don't add navigation for single report
+        }
+
+        const container = document.getElementById("charts-container");
+        const navSection = document.createElement("h2");
+        navSection.textContent = "Reports";
+        container.appendChild(navSection);
+
+        const navList = document.createElement("ul");
+        navList.style.listStyle = "none";
+        navList.style.padding = "0";
+        navList.style.display = "flex";
+        navList.style.flexWrap = "wrap";
+        navList.style.gap = "1em";
+
+        reportOrder.forEach((key) => {
+          const listItem = document.createElement("li");
+          const link = document.createElement("a");
+          link.href = `#section-${key}`;
+          link.textContent = key;
+          link.style.textDecoration = "none";
+          link.style.color = "#007acc";
+          link.style.padding = "0.5em 1em";
+          link.style.border = "1px solid #ccc";
+          link.style.borderRadius = "4px";
+          link.style.display = "block";
+          link.addEventListener("mouseover", () => {
+            link.style.backgroundColor = "#f0f0f0";
+          });
+          link.addEventListener("mouseout", () => {
+            link.style.backgroundColor = "transparent";
+          });
+          listItem.appendChild(link);
+          navList.appendChild(listItem);
+        });
+
+        container.appendChild(navList);
+        container.appendChild(document.createElement("hr"));
+      }
+
+      function render_number(number) {
+        return typeof number === "number" ? number.toLocaleString() : number;
+      }
+
+      function addSection(key, sectionData) {
+        const container = document.getElementById("charts-container");
+        // Add section title with anchor ID and back-to-top button
+        const headerContainer = document.createElement("div");
+        headerContainer.style.display = "flex";
+        headerContainer.style.alignItems = "center";
+        headerContainer.style.justifyContent = "space-between";
+        headerContainer.style.marginBottom = "0.5em";
+
+        const sectionHeader = document.createElement("h2");
+        sectionHeader.textContent = key;
+        sectionHeader.id = `section-${key}`;
+        sectionHeader.style.margin = "0";
+
+        const backButton = document.createElement("a");
+        backButton.href = "#";
+        backButton.textContent = "↑ Back to top";
+        backButton.style.textDecoration = "none";
+        backButton.style.color = "#007acc";
+        backButton.style.fontSize = "0.8em";
+        backButton.style.padding = "0.3em 0.8em";
+        backButton.style.border = "1px solid #ccc";
+        backButton.style.borderRadius = "4px";
+        backButton.style.backgroundColor = "#f9f9f9";
+        backButton.addEventListener("mouseover", () => {
+          backButton.style.backgroundColor = "#e6e6e6";
+        });
+        backButton.addEventListener("mouseout", () => {
+          backButton.style.backgroundColor = "#f9f9f9";
+        });
+        backButton.addEventListener("click", (e) => {
+          e.preventDefault();
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+
+        headerContainer.appendChild(sectionHeader);
+        headerContainer.appendChild(backButton);
+        container.appendChild(headerContainer);
+
+        if (sectionData.multiplexed !== undefined) {
+          Object.entries(sectionData.multiplexed).forEach(([bucketKey, bucketData]) => {
+            if (typeof bucketData !== "object" || bucketData === null) {
+              return;
+            }
+            const bucketHeader = document.createElement("h3");
+            bucketHeader.textContent = bucketKey;
+            container.appendChild(bucketHeader);
+            container.appendChild(addSectionTable(bucketData));
+            container.appendChild(document.createElement("hr"));
+          });
+          return;
+        }
+
+        container.appendChild(addSectionTable(sectionData));
+        container.appendChild(document.createElement("hr"));
+      }
+
+      function addSectionTable(sectionData) {
+        // Create table for the section with three columns: target, description, content
+        const table = document.createElement("table");
+        table.style.width = "95%";
+        // Molecule count row, if present
+        if (sectionData.molecule_count !== undefined) {
+          const tr = document.createElement("tr");
+          const tdTarget = document.createElement("th");
+          tdTarget.textContent = "-";
+          tdTarget.style.width = "1px";
+          const tdDesc = document.createElement("th");
+          tdDesc.textContent = "molecule count";
+          tdDesc.style.width = "1px";
+          const tdContent = document.createElement("td");
+          tdContent.textContent = render_number(sectionData.molecule_count);
+          tr.appendChild(tdTarget);
+          tr.appendChild(tdDesc);
+          tr.appendChild(tdContent);
+          table.appendChild(tr);
+        }
+        // Fragment duplicate count row, if present
+        if (sectionData.fragment_duplicate_count !== undefined) {
+          const dup = sectionData.fragment_duplicate_count;
+          let dupRel = "";
+          if (sectionData.molecule_count !== undefined && sectionData.molecule_count > 0) {
+            dupRel = " (" + ((dup / sectionData.molecule_count) * 100).toFixed(2) + "%)";
+          }
+          const tr = document.createElement("tr");
+          const tdTarget = document.createElement("th");
+          tdTarget.textContent = "-";
+          tdTarget.style.width = "1px";
+          const tdDesc = document.createElement("th");
+          tdDesc.textContent = "Fragment duplicate count";
+          tdDesc.style.width = "1px";
+          const tdContent = document.createElement("td");
+          tdContent.textContent = render_number(dup) + dupRel;
+          tr.appendChild(tdTarget);
+          tr.appendChild(tdDesc);
+          tr.appendChild(tdContent);
+          table.appendChild(tr);
+        }
+        // For each target (read1, read2, index1, index2)
+        ["read1", "read2", "index1", "index2"].forEach((target) => {
+          const rows = [];
+          if (sectionData[target]) {
+            // Add base_statistics summary rows if present
+            if (sectionData[target].base_statistics) {
+              const bs = sectionData[target].base_statistics;
+              if (bs.total_bases !== undefined) {
+                const tr = document.createElement("tr");
+                const tdDesc = document.createElement("th");
+                tdDesc.textContent = "Total bases";
+                const tdContent = document.createElement("td");
+                tdContent.textContent = render_number(bs.total_bases);
+                tr.appendChild(tdDesc);
+                tr.appendChild(tdContent);
+                rows.push(tr);
+              }
+              if (bs.gc_bases !== undefined && bs.total_bases) {
+                const rel =
+                  ((bs.gc_bases / bs.total_bases) * 100).toFixed(2) + "%";
+                const tr = document.createElement("tr");
+                const tdDesc = document.createElement("th");
+                tdDesc.textContent = "GC bases";
+                const tdContent = document.createElement("td");
+                tdContent.textContent = render_number(bs.gc_bases) + " (" + rel + ")";
+                tr.appendChild(tdDesc);
+                tr.appendChild(tdContent);
+                rows.push(tr);
+              }
+              if (bs.q20_bases !== undefined && bs.total_bases) {
+                const rel =
+                  ((bs.q20_bases / bs.total_bases) * 100).toFixed(2) + "%";
+                const tr = document.createElement("tr");
+                const tdDesc = document.createElement("th");
+                tdDesc.textContent = "Q20 bases";
+                const tdContent = document.createElement("td");
+                tdContent.textContent = render_number(bs.q20_bases) + " (" + rel + ")";
+                tr.appendChild(tdDesc);
+                tr.appendChild(tdContent);
+                rows.push(tr);
+              }
+              if (bs.q30_bases !== undefined && bs.total_bases) {
+                const rel =
+                  ((bs.q30_bases / bs.total_bases) * 100).toFixed(2) + "%";
+                const tr = document.createElement("tr");
+                const tdDesc = document.createElement("th");
+                tdDesc.textContent = "Q30 bases";
+                const tdContent = document.createElement("td");
+                tdContent.textContent = render_number(bs.q30_bases) + " (" + rel + ")";
+                tr.appendChild(tdDesc);
+                tr.appendChild(tdContent);
+                rows.push(tr);
+              }
+            }
+            if (sectionData[target].duplicate_count !== undefined) {
+              const dup = sectionData[target].duplicate_count;
+              let dupRel = "";
+              if (
+                sectionData.molecule_count !== undefined &&
+                sectionData.molecule_count > 0
+              ) {
+                dupRel =
+                  " (" +
+                  ((dup / sectionData.molecule_count) * 100).toFixed(2) +
+                  "%)";
+              }
+              const tr = document.createElement("tr");
+              const tdDesc = document.createElement("th");
+              tdDesc.textContent = "Duplicate count";
+              const tdContent = document.createElement("td");
+              tdContent.textContent = render_number(dup) + dupRel;
+              tr.appendChild(tdDesc);
+              tr.appendChild(tdContent);
+              rows.push(tr);
+            }
+          }
+          if (sectionData[target] && sectionData[target].length_distribution) {
+            const tr = document.createElement("tr");
+            const tdDesc = document.createElement("th");
+            tdDesc.textContent = "Read length distribution";
+            const tdContent = document.createElement("td");
+            plot_read_length_distribution(
+              sectionData[target].length_distribution,
+              tdContent,
+            );
+            tr.appendChild(tdDesc);
+            tr.appendChild(tdContent);
+            rows.push(tr);
+          }
+          if (sectionData[target] && sectionData[target].base_statistics) {
+            if (sectionData[target].base_statistics.per_position_counts) {
+              const tr = document.createElement("tr");
+              const tdDesc = document.createElement("th");
+              tdDesc.textContent = "Per position counts";
+              const tdContent = document.createElement("td");
+              plot_per_position_counts(
+                sectionData[target].base_statistics.per_position_counts,
+                tdContent,
+              );
+              tr.appendChild(tdDesc);
+              tr.appendChild(tdContent);
+              rows.push(tr);
+            }
+            if (
+              sectionData[target].base_statistics
+                .expected_errors_from_quality_curve
+            ) {
+              const tr = document.createElement("tr");
+              const tdDesc = document.createElement("th");
+              tdDesc.textContent = "Expected Errors from Quality Curve";
+              const tdContent = document.createElement("td");
+              plot_expected_errors_from_quality_curve(
+                sectionData[target].base_statistics
+                  .expected_errors_from_quality_curve,
+                tdContent,
+              );
+              tr.appendChild(tdDesc);
+              tr.appendChild(tdContent);
+              rows.push(tr);
+            }
+          }
+          if (rows.length > 0) {
+            const firstRow = rows[0];
+            const tdTarget = document.createElement("th");
+            tdTarget.textContent = target;
+            tdTarget.style.width = "1px";
+            tdTarget.rowSpan = rows.length;
+            firstRow.insertBefore(tdTarget, firstRow.firstChild);
+            rows.forEach((r) => table.appendChild(r));
+          }
+        });
+
+        // Check for count_oligos data
+        if (sectionData.count_oligos) {
+          const tr = document.createElement("tr");
+          const tdTarget = document.createElement("th");
+          tdTarget.textContent = "-";
+          tdTarget.style.width = "1px";
+          const tdDesc = document.createElement("th");
+          tdDesc.textContent = "Oligo counts";
+          tdDesc.style.width = "1px";
+          const tdContent = document.createElement("td");
+          tdContent.appendChild(render_count_oligos(sectionData.count_oligos));
+          tr.appendChild(tdTarget);
+          tr.appendChild(tdDesc);
+          tr.appendChild(tdContent);
+          table.appendChild(tr);
+        }
+
+        // Check for histogram data under the "histogram" key
+        if (sectionData.histogram) {
+          for (const [histogramName, histogramData] of Object.entries(sectionData.histogram)) {
+            const tr = document.createElement("tr");
+            const tdTarget = document.createElement("th");
+            tdTarget.textContent = "-";
+            tdTarget.style.width = "1px";
+            const tdDesc = document.createElement("th");
+            tdDesc.textContent = `Histogram: ${histogramName}`;
+            tdDesc.style.width = "1px";
+            const tdContent = document.createElement("td");
+            plot_tag_histogram(histogramData, tdContent);
+            tr.appendChild(tdTarget);
+            tr.appendChild(tdDesc);
+            tr.appendChild(tdContent);
+            table.appendChild(tr);
+          }
+        }
+        return table;
+      }
+
+      window.addEventListener("resize", function () {
+        //toggel background color between white and blue
+        //resize all canvases to 85% width
+        document.querySelectorAll("canvas").forEach((canvas) => {
+          canvas.style.width = "85%";
+        });
+      });
+
+      // Fetch data and generate charts on page load
+      document.addEventListener("DOMContentLoaded", function () {
+        // Add GitHub link if repository is available
+        if (embeddedData.__ && embeddedData.__.repository) {
+          const githubLink = document.getElementById("github-link");
+          githubLink.href = embeddedData.__.repository;
+          githubLink.style.display = "block";
+        }
+
+        addHead(embeddedData);
+        // Use report_order to maintain the order defined in TOML, fallback to Object.keys for backward compatibility
+        const reportOrder =
+          embeddedData.report_order ||
+          Object.keys(embeddedData).filter(
+            (key) =>
+              key !== "__" && key !== "run_info" && key !== "report_order",
+          );
+
+        // Add navigation links if multiple reports are present
+        addNavigationLinks(reportOrder);
+
+        reportOrder.forEach((key) => {
+          if (
+            key !== "__" &&
+            key !== "run_info" &&
+            key !== "report_order" &&
+            embeddedData[key]
+          ) {
+            addSection(key, embeddedData[key]);
+          }
+        });
+      });
+
+      const embeddedData = JSON.parse(document.getElementById("data").textContent);
     </script>
     <script type="module">
       /**

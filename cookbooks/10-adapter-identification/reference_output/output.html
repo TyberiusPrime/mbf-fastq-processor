@@ -5,6 +5,54 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>fastqrab report</title>
 
+    <script type="application/json" id='data'>
+    {
+  "__": {
+    "version": "_IGNORED_",
+    "cwd": "_IGNORED_",
+    "input_files": {
+      "interleaved": null,
+      "read1": [
+        "input/fastp_606.fq.gz"
+      ]
+    },
+    "repository": "_IGNORED_"
+  },
+  "adapter_check": {
+    "molecule_count": 337903,
+    "count_oligos": {
+      "Illumina Nextera/AmpliSeq": {
+        "sequence": "CTGTCTCTTATACACATCT",
+        "count": 0
+      },
+      "Illumina TruSeq R1/miRNA": {
+        "sequence": "AGATCGGAAGAGCACACGTCTGAACTCCAGTCA",
+        "count": 0
+      },
+      "Illumina TruSeq R2": {
+        "sequence": "AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT",
+        "count": 1393
+      },
+      "BGI Forward": {
+        "sequence": "AAGTCGGAGGCCAAGCGGTCTTAGGAAGACAA",
+        "count": 0
+      },
+      "BGI Reverse": {
+        "sequence": "AAGTCGGATCGTAGCCATGTCGTTCTGTGAGCCAAGGAGTTG",
+        "count": 0
+      }
+    }
+  },
+  "run_info": {
+    "program_version": "_IGNORED_",
+    "input_toml": "_IGNORED_",
+    "working_directory": "_IGNORED_"
+  },
+  "report_order": [
+    "adapter_check"
+  ]
+}
+    </script>
     <script>
       function plot_read_length_distribution(data, container) {
         const inner_container = document.createElement("div");
@@ -674,52 +722,7 @@
         });
       });
 
-      const embeddedData = {
-  "__": {
-    "version": "0.8.1",
-    "cwd": "/home/user/10-adapter-identification",
-    "input_files": {
-      "interleaved": null,
-      "read1": [
-        "input/fastp_606.fq.gz"
-      ]
-    },
-    "repository": "https://tyberiusprime.github.io/fastqrab/"
-  },
-  "adapter_check": {
-    "molecule_count": 337903,
-    "count_oligos": {
-      "Illumina Nextera/AmpliSeq": {
-        "sequence": "CTGTCTCTTATACACATCT",
-        "count": 0
-      },
-      "Illumina TruSeq R1/miRNA": {
-        "sequence": "AGATCGGAAGAGCACACGTCTGAACTCCAGTCA",
-        "count": 0
-      },
-      "Illumina TruSeq R2": {
-        "sequence": "AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT",
-        "count": 1393
-      },
-      "BGI Forward": {
-        "sequence": "AAGTCGGAGGCCAAGCGGTCTTAGGAAGACAA",
-        "count": 0
-      },
-      "BGI Reverse": {
-        "sequence": "AAGTCGGATCGTAGCCATGTCGTTCTGTGAGCCAAGGAGTTG",
-        "count": 0
-      }
-    }
-  },
-  "run_info": {
-    "program_version": "0.8.1",
-    "input_toml": "[input]\n    read1 = 'input/fastp_606.fq.gz'\n\n# Probe for common adapters using count_oligos.\n# count_oligos performs exact full-sequence matching — no mismatches, no IUPAC.\n# A count > 0 identifies reads that still carry adapter sequence.\n# See the adapters reference for the full list of sequences.\n[[step]]\n    action = 'Report'\n    name = 'adapter_check'\n    count = true\n\n    count_oligos = {\n        # https://support-docs.illumina.com/SHARE/AdapterSequences/adapter-sequences.htm\n        \"Illumina Nextera/AmpliSeq\"  = \"CTGTCTCTTATACACATCT\",\n        \"Illumina TruSeq R1/miRNA\"   = \"AGATCGGAAGAGCACACGTCTGAACTCCAGTCA\",\n        \"Illumina TruSeq R2\"         = \"AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT\",\n\n        # http://seqanswers.com/forums/showthread.php?t=87647 (2nd post)\n        \"BGI Forward\"                = \"AAGTCGGAGGCCAAGCGGTCTTAGGAAGACAA\",\n        \"BGI Reverse\"                = \"AAGTCGGATCGTAGCCATGTCGTTCTGTGAGCCAAGGAGTTG\",\n    }\n\n[output]\n    prefix = 'reference_output/output'\n    report_html = true\n    report_json = true\n    format = 'None'\n",
-    "working_directory": "/home/user/10-adapter-identification"
-  },
-  "report_order": [
-    "adapter_check"
-  ]
-};
+      const embeddedData = JSON.parse(document.getElementById("data").textContent);
     </script>
     <script type="module">
       /**
