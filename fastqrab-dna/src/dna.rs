@@ -494,6 +494,22 @@ pub fn reverse_complement_iupac(input: &[u8]) -> Vec<u8> {
     new_seq
 }
 
+/// Straight up hamming distance. No frills.
+pub fn hamming_distance(a: &[u8], b: &[u8]) -> usize {
+    assert_eq!(
+        a.len(),
+        b.len(),
+        "Hamming distance requires sequences of equal length"
+    );
+    let mut dist = 0;
+    for (letter_a, letter_b) in a.iter().zip(b.iter()) {
+        if letter_a != letter_b {
+            dist += 1;
+        }
+    }
+    dist
+}
+
 /// Calculate IUPAC-aware Hamming distance between a pattern and a sequence.
 /// N in the pattern matches any base. N in the sequence is treated as uncertain (mismatch).
 #[inline]

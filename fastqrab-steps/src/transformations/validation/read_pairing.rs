@@ -1,5 +1,7 @@
 use std::sync::atomic::Ordering;
 
+use fastqrab_dna::dna::hamming_distance;
+
 use crate::transformations::prelude::*;
 
 pub(crate) fn default_sample_stride() -> u64 {
@@ -102,7 +104,7 @@ impl Step for ValidateReadPairing {
                 let candidate_name = candidate.name();
 
                 if reference_name.len() == candidate_name.len() {
-                    let dist = bio::alignment::distance::hamming(reference_name, candidate_name);
+                    let dist = hamming_distance(reference_name, candidate_name);
                     if dist > 1 {
                         bail!("ValidateReadPairing detected mismatched read names near read {global_index}.
                 Had a hamming distance above 1: {dist}
