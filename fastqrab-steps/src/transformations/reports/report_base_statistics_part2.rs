@@ -57,6 +57,18 @@ impl Partial_ReportBaseStatisticsPart2 {
 }
 impl TagUser for PartialTaggedVariant<Box<Partial_ReportBaseStatisticsPart2>> {}
 
+//ensure the unsafe below is actually safe.
+const _: () = {
+    let mut i = 0;
+    while i < 256 {
+        assert!(
+            BASE_TO_INDEX[i] <= 4,
+            "BASE_TO_INDEX must not contain values > 4, for the unsafe optimization below to hold"
+        );
+        i += 1;
+    }
+};
+
 impl Step for Box<_ReportBaseStatisticsPart2> {
     fn transmits_premature_termination(&self) -> bool {
         false
@@ -102,9 +114,10 @@ impl Step for Box<_ReportBaseStatisticsPart2> {
             // Optimized: use unsafe to eliminate bounds checking
             // Safety: We just resized to ensure read_len capacity, and we only iterate up to read_len
             // BASE_TO_INDEX always returns 0-4, which is within bounds of the [0; 5] array
+            // (and we enforce that with a const assertion above)
             for ii in 0..read_len {
                 unsafe {
-                    let base = *seq.get_unchecked(ii);
+                    let base: u8 = *seq.get_unchecked(ii);
                     let idx = *BASE_TO_INDEX.get_unchecked(base as usize);
                     let counts = target.per_position_counts.get_unchecked_mut(ii);
                     *counts.0.get_unchecked_mut(idx as usize) += 1;
