@@ -278,7 +278,7 @@ fn correct_barcodes<'a, T: Clone + WithUpdatedSequence + 'a>(
                         .try_into()
                         .expect("hamming distance conversion should succeed")
                 };
-                let distance: Result<u8, _>= distance.try_into();
+                let distance: Result<u8, _> = distance.try_into();
                 match distance {
                     Ok(distance) => {
                         if distance <= max_hamming_distance {

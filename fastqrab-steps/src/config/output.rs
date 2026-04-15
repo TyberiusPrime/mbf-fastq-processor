@@ -85,6 +85,48 @@ impl VerifyIn<super::PartialConfig> for PartialOutput {
                 Ok(())
             }
         });
+        self.prefix.verify(|prefix| {
+            if prefix.contains("/../")
+                || prefix.contains("\\..\\")
+                || prefix.contains(':')
+                || prefix.starts_with('/')
+                || prefix.starts_with('\\')
+            {
+                Err(ValidationFailure::new(
+                    "Invalid value",
+                    Some(
+                        "Must not contain '/../', '\\..\\' or ':', nor be an absolute path. \
+                        fastqrab only outputs below the current directory.",
+                    ),
+                ))
+            } else if prefix.is_empty() {
+                Err(ValidationFailure::new(
+                    "Invalid value",
+                    Some("Must not be empty"),
+                ))
+            } else {
+                Ok(())
+            }
+        });
+        self.suffix.verify(|suffix| {
+            if let Some(suffix) = suffix.as_ref() {
+                if suffix.contains('/') || suffix.contains('\\') || suffix.contains(':') {
+                    Err(ValidationFailure::new(
+                        "Invalid value",
+                        Some("Must not contain '/', '\\' or ':'."),
+                    ))
+                } else if suffix.is_empty() {
+                    Err(ValidationFailure::new(
+                        "Invalid value",
+                        Some("Must not be empty"),
+                    ))
+                } else {
+                    Ok(())
+                }
+            } else {
+                Ok(())
+            }
+        });
 
         self.chunksize.verify(|chunk_size| {
             if let Some(chunk_size) = chunk_size.as_ref() {

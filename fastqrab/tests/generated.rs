@@ -463,6 +463,46 @@ fn test_cases_x_error_handling_x_misc_x_missing_output_dir_will_be_created() {
 }
 
 #[test]
+fn test_cases_x_error_handling_x_misc_x_prefix_absolute() {
+    println!("Test case is in: test_cases/error_handling/misc/prefix_absolute");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/misc/prefix_absolute"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_error_handling_x_misc_x_prefix_absolute_windows() {
+    println!("Test case is in: test_cases/error_handling/misc/prefix_absolute_windows");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/misc/prefix_absolute_windows"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_error_handling_x_misc_x_prefix_drive_letter() {
+    println!("Test case is in: test_cases/error_handling/misc/prefix_drive_letter");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/misc/prefix_drive_letter"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_error_handling_x_misc_x_prefix_go_back() {
+    println!("Test case is in: test_cases/error_handling/misc/prefix_go_back");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/misc/prefix_go_back"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_error_handling_x_misc_x_too_many_open_files() {
     println!("Test case is in: test_cases/error_handling/misc/too_many_open_files");
     run_test(
