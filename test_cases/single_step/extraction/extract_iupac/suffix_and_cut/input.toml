@@ -1,0 +1,38 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'ExtractIUPACSuffix'
+	out_label = 'hit'
+    query = 'GATCGGAAGAGCACACGTCTGAACTCCAGTCAC'
+    min_length = 12
+    max_mismatches = 0
+
+
+[[step]]
+  action= 'Lowercase'
+  source='tag:hit'
+
+[[step]]
+  action ='StoreTagBackInSequence' 
+  in_label = 'hit'
+
+
+[[step]]
+  action ='Postfix'
+  seq = "GTGA"
+  qual = "IIII"
+
+
+[[step]]
+	action = 'TrimAtTag'
+	in_label = 'hit'
+    direction = 'end'
+    keep_tag = true
+
+
+[[step]]
+    action = 'StoreTagsInTable'
+    infix = "table"
+[output]
+    prefix = 'output'

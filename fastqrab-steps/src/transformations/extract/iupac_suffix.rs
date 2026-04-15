@@ -121,7 +121,7 @@ impl Step for IUPACSuffix {
             .map(|suffix_len| {
                 Hits::new(
                     seq.len() - suffix_len,
-                    seq.len(),
+                    suffix_len,
                     self.segment,
                     seq[seq.len() - suffix_len..].to_vec().into(),
                 )

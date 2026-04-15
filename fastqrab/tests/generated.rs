@@ -6340,6 +6340,16 @@ fn test_cases_x_single_step_x_extraction_x_extract_iupac_x_suffix() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_extraction_x_extract_iupac_x_suffix_and_cut() {
+    println!("Test case is in: test_cases/single_step/extraction/extract_iupac/suffix_and_cut");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/extraction/extract_iupac/suffix_and_cut"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_extraction_x_extract_iupac_x_suffix_using_iupac() {
     println!("Test case is in: test_cases/single_step/extraction/extract_iupac/suffix_using_iupac");
     run_test(
