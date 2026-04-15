@@ -143,7 +143,7 @@ impl WorkpoolCoordinator {
                                 self
                                 .error_collector
                                 .lock()
-                                .expect("error collector mutex poisoned")
+                                .unwrap_or_else(|p| p.into_inner())
                                 .push(
                                     "No incoming blocks and no completed work; terminating coordinator."
                                         .to_string(),
@@ -163,7 +163,7 @@ impl WorkpoolCoordinator {
                                 self
                                     .error_collector
                                     .lock()
-                                    .expect("error collector mutex poisoned")
+                                    .unwrap_or_else(|p| p.into_inner())
                                     .push(
                                         "Output pipe closed unexpectedly; terminating coordinator."
                                             .to_string(),
@@ -220,7 +220,7 @@ impl WorkpoolCoordinator {
                                 self
                                     .error_collector
                                     .lock()
-                                    .expect("error collector mutex poisoned")
+                                    .unwrap_or_else(|p| p.into_inner())
                                     .push(
                                         "Output pipe closed unexpectedly; terminating coordinator."
                                             .to_string(),
@@ -372,7 +372,7 @@ impl WorkpoolCoordinator {
             // Handle error - for now, continue pipeline with empty block
             self.error_collector
                 .lock()
-                .expect("error collector mutex poisoned")
+                .unwrap_or_else(|p| p.into_inner())
                 .push(format!("Error in stage {stage_index}: {error:?}"));
             bail!("error detected");
         }
