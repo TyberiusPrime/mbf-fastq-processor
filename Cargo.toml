@@ -54,7 +54,6 @@
 	memchr = { version = "2.7.4", default-features = false }
     mutants = "0.0.3"
 	niffler = "3.0"
-	nix = { version = "0.30", features = ["signal"] }
 	noodles = { version = "0.108.0", features = ["bam", "bgzf", "csi", "sam"] }
 	num_cpus = "1.16"
 	rand_chacha = { version = "0.9", default-features = false }

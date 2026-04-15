@@ -3811,15 +3811,6 @@ fn test_verify_compressed_size_difference_too_large() {
     );
 }
 
-/// Send SIGUSR1 to the child process to wake it from its poll sleep.
-#[cfg(unix)]
-fn send_sigusr1(child: &std::process::Child) {
-    std::process::Command::new("kill")
-        .arg("-USR1")
-        .arg(child.id().to_string())
-        .status()
-        .unwrap();
-}
 
 /// Wait until `stdout_path` contains at least `run_number` run-completion markers.
 /// Uses the timestamp-bracket suffix " [" to distinguish the header lines from error bodies.
@@ -3870,7 +3861,7 @@ fn test_interactive() {
     let mut cmd = std::process::Command::new(get_bin_path())
         .arg("interactive")
         .arg("--poll-interval")
-        .arg("100")
+        .arg("50")
         .arg("--max-runs")
         .arg("6")
         .current_dir(temp_path)
@@ -3894,8 +3885,6 @@ fn test_interactive() {
 ",
     )
     .unwrap();
-    #[cfg(unix)]
-    send_sigusr1(&cmd);
     wait_for_interactive_run(&stdout_path, 2); // wait for run 2 to complete
 
     fs::write(
@@ -3912,8 +3901,6 @@ fn test_interactive() {
 ",
     )
     .unwrap();
-    #[cfg(unix)]
-    send_sigusr1(&cmd);
     wait_for_interactive_run(&stdout_path, 3); // wait for run 3 to complete
 
     // Run 4: absolute path + interleaved key + Report step — covers has_report_step = true,
@@ -3931,8 +3918,6 @@ fn test_interactive() {
         ),
     )
     .unwrap();
-    #[cfg(unix)]
-    send_sigusr1(&cmd);
     wait_for_interactive_run(&stdout_path, 4); // wait for run 4 to complete
 
     // Run 5: integer-valued segment — covers `_ => bail!` (line 275) in make_paths_absolute
@@ -3945,8 +3930,6 @@ fn test_interactive() {
 ",
     )
     .unwrap();
-    #[cfg(unix)]
-    send_sigusr1(&cmd);
     wait_for_interactive_run(&stdout_path, 5); // wait for run 5 to complete
 
     // Run 6: sub-table segment — covers `_ => bail!` (line 277) in make_paths_absolute
@@ -3959,8 +3942,6 @@ fn test_interactive() {
 ",
     )
     .unwrap();
-    #[cfg(unix)]
-    send_sigusr1(&cmd);
     wait_for_interactive_run(&stdout_path, 6); // wait for run 6 to complete
     cmd.wait().unwrap(); // wait for clean exit (flushes coverage data)
     let stdout = std::fs::read_to_string(temp_path.join("stdout")).unwrap();
@@ -4057,7 +4038,7 @@ fn test_interactive_no_output() {
     let mut cmd = std::process::Command::new(get_bin_path())
         .arg("interactive")
         .arg("--poll-interval")
-        .arg("100")
+        .arg("50")
         .arg("--max-runs")
         .arg("1")
         .current_dir(temp_path)

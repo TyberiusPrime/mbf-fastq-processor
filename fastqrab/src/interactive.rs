@@ -13,27 +13,11 @@ use bstr::BString;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, SystemTime};
 use toml_edit::{DocumentMut, Item, Table, value};
 
-static SIGUSR1_RECEIVED: AtomicBool = AtomicBool::new(false);
-
-#[cfg(unix)]
-extern "C" fn sigusr1_handler(_signum: std::ffi::c_int) {
-    SIGUSR1_RECEIVED.store(true, Ordering::Relaxed);
-}
-
-/// Sleep for up to `duration_ms` milliseconds, but wake immediately if SIGUSR1 arrives.
 fn interruptible_sleep(duration_ms: u64) {
-    let step_ms = 10u64;
-    let steps = duration_ms / step_ms;
-    for _ in 0..steps {
-        if SIGUSR1_RECEIVED.swap(false, Ordering::Relaxed) {
-            return;
-        }
-        std::thread::sleep(Duration::from_millis(step_ms));
-    }
+    std::thread::sleep(Duration::from_millis(duration_ms));
 }
 
 /// Get current local time as a formatted string
@@ -103,16 +87,6 @@ pub fn run_interactive(
     println!("Showing {} reads in output", config.inspect_count);
     println!("\n{}", "=".repeat(80));
     println!("Press Ctrl+C to exit\n");
-
-    #[cfg(unix)]
-    // SAFETY: sigusr1_handler only writes to an AtomicBool, which is async-signal-safe.
-    unsafe {
-        nix::sys::signal::signal(
-            nix::sys::signal::Signal::SIGUSR1,
-            nix::sys::signal::SigHandler::Handler(sigusr1_handler),
-        )
-        .expect("Failed to install SIGUSR1 handler");
-    }
 
     let toml_path = toml_path
         .canonicalize()

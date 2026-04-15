@@ -36,7 +36,6 @@ workspace = true
 	flate2 = {workspace = true}
 	human-panic = {workspace = true}
     indexmap = {workspace = true}
-    nix = {workspace = true}
     itertools = "0.14.0"
 	json_value_merge = {workspace = true}
     fastqrab-io = {workspace = true}
