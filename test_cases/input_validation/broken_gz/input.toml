@@ -1,0 +1,2 @@
+input.r1 = 'input_read1.fq.gz'
+output.prefix = 'output'
