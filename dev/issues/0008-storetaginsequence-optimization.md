@@ -1,4 +1,4 @@
-status: open
+status: done
 # Tag modification throws away location data
 
 - **Problem**: Currently discards all tag locations when growing/shrinking sequences
