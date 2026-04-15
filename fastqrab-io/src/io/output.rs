@@ -24,6 +24,7 @@ pub fn write_read_to_bam(
     read: &WrappedFastQRead<'_>,
     segment_index: usize,
     segment_count: usize,
+    bam_comment_separation_char: u8,
 ) -> Result<()> {
     use noodles::sam::alignment::{
         record::data::field::Tag,
@@ -51,7 +52,11 @@ pub fn write_read_to_bam(
         // BAM may not have spaces in read names.
         // So we split on the first space, and put the rest in the comment field.
         // If there is no space, the comment field is None.
-        if let Some(space_pos) = read.name().iter().position(|&c| c == b' ') {
+        if let Some(space_pos) = read
+            .name()
+            .iter()
+            .position(|&c| c == bam_comment_separation_char)
+        {
             (
                 &read.name()[..space_pos],
                 Some(&read.name()[space_pos + 1..]),
@@ -77,10 +82,23 @@ pub fn write_read_to_bam(
     }
     let record = record.build();
 
-    bam_output
+    if let Err(e) = bam_output
         .writer
         .write_alignment_record(&bam_output.header, &record)
-        .context("Failed to write BAM record")?;
+    {
+        let mut res = Err(e).context("Failed to write BAM record");
+        let name: BString = name.into();
+        if name.len() > 254 {
+            res = res.context(format!(
+                "The read name exceeded the 254 byte limited of the SAM/BAM spec.\n\
+                    Shorten your read name, or set output.bam_comment_separation_char\n\
+                    to split your read name into a name and a 'CO' tag.\n\
+                    Read name (length: {len}): '{name}'",
+                len = name.len()
+            ));
+        }
+        return res;
+    }
 
     Ok(())
 }
@@ -131,8 +149,14 @@ mod tests {
             let mut bam_output = BamOutput { writer, header };
 
             let block = make_read_block();
-            write_read_to_bam(&mut bam_output, &block.get(0), segment_index, segment_count)
-                .unwrap();
+            write_read_to_bam(
+                &mut bam_output,
+                &block.get(0),
+                segment_index,
+                segment_count,
+                b' ',
+            )
+            .unwrap();
         } // drops bam_output, flushing and finalizing the file
 
         // Read back the flags of the first record

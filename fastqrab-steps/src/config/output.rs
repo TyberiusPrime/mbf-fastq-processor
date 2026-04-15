@@ -2,12 +2,17 @@ use schemars::JsonSchema;
 use std::collections::HashSet;
 use toml_pretty_deser::prelude::*;
 
-use fastqrab_config::offer_alternatives;
+use fastqrab_config::{offer_alternatives, tpd_adapt_u8_from_byte_or_char};
 use fastqrab_io::{CompressionFormat, FileFormat};
 
 #[must_use]
 pub fn default_ix_separator() -> String {
     "_".to_string()
+}
+
+#[must_use]
+pub fn default_bam_comment_separation_char() -> u8 {
+    b' '
 }
 
 #[derive(Clone, JsonSchema)]
@@ -48,6 +53,9 @@ pub struct Output {
 
     #[tpd(default)]
     pub chunksize: Option<usize>,
+
+    #[tpd(with = "tpd_adapt_u8_from_byte_or_char")]
+    pub bam_comment_separation_char: u8,
 }
 
 impl VerifyIn<super::PartialConfig> for PartialOutput {
@@ -95,6 +103,8 @@ impl VerifyIn<super::PartialConfig> for PartialOutput {
             Ok(())
         });
         self.ix_separator.or_with(default_ix_separator);
+        self.bam_comment_separation_char
+            .or_with(default_bam_comment_separation_char);
 
         if let Some(Some(_level)) = self.compression_level.value {
             validate_compression_level_u8(

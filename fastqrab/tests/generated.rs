@@ -355,6 +355,62 @@ fn test_cases_x_error_handling_x_bam_x_disk_full_bam() {
 }
 
 #[test]
+fn test_cases_x_error_handling_x_bam_x_read_name_exceeds_bam_length_x_just_fit() {
+    println!(
+        "Test case is in: test_cases/error_handling/bam/read_name_exceeds_bam_length/just_fit"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/error_handling/bam/read_name_exceeds_bam_length/just_fit",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_error_handling_x_bam_x_read_name_exceeds_bam_length_x_too_long() {
+    println!(
+        "Test case is in: test_cases/error_handling/bam/read_name_exceeds_bam_length/too_long"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/error_handling/bam/read_name_exceeds_bam_length/too_long",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_error_handling_x_bam_x_read_name_exceeds_bam_length_x_with_comment_ok() {
+    println!(
+        "Test case is in: test_cases/error_handling/bam/read_name_exceeds_bam_length/with_comment_ok"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/error_handling/bam/read_name_exceeds_bam_length/with_comment_ok",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_error_handling_x_bam_x_read_name_exceeds_bam_length_x_with_separation_char() {
+    println!(
+        "Test case is in: test_cases/error_handling/bam/read_name_exceeds_bam_length/with_separation_char"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/error_handling/bam/read_name_exceeds_bam_length/with_separation_char",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_error_handling_x_declared_tag_an_int() {
     println!("Test case is in: test_cases/error_handling/declared_tag_an_int");
     run_test(
@@ -817,6 +873,16 @@ fn test_cases_x_input_validation_x_empty_bam_in_middle() {
 }
 
 #[test]
+fn test_cases_x_input_validation_x_fasta_newline() {
+    println!("Test case is in: test_cases/input_validation/fasta_newline");
+    run_test(
+        std::path::Path::new("../test_cases/input_validation/fasta_newline"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_input_validation_x_fastq_breaking_after_sequence_in_partial() {
     println!(
         "Test case is in: test_cases/input_validation/fastq_breaking_after_sequence_in_partial"
@@ -855,6 +921,16 @@ fn test_cases_x_input_validation_x_fastq_breakng_after_sequence_in_partial_but_s
         std::path::Path::new(
             "../test_cases/input_validation/fastq_breakng_after_sequence_in_partial_but_stop_at_newline_so_check_in_spacer_windows",
         ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_input_validation_x_fastq_invalid_bases() {
+    println!("Test case is in: test_cases/input_validation/fastq_invalid_bases");
+    run_test(
+        std::path::Path::new("../test_cases/input_validation/fastq_invalid_bases"),
         "input.toml",
         1,
     );

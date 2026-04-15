@@ -487,7 +487,8 @@ pub fn reverse_complement_iupac(input: &[u8]) -> Vec<u8> {
             b'v' => b'b',
             b'd' => b'h',
             b'h' => b'd',
-            b'\n' => panic!("New line in DNA sequence"), // since that's not valid fastq!
+            b'\n' => panic!("New line in DNA sequence"), // since that's not valid fastq,
+            // and our parsers explicily never produce anything with a newline
             _ => *char,
         });
     }
@@ -604,6 +605,10 @@ fn positions_compatible(c1: u8, c2: u8) -> bool {
 }
 
 /// Convert an IUPAC character to its set of possible bases
+///
+/// # panics
+/// on non-iupac bases. it's up to the upstream validation
+/// to prevent that from ahppening.
 fn iupac_to_bases(c: u8) -> &'static [u8] {
     match c.to_ascii_uppercase() {
         b'A' => b"A",

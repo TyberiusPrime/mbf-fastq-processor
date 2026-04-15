@@ -1,0 +1,15 @@
+[input]
+  read1 = 'input_read1.fq'
+
+options.fasta_fake_quality = '~'
+
+[options]
+  buffer_size = 5 # it's allpartial hahaha
+
+[[step]]    
+  action = 'reversecomplement'
+  target = 'read1'
+
+
+[output]
+  prefix = "output"

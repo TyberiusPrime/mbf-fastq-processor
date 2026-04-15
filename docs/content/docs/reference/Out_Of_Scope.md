@@ -37,3 +37,9 @@ Apparently no formal spec.
 
 While it's tempting to leverage the fastq parsing for an aligner,
 aligning molecules to references is out of scope for the 1.0 target.
+
+
+## Gigantic reads
+fastqrab is assuming read lengths < 2^31 i.e. 2_147_483_648.
+
+SAM/BAM shares this limitation, see the (spec, page 15, section 4.2)[https://samtools.github.io/hts-specs/SAMv1.pdf].

@@ -587,6 +587,7 @@ impl PartialConfig {
                     output_hash_compressed: TomlValue::new_ok(false, 0..0),
                     ix_separator: TomlValue::new_ok(output::default_ix_separator(), 0..0),
                     chunksize: TomlValue::new_ok(None, 0..0),
+                    bam_comment_separation_char: TomlValue::new_ok(b' ', 0..0),
                 }),
                 0..0,
             );

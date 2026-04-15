@@ -359,8 +359,14 @@ fn find_best_overlap_fastp(
     max_mismatch_count: usize,
 ) -> Option<(isize, usize)> {
     //offset, length
-    let len1: isize = seq1.len().try_into().expect("seq1 len too large for isize");
-    let len2: isize = seq2.len().try_into().expect("seq2 len too large for isize"); //already reverse complement
+    let len1: isize = seq1
+        .len()
+        .try_into()
+        .expect("seq1 len too large for isize. Max supported read size is 2^31 bases");
+    let len2: isize = seq2
+        .len()
+        .try_into()
+        .expect("seq2 len too large for isize. Max supported read size is 2^31 bases"); //already reverse complement
 
     let complete_compare_require = 50;
 

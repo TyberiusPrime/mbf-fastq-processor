@@ -126,6 +126,7 @@ pub struct OutputFileConfig {
     chunk_index: usize,
     chunk_digit_count: usize,
     fragments_written_in_chunk: usize,
+    comment_separation_char: u8,
 }
 
 pub struct OutputFile<'a> {
@@ -282,6 +283,7 @@ impl OutputFileConfig {
         simulated_failure: Option<&SimulatedWriteFailure>,
         allow_overwrite: bool,
         chunk_size: Option<usize>,
+        comment_separation_char: u8,
     ) -> Result<Self> {
         let directory = directory.as_ref().to_owned();
         let filename = Self::make_filename(
@@ -308,6 +310,7 @@ impl OutputFileConfig {
             chunk_index: 0,
             chunk_digit_count: usize::from(chunk_size.is_some()),
             fragments_written_in_chunk: 0,
+            comment_separation_char,
         })
     }
 
@@ -347,6 +350,7 @@ impl OutputFileConfig {
             chunk_index: 0,
             chunk_digit_count: 0,
             fragments_written_in_chunk: 0,
+            comment_separation_char: b' ', // unused since it's not bam.
         })
     }
 
@@ -755,6 +759,7 @@ fn open_one_set_of_output_files(
                             // so the you end up with with the same number of files if you mix
                             // interleaved and non-interleaved output
                             output_config.chunksize.map(|x| x * interleave_count),
+                            output_config.bam_comment_separation_char,
                         )?) // cov:excl-line
                     } else {
                         None
@@ -780,6 +785,7 @@ fn open_one_set_of_output_files(
                                     simulated_failure.as_ref(),
                                     allow_overwrite,
                                     output_config.chunksize,
+                                    output_config.bam_comment_separation_char,
                                 )?)
                             } else {
                                 None
@@ -1174,7 +1180,13 @@ fn write_block_to_bam(
             unreachable!("BAM writer expected");
             // cov:excl-stop
         };
-        io::write_read_to_bam(bam_output, &read, 0, 1)?;
+        io::write_read_to_bam(
+            bam_output,
+            &read,
+            0,
+            1,
+            output_file.config.comment_separation_char,
+        )?;
         output_file.after_bam_fragment()?;
     }
 
@@ -1213,7 +1225,13 @@ fn write_interleaved_blocks_to_bam(
                         unreachable!("BAM writer expected")
                         // cov:excl-stop
                     };
-                    io::write_read_to_bam(bam_output, &read, segment_index, segment_count)?;
+                    io::write_read_to_bam(
+                        bam_output,
+                        &read,
+                        segment_index,
+                        segment_count,
+                        output_file.config.comment_separation_char,
+                    )?;
                     output_file.after_bam_fragment()?;
                 }
                 None => return Ok(()),
