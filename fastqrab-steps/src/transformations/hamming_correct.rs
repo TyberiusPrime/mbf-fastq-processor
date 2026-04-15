@@ -278,11 +278,17 @@ fn correct_barcodes<'a, T: Clone + WithUpdatedSequence + 'a>(
                         .try_into()
                         .expect("hamming distance conversion should succeed")
                 };
-                if distance.try_into().unwrap_or(255u8) <= max_hamming_distance {
-                    // Create corrected hit with new sequence
-                    corrected_hits.push(hit_seq.clone_with_sequence(barcode));
-                    found_match = true;
-                    break;
+                let distance: Result<u8, _>= distance.try_into();
+                match distance {
+                    Ok(distance) => {
+                        if distance <= max_hamming_distance {
+                            // Create corrected hit with new sequence
+                            corrected_hits.push(hit_seq.clone_with_sequence(barcode));
+                            found_match = true;
+                            break;
+                        }
+                    }
+                    Err(_) => continue,
                 }
             }
         } // cov:excl-line

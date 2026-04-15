@@ -1,5 +1,5 @@
 [input]
-    read1 = 'input_read1.fq.gz'
+    read1 = 'input_read1.fq'
 
 [output]
     prefix = 'output'
@@ -9,45 +9,27 @@
     anchor = "Start"
     source = 'read1'
     start = 0
-    length = 2
+    length = 512
     out_label = 'a12'
 
 [[step]]
-	action = "StoreTagInComment"
-	in_label = 'a12'
+  action = 'HammingCorrect'
+  in_label = 'a12'
+  out_label = 'c12'
+  barcodes = 'bc46'
+  max_hamming_distance=1
+  on_no_match='keep'
 
 [[step]]
     action = 'Demultiplex'
-    in_label = 'a12'
-	barcodes='bc123'
-
-    output_unmatched = true
-
-[barcodes.bc123]
-    CT = 'ct'
-    TT = 'tt'
-
-[[step]]
-    action = 'ExtractRegion'
-    anchor = "Start"
-    source = 'read1'
-    start = 4
-    length = 2
-    out_label = 'b46'
-
-[[step]]
-	action = "StoreTagInComment"
-	in_label = 'b46'
-
-[[step]]
-    action = 'Demultiplex'
-    in_label = 'b46'
+    in_label = 'c12'
 	barcodes='bc46'
-
     output_unmatched = true
+
+
 
 [barcodes.bc46]
-    AG = 'ag'
-    AT = 'at'
+# one off from th actual sequence
+    AGGCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTCAGTC = 'ag'
 
 
