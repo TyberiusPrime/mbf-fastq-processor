@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Run all integration test cases against the docker image built from the nix flake.
+# All tests run inside a single container to avoid per-test startup overhead.
 #
 # Usage:
 #   ./dev/ci/docker_integration_tests.sh [--no-build] [--filter PATTERN]
@@ -10,8 +11,7 @@
 #
 # The image runs as nobody by default.  test_cases/ is mounted read-only;
 # the verify command writes its working copy to /tmp inside the container
-# (an ephemeral tmpfs), so no host files are written and no --user override
-# is needed.
+# (an ephemeral tmpfs), so no host files are written.
 
 set -euo pipefail
 
@@ -44,66 +44,67 @@ if [[ $DO_BUILD -eq 1 ]]; then
 fi
 
 # ---------------------------------------------------------------------------
-# Discover test cases
+# Run all tests inside a single container
 # ---------------------------------------------------------------------------
 TEST_CASES_DIR="$PROJECT_ROOT/test_cases"
+
+# Script executed inside the container.  Outputs structured lines:
+#   PASS <secs> <rel_path>
+#   FAIL <secs> <rel_path>
+#   ERR  <text>            (stderr lines for the preceding FAIL)
+#
+# Single-quoted so $-signs are passed literally to the container's bash.
+# shellcheck disable=SC2016
+INNER_SCRIPT='
+set -euo pipefail
+while IFS= read -r -d "" f; do
+    dir="$(dirname "$f")"
+    case "$(basename "$dir")" in actual*) continue ;; esac
+    rel="${f#/test_cases/}"
+    if [ -n "${FILTER_PAT:-}" ] && ! echo "$rel" | grep -qF "$FILTER_PAT"; then
+        continue
+    fi
+    t=$SECONDS
+    if fastqrab verify "$f" --unsafe-call-prep-sh >/tmp/t_out 2>/tmp/t_err; then
+        printf "PASS %d %s\n" "$((SECONDS - t))" "$rel"
+    else
+        printf "FAIL %d %s\n" "$((SECONDS - t))" "$rel"
+        sed "s/^/ERR /" /tmp/t_err
+    fi
+done < <(find /test_cases -name "input*.toml" -print0 | sort -z)
+'
 
 PASS=0
 FAIL=0
 declare -a FAILURES=()
-# Timing log: lines of "<seconds> <rel_toml>" accumulated for the slowest-10 report.
 TIMING_LOG=""
 
-# We iterate over sorted input*.toml files, skipping actual* directories.
-while IFS= read -r -d '' input_toml; do
-    case_dir="$(dirname "$input_toml")"
-    case_basename="$(basename "$case_dir")"
-
-    # Skip directories that are themselves output dirs from a previous run
-    if [[ "$case_basename" == actual* ]]; then
-        continue
-    fi
-
-    # Apply optional filter
-    if [[ -n "$FILTER" ]] && ! echo "$input_toml" | grep -qF "$FILTER"; then
-        continue
-    fi
-
-    rel_toml="${input_toml#"$TEST_CASES_DIR/"}"
-    rel_dir="${case_dir#"$TEST_CASES_DIR/"}"
-    input_name="$(basename "$input_toml")"
-
-    printf "  %-70s " "$rel_toml"
-
-    t_start=$SECONDS
-
-    # Run fastqrab verify inside the docker container.
-    #   - test_cases/ is mounted read-only; verify copies input files into
-    #     /tmp (tmpfs) and does all writes there.
-    #   - No --output-dir: verify uses a tempdir in /tmp inside the container,
-    #     keeping the host filesystem untouched.
-    #   - --unsafe-call-prep-sh enables prep.sh / post.sh / test.sh execution.
-    if docker run --rm \
-            -v "$TEST_CASES_DIR:/test_cases:ro" \
-            --tmpfs /tmp:mode=1777 \
-            "$IMAGE" \
-            verify "/test_cases/$rel_dir/$input_name" \
-            --unsafe-call-prep-sh \
-            > /tmp/fastqrab_docker_test_stdout.txt 2>/tmp/fastqrab_docker_test_stderr.txt; then
-        elapsed=$(( SECONDS - t_start ))
-        printf "PASS  %3ds\n" "$elapsed"
-        PASS=$((PASS + 1))
-    else
-        elapsed=$(( SECONDS - t_start ))
-        printf "FAIL  %3ds\n" "$elapsed"
-        FAIL=$((FAIL + 1))
-        FAILURES+=("$rel_toml")
-        echo "    stdout: $(cat /tmp/fastqrab_docker_test_stdout.txt)"
-        echo "    stderr: $(cat /tmp/fastqrab_docker_test_stderr.txt)"
-    fi
-
-    TIMING_LOG="${TIMING_LOG}${elapsed} ${rel_toml}"$'\n'
-done < <(find "$TEST_CASES_DIR" -name "input*.toml" -print0 | sort -z)
+while IFS= read -r line; do
+    case "$line" in
+        PASS\ *)
+            read -r _ secs rel_toml <<< "$line"
+            printf "  %-70s PASS  %3ds\n" "$rel_toml" "$secs"
+            PASS=$((PASS + 1))
+            TIMING_LOG="${TIMING_LOG}${secs} ${rel_toml}"$'\n'
+            ;;
+        FAIL\ *)
+            read -r _ secs rel_toml <<< "$line"
+            printf "  %-70s FAIL  %3ds\n" "$rel_toml" "$secs"
+            FAIL=$((FAIL + 1))
+            FAILURES+=("$rel_toml")
+            TIMING_LOG="${TIMING_LOG}${secs} ${rel_toml}"$'\n'
+            ;;
+        ERR\ *)
+            echo "    ${line#ERR }"
+            ;;
+    esac
+done < <(docker run --rm \
+    -v "$TEST_CASES_DIR:/test_cases:ro" \
+    --tmpfs /tmp:mode=1777 \
+    -e FILTER_PAT="${FILTER}" \
+    --entrypoint /bin/bash \
+    "$IMAGE" \
+    -c "$INNER_SCRIPT")
 
 # ---------------------------------------------------------------------------
 # Summary
