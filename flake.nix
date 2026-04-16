@@ -111,12 +111,14 @@
               pkgs.bash
               pkgs.glibc
               pkgs.rapidgzip
+              pkgs.dockerTools.fakeNss
               binary
             ];
             config = {
               Env = [ "PATH=/usr/local/bin:/bin" ];
               Entrypoint = [ "/bin/fastqrab" ];
               WorkingDir = "/work";
+              User = "nobody";
             };
           };
         packages.check = naersk-lib.buildPackage {

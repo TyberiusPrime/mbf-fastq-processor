@@ -8,10 +8,10 @@
 #   --no-build     Skip nix build / docker load (use already-loaded image)
 #   --filter PAT   Only run test cases whose path matches PAT (grep -F)
 #
-# The script mounts test_cases/ read-write into the container so the verify
-# command can write its temporary working directory there.  Each test case
-# gets its own subdirectory under test_cases/<path>/actual_docker/ so that
-# docker runs do not collide with normal cargo-test runs that use actual/.
+# The image runs as nobody by default.  test_cases/ is mounted read-only;
+# the verify command writes its working copy to /tmp inside the container
+# (an ephemeral tmpfs), so no host files are written and no --user override
+# is needed.
 
 set -euo pipefail
 
@@ -50,8 +50,9 @@ TEST_CASES_DIR="$PROJECT_ROOT/test_cases"
 
 PASS=0
 FAIL=0
-SKIP=0
 declare -a FAILURES=()
+# Timing log: lines of "<seconds> <rel_toml>" accumulated for the slowest-10 report.
+TIMING_LOG=""
 
 # We iterate over sorted input*.toml files, skipping actual* directories.
 while IFS= read -r -d '' input_toml; do
@@ -72,41 +73,36 @@ while IFS= read -r -d '' input_toml; do
     rel_dir="${case_dir#"$TEST_CASES_DIR/"}"
     input_name="$(basename "$input_toml")"
 
-    # Use a separate output dir so we don't stomp on local cargo-test runs
-    output_dir="$case_dir/actual_docker"
-
     printf "  %-70s " "$rel_toml"
 
+    t_start=$SECONDS
+
     # Run fastqrab verify inside the docker container.
-    #   - Mount the entire test_cases tree so relative references between
-    #     test cases (symlinks, shared sample data) work correctly.
-    #   - Pass --output-dir pointing at the per-test actual_docker/ dir on
-    #     the mounted volume so the verify command can write there.
-    #   - --unsafe-call-prep-sh enables prep.sh / post.sh / test.sh
-    #     execution.  These scripts require bash; the docker image ships
-    #     busybox which provides /bin/bash (as an ash alias).  Tests that
-    #     need tools not present in the minimal image may fail — that is
-    #     expected and useful signal.
+    #   - test_cases/ is mounted read-only; verify copies input files into
+    #     /tmp (tmpfs) and does all writes there.
+    #   - No --output-dir: verify uses a tempdir in /tmp inside the container,
+    #     keeping the host filesystem untouched.
+    #   - --unsafe-call-prep-sh enables prep.sh / post.sh / test.sh execution.
     if docker run --rm \
-            -v "$TEST_CASES_DIR:/test_cases" \
-            --tmpfs /tmp \
-            --user "$(id -u):$(id -g)" \
+            -v "$TEST_CASES_DIR:/test_cases:ro" \
+            --tmpfs /tmp:mode=1777 \
             "$IMAGE" \
             verify "/test_cases/$rel_dir/$input_name" \
-            --output-dir "/test_cases/$rel_dir/actual_docker" \
             --unsafe-call-prep-sh \
             > /tmp/fastqrab_docker_test_stdout.txt 2>/tmp/fastqrab_docker_test_stderr.txt; then
-        echo "PASS"
+        elapsed=$(( SECONDS - t_start ))
+        printf "PASS  %3ds\n" "$elapsed"
         PASS=$((PASS + 1))
-        # Clean up the actual_docker dir on success to avoid clutter
-        rm -rf "$output_dir"
     else
-        echo "FAIL"
+        elapsed=$(( SECONDS - t_start ))
+        printf "FAIL  %3ds\n" "$elapsed"
         FAIL=$((FAIL + 1))
         FAILURES+=("$rel_toml")
         echo "    stdout: $(cat /tmp/fastqrab_docker_test_stdout.txt)"
         echo "    stderr: $(cat /tmp/fastqrab_docker_test_stderr.txt)"
     fi
+
+    TIMING_LOG="${TIMING_LOG}${elapsed} ${rel_toml}"$'\n'
 done < <(find "$TEST_CASES_DIR" -name "input*.toml" -print0 | sort -z)
 
 # ---------------------------------------------------------------------------
@@ -114,8 +110,14 @@ done < <(find "$TEST_CASES_DIR" -name "input*.toml" -print0 | sort -z)
 # ---------------------------------------------------------------------------
 echo ""
 echo "========================================"
-echo "Results: $PASS passed, $FAIL failed, $SKIP skipped"
+echo "Results: $PASS passed, $FAIL failed"
 echo "========================================"
+
+echo ""
+echo "Slowest 10 tests:"
+echo "$TIMING_LOG" | sort -rn | head -10 | while read -r secs name; do
+    printf "  %3ds  %s\n" "$secs" "$name"
+done
 
 if [[ ${#FAILURES[@]} -gt 0 ]]; then
     echo ""
