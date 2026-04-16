@@ -1,0 +1,26 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[output]
+    prefix = 'output'
+    format = 'fastq'
+    compression = 'raw'
+
+[[step]]
+    action = 'ExtractRegion'
+    source = "read1"
+    anchor = "start"
+    start = 0
+    length = 50
+    out_label = 'query_seq'
+
+[[step]]
+    action = 'AssignToReference'
+    in_label = 'query_seq'
+    out_label = 'ref_name'
+    reference = 'reference.fa'
+    max_hamming_distance = 2
+
+[[step]]
+    action = 'StoreTagInComment'
+    in_label = 'ref_name'

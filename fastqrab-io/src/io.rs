@@ -93,3 +93,21 @@ pub fn apply_to_read_sequences(
         use_rapidgzip,
     )
 }
+
+/// Given a FASTA or FASTQ file or BAM file, run a callback on each read's (name, sequence) pair.
+/// For FASTA, the name is the record id (and description if present), without the leading `>`.
+pub fn apply_to_read_names_and_sequences(
+    filename: impl AsRef<Path>,
+    func: &mut impl FnMut(&[u8], &[u8]),
+    use_rapidgzip: bool,
+) -> Result<()> {
+    apply_to_read(
+        filename,
+        &mut |block: &Vec<u8>, read: &FastQRead| {
+            func(read.name.get(block), read.seq.get(block));
+        },
+        true,
+        true,
+        use_rapidgzip,
+    )
+}

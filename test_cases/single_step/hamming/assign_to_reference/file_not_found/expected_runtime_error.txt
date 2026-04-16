@@ -1,0 +1,5 @@
+Error in transform initalization. Index 1: AssignToReference(AssignToReference { in_label: Normal("query_seq"), out_label: Normal("ref_name"), reference: "reference.fa", reference_read_comment_character: Some(32), max_hamming_distance: 0, seq_to_name: {}, resonator: None })
+
+Caused by:
+    0: Could not open file "reference.fa"
+    1: error opening file "reference.fa": No such file or directory (os error 2)

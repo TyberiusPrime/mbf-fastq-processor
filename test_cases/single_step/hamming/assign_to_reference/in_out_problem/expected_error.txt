@@ -1,0 +1,23 @@
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+20 │ [[step]]
+21 │     action = 'AssignToReference'
+   ┆              ─────────┬─────────
+   ┆                       │
+   ┆                       ╰────────── In this step
+22 │     in_label = 'query_seq'
+   ┆                ─────┬─────
+   ┆                     │
+   ┆                     ╰────── The same as out_label
+23 │     out_label = 'query_seq'
+   ┆                 ─────┬─────
+   ┆                      │
+   ┆                      ╰────── The same as in_label
+───╯
+Hint: Use different tag names for in_label and out_label.
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/AssignToReference
+      Or run: `fastqrab template AssignToReference` for more information.
+
+

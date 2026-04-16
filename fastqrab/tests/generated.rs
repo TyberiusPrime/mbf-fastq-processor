@@ -8464,6 +8464,101 @@ fn test_cases_x_single_step_x_forget_all_tags() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_hamming_x_assign_to_reference_x_basic() {
+    println!("Test case is in: test_cases/single_step/hamming/assign_to_reference/basic");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/hamming/assign_to_reference/basic"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_hamming_x_assign_to_reference_x_duplicate_reference() {
+    println!(
+        "Test case is in: test_cases/single_step/hamming/assign_to_reference/duplicate_reference"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/hamming/assign_to_reference/duplicate_reference",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_hamming_x_assign_to_reference_x_fuzzy() {
+    println!("Test case is in: test_cases/single_step/hamming/assign_to_reference/fuzzy");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/hamming/assign_to_reference/fuzzy"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_hamming_x_assign_to_reference_x_in_out_problem() {
+    println!("Test case is in: test_cases/single_step/hamming/assign_to_reference/in_out_problem");
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/hamming/assign_to_reference/in_out_problem",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_hamming_x_assign_to_reference_x_no_match() {
+    println!("Test case is in: test_cases/single_step/hamming/assign_to_reference/no_match");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/hamming/assign_to_reference/no_match"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_hamming_x_assign_to_reference_x_reference_not_enough_hamming_distance()
+ {
+    println!(
+        "Test case is in: test_cases/single_step/hamming/assign_to_reference/reference_not_enough_hamming_distance"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/hamming/assign_to_reference/reference_not_enough_hamming_distance",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_hamming_x_assign_to_reference_x_unequal_len_references() {
+    println!(
+        "Test case is in: test_cases/single_step/hamming/assign_to_reference/unequal_len_references"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/hamming/assign_to_reference/unequal_len_references",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_hamming_x_assign_to_reference_x_unique() {
+    println!("Test case is in: test_cases/single_step/hamming/assign_to_reference/unique");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/hamming/assign_to_reference/unique"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_hamming_x_barcodes_not_found() {
     println!("Test case is in: test_cases/single_step/hamming/barcodes_not_found");
     run_test(

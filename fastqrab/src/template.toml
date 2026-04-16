@@ -565,6 +565,20 @@
 #    comment_separator = '|' # (optional) char to separate comments
 #    region_separator = '_' # (optional) char to separate regions in a tag, if it has multiple
 
+# ==== AssignToReference ====
+## Assign each query sequence to the closest entry in a named reference database.
+## The reference is a FASTA or FASTQ file (optionally compressed).
+## The matched reference name is stored as a string tag.
+## When no entry falls within max_hamming_distance the tag is set to Missing.
+#
+# [[step]]
+#    action = "AssignToReference"
+#    in_label = "query_seq"   # tag holding the query (String or Location)
+#    out_label = "ref_name"   # output string tag with the matched reference name
+#    reference = "reference.fa"   # FASTA/FASTQ reference file
+#    max_hamming_distance = 2     # 0 for exact match only
+
+
 # ==== HammingCorrect ====
 ## Correct a tag to one of a predefined set of 'barcodes' using closest hamming distance.
 #

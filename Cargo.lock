@@ -190,6 +190,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "63044e1ae8e69f3b5a92c736ca6269b8d12fa7efe39bf34ddb06d102cf0e2cab"
 dependencies = [
  "memchr",
+ "regex-automata",
  "serde",
 ]
 
@@ -735,6 +736,7 @@ dependencies = [
  "fastqrab-config",
  "fastqrab-dna",
  "fastqrab-io",
+ "hamming-resonate",
  "indexmap",
  "memchr",
  "mutants 0.0.3",
@@ -916,6 +918,17 @@ dependencies = [
  "cfg-if",
  "crunchy",
  "zerocopy",
+]
+
+[[package]]
+name = "hamming-resonate"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "08243f33c86a72677eec020f80f525f6bc99c4e10d8b44291f49368d41545105"
+dependencies = [
+ "bstr",
+ "rayon",
+ "thiserror 2.0.18",
 ]
 
 [[package]]

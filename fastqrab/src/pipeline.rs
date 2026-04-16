@@ -423,7 +423,12 @@ impl RunStage0 {
                             last_demultiplex_info,
                             allow_overwrite,
                         )
-                        .context("Transform initialize failed")?
+                        .with_context(|| {
+                            format!(
+                                "Error in transform initalization. Index {index}: {:?}",
+                                stage.transformation
+                            )
+                        })?
                 };
                 #[allow(clippy::cast_precision_loss)]
                 if let Some(new_demultiplex_barcodes) = new_demultiplex_barcodes {

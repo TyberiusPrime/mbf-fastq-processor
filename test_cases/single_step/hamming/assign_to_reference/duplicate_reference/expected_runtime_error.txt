@@ -1,0 +1,4 @@
+Caused by:
+    AssignToReference: reference file 'reference.fa' contains duplicate sequences.
+    This is not supported, check your input.
+    Duplicated sequences: ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTAC (2 times)

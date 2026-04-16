@@ -89,6 +89,12 @@ fn benchmark_key_steps(c: &mut Criterion) {
         .unwrap()
         .join("test_cases/sample_data/fasta/input_kmers.fa");
     let str_kmer_file = kmer_file.to_string_lossy();
+    let reference_file = std::env::current_dir()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("test_cases/sample_data/fasta/input_reference_50mers.fa");
+    let str_reference_file = reference_file.to_string_lossy();
     let benchmarks = vec![
         BenchmarkConfig::new(
             "Progress",
@@ -644,6 +650,30 @@ fn benchmark_key_steps(c: &mut Criterion) {
     action = "FilterSample"
     p= 0.10
     seed = 42"#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "AssignToReference",
+            &format!(
+                r#"[[step]]
+    action = "ExtractRegion"
+    segment = "read1"
+    start = 0
+    length = 50
+    out_label = "query_seq"
+    anchor = "Start"
+
+[[step]]
+    action = "AssignToReference"
+    in_label = "query_seq"
+    out_label = "ref_name"
+    reference = "{str_reference_file}"
+    max_hamming_distance = 2
+
+[[step]]
+    action = "ForgetAllTags""#
+            ),
             molecule_count,
             thread_count,
         ),

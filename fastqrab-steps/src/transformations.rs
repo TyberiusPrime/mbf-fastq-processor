@@ -361,6 +361,7 @@ pub enum Transformation {
     //
     Demultiplex(demultiplex::Demultiplex),
     HammingCorrect(hamming_correct::HammingCorrect),
+    AssignToReference(tag::AssignToReference),
     //
     #[schemars(skip)]
     _InternalDelay(Box<_InternalDelay>),

@@ -253,7 +253,7 @@ fn symlink_input_files(toml_value: &toml::Value, toml_dir: &Path, temp_path: &Pa
     if let Some(steps) = toml_value.get("step").and_then(|v| v.as_array()) {
         for step in steps {
             if let Some(step_table) = step.as_table() {
-                for filename_key in ["filename", "filenames", "files"] {
+                for filename_key in ["filename", "filenames", "files", "reference"] {
                     if let Some(value) = step_table.get(filename_key) {
                         create_symlinks_for_files(value, toml_dir, temp_path)?;
                     }
