@@ -1037,6 +1037,14 @@ fn benchmark_key_steps(c: &mut Criterion) {
             molecule_count,
             thread_count,
         ),
+        BenchmarkConfig::new(
+            "ValidateReadNamesPrintable",
+            r#"[[step]]
+    action = "ValidateReadNamesPrintable"
+    "#,
+            molecule_count,
+            thread_count,
+        ),
     ];
 
     for config in benchmarks {

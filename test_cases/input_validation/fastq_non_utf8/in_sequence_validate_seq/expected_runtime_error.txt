@@ -1,0 +1,3 @@
+Error in stage 0: Invalid base found in read named 'Read1'
+Accepted: any of 'AGTC'.
+Read sequence : 'a�TGCE' Bytes: [97, 245, 84, 71, 67, 69]

@@ -3733,7 +3733,7 @@ prefix = 'output'
     let stderr = std::str::from_utf8(&verify_cmd.stderr).unwrap().to_string();
     assert!(!verify_cmd.status.success(), "Verify should fail");
     assert!(
-        stderr.contains(" Invalid base found in read named 'read1', sequence: 'AXGT' "),
+        stderr.contains(" Invalid base found in read named 'read1'"),
         "Should report invalid base, got: {stderr}"
     );
 }

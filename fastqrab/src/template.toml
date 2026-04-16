@@ -793,6 +793,15 @@
 ## Provided for your sanity checking
 
 
+# ==== ValidateReadNamesPrintable ====
+# [[step]]
+#    action = "ValidateReadNamesPrintable"
+
+## Validates that every read name matches [!-?A-~]{1,254} as required by the SAM/BAM spec.
+## This catches control characters, '@', and names that are too long before they cause
+## problems at BAM output time.
+
+
 # == Reporting ==
 
 # ==== Report ====

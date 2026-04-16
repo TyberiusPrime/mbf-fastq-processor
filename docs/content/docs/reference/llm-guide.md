@@ -1387,6 +1387,17 @@ Check all reads have identical length.
 
 **source VALUES**: segment name, `'All'`, `'tag:<name>'`, `'name:<segment>'`
 
+### ValidateReadNamesPrintable
+
+Check read names conform to the SAM/BAM specification (`[!-?A-~]{1,254}`).
+
+```toml
+[[step]]
+    action = 'ValidateReadNamesPrintable'
+```
+
+**USE WHEN**: Writing BAM output and read names may contain control characters, `@`, or other invalid bytes. Catches the problem early with a clear error message.
+
 ## Reporting & Debugging Steps
 
 ### Report

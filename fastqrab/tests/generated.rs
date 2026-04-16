@@ -9760,6 +9760,30 @@ fn test_cases_x_single_step_x_validation_x_validate_phred_fail() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_validation_x_validate_read_names_printable() {
+    println!("Test case is in: test_cases/single_step/validation/validate_read_names_printable");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/validation/validate_read_names_printable"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_validation_x_validate_read_names_printable_fail() {
+    println!(
+        "Test case is in: test_cases/single_step/validation/validate_read_names_printable_fail"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/validation/validate_read_names_printable_fail",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_validation_x_validate_seq() {
     println!("Test case is in: test_cases/single_step/validation/validate_seq");
     run_test(

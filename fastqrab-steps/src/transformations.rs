@@ -280,6 +280,7 @@ pub enum Transformation {
     ValidateQuality(validation::ValidateQuality),
     ValidateName(validation::ValidateName),
     ValidateAllReadsSameLength(validation::ValidateAllReadsSameLength),
+    ValidateReadNamesPrintable(validation::ValidateReadNamesPrintable),
     //
     // // tag based stuff
     ExtractIUPAC(extract::IUPAC),
