@@ -3811,7 +3811,6 @@ fn test_verify_compressed_size_difference_too_large() {
     );
 }
 
-
 /// Wait until `stdout_path` contains at least `run_number` run-completion markers.
 /// Uses the timestamp-bracket suffix " [" to distinguish the header lines from error bodies.
 /// "Processing completed successfully [time]" and "Processing failed [time]" each appear exactly

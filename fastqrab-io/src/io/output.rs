@@ -92,9 +92,18 @@ pub fn write_read_to_bam(
             res = res.context(format!(
                 "The read name exceeded the 254 byte limited of the SAM/BAM spec.\n\
                     Shorten your read name, or set output.bam_comment_separation_char\n\
-                    to split your read name into a name and a 'CO' tag.\n\
+                    to split your read name into a name and a 'CO' tag (which may exceed 254 bytes).\n\
                     Read name (length: {len}): '{name}'",
                 len = name.len()
+            ));
+        }
+        //bam only allows printable characters. [!-?A-~]
+        if name.iter().any(|&c| c < 33 || c > 126 || c == b'@') {
+            res = res.context(format!(
+                "The read name contains characters that are not allowed in the SAM/BAM spec.\n\
+                    Remove or replace these characters, or set output.bam_comment_separation_char\n\
+                    to split your read name into a name and a 'CO' tag (which may contain these characters).\n\
+                    Read name: '{name}'"
             ));
         }
         return res;

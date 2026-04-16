@@ -76,7 +76,11 @@ pub fn bam_read_count_from_index(
                             0
                         });
 
-                    return Some(total_reads.try_into().expect("Read count exceeded usize. Your BAM file must be astronomical."));
+                    return Some(
+                        total_reads.try_into().expect(
+                            "Read count exceeded usize. Your BAM file must be astronomical.",
+                        ),
+                    );
                 }
                 Err(error) => {
                     //treat it as a soft error

@@ -1,0 +1,4 @@
+Error in output thread: The read name contains characters that are not allowed in the SAM/BAM spec.
+Remove or replace these characters, or set output.bam_comment_separation_char
+to split your read name into a name and a 'CO' tag (which may contain these characters).
+Read name: 'Rea	d1'

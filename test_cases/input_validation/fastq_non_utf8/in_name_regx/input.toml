@@ -1,0 +1,19 @@
+[input]
+  read1 = 'input_read1.fq'
+
+[options]
+  buffer_size = 5 # it's allpartial hahaha
+
+[[step]]    
+  action = 'ExtractRegex'
+  source = 'name:read1'
+  query = "(?s-u:.)+" # match any byte
+  out_label = 'tag'
+
+[[step]]
+  action = 'StoreTagInComment'
+  in_label = 'tag'
+
+
+[output]
+  prefix = "output"

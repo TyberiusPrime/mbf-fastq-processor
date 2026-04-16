@@ -73,7 +73,7 @@ impl HistogramData {
             }
             TagValue::Location(hits) => {
                 let s = hits.joined_sequence(Some(b"_"));
-                let s = std::str::from_utf8(&s).unwrap_or("").to_string();
+                let s = String::from_utf8_lossy(&s).to_string();
                 if let HistogramData::String(map) = self {
                     *map.entry(s).or_insert(0) += 1;
                 } else {

@@ -62,7 +62,7 @@ def run_cargo_test() -> int:
 
 
 def find_failed_error_tests(base_dir: Path) -> list:
-    """Return list of (stderr_file, expected_error_file, test_dir) tuples."""
+    """Return list of (stderr_file, expected_file, test_dir) tuples."""
     seen = set()
     results = []
     for stderr_file in sorted(base_dir.rglob("stderr")):
@@ -72,10 +72,12 @@ def find_failed_error_tests(base_dir: Path) -> list:
         test_dir = actual_dir.parent
         if test_dir in seen:
             continue
-        expected_file = test_dir / "expected_error.txt"
-        if expected_file.exists():
-            seen.add(test_dir)
-            results.append((stderr_file, expected_file, test_dir))
+        for candidate in ("expected_error.txt", "expected_runtime_error.txt"):
+            expected_file = test_dir / candidate
+            if expected_file.exists():
+                seen.add(test_dir)
+                results.append((stderr_file, expected_file, test_dir))
+                break
     return results
 
 
@@ -98,13 +100,13 @@ def print_block(label: str, colour: str, text: str, max_lines: int = 60):
             print(f"  {colour}{line}{RESET}")
 
 
-def print_diff(expected: str, actual: str, max_lines: int = 80):
+def print_diff(expected: str, actual: str, expected_filename: str, max_lines: int = 80):
     """Print a unified diff between expected and actual."""
     exp_lines = expected.rstrip().splitlines(keepends=True)
     act_lines = actual.rstrip().splitlines(keepends=True)
     diff = list(difflib.unified_diff(
         exp_lines, act_lines,
-        fromfile="expected_error.txt",
+        fromfile=expected_filename,
         tofile="stderr",
     ))
     print(f"\n{BOLD}── DIFF (expected → actual) ──{RESET}")
@@ -131,17 +133,18 @@ def print_diff(expected: str, actual: str, max_lines: int = 80):
 
 
 def render(expected_content: str, new_content: str,
-           test_dir: Path, idx: int, total: int, diff_mode: bool):
+           test_dir: Path, expected_filename: str, idx: int, total: int, diff_mode: bool):
     """Clear screen and render the current test."""
     sep = "─" * 72
     print(f"\n{BOLD}{sep}{RESET}")
     mode_tag = f"{CYAN}[diff]{RESET}" if diff_mode else f"{DIM}[side-by-side]{RESET}"
     print(f"{BOLD}[{idx}/{total}]{RESET}  {CYAN}{test_dir}{RESET}  {mode_tag}")
     print(sep)
+    label = f"── EXPECTED ({expected_filename}) ──"
     if diff_mode:
-        print_diff(expected_content, new_content)
+        print_diff(expected_content, new_content, expected_filename)
     else:
-        print_block("── EXPECTED (expected_error.txt) ──", YELLOW, expected_content)
+        print_block(label, YELLOW, expected_content)
         print_block("── ACTUAL   (stderr)              ──", GREEN, new_content)
     print(
         f"\n  {BOLD}[a]{RESET} accept  "
@@ -160,9 +163,10 @@ def review(stderr_file: Path, expected_file: Path, test_dir: Path,
     expected_content = expected_file.read_text(encoding="utf-8")
     stderr_content = stderr_file.read_text(encoding="utf-8")
     new_content = extract_error_text(stderr_content)
+    expected_filename = expected_file.name
 
     while True:
-        render(expected_content, new_content, test_dir, idx, total, diff_mode)
+        render(expected_content, new_content, test_dir, expected_filename, idx, total, diff_mode)
         key = get_single_key()
         print(key)
         if key in ("d", "D"):

@@ -1,4 +1,11 @@
-The read name exceeded the 254 byte limited of the SAM/BAM spec.
+Error Details ==
+Error in output thread: The read name exceeded the 254 byte limited of the SAM/BAM spec.
 Shorten your read name, or set output.bam_comment_separation_char
-to split your read name into a name and a 'CO' tag.
+to split your read name into a name and a 'CO' tag (which may exceed 254 bytes).
 Read name (length: 273): '12345678912345678912345678912345678912345678912345678912345678912345678912345678912345678912345678912345678912345678912345678912345678912345678912345678912345678912345678912345678123456789123456789123456789123456789123456789123456789123456789123456789123456789123456_274end'
+
+Caused by:
+    0: Failed to write BAM record
+    1: invalid name
+    2: invalid length: expected 1 <= n <= 254, got 274
+Output pipe closed unexpectedly; terminating coordinator.

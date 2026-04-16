@@ -421,6 +421,16 @@ fn test_cases_x_error_handling_x_bam_x_read_name_exceeds_bam_length_x_with_separ
 }
 
 #[test]
+fn test_cases_x_error_handling_x_bam_x_read_name_non_printable() {
+    println!("Test case is in: test_cases/error_handling/bam/read_name_non_printable");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/bam/read_name_non_printable"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_error_handling_x_declared_tag_an_int() {
     println!("Test case is in: test_cases/error_handling/declared_tag_an_int");
     run_test(
@@ -991,6 +1001,50 @@ fn test_cases_x_input_validation_x_fastq_invalid_bases() {
     println!("Test case is in: test_cases/input_validation/fastq_invalid_bases");
     run_test(
         std::path::Path::new("../test_cases/input_validation/fastq_invalid_bases"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_input_validation_x_fastq_non_utf8_x_in_name() {
+    println!("Test case is in: test_cases/input_validation/fastq_non_utf8/in_name");
+    run_test(
+        std::path::Path::new("../test_cases/input_validation/fastq_non_utf8/in_name"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_input_validation_x_fastq_non_utf8_x_in_name_regx() {
+    println!("Test case is in: test_cases/input_validation/fastq_non_utf8/in_name_regx");
+    run_test(
+        std::path::Path::new("../test_cases/input_validation/fastq_non_utf8/in_name_regx"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_input_validation_x_fastq_non_utf8_x_in_sequence() {
+    println!("Test case is in: test_cases/input_validation/fastq_non_utf8/in_sequence");
+    run_test(
+        std::path::Path::new("../test_cases/input_validation/fastq_non_utf8/in_sequence"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_input_validation_x_fastq_non_utf8_x_in_sequence_validate_seq() {
+    println!(
+        "Test case is in: test_cases/input_validation/fastq_non_utf8/in_sequence_validate_seq"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/input_validation/fastq_non_utf8/in_sequence_validate_seq",
+        ),
         "input.toml",
         1,
     );
