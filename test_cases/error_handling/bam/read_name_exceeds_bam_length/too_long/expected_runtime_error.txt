@@ -8,4 +8,3 @@ Caused by:
     0: Failed to write BAM record
     1: invalid name
     2: invalid length: expected 1 <= n <= 254, got 274
-Output pipe closed unexpectedly; terminating coordinator.

@@ -46,15 +46,15 @@ fi
 echo "Maximum allowed _InternalReadCount: $max_value"
 
 # Extract the actual _InternalReadCount from the "top" section of output.json
-actual_value=$(jq -r '.top._InternalReadCount' output.json)
+actual_value=$(python3 -c "import json; d=json.load(open('output.json')); print(d.get('top', {}).get('_InternalReadCount', 'null'))")
 
 if [[ "$actual_value" == "null" ]]; then
     echo "ERROR: Could not find top._InternalReadCount in output.json" >&2
     echo "Available keys in output.json:"
-    jq -r 'keys[]' output.json
-    if jq -e '.top' output.json >/dev/null; then
+    python3 -c "import json; d=json.load(open('output.json')); print('\n'.join(str(k) for k in d))"
+    if python3 -c "import json,sys; d=json.load(open('output.json')); sys.exit(0 if 'top' in d else 1)"; then
         echo "Keys in .top:"
-        jq -r '.top | keys[]' output.json
+        python3 -c "import json; d=json.load(open('output.json')); print('\n'.join(str(k) for k in d['top']))"
     fi
     exit 1
 fi

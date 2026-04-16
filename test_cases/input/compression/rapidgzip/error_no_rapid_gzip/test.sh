@@ -6,6 +6,25 @@
 PATH=$(echo "$PATH" | tr ':' '\n' | grep -v 'rapidgzip' | tr '\n' ':' | sed 's/:$//')
 export PATH
 
+# When rapidgzip lives directly in a standard bin dir (e.g. /bin/rapidgzip in
+# a docker container) the name-based filter above won't remove it.  Build a
+# shadow directory that contains everything on the current PATH except the
+# rapidgzip binary and use that instead.
+if command -v rapidgzip >/dev/null 2>&1; then
+    _shadow=$(mktemp -d)
+    while IFS= read -r _dir; do
+        [ -d "$_dir" ] || continue
+        for _f in "$_dir"/*; do
+            [ -x "$_f" ] || continue
+            _name=$(basename "$_f")
+            [ "$_name" = "rapidgzip" ] && continue
+            [ -e "$_shadow/$_name" ] || ln -sf "$_f" "$_shadow/$_name"
+        done
+    done <<< "$(echo "$PATH" | tr ':' '\n')"
+    export PATH="$_shadow"
+    echo "shadow path (no rapidgzip): $PATH"
+fi
+
 
 
 # make sure it's not return code 0

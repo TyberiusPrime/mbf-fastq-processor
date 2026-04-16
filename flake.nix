@@ -110,6 +110,7 @@
               pkgs.busybox
               pkgs.bash
               pkgs.glibc
+              pkgs.python3
               pkgs.rapidgzip
               pkgs.dockerTools.fakeNss
               binary

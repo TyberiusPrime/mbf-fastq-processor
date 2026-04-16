@@ -9,9 +9,15 @@
 #   --no-build     Skip nix build / docker load (use already-loaded image)
 #   --filter PAT   Only run test cases whose path matches PAT (grep -F)
 #
-# The image runs as nobody by default.  test_cases/ is mounted read-only;
-# the verify command writes its working copy to /tmp inside the container
-# (an ephemeral tmpfs), so no host files are written.
+# The image runs as nobody by default.  test_cases/ is mounted read-only.
+# The verify command uses --output-dir /test_cases_work/<rel> so its working
+# tree has the same path depth as the real test_cases tree.  This matters for
+# test cases whose toml references input files via relative paths that escape
+# the test case directory (e.g. '../../../../sample_data/…'): verify.rs calls
+# create_dir_all on temp_path.join(that_relative_path), which traverses '..'
+# literally.  With a shallow /tmp temp dir the traversal exits the tmpfs and
+# hits the read-only container root.  Anchoring the output dir at the right
+# depth keeps the escaped paths inside the writable /test_cases_work tmpfs.
 
 set -euo pipefail
 
@@ -60,12 +66,18 @@ set -euo pipefail
 while IFS= read -r -d "" f; do
     dir="$(dirname "$f")"
     case "$(basename "$dir")" in actual*) continue ;; esac
+    # When a test directory has test.sh, only run input.toml (not input2.toml etc.)
+    if [ -f "$dir/test.sh" ] && [ "$(basename "$f")" != "input.toml" ]; then
+        continue
+    fi
     rel="${f#/test_cases/}"
     if [ -n "${FILTER_PAT:-}" ] && ! echo "$rel" | grep -qF "$FILTER_PAT"; then
         continue
     fi
     t=$SECONDS
-    if fastqrab verify "$f" --unsafe-call-prep-sh >/tmp/t_out 2>/tmp/t_err; then
+    rel_dir="$(dirname "$rel")"
+    if fastqrab verify "$f" --output-dir "/test_cases_work/$rel_dir/actual_docker" \
+            --unsafe-call-prep-sh >/tmp/t_out 2>/tmp/t_err; then
         printf "PASS %d %s\n" "$((SECONDS - t))" "$rel"
     else
         printf "FAIL %d %s\n" "$((SECONDS - t))" "$rel"
@@ -100,7 +112,9 @@ while IFS= read -r line; do
     esac
 done < <(docker run --rm \
     -v "$TEST_CASES_DIR:/test_cases:ro" \
+    -v "$PROJECT_ROOT/cookbooks:/cookbooks:ro" \
     --tmpfs /tmp:mode=1777 \
+    --tmpfs /test_cases_work:mode=1777 \
     -e FILTER_PAT="${FILTER}" \
     --entrypoint /bin/bash \
     "$IMAGE" \
