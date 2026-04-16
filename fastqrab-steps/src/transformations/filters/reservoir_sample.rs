@@ -74,6 +74,7 @@ impl Step for ReservoirSample {
     ) -> anyhow::Result<Option<DemultiplexBarcodes>> {
         use rand_chacha::rand_core::SeedableRng;
         let extended_seed = extend_seed(self.seed);
+        assert!(self.rng.is_none(), "init called twice");
         self.rng = Some(Arc::new(Mutex::new(Some(
             rand_chacha::ChaChaRng::from_seed(extended_seed),
         ))));
