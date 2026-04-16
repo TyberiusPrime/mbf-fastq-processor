@@ -28,6 +28,7 @@ Session.vim
 .aider*
 tests/failures
 **/actual
+**/actual_docker
 
 # Generated documentation content
 docs/content/docs/how-to/cookbooks/[^_]*.md

@@ -37,6 +37,21 @@
         };
 
         bacon = pkgs.bacon;
+
+        # Source filtered for the docker binary build: strips directories that
+        # are not needed to compile the Rust workspace (dev tooling, test data,
+        # documentation, build artefacts).  cookbooks/ must stay because it is
+        # embedded via include_str!().
+        dockerSrc = pkgs.lib.cleanSourceWith {
+          src = ./.;
+          filter = path: type:
+            let
+              baseName = baseNameOf (toString path);
+              excludedDirs = [ "dev" "test_cases" "docs" "target" "target_claude" ".git" ".jj" ".github" ];
+            in
+            !(type == "directory" && builtins.elem baseName excludedDirs);
+          name = "fastqrab-docker-src";
+        };
       in
       rec {
         # `nix build`
@@ -64,7 +79,7 @@
         packages.fastqrab_other_linux =
           (naersk-lib.buildPackage {
             pname = "fastqrab";
-            root = ./.;
+            root = dockerSrc;
             nativeBuildInputs = with pkgs; [
               pkg-config
               cmake
@@ -93,7 +108,9 @@
             # provide a minimal base with glibc and a busybox shell
             contents = [
               pkgs.busybox
+              pkgs.bash
               pkgs.glibc
+              pkgs.rapidgzip
               binary
             ];
             config = {
