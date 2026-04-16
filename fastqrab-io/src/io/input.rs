@@ -328,30 +328,18 @@ fn open_stdin() -> Result<ex::fs::File> {
 
 #[must_use]
 pub fn find_rapidgzip_in_path() -> Option<PathBuf> {
-    // I know, which isn't posix
-    let mut cmd = Command::new("which");
-    cmd.arg("rapidgzip");
-    let output = cmd.output().ok()?;
-    if output.status.success() {
-        let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
-        Some(PathBuf::from(path))
-    } else {
-        //if not on path, but this is a nix binary, refer to the nix store one our flake added for
-        let nix_rapidgzip = option_env!("NIX_RAPIDGZIP");
-        nix_rapidgzip.and_then(|p| {
-            // cov:excl-start
-            // does not happen in testing
-            let path = PathBuf::from(p);
-            if path.exists() {
-                Some(path)
-            } else {
-                // probably an os without which command, such as windows. Then we likely don't have
-                // rapidgzip either?
-                None
-            }
-        })
-        // cov:excl-stop
+    if let Ok(path) = which::which("rapidgzip") {
+        return Some(path);
     }
+    //if not on path, but this is a nix binary, refer to the nix store one our flake added for
+    let nix_rapidgzip = option_env!("NIX_RAPIDGZIP");
+    nix_rapidgzip.and_then(|p| {
+        // cov:excl-start
+        // does not happen in testing
+        let path = PathBuf::from(p);
+        if path.exists() { Some(path) } else { None }
+        // cov:excl-stop
+    })
 }
 
 /// Spawns a rapidgzip process to decompress a gzipped file

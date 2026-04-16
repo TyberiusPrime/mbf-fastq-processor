@@ -72,6 +72,8 @@
     typed_floats = "1.0.7"
 	zstd = { version = "0.13.2", default-features = false }
 
+    which = "7"
+
     fastqrab-config= {path="fastqrab-config"}
     fastqrab-dna = {path="fastqrab-dna"}
     fastqrab-io = {path="fastqrab-io"}

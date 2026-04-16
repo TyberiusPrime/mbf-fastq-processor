@@ -32,6 +32,7 @@ exclude.workspace = true
   sha2 = {workspace = true}
   tempfile = {workspace = true}
   toml-pretty-deser = {workspace = true}
+  which = {workspace = true}
   zstd = {workspace = true}
 
 [lints]
