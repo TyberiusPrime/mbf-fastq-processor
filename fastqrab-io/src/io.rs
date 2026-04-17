@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use std::path::Path;
 
 use crate::get_number_of_cores;
@@ -25,13 +25,13 @@ pub mod reads;
 /// Given a fastq or bam file, run a call back on all reads
 fn apply_to_read(
     filename: impl AsRef<Path>,
-    func: &mut impl FnMut(&Vec<u8>, &FastQRead),
+    func: &mut impl FnMut(&Vec<u8>, &FastQRead) -> Result<()>,
     include_mapped: bool,
     include_unmapped: bool,
     use_rapidgzip: bool,
 ) -> Result<()> {
     let filename = filename.as_ref();
-    let input_file = open_input_file(filename)?;
+    let input_file = open_input_file(filename).context("open_input_file")?;
     let options = InputOptions {
         fasta_fake_quality: Some(33),
         bam_include_mapped: Some(include_mapped),
@@ -42,16 +42,18 @@ fn apply_to_read(
         threads_per_segment: Some(get_number_of_cores()), // at this point, we're ready to multicore this
                                                           // hard.
     };
-    let mut parser = input_file.get_parser(
-        default_block_size(),
-        default_buffer_size(),
-        ThreadCount(1),
-        &options,
-    )?; // cov:excl-line
+    let mut parser = input_file
+        .get_parser(
+            default_block_size(),
+            default_buffer_size(),
+            ThreadCount(1),
+            &options,
+        )
+        .context("Getting parser")?; // cov:excl-line
     loop {
         let res = parser.parse()?;
         for read in res.fastq_block.entries {
-            func(&res.fastq_block.block, &read);
+            func(&res.fastq_block.block, &read)?;
         }
         if res.was_final {
             break;
@@ -63,7 +65,7 @@ fn apply_to_read(
 
 pub fn apply_to_read_names(
     filename: impl AsRef<Path>,
-    func: &mut impl FnMut(&[u8]),
+    func: &mut impl FnMut(&[u8]) -> Result<()>,
     include_mapped: bool,
     include_unmapped: bool,
     use_rapidgzip: bool,
@@ -80,7 +82,7 @@ pub fn apply_to_read_names(
 /// Given a fastq or bam file, run a call back on all read sequences
 pub fn apply_to_read_sequences(
     filename: impl AsRef<Path>,
-    func: &mut impl FnMut(&[u8]),
+    func: &mut impl FnMut(&[u8]) -> Result<()>,
     include_mapped: bool,
     include_unmapped: bool,
     use_rapidgzip: bool,
@@ -98,14 +100,12 @@ pub fn apply_to_read_sequences(
 /// For FASTA, the name is the record id (and description if present), without the leading `>`.
 pub fn apply_to_read_names_and_sequences(
     filename: impl AsRef<Path>,
-    func: &mut impl FnMut(&[u8], &[u8]),
+    func: &mut impl FnMut(&[u8], &[u8]) -> Result<()>,
     use_rapidgzip: bool,
 ) -> Result<()> {
     apply_to_read(
         filename,
-        &mut |block: &Vec<u8>, read: &FastQRead| {
-            func(read.name.get(block), read.seq.get(block));
-        },
+        &mut |block: &Vec<u8>, read: &FastQRead| func(read.name.get(block), read.seq.get(block)),
         true,
         true,
         use_rapidgzip,

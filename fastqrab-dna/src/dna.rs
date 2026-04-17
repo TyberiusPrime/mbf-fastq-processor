@@ -2,7 +2,7 @@ use bio::alignment::{
     AlignmentOperation,
     pairwise::{Aligner, MIN_SCORE, Scoring},
 };
-use bstr::{BStr, BString, ByteVec};
+use bstr::{BStr, BString, ByteSlice, ByteVec};
 use schemars::JsonSchema;
 use std::borrow::Cow;
 use toml_pretty_deser::prelude::*;
@@ -608,7 +608,7 @@ fn positions_compatible(c1: u8, c2: u8) -> bool {
 ///
 /// # panics
 /// on non-iupac bases. it's up to the upstream validation
-/// to prevent that from ahppening.
+/// to prevent that from happening.
 fn iupac_to_bases(c: u8) -> &'static [u8] {
     match c.to_ascii_uppercase() {
         b'A' => b"A",
@@ -617,7 +617,7 @@ fn iupac_to_bases(c: u8) -> &'static [u8] {
         b'T' | b'U' => b"T",
         b'R' => b"AG",
         b'Y' => b"CT",
-        b'S' => b"GC",
+        b'S' => b"CG",
         b'W' => b"AT",
         b'K' => b"GT",
         b'M' => b"AC",
@@ -628,6 +628,60 @@ fn iupac_to_bases(c: u8) -> &'static [u8] {
         b'N' => b"ACGT",
         b'_' => b"", // treat _ as ignored // cov:excl-line
         _ => panic!("non iupac string passed to iupac_to_bases"),
+    }
+}
+
+pub struct IupacExpander {
+    positions: Vec<&'static [u8]>,
+    indices: Option<Vec<usize>>,
+}
+
+impl IupacExpander {
+    pub fn new(iupac: &BStr) -> Self {
+        let positions: Vec<&'static [u8]> = iupac
+            .bytes()
+            .map(iupac_to_bases)
+            .filter(|bases| !bases.is_empty())
+            .collect();
+
+        let indices = Some(vec![0usize; positions.len()]);
+        Self { positions, indices }
+    }
+
+    pub fn count_sequences(&self) -> usize {
+        self.positions.iter().map(|p| p.len()).product()
+    }
+
+    fn advance(&mut self) -> bool {
+        let indices = self.indices.as_mut().unwrap();
+        for i in (0..indices.len()).rev() {
+            indices[i] += 1;
+            if indices[i] < self.positions[i].len() {
+                return true;
+            }
+            indices[i] = 0;
+        }
+        false
+    }
+}
+
+impl Iterator for IupacExpander {
+    type Item = BString;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let indices = self.indices.as_ref()?;
+
+        let seq: BString = indices
+            .iter()
+            .zip(&self.positions)
+            .map(|(&i, bases)| bases[i])
+            .collect();
+
+        if !self.advance() {
+            self.indices = None;
+        }
+
+        Some(seq)
     }
 }
 
@@ -1147,5 +1201,93 @@ mod test {
     #[should_panic(expected = "non iupac string passed to iupac_to_bases")]
     fn test_iupac_to_bases_panics_on_non_iupac() {
         iupac_to_bases(b'X');
+    }
+
+    #[test]
+    fn test_iupac_expander() {
+        assert_eq!(
+            IupacExpander::new(b"A".into()).collect::<Vec<BString>>(),
+            vec![BString::from(b"A")]
+        );
+        assert_eq!(
+            IupacExpander::new(b"G".into()).collect::<Vec<BString>>(),
+            vec![BString::from(b"G")]
+        );
+
+        assert_eq!(
+            IupacExpander::new(b"C".into()).collect::<Vec<BString>>(),
+            vec![BString::from(b"C")]
+        );
+
+        assert_eq!(
+            IupacExpander::new(b"T".into()).collect::<Vec<BString>>(),
+            vec![BString::from(b"T")]
+        );
+
+        assert_eq!(
+            IupacExpander::new(b"N".into()).collect::<Vec<BString>>(),
+            vec![
+                BString::from(b"A"),
+                BString::from(b"C"),
+                BString::from(b"G"),
+                BString::from(b"T"),
+            ]
+        );
+        assert_eq!(
+            IupacExpander::new(b"AGTRA".into()).collect::<Vec<BString>>(),
+            vec![BString::from(b"AGTAA"), BString::from(b"AGTGA"),]
+        );
+        assert_eq!(
+            IupacExpander::new(b"NAGTRA".into()).collect::<Vec<BString>>(),
+            vec![
+                BString::from(b"AAGTAA"),
+                BString::from(b"AAGTGA"),
+                BString::from(b"CAGTAA"),
+                BString::from(b"CAGTGA"),
+                BString::from(b"GAGTAA"),
+                BString::from(b"GAGTGA"),
+                BString::from(b"TAGTAA"),
+                BString::from(b"TAGTGA"),
+            ]
+        );
+        assert_eq!(
+            IupacExpander::new(b"VAGTRA".into()).collect::<Vec<BString>>(),
+            vec![
+                BString::from(b"AAGTAA"),
+                BString::from(b"AAGTGA"),
+                BString::from(b"CAGTAA"),
+                BString::from(b"CAGTGA"),
+                BString::from(b"GAGTAA"),
+                BString::from(b"GAGTGA"),
+                // BString::from(b"TAGTAA"),
+                // BString::from(b"TAGTGA"),
+            ]
+        );
+        assert_eq!(
+            IupacExpander::new(b"SAGTRA".into()).collect::<Vec<BString>>(),
+            vec![
+                // BString::from(b"AAGTAA"),
+                // BString::from(b"AAGTGA"),
+                BString::from(b"CAGTAA"),
+                BString::from(b"CAGTGA"),
+                BString::from(b"GAGTAA"),
+                BString::from(b"GAGTGA"),
+                // BString::from(b"TAGTAA"),
+                // BString::from(b"TAGTGA"),
+            ]
+        );
+        assert_eq!(
+            IupacExpander::new(b"_S_AGT__RA".into()).collect::<Vec<BString>>(),
+            vec![
+                // BString::from(b"AAGTAA"),
+                // BString::from(b"AAGTGA"),
+                BString::from(b"CAGTAA"),
+                BString::from(b"CAGTGA"),
+                BString::from(b"GAGTAA"),
+                BString::from(b"GAGTGA"),
+                // BString::from(b"TAGTAA"),
+                // BString::from(b"TAGTGA"),
+            ]
+        );
     }
 }

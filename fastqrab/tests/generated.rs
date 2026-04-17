@@ -8474,6 +8474,16 @@ fn test_cases_x_single_step_x_hamming_x_assign_to_reference_x_basic() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_hamming_x_assign_to_reference_x_basic_bam() {
+    println!("Test case is in: test_cases/single_step/hamming/assign_to_reference/basic_bam");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/hamming/assign_to_reference/basic_bam"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_hamming_x_assign_to_reference_x_duplicate_reference() {
     println!(
         "Test case is in: test_cases/single_step/hamming/assign_to_reference/duplicate_reference"
@@ -8481,6 +8491,18 @@ fn test_cases_x_single_step_x_hamming_x_assign_to_reference_x_duplicate_referenc
     run_test(
         std::path::Path::new(
             "../test_cases/single_step/hamming/assign_to_reference/duplicate_reference",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_hamming_x_assign_to_reference_x_file_not_found() {
+    println!("Test case is in: test_cases/single_step/hamming/assign_to_reference/file_not_found");
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/hamming/assign_to_reference/file_not_found",
         ),
         "input.toml",
         1,
@@ -8553,6 +8575,30 @@ fn test_cases_x_single_step_x_hamming_x_assign_to_reference_x_unique() {
     println!("Test case is in: test_cases/single_step/hamming/assign_to_reference/unique");
     run_test(
         std::path::Path::new("../test_cases/single_step/hamming/assign_to_reference/unique"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_hamming_x_assign_to_reference_x_unreadable_input_file() {
+    println!(
+        "Test case is in: test_cases/single_step/hamming/assign_to_reference/unreadable_input_file"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/hamming/assign_to_reference/unreadable_input_file",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_hamming_x_assign_to_reference_x_wrong_nesting() {
+    println!("Test case is in: test_cases/single_step/hamming/assign_to_reference/wrong_nesting");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/hamming/assign_to_reference/wrong_nesting"),
         "input.toml",
         1,
     );

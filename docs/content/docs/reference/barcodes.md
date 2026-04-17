@@ -6,8 +6,11 @@ title: "Barcodes section"
 # `[barcodes.*]` section
 
 Barcode tables supply the sequence-to-sample-name mappings used by
-[Demultiplex]({{< relref "docs/reference/Demultiplex.md" >}}) and
-[HammingCorrect]({{< relref "docs/reference/tag-steps/using/HammingCorrect.md" >}}).
+[Demultiplex]({{< relref "docs/reference/Demultiplex.md" >}}),
+[HammingCorrect]({{< relref "docs/reference/tag-steps/using/HammingCorrect.md" >}}
+and 
+[AssignToReference]({{< relref "docs/reference/tag-steps/using/AssignToReference.md" >}})
+).
 
 Each table is an independent named dictionary.  The name is chosen by the
 user and referenced from the step that consumes it.
@@ -28,8 +31,7 @@ references are both valid.
 Keys are DNA sequences using uppercase IUPAC nucleotide codes.
 All standard IUPAC ambiguity codes are accepted (e.g. `N`, `R`, `Y`, `W`, …).
 
-A `_` in a key separates regions when the tag being matched spans multiple
-extracted segments joined with `_`:
+`_` in keys are ignored for readability.
 
 ```toml
 # ignore_in_test
@@ -54,12 +56,30 @@ AAAAAC = "sample-1"   # treated identically to AAAAAA
 CCCCCC = "sample-2"
 ```
 
+## Reading from file
+
+```
+# ignore_in_test
+[barcodes.my_barcodes]
+    from_file = {
+        filename = "barcodes.fasta"
+        read_name_comment_character = " "
+```
+
+Barcodes can be read from a FASTA / FASTQ / BAM file.
+If read_name_comment_character is provided, read names are cut
+off at that character. Defaults to no truncation.
+
+Note that this file is considered part of the configuration - 
+`fastqrab validate` will fail if it is not present.
+
+
 ## Constraints
 
 | Constraint | Detail |
 |---|---|
 | Non-empty | At least one entry required per table. |
-| Uniform length | All keys in the same table must have the same length (counting `_` separators). |
+| Uniform length | All keys (barcodes) in the same table must have the same length (counting `_` separators). |
 | Non-overlapping IUPAC | Two keys must not match any of the same concrete sequences. e.g. `NNNN` and `ATCG` overlap. |
 | Reserved name | The value `"no-barcode"` is used internally for unmatched reads and may not be used as a sample name. |
 

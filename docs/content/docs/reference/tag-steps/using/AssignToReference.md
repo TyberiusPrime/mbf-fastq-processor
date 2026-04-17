@@ -1,11 +1,12 @@
 # AssignToReference
 
-Assign each query sequence to the closest entry in a named reference database
+Assign each query sequence to the closest entry in barcodes section,
 using Hamming distance.
 
-The reference is a FASTA FASTQ or BAM file (optionally compressed) whose
-records each have a fixed-length sequence and a name.  At start-up the step
-builds an efficient Hamming-distance index over the database.  For every read,
+( As opposed to [HammingCorrect]({{< relref "docs/redirects/HammingCorrect.md" >}})
+which will correct to the closest barcode sequence).
+
+At start-up the step builds an efficient Hamming-distance index over the database.  For every read,
 the tag supplied in `in_label` is looked up in the index and the name of the
 closest matching reference entry is written to `out_label` as a string tag.
 
@@ -35,8 +36,13 @@ are included.
     action = "AssignToReference"
     in_label = "query_seq"
     out_label = "ref_name"
-    reference = "reference.fa"
     max_hamming_distance = 2
+    barcodes = 'reference_barcodes'
+
+[barcodes.reference_barcodes]
+    from_file = {
+            filename= "reference.fa"
+    }
 
 # 3. (Optional) Discard reads that did not match any reference entry.
 [[step]]
@@ -56,19 +62,19 @@ are included.
 |---|---|---|---|
 | `in_label` | tag name | yes | Tag holding the query sequence (String or Location tag). |
 | `out_label` | tag name | yes | Output tag for the matched reference name (String). |
-| `reference` | file path | yes | FASTA or FASTQ reference file (plain or gzip-compressed). |
-| `reference_read_comment_character` | character | no | Cut reference read names at first occurances. Default: no cut |
 | `max_hamming_distance` | integer | yes | Maximum allowed Hamming distance.  Use `0` for exact matches only. |
+| `barcodes` | yes | String | Which barcode section to reference. |
 
 ## Notes
 
 * All sequences in the reference file **must have the same length** as the
   query sequences.
 * If the reference contains duplicate sequences, an error will occur during the initial reading.
+  Multiple sequences leading to the same label are ok.
 * The `in_label` tag can be a **String** tag (e.g. from
   [ExtractRegion]({{< relref "docs/reference/tag-steps/extract/ExtractRegion.md" >}}))
   or a **Location** tag (e.g. from
   [ExtractIUPAC]({{< relref "docs/reference/tag-steps/extract/ExtractIUPAC.md" >}})).
 * Use [HammingCorrect]({{< relref "docs/reference/tag-steps/using/HammingCorrect.md" >}})
-  instead when you want to correct a tag to one of a small set of known
-  barcodes that are already embedded in the config file (on which you want to demultiplex).
+  instead when you want to correct a tag to one of the barcodes
+  barcodes.

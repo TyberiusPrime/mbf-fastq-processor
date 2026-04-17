@@ -70,17 +70,11 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
                     let barcodes_section: IndexMap<BString, String> = barcodes_section
                         .as_ref()
                         .expect("parent ok")
-                        .barcode_to_name
+                        .seq_to_name
                         .as_ref()
-                        .expect("parent ok2")
-                        .map
+                        .expect("seq to name should be ok")
                         .iter()
-                        .map(|(k, v)| {
-                            (
-                                k.clone(),
-                                v.value.as_ref().expect("parent was ok").to_owned(),
-                            )
-                        })
+                        .map(|(k, v)| (k.clone(), v.to_string()))
                         .collect();
                     // Copy the resolved barcodes
 

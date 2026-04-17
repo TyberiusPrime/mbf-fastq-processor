@@ -1,10 +1,7 @@
-
 use bstr::BString;
-use fastqrab_config::tpd_adapt_u8_from_byte_or_char;
 use hamming_resonate::HammingResonator;
 
 use crate::transformations::prelude::*;
-use fastqrab_io::io::apply_to_read_names_and_sequences;
 
 /// Assign each query sequence to the closest entry in a named reference database.
 ///
@@ -24,32 +21,28 @@ pub struct AssignToReference {
 
     /// Output tag where the matched reference name is stored.
     pub out_label: TagLabel,
-
-    /// Path to the reference file (FASTA or FASTQ, plain or gzip-compressed).
-    #[tpd(alias = "filename")]
-    pub reference: String,
-
-    #[tpd(with = "tpd_adapt_u8_from_byte_or_char")]
-    pub reference_read_comment_character: Option<u8>,
+    ///
+    /// Reference to barcodes section
+    pub barcodes: TagLabel,
 
     /// Maximum Hamming distance allowed for a match.  Use 0 for exact matches
     /// only.
     pub max_hamming_distance: u32,
 
     // ── built during init ───────────────────────────────────────────────────
-    #[tpd(skip, default)]
+    #[tpd(skip)]
     #[schemars(skip)]
-    pub seq_to_name: IndexMap<BString, String>,
+    seq_to_name: Arc<IndexMap<BString, String>>,
 
-    #[tpd(skip, default)]
+    #[tpd(skip)]
     #[schemars(skip)]
-    pub resonator: Option<Arc<HammingResonator>>,
+    resonator: Arc<HammingResonator>,
 }
 
 impl VerifyIn<PartialConfig> for PartialAssignToReference {
     fn verify(
         &mut self,
-        _parent: &PartialConfig,
+        parent: &PartialConfig,
         _options: &VerifyOptions,
     ) -> std::result::Result<(), ValidationFailure>
     where
@@ -68,6 +61,89 @@ impl VerifyIn<PartialConfig> for PartialAssignToReference {
                 Some("Use different tag names for in_label and out_label.".to_string());
         }
 
+        if let Some(barcodes_to_use) = self.barcodes.as_ref()
+            && let Some(barcode_data) = parent.barcodes.as_ref()
+            && let Some(barcodes_data) = barcode_data
+        {
+            match barcodes_data.map.get(barcodes_to_use) {
+                Some(barcodes_section) => {
+                    if let Some(barcodes_section) = barcodes_section.as_ref()
+                        && let Some(seq_to_name) = &barcodes_section.seq_to_name
+                        && let Some(max_hamming_distance) = self.max_hamming_distance.as_ref()
+                    {
+                        self.init_resonator(seq_to_name, *max_hamming_distance)
+                            .map_err(|e| {
+                                ValidationFailure::new(
+                                    format!("Failure to initialize"),
+                                    Some(format!(
+                                        "Error: {e}\n\
+                                    Verify your barcodes, they must be of the same length and disjoint under your max_hamming_distance."
+                                    )),
+                                )
+                            })?;
+                        self.seq_to_name = Some(seq_to_name.clone());
+                    }
+                    // otherwise the barcode section wasn't ok and we'll never
+                    // be turned into a concrete AssignToReference.
+                }
+                None => {
+                    self.barcodes.help = Some(offer_alternatives(
+                        barcodes_to_use.as_ref(),
+                        &barcodes_data.map.keys().collect::<Vec<_>>(),
+                    ));
+
+                    self.barcodes.state = TomlValueState::ValidationFailed {
+                        message: "Barcodes section not found".to_string(),
+                    };
+                    return Ok(());
+                }
+            }
+        } else {
+            // return Err(ValidationFailure::new(
+            //     "AssignToReference step requires a barcodes section to be defined in the config.",
+            //     Some(&format!("See {}", crate::link_docs("barcodes"))),
+            // ));
+        }
+
+        Ok(())
+    }
+}
+
+impl PartialAssignToReference {
+    fn init_resonator(
+        &mut self,
+        seq_to_name: &IndexMap<BString, String>,
+        max_dist: u32,
+    ) -> Result<()> {
+        let seqs: Vec<BString> = seq_to_name.keys().cloned().collect();
+
+        let resonator = HammingResonator::new(seqs, max_dist)
+            .map_err(|e| anyhow::anyhow!("Failed to build hamming index: {e}"))?;
+
+        for seq in seq_to_name.keys() {
+            let hit = resonator.query(seq.as_ref()).map_err(|e| {
+                anyhow::anyhow!("Failed to query hamming index during validation: {e}")
+            })?;
+            match hit.len() {
+                0 => {
+                    panic!(
+                        "HammingResonator did not return a hit for a sequence that was indexed. This should not happen, check the implementation of HammingResonator."
+                    );
+                }
+                1 => {}
+                _ => {
+                    let mut hit = hit;
+                    hit.sort();
+                    bail!(
+                        "The reference sequence {seq} had more than one hit within the specificied max hamming distance {}\n\
+                        Hits: {hit:?}",
+                        max_dist
+                    );
+                }
+            }
+        }
+
+        self.resonator = Some(Arc::new(resonator));
         Ok(())
     }
 }
@@ -95,104 +171,6 @@ impl TagUser for PartialTaggedVariant<PartialAssignToReference> {
 }
 
 impl Step for AssignToReference {
-    fn init(
-        &mut self,
-        input_info: &InputInfo,
-        _output_prefix: &str,
-        _output_directory: &Path,
-        _output_ix_separator: &str,
-        _demultiplex_info: &OptDemultiplex,
-        _allow_overwrite: bool,
-    ) -> Result<Option<DemultiplexBarcodes>> {
-        let mut entries: Vec<(BString, String)> = Vec::new();
-
-        apply_to_read_names_and_sequences(
-            &self.reference,
-            &mut |name: &[u8], seq: &[u8]| {
-                let name_str = if let Some(comment_char) = self.reference_read_comment_character
-                    && let Some(pos) = name.iter().position(|&c| c == comment_char)
-                {
-                    let name_without_comment = &name[..pos];
-                    String::from_utf8_lossy(name_without_comment).into_owned()
-                } else {
-                    String::from_utf8_lossy(name).into_owned()
-                };
-
-                entries.push((BString::from(seq), name_str));
-            },
-            input_info.use_rapidgzip,
-        )?;
-
-        if entries.is_empty() {
-            bail!(
-                "AssignToReference: reference file '{}' contains no sequences.",
-                self.reference
-            );
-        }
-
-        let seqs: Vec<BString> = entries.iter().map(|(s, _)| s.clone()).collect();
-        let seq_to_name: IndexMap<BString, String> = entries.into_iter().collect();
-
-        if seqs.len() != seq_to_name.len() {
-            let mut counts = IndexMap::new();
-            for seq in seqs {
-                *counts.entry(seq).or_insert(0) += 1;
-            }
-            let mut duplicates: Vec<_> =
-                counts.into_iter().filter(|(_, count)| *count > 1).collect();
-            let had_more = if duplicates.len() > 10 {
-                duplicates.truncate(10);
-                true
-            } else {
-                false
-            };
-            let mut duplicate_string = duplicates
-                .into_iter()
-                .map(|(seq, count)| format!("{} ({} times)", String::from_utf8_lossy(&seq), count))
-                .collect::<Vec<_>>()
-                .join(", ");
-            if had_more {
-                duplicate_string.push_str(", ...");
-            }
-            bail!(
-                "AssignToReference: reference file '{}' contains duplicate sequences.\n\
-                This is not supported, check your input.\n\
-                Duplicated sequences: {duplicate_string}",
-                self.reference
-            );
-        }
-
-        let resonator = HammingResonator::new(seqs, self.max_hamming_distance)
-            .map_err(|e| anyhow::anyhow!("Failed to build reference index: {e}"))?;
-
-        for seq in seq_to_name.keys() {
-            let hit = resonator.query(seq.as_ref()).map_err(|e| {
-                anyhow::anyhow!("Failed to query reference index during validation: {e}")
-            })?;
-            match hit.len() {
-                0 => {
-                    panic!(
-                        "HammingResonator did not return a hit for a sequence that was indexed. This should not happen, check the implementation of HammingResonator."
-                    );
-                }
-                1 => {}
-                _ => {
-                let mut hit = hit;
-                hit.sort();
-                    bail!(
-                        "The reference sequence {seq} had more than one hit within the specificied max hamming distance {}\n\
-                        Hits: {hit:?}",
-                        self.max_hamming_distance
-                    );
-                }
-            }
-        }
-
-        self.seq_to_name = seq_to_name;
-        self.resonator = Some(Arc::new(resonator));
-        Ok(None)
-    }
-
     fn apply(
         &self,
         mut block: FastQBlocksCombined,
@@ -200,10 +178,7 @@ impl Step for AssignToReference {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<(FastQBlocksCombined, bool)> {
-        let resonator = self
-            .resonator
-            .as_ref()
-            .expect("resonator must be set during init");
+        let resonator = &self.resonator;
         let input_tags = block.tags.get(&self.in_label).expect("Input tag not found");
 
         let mut output_tags: Vec<TagValue> = Vec::with_capacity(input_tags.len());

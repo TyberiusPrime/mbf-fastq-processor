@@ -51,5 +51,5 @@ write_sam_from_tuples(
             "CGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCGATCG",
         ),
     ],
-    "reference.bam",
+    "input_reference.bam",
 )

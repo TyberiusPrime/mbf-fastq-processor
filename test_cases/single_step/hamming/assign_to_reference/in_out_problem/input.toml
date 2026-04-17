@@ -21,9 +21,12 @@
     action = 'AssignToReference'
     in_label = 'query_seq'
     out_label = 'query_seq'
-    reference = 'reference.fa'
-    max_hamming_distance = 2
+    max_hamming_distance = 0
+  barcodes ='bc'
 
+[barcodes.bc]
+  AGT = 'on'
+  ATT = 'two'
 [[step]]
     action = 'StoreTagInComment'
     in_label = 'query_seq'

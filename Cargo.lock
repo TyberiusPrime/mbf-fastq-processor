@@ -708,6 +708,7 @@ dependencies = [
  "fastqrab-dna",
  "flate2",
  "gzp",
+ "hamming-resonate",
  "indexmap",
  "memchr",
  "mutants 0.0.3",

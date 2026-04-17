@@ -40,15 +40,8 @@ impl VerifyIn<PartialConfig> for PartialDemultiplex {
                 if let Some(barcodes_ref) = barcodes.map.get(barcodes_name.as_ref()) {
                     if let Some(resolved) = barcodes_ref
                         .as_ref()
-                        .and_then(|x| x.barcode_to_name.as_ref())
-                        .map(|x| {
-                            x.map
-                                .iter()
-                                .map(|(k, v)| {
-                                    (k.clone(), v.as_ref().expect("parent was ok").clone())
-                                })
-                                .collect()
-                        })
+                        .and_then(|x| x.seq_to_name.as_ref())
+                        .map(|x| x.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
                     {
                         self.resolved_barcodes = Some(resolved);
                     } else {
@@ -196,7 +189,7 @@ impl Step for Demultiplex {
 
         for (ii, tag_value) in hits.iter().enumerate() {
             let key: BString = match tag_value {
-                TagValue::Location(hits) => hits.joined_sequence(Some(b"_")).into(),
+                TagValue::Location(hits) => hits.joined_sequence(None).into(),
                 TagValue::String(bstring) => bstring.clone(),
                 TagValue::Bool(bool_val) => {
                     if *bool_val {

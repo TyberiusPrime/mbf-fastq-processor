@@ -41,7 +41,6 @@ pub fn verify_outputs(
 
     let raw_config = ex::fs::read_to_string(toml_file)
         .with_context(|| format!("Could not read toml file: {}", toml_file.to_string_lossy()))?;
-    let (output_prefix, uses_stdout) = extract_output_config(&raw_config)?;
 
     let (_temp_dir, temp_path) = create_working_dir(output_dir.as_deref())?;
     let temp_toml_path = temp_path.join("config.toml");
@@ -63,12 +62,21 @@ pub fn verify_outputs(
         unsafe_prep,
     )?;
 
+    // Change CWD to temp_path so that in-process config validation (which calls
+    // tpd_from_toml → PartialBarcodes::verify → load_from_file) resolves relative
+    // filenames like `input_reference.fa` against the working directory that
+    // contains the symlinked inputs — the same directory the processing subprocess
+    // uses via `.current_dir(temp_path)`.
+    std::env::set_current_dir(&temp_path)
+        .with_context(|| format!("Failed to set working directory to {}", temp_path.display()))?;
+
     validate_config_if_needed(
         &temp_toml_path,
         expected_validation_error.as_ref(),
         expected_runtime_error.is_some(),
         expected_validation_warning.as_ref(),
     )?;
+    let (output_prefix, uses_stdout) = extract_output_config(&raw_config)?;
 
     let current_exe = std::env::current_exe().context("Failed to get current executable path")?;
     let stdin_config = toml_dir.join("stdin_config").exists();

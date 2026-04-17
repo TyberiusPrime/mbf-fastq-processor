@@ -1287,8 +1287,13 @@ When no match is found within `max_hamming_distance`, the tag is set to Missing.
     action = 'AssignToReference'
     in_label = 'query_seq'      # TYPE: existing string/location tag, REQUIRED
     out_label = 'ref_name'      # TYPE: string tag, REQUIRED
-    reference = 'reference.fa'  # TYPE: path, REQUIRED – FASTA or FASTQ, plain or gzip
     max_hamming_distance = 2    # TYPE: u32, REQUIRED – 0 for exact match only
+    barcodes = 'barcode_key'    # TYpe: String, REQUIRED, must match key of barcode section
+
+[barcodes.barcode_key]
+    from_file.filename =  'reference.fa'  # TYPE: path, REQUIRED – FASTA or FASTQ, plain or gzip
+    from_file.read_comment_character = ' ' # TYPE: char, optional, truncate reads at this character if present
+
 ```
 
 ### HammingCorrect

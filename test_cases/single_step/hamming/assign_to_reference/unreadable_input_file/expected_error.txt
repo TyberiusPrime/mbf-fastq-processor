@@ -1,0 +1,16 @@
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+24 │ [barcodes.bc]
+25 │     from_file.filename =  'input_reference.fa'
+   ┆              ┬
+   ┆              │
+   ┆              ╰───────────────────────────────── Error reading from input_reference.fa
+───╯
+Hint: open_input_file
+      
+      Caused by:
+          Could not detect input format for input_reference.fa. Expected FASTA, FASTQ, or BAM.
+
+

@@ -193,6 +193,7 @@ pub fn build_kmer_database(
                         } // cov:excl-line
                     }
                 } // cov:excl-line
+                Ok(())
             },
             true,
             true, //all reads in BAM.

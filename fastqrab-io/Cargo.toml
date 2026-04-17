@@ -18,11 +18,12 @@ exclude.workspace = true
   bio = {workspace = true}
   bstr = {workspace = true}
   ex = {workspace = true}
-  flate2 = {workspace = true}
-  gzp = {workspace = true}
-  indexmap = {workspace = true}
   fastqrab-config= {workspace = true}
   fastqrab-dna = {workspace = true}
+  flate2 = {workspace = true}
+  gzp = {workspace = true}
+  hamming-resonate = {workspace = true}
+  indexmap = {workspace = true}
   memchr = {workspace = true}
   mutants = {workspace = true}
   niffler = {workspace = true}

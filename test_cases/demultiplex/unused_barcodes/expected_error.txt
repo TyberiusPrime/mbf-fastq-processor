@@ -7,7 +7,7 @@ Error 1/2
 21 │     TT = 'tt'
    ┆              ┬
    ┆              │
-   ┆              ╰─ Barcode section not used in any Demultiplex or HammingCorrect step
+   ┆              ╰─ Barcode section not used in any Demultiplex, HammingCorrect or AssignToReference step
 ───╯
 Hint: Add a Demultiplex step, or remove this barcode section
 
@@ -19,7 +19,7 @@ Error 2/2
 25 │     AT = 'at'
    ┆              ┬
    ┆              │
-   ┆              ╰─ Barcode section not used in any Demultiplex or HammingCorrect step
+   ┆              ╰─ Barcode section not used in any Demultiplex, HammingCorrect or AssignToReference step
 ───╯
 Hint: Add a Demultiplex step, or remove this barcode section
 

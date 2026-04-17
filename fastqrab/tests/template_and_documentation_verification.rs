@@ -5,11 +5,11 @@ use schemars::schema_for;
 use std::collections::HashSet;
 use std::fmt::Write;
 use std::fs;
-use std::io::ErrorKind;
+use std::io::{ErrorKind, Write as IOWrite};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::OnceLock;
-use tempfile::tempdir;
+use tempfile::{TempDir, tempdir};
 
 use fastqrab::config::config_from_string;
 
@@ -766,6 +766,8 @@ fn test_every_step_has_a_template_section() {
     let transformations_set: HashSet<_> = transformations.iter().cloned().collect();
     let mut documented_sections = HashSet::new();
 
+    let (td, ref_file) = prep_temp_reference_fasta();
+
     for (section_name, line_no) in get_template_section_names(&template_content) {
         if !documented_sections.insert(section_name.clone()) {
             errors.push(format!(
@@ -799,6 +801,8 @@ fn test_every_step_has_a_template_section() {
                 ));
         }
 
+        let extracted_section =
+            extracted_section.replace("reference.fa", ref_file.to_str().unwrap());
         let config = prep_config_to_parse(&extracted_section);
 
         // Verify just the parsing
@@ -869,6 +873,7 @@ fn test_every_step_has_a_template_section() {
         "Template validation failed:\n{}",
         errors.join("\n")
     );
+    drop(td);
 }
 
 fn get_all_doc_files() -> Vec<PathBuf> {
@@ -988,11 +993,27 @@ fn test_every_transformation_has_documentation() {
     }
 }
 
+fn prep_temp_reference_fasta() -> (TempDir, PathBuf) {
+    let td = tempdir().expect("Failed to create temp directory");
+    let ref_file = td.path().join("reference.fa");
+    {
+        let mut fh = std::fs::File::create(&ref_file).expect("Failed to create reference.fa");
+        fh.write_all(b">ref1\nATGTCA")
+            .expect("Failed to write test_r1.fastq");
+    }
+    let ref_file = ref_file
+        .canonicalize()
+        .expect("Failed to canonicalize reference.fa path");
+    (td, ref_file)
+}
+
 #[test]
 #[allow(clippy::too_many_lines)]
 fn test_documentation_toml_examples_parse() {
     let doc_files = get_all_doc_files();
     let mut failed_files = Vec::new();
+
+    let (td, ref_file) = prep_temp_reference_fasta();
 
     for doc_file in &doc_files {
         let transformation = extract_transformation_from_filename(doc_file);
@@ -1090,7 +1111,13 @@ fn test_documentation_toml_examples_parse() {
                         }
                     }
 
-                    let config = prep_config_to_parse(toml_block);
+                    let toml_block = toml_block.replace(
+                        "reference.fa",
+                        ref_file
+                            .to_str()
+                            .expect("Failed to convert reference.fa path to string"),
+                    );
+                    let config = prep_config_to_parse(&toml_block);
 
                     // Try to parse the configuration
                     match config_from_string(&config) {
@@ -1134,6 +1161,7 @@ fn test_documentation_toml_examples_parse() {
         "Documentation TOML validation failed:\n{}",
         failed_files.join("\n")
     );
+    drop(td);
 }
 
 #[test]
@@ -1224,6 +1252,8 @@ fn extract_toml_blocks_from_llm_guide(content: &str) -> Vec<(String, usize)> {
 fn test_llm_guide_toml_examples_parse() {
     let llm_guide_path = Path::new("../docs/content/docs/reference/llm-guide.md");
 
+    let (td, ref_file) = prep_temp_reference_fasta();
+
     assert!(
         llm_guide_path.exists(),
         "LLM guide not found at {}",
@@ -1248,10 +1278,11 @@ fn test_llm_guide_toml_examples_parse() {
         // Check if this is a complete configuration (has [input] and [output])
         let has_input = toml_block.contains("[input]");
         let has_output = toml_block.contains("[output]");
+        let toml_block = toml_block.replace("reference.fa", ref_file.to_str().unwrap());
 
         if !has_input || !has_output {
             // This is a partial example, wrap it with minimal config
-            let config = prep_config_to_parse(toml_block);
+            let config = prep_config_to_parse(&toml_block);
 
             match config_from_string(&config) {
                 Ok(parsed_config) => {
@@ -1275,7 +1306,7 @@ fn test_llm_guide_toml_examples_parse() {
             }
         } else {
             // This is a complete configuration, parse directly
-            match config_from_string(toml_block) {
+            match config_from_string(&toml_block) {
                 Ok(parsed_config) => {
                     if let Err(e) = parsed_config.check() {
                         failed_examples.push(format!(
@@ -1303,6 +1334,7 @@ fn test_llm_guide_toml_examples_parse() {
         "LLM guide TOML examples validation failed:\n{}",
         failed_examples.join("\n\n")
     );
+    drop(td);
 }
 
 #[test]

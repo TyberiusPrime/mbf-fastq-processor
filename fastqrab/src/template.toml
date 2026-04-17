@@ -575,8 +575,10 @@
 #    action = "AssignToReference"
 #    in_label = "query_seq"   # tag holding the query (String or Location)
 #    out_label = "ref_name"   # output string tag with the matched reference name
-#    reference = "reference.fa"   # FASTA/FASTQ reference file
 #    max_hamming_distance = 2     # 0 for exact match only
+#    barcodes = "barcode_key" # which barcodes to assign to
+#[barcodes.barcode_key]
+#    from_file.filename = "reference.fa"   # FASTA/FASTQ reference file
 
 
 # ==== HammingCorrect ====

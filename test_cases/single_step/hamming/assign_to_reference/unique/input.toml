@@ -21,8 +21,11 @@
     action = 'AssignToReference'
     in_label = 'query_seq'
     out_label = 'ref_name'
-    reference = 'reference.fa'
     max_hamming_distance = 2
+barcodes = 'b'
+
+[barcodes.b]
+    from_file.filename = 'input_reference.fa'
 
 [[step]]
     action = 'StoreTagInComment'

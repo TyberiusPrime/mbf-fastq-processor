@@ -213,6 +213,7 @@ impl Step for OtherFile {
                             filter.insert(&FragmentEntry(&[read_seq]));
                         }
                         count.set(count.get() + 1);
+                        Ok(())
                     },
                     self.include_mapped,
                     self.include_unmapped,
@@ -232,6 +233,7 @@ impl Step for OtherFile {
                             filter.insert(&FragmentEntry(&[trimmed]));
                         }
                         count.set(count.get() + 1);
+                        Ok(())
                     },
                     self.include_mapped,
                     self.include_unmapped,

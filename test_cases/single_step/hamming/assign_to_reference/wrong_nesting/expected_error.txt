@@ -1,0 +1,22 @@
+Error 1/2
+   ╭─config.toml
+   ┆
+24 │ [barcodes.bc]
+25 │     filename =  'input_reference.fa'
+   ┆     ────┬───
+   ┆         │
+   ┆         ╰──────────────────────────── Missing from_file.
+───╯
+Hint: Use from_file = {filename = '...'} to read barcodes from a file
+
+Error 2/2
+   ╭─config.toml
+   ┆
+24 │ [barcodes.bc]
+25 │     filename =  'input_reference.fa'
+26 │     read_comment_character = ' '
+   ┆     ───────────┬──────────
+   ┆                │
+   ┆                ╰───────────────── Missing from_file.
+───╯
+Hint: Use from_file = {filename = '...', read_comment_character = 'x'} to read barcodes from a file

@@ -1,0 +1,20 @@
+Error 1/1
+   ╭─config.toml
+   ┆
+17 │ [[step]]
+18 │     action = 'AssignToReference'
+   ┆              ─────────┬─────────
+   ┆                       │
+   ┆                       ╰────────── In this step
+   ┆
+19 │     in_label = 'query_seq'
+20 │     out_label = 'ref_name'
+21 │     max_hamming_distance = 1
+22 │ barcodes = 'reference'
+   ┆                       ┬
+   ┆                       │
+   ┆                       ╰─ Failure to initialize
+───╯
+Hint: Error: The reference sequence ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTAC had more than one hit within the specificied max hamming distance 1
+      Hits: [("ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTAC", 0), ("ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTAG", 1)]
+      Verify your barcodes, they must be of the same length and disjoint under your max_hamming_distance.

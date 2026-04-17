@@ -1,4 +1,3 @@
-Error Details ==
 Error 1/3
    ╭─config.toml
    ┆
@@ -9,7 +8,7 @@ Error 1/3
    ┆                │
    ┆                ╰────── Must not be 'no-barcode'
 ───╯
-Hint: Choose a different name for your barcode, this one is reserved for internal use.
+Hint: Choose a different name for your barcode, this one is reserved for not-matched reads.
 
 Error 2/3
    ╭─config.toml
@@ -49,5 +48,3 @@ Error 3/3
 Hint: Must start with a letter or underscore (a-zA-Z_), got '1'
       See https://doc_url.example/version-stripped-from-test/docs/redirects/Demultiplex
       Or run: `fastqrab template Demultiplex` for more information.
-
-

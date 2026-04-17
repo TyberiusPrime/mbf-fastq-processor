@@ -18,17 +18,12 @@
     action = 'AssignToReference'
     in_label = 'query_seq'
     out_label = 'ref_name'
-    max_hamming_distance = 2
-  barcodes = 'ref'
+    max_hamming_distance = 0
+    barcodes = 'bc'
 
-[barcodes.ref]
-  from_file.filename = 'input_reference.fa'
-
-# Keep only reads that got a reference assignment
-[[step]]
-    action = 'FilterByTag'
-    in_label = 'ref_name'
-    keep_or_remove = 'keep'
+[barcodes.bc]
+    filename =  'input_reference.fa'
+    read_comment_character = ' '
 
 [[step]]
     action = 'StoreTagInComment'
