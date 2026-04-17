@@ -33,5 +33,5 @@
     output_unmatched = true
 
 [barcodes.demult]
-    GNAA = 'label1'
+    GVAA = 'label1'
     CTNN = 'label2'

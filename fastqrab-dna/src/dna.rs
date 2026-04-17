@@ -1,8 +1,11 @@
+use anyhow::{Result, anyhow, bail};
 use bio::alignment::{
     AlignmentOperation,
     pairwise::{Aligner, MIN_SCORE, Scoring},
 };
 use bstr::{BStr, BString, ByteSlice, ByteVec};
+use hamming_resonate::HammingResonator;
+use indexmap::IndexMap;
 use schemars::JsonSchema;
 use std::borrow::Cow;
 use toml_pretty_deser::prelude::*;
@@ -367,17 +370,17 @@ pub fn iupac_find_best(pattern: &[u8], reference: &[u8], max_mismatches: usize) 
     }
 }
 
-///
-/// check if any of the extend iupac characters occurs.
-/// upper case only
-pub fn contains_iupac_ambigous(input: &[u8]) -> bool {
-    input.iter().any(|&char| {
-        matches!(
-            char,
-            b'R' | b'Y' | b'S' | b'W' | b'K' | b'M' | b'B' | b'V' | b'D' | b'H' | b'N'
-        )
-    })
-}
+// ///
+// /// check if any of the extend iupac characters occurs.
+// /// upper case only
+// pub fn contains_iupac_ambigous(input: &[u8]) -> bool {
+//     input.iter().any(|&char| {
+//         matches!(
+//             char,
+//             b'R' | b'Y' | b'S' | b'W' | b'K' | b'M' | b'B' | b'V' | b'D' | b'H' | b'N'
+//         )
+//     })
+// }
 
 //check the complet string is valid dna + iupac, upper case only
 pub fn first_non_iupac(input: &[u8]) -> Option<u8> {
@@ -683,6 +686,49 @@ impl Iterator for IupacExpander {
 
         Some(seq)
     }
+}
+
+pub fn init_hamming_resonator(
+    seq_to_name: &IndexMap<BString, String>,
+    max_dist: u8,
+) -> Result<HammingResonator> {
+    let seqs: Vec<BString> = seq_to_name.keys().cloned().collect();
+
+    let resonator = HammingResonator::new(seqs, max_dist as u32)
+        .map_err(|e| anyhow!("Failed to build hamming index: {e}"))?;
+
+    for seq in seq_to_name.keys() {
+        let hits = resonator
+            .query(seq.as_ref())
+            .map_err(|e| anyhow!("Failed to query hamming index during validation: {e}"))?;
+        match hits.len() {
+            0 => {
+                panic!(
+                    "HammingResonator did not return a hit for a sequence that was indexed. This should not happen, check the implementation of HammingResonator."
+                );
+            }
+            1 => {}
+            _ => {
+                let hits_and_seqs: Vec<_> = hits
+                    .into_iter()
+                    .map(|(seq, dist)| {
+                        (seq, dist, seq_to_name.get(seq).expect("Must be in there?!"))
+                    })
+                    .collect();
+                let first = hits_and_seqs[0].2;
+                if !hits_and_seqs.iter().all(|(_, _, seq)| *seq == first) {
+                    let mut hits_and_seqs = hits_and_seqs;
+                    hits_and_seqs.sort();
+                    bail!(
+                        "The reference sequence {seq} had more than one hit within the specificied max hamming distance {}\n\
+                        Hits: {hits_and_seqs:?}",
+                        max_dist
+                    );
+                }
+            }
+        }
+    }
+    Ok(resonator)
 }
 
 #[cfg(test)]
@@ -1172,19 +1218,19 @@ mod test {
         assert!(!iupac_overlapping(b"RYRY", b"ATCG")); // R=A/G, Y=C/T vs A-T-C-G
     }
 
-    #[test]
-    fn test_contains_iupac() {
-        assert_eq!(contains_iupac_ambigous(b"A"), false);
-        assert_eq!(contains_iupac_ambigous(b"C"), false);
-        assert_eq!(contains_iupac_ambigous(b"G"), false);
-        assert_eq!(contains_iupac_ambigous(b"T"), false);
-        assert_eq!(contains_iupac_ambigous(b"TN"), true);
-        assert_eq!(contains_iupac_ambigous(b"NT"), true);
-        assert_eq!(contains_iupac_ambigous(b"RT"), true);
-        assert_eq!(contains_iupac_ambigous(b"xx"), false);
-        assert_eq!(contains_iupac_ambigous(b"X"), false);
-        assert_eq!(contains_iupac_ambigous(b"Y"), true);
-    }
+    // #[test]
+    // fn test_contains_iupac() {
+    //     assert_eq!(contains_iupac_ambigous(b"A"), false);
+    //     assert_eq!(contains_iupac_ambigous(b"C"), false);
+    //     assert_eq!(contains_iupac_ambigous(b"G"), false);
+    //     assert_eq!(contains_iupac_ambigous(b"T"), false);
+    //     assert_eq!(contains_iupac_ambigous(b"TN"), true);
+    //     assert_eq!(contains_iupac_ambigous(b"NT"), true);
+    //     assert_eq!(contains_iupac_ambigous(b"RT"), true);
+    //     assert_eq!(contains_iupac_ambigous(b"xx"), false);
+    //     assert_eq!(contains_iupac_ambigous(b"X"), false);
+    //     assert_eq!(contains_iupac_ambigous(b"Y"), true);
+    // }
 
     #[test]
     fn test_all_iupac() {

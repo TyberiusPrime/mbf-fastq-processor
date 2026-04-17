@@ -1,7 +1,8 @@
+use hamming_resonate::HammingResonator;
 use indexmap::IndexMap;
 
 use crate::transformations::prelude::*;
-use fastqrab_dna::dna::{contains_iupac_ambigous, hamming, iupac_hamming_distance};
+use fastqrab_dna::dna::init_hamming_resonator;
 
 /// Correct a tag (extracted region) to known barcodes
 
@@ -22,10 +23,11 @@ pub struct HammingCorrect {
 
     #[tpd(skip)]
     #[schemars(skip)]
-    pub resolved_barcodes: IndexMap<BString, String>,
+    seq_to_name: Arc<IndexMap<BString, String>>,
+
     #[tpd(skip)]
     #[schemars(skip)]
-    pub had_iupac: bool,
+    resonator: Arc<HammingResonator>,
 }
 
 impl VerifyIn<PartialConfig> for PartialHammingCorrect {
@@ -67,21 +69,29 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
         {
             match barcodes_data.map.get(barcodes_to_use) {
                 Some(barcodes_section) => {
-                    let barcodes_section: IndexMap<BString, String> = barcodes_section
-                        .as_ref()
-                        .expect("parent ok")
-                        .seq_to_name
-                        .as_ref()
-                        .expect("seq to name should be ok")
-                        .iter()
-                        .map(|(k, v)| (k.clone(), v.to_string()))
-                        .collect();
-                    // Copy the resolved barcodes
-
-                    // Check if any barcode contains IUPAC ambiguous bases
-                    self.had_iupac =
-                        Some(barcodes_section.keys().any(|x| contains_iupac_ambigous(x)));
-                    self.resolved_barcodes = Some(barcodes_section);
+                    if let Some(barcodes_section) = barcodes_section.as_ref()
+                        && let Some(seq_to_name) = &barcodes_section.seq_to_name
+                        && let Some(max_hamming_distance) = self.max_hamming_distance.as_ref()
+                    {
+                        self.resonator = Some(Arc::new(
+                            init_hamming_resonator(seq_to_name, *max_hamming_distance).map_err(
+                                |e| {
+                                    ValidationFailure::new(
+                                        format!("Failure to initialize"),
+                                        Some(format!(
+                                            "Error: {e}\n\
+                                    Verify your barcodes, they must be of the same length \
+                                        and disjoint under your max_hamming_distance \
+                                        for a given reference target."
+                                        )),
+                                    )
+                                },
+                            )?,
+                        ));
+                        self.seq_to_name = Some(seq_to_name.clone());
+                    }
+                    // otherwise the barcode section wasn't ok and we'll never
+                    // be turned into a concrete HammingCorrect.
                 }
                 None => {
                     self.barcodes.help = Some(offer_alternatives(
@@ -136,6 +146,52 @@ impl TagUser for PartialTaggedVariant<PartialHammingCorrect> {
     }
 }
 
+impl HammingCorrect {
+    fn match_sequence(&self, sequence: &BStr) -> Result<Option<&BStr>> {
+        let matched = self
+            .resonator
+            .query(&BStr::new(&sequence))
+            .map_err(|e| anyhow::anyhow!("HammingCorrect query failed: {e}"))?;
+        if matched.is_empty() {
+            return Ok(None);
+        } else if matched.len() == 1 {
+            return Ok(Some(matched[0].0));
+        } else {
+            let matched_plus_seq: Vec<_> = matched
+                .iter()
+                .map(|(seq, dist)| {
+                    (
+                        seq,
+                        dist,
+                        self.seq_to_name
+                            .get(*seq)
+                            .expect("Corrected sequence was not in database?"),
+                    )
+                })
+                .collect();
+            let all_same_reference = matched_plus_seq
+                .iter()
+                .all(|(_seq, _dist, name)| *name == matched_plus_seq[0].2);
+            if all_same_reference {
+                // If all matched sequences correspond to the same reference, we can still correct,
+                // but we won't know which sequence is the best match,
+                let mut matched = matched;
+                matched.sort_by_key(|(seq, dist)| (*dist, *seq));
+                return Ok(Some(matched[0].0));
+            } else {
+                bail!(
+                    "HammingCorrect on in_label={} \n\
+                             Uncorrectable sequence '{}', \n\
+                             matches multiple sequences within hamming distance: {:?}",
+                    self.in_label,
+                    BStr::new(&sequence),
+                    matched_plus_seq
+                );
+            }
+        }
+    }
+}
+
 impl Step for HammingCorrect {
     fn apply(
         &self,
@@ -146,64 +202,61 @@ impl Step for HammingCorrect {
     ) -> Result<(FastQBlocksCombined, bool)> {
         let input_tags = block.tags.get(&self.in_label).expect("Input tag not found");
 
-        let barcodes = &self.resolved_barcodes;
         let mut output_hits = Vec::new();
 
         for input_tag in input_tags {
             match input_tag {
                 TagValue::Location(hit_sequences) => {
-                    let corrected_hits = correct_barcodes(
-                        barcodes,
-                        hit_sequences.0.iter().map(|hit| (hit, &hit.sequence)),
-                        self.on_no_match,
-                        self.max_hamming_distance,
-                        self.had_iupac,
-                    );
-                    if corrected_hits.is_empty() {
-                        match self.on_no_match {
-                            OnNoMatch::Remove => {
-                                // Create empty tag value
-                                output_hits.push(TagValue::Missing);
-                            }
-                            _ => {
-                                // This shouldn't happen as we handle it above
-                                //output_hits.push(TagValue::Sequence(Hits(corrected_hits)));
-                                // cov:excl-start
-                                unreachable!();
-                                // cov:excl-stop
+                    let seq = hit_sequences.joined_sequence(None);
+                    match self.match_sequence(BStr::new(&seq))? {
+                        Some(matched_seq) => {
+                            let new_hit = Hit {
+                                sequence: matched_seq.into(),
+                                location: if hit_sequences.0.len() == 1 {
+                                    hit_sequences.0[0].location.clone()
+                                } else {
+                                    None
+                                },
+                            };
+                            output_hits.push(TagValue::Location(Hits::new_multiple(vec![new_hit])));
+                        }
+                        None => {
+                            match self.on_no_match {
+                                OnNoMatch::Remove => {
+                                    // Create empty tag value
+                                    output_hits.push(TagValue::Missing);
+                                }
+                                OnNoMatch::Empty => {
+                                    // Create hit with empty sequence
+                                    output_hits.push(TagValue::Location(Hits(vec![])));
+                                }
+                                OnNoMatch::Keep => {
+                                    // Keep original hit unchanged
+                                    output_hits.push(input_tag.clone());
+                                }
                             }
                         }
-                    } else {
-                        output_hits.push(TagValue::Location(Hits(corrected_hits)));
                     }
                 }
                 TagValue::String(hit_string) => {
-                    let mut corrected_hits: Vec<BString> = correct_barcodes(
-                        barcodes,
-                        [hit_string].into_iter().map(|hit| (hit, hit)),
-                        self.on_no_match,
-                        self.max_hamming_distance,
-                        self.had_iupac,
-                    );
-                    if corrected_hits.is_empty() {
-                        match self.on_no_match {
-                            OnNoMatch::Remove => {
-                                // Create empty tag value
-                                output_hits.push(TagValue::Missing);
-                            }
-                            _ => {
-                                // This shouldn't happen as we handle it above
-                                // cov:excl-start
-                                unreachable!();
-                                // cov:excl-stop
+                    match self.match_sequence(hit_string.as_ref())? {
+                        Some(matched_seq) => output_hits.push(TagValue::String(matched_seq.into())),
+                        None => {
+                            match self.on_no_match {
+                                OnNoMatch::Remove => {
+                                    // Create empty tag value
+                                    output_hits.push(TagValue::Missing);
+                                }
+                                OnNoMatch::Empty => {
+                                    // Create hit with empty sequence
+                                    output_hits.push(TagValue::String("".into()));
+                                }
+                                OnNoMatch::Keep => {
+                                    // Keep original hit unchanged
+                                    output_hits.push(input_tag.clone());
+                                }
                             }
                         }
-                    } else {
-                        output_hits.push(TagValue::String(
-                            corrected_hits
-                                .pop()
-                                .expect("corrected_hits must have at least one element"),
-                        ));
                     }
                 }
                 TagValue::Missing => {
@@ -221,83 +274,4 @@ impl Step for HammingCorrect {
 
         Ok((block, true))
     }
-}
-
-trait WithUpdatedSequence {
-    fn clone_with_sequence(&self, sequence: &BString) -> Self;
-}
-
-impl WithUpdatedSequence for Hit {
-    fn clone_with_sequence(&self, sequence: &BString) -> Self {
-        let mut new_hit = self.clone();
-        new_hit.sequence = sequence.clone();
-        new_hit
-    }
-}
-
-impl WithUpdatedSequence for BString {
-    fn clone_with_sequence(&self, sequence: &BString) -> Self {
-        sequence.clone()
-    }
-}
-
-fn correct_barcodes<'a, T: Clone + WithUpdatedSequence + 'a>(
-    barcodes: &IndexMap<BString, String>,
-    hit_sequences: impl Iterator<Item = (&'a T, &'a BString)>,
-    on_no_match: OnNoMatch,
-    max_hamming_distance: u8,
-    had_iupac: bool,
-) -> Vec<T> {
-    let mut corrected_hits = Vec::new();
-    for (hit_seq, sequence) in hit_sequences {
-        let mut found_match = false;
-
-        // Try exact match first
-        if barcodes.contains_key(sequence) {
-            corrected_hits.push(hit_seq.clone());
-            found_match = true;
-        } else if max_hamming_distance > 0 {
-            //mutants false positive
-            // Try hamming distance correction
-            // Use IUPAC hamming distance
-            for barcode in barcodes.keys() {
-                let distance = if had_iupac {
-                    iupac_hamming_distance(barcode, sequence)
-                } else {
-                    hamming(barcode, sequence)
-                        .try_into()
-                        .expect("hamming distance conversion should succeed")
-                };
-                let distance: Result<u8, _> = distance.try_into();
-                match distance {
-                    Ok(distance) => {
-                        if distance <= max_hamming_distance {
-                            // Create corrected hit with new sequence
-                            corrected_hits.push(hit_seq.clone_with_sequence(barcode));
-                            found_match = true;
-                            break;
-                        }
-                    }
-                    Err(_) => continue,
-                }
-            }
-        } // cov:excl-line
-
-        if !found_match {
-            match on_no_match {
-                OnNoMatch::Remove => {
-                    // Don't add to corrected_hits - effectively removes the tag
-                }
-                OnNoMatch::Empty => {
-                    // Create hit with empty sequence
-                    corrected_hits.push(hit_seq.clone_with_sequence(&BString::new(vec![])));
-                }
-                OnNoMatch::Keep => {
-                    // Keep original hit unchanged
-                    corrected_hits.push(hit_seq.clone());
-                }
-            }
-        }
-    }
-    corrected_hits
 }

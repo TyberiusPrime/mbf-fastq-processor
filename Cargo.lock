@@ -689,8 +689,11 @@ dependencies = [
 name = "fastqrab-dna"
 version = "0.8.1"
 dependencies = [
+ "anyhow",
  "bio",
  "bstr",
+ "hamming-resonate",
+ "indexmap",
  "schemars",
  "toml-pretty-deser",
  "triple_accel",

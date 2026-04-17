@@ -12,11 +12,12 @@
     n = 10
 
 [[step]]
-    action = 'ExtractRegex'
-	source = "name:read1"
-	search = "^X(....)"
-	replacement="$1"
-	out_label = 'barcode_extracted'
+    action = 'ExtractRegion'
+    source = "read1"
+	anchor = "start"
+    start = 0
+    length = 4
+    out_label = 'barcode_extracted'
 
 [[step]]
 	action = "StoreTagInComment"
@@ -42,5 +43,5 @@
 
 
 [barcodes.barcodes]
-    CGAA = 'label2'
-    AGTT = 'label1'
+    ATGA = 'label1'
+    ATTT = 'label2'

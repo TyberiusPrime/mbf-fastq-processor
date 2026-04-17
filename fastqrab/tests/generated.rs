@@ -8645,6 +8645,30 @@ fn test_cases_x_single_step_x_hamming_x_basic_correction_keep() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_hamming_x_basic_correction_too_close() {
+    println!("Test case is in: test_cases/single_step/hamming/basic_correction_too_close");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/hamming/basic_correction_too_close"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_hamming_x_basic_correction_too_close_but_same_label() {
+    println!(
+        "Test case is in: test_cases/single_step/hamming/basic_correction_too_close_but_same_label"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/hamming/basic_correction_too_close_but_same_label",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_hamming_x_input_label_is_output_label() {
     println!("Test case is in: test_cases/single_step/hamming/input_label_is_output_label");
     run_test(
@@ -8669,6 +8693,30 @@ fn test_cases_x_single_step_x_hamming_x_require_larger_0() {
     println!("Test case is in: test_cases/single_step/hamming/require_larger_0");
     run_test(
         std::path::Path::new("../test_cases/single_step/hamming/require_larger_0"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_hamming_x_string_tag_barcodes_too_close() {
+    println!("Test case is in: test_cases/single_step/hamming/string_tag_barcodes_too_close");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/hamming/string_tag_barcodes_too_close"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_hamming_x_string_tag_barcodes_too_close_but_same_label() {
+    println!(
+        "Test case is in: test_cases/single_step/hamming/string_tag_barcodes_too_close_but_same_label"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/hamming/string_tag_barcodes_too_close_but_same_label",
+        ),
         "input.toml",
         1,
     );

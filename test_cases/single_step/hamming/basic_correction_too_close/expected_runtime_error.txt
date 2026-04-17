@@ -1,0 +1,3 @@
+Error in stage 3: HammingCorrect on in_label=barcode_extracted 
+Uncorrectable sequence 'ATGT', 
+matches multiple sequences within hamming distance: [("ATGA", 1, "label1"), ("ATTT", 1, "label2")]

@@ -13,7 +13,7 @@ Correct a tag to one of a predefined set of 'barcodes' using closest hamming dis
     on_no_match = 'remove' # 'remove', 'empty', 'keep'
 
 [barcodes.mybarcodelist]
-    "AAAA" = "ignored" # only read when demultiplexing 
+    "AAAA" = "label_ignored" # only read when demultiplexing 
 ```
  
 on_no_match controls what happens if the tag cannot be corrected within the max_hamming_distance:
@@ -23,4 +23,15 @@ on_no_match controls what happens if the tag cannot be corrected within the max_
  * empty: Keep the original location, but set the tag to empty.
 
 
+
+Note that hamming_correction removes the location information on tags if 
+they spanned more than one region. (This is an implementation limitation, not a conceptual one).
+
+The barcodes defined must be disjoint under the given hamming distance and label.
+
+That means 'AGT' -> 'label1' and 'CGT' -> 'label2', max_hamming_distance=1 will fail when encountering
+e.g. 'GTT' (since it's within 1 hamming unit of either).
+
+If the query matches multiple barcodes that all map to the same label, we correct to the 
+closest one, breaking ties by lexicographic ordering.
 

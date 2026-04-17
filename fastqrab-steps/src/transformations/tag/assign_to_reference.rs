@@ -1,4 +1,5 @@
 use bstr::BString;
+use fastqrab_dna::dna::init_hamming_resonator;
 use hamming_resonate::HammingResonator;
 
 use crate::transformations::prelude::*;
@@ -27,7 +28,7 @@ pub struct AssignToReference {
 
     /// Maximum Hamming distance allowed for a match.  Use 0 for exact matches
     /// only.
-    pub max_hamming_distance: u32,
+    pub max_hamming_distance: u8,
 
     // ── built during init ───────────────────────────────────────────────────
     #[tpd(skip)]
@@ -71,7 +72,8 @@ impl VerifyIn<PartialConfig> for PartialAssignToReference {
                         && let Some(seq_to_name) = &barcodes_section.seq_to_name
                         && let Some(max_hamming_distance) = self.max_hamming_distance.as_ref()
                     {
-                        self.init_resonator(seq_to_name, *max_hamming_distance)
+                        self.resonator = Some(Arc::new(init_hamming_resonator(
+                            seq_to_name, *max_hamming_distance)
                             .map_err(|e| {
                                 ValidationFailure::new(
                                     format!("Failure to initialize"),
@@ -80,7 +82,7 @@ impl VerifyIn<PartialConfig> for PartialAssignToReference {
                                     Verify your barcodes, they must be of the same length and disjoint under your max_hamming_distance."
                                     )),
                                 )
-                            })?;
+                            })?));
                         self.seq_to_name = Some(seq_to_name.clone());
                     }
                     // otherwise the barcode section wasn't ok and we'll never
@@ -105,45 +107,6 @@ impl VerifyIn<PartialConfig> for PartialAssignToReference {
             // ));
         }
 
-        Ok(())
-    }
-}
-
-impl PartialAssignToReference {
-    fn init_resonator(
-        &mut self,
-        seq_to_name: &IndexMap<BString, String>,
-        max_dist: u32,
-    ) -> Result<()> {
-        let seqs: Vec<BString> = seq_to_name.keys().cloned().collect();
-
-        let resonator = HammingResonator::new(seqs, max_dist)
-            .map_err(|e| anyhow::anyhow!("Failed to build hamming index: {e}"))?;
-
-        for seq in seq_to_name.keys() {
-            let hit = resonator.query(seq.as_ref()).map_err(|e| {
-                anyhow::anyhow!("Failed to query hamming index during validation: {e}")
-            })?;
-            match hit.len() {
-                0 => {
-                    panic!(
-                        "HammingResonator did not return a hit for a sequence that was indexed. This should not happen, check the implementation of HammingResonator."
-                    );
-                }
-                1 => {}
-                _ => {
-                    let mut hit = hit;
-                    hit.sort();
-                    bail!(
-                        "The reference sequence {seq} had more than one hit within the specificied max hamming distance {}\n\
-                        Hits: {hit:?}",
-                        max_dist
-                    );
-                }
-            }
-        }
-
-        self.resonator = Some(Arc::new(resonator));
         Ok(())
     }
 }

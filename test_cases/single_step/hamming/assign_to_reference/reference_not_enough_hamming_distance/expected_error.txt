@@ -1,3 +1,4 @@
+Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
@@ -16,5 +17,9 @@ Error 1/1
    ┆                       ╰─ Failure to initialize
 ───╯
 Hint: Error: The reference sequence ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTAC had more than one hit within the specificied max hamming distance 1
-      Hits: [("ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTAC", 0), ("ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTAG", 1)]
+      Hits: [("ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTAC", 0, "ref_alpha"), ("ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTAG", 1, "ref_beta")]
       Verify your barcodes, they must be of the same length and disjoint under your max_hamming_distance.
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/AssignToReference
+      Or run: `fastqrab template AssignToReference` for more information.
+
+

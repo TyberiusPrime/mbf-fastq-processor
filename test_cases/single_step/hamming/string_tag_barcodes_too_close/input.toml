@@ -14,7 +14,7 @@
 [[step]]
     action = 'ExtractRegex'
 	source = "name:read1"
-	search = "^X(....)"
+	search = "^X(...)"
 	replacement="$1"
 	out_label = 'barcode_extracted'
 
@@ -42,5 +42,5 @@
 
 
 [barcodes.barcodes]
-    CGAA = 'label2'
-    AGTT = 'label1'
+    CGA = 'label2'
+    AGT = 'label1'

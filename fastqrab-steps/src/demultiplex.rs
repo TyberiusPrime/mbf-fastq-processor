@@ -1,11 +1,10 @@
 use anyhow::{Context, Result};
-use bstr::BString;
+use bstr::{BStr, BString};
 use indexmap::IndexMap;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use crate::join_nonempty;
-use fastqrab_dna::dna::iupac_hamming_distance;
 use fastqrab_io::CompressionFormat;
 use fastqrab_io::io::compressed_output::{HashedAndCompressedWriter, OutputWriter};
 
@@ -193,13 +192,12 @@ impl DemultiplexInfo {
     pub fn barcode_to_tag(&self, barcode: &[u8]) -> Option<Tag> {
         if let Some(tag) = self.local_barcode_to_tag.get(barcode) {
             return Some(*tag);
-        } else if !barcode.is_empty() {
-            for (bc, tag) in &self.local_barcode_to_tag {
-                if bc.len() == barcode.len() && iupac_hamming_distance(bc, barcode) == 0 {
-                    return Some(*tag);
-                }
-            }
-        } // cov:excl-line
+        } else if let Some(tag) = self
+            .local_barcode_to_tag
+            .get(BStr::new(&barcode.to_ascii_uppercase()))
+        {
+            return Some(*tag);
+        }
         None
     }
 }

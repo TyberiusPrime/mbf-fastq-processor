@@ -2,35 +2,35 @@
 CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNNNNNN
 +
 CCCCDCCCCCCCCCC?A???###############################
-@ERR664392.2|barcode_extracted=GGCG|location_barcode_extracted=read1:0-4|corrected=|location_corrected=read1:0-4 GAII02_0001:7:1:1116:17204#0/1
+@ERR664392.2|barcode_extracted=GGCG|location_barcode_extracted=read1:0-4|corrected=|location_corrected= GAII02_0001:7:1:1116:17204#0/1
 GGCGATTTCAATGTCCAAGGNCAGTTTNNNNNNNNNNNNNNNNNNNNNNNN
 +
 CCBCBCCCCCBCCDC?CAC=#@@A@##########################
-@ERR664392.3|barcode_extracted=GTGC|location_barcode_extracted=read1:0-4|corrected=|location_corrected=read1:0-4 GAII02_0001:7:1:1116:15799#0/1
+@ERR664392.3|barcode_extracted=GTGC|location_barcode_extracted=read1:0-4|corrected=|location_corrected= GAII02_0001:7:1:1116:15799#0/1
 GTGCACTGCTGCTTGTGGCTNTCCTTTNNNNNNNNNNNNNNNNNNNNNNNN
 +
 CCCCCCCCCCCCCCC=@@B@#C>C?##########################
-@ERR664392.4|barcode_extracted=GGAA|location_barcode_extracted=read1:0-4|corrected=|location_corrected=read1:0-4 GAII02_0001:7:1:1116:17486#0/1
+@ERR664392.4|barcode_extracted=GGAA|location_barcode_extracted=read1:0-4|corrected=|location_corrected= GAII02_0001:7:1:1116:17486#0/1
 GGAAGTTGATCTCATCCTGANGAGCATNNNNNNNNNNNNNNNNNNNNNNNN
 +
 CCCCC@CCCBCCCCCCC@?C#AAAA##########################
-@ERR664392.5|barcode_extracted=TTCA|location_barcode_extracted=read1:0-4|corrected=|location_corrected=read1:0-4 GAII02_0001:7:1:1116:15631#0/1
+@ERR664392.5|barcode_extracted=TTCA|location_barcode_extracted=read1:0-4|corrected=|location_corrected= GAII02_0001:7:1:1116:15631#0/1
 TTCAAATCCATCTTTGGATANTTCCCTNNNNNNNNNNNNNNNNNNNNNNNN
 +
 BCCCCCCCCCCCCCCCCCCC#ABBB##########################
-@ERR664392.6|barcode_extracted=GCTT|location_barcode_extracted=read1:0-4|corrected=|location_corrected=read1:0-4 GAII02_0001:7:1:1117:20662#0/1
+@ERR664392.6|barcode_extracted=GCTT|location_barcode_extracted=read1:0-4|corrected=|location_corrected= GAII02_0001:7:1:1117:20662#0/1
 GCTTATTACTTTGTACTTCCNATGGAGNNNNNNNNNNNNNNNNNNNNNNNN
 +
 CCCCCCCCCCCCCCCCCCCC#CCCA##########################
-@ERR664392.7|barcode_extracted=CGGG|location_barcode_extracted=read1:0-4|corrected=|location_corrected=read1:0-4 GAII02_0001:7:1:1117:16592#0/1
+@ERR664392.7|barcode_extracted=CGGG|location_barcode_extracted=read1:0-4|corrected=|location_corrected= GAII02_0001:7:1:1117:16592#0/1
 CGGGTGGGGTGGATAGTGAGNTGGAGGNNNNNNNNNNNNNNNNNNNNNNNN
 +
 CCCCACC>>6CB=CABA@AB#5AA###########################
-@ERR664392.8|barcode_extracted=GGTT|location_barcode_extracted=read1:0-4|corrected=|location_corrected=read1:0-4 GAII02_0001:7:1:1117:20327#0/1
+@ERR664392.8|barcode_extracted=GGTT|location_barcode_extracted=read1:0-4|corrected=|location_corrected= GAII02_0001:7:1:1117:20327#0/1
 GGTTCAGTATGTCAGCACAANGATAATNNNNNNNNNNNNNNNNNNNNNNNN
 +
 CCCCCCCCCCCC@CC@=@?@#A=@###########################
-@ERR664392.9|barcode_extracted=CTGG|location_barcode_extracted=read1:0-4|corrected=|location_corrected=read1:0-4 GAII02_0001:7:1:1117:20930#0/1
+@ERR664392.9|barcode_extracted=CTGG|location_barcode_extracted=read1:0-4|corrected=|location_corrected= GAII02_0001:7:1:1117:20930#0/1
 CTGGAGAGGTCAGTGCGATGNGAAAAANNNNNNNNNNNNNNNNNNNNNNNN
 +
 CBB>CBCCCBCCCCC@@@@?#?B@B##########################
