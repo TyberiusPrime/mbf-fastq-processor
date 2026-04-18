@@ -230,6 +230,8 @@ impl VerifyIn<super::PartialConfig> for PartialOutput {
                 || prefix.contains(':')
                 || prefix.starts_with('/')
                 || prefix.starts_with('\\')
+                || prefix.starts_with("../")
+                || prefix.starts_with("..\\")
             {
                 Err(ValidationFailure::new(
                     "Invalid value",

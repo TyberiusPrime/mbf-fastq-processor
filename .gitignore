@@ -28,6 +28,7 @@ Session.vim
 .aider*
 tests/failures
 **/actual
+**/actual_2
 **/actual_docker
 
 # Generated documentation content
