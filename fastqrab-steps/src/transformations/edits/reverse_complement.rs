@@ -84,7 +84,9 @@ impl Step for ReverseComplement {
                 );
                 let ftl =
                     |location: &HitRegion, _pos, seq: &BString, read_len: usize| -> NewLocation {
-                        let new_start = read_len.checked_sub(location.start + location.len).expect("Start position underflow");
+                        let new_start = read_len
+                            .checked_sub(location.start + location.len)
+                            .expect("Start position underflow");
                         let new_seq = reverse_complement_iupac(seq);
                         NewLocation::NewWithSeq(
                             HitRegion {

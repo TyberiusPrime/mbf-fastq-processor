@@ -718,11 +718,11 @@ fn process_work_item(
         Err(e) => WorkResult {
             work_item: WorkItem {
                 block_no,
-                block: io::FastQBlocksCombined::new (
-                     vec![io::FastQBlock::empty()],
-                     None,
-                     Default::default(),
-                     false,
+                block: io::FastQBlocksCombined::new(
+                    vec![io::FastQBlock::empty()],
+                    None,
+                    Default::default(),
+                    false,
                 ),
                 expected_read_count,
                 stage_index,

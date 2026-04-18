@@ -23,7 +23,7 @@ pub trait Parser: Send {
 }
 
 #[derive(Clone, Copy, Debug)]
-pub struct ThreadCount(pub std::num::NonZero<usize>); 
+pub struct ThreadCount(pub std::num::NonZero<usize>);
 
 ///parse multiple files one after the other
 ///this allows the mixing of input file types, I suppose.

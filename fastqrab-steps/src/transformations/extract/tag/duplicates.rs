@@ -117,6 +117,7 @@ impl Step for Duplicates {
         match &self.source {
             ResolvedSourceAll::Segment(segment_index_or_all) => {
                 let filters =
+                //safe, we're single threaded in this
                     RefCell::new(self.filters.lock().expect("Failed to aquire filter lock"));
                 extract_bool_tags_plus_all(
                     &mut block,

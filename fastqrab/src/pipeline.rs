@@ -153,12 +153,8 @@ fn run_combiner_thread(
                     .iter()
                     .map(|_| io::FastQBlock::empty())
                     .collect();
-                let final_block = io::FastQBlocksCombined::new (
-                     empty_segments,
-                     None,
-                     Default::default(),
-                     true,
-                );
+                let final_block =
+                    io::FastQBlocksCombined::new(empty_segments, None, Default::default(), true);
                 let _ = combiner_output_tx.send((
                     block_no,
                     final_block,
@@ -185,12 +181,7 @@ fn run_combiner_thread(
         }
         let out = (
             block_no,
-            io::FastQBlocksCombined::new (
-                 blocks,
-                 None,
-                 Default::default(),
-                 false,
-            ),
+            io::FastQBlocksCombined::new(blocks, None, Default::default(), false),
             *expected_read_count.get().expect("Should have been set"),
         );
         block_no += 1;
@@ -257,15 +248,15 @@ fn run_benchmark_combiner_thread(
     }
 
     // Send final empty block
-    let final_block = io::FastQBlocksCombined::new (
-         first_block
+    let final_block = io::FastQBlocksCombined::new(
+        first_block
             .segments
             .iter()
             .map(|_| io::FastQBlock::empty())
             .collect(),
-         None,
-         Default::default(),
-         true,
+        None,
+        Default::default(),
+        true,
     );
     let _ = combiner_output_tx.send((block_no, final_block, Some(molecule_count)));
 }
@@ -295,12 +286,7 @@ fn run_benchmark_interleaved_thread(
 
         let out = (
             block_no,
-            io::FastQBlocksCombined::new (
-                 out_blocks,
-                 None,
-                 Default::default(),
-                 false,
-            ),
+            io::FastQBlocksCombined::new(out_blocks, None, Default::default(), false),
             Some(molecule_count),
         );
 
@@ -322,11 +308,11 @@ fn run_benchmark_interleaved_thread(
     }
 
     // Send final empty block
-    let final_block = io::FastQBlocksCombined::new (
-         vec![io::FastQBlock::empty()],
-         None,
-         Default::default(),
-         true,
+    let final_block = io::FastQBlocksCombined::new(
+        vec![io::FastQBlock::empty()],
+        None,
+        Default::default(),
+        true,
     );
     let _ = combiner_output_tx.send((block_no, final_block, Some(molecule_count)));
 }
@@ -343,6 +329,14 @@ fn checked_f64_to_u16(value: f64) -> Option<u16> {
         Some(value as u16)
     } else {
         None
+    }
+}
+
+fn bits_needed_to_represent(count: usize) -> u16 {
+    if count <= 1 {
+        1u16
+    } else {
+        (usize::BITS - (count - 1).leading_zeros()) as u16
     }
 }
 
@@ -435,8 +429,8 @@ impl RunStage0 {
                 if let Some(new_demultiplex_barcodes) = new_demultiplex_barcodes {
                     let barcode_count = new_demultiplex_barcodes.barcode_to_name.len()
                         + usize::from(new_demultiplex_barcodes.include_no_barcode);
-                    let bits_needed = checked_f64_to_u16((barcode_count as f64).log2().ceil())
-                        .expect("Barcodes would not fit into a u16");
+                    let bits_needed = //checked_f64_to_u16((barcode_count as f64).log2().ceil())
+                        bits_needed_to_represent(barcode_count);
                     let mut tag_to_name = BTreeMap::new();
                     if new_demultiplex_barcodes.include_no_barcode {
                         tag_to_name.insert(0, Some("no-barcode".to_string()));
@@ -669,11 +663,11 @@ impl RunStage1 {
                             // cov:excl-stop
                         }
 
-                        let first_combined = io::FastQBlocksCombined::new (
-                             first_blocks,
-                             None,
-                             Default::default(),
-                             false,
+                        let first_combined = io::FastQBlocksCombined::new(
+                            first_blocks,
+                            None,
+                            Default::default(),
+                            false,
                         );
 
                         let combiner_thread = thread::Builder::new()

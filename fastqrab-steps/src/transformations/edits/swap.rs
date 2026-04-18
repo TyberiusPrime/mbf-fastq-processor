@@ -120,9 +120,11 @@ impl Step for Swap {
             let a = self.segment_a.get_index();
             let b = self.segment_b.get_index();
             match a.cmp(&b) {
-                std::cmp::Ordering::Less => (a,b),
-                std::cmp::Ordering::Equal => panic!("Swap same segment. should be prevente by config?!"),
-                std::cmp::Ordering::Greater => (b,a,),
+                std::cmp::Ordering::Less => (a, b),
+                std::cmp::Ordering::Equal => {
+                    panic!("Swap same segment. should be prevente by config?!")
+                }
+                std::cmp::Ordering::Greater => (b, a),
             }
         };
 

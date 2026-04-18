@@ -83,11 +83,16 @@ impl FastQElement {
             }
             FastQElement::Local(inner) => {
                 if inner.end - inner.start >= new_value.len() {
-                    inner.end = inner.start + new_value.len();
+                    inner.end = inner
+                        .start
+                        .checked_add(new_value.len())
+                        .expect("new length exceeded usize");
                     block[inner.start..inner.end].copy_from_slice(new_value);
                 } else {
                     let new_start = block.len();
-                    let new_total_len = new_start.checked_add(new_value.len()).expect("New read size exceeds usize");
+                    let new_total_len = new_start
+                        .checked_add(new_value.len())
+                        .expect("New read size exceeds usize");
                     // Resize buffer to accommodate old data + new text
                     block.resize(new_total_len, 0);
                     //copy in the new text
@@ -1220,8 +1225,6 @@ pub struct SegmentsCombined<T> {
     pub segments: Vec<T>,
 }
 
-
-
 /// Multiple fastqblocks together with their tag annotation
 /// and output destination.
 ///
@@ -1242,7 +1245,10 @@ impl FastQBlocksCombined {
         tags: IndexMap<TagLabel, Vec<TagValue>>,
         is_final: bool,
     ) -> Self {
-        assert!(!segments.is_empty(), "Empty segments not supported in FastQBlocksCombined");
+        assert!(
+            !segments.is_empty(),
+            "Empty segments not supported in FastQBlocksCombined"
+        );
         FastQBlocksCombined {
             segments,
             output_tags,
@@ -2259,12 +2265,8 @@ mod test {
 
     #[test]
     fn test_fastq_block_combined_sanity_check_empty() {
-        let empty = FastQBlocksCombined::new (
-             vec![FastQBlock::empty()],
-             None,
-             Default::default(),
-             false,
-        );
+        let empty =
+            FastQBlocksCombined::new(vec![FastQBlock::empty()], None, Default::default(), false);
         empty
             .sanity_check()
             .expect("sanity check should pass in test");
@@ -2272,8 +2274,8 @@ mod test {
     #[test]
     #[should_panic(expected = "Segment counts differ")]
     fn test_fastq_block_combined_sanity_check_r1_neq_r2() {
-        let empty = FastQBlocksCombined::new (
-             vec![
+        let empty = FastQBlocksCombined::new(
+            vec![
                 FastQBlock {
                     block: b"hello".to_vec(),
                     entries: vec![FastQRead {
@@ -2287,9 +2289,9 @@ mod test {
                 FastQBlock::empty(),
                 FastQBlock::empty(),
             ],
-             None,
-             Default::default(),
-             false,
+            None,
+            Default::default(),
+            false,
         );
         empty
             .sanity_check()
@@ -2299,8 +2301,8 @@ mod test {
     #[test]
     #[should_panic(expected = "Segment counts differ")]
     fn test_fastq_block_combined_sanity_check_r1_neq_i1() {
-        let empty = FastQBlocksCombined::new (
-             vec![
+        let empty = FastQBlocksCombined::new(
+            vec![
                 FastQBlock {
                     block: b"hello/1".to_vec(),
                     entries: vec![FastQRead {
@@ -2322,9 +2324,9 @@ mod test {
                 FastQBlock::empty(),
                 FastQBlock::empty(),
             ],
-             None,
-             Default::default(),
-             false,
+            None,
+            Default::default(),
+            false,
         );
         empty
             .sanity_check()
@@ -2334,8 +2336,8 @@ mod test {
     #[test]
     #[should_panic(expected = "Segment counts differ")]
     fn test_fastq_block_combined_sanity_check_r1_neq_i2() {
-        let empty = FastQBlocksCombined::new (
-             vec![
+        let empty = FastQBlocksCombined::new(
+            vec![
                 FastQBlock {
                     block: b"hello/1".to_vec(),
                     entries: vec![FastQRead {
@@ -2365,9 +2367,9 @@ mod test {
                 },
                 FastQBlock::empty(),
             ],
-             None,
-             Default::default(),
-             false,
+            None,
+            Default::default(),
+            false,
         );
         empty
             .sanity_check()
@@ -2377,8 +2379,8 @@ mod test {
     #[test]
     #[should_panic(expected = "Output tag count differs")]
     fn test_fastq_block_combined_sanity_check_r1_eq_output_tags() {
-        let empty = FastQBlocksCombined::new (
-             vec![
+        let empty = FastQBlocksCombined::new(
+            vec![
                 FastQBlock {
                     block: b"hello/1".to_vec(),
                     entries: vec![FastQRead {
@@ -2416,9 +2418,9 @@ mod test {
                     first_read_sequential_number: 0,
                 },
             ],
-             Some(vec![]),
-             Default::default(),
-             false,
+            Some(vec![]),
+            Default::default(),
+            false,
         );
         empty
             .sanity_check()
