@@ -103,7 +103,7 @@ impl VerifyIn<PartialConfig> for PartialMergeReads {
                     parent
                         .input
                         .as_ref()
-                        .expect("Expected input_def to be present at this point")
+                        .expect("Expected input_def to be present at this point. Bug in config validation")
                         .get_segment_order()
                         .join(", ")
                 )),

@@ -87,7 +87,7 @@ impl FastQElement {
                     block[inner.start..inner.end].copy_from_slice(new_value);
                 } else {
                     let new_start = block.len();
-                    let new_total_len = new_start + new_value.len();
+                    let new_total_len = new_start.checked_add(new_value.len()).expect("New read size exceeds usize");
                     // Resize buffer to accommodate old data + new text
                     block.resize(new_total_len, 0);
                     //copy in the new text

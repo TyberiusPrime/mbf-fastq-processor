@@ -490,7 +490,8 @@ pub fn reverse_complement_iupac(input: &[u8]) -> Vec<u8> {
             b'v' => b'b',
             b'd' => b'h',
             b'h' => b'd',
-            b'\n' => panic!("New line in DNA sequence"), // since that's not valid fastq,
+            b'\n' => panic!("New line in DNA sequence"), // prevented by parser upstream
+            // since that's not valid fastq,
             // and our parsers explicily never produce anything with a newline
             _ => *char,
         });

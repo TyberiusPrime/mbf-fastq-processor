@@ -262,7 +262,7 @@ mod tests {
         let open = |path: &std::path::Path| -> Result<File> { Ok(File::open(path)?) };
 
         let file = open(temp.path())?;
-        let mut parser = BamParser::new(file, temp.path().to_owned(), 10, true, false, 1)?;
+        let mut parser = BamParser::new(file, temp.path().to_owned(), 10, true, false, std::num::NonZero::new(1usize).expect("1 is not zero"))?;
         let ParseResult {
             fastq_block: block,
             was_final: finished,
@@ -278,7 +278,7 @@ mod tests {
         }
 
         let file = open(temp.path())?;
-        let mut parser = BamParser::new(file, temp.path().to_owned(), 10, false, true, 1)?;
+            let mut parser = BamParser::new(file, temp.path().to_owned(), 10, false, true, std::num::NonZero::new(1usize).expect("1 is not zero"))?;
         let ParseResult {
             fastq_block: block,
             was_final: finished,
@@ -294,7 +294,7 @@ mod tests {
         }
 
         let file = open(temp.path())?;
-        let mut parser = BamParser::new(file, temp.path().to_owned(), 10, true, true, 1)?;
+        let mut parser = BamParser::new(file, temp.path().to_owned(), 10, true, true, std::num::NonZero::new(1usize).expect("1 is not zero"))?;
         let ParseResult {
             fastq_block: block,
             was_final: finished,

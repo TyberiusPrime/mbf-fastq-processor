@@ -96,6 +96,7 @@ pub fn run_interactive(
     let mut last_content = b"".into();
     let mut first_run = true;
     let mut run_count: u64 = 0;
+    //needs named output folder for test & user inspection.
     let temp_dir =
         std::env::temp_dir().join(format!("fastqrab-interactive-{}", std::process::id()));
     fs::create_dir_all(&temp_dir)

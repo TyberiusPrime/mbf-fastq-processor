@@ -33,7 +33,7 @@ fn test_bufsize_variations(input_fastq_filename: &str, bufsize_range: &[usize]) 
             .get_parser(
                 10000,
                 *bufsize,
-                ThreadCount(1),
+                ThreadCount(std::num::NonZero::new(1usize).expect("1 is not zero")),
                 &fastqrab_io::io::input::InputOptions {
                     bam_include_mapped: None,
                     bam_include_unmapped: None,
