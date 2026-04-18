@@ -419,6 +419,63 @@ fn test_interactive_processes_file_on_first_run() {
     );
 }
 
+#[test]
+#[cfg(unix)]
+fn test_interactive_ctrl_c_removes_temp_dir() {
+    use std::time::{Duration, Instant};
+
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(
+        dir.path().join("input.fq"),
+        b"@r1\nACGT\n+\nIIII\n@r2\nTTTT\n+\nIIII\n",
+    )
+    .unwrap();
+    std::fs::write(
+        dir.path().join("config.toml"),
+        "[input]\nread1 = \"input.fq\"\n\n[output]\nprefix = \"out\"\nformat = \"None\"\n",
+    )
+    .unwrap();
+
+    // Setting TMPDIR places the child's temp dir under `dir`, with a PID-derived name.
+    let mut child = std::process::Command::new(get_bin_path())
+        .args(["interactive", "config.toml"])
+        .current_dir(dir.path())
+        .env("TMPDIR", dir.path())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .unwrap();
+
+    let child_pid = child.id();
+    let temp_dir = dir.path().join(format!("fastqrab-interactive-{child_pid}"));
+
+    let deadline = Instant::now() + Duration::from_secs(30);
+    while Instant::now() < deadline && !temp_dir.exists() {
+        std::thread::sleep(Duration::from_millis(50));
+    }
+    assert!(
+        temp_dir.exists(),
+        "interactive never created temp dir at {}",
+        temp_dir.display()
+    );
+
+    // Send SIGINT, mimicking a Ctrl+C from the user's terminal.
+    let kill_status = std::process::Command::new("kill")
+        .arg("-INT")
+        .arg(child_pid.to_string())
+        .status()
+        .unwrap();
+    assert!(kill_status.success(), "kill -INT failed");
+
+    child.wait().unwrap();
+
+    assert!(
+        !temp_dir.exists(),
+        "temp dir not cleaned up after Ctrl+C: {}",
+        temp_dir.display()
+    );
+}
+
 fn scan_dir(dir: &Path, files: &mut HashSet<std::path::PathBuf>) {
     if let Ok(entries) = fs::read_dir(dir) {
         for entry in entries.flatten() {

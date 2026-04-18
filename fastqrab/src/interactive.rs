@@ -96,11 +96,19 @@ pub fn run_interactive(
     let mut last_content = b"".into();
     let mut first_run = true;
     let mut run_count: u64 = 0;
-    //needs named output folder for test & user inspection.
+    //needs named output folder for test & user inspection
     let temp_dir =
         std::env::temp_dir().join(format!("fastqrab-interactive-{}", std::process::id()));
     fs::create_dir_all(&temp_dir)
         .with_context(|| format!("Failed to create temp directory: {}", temp_dir.display()))?;
+
+    // Remove the temp dir on Ctrl+C so it does not accumulate across runs.
+    let cleanup_path = temp_dir.clone();
+    ctrlc::set_handler(move || {
+        let _ = fs::remove_dir_all(&cleanup_path);
+        std::process::exit(0); // that's the expected behaviour
+    })
+    .context("Failed to register Ctrl+C handler")?;
 
     loop {
         let content: BString = fs::read(&toml_path)

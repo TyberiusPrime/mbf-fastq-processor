@@ -32,6 +32,7 @@ workspace = true
 	clap_complete = {workspace = true}
 	clap = {workspace = true}
 	crossbeam = {workspace = true}
+	ctrlc = "3.5"
 	ex = {workspace = true}
 	flate2 = {workspace = true}
 	human-panic = {workspace = true}
