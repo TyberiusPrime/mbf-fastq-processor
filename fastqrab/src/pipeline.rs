@@ -88,12 +88,7 @@ fn parse_interleaved_and_send(
             let out_blocks = res.fastq_block.split_interleaved(segment_count);
             let out = (
                 block_no,
-                io::FastQBlocksCombined {
-                    segments: out_blocks,
-                    output_tags: None,
-                    tags: IndexMap::default(),
-                    is_final: false,
-                },
+                io::FastQBlocksCombined::new(out_blocks, None, IndexMap::default(), false),
                 expected_read_count,
             );
             block_no += 1; // the receiver verifies this!
@@ -104,12 +99,12 @@ fn parse_interleaved_and_send(
 
         if res.was_final {
             // Send final empty block
-            let final_block = io::FastQBlocksCombined {
-                segments: vec![io::FastQBlock::empty()],
-                output_tags: None,
-                tags: IndexMap::default(),
-                is_final: true,
-            };
+            let final_block = io::FastQBlocksCombined::new(
+                vec![io::FastQBlock::empty()],
+                None,
+                IndexMap::default(),
+                true,
+            );
             let _ = combiner_output_tx.send((block_no, final_block, expected_read_count));
             break;
         }
@@ -158,12 +153,12 @@ fn run_combiner_thread(
                     .iter()
                     .map(|_| io::FastQBlock::empty())
                     .collect();
-                let final_block = io::FastQBlocksCombined {
-                    segments: empty_segments,
-                    output_tags: None,
-                    tags: Default::default(),
-                    is_final: true,
-                };
+                let final_block = io::FastQBlocksCombined::new (
+                     empty_segments,
+                     None,
+                     Default::default(),
+                     true,
+                );
                 let _ = combiner_output_tx.send((
                     block_no,
                     final_block,
@@ -190,12 +185,12 @@ fn run_combiner_thread(
         }
         let out = (
             block_no,
-            io::FastQBlocksCombined {
-                segments: blocks,
-                output_tags: None,
-                tags: Default::default(),
-                is_final: false,
-            },
+            io::FastQBlocksCombined::new (
+                 blocks,
+                 None,
+                 Default::default(),
+                 false,
+            ),
             *expected_read_count.get().expect("Should have been set"),
         );
         block_no += 1;
@@ -262,16 +257,16 @@ fn run_benchmark_combiner_thread(
     }
 
     // Send final empty block
-    let final_block = io::FastQBlocksCombined {
-        segments: first_block
+    let final_block = io::FastQBlocksCombined::new (
+         first_block
             .segments
             .iter()
             .map(|_| io::FastQBlock::empty())
             .collect(),
-        output_tags: None,
-        tags: Default::default(),
-        is_final: true,
-    };
+         None,
+         Default::default(),
+         true,
+    );
     let _ = combiner_output_tx.send((block_no, final_block, Some(molecule_count)));
 }
 
@@ -300,12 +295,12 @@ fn run_benchmark_interleaved_thread(
 
         let out = (
             block_no,
-            io::FastQBlocksCombined {
-                segments: out_blocks,
-                output_tags: None,
-                tags: Default::default(),
-                is_final: false,
-            },
+            io::FastQBlocksCombined::new (
+                 out_blocks,
+                 None,
+                 Default::default(),
+                 false,
+            ),
             Some(molecule_count),
         );
 
@@ -327,12 +322,12 @@ fn run_benchmark_interleaved_thread(
     }
 
     // Send final empty block
-    let final_block = io::FastQBlocksCombined {
-        segments: vec![io::FastQBlock::empty()],
-        output_tags: None,
-        tags: Default::default(),
-        is_final: true,
-    };
+    let final_block = io::FastQBlocksCombined::new (
+         vec![io::FastQBlock::empty()],
+         None,
+         Default::default(),
+         true,
+    );
     let _ = combiner_output_tx.send((block_no, final_block, Some(molecule_count)));
 }
 
@@ -565,8 +560,9 @@ impl RunStage1 {
         let threads_per_parser = ThreadCount(
             input_config
                 .options
-                .threads_per_segment
-                .expect("Must have been set by config"),
+                .threads_per_segment.as_ref().and_then(|x|
+                    std::num::NonZero::new(*x)
+                ) .expect("threads_per_segment must have been set by config validation, and checked to be >= 0"),
         );
         let mut input_files =
             crate::io::open_input_files(input_config).context("Error opening input files")?;
@@ -627,7 +623,7 @@ impl RunStage1 {
                                     molecule_count,
                                 );
                             })
-                            .expect("thread spawn should not fail");
+                            .expect("Thread spawning failed. OS resource exhaustion?");
 
                         (input_threads, combiner_thread, combiner_output_rx)
                     }
@@ -673,12 +669,12 @@ impl RunStage1 {
                             // cov:excl-stop
                         }
 
-                        let first_combined = io::FastQBlocksCombined {
-                            segments: first_blocks,
-                            output_tags: None,
-                            tags: Default::default(),
-                            is_final: false,
-                        };
+                        let first_combined = io::FastQBlocksCombined::new (
+                             first_blocks,
+                             None,
+                             Default::default(),
+                             false,
+                        );
 
                         let combiner_thread = thread::Builder::new()
                             .name("BenchmarkCombiner".into())
@@ -689,7 +685,7 @@ impl RunStage1 {
                                     molecule_count,
                                 );
                             })
-                            .expect("thread spawn should not fail");
+                            .expect("Thread spawning failed. OS resource exhaustion?");
 
                         (input_threads, combiner_thread, combiner_output_rx)
                     }
@@ -731,7 +727,7 @@ impl RunStage1 {
                             // cov:excl-stop
                         }
                         })
-                        .expect("thread spawn should not fail");
+                        .expect("Thread spawning failed. OS resource exhaustion?");
 
                     /* vec![(
                         "interleaved".to_string(),
@@ -771,7 +767,7 @@ impl RunStage1 {
                                     ));
                                 }
                             })
-                            .expect("thread spawn should not fail");
+                            .expect("Thread spawning failed. OS resource exhaustion?");
                         threads.push(read_thread);
                         raw_rx_readers.push(raw_rx_read);
                     }
@@ -790,7 +786,7 @@ impl RunStage1 {
                                     error_collector,
                                 );
                             })
-                            .expect("thread spawn should not fail");
+                            .expect("Thread spawning failed. OS resource exhaustion?");
                         (threads, combiner, combiner_output_rx)
                     }
                 }
@@ -846,6 +842,9 @@ impl RunStage2 {
         let max_blocks_in_flight = parsed.options.max_blocks_in_flight.unwrap_or(100); // TODO: make configurable
 
         // Create channels
+        // unbounded is fine, we later on count blocks in flight
+        // and prevent having more than max_blocks_in_flight
+        // across *all* channels.
         let (todo_tx, todo_rx) = unbounded();
         let (done_tx, done_rx) = unbounded();
         let (output_tx, output_rx) = unbounded();
@@ -878,7 +877,7 @@ impl RunStage2 {
             .spawn(move || {
                 coordinator.run(&coordinator_demultiplex_infos);
             })
-            .expect("thread spawn should not fail");
+            .expect("Thread spawning failed. OS resource exhaustion?");
 
         // Create worker threads
         let mut worker_threads = Vec::new();
@@ -902,7 +901,7 @@ impl RunStage2 {
                         &demultiplex_infos,
                     );
                 })
-                .expect("thread spawn should not fail");
+                .expect("Thread spawning failed. OS resource exhaustion?");
 
             worker_threads.push(worker_thread);
         }
@@ -1146,7 +1145,7 @@ impl RunStage3 {
                     }
                     // cov:excl-stop
                 })
-                .expect("thread spawn should not fail")
+                .expect("Thread spawning failed. OS resource exhaustion?")
         };
 
         Ok(RunStage4 {

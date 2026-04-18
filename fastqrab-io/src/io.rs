@@ -46,7 +46,7 @@ fn apply_to_read(
         .get_parser(
             default_block_size(),
             default_buffer_size(),
-            ThreadCount(1),
+            ThreadCount(std::num::NonZero::new(1usize).expect("1 is not zero")),
             &options,
         )
         .context("Getting parser")?; // cov:excl-line

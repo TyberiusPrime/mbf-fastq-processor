@@ -127,13 +127,13 @@ impl<T: Write + Send + 'static> CompressedWriter<'_, T> {
             CompressedWriter::Raw(inner) => inner,
             CompressedWriter::GzipSingle(inner) => inner
                 .finish()
-                .expect("compression finalization should not fail"),
+                .expect("Compression finalization failed unexpectedly. Disk full or similar unrecoverable condition?"),
             CompressedWriter::GzipParallel(mut inner) => inner
                 .finish()
-                .expect("compression finalization should not fail"),
+                .expect("Compression finalization failed unexpectedly. Disk full or similar unrecoverable condition?"),
             CompressedWriter::Zstd(inner) => inner
                 .finish()
-                .expect("compression finalization should not fail"),
+                .expect("Compression finalization failed unexpectedly. Disk full or similar unrecoverable condition?"),
         }
     }
 }

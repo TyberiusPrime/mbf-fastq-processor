@@ -103,10 +103,9 @@ impl BamParser {
         target_reads_per_block: usize,
         include_mapped: bool,
         include_unmapped: bool,
-        cores: usize,
+        cores: std::num::NonZero<usize>,
     ) -> Result<BamParser> {
-        let worker_count: std::num::NonZero<_> =
-            std::num::NonZero::new(cores).expect("Expected worker cores to have been validated");
+        let worker_count: std::num::NonZero<_> = cores;
         let bgzf_reader = bgzf::io::MultithreadedReader::with_worker_count(worker_count, file);
         let mut reader = bam::io::Reader::from(bgzf_reader);
         reader.read_header()?;

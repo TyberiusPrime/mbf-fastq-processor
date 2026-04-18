@@ -572,7 +572,9 @@ fn extract_from_sequence(
         None
     } else {
         // Ensure we don't go beyond sequence bounds
-        let end_pos = actual_start + out_length;
+        let end_pos = actual_start
+            .checked_add(out_length)
+            .expect("end_pos overflowed usize");
         if end_pos > sequence.len() {
             return None;
         }

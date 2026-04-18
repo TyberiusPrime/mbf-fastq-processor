@@ -1,6 +1,7 @@
 use anyhow::{Result, bail};
 use bstr::BString;
 use indexmap::IndexMap;
+use std::marker::PhantomData;
 use std::ops::Range;
 
 use fastqrab_config::{TagLabel, segments::SegmentIndexOrAll};
@@ -1219,15 +1220,38 @@ pub struct SegmentsCombined<T> {
     pub segments: Vec<T>,
 }
 
+
+
+/// Multiple fastqblocks together with their tag annotation
+/// and output destination.
+///
+/// Contract: segments must not be empty.
 #[derive(Clone, Debug)]
 pub struct FastQBlocksCombined {
     pub segments: Vec<FastQBlock>,
     pub output_tags: Option<Vec<DemultiplexTag>>, // used by Demultiplex
     pub tags: IndexMap<TagLabel, Vec<TagValue>>,
     pub is_final: bool,
+    _force_private: PhantomData<u8>,
 }
 
 impl FastQBlocksCombined {
+    pub fn new(
+        segments: Vec<FastQBlock>,
+        output_tags: Option<Vec<DemultiplexTag>>,
+        tags: IndexMap<TagLabel, Vec<TagValue>>,
+        is_final: bool,
+    ) -> Self {
+        assert!(!segments.is_empty(), "Empty segments not supported in FastQBlocksCombined");
+        FastQBlocksCombined {
+            segments,
+            output_tags,
+            tags,
+            is_final,
+            _force_private: PhantomData,
+        }
+    }
+
     pub fn iter_segment_indices(&self, idx: SegmentIndexOrAll) -> Vec<usize> {
         match idx {
             SegmentIndexOrAll::All => (0..self.segments.len()).collect(),
@@ -1247,6 +1271,7 @@ impl FastQBlocksCombined {
             },
             tags: IndexMap::default(),
             is_final: self.is_final,
+            _force_private: PhantomData,
         }
     }
 
@@ -2234,12 +2259,12 @@ mod test {
 
     #[test]
     fn test_fastq_block_combined_sanity_check_empty() {
-        let empty = FastQBlocksCombined {
-            segments: vec![FastQBlock::empty()],
-            output_tags: None,
-            tags: Default::default(),
-            is_final: false,
-        };
+        let empty = FastQBlocksCombined::new (
+             vec![FastQBlock::empty()],
+             None,
+             Default::default(),
+             false,
+        );
         empty
             .sanity_check()
             .expect("sanity check should pass in test");
@@ -2247,8 +2272,8 @@ mod test {
     #[test]
     #[should_panic(expected = "Segment counts differ")]
     fn test_fastq_block_combined_sanity_check_r1_neq_r2() {
-        let empty = FastQBlocksCombined {
-            segments: vec![
+        let empty = FastQBlocksCombined::new (
+             vec![
                 FastQBlock {
                     block: b"hello".to_vec(),
                     entries: vec![FastQRead {
@@ -2262,10 +2287,10 @@ mod test {
                 FastQBlock::empty(),
                 FastQBlock::empty(),
             ],
-            output_tags: None,
-            tags: Default::default(),
-            is_final: false,
-        };
+             None,
+             Default::default(),
+             false,
+        );
         empty
             .sanity_check()
             .expect("sanity check should pass in test");
@@ -2274,8 +2299,8 @@ mod test {
     #[test]
     #[should_panic(expected = "Segment counts differ")]
     fn test_fastq_block_combined_sanity_check_r1_neq_i1() {
-        let empty = FastQBlocksCombined {
-            segments: vec![
+        let empty = FastQBlocksCombined::new (
+             vec![
                 FastQBlock {
                     block: b"hello/1".to_vec(),
                     entries: vec![FastQRead {
@@ -2297,10 +2322,10 @@ mod test {
                 FastQBlock::empty(),
                 FastQBlock::empty(),
             ],
-            output_tags: None,
-            tags: Default::default(),
-            is_final: false,
-        };
+             None,
+             Default::default(),
+             false,
+        );
         empty
             .sanity_check()
             .expect("sanity check should pass in test");
@@ -2309,8 +2334,8 @@ mod test {
     #[test]
     #[should_panic(expected = "Segment counts differ")]
     fn test_fastq_block_combined_sanity_check_r1_neq_i2() {
-        let empty = FastQBlocksCombined {
-            segments: vec![
+        let empty = FastQBlocksCombined::new (
+             vec![
                 FastQBlock {
                     block: b"hello/1".to_vec(),
                     entries: vec![FastQRead {
@@ -2340,10 +2365,10 @@ mod test {
                 },
                 FastQBlock::empty(),
             ],
-            output_tags: None,
-            tags: Default::default(),
-            is_final: false,
-        };
+             None,
+             Default::default(),
+             false,
+        );
         empty
             .sanity_check()
             .expect("sanity check should pass in test");
@@ -2352,8 +2377,8 @@ mod test {
     #[test]
     #[should_panic(expected = "Output tag count differs")]
     fn test_fastq_block_combined_sanity_check_r1_eq_output_tags() {
-        let empty = FastQBlocksCombined {
-            segments: vec![
+        let empty = FastQBlocksCombined::new (
+             vec![
                 FastQBlock {
                     block: b"hello/1".to_vec(),
                     entries: vec![FastQRead {
@@ -2391,10 +2416,10 @@ mod test {
                     first_read_sequential_number: 0,
                 },
             ],
-            output_tags: Some(vec![]),
-            tags: Default::default(),
-            is_final: false,
-        };
+             Some(vec![]),
+             Default::default(),
+             false,
+        );
         empty
             .sanity_check()
             .expect("sanity check should pass in test");

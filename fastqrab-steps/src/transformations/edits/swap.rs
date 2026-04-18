@@ -116,8 +116,15 @@ impl Step for Swap {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let index_a = self.segment_a.get_index();
-        let index_b = self.segment_b.get_index();
+        let (index_a, index_b) = {
+            let a = self.segment_a.get_index();
+            let b = self.segment_b.get_index();
+            match a.cmp(&b) {
+                std::cmp::Ordering::Less => (a,b),
+                std::cmp::Ordering::Equal => panic!("Swap same segment. should be prevente by config?!"),
+                std::cmp::Ordering::Greater => (b,a,),
+            }
+        };
 
         // If no condition, do unconditional swap
         if self.if_tag.is_none() {

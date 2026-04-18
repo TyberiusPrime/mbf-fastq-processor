@@ -113,7 +113,7 @@ enum OutputWriter<'a> {
 
 impl OutputWriter<'_> {
     fn finish(mut self) -> (Option<String>, Option<String>) {
-        self.flush().expect("Flushing file failed");
+        self.flush().expect("Flushing file failed. Disk trouble?");
         match self {
             OutputWriter::File(inner) => inner.finish(),
         }
