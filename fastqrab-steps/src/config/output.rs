@@ -1,9 +1,9 @@
+use fastqrab_config::{TagLabel, offer_alternatives, tpd_adapt_u8_from_byte_or_char};
+use fastqrab_io::{CompressionFormat, FileFormat};
+use indexmap::IndexMap;
 use schemars::JsonSchema;
 use std::collections::HashSet;
 use toml_pretty_deser::prelude::*;
-
-use fastqrab_config::{offer_alternatives, tpd_adapt_u8_from_byte_or_char};
-use fastqrab_io::{CompressionFormat, FileFormat};
 
 #[must_use]
 pub fn default_ix_separator() -> String {
@@ -13,6 +13,85 @@ pub fn default_ix_separator() -> String {
 #[must_use]
 pub fn default_bam_comment_separation_char() -> u8 {
     b' '
+}
+
+/// A validated two-character BAM auxiliary tag name (e.g. `"BC"`).
+///
+/// Only ASCII alphanumeric characters are accepted.
+#[derive(Clone, Debug, JsonSchema)]
+#[schemars(with = "String")]
+pub struct BamTag(pub [u8; 2]);
+
+impl TryFrom<&str> for BamTag {
+    type Error = String;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        let bytes = s.as_bytes();
+        if bytes.len() != 2 {
+            return Err(format!(
+                "BAM tag must be exactly 2 characters; got '{}' ({} chars). \
+                 BAM auxiliary tag names are exactly 2 ASCII alphanumeric characters.",
+                s,
+                bytes.len()
+            ));
+        }
+        if !bytes.iter().all(|&b| b.is_ascii_alphanumeric()) {
+            return Err(format!(
+                "BAM tag must be 2 alphanumeric ASCII characters; got '{}'. \
+                 Only [A-Za-z0-9] are allowed.",
+                s
+            ));
+        }
+        Ok(BamTag([bytes[0], bytes[1]]))
+    }
+}
+
+toml_pretty_deser::impl_visitor_for_try_from_str!(BamTag, "Invalid BAM tag");
+
+/// Alias so the `#[tpd]` macro can find the "partial" type for `BamTag`
+/// (which is its own visitor – no separate Partial struct is generated).
+pub type PartialBamTag = BamTag;
+
+/// Source for reference sequences used by `tag_to_reference` (Feature B).
+///
+/// Exactly one of `barcodes` or `from_bam` must be set.
+#[tpd(no_verify)]
+#[derive(Clone, Debug, JsonSchema)]
+pub struct TagToReference {
+    /// The fastqrab tag label whose value selects the reference sequence name.
+    pub tag: String,
+
+    /// Name of a `[barcodes.<name>]` section whose keys become reference names.
+    #[tpd(default)]
+    pub barcodes: Option<String>,
+
+    /// Path to a BAM file whose `@SQ` header lines define the reference sequences.
+    #[tpd(default)]
+    pub from_bam: Option<String>,
+}
+
+/// BAM-specific output options.
+#[derive(Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
+pub struct BamOutputOptions {
+    /// Character used to split read names into a BAM name field and a `CO` auxiliary tag.
+    /// Defaults to `' '` (space).  Reads whose names contain this character are split; the
+    /// part after the character is placed in a `CO` tag so it can exceed the 254-byte limit.
+    #[tpd(with = "tpd_adapt_u8_from_byte_or_char")]
+    pub comment_separation_char: u8,
+
+    /// Map of fastqrab tag labels to BAM auxiliary tag names (Feature A).
+    ///
+    /// Each key is a fastqrab tag label; each value is the two-character BAM
+    /// auxiliary tag name to write (e.g. `BC`).
+    #[tpd(nested)]
+    #[schemars(skip)]
+    pub tag_to_bam_tag: IndexMap<TagLabel, BamTag>,
+
+    /// Export a fastqrab tag value as the BAM reference name (Feature B).
+    #[tpd(nested)]
+    pub tag_to_reference: Option<TagToReference>,
 }
 
 #[derive(Clone, JsonSchema)]
@@ -54,8 +133,68 @@ pub struct Output {
     #[tpd(default)]
     pub chunksize: Option<usize>,
 
-    #[tpd(with = "tpd_adapt_u8_from_byte_or_char")]
-    pub bam_comment_separation_char: u8,
+    /// BAM-specific output options (comment separator, tag exports, reference assignment).
+    #[tpd(nested)]
+    pub bam: Option<BamOutputOptions>,
+}
+
+impl VerifyIn<PartialOutput> for PartialBamOutputOptions {
+    fn verify(
+        &mut self,
+        _parent: &PartialOutput,
+        _options: &VerifyOptions,
+    ) -> Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        self.comment_separation_char
+            .or_with(default_bam_comment_separation_char);
+        self.tag_to_bam_tag
+            .or_with(|| toml_pretty_deser::MapAndKeys {
+                map: indexmap::IndexMap::new(),
+                keys: vec![],
+            });
+
+        // Validate tag_to_reference: exactly one of barcodes or from_bam must be set.
+        if let Some(Some(tag_to_ref)) = self.tag_to_reference.as_mut() {
+            let has_barcodes = tag_to_ref
+                .barcodes
+                .as_ref()
+                .and_then(|x| x.as_ref())
+                .is_some();
+            let has_from_bam = tag_to_ref
+                .from_bam
+                .as_ref()
+                .and_then(|x| x.as_ref())
+                .is_some();
+            if !has_barcodes && !has_from_bam {
+                tag_to_ref.barcodes.state = TomlValueState::new_validation_failed(
+                    "Either 'barcodes' or 'from_bam' must be specified",
+                );
+                tag_to_ref.barcodes.help = Some(
+                    "Set 'barcodes' to a barcode section name, or 'from_bam' to a BAM file path."
+                        .to_string(),
+                );
+            } else if has_barcodes && has_from_bam {
+                tag_to_ref.from_bam.state = TomlValueState::Custom {
+                    spans: vec![
+                        (
+                            tag_to_ref.barcodes.span(),
+                            "Conflicts with from_bam".to_string(),
+                        ),
+                        (
+                            tag_to_ref.from_bam.span(),
+                            "Conflicts with barcodes".to_string(),
+                        ),
+                    ],
+                };
+                tag_to_ref.from_bam.help =
+                    Some("Set only one of 'barcodes' or 'from_bam'.".to_string());
+            }
+        }
+
+        Ok(())
+    }
 }
 
 impl VerifyIn<super::PartialConfig> for PartialOutput {
@@ -145,8 +284,6 @@ impl VerifyIn<super::PartialConfig> for PartialOutput {
             Ok(())
         });
         self.ix_separator.or_with(default_ix_separator);
-        self.bam_comment_separation_char
-            .or_with(default_bam_comment_separation_char);
 
         if let Some(Some(_level)) = self.compression_level.value {
             validate_compression_level_u8(

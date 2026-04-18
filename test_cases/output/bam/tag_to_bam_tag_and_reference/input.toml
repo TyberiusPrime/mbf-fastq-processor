@@ -1,0 +1,40 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[output]
+    prefix = 'output'
+    format = 'bam'
+
+[output.bam]
+    [output.bam.tag_to_bam_tag]
+        barcode = 'BC'
+
+    [output.bam.tag_to_reference]
+        tag = 'ref_name'
+        barcodes = 'ref_barcodes'
+
+[[step]]
+    action = 'ExtractRegion'
+    source = 'read1'
+    anchor = 'start'
+    start = 0
+    length = 6
+    out_label = 'barcode'
+
+[[step]]
+    action = 'ExtractRegion'
+    source = 'read1'
+    anchor = 'start'
+    start = 0
+    length = 50
+    out_label = 'query_seq'
+
+[[step]]
+    action = 'AssignToReference'
+    in_label = 'query_seq'
+    out_label = 'ref_name'
+    barcodes = 'ref_barcodes'
+    max_hamming_distance = 0
+
+[barcodes.ref_barcodes]
+    from_file.filename = 'input_reference.fa'

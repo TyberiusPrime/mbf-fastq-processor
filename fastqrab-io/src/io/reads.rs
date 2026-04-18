@@ -11,6 +11,7 @@ use fastqrab_dna::dna::{
 use fastqrab_dna::segments::SegmentIndex;
 
 pub type DemultiplexTag = u64;
+pub type Tags = IndexMap<TagLabel, Vec<TagValue>>;
 /// Read in memory representation.
 /// We either have references in the large block we read from the fastq file,
 /// or owned sections. We therefore need to pass in the block as an 'arena' when
@@ -719,6 +720,44 @@ impl<'a> FastQBlockPseudoIter<'a> {
                         let e = WrappedFastQRead(&inner.entries[*pos], &inner.block);
                         *pos += 1;
                         return Some(e);
+                    } else {
+                        *pos += 1;
+                    }
+                }
+            }
+        }
+    }
+
+    /// Like `pseudo_next` but also returns the original block index of the read.
+    /// This is needed for looking up per-read tags when iterating a filtered view.
+    pub fn pseudo_next_with_index(&mut self) -> Option<(WrappedFastQRead<'a>, usize)> {
+        match self {
+            FastQBlockPseudoIter::Simple { pos, inner } => {
+                let len = inner.entries.len();
+                if *pos >= len || len == 0 {
+                    return None;
+                }
+                let idx = *pos;
+                let e = WrappedFastQRead(&inner.entries[idx], &inner.block);
+                *pos += 1;
+                Some((e, idx))
+            }
+            FastQBlockPseudoIter::Filtered {
+                pos,
+                inner,
+                tag,
+                output_tags,
+            } => {
+                let len = inner.entries.len();
+                loop {
+                    if *pos >= len || len == 0 {
+                        return None;
+                    }
+                    let idx = *pos;
+                    if output_tags[idx] == *tag {
+                        let e = WrappedFastQRead(&inner.entries[idx], &inner.block);
+                        *pos += 1;
+                        return Some((e, idx));
                     } else {
                         *pos += 1;
                     }

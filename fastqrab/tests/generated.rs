@@ -1425,6 +1425,46 @@ fn test_cases_x_output_x_bam_x_interleaved() {
 }
 
 #[test]
+fn test_cases_x_output_x_bam_x_tag_to_bam_tag() {
+    println!("Test case is in: test_cases/output/bam/tag_to_bam_tag");
+    run_test(
+        std::path::Path::new("../test_cases/output/bam/tag_to_bam_tag"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_output_x_bam_x_tag_to_bam_tag_and_reference() {
+    println!("Test case is in: test_cases/output/bam/tag_to_bam_tag_and_reference");
+    run_test(
+        std::path::Path::new("../test_cases/output/bam/tag_to_bam_tag_and_reference"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_output_x_bam_x_tag_to_reference_barcodes() {
+    println!("Test case is in: test_cases/output/bam/tag_to_reference_barcodes");
+    run_test(
+        std::path::Path::new("../test_cases/output/bam/tag_to_reference_barcodes"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_output_x_bam_x_tag_to_reference_from_bam() {
+    println!("Test case is in: test_cases/output/bam/tag_to_reference_from_bam");
+    run_test(
+        std::path::Path::new("../test_cases/output/bam/tag_to_reference_from_bam"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_output_x_chunked_x_bam() {
     println!("Test case is in: test_cases/output/chunked/bam");
     run_test(

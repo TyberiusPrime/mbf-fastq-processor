@@ -529,7 +529,7 @@ impl PartialConfig {
                     output_hash_compressed: TomlValue::new_ok(false, 0..0),
                     ix_separator: TomlValue::new_ok(output::default_ix_separator(), 0..0),
                     chunksize: TomlValue::new_ok(None, 0..0),
-                    bam_comment_separation_char: TomlValue::new_ok(b' ', 0..0),
+                    bam: TomlValue::new_ok(None, 0..0),
                 }),
                 0..0,
             );
@@ -1308,6 +1308,26 @@ impl PartialConfig {
                 }
             } // cov:excl-line
 
+            // Mark tags consumed by output.bam as used so they don't trigger "Unused tag"
+            if let Some(Some(output)) = self.output.as_ref() {
+                if let Some(Some(bam_opts)) = output.bam.as_ref() {
+                    if let Some(map_and_keys) = bam_opts.tag_to_bam_tag.as_ref() {
+                        for tag_label in map_and_keys.map.keys() {
+                            if let Some(meta) = tags_available.get_mut(tag_label.as_ref()) {
+                                meta.used = true;
+                            }
+                        }
+                    }
+                    if let Some(Some(tag_to_ref)) = bam_opts.tag_to_reference.as_ref() {
+                        if let Some(tag_name) = tag_to_ref.tag.as_ref() {
+                            if let Some(meta) = tags_available.get_mut(tag_name.as_str()) {
+                                meta.used = true;
+                            }
+                        }
+                    }
+                }
+            }
+
             //complain about unused tags if there were no tag errors
             //otherwise, mistyping a tag will give you two errors
             //one for 'no such tag' and one for 'you did not use the real one'
@@ -1397,9 +1417,27 @@ impl PartialConfig {
                                 }
                             }
                         }
+                        // Also check if output's tag_to_reference uses this barcode section
+                        if !found_demultiplex_step {
+                            if let Some(Some(output)) = self.output.as_ref() {
+                                if let Some(Some(bam_opts)) = output.bam.as_ref() {
+                                    if let Some(Some(tag_to_ref)) =
+                                        bam_opts.tag_to_reference.as_ref()
+                                    {
+                                        if let Some(Some(barcodes_name)) =
+                                            tag_to_ref.barcodes.as_ref()
+                                            && barcode_section_name.as_ref()
+                                                == barcodes_name.as_str()
+                                        {
+                                            found_demultiplex_step = true;
+                                        }
+                                    }
+                                }
+                            }
+                        }
                         if !found_demultiplex_step {
                             tv_barcodes.state = TomlValueState::new_validation_failed(
-                                "Barcode section not used in any Demultiplex, HammingCorrect or AssignToReference step",
+                                "Barcode section not used in any Demultiplex, HammingCorrect, AssignToReference step, or output.bam.tag_to_reference",
                             );
                             tv_barcodes.help = Some(
                                 "Add a Demultiplex step, or remove this barcode section"

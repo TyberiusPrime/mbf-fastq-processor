@@ -10,7 +10,8 @@ use noodles::{bam, bgzf, sam};
 use std::sync::Arc;
 
 use crate::io::output::compressed_output::HashedAndCompressedWriter;
-use crate::io::reads::{WrappedFastQRead, WrappedFastQReadCommon};
+use crate::io::reads::{Tags, WrappedFastQRead, WrappedFastQReadCommon};
+use fastqrab_dna::dna::TagValue;
 
 pub mod compressed_output;
 
@@ -19,12 +20,30 @@ pub struct BamOutput<'a> {
     pub header: Arc<sam::Header>,
 }
 
+/// Write a single read to a BAM file.
+///
+/// # Parameters
+/// - `bam_output`: the open BAM writer with its header
+/// - `read`: the read to write
+/// - `read_index`: the position of this read in the current block (used for tag lookup)
+/// - `segment_index`: 0-based index among segments in a paired/multi-segment set
+/// - `segment_count`: total number of segments (1 for single-end)
+/// - `comment_separation_char`: character used to split the read name into name+CO tag
+/// - `tags`: per-read tags for this block (may be empty)
+/// - `bam_tag_mappings`: list of `(bam_tag_bytes, fastqrab_tag_name)` pairs to export (Feature A)
+/// - `reference_tag`: if `Some(tag_name)`, look up that tag's value in the BAM reference
+///   sequences and set the read's RNAME / alignment start accordingly (Feature B)
+#[allow(clippy::too_many_arguments)]
 pub fn write_read_to_bam(
     bam_output: &mut BamOutput<'_>,
     read: &WrappedFastQRead<'_>,
+    read_index: usize,
     segment_index: usize,
     segment_count: usize,
-    bam_comment_separation_char: u8,
+    comment_separation_char: u8,
+    tags: &Tags,
+    bam_tag_mappings: &[([u8; 2], &str)],
+    reference_tag: Option<&str>,
 ) -> Result<()> {
     use noodles::sam::alignment::{
         record::data::field::Tag,
@@ -55,7 +74,7 @@ pub fn write_read_to_bam(
         if let Some(space_pos) = read
             .name()
             .iter()
-            .position(|&c| c == bam_comment_separation_char)
+            .position(|&c| c == comment_separation_char)
         {
             (
                 &read.name()[..space_pos],
@@ -65,22 +84,80 @@ pub fn write_read_to_bam(
             (read.name(), None)
         }
     };
-    // Query or read names may contain any printable ASCII characters in the range [!-~] apart from ‘@’, so
-    // that SAM alignment lines can be easily distinguished from header lines.
-    let mut record = RecordBuf::builder()
-        .set_name(name)
-        //.set_name(BString::from("hello"))
-        .set_flags(flags)
-        .set_sequence(SamSequence::from(read.seq().to_vec()))
-        .set_quality_scores(SamQualityScores::from(adjusted_quality_scores));
+
+    // --- Feature A: build auxiliary tag data --------------------------------
+    let mut data_fields: Vec<(Tag, Value)> = Vec::new();
+
     if let Some(comment) = comment {
         let tag = Tag::from([b'C', b'O']);
-        let data: Data = [(tag, Value::String(BString::from(comment)))]
-            .into_iter()
-            .collect();
-        record = record.set_data(data);
+        data_fields.push((tag, Value::String(BString::from(comment))));
     }
-    let record = record.build();
+
+    for (bam_tag_bytes, fastqrab_tag_name) in bam_tag_mappings {
+        if let Some(tag_values) = tags.get(*fastqrab_tag_name) {
+            if let Some(tag_value) = tag_values.get(read_index) {
+                let value_opt: Option<Value> = match tag_value {
+                    TagValue::String(s) => Some(Value::String(s.clone())),
+                    TagValue::Location(hits) => {
+                        // Join all hit sequences with commas
+                        if hits.0.is_empty() {
+                            None
+                        } else {
+                            let joined = hits
+                                .0
+                                .iter()
+                                .map(|h| h.sequence.as_ref())
+                                .collect::<Vec<_>>()
+                                .join(b",".as_ref());
+                            Some(Value::String(BString::from(joined)))
+                        }
+                    }
+                    TagValue::Numeric(n) => Some(Value::Float(*n as f32)),
+                    TagValue::Bool(b) => Some(Value::UInt8(u8::from(*b))),
+                    TagValue::Missing => None,
+                };
+                if let Some(value) = value_opt {
+                    data_fields.push((Tag::from(*bam_tag_bytes), value));
+                }
+            }
+        }
+    }
+
+    let data: Data = data_fields.into_iter().collect();
+
+    // --- Feature B: assign reference ----------------------------------------
+    let mut reference_sequence_id: Option<usize> = None;
+    if let Some(ref_tag_name) = reference_tag {
+        if let Some(tag_values) = tags.get(ref_tag_name) {
+            if let Some(tag_value) = tag_values.get(read_index) {
+                if let TagValue::String(ref_name) = tag_value {
+                    // Look up the reference name in the BAM header
+                    let key: &[u8] = ref_name.as_ref();
+                    if let Some(idx) = bam_output.header.reference_sequences().get_index_of(key) {
+                        reference_sequence_id = Some(idx);
+                        flags.remove(SamFlags::UNMAPPED);
+                    }
+                }
+            }
+        }
+    }
+
+    // Query or read names may contain any printable ASCII characters in the range [!-~] apart from '@', so
+    // that SAM alignment lines can be easily distinguished from header lines.
+    let mut record_builder = RecordBuf::builder()
+        .set_name(name)
+        .set_flags(flags)
+        .set_sequence(SamSequence::from(read.seq().to_vec()))
+        .set_quality_scores(SamQualityScores::from(adjusted_quality_scores))
+        .set_data(data);
+
+    if let Some(ref_id) = reference_sequence_id {
+        record_builder = record_builder
+            .set_reference_sequence_id(ref_id)
+            .set_alignment_start(noodles_core::Position::MIN);
+    }
+
+    let record = record_builder.build();
 
     if let Err(e) = bam_output
         .writer
@@ -91,7 +168,7 @@ pub fn write_read_to_bam(
         if name.len() > 254 {
             res = res.context(format!(
                 "The read name exceeded the 254 byte limited of the SAM/BAM spec.\n\
-                    Shorten your read name, or set output.bam_comment_separation_char\n\
+                    Shorten your read name, or set output.bam.comment_separation_char\n\
                     to split your read name into a name and a 'CO' tag (which may exceed 254 bytes).\n\
                     Read name (length: {len}): '{name}'",
                 len = name.len()
@@ -101,7 +178,7 @@ pub fn write_read_to_bam(
         if name.iter().any(|&c| c < 33 || c > 126 || c == b'@') {
             res = res.context(format!(
                 "The read name contains characters that are not allowed in the SAM/BAM spec.\n\
-                    Remove or replace these characters, or set output.bam_comment_separation_char\n\
+                    Remove or replace these characters, or set output.bam.comment_separation_char\n\
                     to split your read name into a name and a 'CO' tag (which may contain these characters).\n\
                     Read name: '{name}'"
             ));
@@ -161,9 +238,13 @@ mod tests {
             write_read_to_bam(
                 &mut bam_output,
                 &block.get(0),
+                0,
                 segment_index,
                 segment_count,
                 b' ',
+                &Default::default(),
+                &[],
+                None,
             )
             .unwrap();
         } // drops bam_output, flushing and finalizing the file

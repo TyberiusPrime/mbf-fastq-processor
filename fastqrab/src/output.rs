@@ -11,12 +11,35 @@ use crate::demultiplex::OptDemultiplex;
 use crate::transformations::FinalizeReportResult;
 use fastqrab_io::ensure_output_destination_available;
 use fastqrab_io::io::{
-    self,
+    self, Tags,
     compressed_output::{HashedAndCompressedWriter, SimulatedWriteFailure},
     reads::WrappedFastQReadCommon,
 };
 use fastqrab_io::{CompressionFormat, FileFormat};
 use fastqrab_steps::join_nonempty;
+
+/// Runtime BAM write options derived from config at file-open time.
+#[derive(Clone)]
+pub struct BamWriteOptions {
+    pub comment_separation_char: u8,
+    /// `(bam_tag_bytes, fastqrab_tag_name)` pairs for Feature A.
+    pub tag_to_bam_tags: Vec<([u8; 2], String)>,
+    /// Fastqrab tag name to use as BAM reference (Feature B), if any.
+    pub tag_to_reference: Option<String>,
+    /// Reference sequences `(name, length)` for the BAM header (Feature B).
+    pub reference_sequences: Vec<(String, usize)>,
+}
+
+impl Default for BamWriteOptions {
+    fn default() -> Self {
+        Self {
+            comment_separation_char: b' ',
+            tag_to_bam_tags: Vec::new(),
+            tag_to_reference: None,
+            reference_sequences: Vec::new(),
+        }
+    }
+}
 
 pub struct OutputRunMarker {
     pub path: PathBuf,
@@ -126,7 +149,7 @@ pub struct OutputFileConfig {
     chunk_index: usize,
     chunk_digit_count: usize,
     fragments_written_in_chunk: usize,
-    comment_separation_char: u8,
+    bam_write_options: BamWriteOptions,
 }
 
 pub struct OutputFile<'a> {
@@ -283,7 +306,7 @@ impl OutputFileConfig {
         simulated_failure: Option<&SimulatedWriteFailure>,
         allow_overwrite: bool,
         chunk_size: Option<usize>,
-        comment_separation_char: u8,
+        bam_write_options: BamWriteOptions,
     ) -> Result<Self> {
         let directory = directory.as_ref().to_owned();
         let filename = Self::make_filename(
@@ -310,7 +333,7 @@ impl OutputFileConfig {
             chunk_index: 0,
             chunk_digit_count: usize::from(chunk_size.is_some()),
             fragments_written_in_chunk: 0,
-            comment_separation_char,
+            bam_write_options,
         })
     }
 
@@ -350,7 +373,7 @@ impl OutputFileConfig {
             chunk_index: 0,
             chunk_digit_count: 0,
             fragments_written_in_chunk: 0,
-            comment_separation_char: b' ', // unused since it's not bam.
+            bam_write_options: BamWriteOptions::default(), // unused since it's not bam.
         })
     }
 
@@ -428,6 +451,7 @@ impl OutputFileConfig {
                 self.do_compressed_hash,
                 self.compression_level,
                 self.simulated_failure.as_ref(),
+                &self.bam_write_options.reference_sequences,
             )?), // cov:excl-line
             FileFormat::Fastq => {
                 OutputFileHandle::Fastq(OutputWriter::File(HashedAndCompressedWriter::new(
@@ -578,6 +602,7 @@ fn build_bam_output<'a>(
     do_compressed_hash: bool,
     compression_level: Option<u8>,
     simulated_failure: Option<&SimulatedWriteFailure>,
+    reference_sequences: &[(String, usize)],
 ) -> Result<io::BamOutput<'a>> {
     let hashed_writer = HashedAndCompressedWriter::new(
         file_handle,
@@ -601,7 +626,7 @@ fn build_bam_output<'a>(
     };
 
     let mut writer = bam::io::Writer::from(bgzf_writer);
-    let header = Arc::new(create_unaligned_bam_header());
+    let header = Arc::new(create_bam_header(reference_sequences));
     writer
         .write_header(&header)
         .context("Failed to write BAM header")?;
@@ -609,9 +634,24 @@ fn build_bam_output<'a>(
     Ok(io::BamOutput { writer, header })
 }
 
-fn create_unaligned_bam_header() -> sam::Header {
-    sam::Header::from_str("@HD\tVN:1.6\tSO:unsorted\n@PG\tID:fastqrab\tPN:fastqrab\n")
-        .expect("static BAM header must parse")
+/// Build a SAM/BAM header, optionally including reference sequences.
+///
+/// When `reference_sequences` is non-empty, `@SQ` lines are added so that
+/// reads can be assigned to named references (Feature B).
+fn create_bam_header(reference_sequences: &[(String, usize)]) -> sam::Header {
+    use noodles::sam::header::record::value::{Map, map::ReferenceSequence};
+    let base = "@HD\tVN:1.6\tSO:unsorted\n@PG\tID:fastqrab\tPN:fastqrab\n";
+    let mut header = sam::Header::from_str(base).expect("static BAM header must parse");
+    for (name, length) in reference_sequences {
+        let rs = Map::<ReferenceSequence>::new(
+            std::num::NonZero::try_from(*length)
+                .expect("BAM reference sequence length must be > 0"),
+        );
+        header
+            .reference_sequences_mut()
+            .insert(bstr::BString::from(name.as_bytes()), rs);
+    }
+    header
 }
 
 #[derive(Default)]
@@ -699,6 +739,87 @@ impl OutputReports {
     }
 }
 
+/// Resolve the `BamWriteOptions` from the config at runtime.
+///
+/// This is called when opening output files (not during config validation) because
+/// resolving reference sequences from a barcodes section or BAM file requires the
+/// fully-verified `CheckedConfig`.
+fn resolve_bam_write_options(
+    output_config: &fastqrab_steps::config::Output,
+    barcodes: &indexmap::IndexMap<fastqrab_config::TagLabel, fastqrab_steps::config::Barcodes>,
+) -> Result<BamWriteOptions> {
+    let bam_opts = output_config.bam.as_ref();
+
+    let comment_separation_char = bam_opts.map(|b| b.comment_separation_char).unwrap_or(b' ');
+
+    let tag_to_bam_tags: Vec<([u8; 2], String)> = bam_opts
+        .map(|b| {
+            b.tag_to_bam_tag
+                .iter()
+                .map(|(tag_label, bam_tag)| (bam_tag.0, tag_label.to_string()))
+                .collect()
+        })
+        .unwrap_or_default();
+
+    let (tag_to_reference, reference_sequences) = if let Some(tag_to_ref) =
+        bam_opts.and_then(|b| b.tag_to_reference.as_ref())
+    {
+        let tag_name = tag_to_ref.tag.clone();
+        let ref_seqs: Vec<(String, usize)> = if let Some(barcodes_key) = &tag_to_ref.barcodes {
+            // Extract reference names from barcodes section.
+            // Each unique barcode name is one reference; length = barcode sequence length.
+            let label = fastqrab_config::TagLabel::Normal(barcodes_key.clone());
+            let barcode_section = barcodes.get(&label).ok_or_else(|| {
+                anyhow!(
+                    "Barcodes section '{}' not found for tag_to_reference",
+                    barcodes_key
+                )
+            })?;
+            // seq_to_name maps sequence -> name; collect unique names with sequence length
+            let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
+            let mut result: Vec<(String, usize)> = Vec::new();
+            for (seq, name) in barcode_section.seq_to_name.iter() {
+                if seen.insert(name.clone()) {
+                    result.push((name.clone(), seq.len()));
+                }
+            }
+            result
+        } else if let Some(from_bam_path) = &tag_to_ref.from_bam {
+            // Extract reference sequences from the BAM file header.
+            let file = std::fs::File::open(from_bam_path)
+                .with_context(|| format!("Could not open BAM reference file: {from_bam_path}"))?;
+            let mut reader = bam::io::Reader::new(file);
+            let header = reader
+                .read_header()
+                .with_context(|| format!("Could not read BAM header from: {from_bam_path}"))?;
+            header
+                .reference_sequences()
+                .iter()
+                .map(|(name, rs)| {
+                    (
+                        String::from_utf8_lossy(name).into_owned(),
+                        usize::from(rs.length()),
+                    )
+                })
+                .collect()
+        } else {
+            // cov:excl-start
+            Vec::new()
+            // cov:excl-stop
+        };
+        (Some(tag_name), ref_seqs)
+    } else {
+        (None, Vec::new())
+    };
+
+    Ok(BamWriteOptions {
+        comment_separation_char,
+        tag_to_bam_tags,
+        tag_to_reference,
+        reference_sequences,
+    })
+}
+
 #[allow(clippy::too_many_lines)]
 fn open_one_set_of_output_files(
     parsed_config: &CheckedConfig,
@@ -717,6 +838,8 @@ fn open_one_set_of_output_files(
             let suffix = output_config.get_suffix();
             let include_uncompressed_hashes = output_config.output_hash_uncompressed;
             let include_compressed_hashes = output_config.output_hash_compressed;
+            let bam_write_options =
+                resolve_bam_write_options(output_config, &parsed_config.barcodes)?;
             let (interleaved_file, segment_files) = match output_config.format {
                 FileFormat::None => (None, Vec::new()),
                 _ => {
@@ -759,7 +882,7 @@ fn open_one_set_of_output_files(
                             // so the you end up with with the same number of files if you mix
                             // interleaved and non-interleaved output
                             output_config.chunksize.map(|x| x * interleave_count),
-                            output_config.bam_comment_separation_char,
+                            bam_write_options.clone(),
                         )?) // cov:excl-line
                     } else {
                         None
@@ -785,7 +908,7 @@ fn open_one_set_of_output_files(
                                     simulated_failure.as_ref(),
                                     allow_overwrite,
                                     output_config.chunksize,
-                                    output_config.bam_comment_separation_char,
+                                    bam_write_options.clone(),
                                 )?)
                             } else {
                                 None
@@ -961,6 +1084,7 @@ fn output_block_demultiplex(
                 buffer_size,
                 tag,
                 block.output_tags.as_ref(),
+                &block.tags,
             )?;
         }
     }
@@ -977,6 +1101,7 @@ fn output_block_demultiplex(
             buffer_size,
             tag,
             block.output_tags.as_ref(),
+            &block.tags,
         )?; // cov:excl-line
     }
     Ok(())
@@ -1082,6 +1207,7 @@ fn output_block_inner(
     buffer_size: usize,
     demultiplex_tag: Option<crate::demultiplex::Tag>,
     output_tags: Option<&Vec<crate::demultiplex::Tag>>,
+    tags: &Tags,
 ) -> Result<()> {
     match output_file.config.format {
         FileFormat::Fastq => write_text_block(
@@ -1104,7 +1230,7 @@ fn output_block_inner(
         ),
         FileFormat::Bam => {
             let block = block.expect("BAM output requires a block");
-            write_block_to_bam(output_file, block, demultiplex_tag, output_tags)?;
+            write_block_to_bam(output_file, block, demultiplex_tag, output_tags, tags)?;
             buffer.clear();
             Ok(())
         }
@@ -1123,6 +1249,7 @@ fn output_block_interleaved(
     buffer_size: usize,
     demultiplex_tag: Option<crate::demultiplex::Tag>,
     output_tags: Option<&Vec<crate::demultiplex::Tag>>,
+    tags: &Tags,
 ) -> Result<()> {
     match output_file.config.format {
         FileFormat::Fastq => write_interleaved_text_block(
@@ -1149,6 +1276,7 @@ fn output_block_interleaved(
                 blocks_to_interleave,
                 demultiplex_tag,
                 output_tags,
+                tags,
             )?; // cov:excl-line
             buffer.clear();
             Ok(())
@@ -1164,7 +1292,27 @@ fn write_block_to_bam(
     block: &io::FastQBlock,
     demultiplex_tag: Option<crate::demultiplex::Tag>,
     output_tags: Option<&Vec<crate::demultiplex::Tag>>,
+    tags: &Tags,
 ) -> Result<()> {
+    // Clone config data upfront to avoid borrow conflicts with `after_bam_fragment()`.
+    let comment_separation_char = output_file.config.bam_write_options.comment_separation_char;
+    let bam_tag_mappings: Vec<([u8; 2], String)> = output_file
+        .config
+        .bam_write_options
+        .tag_to_bam_tags
+        .iter()
+        .map(|(bytes, name)| (*bytes, name.clone()))
+        .collect();
+    let reference_tag: Option<String> = output_file
+        .config
+        .bam_write_options
+        .tag_to_reference
+        .clone();
+    let bam_tag_refs: Vec<([u8; 2], &str)> = bam_tag_mappings
+        .iter()
+        .map(|(bytes, name)| (*bytes, name.as_str()))
+        .collect();
+
     let mut pseudo_iter = if let Some(demultiplex_tag) = demultiplex_tag {
         block.get_pseudo_iter_filtered_to_tag(
             demultiplex_tag,
@@ -1174,7 +1322,7 @@ fn write_block_to_bam(
         block.get_pseudo_iter()
     };
 
-    while let Some(read) = pseudo_iter.pseudo_next() {
+    while let Some((read, read_index)) = pseudo_iter.pseudo_next_with_index() {
         let OutputFileHandle::Bam(bam_output) = &mut output_file.handle else {
             // cov:excl-start
             unreachable!("BAM writer expected");
@@ -1183,9 +1331,13 @@ fn write_block_to_bam(
         io::write_read_to_bam(
             bam_output,
             &read,
+            read_index,
             0,
             1,
-            output_file.config.comment_separation_char,
+            comment_separation_char,
+            tags,
+            &bam_tag_refs,
+            reference_tag.as_deref(),
         )?;
         output_file.after_bam_fragment()?;
     }
@@ -1198,7 +1350,27 @@ fn write_interleaved_blocks_to_bam(
     blocks_to_interleave: &[&io::FastQBlock],
     demultiplex_tag: Option<crate::demultiplex::Tag>,
     output_tags: Option<&Vec<crate::demultiplex::Tag>>,
+    tags: &Tags,
 ) -> Result<()> {
+    // Clone config data upfront to avoid borrow conflicts with `after_bam_fragment()`.
+    let comment_separation_char = output_file.config.bam_write_options.comment_separation_char;
+    let bam_tag_mappings: Vec<([u8; 2], String)> = output_file
+        .config
+        .bam_write_options
+        .tag_to_bam_tags
+        .iter()
+        .map(|(bytes, name)| (*bytes, name.clone()))
+        .collect();
+    let reference_tag: Option<String> = output_file
+        .config
+        .bam_write_options
+        .tag_to_reference
+        .clone();
+    let bam_tag_refs: Vec<([u8; 2], &str)> = bam_tag_mappings
+        .iter()
+        .map(|(bytes, name)| (*bytes, name.as_str()))
+        .collect();
+
     let mut pseudo_iters: Vec<_> = blocks_to_interleave
         .iter()
         .map(|block| {
@@ -1218,8 +1390,8 @@ fn write_interleaved_blocks_to_bam(
 
     loop {
         for (segment_index, iter) in pseudo_iters.iter_mut().enumerate() {
-            match iter.pseudo_next() {
-                Some(read) => {
+            match iter.pseudo_next_with_index() {
+                Some((read, read_index)) => {
                     let OutputFileHandle::Bam(bam_output) = &mut output_file.handle else {
                         // cov:excl-start
                         unreachable!("BAM writer expected")
@@ -1228,9 +1400,13 @@ fn write_interleaved_blocks_to_bam(
                     io::write_read_to_bam(
                         bam_output,
                         &read,
+                        read_index,
                         segment_index,
                         segment_count,
-                        output_file.config.comment_separation_char,
+                        comment_separation_char,
+                        tags,
+                        &bam_tag_refs,
+                        reference_tag.as_deref(),
                     )?;
                     output_file.after_bam_fragment()?;
                 }

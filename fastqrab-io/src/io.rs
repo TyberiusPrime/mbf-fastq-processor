@@ -9,7 +9,7 @@ pub use input::{
     DetectedInputFormat, InputFile, InputFiles, open_file, open_input_file, total_file_size,
 };
 pub use reads::{
-    FastQBlock, FastQBlocksCombined, FastQElement, FastQRead, Position, SegmentsCombined,
+    FastQBlock, FastQBlocksCombined, FastQElement, FastQRead, Position, SegmentsCombined, Tags,
     WrappedFastQRead, WrappedFastQReadMut, longest_suffix_that_is_a_prefix,
 };
 
