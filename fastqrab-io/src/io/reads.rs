@@ -1,5 +1,5 @@
 use anyhow::{Result, bail};
-use bstr::BString;
+use bstr::{BStr, BString};
 use indexmap::IndexMap;
 use std::marker::PhantomData;
 use std::ops::Range;
@@ -805,8 +805,8 @@ pub struct WrappedFastQReadMut<'a>(&'a mut FastQRead, &'a mut Vec<u8>);
 impl std::fmt::Debug for WrappedFastQRead<'_> {
     #[mutants::skip] // debugging only.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let name = std::str::from_utf8(self.name()).expect("FASTQ field should be valid UTF-8");
-        let seq = std::str::from_utf8(self.seq()).expect("FASTQ field should be valid UTF-8");
+        let name = BStr::new(self.name());
+        let seq = BStr::new(self.seq());
         f.write_str(&format!("WrappedFastQRead {{ name: {name}, seq: {seq} }}",))
     }
 }

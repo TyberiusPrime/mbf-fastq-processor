@@ -386,7 +386,7 @@ fn find_best_overlap_fastp(
     while offset
         < len1
             .checked_sub(overlap_require)
-            .expect("Substraction below range")
+            .expect("Subtraction below range - how large is your min_overlap that you exceed an isize after substraction?")
     {
         // the overlap length of r1 & r2 when r2 is move right for offset
         overlap_len = (len1 - offset).min(len2);

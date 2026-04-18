@@ -173,6 +173,8 @@ pub fn write_read_to_bam(
                     Read name (length: {len}): '{name}'",
                 len = name.len()
             ));
+        } else if name.is_empty() {
+            res = res.context("Empty read name not supported by BAM. Check you Rename steps?");
         }
         //bam only allows printable characters. [!-?A-~]
         if name.iter().any(|&c| c < 33 || c > 126 || c == b'@') {
