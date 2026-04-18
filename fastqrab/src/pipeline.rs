@@ -148,7 +148,9 @@ fn run_combiner_thread(
                 //because otherwise the others have more remaining reads
                 for other_receiver in &raw_rx_readers[1..] {
                     if let Ok((_block, _block_expected_read_count)) = other_receiver.recv() {
-                        error_collector.lock().expect("mutex lock should not be poisoned").push("Unequal number of reads in the segment inputs (first < later). Check your fastqs for identical read counts".to_string());
+                        error_collector.lock()
+                            .unwrap_or_else(|p| p.into_inner())
+                            .push("Unequal number of reads in the segment inputs (first < later). Check your fastqs for identical read counts".to_string());
                     }
                 }
                 // Send final empty block
@@ -171,7 +173,9 @@ fn run_combiner_thread(
                 ));
                 return;
             } else {
-                error_collector.lock().expect("mutex lock should not be poisoned").push("Unequal number of reads in the segment inputs (first > later). Check your fastqs for identical read counts".to_string());
+                error_collector.lock()
+                    .unwrap_or_else(|p| p.into_inner())
+                    .push("Unequal number of reads in the segment inputs (first > later). Check your fastqs for identical read counts".to_string());
 
                 return;
             }
@@ -179,7 +183,9 @@ fn run_combiner_thread(
         // make sure they all have the same length
         let first_len = blocks[0].len();
         if !blocks.iter().all(|b| b.len() == first_len) {
-            error_collector.lock().expect("mutex lock should not be poisoned").push("Unequal block sizes in input segments. This suggests your fastqs have different numbers of reads.".to_string());
+            error_collector.lock()
+                .unwrap_or_else(|p| p.into_inner())
+                .push("Unequal block sizes in input segments. This suggests your fastqs have different numbers of reads.".to_string());
             return;
         }
         let out = (
@@ -720,7 +726,7 @@ impl RunStage1 {
                             // cov:excl-start
                             error_collector
                                 .lock()
-                                .expect("mutex lock should not be poisoned")
+                                .unwrap_or_else(|p| p.into_inner())
                                 .push(format!("Error in interleaved parsing thread: {e:?}"));
                             // cov:excl-stop
                         }
@@ -759,7 +765,7 @@ impl RunStage1 {
                                 ) {
                                     error_collector
                                     .lock()
-                                    .expect("mutex lock should not be poisoned")
+                                    .unwrap_or_else(|p| p.into_inner())
                                     .push(format!(
                                         "Error in reading thread for segment {segment_name}: {e:?}"
                                     ));
@@ -948,7 +954,7 @@ fn collect_thread_failures(
     let mut stage_errors = Vec::new();
     for s in error_collector
         .lock()
-        .expect("mutex lock should not be poisoned")
+        .unwrap_or_else(|p| p.into_inner())
         .drain(..)
     {
         stage_errors.push(s);
@@ -1034,7 +1040,7 @@ impl RunStage3 {
                         // cov:excl-start
                         error_collector
                             .lock()
-                            .expect("mutex lock should not be poisoned")
+                            .unwrap_or_else(|p| p.into_inner())
                             .push(format!("Error in output thread: {e:?}"));
                         // cov:excl-stop
                         return;
@@ -1065,7 +1071,7 @@ impl RunStage3 {
                                 ) {
                                     error_collector
                                         .lock()
-                                        .expect("mutex lock should not be poisoned")
+                                        .unwrap_or_else(|p| p.into_inner())
                                         .push(format!("Error in output thread: {e:?}"));
                                     return;
                                 }
@@ -1091,7 +1097,7 @@ impl RunStage3 {
                         if let Err(e) = set_of_output_files.1.finish() {
                             error_collector
                                 .lock()
-                                .expect("mutex lock should not be poisoned")
+                                .unwrap_or_else(|p| p.into_inner())
                                 .push(format!("Error finishing output files: {e:?}"));
                             return;
                         }
@@ -1114,7 +1120,7 @@ impl RunStage3 {
                                 Err(e) => {
                                     error_collector
                                         .lock()
-                                        .expect("mutex lock should not be poisoned")
+                                        .unwrap_or_else(|p| p.into_inner())
                                         .push(format!("Error writing json report: {e:?}"));
                                     return;
                                     // cov:excl-stop
@@ -1135,7 +1141,7 @@ impl RunStage3 {
                     {
                         error_collector
                             .lock()
-                            .expect("mutex lock should not be poisoned")
+                            .unwrap_or_else(|p| p.into_inner())
                             .push(format!("Error writing html report: {e:?}"));
                     }
                     // cov:excl-stop
