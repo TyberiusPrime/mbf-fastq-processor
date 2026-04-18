@@ -41,8 +41,28 @@ impl VerifyIn<PartialConfig> for PartialDemultiplex {
                     if let Some(resolved) = barcodes_ref
                         .as_ref()
                         .and_then(|x| x.seq_to_name.as_ref())
-                        .map(|x| x.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
+                        .map(|x| {
+                            x.iter()
+                                .map(|(k, v)| (k.clone(), v.clone()))
+                                .collect::<IndexMap<_, _>>()
+                        })
                     {
+                        for v in resolved.values() {
+                            if v.contains("..")
+                                || v.contains('/')
+                                || v.contains('\\')
+                                || v.contains(':')
+                            {
+                                return Err(ValidationFailure {
+                                    message: "Invalid barcode name found".to_string(),
+                                    help: Some(format!(
+                                        "Barcode names that lead to filenames cannot contain '..', '/', ':' or '\\'\n\
+                                        Found: '{v}'"
+                                    )),
+                                });
+                            }
+                        }
+
                         self.resolved_barcodes = Some(resolved);
                     } else {
                         //not a valid barcode, error message will have been generated elsewhere.

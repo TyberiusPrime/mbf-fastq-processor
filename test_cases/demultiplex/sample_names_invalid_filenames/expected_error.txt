@@ -1,0 +1,17 @@
+   ╭─config.toml
+   ┆
+39 │ [[step]]
+40 │     action = 'Demultiplex'
+   ┆              ──────┬──────
+   ┆                    │
+   ┆                    ╰─────── In this step
+   ┆
+41 │     in_label = 'demult'
+42 │     output_unmatched = true
+43 │     barcodes = 'demultiplex'
+   ┆                             ┬
+   ┆                             │
+   ┆                             ╰─ Invalid barcode name found
+───╯
+Hint: Barcode names that lead to filenames cannot contain '..', '/', ':' or '\'
+      Found: '/usr/bin/passwd'

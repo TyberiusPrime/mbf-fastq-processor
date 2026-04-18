@@ -185,6 +185,16 @@ fn test_cases_x_demultiplex_x_reservoir_sample() {
 }
 
 #[test]
+fn test_cases_x_demultiplex_x_sample_names_invalid_filenames() {
+    println!("Test case is in: test_cases/demultiplex/sample_names_invalid_filenames");
+    run_test(
+        std::path::Path::new("../test_cases/demultiplex/sample_names_invalid_filenames"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_demultiplex_x_simple_bam_output() {
     println!("Test case is in: test_cases/demultiplex/simple_bam_output");
     run_test(
