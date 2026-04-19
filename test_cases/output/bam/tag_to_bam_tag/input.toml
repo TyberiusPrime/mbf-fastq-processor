@@ -5,9 +5,9 @@
     prefix = 'output'
     format = 'bam'
 
-[output.bam]
-    [output.bam.tag_to_bam_tag]
+    bam.tags = {
         barcode = 'BC'
+}
 
 [[step]]
     action = 'ExtractRegion'

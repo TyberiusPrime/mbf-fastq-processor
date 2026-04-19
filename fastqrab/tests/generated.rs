@@ -375,6 +375,16 @@ fn test_cases_x_error_handling_x_bam_x_disk_full_bam() {
 }
 
 #[test]
+fn test_cases_x_error_handling_x_bam_x_read_name_empty() {
+    println!("Test case is in: test_cases/error_handling/bam/read_name_empty");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/bam/read_name_empty"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_error_handling_x_bam_x_read_name_exceeds_bam_length_x_just_fit() {
     println!(
         "Test case is in: test_cases/error_handling/bam/read_name_exceeds_bam_length/just_fit"
@@ -2717,6 +2727,16 @@ fn test_cases_x_single_step_x_edits_x_merge_reads_x_dont_revcomp_segment2() {
     println!("Test case is in: test_cases/single_step/edits/merge_reads/dont_revcomp_segment2");
     run_test(
         std::path::Path::new("../test_cases/single_step/edits/merge_reads/dont_revcomp_segment2"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_edits_x_merge_reads_x_fastp_but_short() {
+    println!("Test case is in: test_cases/single_step/edits/merge_reads/fastp_but_short");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/edits/merge_reads/fastp_but_short"),
         "input.toml",
         1,
     );

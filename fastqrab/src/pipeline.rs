@@ -322,21 +322,11 @@ pub struct RunStage0 {
     report_json: bool,
 }
 
-#[allow(clippy::cast_possible_truncation)]
-#[allow(clippy::cast_sign_loss)]
-fn checked_f64_to_u16(value: f64) -> Option<u16> {
-    if value.is_finite() && value >= 0.0 && value <= f64::from(u16::MAX) {
-        Some(value as u16)
-    } else {
-        None
-    }
-}
-
 fn bits_needed_to_represent(count: usize) -> u16 {
     if count <= 1 {
         1u16
     } else {
-        (usize::BITS - (count - 1).leading_zeros()) as u16
+        (usize::BITS - (count).leading_zeros()) as u16
     }
 }
 
@@ -429,8 +419,7 @@ impl RunStage0 {
                 if let Some(new_demultiplex_barcodes) = new_demultiplex_barcodes {
                     let barcode_count = new_demultiplex_barcodes.barcode_to_name.len()
                         + usize::from(new_demultiplex_barcodes.include_no_barcode);
-                    let bits_needed = //checked_f64_to_u16((barcode_count as f64).log2().ceil())
-                        bits_needed_to_represent(barcode_count);
+                    let bits_needed = bits_needed_to_represent(barcode_count);
                     let mut tag_to_name = BTreeMap::new();
                     if new_demultiplex_barcodes.include_no_barcode {
                         tag_to_name.insert(0, Some("no-barcode".to_string()));
@@ -1183,17 +1172,15 @@ pub struct RunStage5 {
 
 #[cfg(test)]
 mod tests {
-    use super::checked_f64_to_u16;
+    use super::bits_needed_to_represent;
     #[test]
     #[allow(clippy::unwrap_used)]
-    fn test_checked_f64_to_u16() {
-        assert_eq!(checked_f64_to_u16(0.0).unwrap(), 0u16);
-        assert_eq!(checked_f64_to_u16(65535.0).unwrap(), 65535u16);
-        assert!(checked_f64_to_u16(-1.0).is_none());
-        assert!(checked_f64_to_u16(70000.0).is_none());
-        assert_eq!(checked_f64_to_u16(0.4).unwrap(), 0u16);
-        assert_eq!(checked_f64_to_u16(0.5).unwrap(), 0u16);
-        assert_eq!(checked_f64_to_u16(0.99999).unwrap(), 0u16);
-        assert_eq!(checked_f64_to_u16(1.0).unwrap(), 1u16);
+    fn test_bits_needed_to_represent() {
+        assert_eq!(bits_needed_to_represent(0), 1);
+        assert_eq!(bits_needed_to_represent(1), 1);
+        assert_eq!(bits_needed_to_represent(7), 3);
+        assert_eq!(bits_needed_to_represent(8), 4);
+        assert_eq!(bits_needed_to_represent(65535), 16);
+        assert_eq!(bits_needed_to_represent(65536), 17);
     }
 }

@@ -50,6 +50,7 @@ toml_pretty_deser::impl_visitor_for_try_from_str!(BamTag, "Invalid BAM tag");
 
 /// Alias so the `#[tpd]` macro can find the "partial" type for `BamTag`
 /// (which is its own visitor – no separate Partial struct is generated).
+
 pub type PartialBamTag = BamTag;
 
 /// Source for reference sequences used by `tag_to_reference` (Feature B).
@@ -81,15 +82,15 @@ pub struct BamOutputOptions {
     #[tpd(with = "tpd_adapt_u8_from_byte_or_char")]
     pub comment_separation_char: u8,
 
-    /// Map of fastqrab tag labels to BAM auxiliary tag names (Feature A).
+    /// Map of fastqrab tag labels to BAM auxiliary tag names
     ///
     /// Each key is a fastqrab tag label; each value is the two-character BAM
     /// auxiliary tag name to write (e.g. `BC`).
-    #[tpd(nested)]
+    #[tpd(nested, alias = "tags")]
     #[schemars(skip)]
     pub tag_to_bam_tag: IndexMap<TagLabel, BamTag>,
 
-    /// Export a fastqrab tag value as the BAM reference name (Feature B).
+    /// Export a fastqrab tag value as the BAM reference name
     #[tpd(nested)]
     pub tag_to_reference: Option<TagToReference>,
 }
