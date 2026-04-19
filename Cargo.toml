@@ -1,5 +1,6 @@
 [workspace]
 	members = ["fastqrab", "fastqrab-dna", "fastqrab-config", "fastqrab-io", "fastqrab-steps"]
+	exclude = ["dev/fuzz/fastq_parser"]
     resolver = "2"
 
 [workspace.lints.clippy]
