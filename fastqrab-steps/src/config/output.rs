@@ -60,15 +60,15 @@ pub type PartialBamTag = BamTag;
 #[derive(Clone, Debug, JsonSchema)]
 pub struct TagToReference {
     /// The fastqrab tag label whose value selects the reference sequence name.
-    pub tag: String,
+    pub tag: Option<String>,
 
     /// Name of a `[barcodes.<name>]` section whose keys become reference names.
-    #[tpd(default)]
-    pub barcodes: Option<String>,
+    #[tpd(default, alias = "from_barcodes")]
+    pub references_from_barcodes: Option<String>,
 
     /// Path to a BAM file whose `@SQ` header lines define the reference sequences.
-    #[tpd(default)]
-    pub from_bam: Option<String>,
+    #[tpd(default, alias = "from_bam", alias = "template")]
+    pub references_from_bam: Option<String>,
 }
 
 /// BAM-specific output options.
@@ -159,37 +159,37 @@ impl VerifyIn<PartialOutput> for PartialBamOutputOptions {
         // Validate tag_to_reference: exactly one of barcodes or from_bam must be set.
         if let Some(Some(tag_to_ref)) = self.tag_to_reference.as_mut() {
             let has_barcodes = tag_to_ref
-                .barcodes
+                .references_from_barcodes
                 .as_ref()
                 .and_then(|x| x.as_ref())
                 .is_some();
             let has_from_bam = tag_to_ref
-                .from_bam
+                .references_from_bam
                 .as_ref()
                 .and_then(|x| x.as_ref())
                 .is_some();
             if !has_barcodes && !has_from_bam {
-                tag_to_ref.barcodes.state = TomlValueState::new_validation_failed(
-                    "Either 'barcodes' or 'from_bam' must be specified",
+                tag_to_ref.references_from_barcodes.state = TomlValueState::new_validation_failed(
+                    "Either 'reference_from_barcodes' or 'reference_from_bam' must be specified",
                 );
-                tag_to_ref.barcodes.help = Some(
-                    "Set 'barcodes' to a barcode section name, or 'from_bam' to a BAM file path."
+                tag_to_ref.references_from_barcodes.help = Some(
+                    "Set 'reference_from_barcodes' to a barcode section name, or 'references_from_bam' to a BAM file path."
                         .to_string(),
                 );
             } else if has_barcodes && has_from_bam {
-                tag_to_ref.from_bam.state = TomlValueState::Custom {
+                tag_to_ref.references_from_bam.state = TomlValueState::Custom {
                     spans: vec![
                         (
-                            tag_to_ref.barcodes.span(),
+                            tag_to_ref.references_from_barcodes.span(),
                             "Conflicts with from_bam".to_string(),
                         ),
                         (
-                            tag_to_ref.from_bam.span(),
+                            tag_to_ref.references_from_bam.span(),
                             "Conflicts with barcodes".to_string(),
                         ),
                     ],
                 };
-                tag_to_ref.from_bam.help =
+                tag_to_ref.references_from_bam.help =
                     Some("Set only one of 'barcodes' or 'from_bam'.".to_string());
             }
         }

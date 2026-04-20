@@ -1,0 +1,10 @@
+Error 1/1
+   ╭─config.toml
+   ┆
+ 9 │     [output.bam.tag_to_reference]
+10 │         tag = 'ref_name'
+   ┆                         ┬
+   ┆                         │
+   ┆                         ╰─ Either 'reference_from_barcodes' or 'reference_from_bam' must be specified
+───╯
+Hint: Set 'reference_from_barcodes' to a barcode section name, or 'references_from_bam' to a BAM file path.

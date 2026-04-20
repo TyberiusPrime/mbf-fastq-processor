@@ -1319,7 +1319,7 @@ impl PartialConfig {
                         }
                     }
                     if let Some(Some(tag_to_ref)) = bam_opts.tag_to_reference.as_ref() {
-                        if let Some(tag_name) = tag_to_ref.tag.as_ref() {
+                        if let Some(Some(tag_name)) = tag_to_ref.tag.as_ref() {
                             if let Some(meta) = tags_available.get_mut(tag_name.as_str()) {
                                 meta.used = true;
                             }
@@ -1425,7 +1425,7 @@ impl PartialConfig {
                                         bam_opts.tag_to_reference.as_ref()
                                     {
                                         if let Some(Some(barcodes_name)) =
-                                            tag_to_ref.barcodes.as_ref()
+                                            tag_to_ref.references_from_barcodes.as_ref()
                                             && barcode_section_name.as_ref()
                                                 == barcodes_name.as_str()
                                         {

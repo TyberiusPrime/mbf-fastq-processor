@@ -6,7 +6,8 @@
     format = 'bam'
 
     bam.tags = {
-        barcode = 'BC'
+        barcode = 'BC',
+      # len_read1 = 'XX' # virtual tags currently unsupported
 }
 
 [[step]]

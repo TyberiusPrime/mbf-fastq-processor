@@ -9,13 +9,12 @@ Error 1/2
    ┆                      ╰──────── In this step
    ┆
 17 │     out_label = 'n_rate'
-18 │     expression = 'len_read1 + 23)'
-   ┆                  ────────┬────────
-   ┆                          │
-   ┆                          ╰───────── Syntax error
+18 │     expression = 'len_read1 + 23'
+   ┆                                  ┬
+   ┆                                  │
+   ┆                                  ╰─ Missing required key: 'result_type'.
 ───╯
-Hint: Inner error message UnparsedTokensRemaining(")")
-      See https://doc_url.example/version-stripped-from-test/docs/redirects/EvalExpression
+Hint: See https://doc_url.example/version-stripped-from-test/docs/redirects/EvalExpression
       Or run: `fastqrab template EvalExpression` for more information.
       Make sure to either use, or forget (using ForgetTag) all your tags.
 

@@ -765,7 +765,9 @@ fn resolve_bam_write_options(
         bam_opts.and_then(|b| b.tag_to_reference.as_ref())
     {
         let tag_name = tag_to_ref.tag.clone();
-        let ref_seqs: Vec<(String, usize)> = if let Some(barcodes_key) = &tag_to_ref.barcodes {
+        let ref_seqs: Vec<(String, usize)> = if let Some(barcodes_key) =
+            &tag_to_ref.references_from_barcodes
+        {
             // Extract reference names from barcodes section.
             // Each unique barcode name is one reference; length = barcode sequence length.
             let label = fastqrab_config::TagLabel::Normal(barcodes_key.clone());
@@ -784,7 +786,7 @@ fn resolve_bam_write_options(
                 }
             }
             result
-        } else if let Some(from_bam_path) = &tag_to_ref.from_bam {
+        } else if let Some(from_bam_path) = &tag_to_ref.references_from_bam {
             // Extract reference sequences from the BAM file header.
             let file = std::fs::File::open(from_bam_path)
                 .with_context(|| format!("Could not open BAM reference file: {from_bam_path}"))?;
@@ -807,7 +809,7 @@ fn resolve_bam_write_options(
             Vec::new()
             // cov:excl-stop
         };
-        (Some(tag_name), ref_seqs)
+        (tag_name, ref_seqs)
     } else {
         (None, Vec::new())
     };

@@ -1445,6 +1445,16 @@ fn test_cases_x_output_x_bam_x_interleaved() {
 }
 
 #[test]
+fn test_cases_x_output_x_bam_x_reference_but_no_tag() {
+    println!("Test case is in: test_cases/output/bam/reference_but_no_tag");
+    run_test(
+        std::path::Path::new("../test_cases/output/bam/reference_but_no_tag"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_output_x_bam_x_tag_to_bam_tag() {
     println!("Test case is in: test_cases/output/bam/tag_to_bam_tag");
     run_test(
@@ -1465,10 +1475,30 @@ fn test_cases_x_output_x_bam_x_tag_to_bam_tag_and_reference() {
 }
 
 #[test]
+fn test_cases_x_output_x_bam_x_tag_to_referenc_no_ref_defined() {
+    println!("Test case is in: test_cases/output/bam/tag_to_referenc_no_ref_defined");
+    run_test(
+        std::path::Path::new("../test_cases/output/bam/tag_to_referenc_no_ref_defined"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_output_x_bam_x_tag_to_reference_barcodes() {
     println!("Test case is in: test_cases/output/bam/tag_to_reference_barcodes");
     run_test(
         std::path::Path::new("../test_cases/output/bam/tag_to_reference_barcodes"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_output_x_bam_x_tag_to_reference_barcodes_no_seq() {
+    println!("Test case is in: test_cases/output/bam/tag_to_reference_barcodes_no_seq");
+    run_test(
+        std::path::Path::new("../test_cases/output/bam/tag_to_reference_barcodes_no_seq"),
         "input.toml",
         1,
     );
@@ -5976,6 +6006,16 @@ fn test_cases_x_single_step_x_eval_x_eval_expr_x_eval_expression_complex() {
     println!("Test case is in: test_cases/single_step/eval/eval_expr/eval_expression_complex");
     run_test(
         std::path::Path::new("../test_cases/single_step/eval/eval_expr/eval_expression_complex"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_eval_x_eval_expr_x_missing_result_type() {
+    println!("Test case is in: test_cases/single_step/eval/eval_expr/missing_result_type");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/eval/eval_expr/missing_result_type"),
         "input.toml",
         1,
     );

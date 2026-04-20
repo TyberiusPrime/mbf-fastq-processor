@@ -5,13 +5,6 @@
     prefix = 'output'
     format = 'bam'
 
-[output.bam]
-    [output.bam.tag_to_bam_tag]
-        barcode = 'BC'
-
-    [output.bam.tag_to_reference]
-        tag = 'ref_name'
-        barcodes = 'ref_barcodes'
 
 [[step]]
     action = 'ExtractRegion'
@@ -29,6 +22,14 @@
     length = 50
     out_label = 'query_seq'
 
+
+[[step]]
+  action = 'ExtractRegex'
+  source = 'name:read1'
+  query = '\d+'
+  out_label ='number_from_name'
+
+
 [[step]]
     action = 'AssignToReference'
     in_label = 'query_seq'
@@ -38,3 +39,31 @@
 
 [barcodes.ref_barcodes]
     from_file.filename = 'input_reference.fa'
+
+[[step]]
+  action = 'CalcBaseContent'
+  out_label = 'acontent'
+  bases_to_count = 'A'
+  relative = true
+
+[[step]]
+  action = 'EvalExpression'
+  query = 'acontent > 0.25'
+  out_label='many_a'
+  result_type='bool'
+
+[output.bam]
+    [output.bam.tag_to_bam_tag]
+        barcode = 'BC'
+        acontent = 'XC'
+        many_a = 'XB'
+        number_from_name = 'RR'
+        
+
+    [output.bam.tag_to_reference]
+        tag = 'ref_name'
+        references_from_barcodes = 'ref_barcodes'
+
+
+[[step]]
+  action = 'StoreTagsInTable'

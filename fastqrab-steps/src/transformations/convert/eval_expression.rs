@@ -66,10 +66,8 @@ impl VerifyIn<PartialConfig> for PartialEvalExpression {
             match parser.parse(expression, &mut slab.ps) {
                 Err(e) => {
                     let help_message = format!("Inner error message {e}");
-                    return Err(ValidationFailure::new(
-                        "Syntax error".to_string(),
-                        Some(help_message),
-                    ));
+                    self.expression.state = TomlValueState::new_validation_failed("Syntax error");
+                    self.expression.help = Some(help_message.clone());
                 }
                 Ok(parsed) => {
                     let instruction = parsed.from(&slab.ps).compile(&slab.ps, &mut slab.cs);
@@ -181,7 +179,8 @@ impl TagUser for PartialTaggedVariant<Box<PartialEvalExpression>> {
             Some(TagUsageInfo {
                 used_tags,
                 declared_tag: inner.out_label.to_declared_tag(
-                    match inner.result_type.as_ref().expect("parent was ok?") {
+                    match inner.result_type.as_ref().unwrap_or(&ResultType::Numeric)// user forgot result_type, or mistype 
+                    {
                         ResultType::Numeric => TagValueType::Numeric((None, None)),
                         ResultType::Bool => TagValueType::Bool,
                     },

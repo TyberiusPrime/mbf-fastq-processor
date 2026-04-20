@@ -8,7 +8,7 @@
 [output.bam]
     [output.bam.tag_to_reference]
         tag = 'ref_name'
-        references_from_barcodes = 'ref_barcodes'
+      # barcodes = 'ref_barcodes'
 
 [[step]]
     action = 'ExtractRegion'
