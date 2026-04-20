@@ -1,0 +1,31 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[output]
+    prefix = 'output'
+    format = 'fastq'
+    compression = 'raw'
+
+[[step]]
+    action = 'ExtractRegion'
+    source = "read1"
+    anchor = "start"
+    start = 0
+    length = 50
+    out_label = 'query_seq'
+
+[[step]]
+    action = 'HammingCorrect'
+    in_label = 'query_seq'
+    out_label = 'ref_name'
+    max_hamming_distance = 1
+    barcodes = 'reference'
+    name_split_char = '!'
+    on_no_match='remove'
+
+[barcodes.reference]
+   from_file.filename = 'input_reference.fa'
+
+[[step]]
+    action = 'StoreTagInComment'
+    in_label = 'ref_name'

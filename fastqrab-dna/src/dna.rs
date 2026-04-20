@@ -1,4 +1,4 @@
-use anyhow::{Result, anyhow, bail};
+use anyhow::Result;
 use bio::alignment::{
     AlignmentOperation,
     pairwise::{Aligner, MIN_SCORE, Scoring},
@@ -677,16 +677,23 @@ pub fn init_hamming_resonator(
     seq_to_name: &IndexMap<BString, String>,
     max_dist: u8,
     name_split_char: Option<u8>,
-) -> Result<HammingResonator> {
+) -> Result<HammingResonator, ValidationFailure> {
     let seqs: Vec<BString> = seq_to_name.keys().cloned().collect();
 
-    let resonator = HammingResonator::new(seqs, max_dist as u32)
-        .map_err(|e| anyhow!("Failed to build hamming index: {e}"))?;
+    let resonator = HammingResonator::new(seqs, max_dist as u32).map_err(|e| {
+        ValidationFailure::new(
+            "Failed to initialize".to_string(),
+            Some(format!("Inner error: {e}")),
+        )
+    })?;
 
     for seq in seq_to_name.keys() {
-        let hits = resonator
-            .query(seq.as_ref())
-            .map_err(|e| anyhow!("Failed to query hamming index during validation: {e}"))?;
+        let hits = resonator.query(seq.as_ref()).map_err(|e| {
+            ValidationFailure::new(
+                "Failed to initialize".to_string(),
+                Some(format!("Inner error: {e}")),
+            )
+        })?;
         match hits.len() {
             0 => {
                 panic!(
@@ -718,11 +725,16 @@ pub fn init_hamming_resonator(
                 if !hits_and_seqs.iter().all(|(_, _, seq)| seq == first) {
                     let mut hits_and_seqs = hits_and_seqs;
                     hits_and_seqs.sort();
-                    bail!(
-                        "The reference sequence {seq} had more than one hit within the specificied max hamming distance {}\n\
-                        Hits: {hits_and_seqs:?}",
-                        max_dist
-                    );
+                    return Err(ValidationFailure::new(
+                        format!("Failure to initialize"),
+                        Some(format!(
+                            "The reference sequence {seq} had more than one hit within the specificied max hamming distance {}.\n\
+                        Hits: {hits_and_seqs:?}\n\
+                        Verify your barcodes, they must be of the same length and disjoint under your max_hamming_distance.\n\
+                        Or Maybe set/check name_split_character if you want to consider these as the same reference?",
+                            max_dist
+                        )),
+                    ));
                 }
             }
         }

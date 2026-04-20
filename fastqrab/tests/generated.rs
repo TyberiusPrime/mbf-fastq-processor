@@ -7749,6 +7749,20 @@ fn test_cases_x_single_step_x_extraction_x_store_tags_in_table_x_in_tsv_gz() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_extraction_x_store_tags_in_table_x_in_tsv_no_read_name() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/store_tags_in_table/in_tsv_no_read_name"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/store_tags_in_table/in_tsv_no_read_name",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_extraction_x_store_tags_in_table_x_in_tsv_string_tag() {
     println!(
         "Test case is in: test_cases/single_step/extraction/store_tags_in_table/in_tsv_string_tag"
@@ -7784,20 +7798,6 @@ fn test_cases_x_single_step_x_extraction_x_store_tags_in_table_x_in_tsv_virtual_
     run_test(
         std::path::Path::new(
             "../test_cases/single_step/extraction/store_tags_in_table/in_tsv_virtual_tags",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-fn test_cases_x_single_step_x_extraction_x_store_tags_in_table_x_in_tsv_no_read_name() {
-    println!(
-        "Test case is in: test_cases/single_step/extraction/store_tags_in_table/in_tsv_no_read_name"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/extraction/store_tags_in_table/in_tsv_no_read_name",
         ),
         "input.toml",
         1,
@@ -8924,6 +8924,34 @@ fn test_cases_x_single_step_x_hamming_x_missing_barcode() {
     println!("Test case is in: test_cases/single_step/hamming/missing_barcode");
     run_test(
         std::path::Path::new("../test_cases/single_step/hamming/missing_barcode"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_hamming_x_reference_not_enough_hamming_distance() {
+    println!(
+        "Test case is in: test_cases/single_step/hamming/reference_not_enough_hamming_distance"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/hamming/reference_not_enough_hamming_distance",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_hamming_x_reference_not_enough_hamming_distance_but_same_seq() {
+    println!(
+        "Test case is in: test_cases/single_step/hamming/reference_not_enough_hamming_distance_but_same_seq"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/hamming/reference_not_enough_hamming_distance_but_same_seq",
+        ),
         "input.toml",
         1,
     );

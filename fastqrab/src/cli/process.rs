@@ -15,6 +15,7 @@ pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> 
     let parsed = match result {
         Ok(config) => config,
         Err(e) => {
+            dbg!(&e);
             let pretty = e.pretty("config.toml");
             if pretty.trim().is_empty() {
                 // shouldn't happen, but if it does, we got this error

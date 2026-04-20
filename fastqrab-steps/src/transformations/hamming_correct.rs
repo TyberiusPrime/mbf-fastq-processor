@@ -79,20 +79,11 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
                         && let Some(seq_to_name) = &barcodes_section.seq_to_name
                         && let Some(max_hamming_distance) = self.max_hamming_distance.as_ref()
                     {
-                        self.resonator = Some(Arc::new(
-                            init_hamming_resonator(seq_to_name, *max_hamming_distance, None)
-                                .map_err(|e| {
-                                    ValidationFailure::new(
-                                        format!("Failure to initialize"),
-                                        Some(format!(
-                                            "Error: {e}\n\
-                                    Verify your barcodes, they must be of the same length \
-                                        and disjoint under your max_hamming_distance \
-                                        for a given reference target."
-                                        )),
-                                    )
-                                })?,
-                        ));
+                        self.resonator = Some(Arc::new(init_hamming_resonator(
+                            seq_to_name,
+                            *max_hamming_distance,
+                            self.name_split_character.as_ref().map(|x| *x).flatten(),
+                        )?));
                         self.seq_to_name = Some(seq_to_name.clone());
                     }
                     // otherwise the barcode section wasn't ok and we'll never

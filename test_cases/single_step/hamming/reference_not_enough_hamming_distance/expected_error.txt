@@ -1,0 +1,46 @@
+Error Details ==
+Error 1/2
+   ╭─config.toml
+   ┆
+17 │ [[step]]
+18 │     action = 'HammingCorrect'
+   ┆              ────────┬───────
+   ┆                      │
+   ┆                      ╰──────── In this step
+   ┆
+19 │     in_label = 'query_seq'
+20 │     out_label = 'ref_name'
+21 │     max_hamming_distance = 1
+22 │     barcodes = 'reference'
+   ┆                           ┬
+   ┆                           │
+   ┆                           ╰─ Missing required key: 'on_no_match'.
+───╯
+Hint: See https://doc_url.example/version-stripped-from-test/docs/redirects/HammingCorrect
+      Or run: `fastqrab template HammingCorrect` for more information.
+
+Error 2/2
+   ╭─config.toml
+   ┆
+17 │ [[step]]
+18 │     action = 'HammingCorrect'
+   ┆              ────────┬───────
+   ┆                      │
+   ┆                      ╰──────── In this step
+   ┆
+19 │     in_label = 'query_seq'
+20 │     out_label = 'ref_name'
+21 │     max_hamming_distance = 1
+22 │     barcodes = 'reference'
+   ┆                           ┬
+   ┆                           │
+   ┆                           ╰─ Failure to initialize
+───╯
+Hint: The reference sequence ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTAC had more than one hit within the specificied max hamming distance 1.
+      Hits: [("ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTAC", 0, "ref_alpha"), ("ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTAG", 1, "ref_beta")]
+      Verify your barcodes, they must be of the same length and disjoint under your max_hamming_distance.
+      Or Maybe set/check name_split_character if you want to consider these as the same reference?
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/HammingCorrect
+      Or run: `fastqrab template HammingCorrect` for more information.
+
+
