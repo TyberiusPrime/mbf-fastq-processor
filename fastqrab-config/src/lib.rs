@@ -131,6 +131,10 @@ pub const fn default_block_size() -> usize {
 pub const fn default_spot_check_read_pairing() -> bool {
     true
 }
+
+pub const fn default_include_read_name() -> bool {
+    true
+}
 // Schema helper for string or list of strings
 #[derive(JsonSchema)]
 #[allow(dead_code)]

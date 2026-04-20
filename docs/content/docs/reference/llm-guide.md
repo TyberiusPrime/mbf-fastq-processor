@@ -1254,6 +1254,7 @@ Save all tags to TSV file.
     compression = 'Raw'            # TYPE: 'Raw'|'Gzip'|'Zstd', REQUIRED
     region_separator = '_'         # TYPE: char, DEFAULT: '_'
     in_labels = ['umi'] # TYPE: array, OPTIONAL (omit for all tags)
+    include_read_name = true       # TYPE: bool, DEFAULT: true (set false to omit ReadName column)
 ```
 
 **OUTPUT**: `{prefix}_{infix}.tsv`

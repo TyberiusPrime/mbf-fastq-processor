@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::transformations::prelude::*;
-use fastqrab_config::{default_region_separator, tpd_adapt_bstring};
+use fastqrab_config::{default_include_read_name, default_region_separator, tpd_adapt_bstring};
 use fastqrab_io::CompressionFormat;
 
 type OutputHandles = Arc<Mutex<DemultiplexedData<Option<csv::Writer<Box<OutputWriter>>>>>>;
@@ -25,6 +25,8 @@ pub struct StoreTagsInTable {
     #[schemars(skip)]
     #[tpd(skip, default)]
     output_handles: Option<OutputHandles>,
+
+    include_read_name: bool,
 
     #[allow(dead_code)] //only used in deser
     #[tpd(alias = "tags")]
@@ -54,6 +56,7 @@ impl VerifyIn<PartialConfig> for PartialStoreTagsInTable {
         //     }
         // });
         self.region_separator.or_with(default_region_separator);
+        self.include_read_name.or_with(default_include_read_name);
 
         Ok(())
     }
@@ -206,7 +209,10 @@ impl Step for StoreTagsInTable {
             let tag_list = &self.final_in_labels;
             // Write header
             {
-                let mut header = vec!["ReadName"];
+                let mut header = Vec::new();
+                if self.include_read_name {
+                    header.push("ReadName");
+                }
                 for tag in tag_list {
                     header.push(tag.as_ref());
                 }
@@ -243,10 +249,13 @@ impl Step for StoreTagsInTable {
                 .get_mut(&output_tag)
                 .expect("output_handle must exist for tag")
             {
-                let mut record = vec![
-                    read.name_without_comment(input_info.comment_insert_char)
-                        .to_vec(),
-                ];
+                let mut record = Vec::new();
+                if self.include_read_name {
+                    record.push(
+                        read.name_without_comment(input_info.comment_insert_char)
+                            .to_vec(),
+                    );
+                }
                 for tag in &self.final_in_labels {
                     record.push(
                         match &(block.tags.get(tag).expect("tag must exist in block.tags")[ii]) {
