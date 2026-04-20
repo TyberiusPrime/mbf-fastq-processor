@@ -11,7 +11,7 @@ Output is one path per line, suitable for piping into xargs.
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+REPO_ROOT = Path(__file__).resolve().parents[3]
 OUTPUT_DIR = REPO_ROOT / "dev" / "fuzz" / "fastq_parser" / "output"
 CANARY_MARKER = b"AFL_POSITIVE_CONTROL"
 

@@ -1,21 +1,26 @@
 #!/usr/bin/env python3
-"""Drive an AFL++ fuzzing run against the fastq parser.
+"""Drive an AFL++ fuzzing run against one of the fastq parser fuzz targets.
 
-Builds the instrumented fuzz target (`dev/fuzz/fastq_parser`) with cargo-afl,
-then launches one or more parallel `afl-fuzz` instances against the seed
-corpus. With `-j N` (the default, N = CPU count), one instance is started
-as `-M main` and the rest as `-S secN`; they share the same output directory
-and synchronize through the filesystem. Extra flags after `--` are forwarded
-to every afl-fuzz instance.
+Available targets (under `dev/fuzz/<target>`):
+    fastq_parser        — full pipeline, includes niffler decompression
+    fastq_parser_nogz   — parser-only, rejects compressed inputs up-front
+
+Builds the instrumented fuzz target with cargo-afl, then launches one or
+more parallel `afl-fuzz` instances against its seed corpus. With `-j N`
+(the default, N = CPU count - 1), one instance is started as `-M main` and
+the rest as `-S secN`; they share the same output directory and synchronize
+through the filesystem. Extra flags after `--` are forwarded to every
+afl-fuzz instance.
 
 Live stats across all instances:
-    afl-whatsup -s dev/fuzz/fastq_parser/output
+    afl-whatsup -s dev/fuzz/<target>/output
 
 Examples:
-    ./dev/scripts/fuzzy_fastq_parser.py                  # parallel, all cores
-    ./dev/scripts/fuzzy_fastq_parser.py -j 1             # single instance (TUI)
-    ./dev/scripts/fuzzy_fastq_parser.py -j 8 --clean
-    ./dev/scripts/fuzzy_fastq_parser.py -- -t 2000       # forward to afl-fuzz
+    ./dev/scripts/fuzz/run.py                            # default target, all cores
+    ./dev/scripts/fuzz/run.py --target fastq_parser_nogz # parser-only target
+    ./dev/scripts/fuzz/run.py -j 1                       # single instance (TUI)
+    ./dev/scripts/fuzz/run.py -j 8 --clean
+    ./dev/scripts/fuzz/run.py -- -t 2000                 # forward to afl-fuzz
 """
 
 import argparse
@@ -27,17 +32,43 @@ import sys
 import time
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-FUZZ_DIR = REPO_ROOT / "dev" / "fuzz" / "fastq_parser"
-CORPUS_DIR = FUZZ_DIR / "corpus"
-OUTPUT_DIR = FUZZ_DIR / "output"
-LOG_DIR = FUZZ_DIR / "logs"
-# Pin the target directory so we don't chase a user-wide CARGO_TARGET_DIR
-# or ~/.cargo/config.toml `build.target-dir` setting.
-TARGET_DIR = FUZZ_DIR / "target"
-TARGET_BIN = TARGET_DIR / "release" / "fastq_parser_fuzz"
+REPO_ROOT = Path(__file__).resolve().parents[3]
+FUZZ_BASE = REPO_ROOT / "dev" / "fuzz"
+DEFAULT_TARGET = "fastq_parser"
+# Map of target name → instrumented binary name produced by cargo-afl. Add a
+# line here when adding a new fuzz crate under dev/fuzz/.
+TARGET_BIN_NAMES = {
+    "fastq_parser": "fastq_parser_fuzz",
+    "fastq_parser_nogz": "fastq_parser_nogz_fuzz",
+}
 
 CARGO_AFL = os.environ.get("CARGO_AFL") or shutil.which("cargo-afl")
+
+# Per-target paths, populated by `set_target()` once we've parsed --target.
+FUZZ_DIR: Path
+CORPUS_DIR: Path
+OUTPUT_DIR: Path
+LOG_DIR: Path
+TARGET_DIR: Path
+TARGET_BIN: Path
+
+
+def set_target(target: str) -> None:
+    """Resolve all per-target paths into module globals.
+
+    Called once from main() after argparse — the fuzz CLI only ever drives a
+    single target per invocation, so mutating globals beats threading a
+    Paths struct through every helper.
+    """
+    global FUZZ_DIR, CORPUS_DIR, OUTPUT_DIR, LOG_DIR, TARGET_DIR, TARGET_BIN
+    FUZZ_DIR = FUZZ_BASE / target
+    CORPUS_DIR = FUZZ_DIR / "corpus"
+    OUTPUT_DIR = FUZZ_DIR / "output"
+    LOG_DIR = FUZZ_DIR / "logs"
+    # Pin the target directory so we don't chase a user-wide CARGO_TARGET_DIR
+    # or ~/.cargo/config.toml `build.target-dir` setting.
+    TARGET_DIR = FUZZ_DIR / "target"
+    TARGET_BIN = TARGET_DIR / "release" / TARGET_BIN_NAMES[target]
 
 
 def run(cmd, **kwargs):
@@ -148,6 +179,12 @@ def main() -> int:
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
     parser.add_argument(
+        "--target",
+        choices=sorted(TARGET_BIN_NAMES),
+        default=DEFAULT_TARGET,
+        help=f"Which fuzz crate under dev/fuzz/ to drive (default: {DEFAULT_TARGET}).",
+    )
+    parser.add_argument(
         "-j", "--jobs",
         type=int,
         default=max(1, (os.cpu_count() or 2) - 1),
@@ -187,6 +224,7 @@ def main() -> int:
         help="Extra args forwarded to every afl-fuzz instance (use `--` to separate).",
     )
     args = parser.parse_args()
+    set_target(args.target)
 
     if args.jobs < 1:
         print("error: --jobs must be >= 1", file=sys.stderr)
