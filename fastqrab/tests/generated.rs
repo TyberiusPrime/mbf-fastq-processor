@@ -1475,6 +1475,16 @@ fn test_cases_x_output_x_bam_x_tag_to_bam_tag_and_reference() {
 }
 
 #[test]
+fn test_cases_x_output_x_bam_x_tag_to_bam_tag_missing_tag() {
+    println!("Test case is in: test_cases/output/bam/tag_to_bam_tag_missing_tag");
+    run_test(
+        std::path::Path::new("../test_cases/output/bam/tag_to_bam_tag_missing_tag"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_output_x_bam_x_tag_to_referenc_no_ref_defined() {
     println!("Test case is in: test_cases/output/bam/tag_to_referenc_no_ref_defined");
     run_test(
@@ -1495,10 +1505,30 @@ fn test_cases_x_output_x_bam_x_tag_to_reference_barcodes() {
 }
 
 #[test]
+fn test_cases_x_output_x_bam_x_tag_to_reference_barcodes_missing_tag() {
+    println!("Test case is in: test_cases/output/bam/tag_to_reference_barcodes_missing_tag");
+    run_test(
+        std::path::Path::new("../test_cases/output/bam/tag_to_reference_barcodes_missing_tag"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_output_x_bam_x_tag_to_reference_barcodes_no_seq() {
     println!("Test case is in: test_cases/output/bam/tag_to_reference_barcodes_no_seq");
     run_test(
         std::path::Path::new("../test_cases/output/bam/tag_to_reference_barcodes_no_seq"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_output_x_bam_x_tag_to_reference_barcodes_no_such_barcode() {
+    println!("Test case is in: test_cases/output/bam/tag_to_reference_barcodes_no_such_barcode");
+    run_test(
+        std::path::Path::new("../test_cases/output/bam/tag_to_reference_barcodes_no_such_barcode"),
         "input.toml",
         1,
     );

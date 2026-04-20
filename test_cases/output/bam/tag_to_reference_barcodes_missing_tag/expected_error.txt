@@ -1,0 +1,10 @@
+Error 1/1
+   ╭─config.toml
+   ┆
+ 9 │     [output.bam.tag_to_reference]
+10 │         tag = 'ref_name_not_present'
+   ┆               ───────────┬──────────
+   ┆                          │
+   ┆                          ╰─────────── No such tag
+───╯
+Hint: Did you mean: 'ref_name' or 'query_seq'?

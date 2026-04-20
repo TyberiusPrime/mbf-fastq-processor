@@ -772,8 +772,8 @@ fn resolve_bam_write_options(
             // Each unique barcode name is one reference; length = barcode sequence length.
             let label = fastqrab_config::TagLabel::Normal(barcodes_key.clone());
             let barcode_section = barcodes.get(&label).ok_or_else(|| {
-                anyhow!(
-                    "Barcodes section '{}' not found for tag_to_reference",
+                panic!(
+                    "Barcodes section '{}' not found for tag_to_reference. SHould have been caught in validation.",
                     barcodes_key
                 )
             })?;

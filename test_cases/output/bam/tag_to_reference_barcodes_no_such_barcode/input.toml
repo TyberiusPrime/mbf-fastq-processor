@@ -1,0 +1,29 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[output]
+    prefix = 'output'
+    format = 'bam'
+
+[output.bam]
+    [output.bam.tag_to_reference]
+        tag = 'ref_name'
+        references_from_barcodes = 'ref_barcodes_missing'
+
+[[step]]
+    action = 'ExtractRegion'
+    source = 'read1'
+    anchor = 'start'
+    start = 0
+    length = 50
+    out_label = 'query_seq'
+
+[[step]]
+    action = 'AssignToReference'
+    in_label = 'query_seq'
+    out_label = 'ref_name'
+    barcodes = 'ref_barcodes'
+    max_hamming_distance = 0
+
+[barcodes.ref_barcodes]
+    from_file.filename = 'input_reference.fa'

@@ -1,0 +1,11 @@
+Error 1/1
+   ╭─config.toml
+   ┆
+ 9 │     [output.bam.tag_to_reference]
+10 │         tag = 'ref_name'
+11 │         references_from_barcodes = 'ref_barcodes_missing'
+   ┆                                    ───────────┬──────────
+   ┆                                               │
+   ┆                                               ╰─────────── Barcode section not found for output.bam.tag_to_reference
+───╯
+Hint: Did you mean: 'ref_barcodes'?

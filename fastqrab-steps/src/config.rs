@@ -1309,19 +1309,43 @@ impl PartialConfig {
             } // cov:excl-line
 
             // Mark tags consumed by output.bam as used so they don't trigger "Unused tag"
-            if let Some(Some(output)) = self.output.as_ref() {
-                if let Some(Some(bam_opts)) = output.bam.as_ref() {
-                    if let Some(map_and_keys) = bam_opts.tag_to_bam_tag.as_ref() {
-                        for tag_label in map_and_keys.map.keys() {
+            if let Some(Some(output)) = self.output.as_mut() {
+                if let Some(Some(bam_opts)) = output.bam.as_mut() {
+                    if let Some(map_and_keys) = bam_opts.tag_to_bam_tag.as_mut() {
+                        for (toml_tag_label, tag_label) in
+                            map_and_keys.keys.iter_mut().zip(map_and_keys.map.keys())
+                        {
                             if let Some(meta) = tags_available.get_mut(tag_label.as_ref()) {
                                 meta.used = true;
+                            } else {
+                                toml_tag_label.state = TomlValueState::new_validation_failed(
+                                    "No such tag".to_string(),
+                                );
+                                toml_tag_label.help = Some(offer_alternatives(
+                                    tag_label.as_ref(),
+                                    &tags_available
+                                        .keys()
+                                        .map(|x| x.as_ref())
+                                        .collect::<Vec<_>>(),
+                                ));
                             }
                         }
                     }
-                    if let Some(Some(tag_to_ref)) = bam_opts.tag_to_reference.as_ref() {
-                        if let Some(Some(tag_name)) = tag_to_ref.tag.as_ref() {
+                    if let Some(Some(tag_to_ref)) = bam_opts.tag_to_reference.as_mut() {
+                        if let Some(Some(tag_name)) = tag_to_ref.tag.as_mut() {
                             if let Some(meta) = tags_available.get_mut(tag_name.as_str()) {
                                 meta.used = true;
+                            } else {
+                                tag_to_ref.tag.help = Some(offer_alternatives(
+                                    tag_name.as_ref(),
+                                    &tags_available
+                                        .keys()
+                                        .map(|x| x.as_ref())
+                                        .collect::<Vec<_>>(),
+                                ));
+                                tag_to_ref.tag.state = TomlValueState::new_validation_failed(
+                                    "No such tag".to_string(),
+                                );
                             }
                         }
                     }
@@ -1446,6 +1470,25 @@ impl PartialConfig {
                         }
                     }
                     // cov:excl-line
+                }
+
+                if let Some(Some(output)) = self.output.as_mut()
+                    && output.format.as_ref() == Some(&FileFormat::Bam)
+                    && let Some(Some(bam)) = output.bam.as_mut()
+                    && let Some(Some(tag_to_reference)) = bam.tag_to_reference.as_mut()
+                    && let Some(Some(from_barcode)) =
+                        tag_to_reference.references_from_barcodes.as_ref()
+                {
+                    if !barcodes.map.contains_key(from_barcode.as_str()) {
+                        tag_to_reference.references_from_barcodes.help = Some(offer_alternatives(
+                            from_barcode,
+                            &barcodes.map.keys().map(|x| x.as_ref()).collect::<Vec<_>>(),
+                        ));
+                        tag_to_reference.references_from_barcodes.state =
+                            TomlValueState::new_validation_failed(
+                                "Barcode section not found for output.bam.tag_to_reference",
+                            );
+                    }
                 }
             }
         }
