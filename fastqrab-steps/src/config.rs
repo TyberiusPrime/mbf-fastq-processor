@@ -130,7 +130,7 @@ pub struct Config {
     #[tpd(nested)]
     pub barcodes: Option<IndexMap<TagLabel, Barcodes>>,
 
-    #[tpd(alias = "step")]
+    #[tpd(alias = "step", alias = "steps", alias = "transforms")]
     #[tpd(nested)]
     pub transform: Vec<Transformation>,
 

@@ -1,0 +1,37 @@
+# Standalone fuzz crate that exercises the fastq parser WITHOUT the
+# decompression layer: any input whose leading bytes look like gzip / bzip2 /
+# xz / zstd magic is rejected up-front, so AFL spends all its budget on the
+# fastq parser state machine instead of the niffler codecs.
+#
+# Kept out of the main workspace for the same reason as `fastq_parser`:
+# AFL-instrumented builds shouldn't pollute the regular target dir, and a
+# normal `cargo build` at the repo root shouldn't try to compile the `afl`
+# crate.
+
+[package]
+name = "fastq_parser_nogz_fuzz"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[[bin]]
+name = "fastq_parser_nogz_fuzz"
+path = "src/main.rs"
+
+[dependencies]
+afl = "0.15"
+fastqrab-io = { path = "../../../fastqrab-io" }
+libc = "0.2"
+
+[features]
+# Same canary as fastq_parser: validates the fuzzing setup end-to-end.
+afl-positive-control = []
+
+[profile.release]
+debug = 1
+panic = "abort"
+
+[profile.dev]
+panic = "abort"
+
+[workspace]

@@ -676,6 +676,7 @@ impl Iterator for IupacExpander {
 pub fn init_hamming_resonator(
     seq_to_name: &IndexMap<BString, String>,
     max_dist: u8,
+    name_split_char: Option<u8>,
 ) -> Result<HammingResonator> {
     let seqs: Vec<BString> = seq_to_name.keys().cloned().collect();
 
@@ -697,11 +698,24 @@ pub fn init_hamming_resonator(
                 let hits_and_seqs: Vec<_> = hits
                     .into_iter()
                     .map(|(seq, dist)| {
-                        (seq, dist, seq_to_name.get(seq).expect("Must be in there?!"))
+                        let seq_name: BString = seq_to_name
+                            .get(seq)
+                            .expect("Must be in there?!")
+                            .as_bytes()
+                            .into();
+                        let seq_name = match name_split_char {
+                            Some(split_char) => seq_name
+                                .splitn(2, |&c| c == split_char)
+                                .next()
+                                .unwrap_or(&seq_name)
+                                .into(),
+                            None => seq_name,
+                        };
+                        (seq, dist, seq_name)
                     })
                     .collect();
-                let first = hits_and_seqs[0].2;
-                if !hits_and_seqs.iter().all(|(_, _, seq)| *seq == first) {
+                let first = &hits_and_seqs[0].2;
+                if !hits_and_seqs.iter().all(|(_, _, seq)| seq == first) {
                     let mut hits_and_seqs = hits_and_seqs;
                     hits_and_seqs.sort();
                     bail!(

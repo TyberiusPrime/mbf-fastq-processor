@@ -49,4 +49,6 @@ mutants.out.old/
 *.incompleted
 opencode.json
 .serena
-dev/fuzz
+dev/fuzz/**/output
+dev/fuzz/**/logs
+dev/fuzz/**/core

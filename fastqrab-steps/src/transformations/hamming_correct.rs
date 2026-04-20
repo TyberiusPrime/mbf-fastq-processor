@@ -2,6 +2,7 @@ use hamming_resonate::HammingResonator;
 use indexmap::IndexMap;
 
 use crate::transformations::prelude::*;
+use fastqrab_config::tpd_adapt_u8_from_byte_or_char;
 use fastqrab_dna::dna::init_hamming_resonator;
 
 /// Correct a tag (extracted region) to known barcodes
@@ -20,6 +21,11 @@ pub struct HammingCorrect {
     pub max_hamming_distance: u8,
     /// What to do when no match is found
     pub on_no_match: OnNoMatch,
+
+    /// names are considered identical if they match up to the first name_split_character
+    /// for must-have-hamming-distance considerations
+    #[tpd(with = "tpd_adapt_u8_from_byte_or_char", alias = "name_split_char")]
+    pub name_split_character: Option<u8>,
 
     #[tpd(skip)]
     #[schemars(skip)]
@@ -74,8 +80,8 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
                         && let Some(max_hamming_distance) = self.max_hamming_distance.as_ref()
                     {
                         self.resonator = Some(Arc::new(
-                            init_hamming_resonator(seq_to_name, *max_hamming_distance).map_err(
-                                |e| {
+                            init_hamming_resonator(seq_to_name, *max_hamming_distance, None)
+                                .map_err(|e| {
                                     ValidationFailure::new(
                                         format!("Failure to initialize"),
                                         Some(format!(
@@ -85,8 +91,7 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
                                         for a given reference target."
                                         )),
                                     )
-                                },
-                            )?,
+                                })?,
                         ));
                         self.seq_to_name = Some(seq_to_name.clone());
                     }
@@ -160,13 +165,21 @@ impl HammingCorrect {
             let matched_plus_seq: Vec<_> = matched
                 .iter()
                 .map(|(seq, dist)| {
-                    (
-                        seq,
-                        dist,
-                        self.seq_to_name
-                            .get(*seq)
-                            .expect("Corrected sequence was not in database?"),
-                    )
+                    let seq_name: BString = self
+                        .seq_to_name
+                        .get(*seq)
+                        .expect("Must be in there?!")
+                        .as_bytes()
+                        .into();
+                    let seq_name = match self.name_split_character {
+                        Some(split_char) => seq_name
+                            .splitn(2, |&c| c == split_char)
+                            .next()
+                            .unwrap_or(&seq_name)
+                            .into(),
+                        None => seq_name,
+                    };
+                    (seq, dist, seq_name)
                 })
                 .collect();
             let all_same_reference = matched_plus_seq
@@ -181,8 +194,9 @@ impl HammingCorrect {
             } else {
                 bail!(
                     "HammingCorrect on in_label={} \n\
-                             Uncorrectable sequence '{}', \n\
-                             matches multiple sequences within hamming distance: {:?}",
+                     Uncorrectable sequence '{}', \n\
+                     matches multiple sequences within hamming distance: {:?}.\n
+                    Maybe set name_split_character if you want to consider these as the same reference?",
                     self.in_label,
                     BStr::new(&sequence),
                     matched_plus_seq

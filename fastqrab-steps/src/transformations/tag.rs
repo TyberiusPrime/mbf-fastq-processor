@@ -129,12 +129,15 @@ pub(crate) fn store_tag_in_comment(
     comment_separator: u8,
     comment_insert_char: u8,
 ) -> Result<Vec<u8>> {
+    //todo: should we check region_separator as well?!
     if tag_value
         .iter()
         .any(|x| *x == comment_separator || *x == comment_insert_char)
     {
         bail!(
-            "Tag value must not contain the comment separator ('{}'), nor the comment insert char ('{}'). Observed tag value for label '{}': '{}'",
+            "Tag value must not contain the comment separator ('{}'), nor the comment insert char ('{}').\n\
+            Observed tag value for label '{}': '{}'.\n\
+            Check `comment_separator` and `comment_insert_char` on StoreTagInComment steps",
             BString::new(vec![comment_separator]),
             BString::new(vec![comment_insert_char]),
             std::str::from_utf8(label).unwrap_or("utf-8 error"),

@@ -1,0 +1,34 @@
+# Standalone fuzz crate for the fastq parser. Kept out of the main workspace
+# so AFL-instrumented builds don't pollute the regular target directory and so
+# normal `cargo build` at the repo root doesn't try to compile the `afl` crate.
+
+[package]
+name = "fastq_parser_fuzz"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[[bin]]
+name = "fastq_parser_fuzz"
+path = "src/main.rs"
+
+[dependencies]
+afl = "0.15"
+fastqrab-io = { path = "../../../fastqrab-io" }
+libc = "0.2"
+
+[features]
+# Injects a deliberate panic when a read name matches a known marker, so a
+# fuzzing run can be validated end-to-end: AFL should drop a file into
+# output/*/crashes/ within seconds of starting. Do NOT enable for real runs.
+afl-positive-control = []
+
+[profile.release]
+debug = 1
+# AFL needs panics to abort so the supervisor can detect them.
+panic = "abort"
+
+[profile.dev]
+panic = "abort"
+
+[workspace]

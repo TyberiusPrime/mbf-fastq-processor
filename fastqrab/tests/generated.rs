@@ -8681,6 +8681,65 @@ fn test_cases_x_single_step_x_hamming_x_assign_to_reference_x_reference_not_enou
 }
 
 #[test]
+fn test_cases_x_single_step_x_hamming_x_assign_to_reference_x_reference_not_enough_hamming_distance_but_same_prefix()
+ {
+    println!(
+        "Test case is in: test_cases/single_step/hamming/assign_to_reference/reference_not_enough_hamming_distance_but_same_prefix"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/hamming/assign_to_reference/reference_not_enough_hamming_distance_but_same_prefix",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_hamming_x_assign_to_reference_x_runtime_not_distinct() {
+    println!(
+        "Test case is in: test_cases/single_step/hamming/assign_to_reference/runtime_not_distinct"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/hamming/assign_to_reference/runtime_not_distinct",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_hamming_x_assign_to_reference_x_runtime_not_distinct_but_equivalent()
+{
+    println!(
+        "Test case is in: test_cases/single_step/hamming/assign_to_reference/runtime_not_distinct_but_equivalent"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/hamming/assign_to_reference/runtime_not_distinct_but_equivalent",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_hamming_x_assign_to_reference_x_runtime_not_distinct_but_equivalent_rev_order()
+ {
+    println!(
+        "Test case is in: test_cases/single_step/hamming/assign_to_reference/runtime_not_distinct_but_equivalent_rev_order"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/hamming/assign_to_reference/runtime_not_distinct_but_equivalent_rev_order",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_hamming_x_assign_to_reference_x_unequal_len_references() {
     println!(
         "Test case is in: test_cases/single_step/hamming/assign_to_reference/unequal_len_references"
@@ -8786,6 +8845,20 @@ fn test_cases_x_single_step_x_hamming_x_basic_correction_too_close_but_same_labe
     run_test(
         std::path::Path::new(
             "../test_cases/single_step/hamming/basic_correction_too_close_but_same_label",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_hamming_x_basic_correction_too_close_but_same_label_after_split() {
+    println!(
+        "Test case is in: test_cases/single_step/hamming/basic_correction_too_close_but_same_label_after_split"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/hamming/basic_correction_too_close_but_same_label_after_split",
         ),
         "input.toml",
         1,

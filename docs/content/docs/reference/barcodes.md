@@ -63,7 +63,7 @@ CCCCCC = "sample-2"
 [barcodes.my_barcodes]
     from_file = {
         filename = "barcodes.fasta"
-        read_name_comment_character = " "
+        read_name_comment_character = " " # optional
 ```
 
 Barcodes can be read from a FASTA / FASTQ / BAM file.

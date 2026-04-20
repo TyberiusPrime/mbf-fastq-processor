@@ -1,0 +1,3 @@
+Uncorrectable sequence 'ATGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTAC', 
+matches multiple sequences within hamming distance: [("ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTAC", 1, "ref_alpha|1", "ref_alpha|1"), ("TTGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTAC", 1, "ref_alpha|2", "ref_alpha|2")]
+Maybe set/check name_split_character if you want to consider these as the same reference?

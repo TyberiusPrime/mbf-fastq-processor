@@ -11,6 +11,7 @@ Correct a tag to one of a predefined set of 'barcodes' using closest hamming dis
     barcodes = "mybarcodelist"
     max_hamming_distance = 1
     on_no_match = 'remove' # 'remove', 'empty', 'keep'
+    name_split_character = '|' # optional
 
 [barcodes.mybarcodelist]
     "AAAA" = "label_ignored" # only read when demultiplexing 
@@ -34,4 +35,11 @@ e.g. 'GTT' (since it's within 1 hamming unit of either).
 
 If the query matches multiple barcodes that all map to the same label, we correct to the 
 closest one, breaking ties by lexicographic ordering.
+
+You can influence whether we consider labels identical (default = complete name) 
+by setting `name_split_character`, then they're considered identical if they match up 
+to the first occurrence of `name_split_character`
+
+
+
 

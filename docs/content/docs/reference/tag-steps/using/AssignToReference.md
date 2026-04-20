@@ -38,6 +38,7 @@ are included.
     out_label = "ref_name"
     max_hamming_distance = 2
     barcodes = 'reference_barcodes'
+    name_split_character = ' ' # Optional,
 
 [barcodes.reference_barcodes]
     from_file = {
@@ -64,6 +65,7 @@ are included.
 | `out_label` | tag name | yes | Output tag for the matched reference name (String). |
 | `max_hamming_distance` | integer | yes | Maximum allowed Hamming distance.  Use `0` for exact matches only. |
 | `barcodes` | yes | String | Which barcode section to reference. |
+| `name_split_character`| no | Char/byte | Split barcode names at this character when considering equivalence classes (see below)|
 
 ## Notes
 
@@ -78,3 +80,7 @@ are included.
 * Use [HammingCorrect]({{< relref "docs/reference/tag-steps/using/HammingCorrect.md" >}})
   instead when you want to correct a tag to one of the barcodes
   barcodes.
+* All barcode sequences must lead to exactly one barcode label - the hamming based equivalence classes must be disjoint.
+You can influence this with `name_split_character`, fastqrab considers labels equivalent if they're 
+equal up to the first `name_split_character`. 
+The stored sequence is then always the first one defined in your barcode section.

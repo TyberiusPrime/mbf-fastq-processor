@@ -1,4 +1,5 @@
 use bstr::BString;
+use fastqrab_config::tpd_adapt_u8_from_byte_or_char;
 use fastqrab_dna::dna::init_hamming_resonator;
 use hamming_resonate::HammingResonator;
 
@@ -29,6 +30,11 @@ pub struct AssignToReference {
     /// Maximum Hamming distance allowed for a match.  Use 0 for exact matches
     /// only.
     pub max_hamming_distance: u8,
+
+    /// names are considered identical if they match up to the first name_split_character
+    /// for must-have-hamming-distance considerations
+    #[tpd(with = "tpd_adapt_u8_from_byte_or_char", alias = "name_split_char")]
+    pub name_split_character: Option<u8>,
 
     // ── built during init ───────────────────────────────────────────────────
     #[tpd(skip)]
@@ -73,7 +79,7 @@ impl VerifyIn<PartialConfig> for PartialAssignToReference {
                         && let Some(max_hamming_distance) = self.max_hamming_distance.as_ref()
                     {
                         self.resonator = Some(Arc::new(init_hamming_resonator(
-                            seq_to_name, *max_hamming_distance)
+                            seq_to_name, *max_hamming_distance, self.name_split_character.as_ref().map(|x| *x).flatten())
                             .map_err(|e| {
                                 ValidationFailure::new(
                                     format!("Failure to initialize"),
@@ -158,13 +164,56 @@ impl Step for AssignToReference {
                 let hits = resonator
                     .query(query.into())
                     .map_err(|e| anyhow::anyhow!("AssignToReference query failed: {e}"))?;
-                if let Some((matched_seq, _dist)) = hits.first() {
-                    match self.seq_to_name.get(*matched_seq) {
-                        Some(name) => TagValue::String(BString::from(name.as_bytes())),
-                        None => TagValue::Missing, // cov:excl-line
+                match hits.len() {
+                    0 => TagValue::Missing,
+                    1 => {
+                        let matched_seq = &hits[0].0; //safe we just checked 
+                        match self.seq_to_name.get(*matched_seq) {
+                            Some(name) => TagValue::String(BString::from(name.as_bytes())),
+                            None => TagValue::Missing, // cov:excl-line
+                        }
                     }
-                } else {
-                    TagValue::Missing
+                    _ => {
+                        let matched_plus_seq: Vec<_> = hits
+                            .iter()
+                            .map(|(seq, dist)| {
+                                let org_seq_name: BString = self
+                                    .seq_to_name
+                                    .get(*seq)
+                                    .expect("Must be in there?!")
+                                    .as_bytes()
+                                    .into();
+                                let seq_name = match self.name_split_character {
+                                    Some(split_char) => org_seq_name
+                                        .splitn(2, |&c| c == split_char)
+                                        .next()
+                                        .unwrap_or(&org_seq_name)
+                                        .into(),
+                                    None => org_seq_name.clone(),
+                                };
+                                (seq, dist, seq_name, org_seq_name)
+                            })
+                            .collect();
+                        let all_same_reference =
+                            matched_plus_seq
+                                .iter()
+                                .all(|(_seq, _dist, split_name, _org_name)| {
+                                    *split_name == matched_plus_seq[0].2
+                                });
+                        if all_same_reference {
+                            TagValue::String(matched_plus_seq[0].3.clone())
+                        } else {
+                            bail!(
+                                "AssignToReference on in_label={} \n\
+                             Uncorrectable sequence '{}', \n\
+                             matches multiple sequences within hamming distance: {:?}\n\
+                            Maybe set/check name_split_character if you want to consider these as the same reference?",
+                                self.in_label,
+                                BStr::new(&query),
+                                matched_plus_seq
+                            );
+                        }
+                    }
                 }
             } else {
                 TagValue::Missing
