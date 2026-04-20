@@ -3,7 +3,7 @@ use bio::alignment::{
     AlignmentOperation,
     pairwise::{Aligner, MIN_SCORE, Scoring},
 };
-use bstr::{BStr, BString, ByteSlice, ByteVec};
+use bstr::{BStr, BString, ByteSlice};
 use hamming_resonate::HammingResonator;
 use indexmap::IndexMap;
 use schemars::JsonSchema;
@@ -75,22 +75,6 @@ impl TagValue {
         }
     }
 
-    pub fn as_str(&self, separator: &[u8]) -> Option<BString> {
-        match self {
-            TagValue::String(s) => Some(s.clone()),
-            TagValue::Location(hits) => {
-                let mut out = BString::default();
-                for section in &hits.0 {
-                    if !out.is_empty() {
-                        out.push_str(separator);
-                    }
-                    out.push_str(&section.sequence);
-                }
-                Some(out)
-            }
-            _ => None,
-        }
-    }
     pub fn to_bstr<'a>(&'a self) -> Cow<'a, BStr> {
         match &self {
             TagValue::Missing => Cow::Borrowed(BStr::new(b"")),

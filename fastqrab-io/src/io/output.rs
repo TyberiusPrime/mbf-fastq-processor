@@ -1,5 +1,5 @@
-use anyhow::{Context, Result};
-use bstr::BString;
+use anyhow::{Context, Result, bail};
+use bstr::{BStr, BString};
 use noodles::sam::alignment::{
     RecordBuf,
     io::Write as SamAlignmentWrite,
@@ -85,7 +85,7 @@ pub fn write_read_to_bam(
         }
     };
 
-    // --- Feature A: build auxiliary tag data --------------------------------
+    // --- build auxiliary tag data --------------------------------
     let mut data_fields: Vec<(Tag, Value)> = Vec::new();
 
     if let Some(comment) = comment {
@@ -125,19 +125,29 @@ pub fn write_read_to_bam(
 
     let data: Data = data_fields.into_iter().collect();
 
-    // --- Feature B: assign reference ----------------------------------------
+    // --- assign reference ----------------------------------------
     let mut reference_sequence_id: Option<usize> = None;
     if let Some(ref_tag_name) = reference_tag {
         if let Some(tag_values) = tags.get(ref_tag_name) {
+            //missing > not 'aligned'
             if let Some(tag_value) = tag_values.get(read_index) {
-                if let TagValue::String(ref_name) = tag_value {
-                    // Look up the reference name in the BAM header
-                    let key: &[u8] = ref_name.as_ref();
+                let ref_name = tag_value.to_bstr();
+                // Look up the reference name in the BAM header
+                let key: &[u8] = &ref_name;
+                if !key.is_empty() {
                     if let Some(idx) = bam_output.header.reference_sequences().get_index_of(key) {
                         reference_sequence_id = Some(idx);
                         flags.remove(SamFlags::UNMAPPED);
+                    } else {
+                        bail!(
+                            "Error in Bam tag-to-reference output: \n\
+                            the value '{ref_name}' for tag '{ref_tag_name}' was not a valid reference sequence.\n\
+                           Check that your output.bam.tag_to_reference.from_bam|from_barcodes derived values match\n\
+                           with the actual tag values. Read name involved: '{}'",
+                            BStr::new(read.name()),
+                        );
                     }
-                }
+                } // else stay at 'not aligned'
             }
         }
     }

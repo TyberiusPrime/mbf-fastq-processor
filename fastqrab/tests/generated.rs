@@ -1485,6 +1485,20 @@ fn test_cases_x_output_x_bam_x_tag_to_reference_from_bam() {
 }
 
 #[test]
+fn test_cases_x_output_x_bam_x_tag_to_reference_from_bam_non_existant_reference() {
+    println!(
+        "Test case is in: test_cases/output/bam/tag_to_reference_from_bam_non_existant_reference"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/output/bam/tag_to_reference_from_bam_non_existant_reference",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_output_x_chunked_x_bam() {
     println!("Test case is in: test_cases/output/chunked/bam");
     run_test(
