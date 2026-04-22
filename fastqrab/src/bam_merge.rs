@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use noodles::bam::bai;
-use noodles::{bam, bgzf};
+use noodles::{bam, bgzf, sam};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
@@ -53,8 +53,8 @@ pub fn merge_demultiplexed_bam(
         }
     };
 
-    // ── build merge groups: other_tag → (other_name, [(combined_tag, combined_name)]) ──
-    let mut groups: BTreeMap<Tag, (String, Vec<(Tag, String)>)> = BTreeMap::new();
+    // ── build merge groups: other_tag → (other_name, [(combined_tag, combined_name, merge_part_name)]) ──
+    let mut groups: BTreeMap<Tag, (String, Vec<(Tag, String, String)>)> = BTreeMap::new();
 
     for (combined_tag, combined_name_opt) in final_tag_to_name {
         let Some(combined_name) = combined_name_opt else {
@@ -62,10 +62,8 @@ pub fn merge_demultiplexed_bam(
         };
         let other_tag = combined_tag & !merge_mask;
 
-        // Derive the "other" name by stripping the merge-step's name from the combined name.
         let merge_part_tag = combined_tag & merge_mask;
         let merge_part_name = if merge_part_tag == 0 {
-            // "no-barcode" for the merge step — its name in the combined string is "no-barcode"
             "no-barcode".to_string()
         } else {
             merge_step_info
@@ -80,27 +78,42 @@ pub fn merge_demultiplexed_bam(
         let entry = groups
             .entry(other_tag)
             .or_insert_with(|| (other_name, Vec::new()));
-        entry.1.push((*combined_tag, combined_name.clone()));
+        entry.1.push((*combined_tag, combined_name.clone(), merge_part_name));
     }
+
+    if groups.is_empty() {
+        return Ok(());
+    }
+
+    // ── read the shared header once and build reference-name → position map ──
+    // All source files from the same pipeline run share an identical header.
+    // The merge-part name (e.g. "lane1") is the reference sequence name, so
+    // looking it up in the header gives the sort key without peeking at records.
+    let first_tail = segment_tails.first().map(String::as_str).unwrap_or("");
+    let header = {
+        let (_, srcs) = groups.values().next().expect("groups non-empty");
+        let (_, name, _) = srcs.first().expect("group has at least one source");
+        let path = output_directory.join(format!("{prefix}{sep}{name}{first_tail}"));
+        read_bam_header(&path)?
+    };
+    let ref_order: indexmap::IndexMap<String, usize> = header
+        .reference_sequences()
+        .keys()
+        .enumerate()
+        .map(|(i, name)| (name.to_string(), i))
+        .collect();
 
     // ── merge each group ─────────────────────────────────────────────────────
 
-    for (_, (other_name, sources)) in groups {
-        // Sort sources by the reference sequence ID of their first mapped record so
-        // the merged BAM has non-decreasing coordinates (required by BAI indexer).
-        // Use the first segment tail as a proxy; unmapped-only files sort first (None).
-        let first_tail = segment_tails.first().map(String::as_str).unwrap_or("");
-        let mut sources_with_ref: Vec<(Tag, String, Option<usize>)> = sources
-            .into_iter()
-            .map(|(tag, name)| {
-                let path = output_directory.join(format!("{prefix}{sep}{name}{first_tail}"));
-                let ref_id = peek_first_ref_id(&path).unwrap_or(None);
-                (tag, name, ref_id)
-            })
-            .collect();
-        // Ascending by ref_id, unmapped last.
-        sources_with_ref
-            .sort_by_key(|&(_, _, ref_id)| ref_id.map(|id| id + 1).unwrap_or(usize::MAX));
+    for (_, (other_name, mut sources)) in groups {
+        // Sort by header position of the merge-part reference name; unmatched sort last.
+        sources.sort_by_key(|(_, _, merge_part_name)| {
+            ref_order
+                .get(merge_part_name.as_str())
+                .copied()
+                .map(|id| id + 1)
+                .unwrap_or(usize::MAX)
+        });
 
         for tail in segment_tails {
             let dst_name = if other_name.is_empty() {
@@ -110,14 +123,12 @@ pub fn merge_demultiplexed_bam(
             };
             let dst_path = output_directory.join(&dst_name);
 
-            let src_paths: Vec<PathBuf> = sources_with_ref
+            let src_paths: Vec<PathBuf> = sources
                 .iter()
-                .map(|(_, name, _)| -> PathBuf {
-                    output_directory.join(format!("{prefix}{sep}{name}{tail}"))
-                })
+                .map(|(_, name, _)| output_directory.join(format!("{prefix}{sep}{name}{tail}")))
                 .collect();
 
-            merge_bam_files(&src_paths, &dst_path)?;
+            merge_bam_files(&header, &src_paths, &dst_path)?;
 
             for src in src_paths.iter().map(PathBuf::as_path) {
                 std::fs::remove_file(src)
@@ -161,51 +172,27 @@ fn strip_step_name(combined: &str, step_name: &str, sep: &str) -> String {
     combined.to_string()
 }
 
-/// Read the first mapped record's reference sequence ID from a BAM file.
-/// Returns Ok(None) if the file has no mapped records or cannot be opened.
-fn peek_first_ref_id(path: &Path) -> Result<Option<usize>> {
-    let f = match std::fs::File::open(path) {
-        Ok(f) => f,
-        Err(_) => return Ok(None),
-    };
+fn read_bam_header(path: &Path) -> Result<sam::Header> {
+    let f = std::fs::File::open(path)
+        .with_context(|| format!("Cannot open BAM for header: {}", path.display()))?;
     let mut reader = bam::io::Reader::new(f);
-    reader.read_header()?;
-    let mut record = bam::Record::default();
-    loop {
-        let n = reader.read_record(&mut record)?;
-        if n == 0 {
-            return Ok(None);
-        }
-        if let Some(id) = record.reference_sequence_id().transpose()? {
-            return Ok(Some(id));
-        }
-    }
+    reader
+        .read_header()
+        .with_context(|| format!("Cannot read header from: {}", path.display()))
 }
 
-/// Merge BAM files by reading and rewriting records via the noodles API.
+/// Merge BAM files by streaming decompressed record bytes from each source into a single output.
 ///
-/// The header is taken from the first source file.  All records from every
-/// source are written in order to the destination.
-fn merge_bam_files(src_paths: &[PathBuf], dst_path: &Path) -> Result<()> {
-    // Read header from first source.
-    let header = {
-        let f = std::fs::File::open(&src_paths[0])
-            .with_context(|| format!("Cannot open source: {}", src_paths[0].display()))?;
-        let mut reader = bam::io::Reader::new(f);
-        reader
-            .read_header()
-            .with_context(|| format!("Cannot read header from: {}", src_paths[0].display()))?
-    };
-
+/// The caller supplies the header (read once from any source); all sources share the same header.
+fn merge_bam_files(header: &sam::Header, src_paths: &[PathBuf], dst_path: &Path) -> Result<()> {
     let dst_file = ex::fs::File::create(dst_path)
         .with_context(|| format!("Cannot create merged BAM: {}", dst_path.display()))?;
     let mut writer =
         bam::io::Writer::from(bgzf::io::Writer::new(std::io::BufWriter::new(dst_file)));
     writer
-        .write_header(&header)
+        .write_header(header)
         .context("Failed to write BAM header")?;
 
-    let mut record = bam::Record::default();
     for src_path in src_paths {
         let f = std::fs::File::open(src_path)
             .with_context(|| format!("Cannot open source BAM: {}", src_path.display()))?;
@@ -213,17 +200,8 @@ fn merge_bam_files(src_paths: &[PathBuf], dst_path: &Path) -> Result<()> {
         reader
             .read_header()
             .with_context(|| format!("Cannot read header from: {}", src_path.display()))?;
-        loop {
-            let n = reader
-                .read_record(&mut record)
-                .with_context(|| format!("Error reading record from: {}", src_path.display()))?;
-            if n == 0 {
-                break;
-            }
-            writer
-                .write_record(&header, &record)
-                .with_context(|| format!("Error writing record from: {}", src_path.display()))?;
-        }
+        std::io::copy(reader.get_mut(), writer.get_mut())
+            .with_context(|| format!("Error streaming records from: {}", src_path.display()))?;
     }
 
     writer
