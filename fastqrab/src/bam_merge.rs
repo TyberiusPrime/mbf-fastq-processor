@@ -128,7 +128,7 @@ pub fn merge_demultiplexed_bam(
                 .map(|(_, name, _)| output_directory.join(format!("{prefix}{sep}{name}{tail}")))
                 .collect();
 
-            merge_bam_files(&header, &src_paths, &dst_path)?;
+            let bam_index = merge_bam_files(&header, &src_paths, &dst_path)?;
 
             for src in src_paths.iter().map(PathBuf::as_path) {
                 std::fs::remove_file(src)
@@ -137,7 +137,8 @@ pub fn merge_demultiplexed_bam(
 
             if index {
                 let bai_path = dst_path.with_extension("bam.bai");
-                index_bam_file(&dst_path, &bai_path)?;
+                bai::fs::write(&bai_path, &bam_index)
+                    .with_context(|| format!("Failed to write BAI: {}", bai_path.display()))?;
             }
         }
     }
@@ -181,10 +182,18 @@ fn read_bam_header(path: &Path) -> Result<sam::Header> {
         .with_context(|| format!("Cannot read header from: {}", path.display()))
 }
 
-/// Merge BAM files by streaming decompressed record bytes from each source into a single output.
+/// Merge BAM files into a single output, building a BAI index inline.
 ///
-/// The caller supplies the header (read once from any source); all sources share the same header.
-fn merge_bam_files(header: &sam::Header, src_paths: &[PathBuf], dst_path: &Path) -> Result<()> {
+/// Reads records one-by-one from each source to track virtual offsets in the
+/// BGZF writer, avoiding a second pass over the merged file for indexing.
+/// The caller supplies the header (read once from any source); all sources share it.
+fn merge_bam_files(
+    header: &sam::Header,
+    src_paths: &[PathBuf],
+    dst_path: &Path,
+) -> Result<bai::Index> {
+    use noodles::csi::binning_index::{Indexer, index::reference_sequence::bin::Chunk};
+
     let dst_file = ex::fs::File::create(dst_path)
         .with_context(|| format!("Cannot create merged BAM: {}", dst_path.display()))?;
     let mut writer =
@@ -193,6 +202,9 @@ fn merge_bam_files(header: &sam::Header, src_paths: &[PathBuf], dst_path: &Path)
         .write_header(header)
         .context("Failed to write BAM header")?;
 
+    let mut indexer = Indexer::default();
+    let mut record = bam::Record::default();
+
     for src_path in src_paths {
         let f = std::fs::File::open(src_path)
             .with_context(|| format!("Cannot open source BAM: {}", src_path.display()))?;
@@ -200,55 +212,32 @@ fn merge_bam_files(header: &sam::Header, src_paths: &[PathBuf], dst_path: &Path)
         reader
             .read_header()
             .with_context(|| format!("Cannot read header from: {}", src_path.display()))?;
-        std::io::copy(reader.get_mut(), writer.get_mut())
-            .with_context(|| format!("Error streaming records from: {}", src_path.display()))?;
+
+        loop {
+            let start_pos = writer.get_ref().virtual_position();
+            let n = reader
+                .read_record(&mut record)
+                .with_context(|| format!("Error reading record from: {}", src_path.display()))?;
+            if n == 0 {
+                break;
+            }
+            writer
+                .write_record(header, &record)
+                .with_context(|| format!("Error writing record from: {}", src_path.display()))?;
+            let end_pos = writer.get_ref().virtual_position();
+
+            let ctx = alignment_context(&record)?;
+            indexer
+                .add_record(ctx, Chunk::new(start_pos, end_pos))
+                .context("Failed to add record to BAM index")?;
+        }
     }
 
     writer
         .try_finish()
         .context("Failed to finish merged BAM writer")?;
-    Ok(())
-}
 
-/// Build a BAI index for `bam_path` and write it to `bai_path`.
-///
-/// Works for both sorted and unsorted BAMs (unmapped reads are counted;
-/// mapped reads are indexed by position).
-fn index_bam_file(bam_path: &Path, bai_path: &Path) -> Result<()> {
-    use noodles::csi::binning_index::{Indexer, index::reference_sequence::bin::Chunk};
-
-    let file = std::fs::File::open(bam_path)
-        .with_context(|| format!("Cannot open BAM for indexing: {}", bam_path.display()))?;
-    let mut reader = bam::io::Reader::new(file);
-    let header = reader
-        .read_header()
-        .with_context(|| format!("Cannot read header for indexing: {}", bam_path.display()))?;
-
-    let mut indexer = Indexer::default();
-    let mut record = bam::Record::default();
-    let mut start_pos = reader.get_ref().virtual_position();
-
-    while reader
-        .read_record(&mut record)
-        .context("Error reading BAM record for indexing")?
-        != 0
-    {
-        let end_pos = reader.get_ref().virtual_position();
-        let chunk = Chunk::new(start_pos, end_pos);
-
-        let ctx = alignment_context(&record)?;
-        indexer
-            .add_record(ctx, chunk)
-            .context("Failed to add record to BAM index")?;
-
-        start_pos = end_pos;
-    }
-
-    let index = indexer.build(header.reference_sequences().len());
-    bai::fs::write(bai_path, &index)
-        .with_context(|| format!("Failed to write BAI: {}", bai_path.display()))?;
-
-    Ok(())
+    Ok(indexer.build(header.reference_sequences().len()))
 }
 
 fn alignment_context(
