@@ -1,3 +1,4 @@
+mod bam_merge;
 pub mod cli;
 pub mod cookbooks;
 pub mod documentation;

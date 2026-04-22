@@ -11,6 +11,7 @@ use std::{
 };
 
 use crate::{
+    bam_merge::DemultiplexStepInfo,
     config::{CheckedConfig, StructuredInput},
     demultiplex::{DemultiplexBarcodes, DemultiplexInfo, OptDemultiplex},
     output::{open_output_files, output_block, output_html_report, output_json_report},
@@ -360,6 +361,7 @@ impl RunStage0 {
             use_rapidgzip: parsed.input.options.use_rapidgzip,
         };
         let mut demultiplex_infos: Vec<(usize, OptDemultiplex)> = Vec::new();
+        let mut demultiplex_step_infos: Vec<DemultiplexStepInfo> = Vec::new();
         // we need to initialize the progress_output first
         // so we can store it on each stage before the stages' init
         let progress_output = {
@@ -433,13 +435,18 @@ impl RunStage0 {
                         .collect::<std::collections::BTreeSet<_>>();
                     let unique_names = unique_names.into_iter().cloned().collect::<Vec<_>>();
                     let mut local_name_to_tag = BTreeMap::new();
+                    let mut local_tag_to_name: BTreeMap<crate::demultiplex::Tag, String> =
+                        BTreeMap::new();
                     let mut tag_value: crate::demultiplex::Tag = 1;
                     for name in unique_names {
                         let bitpattern = tag_value << current_bit_start;
                         tag_to_name.insert(bitpattern, Some(name.clone()));
-                        local_name_to_tag.insert(name, bitpattern);
+                        local_name_to_tag.insert(name.clone(), bitpattern);
+                        local_tag_to_name.insert(bitpattern, name);
                         tag_value += 1;
                     }
+                    let merge_mask: crate::demultiplex::Tag =
+                        local_tag_to_name.keys().fold(0, |acc, &k| acc | k);
                     let local_barcode_to_tag = new_demultiplex_barcodes
                         .barcode_to_name
                         .into_iter()
@@ -450,6 +457,19 @@ impl RunStage0 {
                             (k, *tag)
                         })
                         .collect();
+
+                    // Capture the in_label for this step if it is a Demultiplex transformation.
+                    let step_in_label =
+                        if let Transformation::Demultiplex(ref d) = stage.transformation {
+                            d.in_label.to_string()
+                        } else {
+                            String::new() // fallback (should not happen)
+                        };
+                    demultiplex_step_infos.push(DemultiplexStepInfo {
+                        in_label: step_in_label,
+                        local_tag_to_name,
+                        merge_mask,
+                    });
 
                     if demultiplex_infos.is_empty() {
                         demultiplex_infos.push((
@@ -511,6 +531,7 @@ impl RunStage0 {
             report_json: self.report_json,
             output_directory: output_directory.to_owned(),
             demultiplex_infos,
+            demultiplex_step_infos,
             allow_overwrite,
         })
     }
@@ -520,9 +541,8 @@ impl RunStage0 {
 pub struct RunStage1 {
     input_info: transformations::InputInfo,
     output_directory: PathBuf,
-    //demultiplex_info: Demultiplex,
-    //demultiplex_start: usize,
     demultiplex_infos: Vec<(usize, OptDemultiplex)>,
+    demultiplex_step_infos: Vec<DemultiplexStepInfo>,
     report_html: bool,
     report_json: bool,
     allow_overwrite: bool,
@@ -782,6 +802,7 @@ impl RunStage1 {
             report_html: self.report_html,
             report_json: self.report_json,
             demultiplex_infos: self.demultiplex_infos,
+            demultiplex_step_infos: self.demultiplex_step_infos,
             input_threads,
             combiner_thread,
             combiner_output_rx,
@@ -798,6 +819,7 @@ pub struct RunStage2 {
     report_html: bool,
     report_json: bool,
     demultiplex_infos: Vec<(usize, OptDemultiplex)>,
+    demultiplex_step_infos: Vec<DemultiplexStepInfo>,
 
     input_threads: Vec<thread::JoinHandle<()>>,
     combiner_thread: thread::JoinHandle<()>,
@@ -898,6 +920,7 @@ impl RunStage2 {
             report_html: self.report_html,
             report_json: self.report_json,
             demultiplex_infos: self.demultiplex_infos,
+            demultiplex_step_infos: self.demultiplex_step_infos,
             input_threads: self.input_threads,
             combiner_thread: self.combiner_thread,
             stage_threads: all_threads,
@@ -914,6 +937,7 @@ impl RunStage2 {
 pub struct RunStage3 {
     output_directory: PathBuf,
     demultiplex_infos: Vec<(usize, OptDemultiplex)>,
+    demultiplex_step_infos: Vec<DemultiplexStepInfo>,
     report_html: bool,
     report_json: bool,
     allow_overwrite: bool,
@@ -1136,6 +1160,8 @@ impl RunStage3 {
             combiner_thread: self.combiner_thread,
             output_thread: output,
             error_collector: self.error_collector,
+            demultiplex_infos: self.demultiplex_infos,
+            demultiplex_step_infos: self.demultiplex_step_infos,
         })
     }
 }
@@ -1145,6 +1171,8 @@ pub struct RunStage4 {
     input_threads: Vec<thread::JoinHandle<()>>,
     combiner_thread: thread::JoinHandle<()>,
     output_thread: thread::JoinHandle<()>,
+    pub demultiplex_infos: Vec<(usize, OptDemultiplex)>,
+    pub demultiplex_step_infos: Vec<DemultiplexStepInfo>,
 }
 
 impl RunStage4 {
@@ -1162,12 +1190,18 @@ impl RunStage4 {
             errors.extend(collect_thread_failures(threads, msg, &self.error_collector));
         }
 
-        RunStage5 { errors }
+        RunStage5 {
+            errors,
+            demultiplex_infos: self.demultiplex_infos,
+            demultiplex_step_infos: self.demultiplex_step_infos,
+        }
     }
 }
 
 pub struct RunStage5 {
     pub errors: Vec<String>,
+    pub demultiplex_infos: Vec<(usize, OptDemultiplex)>,
+    pub demultiplex_step_infos: Vec<DemultiplexStepInfo>,
 }
 
 #[cfg(test)]

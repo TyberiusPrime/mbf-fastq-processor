@@ -1,0 +1,47 @@
+[input]
+    read1 = 'input_read1.fq'
+
+# Extract first 2 bases as sample barcode
+[[step]]
+    action = 'ExtractRegion'
+    anchor = "Start"
+    source = "read1"
+    start = 0
+    len = 2
+    out_label = 'sample'
+
+# Extract next 2 bases as lane barcode
+[[step]]
+    action = 'ExtractRegion'
+    anchor = "Start"
+    source = "read1"
+    start = 2
+    len = 2
+    out_label = 'lane'
+
+[[step]]
+    action = 'Demultiplex'
+    in_label = 'sample'
+    output_unmatched = true
+    barcodes = 'samples'
+
+[[step]]
+    action = 'Demultiplex'
+    in_label = 'lane'
+    output_unmatched = true
+    barcodes = 'lanes'
+
+[barcodes.samples]
+    AA = 'sampleA'
+    GG = 'sampleB'
+
+[barcodes.lanes]
+    CG = 'lane1'
+    TC = 'lane2'
+
+[output]
+    prefix = 'output'
+    format = 'bam'
+
+    [output.bam]
+        merge_demultiplexed = 'lane'

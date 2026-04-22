@@ -696,6 +696,7 @@ dependencies = [
  "mutants 0.0.3",
  "niffler",
  "noodles",
+ "noodles-core",
  "regex",
  "schemars",
  "serde_json",

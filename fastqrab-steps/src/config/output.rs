@@ -71,6 +71,8 @@ pub struct TagToReference {
     pub references_from_bam: Option<String>,
 }
 
+#[must_use]
+
 /// BAM-specific output options.
 #[derive(Clone, JsonSchema)]
 #[tpd]
@@ -93,6 +95,16 @@ pub struct BamOutputOptions {
     /// Export a fastqrab tag value as the BAM reference name
     #[tpd(nested)]
     pub tag_to_reference: Option<TagToReference>,
+
+    /// In-label of a Demultiplex step whose outputs should be concatenated into merged BAM
+    /// files.  All demultiplexed files for that step are merged; any additional demultiplex
+    /// levels produce one merged file per combination of the remaining levels.
+    #[tpd(default)]
+    pub merge_demultiplexed: Option<TagLabel>,
+
+    /// Write a BAI index alongside each merged BAM file (default: true).
+    #[tpd(default)]
+    pub index_merged: Option<bool>,
 }
 
 #[derive(Clone, JsonSchema)]

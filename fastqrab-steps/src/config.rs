@@ -200,6 +200,7 @@ impl VerifyIn<TPDRoot> for PartialConfig {
         self.expand_transformations();
         self.verify_transformation_labels();
         self.verify_barcodes_used();
+        self.verify_merge_demultiplexed();
         //todo: verify labels, barcodes, segment_names disjoint
 
         Ok(())
@@ -1491,6 +1492,57 @@ impl PartialConfig {
                     }
                 }
             }
+        }
+    }
+
+    fn verify_merge_demultiplexed(&mut self) {
+        let Some(Some(output)) = self.output.as_mut() else {
+            return;
+        };
+        let Some(Some(bam)) = output.bam.as_mut() else {
+            return;
+        };
+        let Some(Some(merge_label)) = bam.merge_demultiplexed.as_ref() else {
+            return;
+        };
+        let merge_label = merge_label.clone();
+
+        // Must be BAM format
+        if output.format.as_ref() != Some(&FileFormat::Bam) {
+            bam.merge_demultiplexed.state = TomlValueState::new_validation_failed(
+                "merge_demultiplexed requires format = 'bam'",
+            );
+            bam.merge_demultiplexed.help =
+                Some("Set [output] format = 'bam' to use merge_demultiplexed.".to_string());
+            return;
+        }
+
+        // Must have a Demultiplex step with matching in_label
+        let found = self
+            .transform
+            .as_ref()
+            .map(|steps| {
+                steps.iter().any(|step| {
+                    if let Some(PartialTransformation::Demultiplex(d)) = step.value.as_ref() {
+                        if let Some(d) = d.toml_value.value.as_ref() {
+                            if let Some(label) = d.in_label.as_ref() {
+                                return label.as_ref() == merge_label.as_ref();
+                            }
+                        }
+                    }
+                    false
+                })
+            })
+            .unwrap_or(false);
+
+        if !found {
+            bam.merge_demultiplexed.state = TomlValueState::new_validation_failed(
+                "No Demultiplex step found with this in_label",
+            );
+            bam.merge_demultiplexed.help = Some(format!(
+                "Add a [[step]] with action='Demultiplex' and in_label='{merge_label}' \
+                 or correct the label name."
+            ));
         }
     }
 }

@@ -75,6 +75,20 @@ fn inner_run(
 ) -> Result<()> {
     let start_time = std::time::Instant::now();
     let is_benchmark = parsed.benchmark.as_ref().is_some_and(|b| b.enable);
+    // Extract merge config before parsed is shadowed/moved.
+    let merge_config = parsed.output.as_ref().and_then(|o| {
+        o.bam.as_ref().and_then(|b| {
+            b.merge_demultiplexed.as_ref().map(|label| {
+                (
+                    o.prefix.clone(),
+                    o.get_suffix(),
+                    o.ix_separator.clone(),
+                    label.to_string(),
+                    b.index_merged.unwrap_or(true),
+                )
+            })
+        })
+    });
     {
         let run = pipeline::RunStage0::new(&parsed);
         let run = run.configure_demultiplex_and_init_stages(
@@ -92,6 +106,19 @@ fn inner_run(
 
         if !errors.is_empty() {
             bail!(errors.join("\n"));
+        }
+
+        if let Some((prefix, suffix, sep, merge_label, index_merged)) = merge_config {
+            crate::bam_merge::merge_demultiplexed_bam(
+                output_directory,
+                &prefix,
+                &suffix,
+                &sep,
+                &run.demultiplex_infos,
+                &run.demultiplex_step_infos,
+                &merge_label,
+                index_merged,
+            )?;
         }
 
         drop(parsed);

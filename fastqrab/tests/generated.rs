@@ -1445,6 +1445,26 @@ fn test_cases_x_output_x_bam_x_interleaved() {
 }
 
 #[test]
+fn test_cases_x_output_x_bam_x_merge_demultiplexed() {
+    println!("Test case is in: test_cases/output/bam/merge_demultiplexed");
+    run_test(
+        std::path::Path::new("../test_cases/output/bam/merge_demultiplexed"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_output_x_bam_x_merge_demultiplexed_two_levels() {
+    println!("Test case is in: test_cases/output/bam/merge_demultiplexed_two_levels");
+    run_test(
+        std::path::Path::new("../test_cases/output/bam/merge_demultiplexed_two_levels"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_output_x_bam_x_reference_but_no_tag() {
     println!("Test case is in: test_cases/output/bam/reference_but_no_tag");
     run_test(
