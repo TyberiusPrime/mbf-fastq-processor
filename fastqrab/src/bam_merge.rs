@@ -22,27 +22,27 @@ pub struct DemultiplexStepInfo {
 /// * One merged file per unique combination of the **other** demultiplex levels.
 /// * Intermediary files are removed after merging.
 /// * If `index` is true a `.bai` index is written beside each merged file.
+/// * `segment_tails` are the per-segment file suffixes derived from config (e.g. `["_read1.bam"]`).
 #[allow(clippy::too_many_arguments)]
 pub fn merge_demultiplexed_bam(
     output_directory: &Path,
     prefix: &str,
-    suffix: &str,
     sep: &str,
     demultiplex_infos: &[(usize, OptDemultiplex)],
     demultiplex_step_infos: &[DemultiplexStepInfo],
     merge_label: &str,
+    segment_tails: &[String],
     index: bool,
 ) -> Result<()> {
     // ── find the merge step ──────────────────────────────────────────────────
-    let (merge_step_idx, merge_step_info) = demultiplex_step_infos
+    let merge_step_info = demultiplex_step_infos
         .iter()
-        .enumerate()
-        .find(|(_, s)| s.in_label == merge_label)
-        .with_context(|| {
-            format!("No demultiplex step found with in_label='{merge_label}' (this is a bug)")
-        })?;
+        .find(|s| s.in_label == merge_label)
+        .unwrap_or_else(|| {
+            panic!("No demultiplex step found with in_label='{merge_label}' (this is a bug)")
+        });
 
-    let merge_mask = merge_step_info.merge_mask;
+    let merge_mask = merge_step_info.merge_mask; //the bits for the step we're combining
 
     // ── final tag→name mapping ───────────────────────────────────────────────
     let final_tag_to_name = match demultiplex_infos.last() {
@@ -72,7 +72,7 @@ pub fn merge_demultiplexed_bam(
                 .local_tag_to_name
                 .get(&merge_part_tag)
                 .cloned()
-                .unwrap_or_default()
+                .expect("missing merge-part-tag?")
         };
 
         let other_name = strip_step_name(combined_name, &merge_part_name, sep);
@@ -83,32 +83,26 @@ pub fn merge_demultiplexed_bam(
         entry.1.push((*combined_tag, combined_name.clone()));
     }
 
-    // Sort source files within each group deterministically (by combined_name).
-    for (_, (_, sources)) in &mut groups {
-        sources.sort_by(|a, b| a.1.cmp(&b.1));
-    }
-
     // ── merge each group ─────────────────────────────────────────────────────
-    let _ = merge_step_idx; // suppress warning — used for context only
-    let dot_suffix = format!(".{suffix}");
 
     for (_, (other_name, sources)) in groups {
-        // Discover segment tails by listing files for the first source:
-        // e.g. "output_sample1_read1.bam" → tail "_read1.bam"
-        let first_file_prefix = format!("{prefix}{sep}{}", sources[0].1);
-        let segment_tails: Vec<String> = {
-            let mut tails: Vec<String> = std::fs::read_dir(output_directory)
-                .context("Cannot list output directory")?
-                .filter_map(|e| e.ok())
-                .filter_map(|e| e.file_name().into_string().ok())
-                .filter(|name| name.starts_with(&first_file_prefix) && name.ends_with(&dot_suffix))
-                .map(|name| name[first_file_prefix.len()..].to_string())
-                .collect();
-            tails.sort();
-            tails
-        };
+        // Sort sources by the reference sequence ID of their first mapped record so
+        // the merged BAM has non-decreasing coordinates (required by BAI indexer).
+        // Use the first segment tail as a proxy; unmapped-only files sort first (None).
+        let first_tail = segment_tails.first().map(String::as_str).unwrap_or("");
+        let mut sources_with_ref: Vec<(Tag, String, Option<usize>)> = sources
+            .into_iter()
+            .map(|(tag, name)| {
+                let path = output_directory.join(format!("{prefix}{sep}{name}{first_tail}"));
+                let ref_id = peek_first_ref_id(&path).unwrap_or(None);
+                (tag, name, ref_id)
+            })
+            .collect();
+        // Ascending by ref_id, unmapped last.
+        sources_with_ref
+            .sort_by_key(|&(_, _, ref_id)| ref_id.map(|id| id + 1).unwrap_or(usize::MAX));
 
-        for tail in &segment_tails {
+        for tail in segment_tails {
             let dst_name = if other_name.is_empty() {
                 format!("{prefix}{tail}")
             } else {
@@ -116,14 +110,16 @@ pub fn merge_demultiplexed_bam(
             };
             let dst_path = output_directory.join(&dst_name);
 
-            let src_paths: Vec<PathBuf> = sources
+            let src_paths: Vec<PathBuf> = sources_with_ref
                 .iter()
-                .map(|(_, name)| output_directory.join(format!("{prefix}{sep}{name}{tail}")))
+                .map(|(_, name, _)| -> PathBuf {
+                    output_directory.join(format!("{prefix}{sep}{name}{tail}"))
+                })
                 .collect();
 
             merge_bam_files(&src_paths, &dst_path)?;
 
-            for src in &src_paths {
+            for src in src_paths.iter().map(PathBuf::as_path) {
                 std::fs::remove_file(src)
                     .with_context(|| format!("Failed to remove intermediary: {}", src.display()))?;
             }
@@ -163,6 +159,27 @@ fn strip_step_name(combined: &str, step_name: &str, sep: &str) -> String {
     }
     // No match — return as-is (should not happen with well-formed config).
     combined.to_string()
+}
+
+/// Read the first mapped record's reference sequence ID from a BAM file.
+/// Returns Ok(None) if the file has no mapped records or cannot be opened.
+fn peek_first_ref_id(path: &Path) -> Result<Option<usize>> {
+    let f = match std::fs::File::open(path) {
+        Ok(f) => f,
+        Err(_) => return Ok(None),
+    };
+    let mut reader = bam::io::Reader::new(f);
+    reader.read_header()?;
+    let mut record = bam::Record::default();
+    loop {
+        let n = reader.read_record(&mut record)?;
+        if n == 0 {
+            return Ok(None);
+        }
+        if let Some(id) = record.reference_sequence_id().transpose()? {
+            return Ok(Some(id));
+        }
+    }
 }
 
 /// Merge BAM files by reading and rewriting records via the noodles API.
@@ -242,7 +259,9 @@ fn index_bam_file(bam_path: &Path, bai_path: &Path) -> Result<()> {
         let chunk = Chunk::new(start_pos, end_pos);
 
         let ctx = alignment_context(&record)?;
-        indexer.add_record(ctx, chunk).context("Failed to add record to BAM index")?;
+        indexer
+            .add_record(ctx, chunk)
+            .context("Failed to add record to BAM index")?;
 
         start_pos = end_pos;
     }

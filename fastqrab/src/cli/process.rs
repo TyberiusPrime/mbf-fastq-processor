@@ -79,12 +79,32 @@ fn inner_run(
     let merge_config = parsed.output.as_ref().and_then(|o| {
         o.bam.as_ref().and_then(|b| {
             b.merge_demultiplexed.as_ref().map(|label| {
+                let suffix = o.get_suffix();
+                let sep = &o.ix_separator;
+                // Compute segment tails from config rather than filesystem.
+                // Each tail is the part of the filename that follows the combined barcode name,
+                // e.g. "_read1.bam" or "_interleaved.bam".
+                let segment_order = parsed.input.get_segment_order();
+                let mut tails: Vec<String> = Vec::new();
+                if o.interleave.is_some() {
+                    tails.push(format!("{sep}interleaved.{suffix}"));
+                }
+                let active: Vec<&String> = match &o.output {
+                    Some(list) => segment_order
+                        .iter()
+                        .filter(|n| list.iter().any(|l| l == *n))
+                        .collect(),
+                    None => segment_order.iter().collect(),
+                };
+                for seg in active {
+                    tails.push(format!("{sep}{seg}.{suffix}"));
+                }
                 (
                     o.prefix.clone(),
-                    o.get_suffix(),
                     o.ix_separator.clone(),
                     label.to_string(),
                     b.index_merged.unwrap_or(true),
+                    tails,
                 )
             })
         })
@@ -108,15 +128,15 @@ fn inner_run(
             bail!(errors.join("\n"));
         }
 
-        if let Some((prefix, suffix, sep, merge_label, index_merged)) = merge_config {
+        if let Some((prefix, sep, merge_label, index_merged, segment_tails)) = merge_config {
             crate::bam_merge::merge_demultiplexed_bam(
                 output_directory,
                 &prefix,
-                &suffix,
                 &sep,
                 &run.demultiplex_infos,
                 &run.demultiplex_step_infos,
                 &merge_label,
+                &segment_tails,
                 index_merged,
             )?;
         }
