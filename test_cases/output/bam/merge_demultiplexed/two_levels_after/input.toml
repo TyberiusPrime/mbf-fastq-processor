@@ -20,16 +20,25 @@
     out_label = 'lane'
 
 [[step]]
-    action = 'Demultiplex'
-    in_label = 'sample'
-    output_unmatched = true
-    barcodes = 'samples'
+  action ="AssignToReference"
+  barcodes = "lanes"
+  in_label="lane"
+  out_label="ref_lane"
+  max_hamming_distance = 0
+  
 
 [[step]]
     action = 'Demultiplex'
     in_label = 'lane'
     output_unmatched = true
     barcodes = 'lanes'
+
+[[step]]
+    action = 'Demultiplex'
+    in_label = 'sample'
+    output_unmatched = true
+    barcodes = 'samples'
+
 
 [barcodes.samples]
     AA = 'sampleA'
@@ -44,4 +53,5 @@
     format = 'bam'
 
     [output.bam]
+        tag_to_reference = {'tag'= 'ref_lane', from_barcodes = "lanes"}
         merge_demultiplexed = 'lane'

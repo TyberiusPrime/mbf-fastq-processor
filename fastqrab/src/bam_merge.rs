@@ -242,7 +242,7 @@ fn index_bam_file(bam_path: &Path, bai_path: &Path) -> Result<()> {
         let chunk = Chunk::new(start_pos, end_pos);
 
         let ctx = alignment_context(&record)?;
-        indexer.add_record(ctx, chunk)?;
+        indexer.add_record(ctx, chunk).context("Failed to add record to BAM index")?;
 
         start_pos = end_pos;
     }
