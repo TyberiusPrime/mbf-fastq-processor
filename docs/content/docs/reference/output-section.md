@@ -42,6 +42,8 @@ The `[output]` table controls how transformed reads and reporting artefacts are 
         # or
         references_from_barcodes = 'barcode-section-name' # take references from this barcode section.
     }
+    merge_demultiplexed = false # merge demultiplexed bam  (see below)
+    index_merged = true # add .bai to merged bam file.
 ```
 
 | Key                                                   | Default             | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
@@ -83,6 +85,8 @@ Position is always 1.
 This is useful for example to later quantify 'looked up' reads with [mbf-bam-quantifier](https://tyberiusprime.github.io/mbf-bam-quantifier/)
 in 'preassigned [bam tag' mode](https://tyberiusprime.github.io/mbf-bam-quantifier/docs/reference/input-section/#bam_tag).
 
+Please note the [#merge_demultiplexed](merge demultiplexed) section below.
+
 ### Other tags
 
 You can store arbitrary tags into BAM tags using `output.bam.tag_to_bam_tag'.
@@ -111,6 +115,20 @@ Interleaved produces one paired BAM with appropriate SAM flags for first/last se
 ### Other
 
 BAM output cannot be streamed to stdout and requires `output_hash_uncompressed = false` (compressed hashes continue to work).
+
+### Merge demultiplexed
+
+When assigning reads to references using,  you might wish to produce a sorted BAM output file.
+
+To do so, you need to 
+* create a tag with reference names 
+    ([AssignToReference]({{< relref "docs/reference/tag-steps/using/AssignToReference.md" >}})
+* Demultiplex on that tag
+* set the output to BAM
+* store the tag in references using `output.bam.tag_to_reference.tag`
+* merge the BAM files (which then will be trivially sorted) using `output.bam.merge_demultiplexed = true`
+
+See the cookbook (todo) for more details.
 
 
 ### Example output files.
