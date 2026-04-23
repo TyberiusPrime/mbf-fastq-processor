@@ -114,14 +114,14 @@ impl<T: Write + Send + 'static> ZWriter<T> for ParallelWriter<T> {
     }
 }
 
-enum CompressedWriter<'a, T: Write + Send + 'static> {
+enum CompressedWriter<T: Write + Send + 'static> {
     Raw(HashingFileWriter<BufWriter<T>>),
     GzipSingle(GzEncoder<HashingFileWriter<BufWriter<T>>>),
     GzipParallel(ParallelWriter<HashingFileWriter<BufWriter<T>>>),
-    Zstd(zstd::stream::Encoder<'a, HashingFileWriter<BufWriter<T>>>),
+    Zstd(zstd::stream::Encoder<'static, HashingFileWriter<BufWriter<T>>>),
 }
 
-impl<T: Write + Send + 'static> CompressedWriter<'_, T> {
+impl<T: Write + Send + 'static> CompressedWriter<T> {
     fn finish(self) -> HashingFileWriter<BufWriter<T>> {
         match self {
             CompressedWriter::Raw(inner) => inner,
@@ -138,7 +138,7 @@ impl<T: Write + Send + 'static> CompressedWriter<'_, T> {
     }
 }
 
-impl<T: Write + Send + 'static> Write for CompressedWriter<'_, T> {
+impl<T: Write + Send + 'static> Write for CompressedWriter<T> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         match self {
             CompressedWriter::Raw(inner) => inner.write(buf),
@@ -158,12 +158,12 @@ impl<T: Write + Send + 'static> Write for CompressedWriter<'_, T> {
     }
 }
 
-enum Compressed<'a, T: Write + Send + 'static> {
-    Normal(CompressedWriter<'a, T>),
-    FailForTest(FailForTestWriter<CompressedWriter<'a, T>>),
+enum Compressed<T: Write + Send + 'static> {
+    Normal(CompressedWriter<T>),
+    FailForTest(FailForTestWriter<CompressedWriter<T>>),
 }
 
-impl<T: Write + Send + 'static> Compressed<'_, T> {
+impl<T: Write + Send + 'static> Compressed<T> {
     fn finish(self) -> HashingFileWriter<BufWriter<T>> {
         match self {
             Compressed::Normal(inner) => inner.finish(),
@@ -172,7 +172,7 @@ impl<T: Write + Send + 'static> Compressed<'_, T> {
     }
 }
 
-impl<T: Write + Send + 'static> Write for Compressed<'_, T> {
+impl<T: Write + Send + 'static> Write for Compressed<T> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         match self {
             Compressed::Normal(inner) => inner.write(buf),
@@ -188,11 +188,11 @@ impl<T: Write + Send + 'static> Write for Compressed<'_, T> {
     }
 }
 
-pub struct HashedAndCompressedWriter<'a, T: std::io::Write + Send + 'static> {
-    compressed_writer: HashingFileWriter<Compressed<'a, T>>,
+pub struct HashedAndCompressedWriter<T: std::io::Write + Send + 'static> {
+    compressed_writer: HashingFileWriter<Compressed<T>>,
 }
 
-pub type OutputWriter = HashedAndCompressedWriter<'static, ex::fs::File>;
+pub type OutputWriter = HashedAndCompressedWriter<ex::fs::File>;
 // cov:excl-start
 impl std::fmt::Debug for OutputWriter {
     #[mutants::skip] // don't care that it's never used, it' s useful when you need to debug
@@ -202,7 +202,7 @@ impl std::fmt::Debug for OutputWriter {
 }
 // cov:excl-stop
 
-impl<T: std::io::Write + Send + 'static> HashedAndCompressedWriter<'_, T> {
+impl<T: std::io::Write + Send + 'static> HashedAndCompressedWriter<T> {
     pub fn new(
         writer: T,
         compression_format: CompressionFormat,
@@ -312,7 +312,7 @@ impl<T: std::io::Write + Send + 'static> HashedAndCompressedWriter<'_, T> {
     }
 }
 
-impl<T: std::io::Write + Send + 'static> std::io::Write for HashedAndCompressedWriter<'_, T> {
+impl<T: std::io::Write + Send + 'static> std::io::Write for HashedAndCompressedWriter<T> {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         self.compressed_writer.write(buf)
     }

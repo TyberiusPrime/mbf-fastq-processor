@@ -7,4 +7,4 @@
 [output]
     prefix = 'output'
     format = 'bam'
-    compression_level=0
+    compression_level=10

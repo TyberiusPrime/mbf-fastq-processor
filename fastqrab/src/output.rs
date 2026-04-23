@@ -2,6 +2,7 @@ use anyhow::{Context, Result, anyhow};
 use noodles::{bam, bgzf, sam};
 use std::collections::BTreeMap;
 use std::io::{BufWriter, Write};
+use std::num::NonZero;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
@@ -107,11 +108,11 @@ impl OutputRunMarker {
     }
 }
 
-enum OutputWriter<'a> {
-    File(HashedAndCompressedWriter<'a, ex::fs::File>),
+enum OutputWriter {
+    File(HashedAndCompressedWriter<ex::fs::File>),
 }
 
-impl OutputWriter<'_> {
+impl OutputWriter {
     fn finish(mut self) -> (Option<String>, Option<String>) {
         self.flush().expect("Flushing file failed. Disk trouble?");
         match self {
@@ -120,7 +121,7 @@ impl OutputWriter<'_> {
     }
 }
 
-impl std::io::Write for OutputWriter<'_> {
+impl std::io::Write for OutputWriter {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         match self {
             OutputWriter::File(inner) => inner.write(buf),
@@ -152,12 +153,12 @@ pub struct OutputFileConfig {
     bam_write_options: BamWriteOptions,
 }
 
-pub struct OutputFile<'a> {
+pub struct OutputFile {
     config: OutputFileConfig,
-    handle: OutputFileHandle<'a>,
+    handle: OutputFileHandle,
 }
 
-impl OutputFile<'_> {
+impl OutputFile {
     fn rotate_chunk(&mut self) -> Result<()> {
         //capture the old name
         let old_filename = self.config.filename();
@@ -231,14 +232,14 @@ impl OutputFile<'_> {
     }
 }
 
-enum OutputFileHandle<'a> {
-    Fastq(OutputWriter<'a>),
-    Fasta(OutputWriter<'a>),
-    Bam(fastqrab_io::io::BamOutput<'a>),
+enum OutputFileHandle {
+    Fastq(OutputWriter),
+    Fasta(OutputWriter),
+    Bam(fastqrab_io::io::BamOutput),
     TemporarilyOutOfAction,
 }
 
-impl OutputFileHandle<'_> {
+impl OutputFileHandle {
     fn finish(self, filename: &Path) -> Result<()> {
         match self {
             Self::Fastq(writer) | Self::Fasta(writer) => {
@@ -252,13 +253,20 @@ impl OutputFileHandle<'_> {
                 }
                 Ok(())
             }
-            Self::Bam(mut bam_output) => {
-                bam_output
-                    .writer
-                    .try_finish()
-                    .context("Failed to finish BAM writer")?;
-                let bgzf_writer = bam_output.writer.into_inner();
-                let hashed_writer = bgzf_writer.into_inner();
+            Self::Bam(bam_output) => {
+                let mut mt_writer = bam_output.writer.into_inner();
+                let mut hashed_writer = mt_writer
+                    .finish()
+                    .context("Failed to finish BAM multithreaded writer")?;
+                // Write the BGZF EOF marker (§ 4.1.2 End-of-file marker)
+                const BGZF_EOF: [u8; 28] = [
+                    0x1f, 0x8b, 0x08, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0x06, 0x00, 0x42,
+                    0x43, 0x02, 0x00, 0x1b, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                    0x00, 0x00,
+                ];
+                hashed_writer
+                    .write_all(&BGZF_EOF)
+                    .context("Failed to write BGZF EOF block")?;
                 let (uncompressed_hash, compressed_hash) = hashed_writer.finish();
 
                 if let Some(_hash) = uncompressed_hash {
@@ -382,7 +390,7 @@ impl OutputFileConfig {
         })
     }
 
-    fn into_writer<'a>(self) -> Result<OutputFile<'a>> {
+    fn into_writer(self) -> Result<OutputFile> {
         let handle = ex::fs::File::create(self.filename()).with_context(|| {
             format!(
                 "Could not open file for output: {}",
@@ -449,7 +457,7 @@ impl OutputFileConfig {
         Ok(())
     }
 
-    fn build_writer<'a>(&self, file_handle: ex::fs::File) -> Result<OutputFileHandle<'a>> {
+    fn build_writer(&self, file_handle: ex::fs::File) -> Result<OutputFileHandle> {
         let kind = match self.format {
             FileFormat::Bam => OutputFileHandle::Bam(build_bam_output(
                 file_handle,
@@ -457,6 +465,9 @@ impl OutputFileConfig {
                 self.compression_level,
                 self.simulated_failure.as_ref(),
                 &self.bam_write_options.reference_sequences,
+                self.compression_threads
+                    .and_then(|x| x.try_into().ok())
+                    .unwrap_or(NonZero::try_from(1).unwrap()),
             )?), // cov:excl-line
             FileFormat::Fastq => {
                 OutputFileHandle::Fastq(OutputWriter::File(HashedAndCompressedWriter::new(
@@ -602,13 +613,14 @@ impl OutputFileConfig {
     }
 }
 
-fn build_bam_output<'a>(
+fn build_bam_output(
     file_handle: ex::fs::File,
     do_compressed_hash: bool,
     compression_level: Option<u8>,
     simulated_failure: Option<&SimulatedWriteFailure>,
     reference_sequences: &[(String, usize)],
-) -> Result<io::BamOutput<'a>> {
+    thread_count: NonZero<usize>,
+) -> Result<io::BamOutput> {
     let hashed_writer = HashedAndCompressedWriter::new(
         file_handle,
         CompressionFormat::Uncompressed,
@@ -619,16 +631,18 @@ fn build_bam_output<'a>(
         simulated_failure.cloned(),
     )?; // cov:excl-line
 
-    let bgzf_writer = match compression_level {
+    let mut builder = bgzf::io::multithreaded_writer::Builder::default();
+    match compression_level {
         Some(level) => {
             let level = bgzf::io::writer::CompressionLevel::try_from(level)
                 .context("Invalid compression level for BAM BGZF writer")?;
-            bgzf::io::writer::Builder::default()
-                .set_compression_level(level)
-                .build_from_writer(hashed_writer)
+            builder = builder.set_compression_level(level);
         }
-        None => bgzf::io::Writer::new(hashed_writer),
-    };
+        None => {}
+    }
+    let bgzf_writer = builder
+        .set_worker_count(thread_count) //todo: use from config...
+        .build_from_writer(hashed_writer);
 
     let mut writer = bam::io::Writer::from(bgzf_writer);
     let header = Arc::new(create_bam_header(reference_sequences));
@@ -671,7 +685,7 @@ pub struct OutputFastqs<T> {
 }
 
 impl OutputFastqs<OutputFileConfig> {
-    pub fn into_writer<'a>(self) -> Result<OutputFastqs<OutputFile<'a>>> {
+    pub fn into_writer(self) -> Result<OutputFastqs<OutputFile>> {
         Ok(OutputFastqs {
             interleaved_file: match self.interleaved_file {
                 Some(config) => Some(config.into_writer()?),
@@ -684,12 +698,12 @@ impl OutputFastqs<OutputFileConfig> {
                     Some(config) => Ok(Some(config.into_writer()?)),
                     None => Ok(None),
                 })
-                .collect::<Result<Vec<Option<OutputFile<'a>>>>>()?,
+                .collect::<Result<Vec<Option<OutputFile>>>>()?,
         })
     }
 }
 
-impl OutputFastqs<OutputFile<'_>> {
+impl OutputFastqs<OutputFile> {
     /// Total BAM records written across all segment/interleaved files for this tag.
     /// For demultiplexed BAM merge, each fragment writes one record per segment, so
     /// any one segment gives the fragment count; we take the max across all present files.
@@ -966,13 +980,13 @@ pub struct OutputFiles {
     pub output_reports: OutputReports,
 }
 
-pub struct OutputFilesReadyToWrite<'a> {
-    pub output_segments: BTreeMap<crate::demultiplex::Tag, OutputFastqs<OutputFile<'a>>>,
+pub struct OutputFilesReadyToWrite {
+    pub output_segments: BTreeMap<crate::demultiplex::Tag, OutputFastqs<OutputFile>>,
     pub output_reports: OutputReports,
 }
 
 impl OutputFiles {
-    pub fn into_writer<'a>(self) -> Result<OutputFilesReadyToWrite<'a>> {
+    pub fn into_writer(self) -> Result<OutputFilesReadyToWrite> {
         let mut output_segments = BTreeMap::new();
         for (k, v) in self.output_segments {
             let inner = Arc::try_unwrap(v)
@@ -1057,7 +1071,7 @@ pub fn open_output_files(
 pub fn output_block(
     block: &io::FastQBlocksCombined,
     //that's one set of OutputFastqs per (demultiplexd) output
-    output_files: &mut BTreeMap<crate::demultiplex::Tag, OutputFastqs<OutputFile<'_>>>,
+    output_files: &mut BTreeMap<crate::demultiplex::Tag, OutputFastqs<OutputFile>>,
     interleave_order: &[usize],
     demultiplexed: &OptDemultiplex,
     buffer_size: usize,
@@ -1093,7 +1107,7 @@ pub fn output_block(
 #[allow(clippy::if_not_else)]
 fn output_block_demultiplex(
     block: &io::FastQBlocksCombined,
-    output_files: &mut OutputFastqs<OutputFile<'_>>,
+    output_files: &mut OutputFastqs<OutputFile>,
     interleave_order: &[usize],
     tag: Option<crate::demultiplex::Tag>,
     buffer_size: usize,

@@ -15,8 +15,12 @@ use fastqrab_dna::dna::TagValue;
 
 pub mod compressed_output;
 
-pub struct BamOutput<'a> {
-    pub writer: bam::io::Writer<bgzf::io::Writer<HashedAndCompressedWriter<'a, ex::fs::File>>>,
+pub struct BamOutput {
+    pub writer: bam::io::Writer<
+        bgzf::io::multithreaded_writer::MultithreadedWriter<
+            HashedAndCompressedWriter<ex::fs::File>,
+        >,
+    >,
     pub header: Arc<sam::Header>,
 }
 
@@ -35,7 +39,7 @@ pub struct BamOutput<'a> {
 ///   sequences and set the read's RNAME / alignment start accordingly (Feature B)
 #[allow(clippy::too_many_arguments)]
 pub fn write_read_to_bam(
-    bam_output: &mut BamOutput<'_>,
+    bam_output: &mut BamOutput,
     read: &WrappedFastQRead<'_>,
     read_index: usize,
     segment_index: usize,
@@ -65,7 +69,7 @@ pub fn write_read_to_bam(
     let adjusted_quality_scores = read
         .qual()
         .iter()
-        .map(|&q| q.saturating_sub(33))
+        .map(|&q| q.saturating_sub(33)) //todo: evaluate if this shouldn't fail instead.
         .collect::<Vec<u8>>();
     let (name, comment) = {
         // BAM may not have spaces in read names.
@@ -240,7 +244,7 @@ mod tests {
                 None,
             )
             .unwrap();
-            let bgzf_writer = bgzf::io::Writer::new(hashed_writer);
+            let bgzf_writer = bgzf::io::multithreaded_writer::MultithreadedWriter::new(hashed_writer);
             let mut writer = bam::io::Writer::from(bgzf_writer);
             let header = Arc::new(sam::Header::from_str("@HD\tVN:1.6\tSO:unsorted\n").unwrap());
             writer.write_header(&header).unwrap();

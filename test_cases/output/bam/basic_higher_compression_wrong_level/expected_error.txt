@@ -1,12 +1,15 @@
+Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
  7 │ [output]
  8 │     prefix = 'output'
  9 │     format = 'bam'
-10 │     compression_level=0
-   ┆                       ┬
-   ┆                       │
-   ┆                       ╰─ Invalid compression level specified for BAM output
+10 │     compression_level=10
+   ┆                       ─┬
+   ┆                        │
+   ┆                        ╰─ Invalid compression level specified for BAM output
 ───╯
-Hint: Valid range is 1-9 for BAM (and our compressor)
+Hint: Valid range is 0-9 for BAM (and our compressor)
+
+

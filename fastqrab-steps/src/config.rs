@@ -1851,7 +1851,11 @@ impl Config {
         let can_multicore_compression = self
             .output
             .as_ref()
-            .is_some_and(|o| matches!(o.compression, CompressionFormat::Gzip));
+            .is_some_and(|o| matches!(o.compression, CompressionFormat::Gzip))
+            | self
+                .output
+                .as_ref()
+                .is_some_and(|o| matches!(o.format, FileFormat::Bam));
         let (thread_count, input_threads_per_segment, output_threads) = calculate_thread_counts(
             self.options.threads,
             self.input.options.threads_per_segment,
