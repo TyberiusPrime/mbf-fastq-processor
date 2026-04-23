@@ -1,0 +1,11 @@
+Error 1/1
+   ╭─config.toml
+   ┆
+ 9 │     [output.bam.tag_to_reference]
+10 │         from_bam = 'input_reference.bam'
+   ┆                                         ┬
+   ┆                                         │
+   ┆                                         ╰─ Missing required key: 'tag'.
+───╯
+
+

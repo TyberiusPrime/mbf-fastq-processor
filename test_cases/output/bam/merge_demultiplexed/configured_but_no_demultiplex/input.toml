@@ -34,4 +34,4 @@
     [output.bam]
         tag_to_reference.references_from_barcodes = "barcodes"
         tag_to_reference.tag="refs"
-        merge_demultiplexed = 'barcode'
+        merge_demultiplexed = true

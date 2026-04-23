@@ -60,7 +60,7 @@ pub type PartialBamTag = BamTag;
 #[derive(Clone, Debug, JsonSchema)]
 pub struct TagToReference {
     /// The fastqrab tag label whose value selects the reference sequence name.
-    pub tag: Option<String>,
+    pub tag: String,
 
     /// Name of a `[barcodes.<name>]` section whose keys become reference names.
     #[tpd(default, alias = "from_barcodes")]
@@ -96,15 +96,11 @@ pub struct BamOutputOptions {
     #[tpd(nested)]
     pub tag_to_reference: Option<TagToReference>,
 
-    /// In-label of a Demultiplex step whose outputs should be concatenated into merged BAM
-    /// files.  All demultiplexed files for that step are merged; any additional demultiplex
-    /// levels produce one merged file per combination of the remaining levels.
     #[tpd(default)]
-    pub merge_demultiplexed: Option<TagLabel>,
+    pub merge_demultiplexed: Option<bool>,
 
     /// Write a BAI index alongside each merged BAM file (default: true).
-    #[tpd(default)]
-    pub index_merged: Option<bool>,
+    pub index_merged: bool,
 }
 
 #[derive(Clone, JsonSchema)]
@@ -154,7 +150,7 @@ pub struct Output {
 impl VerifyIn<PartialOutput> for PartialBamOutputOptions {
     fn verify(
         &mut self,
-        parent: &PartialOutput,
+        _parent: &PartialOutput,
         _options: &VerifyOptions,
     ) -> Result<(), ValidationFailure>
     where
@@ -205,26 +201,7 @@ impl VerifyIn<PartialOutput> for PartialBamOutputOptions {
                     Some("Set only one of 'barcodes' or 'from_bam'.".to_string());
             }
         }
-
-        if self.merge_demultiplexed.as_ref().is_some()
-            && let Some(Some(output_segments)) = parent.output.as_ref()
-            && output_segments.is_empty()
-        {
-            let spans = vec![
-                (
-                    self.merge_demultiplexed.span(),
-                    "Incompatible with empty outputs".to_string(),
-                ),
-                (
-                    parent.output.span(),
-                    "These output segments are empty".to_string(),
-                ),
-            ];
-            self.merge_demultiplexed.state = TomlValueState::Custom { spans };
-            self.merge_demultiplexed.help = Some(
-                "Either remove 'merge_demultiplexed' or specify some output segments.".to_string(),
-            );
-        }
+        self.index_merged.or(true);
 
         Ok(())
     }

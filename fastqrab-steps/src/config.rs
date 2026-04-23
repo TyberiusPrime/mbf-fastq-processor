@@ -14,7 +14,7 @@ use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::path::Path;
 use std::rc::Rc;
-use toml_pretty_deser::prelude::*;
+use toml_pretty_deser::{prelude::*, suggest_alternatives};
 
 mod barcodes;
 mod input;
@@ -1335,7 +1335,7 @@ impl PartialConfig {
                         }
                     }
                     if let Some(Some(tag_to_ref)) = bam_opts.tag_to_reference.as_mut() {
-                        if let Some(Some(tag_name)) = tag_to_ref.tag.as_mut() {
+                        if let Some(tag_name) = tag_to_ref.tag.as_mut() {
                             if let Some(meta) = tags_available.get_mut(tag_name.as_str()) {
                                 meta.used = true;
                             } else {
@@ -1539,10 +1539,9 @@ impl PartialConfig {
         let Some(Some(bam)) = output.bam.as_mut() else {
             return;
         };
-        let Some(Some(merge_label)) = bam.merge_demultiplexed.as_ref() else {
+        if let Some(None) = bam.merge_demultiplexed.as_ref() {
             return;
         };
-        let merge_label = merge_label.clone();
 
         // Must be BAM format
         if output.format.as_ref() != Some(&FileFormat::Bam) {
@@ -1553,33 +1552,87 @@ impl PartialConfig {
                 Some("Set [output] format = 'bam' to use merge_demultiplexed.".to_string());
             return;
         }
+        let interleave_empty = match output.interleave.as_ref() {
+            None => false, //misspecified, we already have an error then.
+            Some(None) => true,
+            Some(Some(x)) => x.is_empty(),
+        };
 
-        // Must have a Demultiplex step with matching in_label
-        let found = self
-            .transform
-            .as_ref()
-            .map(|steps| {
-                steps.iter().any(|step| {
-                    if let Some(PartialTransformation::Demultiplex(d)) = step.value.as_ref() {
-                        if let Some(d) = d.toml_value.value.as_ref() {
-                            if let Some(label) = d.in_label.as_ref() {
-                                return label.as_ref() == merge_label.as_ref();
+        if let Some(Some(output_segments)) = output.output.as_ref()
+            && output_segments.is_empty()
+            && interleave_empty
+        {
+            let spans = vec![
+                (
+                    bam.merge_demultiplexed.span(),
+                    "Incompatible with empty outputs".to_string(),
+                ),
+                (
+                    output.output.span(),
+                    "These output segments are empty".to_string(),
+                ),
+            ];
+            bam.merge_demultiplexed.state = TomlValueState::Custom { spans };
+            bam.merge_demultiplexed.help = Some(
+                "Either remove 'merge_demultiplexed' or specify either output segments or interleaved output.".to_string(),
+            );
+        }
+        match bam.tag_to_reference.as_ref() {
+            Some(Some(tag_to_reference)) => {
+                let mut available_demultiplex_labels = Vec::new();
+                if let Some(ref_label) = tag_to_reference.tag.as_ref() {
+                    //None if set to 'no such tag'
+
+                    if let Some(trafos) = self.transform.value.as_ref() {
+                        for trafo in trafos.iter() {
+                            if let Some(PartialTransformation::Demultiplex(
+                                demultiplex_config_toml,
+                            )) = trafo.value.as_ref()
+                            {
+                                if let Some(demultiplex_config) =
+                                    demultiplex_config_toml.toml_value.value.as_ref()
+                                {
+                                    if let Some(TagLabel::Normal(in_label)) =
+                                    demultiplex_config.in_label.as_ref()
+                                    && matches!(
+                                        demultiplex_config.lookup_mode,
+                                        Some(crate::transformations::demultiplex::LookupMode::NoLookup) | None
+                                    )
+                                {
+                                    available_demultiplex_labels.push(in_label.clone());
+                                    break;
+                                }
+                                }
                             }
                         }
                     }
-                    false
-                })
-            })
-            .unwrap_or(false);
-
-        if !found {
-            bam.merge_demultiplexed.state = TomlValueState::new_validation_failed(
-                "No Demultiplex step found with this in_label",
-            );
-            bam.merge_demultiplexed.help = Some(format!(
-                "Add a [[step]] with action='Demultiplex' and in_label='{merge_label}' \
-                 or correct the label name."
-            ));
+                    if !available_demultiplex_labels.contains(ref_label) {
+                        bam.merge_demultiplexed.state = TomlValueState::new_validation_failed(
+                            format!("No Demultiplex step found that had in_label = {ref_label}",),
+                        );
+                        if available_demultiplex_labels.is_empty() {
+                            bam.merge_demultiplexed.help = Some(
+                            "No suitable Demultiplex step found. Make sure you have a Demultiplex step with lookup_mode = 'lookup' and an in_label that matches output.bam.tag_to_reference.tag.".to_string(),
+                        );
+                        } else {
+                            bam.merge_demultiplexed.help = Some(format!(
+                                "Either add a Demultiplex step or reuse one of the following: {}",
+                                suggest_alternatives("", &available_demultiplex_labels)
+                            ));
+                        }
+                    }
+                }
+            }
+            Some(None) => {
+                bam.merge_demultiplexed.state = TomlValueState::new_validation_failed(
+                    "merge_demultiplexed requires tag_to_reference to be set.",
+                );
+                bam.merge_demultiplexed.help = Some(
+                        "Either remove 'merge_demultiplexed' or set 'tag_to_reference' to specify how to assign reads to BAM references for merging."
+                            .to_string(),
+                    );
+            }
+            None => {}
         }
     }
 }

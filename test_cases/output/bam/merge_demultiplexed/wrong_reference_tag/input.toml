@@ -1,3 +1,5 @@
+[options]
+  blocksize=1
 [input]
     read1 = 'input_read1.fq'
 
@@ -24,8 +26,7 @@
     barcodes = 'barcodes'
 
 [barcodes.barcodes]
-    AA = 'sample_1'
-    GG = 'sample_2'
+    AA = 'sample1'
 
 [output]
     prefix = 'output'
@@ -33,5 +34,5 @@
 
     [output.bam]
         tag_to_reference.references_from_barcodes = "barcodes"
-        tag_to_reference.tag="refs"
+        tag_to_reference.tag="refss"
         merge_demultiplexed = true

@@ -19,13 +19,13 @@
 
 [[step]]
     action = 'Demultiplex'
-    in_label = 'barcode'
+    in_label = 'refs'
     output_unmatched = true
     barcodes = 'barcodes'
 
 [[step]]
     action = 'Demultiplex'
-    in_label = 'barcode'
+    in_label = 'refs'
     output_unmatched = true
     barcodes = 'barcodes'
 
@@ -40,4 +40,4 @@
     [output.bam]
         tag_to_reference.references_from_barcodes = "barcodes"
         tag_to_reference.tag="refs"
-        merge_demultiplexed = 'barcode'
+        merge_demultiplexed = true

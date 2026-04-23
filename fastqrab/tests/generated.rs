@@ -1531,6 +1531,18 @@ fn test_cases_x_output_x_bam_x_merge_demultiplexed_x_no_output() {
 }
 
 #[test]
+fn test_cases_x_output_x_bam_x_merge_demultiplexed_x_no_output_but_interleave() {
+    println!("Test case is in: test_cases/output/bam/merge_demultiplexed/no_output_but_interleave");
+    run_test(
+        std::path::Path::new(
+            "../test_cases/output/bam/merge_demultiplexed/no_output_but_interleave",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_output_x_bam_x_merge_demultiplexed_x_sep_in_sample_names() {
     println!("Test case is in: test_cases/output/bam/merge_demultiplexed/sep_in_sample_names");
     run_test(
@@ -1575,6 +1587,16 @@ fn test_cases_x_output_x_bam_x_merge_demultiplexed_x_two_levels_after() {
     println!("Test case is in: test_cases/output/bam/merge_demultiplexed/two_levels_after");
     run_test(
         std::path::Path::new("../test_cases/output/bam/merge_demultiplexed/two_levels_after"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_output_x_bam_x_merge_demultiplexed_x_wrong_reference_tag() {
+    println!("Test case is in: test_cases/output/bam/merge_demultiplexed/wrong_reference_tag");
+    run_test(
+        std::path::Path::new("../test_cases/output/bam/merge_demultiplexed/wrong_reference_tag"),
         "input.toml",
         1,
     );

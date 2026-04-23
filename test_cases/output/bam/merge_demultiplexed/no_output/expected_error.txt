@@ -1,3 +1,4 @@
+Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
@@ -11,9 +12,11 @@ Error 1/1
 41 │     [output.bam]
 42 │         tag_to_reference.references_from_barcodes = "barcodes"
 43 │         tag_to_reference.tag="refs"
-44 │         merge_demultiplexed = 'barcode'
-   ┆                               ────┬────
-   ┆                                   │
-   ┆                                   ╰───── Incompatible with empty outputs
+44 │         merge_demultiplexed = true
+   ┆                               ──┬─
+   ┆                                 │
+   ┆                                 ╰── Incompatible with empty outputs
 ───╯
-Hint: Either remove 'merge_demultiplexed' or specify some output segments.
+Hint: Either remove 'merge_demultiplexed' or specify either output segments or interleaved output.
+
+

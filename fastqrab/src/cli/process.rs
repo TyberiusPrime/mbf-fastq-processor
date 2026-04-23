@@ -66,6 +66,14 @@ pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> 
     }
 }
 
+struct MergeConfig {
+    prefix: String,
+    ix_separator: String,
+    reference_label: String,
+    index_merged: bool,
+    segment_tails: Vec<String>,
+}
+
 fn inner_run(
     mut parsed: CheckedConfig,
     output_directory: &Path,
@@ -75,39 +83,65 @@ fn inner_run(
     let start_time = std::time::Instant::now();
     let is_benchmark = parsed.benchmark.as_ref().is_some_and(|b| b.enable);
     // Extract merge config before parsed is shadowed/moved.
-    let merge_config = parsed.output.as_ref().and_then(|o| {
-        o.bam.as_ref().and_then(|b| {
-            b.merge_demultiplexed.as_ref().map(|label| {
-                let suffix = o.get_suffix();
-                let sep = &o.ix_separator;
-                // Compute segment tails from config rather than filesystem.
-                // Each tail is the part of the filename that follows the combined barcode name,
-                // e.g. "_read1.bam" or "_interleaved.bam".
-                let segment_order = parsed.input.get_segment_order();
-                let mut tails: Vec<String> = Vec::new();
-                if o.interleave.is_some() {
-                    tails.push(format!("{sep}interleaved.{suffix}"));
-                }
-                let active: Vec<&String> = match &o.output {
-                    Some(list) => segment_order
-                        .iter()
-                        .filter(|n| list.iter().any(|l| l == *n))
-                        .collect(),
-                    None => segment_order.iter().collect(),
-                };
-                for seg in active {
-                    tails.push(format!("{sep}{seg}.{suffix}"));
-                }
-                (
-                    o.prefix.clone(),
-                    o.ix_separator.clone(),
-                    label.to_string(),
-                    b.index_merged.unwrap_or(true),
-                    tails,
-                )
-            })
+    let merge_config = if let Some(output_config) = parsed.output.as_ref()
+        && let Some(bam_output_config) = output_config.bam.as_ref()
+        && bam_output_config
+            .merge_demultiplexed
+            .as_ref()
+            .is_some_and(|m| *m)
+        && let Some(reference_tag) = bam_output_config.tag_to_reference.as_ref().map(|x| &x.tag)
+    {
+        let suffix = output_config.get_suffix();
+        let sep = output_config.ix_separator.as_str();
+        let segment_order = parsed.input.get_segment_order();
+        let mut tails: Vec<String> = Vec::new();
+        if output_config.interleave.is_some() {
+            tails.push(format!("{sep}interleaved.{suffix}"));
+        }
+        let active: Vec<&String> = match &output_config.output {
+            Some(list) => segment_order
+                .iter()
+                .filter(|n| list.iter().any(|l| l == *n))
+                .collect(),
+            None => segment_order.iter().collect(),
+        };
+        for seg in active {
+            tails.push(format!("{sep}{seg}.{suffix}"));
+        }
+        Some(MergeConfig {
+            prefix: output_config.prefix.to_string(),
+            ix_separator: sep.to_string(),
+            reference_label: reference_tag.clone(),
+            index_merged: bam_output_config.index_merged,
+            segment_tails: tails,
         })
-    });
+    } else {
+        None
+    };
+    //
+    // parsed.output.as_ref().and_then(|o| {
+    //     o.bam.as_ref().and_then(|b| {
+    //         b.merge_demultiplexed.as_ref().map(|value| {
+    //             let suffix = o.get_suffix();
+    //             let sep = &o.ix_separator;
+    //             // Compute segment tails from config rather than filesystem.
+    //             // Each tail is the part of the filename that follows the combined barcode name,
+    //             // e.g. "_read1.bam" or "_interleaved.bam".
+    //
+    //             MergeConfig {
+    //                 prefix: &o.prefix,
+    //                 ix_separator: &o.ix_separator,
+    //             ]
+    //             (
+    //                 o.prefix.clone(),
+    //                 o.ix_separator.clone(),
+    //                 label.to_string(),
+    //                 b.index_merged.unwrap_or(true),
+    //                 tails,
+    //             )
+    //         })
+    //     })
+    // });
     {
         let run = pipeline::RunStage0::new(&parsed);
         let run = run.configure_demultiplex_and_init_stages(
@@ -127,16 +161,16 @@ fn inner_run(
             bail!(errors.join("\n"));
         }
 
-        if let Some((prefix, sep, merge_label, index_merged, segment_tails)) = merge_config {
+        if let Some(merge_config) = merge_config {
             crate::bam_merge::merge_demultiplexed_bam(
                 output_directory,
-                &prefix,
-                &sep,
+                &merge_config.prefix,
+                &merge_config.ix_separator,
                 &run.demultiplex_infos,
                 &run.demultiplex_step_infos,
-                &merge_label,
-                &segment_tails,
-                index_merged,
+                &merge_config.reference_label,
+                &merge_config.segment_tails,
+                merge_config.index_merged,
                 &run.reads_per_tag,
             )?;
         }

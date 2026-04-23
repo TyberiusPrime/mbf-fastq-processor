@@ -28,11 +28,11 @@ pub struct Demultiplex {
 
     #[tpd(skip)]
     #[schemars(skip)]
-    lookup_mode: LookupMode,
+    pub lookup_mode: LookupMode,
 }
 
 #[derive(Debug)]
-enum LookupMode {
+pub enum LookupMode {
     NoLookup,
     Lookup,
 }
@@ -295,7 +295,10 @@ impl Step for Demultiplex {
                     }
                 }
                 LookupMode::NoLookup => {
-                    if let Some(&tag) = demultiplex_info.name_to_tag.get(&key) {
+                    if let Some(tag) = demultiplex_info
+                        .name_to_tag(std::str::from_utf8(&key).expect(
+                        "Tag sequence was not utf-8, barcode names must be utf-8 unicode strings",
+                    )) {
                         output_tags[ii] |= tag;
                         if tag > 0 {
                             self.any_hit_observed
@@ -315,10 +318,16 @@ impl Step for Demultiplex {
             .any_hit_observed
             .load(std::sync::atomic::Ordering::Relaxed)
         {
-            bail!(
-                "Demultiplex step for label '{}' did not observe any matching barcodes. Please check that the barcodes section matches the data, or that the correct tag label is used.",
+            let mut msg = format!(
+                "Demultiplex step for label '{}' did not observe any matching barcodes.\n\
+                    Please check that the barcodes section matches the data,\n\
+                    or that the correct tag label is used.",
                 self.in_label
             );
+            if matches!(self.lookup_mode, LookupMode::NoLookup) {
+                msg.push_str("You might need to set tag_contains_barcode=true to trigger the lookup barcode->sequence.");
+            }
+            bail!(msg);
         }
         Ok(None)
     }

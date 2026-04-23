@@ -34,7 +34,7 @@
 
 [[step]]
     action = 'Demultiplex'
-    in_label = 'lane'
+    in_label = 'ref_lane'
     output_unmatched = true
     barcodes = 'lanes'
 
@@ -53,4 +53,4 @@
 
     [output.bam]
         tag_to_reference = {'tag'= 'ref_lane', from_barcodes = "lanes"}
-        merge_demultiplexed = 'lane'
+        merge_demultiplexed = true

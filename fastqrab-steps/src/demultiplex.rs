@@ -169,12 +169,17 @@ pub struct DemultiplexInfo {
     pub tag_to_name: DemultiplexTagToName,
 
     pub local_barcode_to_tag: BTreeMap<BString, Tag>, //And that's the values for this specific step,
-                                                      //which we then or together to get the full qualified tag.
+    //which we then or together to get the full qualified tag.
+    pub local_name_to_tag: BTreeMap<String, Tag>, //for the 'non lookup' demultiplexes
 }
 
 impl DemultiplexInfo {
     #[must_use]
-    pub fn new(tag_to_name: DemultiplexTagToName, barcode_to_tag: BTreeMap<BString, Tag>) -> Self {
+    pub fn new(
+        tag_to_name: DemultiplexTagToName,
+        local_barcode_to_tag: BTreeMap<BString, Tag>,
+        local_name_to_tag: BTreeMap<String, Tag>,
+    ) -> Self {
         let mut name_to_tag = BTreeMap::new();
         for (tag, name_opt) in &tag_to_name {
             if let Some(name) = name_opt {
@@ -184,7 +189,8 @@ impl DemultiplexInfo {
         Self {
             name_to_tag,
             tag_to_name,
-            local_barcode_to_tag: barcode_to_tag,
+            local_barcode_to_tag,
+            local_name_to_tag,
         }
     }
 
@@ -199,6 +205,15 @@ impl DemultiplexInfo {
             return Some(*tag);
         }
         None
+    }
+
+    #[must_use]
+    pub fn name_to_tag(&self, name: &str) -> Option<Tag> {
+        if let Some(tag) = self.local_name_to_tag.get(name) {
+            return Some(*tag);
+        } else {
+            None
+        }
     }
 }
 

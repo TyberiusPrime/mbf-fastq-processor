@@ -474,6 +474,7 @@ impl RunStage0 {
                             OptDemultiplex::Yes(DemultiplexInfo::new(
                                 tag_to_name,
                                 local_barcode_to_tag,
+                                local_name_to_tag,
                             )),
                         ));
                     } else {
@@ -505,7 +506,11 @@ impl RunStage0 {
                         }
                         demultiplex_infos.push((
                             index,
-                            OptDemultiplex::Yes(DemultiplexInfo::new(next, local_barcode_to_tag)),
+                            OptDemultiplex::Yes(DemultiplexInfo::new(
+                                next,
+                                local_barcode_to_tag,
+                                local_name_to_tag,
+                            )),
                         ));
                     }
                     current_bit_start += bits_needed;

@@ -835,7 +835,7 @@ fn resolve_bam_write_options(
             Vec::new()
             // cov:excl-stop
         };
-        (tag_name, ref_seqs)
+        (Some(tag_name), ref_seqs)
     } else {
         (None, Vec::new())
     };

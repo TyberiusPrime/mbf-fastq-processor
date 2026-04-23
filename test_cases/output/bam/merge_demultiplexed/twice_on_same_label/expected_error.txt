@@ -3,19 +3,23 @@ Error 1/1
    ┆
 20 │ [[step]]
 21 │     action = 'Demultiplex'
-22 │     in_label = 'barcode'
-   ┆                ────┬────
-   ┆                    │
-   ┆                    ╰───── first use for this label for demultiplexing
+22 │     in_label = 'refs'
+   ┆                ───┬──
+   ┆                   │
+   ┆                   ╰─── first use for this label for demultiplexing
    ┆
 26 │ [[step]]
 27 │     action = 'Demultiplex'
    ┆              ──────┬──────
    ┆                    │
    ┆                    ╰─────── In this step
-28 │     in_label = 'barcode'
-   ┆                ────┬────
-   ┆                    │
-   ┆                    ╰───── 2nd use of this label for demultiplexing
+28 │     in_label = 'refs'
+   ┆                ───┬──
+   ┆                   │
+   ┆                   ╰─── 2nd use of this label for demultiplexing
 ───╯
 Hint: Demultiplexing twice on the same label is nonsentical and unsupported.
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/Demultiplex
+      Or run: `fastqrab template Demultiplex` for more information.
+
+

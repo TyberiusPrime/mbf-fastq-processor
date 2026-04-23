@@ -1,5 +1,7 @@
+options.accept_duplicate_files = true
 [input]
     read1 = 'input_read1.fq'
+    read2 = 'input_read1.fq'
 
 [[step]]
     action = 'ExtractRegion'
@@ -24,11 +26,19 @@
     barcodes = 'barcodes'
 
 [barcodes.barcodes]
-    AA = 'sample_1'
-    GG = 'sample_2'
+    GG = 'sample-2' # rev order please
+    AA = 'sample-1'
+
+
+[[step]]
+  action = 'Report'
+  name = 'rep'
 
 [output]
     prefix = 'output'
+    output = []
+    interleave = ['read1', 'read2']
+    report_html=true
     format = 'bam'
 
     [output.bam]

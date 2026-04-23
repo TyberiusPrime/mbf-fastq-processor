@@ -1,12 +1,15 @@
+Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
 34 │     [output.bam]
 35 │         tag_to_reference.references_from_barcodes = "barcodes"
 36 │         tag_to_reference.tag="refs"
-37 │         merge_demultiplexed = 'barcode'
-   ┆                               ────┬────
-   ┆                                   │
-   ┆                                   ╰───── No Demultiplex step found with this in_label
+37 │         merge_demultiplexed = true
+   ┆                               ──┬─
+   ┆                                 │
+   ┆                                 ╰── No Demultiplex step found that had in_label = refs
 ───╯
-Hint: Add a [[step]] with action='Demultiplex' and in_label='barcode' or correct the label name.
+Hint: No suitable Demultiplex step found. Make sure you have a Demultiplex step with lookup_mode = 'lookup' and an in_label that matches output.bam.tag_to_reference.tag.
+
+

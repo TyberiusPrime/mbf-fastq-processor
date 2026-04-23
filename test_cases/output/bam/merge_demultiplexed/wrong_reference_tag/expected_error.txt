@@ -1,0 +1,13 @@
+Error 1/1
+   ╭─config.toml
+   ┆
+35 │     [output.bam]
+36 │         tag_to_reference.references_from_barcodes = "barcodes"
+37 │         tag_to_reference.tag="refss"
+   ┆                              ───┬───
+   ┆                                 │
+   ┆                                 ╰──── No such tag
+───╯
+Hint: Did you mean: 'refs' or 'barcode'?
+
+
