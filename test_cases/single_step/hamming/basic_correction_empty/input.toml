@@ -34,6 +34,7 @@
 	out_label = 'corrected'
 	barcodes = 'barcodes'
 	on_no_match = 'empty'
+    on_tie = 'fail'
 	max_hamming_distance=1
 
 [[step]]

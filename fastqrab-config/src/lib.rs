@@ -128,6 +128,12 @@ pub const fn default_block_size() -> usize {
 }
 
 #[must_use]
+#[mutants::skip]
+pub const fn default_blocks_in_flight() -> usize {
+    100 // in 'molecules', ie. read1, read2, index1, index2 tuples.
+}
+
+#[must_use]
 pub const fn default_spot_check_read_pairing() -> bool {
     true
 }

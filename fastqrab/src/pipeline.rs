@@ -846,7 +846,7 @@ impl RunStage2 {
             .options
             .threads
             .expect("Thread count should have been set by config parsing");
-        let max_blocks_in_flight = parsed.options.max_blocks_in_flight.unwrap_or(100); // TODO: make configurable
+        let max_blocks_in_flight = parsed.options.max_blocks_in_flight;
 
         // Create channels
         // unbounded is fine, we later on count blocks in flight

@@ -30,6 +30,7 @@
 	out_label = 'corrected'
 	barcodes = 'barcodes'
 	on_no_match = 'remove'
+    on_tie = 'FirstStrict'
 	max_hamming_distance=1
     name_split_char = '!'
 

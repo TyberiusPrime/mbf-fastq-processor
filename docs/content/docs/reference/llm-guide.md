@@ -159,6 +159,7 @@ Extract barcode from index1, correct errors, split into separate files.
     barcodes = 'my_barcodes'
     max_hamming_distance = 1
     on_no_match = 'remove'
+    on_tie = 'fail' # barcodes must be far enough apart in hamming space so each sequence is assigned to just one
 
 [[step]]
     action = 'Demultiplex'
@@ -1289,7 +1290,7 @@ When no match is found within `max_hamming_distance`, the tag is set to Missing.
     in_label = 'query_seq'      # TYPE: existing string/location tag, REQUIRED
     out_label = 'ref_name'      # TYPE: string tag, REQUIRED
     max_hamming_distance = 2    # TYPE: u32, REQUIRED – 0 for exact match only
-    barcodes = 'barcode_key'    # TYpe: String, REQUIRED, must match key of barcode section
+    barcodes = 'barcode_key'    # TYPE: String, REQUIRED, must match key of barcode section
 
 [barcodes.barcode_key]
     from_file.filename =  'reference.fa'  # TYPE: path, REQUIRED – FASTA or FASTQ, plain or gzip
@@ -1311,6 +1312,8 @@ Correct barcodes using Hamming distance.
     barcodes = 'my_barcodes'       # TYPE: string, REQUIRED
     max_hamming_distance = 1       # TYPE: usize, REQUIRED
     on_no_match = 'remove'         # TYPE: string, REQUIRED
+    on_tie = 'fail'                # TYPE: string, REQUIRED
+    name_split_character = ' '     # Type: u8/byte, Optional, only if on_tie = 'FirstPrefix'
 
 [barcodes.my_barcodes]  # hamming correct requires barcode section
     'AAAAAAAA' = 'sample-1'
@@ -1321,6 +1324,15 @@ Correct barcodes using Hamming distance.
 - `'remove'`: Remove tag (location and sequence)
 - `'keep'`: Keep original tag
 - `'empty'`: Keep location, set sequence to empty
+
+**on_tie values**:
+- `'remove'`: Remove tag (location and sequence)
+- `'keep'`: Keep original tag
+- `'empty'`: Keep location, set sequence to empty
+- `fail`: Complain to the user, abort the run
+- `first`: Break ties by taking the lexicographically smallest.
+- `firststrict`: Take the lexicographically smallest, iff they all match to the same label (or label prefix if name_split_character). Otherwise fail
+- `bymajority`: Correct towards barcodes that are predominant (>= 97.5% of the ties).
 
 ### Demultiplex
 

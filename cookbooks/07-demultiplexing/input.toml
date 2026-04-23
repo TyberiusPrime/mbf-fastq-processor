@@ -19,6 +19,7 @@
     barcodes = 'sample_barcodes'
     max_hamming_distance = 1
     on_no_match = 'keep'  # Keep reads with unmatched barcodes
+    on_tie = 'fail'
 
 [[step]]
     # Remove the barcode sequence from the reads

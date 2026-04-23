@@ -22,6 +22,7 @@
     barcodes = 'reference'
     name_split_char = '!'
     on_no_match='remove'
+    on_tie = 'fail'
 
 [barcodes.reference]
    from_file.filename = 'input_reference.fa'

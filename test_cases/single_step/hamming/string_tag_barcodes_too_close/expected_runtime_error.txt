@@ -1,3 +1,5 @@
 Error in stage 3: HammingCorrect on in_label=barcode_extracted 
 Uncorrectable sequence 'CGT', 
-matches multiple sequences within hamming distance: [("CGA", 1, "label2"), ("AGT", 1, "label1")]
+matches multiple sequences within hamming distance: [("AGT", "label1"), ("CGA", "label2")].
+Set `on_tie` to one of Keep, Remove, Empty, First, or FirstStrict to resolve ties.
+If using FirstStrict, consider setting `name_split_character`?

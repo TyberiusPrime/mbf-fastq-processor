@@ -15,11 +15,14 @@
     out_label = 'query_seq'
 
 [[step]]
-    action = 'AssignToReference'
+    action = 'HammingCorrect'
     in_label = 'query_seq'
     out_label = 'ref_name'
     max_hamming_distance = 1
-barcodes = 'reference'
+    barcodes = 'reference'
+    on_tie = 'fail'
+    on_no_match = 'remove'
+    output = 'label'
 
 [barcodes.reference]
    from_file.filename = 'input_reference.fa'

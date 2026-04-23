@@ -591,6 +591,7 @@
 #    barcodes = "mybarcodelist"
 #    max_hamming_distance = 1
 #    on_no_match = "remove" # 'remove', 'empty', 'keep'
+#    on_tie = "remove" # 'remove', 'empty', 'keep', 'first', 'first_strict', 'fail',
 #
 #[barcodes.mybarcodelist]
 #    "AAAA" = "ignored" # only read when demultiplexing

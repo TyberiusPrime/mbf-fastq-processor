@@ -19,6 +19,7 @@
   barcodes = 'bc46'
   max_hamming_distance=1
   on_no_match='keep'
+    on_tie = 'fail'
 
 [[step]]
     action = 'Demultiplex'

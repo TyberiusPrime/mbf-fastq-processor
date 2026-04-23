@@ -1,0 +1,5 @@
+Error in stage 1: HammingCorrect on in_label=query_seq 
+Uncorrectable sequence 'ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTAT', 
+matches multiple sequences within hamming distance: [("ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTAC", "ref_alpha"), ("ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTAG", "ref_beta")].
+Set `on_tie` to one of Keep, Remove, Empty, First, or FirstStrict to resolve ties.
+If using FirstStrict, consider setting `name_split_character`?

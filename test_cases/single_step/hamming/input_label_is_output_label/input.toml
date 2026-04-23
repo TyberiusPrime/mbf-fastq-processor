@@ -30,6 +30,7 @@
 	out_label = 'barcode_extracted'
 	barcodes = 'barcodes'
 	on_no_match = 'remove'
+    on_tie = 'fail'
 	max_hamming_distance=1
 
 [[step]]

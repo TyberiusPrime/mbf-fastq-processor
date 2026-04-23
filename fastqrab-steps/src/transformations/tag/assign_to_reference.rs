@@ -81,7 +81,6 @@ impl VerifyIn<PartialConfig> for PartialAssignToReference {
                         self.resonator = Some(Arc::new(init_hamming_resonator(
                             seq_to_name,
                             *max_hamming_distance,
-                            self.name_split_character.as_ref().map(|x| *x).flatten(),
                         )?));
                         self.seq_to_name = Some(seq_to_name.clone());
                     }

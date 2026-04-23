@@ -5,7 +5,7 @@ use toml_pretty_deser::prelude::*;
 
 use crate::config::{PartialConfig, StructuredInput};
 use fastqrab_config::{
-    default_block_size, default_buffer_size, default_output_buffer_size,
+    default_block_size, default_blocks_in_flight, default_buffer_size, default_output_buffer_size,
     default_spot_check_read_pairing,
 };
 use fastqrab_io::io::output::compressed_output::{SimulatedWriteError, SimulatedWriteFailure};
@@ -61,7 +61,7 @@ pub enum FailOutputError {
 pub struct Options {
     #[tpd(alias = "thread_count")]
     pub threads: Option<usize>,
-    pub max_blocks_in_flight: Option<usize>,
+    pub max_blocks_in_flight: usize,
 
     pub block_size: usize,
     pub buffer_size: usize,
@@ -83,6 +83,7 @@ impl VerifyIn<PartialConfig> for PartialOptions {
         Self: Sized,
     {
         self.block_size.or_with(default_block_size);
+        self.max_blocks_in_flight.or_with(default_blocks_in_flight);
         self.buffer_size.or_with(default_buffer_size);
         self.output_buffer_size.or_with(default_output_buffer_size);
         self.accept_duplicate_files.or(false);

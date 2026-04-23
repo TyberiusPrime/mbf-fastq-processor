@@ -20,6 +20,8 @@
     out_label = 'ref_name'
     max_hamming_distance = 1
     barcodes = 'reference'
+    on_tie = 'fail'
+    on_no_match = 'remove'
 
 [barcodes.reference]
    from_file.filename = 'input_reference.fa'

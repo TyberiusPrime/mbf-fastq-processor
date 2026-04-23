@@ -24,6 +24,7 @@
 	barcodes = 'mine'
 	max_hamming_distance = 1
 	on_no_match = 'Keep'
+    on_tie = 'fail'
 
 [[step]]
     action = 'Demultiplex'

@@ -24,6 +24,7 @@
 	max_hamming_distance = 1
 	barcodes = 'demult'
 	on_no_match = 'keep'
+    on_tie = 'fail'
 
 
 [[step]]
