@@ -1068,12 +1068,14 @@ impl PartialConfig {
                         continue;
                     }
                 };
+                let mut tags_used_here: Vec<TagLabel> = Vec::new();
                 match tag_info.removed_tags {
                     RemovedTags::None => {}
                     RemovedTags::All => {
                         for metadata in tags_available.values_mut() {
                             metadata.used = true;
                         }
+                        tags_used_here.extend(tags_available.keys().cloned());
                         tags_available.clear();
                     }
                     RemovedTags::Some(tags) => {
@@ -1081,6 +1083,7 @@ impl PartialConfig {
                             //no need to check if empty, empty will never be present
                             if let Some(metadata) = tags_available.get_mut(&tag_name) {
                                 metadata.used = true;
+                                tags_used_here.push(tag_name.clone());
                             } else {
                                 any_tag_errors = true;
                                 toml_source.state = TomlValueState::new_validation_failed(format!(
@@ -1100,7 +1103,6 @@ impl PartialConfig {
                     }
                 }
 
-                let mut tags_used_here: Vec<TagLabel> = Vec::new();
                 if tag_info.must_see_all_tags {
                     tags_used_here.extend(tags_available.keys().cloned());
                 }

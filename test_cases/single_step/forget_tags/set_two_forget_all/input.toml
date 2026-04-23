@@ -1,0 +1,38 @@
+[input]
+  r1 = "input_read1.fq"
+
+
+[[step]]
+  action= 'ExtractRegion'
+  start = 0
+  length = 16
+  anchor = 'left'
+  out_label='reg1'
+  source = 'r1'
+
+
+[[step]]
+  action = 'EvalExpression'
+  query= "read_no % 2 == 0"
+  out_label = 'even'
+  result_type = 'bool'
+
+[[step]]
+  action ='ForgetallTags'
+
+[[step]]
+  action = 'EvalExpression'
+  query= "read_no % 2 != 0"
+  out_label = 'even'
+  result_type = 'bool'
+
+[[step]]
+  action = 'FilterByTag'
+  in_label = 'even'
+  keep_or_remove= 'keep'
+
+[[step]]
+  action = 'StoreTagsInTable'
+
+[output]
+  prefix = 'output'

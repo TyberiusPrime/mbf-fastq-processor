@@ -685,12 +685,24 @@ fn process_work_item(
                 .map(std::vec::Vec::len)
                 .all_equal();
             // cov:excl-start
-            assert!(
-                all_tag_lengths_equal,
-                "Unequal tag lengths after stage {:?}:. Tags: {:?}. This is a bug!. \n\
-                Best case it needs to declare must_see_all_tags=true in TagUser::get_tag_usage()",
-                stage.transformation, result_block.tags
-            );
+            if !all_tag_lengths_equal {
+                let tags_and_lengths: String = result_block
+                    .tags
+                    .iter()
+                    .map(|(k, v)| format!("{}: {}", k, v.len()))
+                    .join(", ");
+                panic!(
+                    "Unequal tag lengths after stage {:?}:. Tags & lengths: {tags_and_lengths}. This is a bug!. \n\
+                    Best case it needs to declare must_see_all_tags=true in TagUser::get_tag_usage()",
+                    stage.transformation
+                );
+            }
+            // assert!(
+            //     all_tag_lengths_equal,
+            //     "Unequal tag lengths after stage {:?}:. Tags: {:?}. This is a bug!. \n\
+            //     Best case it needs to declare must_see_all_tags=true in TagUser::get_tag_usage()",
+            //     stage.transformation, result_block.tags
+            // );
             // cov:excl-stop
             if let Some(tag_len) = result_block.tags.values().next().map(std::vec::Vec::len) {
                 //cov:excl-start

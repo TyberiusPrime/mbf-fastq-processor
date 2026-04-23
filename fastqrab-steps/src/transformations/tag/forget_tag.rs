@@ -21,6 +21,7 @@ impl TagUser for PartialTaggedVariant<PartialForgetTag> {
                     inner.in_label.as_ref().expect("parent was ok").clone(),
                     &mut inner.in_label,
                 )]),
+                //must_see_all_tags: true, // otherwise, the removed tag get's readded?,
                 ..Default::default()
             })
         } else {
