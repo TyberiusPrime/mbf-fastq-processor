@@ -199,6 +199,7 @@ impl VerifyIn<TPDRoot> for PartialConfig {
         self.verify_head_rapidgzip_conflict();
         self.expand_transformations();
         self.verify_transformation_labels();
+        self.verify_demultiplex_unique();
         self.verify_barcodes_used();
         self.verify_merge_demultiplexed();
         //todo: verify labels, barcodes, segment_names disjoint
@@ -258,6 +259,7 @@ impl PartialConfig {
     fn verify_reports(&mut self) {
         let report_html = self
             .output
+            .value
             .as_ref()
             .and_then(|x| x.as_ref())
             .and_then(|x| x.report_html.as_ref())
@@ -1382,6 +1384,41 @@ impl PartialConfig {
                                 before,
                             );
                         } // cov:excl-line
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn verify_demultiplex_unique(&mut self) {
+        let mut seen: IndexMap<String, std::ops::Range<usize>> = IndexMap::new();
+        if let Some(transforms) = self.transform.as_mut() {
+            for trafo in transforms.iter_mut() {
+                if let Some(PartialTransformation::Demultiplex(demultiplex_config)) = trafo.as_mut()
+                {
+                    if let Some(demultiplex_config_value) = demultiplex_config.toml_value.as_ref() {
+                        if let Some(in_label) = demultiplex_config_value.in_label.as_ref() {
+                            let in_label: String = in_label.as_ref().to_string();
+                            if let Some(old) = seen
+                                .insert(in_label.clone(), demultiplex_config_value.in_label.span())
+                            {
+                                let spans = vec![
+                                    (
+                                        demultiplex_config_value.in_label.span(),
+                                        "2nd use of this label for demultiplexing".to_string(),
+                                    ),
+                                    (
+                                        old.clone(),
+                                        "first use for this label for demultiplexing".to_string(),
+                                    ),
+                                ];
+                                demultiplex_config.toml_value.help = Some(format!(
+                                    "Demultiplexing twice on the same label is nonsentical and unsupported."
+                                ));
+                                demultiplex_config.toml_value.state =
+                                    TomlValueState::Custom { spans }
+                            }
+                        }
                     }
                 }
             }

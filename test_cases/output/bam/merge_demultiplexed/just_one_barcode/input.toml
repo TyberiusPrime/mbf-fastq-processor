@@ -1,0 +1,38 @@
+[options]
+  blocksize=1
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'ExtractRegion'
+    anchor = "Start"
+    source = "read1"
+    start = 0
+    len = 2
+    out_label = 'barcode'
+
+
+[[step]]
+  action = "AssignToReference"
+  barcodes = 'barcodes'
+  in_label='barcode'
+  out_label='refs'
+  max_hamming_distance =0
+
+[[step]]
+    action = 'Demultiplex'
+    in_label = 'barcode'
+    output_unmatched = true
+    barcodes = 'barcodes'
+
+[barcodes.barcodes]
+    AA = 'sample1'
+
+[output]
+    prefix = 'output'
+    format = 'bam'
+
+    [output.bam]
+        tag_to_reference.references_from_barcodes = "barcodes"
+        tag_to_reference.tag="refs"
+        merge_demultiplexed = 'barcode'

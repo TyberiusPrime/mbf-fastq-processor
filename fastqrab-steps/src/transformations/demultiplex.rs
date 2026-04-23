@@ -33,6 +33,10 @@ impl VerifyIn<PartialConfig> for PartialDemultiplex {
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {
+        let ix_separator = parent
+            .output
+            .as_ref()
+            .and_then(|x| x.as_ref().and_then(|x| x.ix_separator.as_ref()));
         if let Some(Some(barcodes_name)) = self.barcodes.as_ref() {
             if let Some(Some(barcodes)) = parent.barcodes.value.as_ref() {
                 //error sections are
@@ -58,6 +62,18 @@ impl VerifyIn<PartialConfig> for PartialDemultiplex {
                                     help: Some(format!(
                                         "Barcode names that lead to filenames cannot contain '..', '/', ':' or '\\'\n\
                                         Found: '{v}'"
+                                    )),
+                                });
+                            }
+                            if let Some(ix_separator) = ix_separator
+                                && v.contains(ix_separator)
+                            {
+                                return Err(ValidationFailure {
+                                    message: "Invalid barcode name found".to_string(),
+                                    help: Some(format!(
+                                        "Barcode names must not contain the output.ix_separator '{ix_separator}'\n\
+                                        Barcode name in question: '{v}'\n\
+                                        Change the output.ix_separator in your config or remove it from the barcode name."
                                     )),
                                 });
                             }

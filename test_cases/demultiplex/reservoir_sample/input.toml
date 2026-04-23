@@ -19,9 +19,9 @@
     output_unmatched = true
 
 [barcodes.samples]
-    A = 'sample_a'
-    C = 'sample_c'
-    G = 'sample_g'
+    A = 'sample-a'
+    C = 'sample-c'
+    G = 'sample-g'
 
 [[step]]
     action = 'FilterReservoirSample'

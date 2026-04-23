@@ -35,3 +35,4 @@
 [output]
     prefix = 'output'
     format = 'None'
+    ix_separator = '-'

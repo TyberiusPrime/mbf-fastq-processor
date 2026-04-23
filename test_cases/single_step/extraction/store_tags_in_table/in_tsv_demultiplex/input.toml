@@ -32,9 +32,9 @@
     barcodes = 'samples'
 
 [barcodes.samples]
-    AA = 'sample_a'
-    CC = 'sample_b'
-    GG = 'sample_c'
+    AA = 'sample-a'
+    CC = 'sample-b'
+    GG = 'sample-c'
 
 [[step]]
     action = 'StoreTagsInTable'

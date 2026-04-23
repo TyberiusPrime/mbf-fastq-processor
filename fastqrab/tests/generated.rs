@@ -1487,10 +1487,64 @@ fn test_cases_x_output_x_bam_x_merge_demultiplexed_x_basic_multi_segment() {
 }
 
 #[test]
+fn test_cases_x_output_x_bam_x_merge_demultiplexed_x_configured_but_no_demultiplex() {
+    println!(
+        "Test case is in: test_cases/output/bam/merge_demultiplexed/configured_but_no_demultiplex"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/output/bam/merge_demultiplexed/configured_but_no_demultiplex",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_output_x_bam_x_merge_demultiplexed_x_just_one_barcode() {
+    println!("Test case is in: test_cases/output/bam/merge_demultiplexed/just_one_barcode");
+    run_test(
+        std::path::Path::new("../test_cases/output/bam/merge_demultiplexed/just_one_barcode"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_output_x_bam_x_merge_demultiplexed_x_no_output() {
+    println!("Test case is in: test_cases/output/bam/merge_demultiplexed/no_output");
+    run_test(
+        std::path::Path::new("../test_cases/output/bam/merge_demultiplexed/no_output"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_output_x_bam_x_merge_demultiplexed_x_sep_in_sample_names() {
+    println!("Test case is in: test_cases/output/bam/merge_demultiplexed/sep_in_sample_names");
+    run_test(
+        std::path::Path::new("../test_cases/output/bam/merge_demultiplexed/sep_in_sample_names"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_output_x_bam_x_merge_demultiplexed_x_three_levels_bool() {
     println!("Test case is in: test_cases/output/bam/merge_demultiplexed/three_levels_bool");
     run_test(
         std::path::Path::new("../test_cases/output/bam/merge_demultiplexed/three_levels_bool"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_output_x_bam_x_merge_demultiplexed_x_twice_on_same_label() {
+    println!("Test case is in: test_cases/output/bam/merge_demultiplexed/twice_on_same_label");
+    run_test(
+        std::path::Path::new("../test_cases/output/bam/merge_demultiplexed/twice_on_same_label"),
         "input.toml",
         1,
     );
@@ -1511,16 +1565,6 @@ fn test_cases_x_output_x_bam_x_merge_demultiplexed_x_two_levels_after() {
     println!("Test case is in: test_cases/output/bam/merge_demultiplexed/two_levels_after");
     run_test(
         std::path::Path::new("../test_cases/output/bam/merge_demultiplexed/two_levels_after"),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-fn test_cases_x_output_x_bam_x_merge_demultiplexed_two_levels() {
-    println!("Test case is in: test_cases/output/bam/merge_demultiplexed_two_levels");
-    run_test(
-        std::path::Path::new("../test_cases/output/bam/merge_demultiplexed_two_levels"),
         "input.toml",
         1,
     );

@@ -1,5 +1,6 @@
 use anyhow::{Context, Result, bail};
 use crossbeam::channel::{bounded, unbounded};
+use fastqrab_steps::no_barcode_infix;
 use indexmap::IndexMap;
 use std::{
     cell::OnceCell,
@@ -424,7 +425,7 @@ impl RunStage0 {
                     let bits_needed = bits_needed_to_represent(barcode_count);
                     let mut tag_to_name = BTreeMap::new();
                     if new_demultiplex_barcodes.include_no_barcode {
-                        tag_to_name.insert(0, Some("no-barcode".to_string()));
+                        tag_to_name.insert(0, Some(no_barcode_infix().to_string()));
                     } else {
                         tag_to_name.insert(0, None);
                     }
@@ -445,8 +446,6 @@ impl RunStage0 {
                         local_tag_to_name.insert(bitpattern, name);
                         tag_value += 1;
                     }
-                    let merge_mask: crate::demultiplex::Tag =
-                        local_tag_to_name.keys().fold(0, |acc, &k| acc | k);
                     let local_barcode_to_tag = new_demultiplex_barcodes
                         .barcode_to_name
                         .into_iter()
@@ -467,8 +466,6 @@ impl RunStage0 {
                         };
                     demultiplex_step_infos.push(DemultiplexStepInfo {
                         in_label: step_in_label,
-                        local_tag_to_name,
-                        merge_mask,
                     });
 
                     if demultiplex_infos.is_empty() {

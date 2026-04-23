@@ -154,7 +154,7 @@ pub struct Output {
 impl VerifyIn<PartialOutput> for PartialBamOutputOptions {
     fn verify(
         &mut self,
-        _parent: &PartialOutput,
+        parent: &PartialOutput,
         _options: &VerifyOptions,
     ) -> Result<(), ValidationFailure>
     where
@@ -204,6 +204,26 @@ impl VerifyIn<PartialOutput> for PartialBamOutputOptions {
                 tag_to_ref.references_from_bam.help =
                     Some("Set only one of 'barcodes' or 'from_bam'.".to_string());
             }
+        }
+
+        if self.merge_demultiplexed.as_ref().is_some()
+            && let Some(Some(output_segments)) = parent.output.as_ref()
+            && output_segments.is_empty()
+        {
+            let spans = vec![
+                (
+                    self.merge_demultiplexed.span(),
+                    "Incompatible with empty outputs".to_string(),
+                ),
+                (
+                    parent.output.span(),
+                    "These output segments are empty".to_string(),
+                ),
+            ];
+            self.merge_demultiplexed.state = TomlValueState::Custom { spans };
+            self.merge_demultiplexed.help = Some(
+                "Either remove 'merge_demultiplexed' or specify some output segments.".to_string(),
+            );
         }
 
         Ok(())

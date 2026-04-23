@@ -1,0 +1,19 @@
+Error 1/1
+   ╭─config.toml
+   ┆
+20 │ [[step]]
+21 │     action = 'Demultiplex'
+   ┆              ──────┬──────
+   ┆                    │
+   ┆                    ╰─────── In this step
+   ┆
+22 │     in_label = 'barcode'
+23 │     output_unmatched = true
+24 │     barcodes = 'barcodes'
+   ┆                          ┬
+   ┆                          │
+   ┆                          ╰─ Invalid barcode name found
+───╯
+Hint: Barcode names must not contain the output.ix_separator '_'
+      Barcode name in question: 'sample_1'
+      Change the output.ix_separator in your config or remove it from the barcode name.

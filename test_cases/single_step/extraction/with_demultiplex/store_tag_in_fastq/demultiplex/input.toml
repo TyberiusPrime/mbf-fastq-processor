@@ -4,6 +4,7 @@
 [output]
     prefix = 'output'
     output = []  # no read1 output
+    ix_separator = '---'
 
 [[step]]
     action = 'ExtractRegion'

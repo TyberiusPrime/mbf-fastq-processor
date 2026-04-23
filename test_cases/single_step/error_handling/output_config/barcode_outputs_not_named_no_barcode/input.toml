@@ -22,5 +22,5 @@
 
 [barcodes.key]
     CT = 'aaaa'
-    TT = 'no-barcode'
+    TT = 'nobarcode'
 

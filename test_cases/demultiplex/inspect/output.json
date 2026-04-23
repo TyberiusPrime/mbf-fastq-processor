@@ -18,7 +18,7 @@
   },
   "post_multiplex": {
     "multiplexed": {
-      "no-barcode": {
+      "nobarcode": {
         "molecule_count": 10
       },
       "aaaa": {

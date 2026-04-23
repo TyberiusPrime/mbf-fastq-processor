@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use crate::transformations::prelude::*;
+use crate::{no_barcode_infix, transformations::prelude::*};
 
 /// Histogram data structure that can handle both String and Numeric tags
 #[derive(Debug, Clone)]
@@ -269,7 +269,7 @@ impl Step for Box<_ReportTagHistogram> {
                 // lives alongside molecule_count inside the per-bucket object and the
                 // HTML template can find it via addSectionTable().
                 for (tag, name) in &demultiplex_info.tag_to_name {
-                    let barcode_key = name.as_ref().map_or("no-barcode", |x| x.as_str());
+                    let barcode_key = name.as_ref().map_or(no_barcode_infix(), |x| x.as_str());
                     let histogram = data
                         .get(tag)
                         .expect("no multiplex data found, but expected");

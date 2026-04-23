@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use fastqrab_steps::no_barcode_infix;
 use noodles::{bam, sam};
 use std::collections::BTreeMap;
 use std::io::{Read, Seek, SeekFrom, Write};
@@ -17,10 +18,6 @@ use crate::demultiplex::{OptDemultiplex, Tag};
 pub struct DemultiplexStepInfo {
     /// The `in_label` of the Demultiplex step (as a plain string for easy comparison).
     pub in_label: String,
-    /// Maps this step's local bit-pattern → barcode name.
-    pub local_tag_to_name: BTreeMap<Tag, String>,
-    /// OR of all values in local_tag_to_name — the bit-mask for this step's contribution.
-    pub merge_mask: Tag,
 }
 
 /// Merge the demultiplexed BAM files produced for `merge_label` into combined output files.
@@ -42,99 +39,114 @@ pub fn merge_demultiplexed_bam(
     reads_per_tag: &BTreeMap<Tag, u64>,
 ) -> Result<()> {
     // ── find the merge step ──────────────────────────────────────────────────
-    let merge_step_info = demultiplex_step_infos
+    let (merge_step_index, _merge_step_info) = demultiplex_step_infos
         .iter()
-        .find(|s| s.in_label == merge_label)
+        .enumerate()
+        .find(|s| s.1.in_label == merge_label)
         .unwrap_or_else(|| {
             panic!("No demultiplex step found with in_label='{merge_label}' (this is a bug)")
         });
-
-    let merge_mask = merge_step_info.merge_mask;
 
     //  final tag→name mapping
     let final_tag_to_name = match demultiplex_infos.last() {
         Some((_, OptDemultiplex::Yes(info))) => &info.tag_to_name,
         _ => {
-            // No demultiplexing active — nothing to merge.
-            return Ok(());
+            unreachable!("No demultiplexing active - should not be able to be configured this way");
         }
     };
 
-    // build merge groups: other_tag → (other_name, [(combined_tag, combined_name, merge_part_name)])
-    let mut groups: BTreeMap<Tag, (String, Vec<(Tag, String, String)>)> = BTreeMap::new();
+    // build merge groups: output_name → (filename-infix, demultiplex_tag, reference-seq)
 
-    for (combined_tag, combined_name_opt) in final_tag_to_name {
-        let Some(combined_name) = combined_name_opt else {
+    let mut groups: BTreeMap<String, Vec<(String, u64, String)>> = BTreeMap::new();
+
+    for (final_demultiplex_output_tag, tag_output_name_opt) in final_tag_to_name {
+        let Some(tag_output_name) = tag_output_name_opt else {
             continue; // no output file for this tag
         };
-        let other_tag = combined_tag & !merge_mask;
-
-        let merge_part_tag = combined_tag & merge_mask;
-        let merge_part_name = if merge_part_tag == 0 {
-            "no-barcode".to_string()
-        } else {
-            merge_step_info
-                .local_tag_to_name
-                .get(&merge_part_tag)
-                .cloned()
-                .expect("missing merge-part-tag?")
-        };
-
-        let other_name = strip_step_name(combined_name, &merge_part_name, sep);
+        let parts = tag_output_name.split(sep).collect::<Vec<_>>();
+        assert_eq!(
+            parts.len(),
+            demultiplex_step_infos.len(),
+            "combined name should have one part per step. Did you manage to put the separator into the output names? ",
+        );
+        let group: Vec<&str> = parts
+            .iter()
+            .enumerate()
+            .filter(|(i, _part)| *i != merge_step_index)
+            .map(|(_, part)| *part)
+            .collect();
+        let grouped_output_name: String = group.join(sep);
+        let ref_seq = parts[merge_step_index].to_string();
 
         let entry = groups
-            .entry(other_tag)
-            .or_insert_with(|| (other_name, Vec::new()));
-        entry
-            .1
-            .push((*combined_tag, combined_name.clone(), merge_part_name));
+            .entry(grouped_output_name)
+            .or_insert_with(|| Vec::new());
+        entry.push((
+            tag_output_name.clone(),
+            *final_demultiplex_output_tag,
+            ref_seq,
+        ));
     }
 
     if groups.is_empty() {
-        return Ok(());
+        unreachable!("Should always have something to combine");
     }
 
     // read the shared header once and build reference-name → position map
-    let first_tail = segment_tails.first().map(String::as_str).unwrap_or("");
-    let header = {
-        let (_, srcs) = groups.values().next().expect("groups non-empty");
-        let (_, name, _) = srcs.first().expect("group has at least one source");
-        let path = output_directory.join(format!("{prefix}{sep}{name}{first_tail}"));
+    let first_tail = segment_tails
+        .first()
+        .map(String::as_str)
+        .expect("Should have segments defined at this point");
+    let (header, header_size) = {
+        let any_source_infix = &groups
+            .values()
+            .next()
+            .and_then(|x| x.first())
+            .expect("groups non-empty, groups must have files")
+            .0;
+        let path = output_directory.join(format!("{prefix}{sep}{any_source_infix}{first_tail}"));
         read_bam_header(&path)?
     };
     let ref_order: indexmap::IndexMap<String, usize> = header
         .reference_sequences()
         .keys()
         .enumerate()
-        .map(|(i, name)| (name.to_string(), i))
+        .map(|(i, name)| (name.to_string(), i + 1))
         .collect();
 
     // merge each group
 
-    for (_, (other_name, mut sources)) in groups {
+    for (group_output_name, mut sources) in groups {
         // Sort by header position of the merge-part reference name; unmatched sort last.
-        sources.sort_by_key(|(_, _, merge_part_name)| {
-            ref_order
-                .get(merge_part_name.as_str())
+        sources.sort_by_key(|(_merge_part_name ,_demultiplex_tag, ref_seq)| {
+            if ref_seq == no_barcode_infix() {
+                ref_order.len() + 1
+            } else  {
+                ref_order
+                .get(ref_seq.as_str())
                 .copied()
-                .map(|id| id + 1)
-                .unwrap_or(usize::MAX)
+                .with_context(||format!("ref_seq {ref_seq} not found in references {ref_order:?} - validation has failed us"))
+                .expect("?")
+            }
         });
 
         for tail in segment_tails {
-            let dst_name = if other_name.is_empty() {
+            let dst_name = if group_output_name.is_empty() {
                 format!("{prefix}{tail}")
             } else {
-                format!("{prefix}{sep}{other_name}{tail}")
+                format!("{prefix}{sep}{group_output_name}{tail}")
             };
+
             let dst_path = output_directory.join(&dst_name);
 
             let src_paths: Vec<PathBuf> = sources
                 .iter()
-                .map(|(_, name, _)| output_directory.join(format!("{prefix}{sep}{name}{tail}")))
+                .map(|(filename_infix, _demultiplex_tag, _refseq)| {
+                    output_directory.join(format!("{prefix}{sep}{filename_infix}{tail}"))
+                })
                 .collect();
 
-            let spans = merge_bam_files(&src_paths, &dst_path)?;
+            let spans = merge_bam_files(&src_paths, &dst_path, header_size)?;
 
             for src in src_paths.iter().map(PathBuf::as_path) {
                 std::fs::remove_file(src)
@@ -158,40 +170,24 @@ pub fn merge_demultiplexed_bam(
     Ok(())
 }
 
-/// Remove the merge-step's name component from a combined demultiplex name.
-///
-/// Handles the cases where the step is first, last, or in the middle of the
-/// combined name (e.g. `"A_B_C"` with step name `"B"` and sep `"_"` → `"A_C"`).
-fn strip_step_name(combined: &str, step_name: &str, sep: &str) -> String {
-    if combined == step_name {
-        return String::new();
-    }
-    // Middle: sep + name + sep → sep
-    let mid = format!("{sep}{step_name}{sep}");
-    if let Some(pos) = combined.find(&mid) {
-        return format!("{}{sep}{}", &combined[..pos], &combined[pos + mid.len()..]);
-    }
-    // First: name + sep
-    let pfx = format!("{step_name}{sep}");
-    if combined.starts_with(&pfx) {
-        return combined[pfx.len()..].to_string();
-    }
-    // Last: sep + name
-    let sfx = format!("{sep}{step_name}");
-    if combined.ends_with(&sfx) {
-        return combined[..combined.len() - sfx.len()].to_string();
-    }
-    // No match — return as-is (should not happen with well-formed config).
-    combined.to_string()
-}
-
-fn read_bam_header(path: &Path) -> Result<sam::Header> {
+fn read_bam_header(path: &Path) -> Result<(sam::Header, u64)> {
     let f = std::fs::File::open(path)
         .with_context(|| format!("Cannot open BAM for header: {}", path.display()))?;
     let mut reader = bam::io::Reader::new(f);
-    reader
+    let header = reader
         .read_header()
-        .with_context(|| format!("Cannot read header from: {}", path.display()))
+        .with_context(|| format!("Cannot read header from: {}", path.display()))?;
+    let header_size = {
+        let vpos = u64::from(reader.get_ref().virtual_position());
+        let offset = vpos & 0xFFFF;
+        assert_eq!(
+            offset, 0,
+            "BAM header must end on a BGZF block boundary (offset={offset}); \
+                 ensure build_bam_output flushes after write_header"
+        );
+        vpos >> 16
+    };
+    Ok((header, header_size))
 }
 
 /// Merge BAM files by copying raw BGZF blocks verbatim (no decompression/recompression).
@@ -202,25 +198,11 @@ fn read_bam_header(path: &Path) -> Result<sam::Header> {
 ///
 /// Returns the BGZF virtual-offset span `(v_beg, v_end)` for each source file, where the
 /// virtual offset is `coffset << 16` (uoffset is always 0 at every BGZF block boundary).
-fn merge_bam_files(src_paths: &[PathBuf], dst_path: &Path) -> Result<Vec<(u64, u64)>> {
-    // ── locate where header ends in every source (all identical) ────────────
-    let header_end_coffset: u64 = {
-        let f = std::fs::File::open(&src_paths[0])
-            .with_context(|| format!("Cannot open BAM: {}", src_paths[0].display()))?;
-        let mut reader = bam::io::Reader::new(f);
-        reader
-            .read_header()
-            .with_context(|| format!("Cannot read header from: {}", src_paths[0].display()))?;
-        let vpos = u64::from(reader.get_ref().virtual_position());
-        let uoffset = vpos & 0xFFFF;
-        anyhow::ensure!(
-            uoffset == 0,
-            "BAM header must end on a BGZF block boundary (uoffset={uoffset}); \
-             ensure build_bam_output flushes after write_header"
-        );
-        vpos >> 16
-    };
-
+fn merge_bam_files(
+    src_paths: &[PathBuf],
+    dst_path: &Path,
+    header_size: u64,
+) -> Result<Vec<(u64, u64)>> {
     let mut dst = ex::fs::File::create(dst_path)
         .with_context(|| format!("Failed to create BAM file: {}", dst_path.display()))?;
 
@@ -228,17 +210,17 @@ fn merge_bam_files(src_paths: &[PathBuf], dst_path: &Path) -> Result<Vec<(u64, u
     {
         let src = std::fs::File::open(&src_paths[0])
             .with_context(|| format!("Cannot open intermediate BAM: {}", src_paths[0].display()))?;
-        let copied = std::io::copy(&mut src.take(header_end_coffset), &mut dst)
+        let copied = std::io::copy(&mut src.take(header_size), &mut dst)
             .with_context(|| format!("Error copying header from: {}", src_paths[0].display()))?;
-        if copied != header_end_coffset {
+        if copied != header_size {
             anyhow::bail!(
-                "Unexpected header size: copied {copied} bytes but expected {header_end_coffset} bytes"
+                "Unexpected header size: copied {copied} bytes but expected {header_size} bytes"
             );
         }
     }
 
     // ── copy record blocks from each source (skip header + EOF block) ────────
-    let mut total_compressed = header_end_coffset;
+    let mut total_compressed = header_size;
     let mut spans = Vec::with_capacity(src_paths.len());
 
     for src_path in src_paths {
@@ -249,11 +231,11 @@ fn merge_bam_files(src_paths: &[PathBuf], dst_path: &Path) -> Result<Vec<(u64, u
         let src_size = src
             .seek(SeekFrom::End(0))
             .with_context(|| format!("Cannot seek to end: {}", src_path.display()))?;
-        src.seek(SeekFrom::Start(header_end_coffset))
+        src.seek(SeekFrom::Start(header_size))
             .with_context(|| format!("Cannot seek to end of header: {}", src_path.display()))?;
 
         let records_size = src_size
-            .saturating_sub(header_end_coffset)
+            .saturating_sub(header_size)
             .saturating_sub(BGZF_EOF.len() as u64);
         total_compressed += std::io::copy(&mut src.take(records_size), &mut dst)
             .with_context(|| format!("Error copying records from: {}", src_path.display()))?;
@@ -282,7 +264,7 @@ fn write_merged_bai(
     bai_path: &Path,
     header: &sam::Header,
     ref_order: &indexmap::IndexMap<String, usize>,
-    sources: &[(Tag, String, String)], // (combined_tag, combined_name, merge_part_name)
+    sources: &[(String, u64, String)], // (combined_tag, combined_name, merge_part_name)
     spans: &[(u64, u64)],              // (v_beg, v_end) per source, same order as sources
     reads_per_tag: &BTreeMap<Tag, u64>,
 ) -> Result<()> {
@@ -293,11 +275,14 @@ fn write_merged_bai(
     let mut ref_spans: Vec<Option<(u64, u64, u64)>> = vec![None; n_ref];
     let mut n_no_coor: u64 = 0;
 
-    for (i, (combined_tag, _, merge_part_name)) in sources.iter().enumerate() {
-        let n_reads = reads_per_tag.get(combined_tag).copied().unwrap_or(0);
-        if let Some(&ref_id) = ref_order.get(merge_part_name.as_str()) {
+    for (i, (_demultiplex_infix, demultiplex_tag, ref_seq)) in sources.iter().enumerate() {
+        let n_reads = reads_per_tag
+            .get(demultiplex_tag)
+            .copied()
+            .expect("No read count found");
+        if let Some(&ref_id) = ref_order.get(ref_seq.as_str()) {
             let (v_beg, v_end) = spans[i];
-            ref_spans[ref_id] = Some((v_beg, v_end, n_reads));
+            ref_spans[ref_id - 1] = Some((v_beg, v_end, n_reads));
         } else {
             n_no_coor += n_reads;
         }

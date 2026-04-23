@@ -475,8 +475,8 @@ report_html = false
                 r"
 
 [barcodes.{name}]
-    'AAAAAAAA' = 'sample_1'
-    'CCCCCCCC' = 'sample_2'
+    'AAAAAAAA' = 'sample-1'
+    'CCCCCCCC' = 'sample-2'
             ",
             )
             .unwrap();

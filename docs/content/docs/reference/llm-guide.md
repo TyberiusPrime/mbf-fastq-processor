@@ -167,10 +167,10 @@ Extract barcode from index1, correct errors, split into separate files.
     output_unmatched = true
 
 [barcodes.my_barcodes]
-    'AAAAAAAA' = 'sample_1'
-    'CCCCCCCC' = 'sample_2'
-    'GGGGGGGG' = 'sample_3'
-    'TTTTTTTT' = 'sample_1'  # Multiple barcodes can map to same sample
+    'AAAAAAAA' = 'sample-1'
+    'CCCCCCCC' = 'sample-2'
+    'GGGGGGGG' = 'sample-3'
+    'TTTTTTTT' = 'sample-1'  # Multiple barcodes can map to same sample
 
 [output]
     prefix = 'output'
@@ -1313,7 +1313,7 @@ Correct barcodes using Hamming distance.
     on_no_match = 'remove'         # TYPE: string, REQUIRED
 
 [barcodes.my_barcodes]  # hamming correct requires barcode section
-    'AAAAAAAA' = 'sample_1'
+    'AAAAAAAA' = 'sample-1'
     
 ```
 
@@ -1330,9 +1330,9 @@ Split output by barcode or boolean tag.
 
 ```toml
 [barcodes.my_barcodes]
-    'AAAAAAAA' = 'sample_1'        # barcode -> output_name
-    'CCCCCCCC' = 'sample_2'
-    'GGGGGGGG' = 'sample_1'        # Multiple barcodes can map to same sample
+    'AAAAAAAA' = 'sample-1'        # barcode -> output_name
+    'CCCCCCCC' = 'sample-2'
+    'GGGGGGGG' = 'sample-1'        # Multiple barcodes can map to same sample
 [[step]]
     action = 'Demultiplex'
     in_label = 'barcode_corrected' # TYPE: existing tag, REQUIRED

@@ -1,0 +1,21 @@
+Error 1/1
+   ╭─config.toml
+   ┆
+20 │ [[step]]
+21 │     action = 'Demultiplex'
+22 │     in_label = 'barcode'
+   ┆                ────┬────
+   ┆                    │
+   ┆                    ╰───── first use for this label for demultiplexing
+   ┆
+26 │ [[step]]
+27 │     action = 'Demultiplex'
+   ┆              ──────┬──────
+   ┆                    │
+   ┆                    ╰─────── In this step
+28 │     in_label = 'barcode'
+   ┆                ────┬────
+   ┆                    │
+   ┆                    ╰───── 2nd use of this label for demultiplexing
+───╯
+Hint: Demultiplexing twice on the same label is nonsentical and unsupported.

@@ -12,7 +12,7 @@ use std::{
 };
 use toml_pretty_deser::prelude::*;
 
-use crate::config::PartialConfig;
+use crate::{config::PartialConfig, no_barcode_infix};
 
 #[derive(Clone, Debug, JsonSchema)]
 #[tpd]
@@ -125,9 +125,12 @@ impl VerifyIn<PartialConfig> for PartialBarcodes {
             if let Some(bad_value) = values
                 .map
                 .values_mut()
-                .find(|v| v.as_ref().map(|x| x.as_str()) == Some("no-barcode"))
+                .find(|v| v.as_ref().map(|x| x.as_str()) == Some(no_barcode_infix()))
             {
-                bad_value.state = TomlValueState::new_validation_failed("Must not be 'no-barcode'");
+                bad_value.state = TomlValueState::new_validation_failed(format!(
+                    "Must not be '{}'",
+                    no_barcode_infix()
+                ));
                 bad_value.help = Some(
                     "Choose a different name for your barcode, \
                 this one is reserved for not-matched reads."

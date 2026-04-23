@@ -11,8 +11,8 @@ counts = {}
 for seq in seqs:
     bc_a = seq[0:2].lower()
     bc_b = seq[4:6].lower()
-    name_a = barcodes_a.get(bc_a, "no-barcode")
-    name_b = barcodes_b.get(bc_b, "no-barcode")
+    name_a = barcodes_a.get(bc_a, "nobarcode")
+    name_b = barcodes_b.get(bc_b, "nobarcode")
     key = f"{name_a}_{name_b}"
     if key not in counts:
         counts[key] = 0
