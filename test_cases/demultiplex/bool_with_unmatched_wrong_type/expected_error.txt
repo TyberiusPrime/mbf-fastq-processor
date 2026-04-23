@@ -1,0 +1,21 @@
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+15 │ [[step]]
+16 │     action = 'Demultiplex'
+   ┆              ──────┬──────
+   ┆                    │
+   ┆                    ╰─────── In this step
+   ┆
+17 │     in_label = 'in_other_file'
+18 │     output_unmatched = 123
+   ┆                        ─┬─
+   ┆                         │
+   ┆                         ╰── Wrong type: expected boolean, found integer.
+───╯
+Hint: This value has the wrong type.
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/Demultiplex
+      Or run: `fastqrab template Demultiplex` for more information.
+
+

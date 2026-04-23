@@ -10,10 +10,13 @@ use fastqrab_dna::dna::TagValue;
 #[derive(Debug)]
 pub struct Demultiplex {
     pub in_label: TagLabel,
-    pub output_unmatched: Option<bool>,
+    pub output_unmatched: bool,
 
     /// reference to shared barcodes section (optional for boolean tag mode)
     pub barcodes: Option<TagLabel>,
+
+    // by default, set from tag type...
+    pub tag_contains_barcode: Option<bool>,
 
     #[tpd(skip, default)]
     #[schemars(skip)]
@@ -22,6 +25,16 @@ pub struct Demultiplex {
     #[tpd(skip, default)]
     #[schemars(skip)]
     any_hit_observed: std::sync::atomic::AtomicBool,
+
+    #[tpd(skip)]
+    #[schemars(skip)]
+    lookup_mode: LookupMode,
+}
+
+#[derive(Debug)]
+enum LookupMode {
+    NoLookup,
+    Lookup,
 }
 
 impl VerifyIn<PartialConfig> for PartialDemultiplex {
@@ -120,9 +133,8 @@ impl VerifyIn<PartialConfig> for PartialDemultiplex {
                     format!("{label}=true", label = label.as_ref()),
                 );
                 self.resolved_barcodes = Some(synthetic_barcodes);
-                self.output_unmatched.value = Some(Some(false));
-                self.output_unmatched.state = TomlValueState::Ok;
             }
+            self.output_unmatched.or(false); // unused for bool.
         }
         Ok(())
     }
@@ -141,24 +153,56 @@ impl TagUser for PartialTaggedVariant<PartialDemultiplex> {
             let upstream_label_type = tags_available
                 .get(inner.in_label.as_ref().expect("parent was ok"))
                 .map(|meta| &meta.tag_type);
-            let upstream_label_is_bool = matches!(upstream_label_type, Some(TagValueType::Bool));
-            if !upstream_label_is_bool
-                && inner
-                    .output_unmatched
-                    .as_ref()
-                    .expect("parent was ok")
-                    .is_none()
-            {
-                self.toml_value.state = TomlValueState::new_validation_failed(
-                    "output_unmatched must be set when using barcodes for demultiplex.",
-                );
-                self.toml_value.help = Some("Add output_unmatched=true (or false)".to_string());
-            }
             let inner = self
                 .toml_value
                 .value
                 .as_mut()
                 .expect("Was ok before, now might not be ok, but should be still set");
+
+            if let Some(upstream_label_type) = upstream_label_type {
+                match upstream_label_type {
+                    TagValueType::Location | TagValueType::String => {
+                        if !inner.output_unmatched.as_ref().is_some() {
+                            self.toml_value.state = TomlValueState::new_validation_failed(
+                                "output_unmatched must be *not* set when using boolean values for demultiplex.",
+                            );
+                            self.toml_value.help =
+                                Some("Remove output_unmatched=true (or false)".to_string());
+                        }
+                        if let Some(Some(tag_contains_barcode)) =
+                            inner.tag_contains_barcode.as_ref()
+                        {
+                            //user has explicitly told us what the tag contains,
+                            //barcodes or barcode-names
+                            if *tag_contains_barcode {
+                                inner.lookup_mode = Some(LookupMode::Lookup);
+                            } else {
+                                inner.lookup_mode = Some(LookupMode::NoLookup);
+                            }
+                        } else {
+                            if matches!(upstream_label_type, TagValueType::Location) {
+                                inner.lookup_mode = Some(LookupMode::Lookup);
+                            } else {
+                                inner.lookup_mode = Some(LookupMode::NoLookup);
+                            }
+                        }
+                    }
+                    TagValueType::Numeric(_) => {
+                        //will be complained about because of allowed tag modes below
+                    }
+                    TagValueType::Bool => {
+                        // if inner.output_unmatched.as_ref().is_some() {
+                        //     self.toml_value.state = TomlValueState::new_validation_failed(
+                        //         "output_unmatched must be *not* set when using boolean values for demultiplex.",
+                        //     );
+                        //     self.toml_value.help =
+                        //         Some("Remove output_unmatched=true (or false)".to_string());
+                        // }
+                        inner.lookup_mode = Some(LookupMode::Lookup);
+                        inner.output_unmatched.value = Some(false);
+                    }
+                }
+            }
 
             Some(TagUsageInfo {
                 used_tags: vec![inner.in_label.to_used_tag(
@@ -198,9 +242,7 @@ impl Step for Demultiplex {
 
         Ok(Some(DemultiplexBarcodes {
             barcode_to_name: self.resolved_barcodes.clone(),
-            include_no_barcode: self
-                .output_unmatched
-                .expect("output_unmatched must be set during initialization"),
+            include_no_barcode: self.output_unmatched,
         }))
     }
 
@@ -242,11 +284,24 @@ impl Step for Demultiplex {
                     unreachable!();
                 } // cov:excl-stop
             };
-            if let Some(tag) = demultiplex_info.barcode_to_tag(&key) {
-                output_tags[ii] |= tag;
-                if tag > 0 {
-                    self.any_hit_observed
-                        .store(true, std::sync::atomic::Ordering::Relaxed);
+            match self.lookup_mode {
+                LookupMode::Lookup => {
+                    if let Some(tag) = demultiplex_info.barcode_to_tag(&key) {
+                        output_tags[ii] |= tag;
+                        if tag > 0 {
+                            self.any_hit_observed
+                                .store(true, std::sync::atomic::Ordering::Relaxed);
+                        }
+                    }
+                }
+                LookupMode::NoLookup => {
+                    if let Some(&tag) = demultiplex_info.name_to_tag.get(&key) {
+                        output_tags[ii] |= tag;
+                        if tag > 0 {
+                            self.any_hit_observed
+                                .store(true, std::sync::atomic::Ordering::Relaxed);
+                        }
+                    }
                 }
             }
         }

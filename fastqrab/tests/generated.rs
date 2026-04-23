@@ -25,6 +25,16 @@ fn test_cases_x_demultiplex_x_bool_with_unmatched() {
 }
 
 #[test]
+fn test_cases_x_demultiplex_x_bool_with_unmatched_wrong_type() {
+    println!("Test case is in: test_cases/demultiplex/bool_with_unmatched_wrong_type");
+    run_test(
+        std::path::Path::new("../test_cases/demultiplex/bool_with_unmatched_wrong_type"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_demultiplex_x_chunked_interleaved_output_demultiplex() {
     println!("Test case is in: test_cases/demultiplex/chunked_interleaved_output_demultiplex");
     run_test(

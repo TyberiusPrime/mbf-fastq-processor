@@ -19,10 +19,15 @@ Demultiplexing can be done on barcodes, or on boolean tags, and can happen multi
 ```toml
 [[step]]
     action = "Demultiplex"
-    in_label = "mytag"
+    in_label = "mytag"       # a location, string or boolean tag
     barcodes = "mybarcodes"
     output_unmatched  = true # if set, write reads not matching any barcode
                              #  to a file like ouput_prefix_no-barcode_1.fq
+    tag_contains_barcode = true # Whether the tag contains barcodes to lookup (true)
+                                # or barcode-names (invalid names get translated to 'nobarcode')
+                                # By default, auto detected on tag type: 
+                                # location -> true, string -> false
+                                # overwrite if your strings contain dna sequence to look up
 
 [barcodes.mybarcodes] # can be before and after.
 # separate multiple regions with a _
@@ -72,4 +77,8 @@ Notes:
 - A demultiplex step matching zero barcodes (across all reads) will issue an error.
 
 ## Hamming Distance matching
-Correcting a tag for hamming distance is a separate step. See [HammingCorrect]({{< relref "docs/reference/tag-steps/using/HammingCorrect.md" >}}).
+Correcting a tag for hamming distance is a separate step. 
+See [HammingCorrect]({{< relref "docs/reference/tag-steps/using/HammingCorrect.md" >}}).
+
+Similarity, you can use [AssignToReference]({{< relref "docs/redirects/AssignToReference.md" >}}) 
+if you want to store the lookup's result's in a tag.
