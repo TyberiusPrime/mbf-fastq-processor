@@ -4,6 +4,7 @@ use toml_pretty_deser::{TomlValue, TomlValueState};
 // Common functionality shared by multiple tag transformations
 
 // Individual transformation modules
+pub mod assign_by_halves;
 pub mod concat_tags;
 pub mod forget_all_tags;
 pub mod forget_tag;
@@ -16,6 +17,7 @@ pub mod store_tag_in_sequence;
 pub mod store_tags_in_table;
 
 // Re-exports
+pub use assign_by_halves::{AssignByHalves, PartialAssignByHalves};
 pub use concat_tags::{ConcatTags, PartialConcatTags};
 use fastqrab_io::io::bam_read_count_from_index;
 pub use forget_all_tags::{ForgetAllTags, PartialForgetAllTags};

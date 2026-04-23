@@ -1287,6 +1287,7 @@ Correct barcodes using Hamming distance. Output corrected barcode, or barcode la
     action = 'HammingCorrect'
     in_label = 'barcode'           # TYPE: existing tag, REQUIRED
     out_label = 'barcode_corrected' # TYPE: string, REQUIRED
+    output = 'barcode'             # TYPE: string, REQUIRED, one of 'barcode' or 'label',
     barcodes = 'my_barcodes'       # TYPE: string, REQUIRED
     max_hamming_distance = 1       # TYPE: usize, REQUIRED
     on_no_match = 'remove'         # TYPE: string, REQUIRED
@@ -1311,6 +1312,22 @@ Correct barcodes using Hamming distance. Output corrected barcode, or barcode la
 - `first`: Break ties by taking the lexicographically smallest.
 - `firststrict`: Take the lexicographically smallest, iff they all match to the same label (or label prefix if name_split_character). Otherwise fail
 - `bymajority`: Correct towards barcodes that are predominant (>= 97.5% of the ties).
+
+### AssignByHalves 
+
+Assign to references via a cell ranger inspired probe matching algorithm.
+
+```toml
+ [[step]]
+     action = "AssignByHalves"
+     in_label = "mytag" # a sequence region
+     out_label = "assigned_tag"
+     barcodes = "mybarcodelist" # the [barcodes] section to use as references
+     name_split_character = "_" # optional, consider references equivalent when tie breaking if they match up to this 
+
+ [barcodes.mybarcodelist]
+     "AAAA" = "label_ignored" # only read when demultiplexing 
+```
 
 ### Demultiplex
 

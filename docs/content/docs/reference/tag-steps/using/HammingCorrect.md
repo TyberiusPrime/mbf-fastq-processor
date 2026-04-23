@@ -9,6 +9,8 @@ Correct a tag to one of a predefined set of 'barcodes' using closest hamming dis
     in_label = "mytag"
     out_label = "my_corrected_tag"
     barcodes = "mybarcodelist"
+    output = "barcode" # or "label"
+
     max_hamming_distance = 1
     on_no_match = 'remove' # 'remove', 'empty', 'keep'
     on_tie = 'remove' # 'remove', 'empty', 'keep', 'first', 'first_strict', 'fail', 'by_majority'
@@ -19,6 +21,15 @@ Correct a tag to one of a predefined set of 'barcodes' using closest hamming dis
 [barcodes.mybarcodelist]
     "AAAA" = "label_ignored" # only read when demultiplexing 
 ```
+
+
+## Output 
+
+`HammingCorrect` can either output a corrected barcode,
+or the corrected barcodes' label. Use the `output` setting for this. It defaults
+to 'barcode'
+
+## Non matching barcode handling
  
 `on_no_match` controls what happens if the tag cannot be corrected within the max_hamming_distance:
 

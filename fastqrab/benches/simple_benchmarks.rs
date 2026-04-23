@@ -654,22 +654,25 @@ fn benchmark_key_steps(c: &mut Criterion) {
             thread_count,
         ),
         BenchmarkConfig::new(
-            "AssignToReference",
+            "AssignByHalves",
             &format!(
                 r#"[[step]]
     action = "ExtractRegion"
     segment = "read1"
     start = 0
-    length = 50
+    length = 8
     out_label = "query_seq"
     anchor = "Start"
 
+[barcodes.sample_barcodes]
+    'AAAAAAAA' = 'sample_1'
+    'CCCCCCCC' = 'sample_2'
+
 [[step]]
-    action = "AssignToReference"
+    action = "AssignByHalves"
     in_label = "query_seq"
     out_label = "ref_name"
-    reference = "{str_reference_file}"
-    max_hamming_distance = 2
+    barcodes  "sample_barcodes"
 
 [[step]]
     action = "ForgetAllTags""#

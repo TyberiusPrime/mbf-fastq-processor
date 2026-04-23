@@ -362,6 +362,7 @@ pub enum Transformation {
     Demultiplex(demultiplex::Demultiplex),
     HammingCorrect(hamming_correct::HammingCorrect),
     _HammingExactCounter(hamming_exact_counter::HammingExactCounter),
+    AssignByHalves(tag::AssignByHalves),
     //
     #[schemars(skip)]
     _InternalDelay(Box<_InternalDelay>),

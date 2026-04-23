@@ -1567,6 +1567,14 @@ impl PartialConfig {
                             {
                                 found_barcode_using_step = true;
                                 break;
+                            } else if let Some(PartialTransformation::AssignByHalves(step_config)) =
+                                step.value.as_ref()
+                                && let Some(step_config) = step_config.toml_value.value.as_ref()
+                                && let Some(barcodes_name) = step_config.barcodes.as_ref()
+                                && barcodes_name == barcode_section_name
+                            {
+                                found_barcode_using_step = true;
+                                break;
                             }
                         }
                         // Also check if output's tag_to_reference uses this barcode section
