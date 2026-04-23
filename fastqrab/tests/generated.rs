@@ -1455,10 +1455,42 @@ fn test_cases_x_output_x_bam_x_merge_demultiplexed_x_basic() {
 }
 
 #[test]
+fn test_cases_x_output_x_bam_x_merge_demultiplexed_x_basic_interleaved_output() {
+    println!("Test case is in: test_cases/output/bam/merge_demultiplexed/basic_interleaved_output");
+    run_test(
+        std::path::Path::new(
+            "../test_cases/output/bam/merge_demultiplexed/basic_interleaved_output",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_output_x_bam_x_merge_demultiplexed_x_basic_inv_ref_order() {
     println!("Test case is in: test_cases/output/bam/merge_demultiplexed/basic_inv_ref_order");
     run_test(
         std::path::Path::new("../test_cases/output/bam/merge_demultiplexed/basic_inv_ref_order"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_output_x_bam_x_merge_demultiplexed_x_basic_multi_segment() {
+    println!("Test case is in: test_cases/output/bam/merge_demultiplexed/basic_multi_segment");
+    run_test(
+        std::path::Path::new("../test_cases/output/bam/merge_demultiplexed/basic_multi_segment"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_output_x_bam_x_merge_demultiplexed_x_three_levels_bool() {
+    println!("Test case is in: test_cases/output/bam/merge_demultiplexed/three_levels_bool");
+    run_test(
+        std::path::Path::new("../test_cases/output/bam/merge_demultiplexed/three_levels_bool"),
         "input.toml",
         1,
     );

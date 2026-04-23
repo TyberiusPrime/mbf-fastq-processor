@@ -131,7 +131,7 @@ pub struct Output {
 
     #[tpd(default)]
     pub stdout: bool,
-    #[tpd(default)]
+    #[tpd(default, alias = "interleaved")]
     pub interleave: Option<Vec<String>>,
 
     #[tpd(default)]
@@ -480,7 +480,9 @@ impl PartialOutput {
                     } // cov:excl-line
                 }
                 if any_failed {
-                    self.interleave.state = TomlValueState::Nested;
+                    if matches!(self.interleave.state, TomlValueState::Ok) {
+                        self.interleave.state = TomlValueState::Nested;
+                    }
                 } else if interleave_order.len() < 2 && !*self.stdout.unwrap_ref() {
                     self.interleave.state = TomlValueState::new_validation_failed(
                         "Must contain at least two segments to interleave.",

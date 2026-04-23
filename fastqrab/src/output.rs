@@ -185,8 +185,8 @@ impl OutputFile<'_> {
 
     #[mutants::skip] // changing when exactly the buffer is being written 
     fn after_text_fragment(&mut self, buffer: &mut Vec<u8>, buffer_size: usize) -> Result<()> {
+        self.config.fragments_written_in_chunk += 1;
         if let Some(chunk_size) = self.config.chunk_size {
-            self.config.fragments_written_in_chunk += 1;
             if !buffer.is_empty() {
                 match &mut self.handle {
                     OutputFileHandle::Fastq(writer) | OutputFileHandle::Fasta(writer) => {
@@ -216,13 +216,18 @@ impl OutputFile<'_> {
     }
 
     fn after_bam_fragment(&mut self) -> Result<()> {
+        self.config.fragments_written_in_chunk += 1;
         if let Some(chunk_size) = self.config.chunk_size {
-            self.config.fragments_written_in_chunk += 1;
             if self.config.fragments_written_in_chunk >= chunk_size {
                 self.rotate_chunk()?;
             }
         }
         Ok(())
+    }
+
+    pub fn total_records_written(&self) -> u64 {
+        (self.config.chunk_index * self.config.chunk_size.unwrap_or(0)
+            + self.config.fragments_written_in_chunk) as u64
     }
 }
 
@@ -630,6 +635,10 @@ fn build_bam_output<'a>(
     writer
         .write_header(&header)
         .context("Failed to write BAM header")?;
+    writer
+        .get_mut()
+        .flush()
+        .context("Failed to flush BAM header to its own BGZF block")?;
 
     Ok(io::BamOutput { writer, header })
 }
@@ -681,6 +690,23 @@ impl OutputFastqs<OutputFileConfig> {
 }
 
 impl OutputFastqs<OutputFile<'_>> {
+    /// Total BAM records written across all segment/interleaved files for this tag.
+    /// For demultiplexed BAM merge, each fragment writes one record per segment, so
+    /// any one segment gives the fragment count; we take the max across all present files.
+    pub fn total_fragment_written(&self) -> u64 {
+        self.segment_files
+            .iter()
+            .filter_map(Option::as_ref)
+            .map(OutputFile::total_records_written)
+            .chain(
+                self.interleaved_file
+                    .as_ref()
+                    .map(OutputFile::total_records_written),
+            )
+            .max()
+            .unwrap_or(0)
+    }
+
     pub fn finish(&mut self) -> Result<()> {
         if let Some(interleaved) = self.interleaved_file.take() {
             interleaved

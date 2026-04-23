@@ -1,1 +1,1 @@
-Error finishing output files: Failed to finish BAM writer
+Error in output thread: Failed to flush BAM header to its own BGZF block

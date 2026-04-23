@@ -929,6 +929,7 @@ impl RunStage2 {
             error_collector: self.error_collector,
             allow_overwrite: self.allow_overwrite,
             output_done_tx,
+            reads_per_tag: Arc::new(Mutex::new(BTreeMap::new())),
         }
     }
 }
@@ -950,6 +951,7 @@ pub struct RunStage3 {
     report_collector: Arc<Mutex<Vec<FinalizeReportResult>>>,
     error_collector: Arc<Mutex<Vec<String>>>,
     output_done_tx: crossbeam::channel::Sender<usize>,
+    reads_per_tag: Arc<Mutex<BTreeMap<crate::demultiplex::Tag, u64>>>,
 }
 
 fn collect_thread_failures(
@@ -1033,6 +1035,7 @@ impl RunStage3 {
         }
         let output_done_tx = self.output_done_tx;
         let report_labels = parsed.report_labels.clone();
+        let reads_per_tag = self.reads_per_tag.clone();
 
         let output = {
             let error_collector = self.error_collector.clone();
@@ -1099,6 +1102,12 @@ impl RunStage3 {
                         "Error in stage threads occured: {stage_errors:?}"
                     ); */
 
+                    {
+                        let mut counts = reads_per_tag.lock().unwrap_or_else(|p| p.into_inner());
+                        for (tag, fastqs) in &output_files.output_segments {
+                            counts.insert(*tag, fastqs.total_fragment_written());
+                        }
+                    }
                     for set_of_output_files in &mut output_files.output_segments {
                         if let Err(e) = set_of_output_files.1.finish() {
                             error_collector
@@ -1162,6 +1171,7 @@ impl RunStage3 {
             error_collector: self.error_collector,
             demultiplex_infos: self.demultiplex_infos,
             demultiplex_step_infos: self.demultiplex_step_infos,
+            reads_per_demultiplex_tag: self.reads_per_tag,
         })
     }
 }
@@ -1173,6 +1183,7 @@ pub struct RunStage4 {
     output_thread: thread::JoinHandle<()>,
     pub demultiplex_infos: Vec<(usize, OptDemultiplex)>,
     pub demultiplex_step_infos: Vec<DemultiplexStepInfo>,
+    reads_per_demultiplex_tag: Arc<Mutex<BTreeMap<crate::demultiplex::Tag, u64>>>,
 }
 
 impl RunStage4 {
@@ -1190,10 +1201,16 @@ impl RunStage4 {
             errors.extend(collect_thread_failures(threads, msg, &self.error_collector));
         }
 
+        let reads_per_tag = Arc::into_inner(self.reads_per_demultiplex_tag)
+            .expect("reads_per_demultiplex_tag mutex still had multiple references")
+            .into_inner()
+            .expect("reads_per_tag mutex was poisened");
+
         RunStage5 {
             errors,
             demultiplex_infos: self.demultiplex_infos,
             demultiplex_step_infos: self.demultiplex_step_infos,
+            reads_per_tag,
         }
     }
 }
@@ -1202,6 +1219,7 @@ pub struct RunStage5 {
     pub errors: Vec<String>,
     pub demultiplex_infos: Vec<(usize, OptDemultiplex)>,
     pub demultiplex_step_infos: Vec<DemultiplexStepInfo>,
+    pub reads_per_tag: BTreeMap<crate::demultiplex::Tag, u64>,
 }
 
 #[cfg(test)]
