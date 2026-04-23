@@ -531,13 +531,13 @@ pub fn validate_compression_level_u8(
         match compression.as_ref() {
             None | Some(CompressionFormat::Uncompressed) => {
                 if output_format == &FileFormat::Bam {
-                    if *level > 9 || *level < 1 {
+                    if *level > 9 {
                         compression_level.state = TomlValueState::ValidationFailed {
                             message: "Invalid compression level specified for BAM output"
                                 .to_string(),
                         };
                         compression_level.help =
-                            Some("Valid range is 1-9 for BAM (and our compressor)".to_string());
+                            Some("Valid range is 0-9 for BAM (and our compressor)".to_string());
                     }
                 } else {
                     if *level != 0 {
