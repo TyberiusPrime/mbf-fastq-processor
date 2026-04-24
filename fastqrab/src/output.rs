@@ -166,8 +166,8 @@ impl OutputFile {
             std::mem::replace(&mut self.handle, OutputFileHandle::TemporarilyOutOfAction);
         //create the hash files
         old_handle.finish(&old_filename)?;
-        //that's also the reason we can't just create the new file, then 
-        //finish the old one (skipping the TemporarilyOutOfAction state) - 
+        //that's also the reason we can't just create the new file, then
+        //finish the old one (skipping the TemporarilyOutOfAction state) -
         //we might be renaming the file & hashes after finish in rotate_chunk.
 
         //now rotate the filenames, rename files if necessary,

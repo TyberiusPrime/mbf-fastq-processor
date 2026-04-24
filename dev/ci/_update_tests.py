@@ -37,8 +37,11 @@ for test_path in ["test_cases", "cookbooks"]:
         else:
             test_name = f"test_cases_x_{name}"
 
+        should_fail = (case_dir / "should_panic").exists()
+
         out += f"""
     #[test]
+    {'#[should_panic]' if should_fail else ''}
     fn {test_name}() {{
         println!("Test case is in: {case_path}");
         run_test(std::path::Path::new("../{case_path}"), "{input_toml.name}", {count});

@@ -244,7 +244,8 @@ mod tests {
                 None,
             )
             .unwrap();
-            let bgzf_writer = bgzf::io::multithreaded_writer::MultithreadedWriter::new(hashed_writer);
+            let bgzf_writer =
+                bgzf::io::multithreaded_writer::MultithreadedWriter::new(hashed_writer);
             let mut writer = bam::io::Writer::from(bgzf_writer);
             let header = Arc::new(sam::Header::from_str("@HD\tVN:1.6\tSO:unsorted\n").unwrap());
             writer.write_header(&header).unwrap();
