@@ -258,18 +258,10 @@ impl OutputFileHandle {
             }
             Self::Bam(bam_output) => {
                 let mut mt_writer = bam_output.writer.into_inner();
-                let mut hashed_writer = mt_writer
+                let hashed_writer = mt_writer
                     .finish()
                     .context("Failed to finish BAM multithreaded writer")?;
-                // Write the BGZF EOF marker (§ 4.1.2 End-of-file marker)
-                const BGZF_EOF: [u8; 28] = [
-                    0x1f, 0x8b, 0x08, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0x06, 0x00, 0x42,
-                    0x43, 0x02, 0x00, 0x1b, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                    0x00, 0x00,
-                ];
-                hashed_writer
-                    .write_all(&BGZF_EOF)
-                    .context("Failed to write BGZF EOF block")?;
+                //eof marker is being taken care of by the writer!
                 let (uncompressed_hash, compressed_hash) = hashed_writer.finish();
 
                 if let Some(_hash) = uncompressed_hash {

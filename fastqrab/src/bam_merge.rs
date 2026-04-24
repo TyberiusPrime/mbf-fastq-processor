@@ -236,7 +236,7 @@ fn merge_bam_files(
 
         let records_size = src_size
             .saturating_sub(header_size)
-            .saturating_sub(BGZF_EOF.len() as u64);
+            .saturating_sub(BGZF_EOF.len() as u64); //skip the EOF marker.
         total_compressed += std::io::copy(&mut src.take(records_size), &mut dst)
             .with_context(|| format!("Error copying records from: {}", src_path.display()))?;
 
