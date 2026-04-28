@@ -46,7 +46,6 @@ impl Step for Box<_ReportLengthDistribution> {
         &self,
         block: FastQBlocksCombined,
         input_info: &InputInfo,
-        _block_no: usize,
         demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         fn update_from_read(target: &mut Vec<usize>, read: &WrappedFastQRead) {

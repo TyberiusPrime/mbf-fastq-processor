@@ -199,7 +199,6 @@ impl Step for Inspect {
         &self,
         block: FastQBlocksCombined,
         input_info: &InputInfo,
-        _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let mut collected = self.collected.load(std::sync::atomic::Ordering::Relaxed);

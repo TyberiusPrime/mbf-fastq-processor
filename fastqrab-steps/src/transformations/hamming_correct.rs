@@ -31,7 +31,8 @@ pub struct HammingCorrect {
     /// What to do when more than one match an the same distance is found
     pub on_tie: OnTie,
 
-    pub on_tie_min_molecules_for_frequency: Option<usize>,
+    pub by_majority_min_molecules_to_start: Option<usize>,
+    pub by_majority_threshold: Option<f64>,
 
     /// names are considered identical if they match up to the first name_split_character
     /// for must-have-hamming-distance considerations
@@ -124,27 +125,30 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
             }
         } else {
             let barcodes_empty = if let Some(Some(barcode_data)) = parent.barcodes.as_ref() {
-                barcode_data.keys.is_empty() 
-                } else {
-                    matches!(parent.barcodes.as_ref(), Some(None))
+                barcode_data.keys.is_empty()
+            } else {
+                matches!(parent.barcodes.as_ref(), Some(None))
             };
-        if barcodes_empty 
-        {
-            return Err(ValidationFailure::new(
-                "HammingCorrect step requires a barcodes section to be defined in the config.",
-                Some(&format!("See {}", crate::link_docs("barcodes"))),
-            ));
+            if barcodes_empty {
+                return Err(ValidationFailure::new(
+                    "HammingCorrect step requires a barcodes section to be defined in the config.",
+                    Some(&format!("See {}", crate::link_docs("barcodes"))),
+                ));
+            }
         }
-        }
+        self.by_majority_min_molecules_to_start.or(Some(1_000_000));
+        self.by_majority_threshold.or(Some(0.975));
 
         if let Some(OnTie::ByMajority) = self.on_tie.as_ref() {
-            self.on_tie_min_molecules_for_frequency
-                .or_with(|| Some(1_000_000));
             let majority = MajorityData {
                 barcode_counts: IndexMap::new(),
-                threshold: 0.975, //subject to configuration later on?
+                threshold: *self
+                    .by_majority_threshold
+                    .as_ref()
+                    .and_then(|x| x.as_ref())
+                    .expect("just set"),
                 reads_still_needed: *self
-                    .on_tie_min_molecules_for_frequency
+                    .by_majority_min_molecules_to_start
                     .as_ref()
                     .and_then(|x| x.as_ref())
                     .expect("just set"),
@@ -156,12 +160,13 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
                 .as_ref()
                 .and_then(|options| options.max_blocks_in_flight.as_ref())
                 .map(|x| *x)
-                .expect("Blocks in flight should be set at this point in config");
+                .unwrap_or_else(fastqrab_config::default_blocks_in_flight);
             let reads_per_block = parent
                 .options
                 .as_ref()
                 .and_then(|options| options.block_size.as_ref())
-                .expect("reads_per_block must be set at this point");
+                .map(|x| *x)
+                .unwrap_or_else(fastqrab_config::default_block_size);
             if blocks_in_flight * reads_per_block < majority.reads_still_needed {
                 return Err(ValidationFailure::new(
                     "Not enough reads 'in flight' for ByMajority".to_string(),
@@ -217,9 +222,10 @@ impl TagUser for PartialTaggedVariant<PartialHammingCorrect> {
             Some(TagUsageInfo {
                 declared_tag: inner.out_label.to_declared_tag(
                     match inner.output.as_ref().unwrap_or(&HammingOutput::Barcode) {
-                        HammingOutput::Barcode  =>TagValueType::Location,
-                        HammingOutput::Label => TagValueType::String
-                    }),
+                        HammingOutput::Barcode => TagValueType::Location,
+                        HammingOutput::Label => TagValueType::String,
+                    },
+                ),
                 used_tags: vec![
                     inner
                         .in_label
@@ -323,7 +329,6 @@ impl Step for HammingCorrect {
         &self,
         mut block: FastQBlocksCombined,
         _input_info: &InputInfo,
-        _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<(FastQBlocksCombined, bool)> {
         let input_tags = block.tags.get(&self.in_label).expect("Input tag not found");
@@ -342,6 +347,7 @@ impl Step for HammingCorrect {
         } else {
             None
         };
+        //dbg!("block is final", block.is_final);
 
         // we first match them, and count them if OnTie::ByMajority
         // to gain the maximum amount of information available.
@@ -360,32 +366,38 @@ impl Step for HammingCorrect {
             };
             if matches!(self.on_tie, OnTie::ByMajority)
                 && let Some(mj) = mj.as_mut()
-                && mj.reads_still_needed > 0
-                && let Some(MatchResult::OneMatch(seq, was_exact)) = hit
-                && was_exact
             {
-                mj.reads_still_needed -= 1; //doesn't matter if we could use it, we decrease the
-                // counter  - or our whole 'do we get enough reads' checking might be off.
-                skip_counting_until += 1;
+                //dbg!(&mj);
+                if mj.reads_still_needed > 0
+                    && let Some(MatchResult::OneMatch(seq, was_exact)) = hit
+                    && was_exact
+                {
+                    //dbg!("pushing barcode to counter");
+                    mj.reads_still_needed -= 1; //doesn't matter if we could use it, we decrease the
+                    // counter  - or our whole 'do we get enough reads' checking might be off.
+                    skip_counting_until += 1;
 
-                let hits = self.resonator.query(seq)?;
-                if hits.len() == 1 && hits[0].1 == 0 {
-                    //only count perfect hits
-                    mj.barcode_counts
-                        .entry(seq.into())
-                        .and_modify(|count| *count += 1)
-                        .or_insert(1);
-                }
-                if mj.reads_still_needed == 0 {
-                    let mut ready = mj.barrier.0.lock().unwrap();
-                    *ready = true;
-                    mj.barrier.1.notify_all();
+                    let hits = self.resonator.query(seq)?;
+                    if hits.len() == 1 && hits[0].1 == 0 {
+                        //only count perfect hits
+                        mj.barcode_counts
+                            .entry(seq.into())
+                            .and_modify(|count| *count += 1)
+                            .or_insert(1);
+                    }
+                    if mj.reads_still_needed == 0 {
+                        //dbg!("unlocking barrier");
+                        let mut ready = mj.barrier.0.lock().unwrap();
+                        *ready = true;
+                        mj.barrier.1.notify_all();
+                    }
                 }
             }
             hamming_hits.push(hit);
         }
         if matches!(self.on_tie, OnTie::ByMajority) {
             if block.is_final {
+                //dbg!("block is final, unlocking barrier");
                 let mj = mj.as_mut().expect("Must be there if ByMajority is set");
                 let mut ready = mj.barrier.0.lock().unwrap();
                 *ready = true;
@@ -397,6 +409,7 @@ impl Step for HammingCorrect {
                     .expect("Must be there if ByMajority is set")
                     .barrier,
             );
+            //dbg!("Wating on barrier in block {}", block_no);
             let _guard = cvar
                 .wait_while(lock.lock().unwrap(), |ready| !*ready)
                 .expect("Mutex poisened in condvar");
@@ -491,6 +504,7 @@ impl Step for HammingCorrect {
                                     for item in &items {
                                         //add 1 to all counts,
                                         //or otherwise the first one would never get in.
+                                        //if we were approximating 1 by 1..
                                         let count = mj.barcode_counts.get(item.0).map(|x| *x).unwrap_or(0) + 1;
                                         best = Some(match best {
                                             Some(ibest) => if ibest.1 < count {(item.0, count)} else {ibest},

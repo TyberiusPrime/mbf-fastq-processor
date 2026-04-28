@@ -214,7 +214,6 @@ impl Step for Box<_ReportTagHistogram> {
         &self,
         block: FastQBlocksCombined,
         _input_info: &InputInfo,
-        _block_no: usize,
         demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let mut data = self.data.lock().expect("Lock poisoned");

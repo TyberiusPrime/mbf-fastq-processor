@@ -69,7 +69,6 @@ impl Step for ExpectedError {
         &self,
         mut block: FastQBlocksCombined,
         _input_info: &InputInfo,
-        _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let error_state: RefCell<Option<anyhow::Error>> = RefCell::new(None);

@@ -135,7 +135,6 @@ impl Step for Progress {
         &self,
         block: FastQBlocksCombined,
         _input_info: &InputInfo,
-        _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let (counter, next) = {

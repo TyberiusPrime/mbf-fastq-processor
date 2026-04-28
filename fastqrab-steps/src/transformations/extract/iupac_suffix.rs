@@ -105,7 +105,6 @@ impl Step for IUPACSuffix {
         &self,
         mut block: FastQBlocksCombined,
         _input_info: &InputInfo,
-        _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         extract_region_tags(&mut block, self.segment, &self.out_label, |read| {

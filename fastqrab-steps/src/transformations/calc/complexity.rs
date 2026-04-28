@@ -59,7 +59,6 @@ impl Step for Complexity {
         &self,
         mut block: FastQBlocksCombined,
         _input_info: &InputInfo,
-        _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         extract_numeric_tags_plus_all(

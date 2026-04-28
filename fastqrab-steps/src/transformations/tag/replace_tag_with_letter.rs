@@ -37,7 +37,6 @@ impl Step for ReplaceTagWithLetter {
         &self,
         mut block: FastQBlocksCombined,
         _input_info: &InputInfo,
-        _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         block.apply_mut_with_tag(&self.in_label, |reads, tag_val| {

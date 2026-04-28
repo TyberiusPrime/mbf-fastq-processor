@@ -1235,6 +1235,7 @@ pub struct FastQBlocksCombined {
     pub output_tags: Option<Vec<DemultiplexTag>>, // used by Demultiplex
     pub tags: IndexMap<TagLabel, Vec<TagValue>>,
     pub is_final: bool,
+    block_no: usize,
     _force_private: PhantomData<u8>,
 }
 
@@ -1244,6 +1245,7 @@ impl FastQBlocksCombined {
         output_tags: Option<Vec<DemultiplexTag>>,
         tags: IndexMap<TagLabel, Vec<TagValue>>,
         is_final: bool,
+        block_no: usize,
     ) -> Self {
         assert!(
             !segments.is_empty(),
@@ -1254,10 +1256,14 @@ impl FastQBlocksCombined {
             output_tags,
             tags,
             is_final,
+            block_no,
             _force_private: PhantomData,
         }
     }
 
+    pub fn block_no(&self) -> usize {
+        self.block_no
+    }
     pub fn iter_segment_indices(&self, idx: SegmentIndexOrAll) -> Vec<usize> {
         match idx {
             SegmentIndexOrAll::All => (0..self.segments.len()).collect(),
@@ -1265,7 +1271,7 @@ impl FastQBlocksCombined {
         }
     }
 
-    /// create an empty one with the same options filled
+    /// create an empty one with the same options filled, and same block_no
     #[must_use]
     pub fn empty(&self) -> FastQBlocksCombined {
         FastQBlocksCombined {
@@ -1277,8 +1283,16 @@ impl FastQBlocksCombined {
             },
             tags: IndexMap::default(),
             is_final: self.is_final,
+            block_no: self.block_no,
             _force_private: PhantomData,
         }
+    }
+
+    #[must_use]
+    pub fn with_new_block_no(&self, block_no: usize) -> FastQBlocksCombined {
+        let mut res = self.clone();
+        res.block_no = block_no;
+        res
     }
 
     #[must_use]
@@ -2265,8 +2279,13 @@ mod test {
 
     #[test]
     fn test_fastq_block_combined_sanity_check_empty() {
-        let empty =
-            FastQBlocksCombined::new(vec![FastQBlock::empty()], None, Default::default(), false);
+        let empty = FastQBlocksCombined::new(
+            vec![FastQBlock::empty()],
+            None,
+            Default::default(),
+            false,
+            0,
+        );
         empty
             .sanity_check()
             .expect("sanity check should pass in test");
@@ -2292,6 +2311,7 @@ mod test {
             None,
             Default::default(),
             false,
+            0,
         );
         empty
             .sanity_check()
@@ -2327,6 +2347,7 @@ mod test {
             None,
             Default::default(),
             false,
+            0,
         );
         empty
             .sanity_check()
@@ -2370,6 +2391,7 @@ mod test {
             None,
             Default::default(),
             false,
+            0,
         );
         empty
             .sanity_check()
@@ -2421,6 +2443,7 @@ mod test {
             Some(vec![]),
             Default::default(),
             false,
+            0,
         );
         empty
             .sanity_check()

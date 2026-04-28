@@ -130,7 +130,6 @@ impl Step for Kmers {
         &self,
         mut block: FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
-        _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let kmer_db = self

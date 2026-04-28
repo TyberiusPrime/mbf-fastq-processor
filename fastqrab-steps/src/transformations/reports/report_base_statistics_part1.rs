@@ -67,7 +67,6 @@ impl Step for Box<_ReportBaseStatisticsPart1> {
         &self,
         block: FastQBlocksCombined,
         _input_info: &InputInfo,
-        _block_no: usize,
         demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         fn update_from_read(target: &mut BaseStatisticsPart1, read: &WrappedFastQRead) {

@@ -17,7 +17,6 @@ use fastqrab_config::{TagLabel, dna::TagValue};
 use fastqrab_io::io;
 
 pub struct WorkItem {
-    pub block_no: usize,
     pub block: io::FastQBlocksCombined,
     pub expected_read_count: Option<usize>,
     pub stage_index: usize,
@@ -25,7 +24,6 @@ pub struct WorkItem {
 
 #[derive(Clone)]
 pub struct BlockStatus {
-    pub block_no: usize,
     pub current_stage: usize,
     pub block: io::FastQBlocksCombined,
     pub expected_read_count: Option<usize>,
@@ -53,10 +51,10 @@ pub struct WorkpoolCoordinator {
     current_blocks_in_flight: usize, // that's 'within pipeline, stalled + currently being worked on.
     max_blocks_in_flight: usize,
 
-    incoming_rx: Option<Receiver<(usize, io::FastQBlocksCombined, Option<usize>)>>,
+    incoming_rx: Option<Receiver<(io::FastQBlocksCombined, Option<usize>)>>,
     todo_tx: Sender<WorkItem>,     //towards workers
     done_rx: Receiver<WorkResult>, //back from workers
-    output_tx: Sender<(usize, io::FastQBlocksCombined, Option<usize>)>,
+    output_tx: Sender<(io::FastQBlocksCombined, Option<usize>)>,
     output_done_rx: Receiver<usize>,
 
     report_collector: Arc<Mutex<Vec<transformations::FinalizeReportResult>>>,
@@ -76,10 +74,10 @@ impl WorkpoolCoordinator {
     pub fn new(
         stages: Vec<Stage>,
         max_blocks_in_flight: usize,
-        incoming_rx: Receiver<(usize, io::FastQBlocksCombined, Option<usize>)>,
+        incoming_rx: Receiver<(io::FastQBlocksCombined, Option<usize>)>,
         todo_tx: Sender<WorkItem>,     //towards workers
         done_rx: Receiver<WorkResult>, //back from workers
-        output_tx: Sender<(usize, io::FastQBlocksCombined, Option<usize>)>,
+        output_tx: Sender<(io::FastQBlocksCombined, Option<usize>)>,
         output_done_rx: Receiver<usize>,
 
         report_collector: Arc<Mutex<Vec<transformations::FinalizeReportResult>>>,
@@ -178,8 +176,8 @@ impl WorkpoolCoordinator {
                 select! {
                     recv(self.incoming_rx.as_ref().expect("Checked for someness just before")) -> msg => {
                         match msg {
-                            Ok((block_no, block, expected_read_count)) => {
-                                if self.process_incoming_block(block_no, block, expected_read_count).is_err() {
+                            Ok((block, expected_read_count)) => {
+                                if self.process_incoming_block(block.block_no(), block, expected_read_count).is_err() {
                                     // cov:excl-start
                                     break
                                     // cov:excl-stop
@@ -276,7 +274,6 @@ impl WorkpoolCoordinator {
 
         self.last_incoming_block = Some(block_no);
         let block_status = BlockStatus {
-            block_no,
             current_stage: 0,
             block,
             expected_read_count,
@@ -293,7 +290,7 @@ impl WorkpoolCoordinator {
             match Self::stage_can_take_block(
                 &self.stage_progress,
                 block_status.current_stage,
-                block_status.block_no,
+                block_status.block.block_no(),
             ) {
                 CanTake::Yes => {
                     // eprintln!("Sending block {} off to process stage {}", block_status.block_no, block_status.current_stage);
@@ -336,8 +333,8 @@ impl WorkpoolCoordinator {
     }
 
     pub fn send_block_to_workers(&mut self, block_status: BlockStatus) -> Result<()> {
+        let block_no = block_status.block.block_no();
         let work_item = WorkItem {
-            block_no: block_status.block_no,
             block: block_status.block,
             expected_read_count: block_status.expected_read_count,
             stage_index: block_status.current_stage,
@@ -346,16 +343,13 @@ impl WorkpoolCoordinator {
             Ok(())
         } else {
             // cov:excl-start
-            bail!(
-                "Failed to send work item for block {}",
-                block_status.block_no
-            );
+            bail!("Failed to send work item for block {}", block_no);
             // cov:excl-stop
         }
     }
 
     pub fn process_completed_work(&mut self, work_result: WorkResult) -> Result<()> {
-        let block_no = work_result.work_item.block_no;
+        let block_no = work_result.work_item.block.block_no();
         let stage_index = work_result.work_item.stage_index;
 
         // eprintln!(
@@ -379,7 +373,6 @@ impl WorkpoolCoordinator {
 
         // Create or update block status
         let mut block_status = BlockStatus {
-            block_no,
             current_stage: stage_index + 1,
             block: work_result.work_item.block,
             expected_read_count: work_result.work_item.expected_read_count,
@@ -421,7 +414,7 @@ impl WorkpoolCoordinator {
             match Self::stage_can_take_block(
                 &self.stage_progress,
                 block_status.current_stage,
-                block_status.block_no,
+                block_status.block.block_no(),
             ) {
                 CanTake::No => new_stalled.push(block_status),
                 CanTake::Yes => {
@@ -441,20 +434,14 @@ impl WorkpoolCoordinator {
     }
 
     fn output_block(&mut self, block_status: BlockStatus) -> Result<()> {
+        let block_no = block_status.block.block_no();
         if self
             .output_tx
-            .send((
-                block_status.block_no,
-                block_status.block,
-                block_status.expected_read_count,
-            ))
+            .send((block_status.block, block_status.expected_read_count))
             .is_err()
         {
             //cov:excl-start
-            bail!(
-                "Failed to send completed block {} to output",
-                block_status.block_no
-            );
+            bail!("Failed to send completed block {} to output", block_no);
             // cov:excl-stop
         }
         self.queue_stalled()
@@ -546,7 +533,7 @@ fn process_work_item(
         }
     }
 
-    let block_no = work_item.block_no;
+    let block_no = work_item.block.block_no();
     let expected_read_count = work_item.expected_read_count;
     let stage = &stages[stage_index];
 
@@ -646,10 +633,9 @@ fn process_work_item(
         let len_before = work_item.block.len();
 
         let block_tag_count = work_item.block.tags.len();
-        let result =
-            stage
-                .transformation
-                .apply(work_item.block, &input_info, block_no, demultiplex_info);
+        let result = stage
+            .transformation
+            .apply(work_item.block, &input_info, demultiplex_info);
 
         if let Ok(ref result) = result {
             let len_after = result.0.len();
@@ -718,7 +704,6 @@ fn process_work_item(
             }
             WorkResult {
                 work_item: WorkItem {
-                    block_no,
                     block: result_block,
                     expected_read_count,
                     stage_index,
@@ -729,12 +714,12 @@ fn process_work_item(
         }
         Err(e) => WorkResult {
             work_item: WorkItem {
-                block_no,
                 block: io::FastQBlocksCombined::new(
                     vec![io::FastQBlock::empty()],
                     None,
                     Default::default(),
                     false,
+                    block_no,
                 ),
                 expected_read_count,
                 stage_index,

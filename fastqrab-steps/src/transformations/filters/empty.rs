@@ -34,7 +34,6 @@ impl Step for Empty {
         &self,
         mut _block: FastQBlocksCombined,
         _input_info: &InputInfo,
-        _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         unreachable!("Should have been replaced before validation");

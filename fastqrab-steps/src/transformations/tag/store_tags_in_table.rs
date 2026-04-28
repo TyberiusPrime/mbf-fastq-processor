@@ -200,10 +200,9 @@ impl Step for StoreTagsInTable {
         &self,
         block: FastQBlocksCombined,
         input_info: &InputInfo,
-        block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        if block_no == 1 {
+        if block.block_no() == 1 {
             // first block, output header
 
             let tag_list = &self.final_in_labels;

@@ -89,7 +89,6 @@ impl Step for Box<_ReportDuplicateCount> {
         &self,
         block: FastQBlocksCombined,
         input_info: &InputInfo,
-        block_no: usize,
         demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         fn update_from_read(target: &mut DuplicateCountData, read: &WrappedFastQRead) {
@@ -111,7 +110,7 @@ impl Step for Box<_ReportDuplicateCount> {
         }
         // Initialize filters on first block using dynamic sizing
         let mut data_lock = self.data_per_segment.lock().expect("lock poisened");
-        if block_no == 1 {
+        if block.block_no() == 1 {
             let false_positive_probability = if self.debug_reproducibility {
                 0.1 // cov:excl-line
             } else {

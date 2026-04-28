@@ -86,7 +86,6 @@ impl Step for ReservoirSample {
         &self,
         block: FastQBlocksCombined,
         _input_info: &InputInfo,
-        _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let mut rng_lock = self.rng.as_ref().expect("rng not set in init").lock();

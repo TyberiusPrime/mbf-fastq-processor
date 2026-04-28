@@ -59,11 +59,7 @@ fn parse_and_send(
 
 fn parse_interleaved_and_send(
     readers: Vec<io::InputFile>,
-    combiner_output_tx: &crossbeam::channel::Sender<(
-        usize,
-        io::FastQBlocksCombined,
-        Option<usize>,
-    )>,
+    combiner_output_tx: &crossbeam::channel::Sender<(io::FastQBlocksCombined, Option<usize>)>,
     segment_count: usize,
     buffer_size: usize,
     input_thread_count: ThreadCount,
@@ -89,8 +85,13 @@ fn parse_interleaved_and_send(
         if !res.fastq_block.entries.is_empty() {
             let out_blocks = res.fastq_block.split_interleaved(segment_count);
             let out = (
-                block_no,
-                io::FastQBlocksCombined::new(out_blocks, None, IndexMap::default(), false),
+                io::FastQBlocksCombined::new(
+                    out_blocks,
+                    None,
+                    IndexMap::default(),
+                    false,
+                    block_no,
+                ),
                 expected_read_count,
             );
             block_no += 1; // the receiver verifies this!
@@ -106,8 +107,9 @@ fn parse_interleaved_and_send(
                 None,
                 IndexMap::default(),
                 true,
+                block_no,
             );
-            let _ = combiner_output_tx.send((block_no, final_block, expected_read_count));
+            let _ = combiner_output_tx.send((final_block, expected_read_count));
             break;
         }
     }
@@ -117,7 +119,7 @@ fn parse_interleaved_and_send(
 #[allow(clippy::needless_pass_by_value)]
 fn run_combiner_thread(
     raw_rx_readers: Vec<crossbeam::channel::Receiver<(io::FastQBlock, Option<usize>)>>,
-    combiner_output_tx: crossbeam::channel::Sender<(usize, io::FastQBlocksCombined, Option<usize>)>,
+    combiner_output_tx: crossbeam::channel::Sender<(io::FastQBlocksCombined, Option<usize>)>,
     largest_segment_idx: usize,
     error_collector: Arc<Mutex<Vec<String>>>,
 ) {
@@ -155,10 +157,14 @@ fn run_combiner_thread(
                     .iter()
                     .map(|_| io::FastQBlock::empty())
                     .collect();
-                let final_block =
-                    io::FastQBlocksCombined::new(empty_segments, None, Default::default(), true);
-                let _ = combiner_output_tx.send((
+                let final_block = io::FastQBlocksCombined::new(
+                    empty_segments,
+                    None,
+                    Default::default(),
+                    true,
                     block_no,
+                );
+                let _ = combiner_output_tx.send((
                     final_block,
                     //'will not have been set if we're suffering
                     // an early parse error
@@ -182,8 +188,7 @@ fn run_combiner_thread(
             return;
         }
         let out = (
-            block_no,
-            io::FastQBlocksCombined::new(blocks, None, Default::default(), false),
+            io::FastQBlocksCombined::new(blocks, None, Default::default(), false, block_no),
             *expected_read_count.get().expect("Should have been set"),
         );
         block_no += 1;
@@ -200,7 +205,7 @@ fn run_combiner_thread(
 #[allow(clippy::needless_pass_by_value)]
 fn run_benchmark_combiner_thread(
     first_block: io::FastQBlocksCombined,
-    combiner_output_tx: crossbeam::channel::Sender<(usize, io::FastQBlocksCombined, Option<usize>)>,
+    combiner_output_tx: crossbeam::channel::Sender<(io::FastQBlocksCombined, Option<usize>)>,
     molecule_count: usize,
 ) {
     let mut block_no = 1;
@@ -219,7 +224,7 @@ fn run_benchmark_combiner_thread(
     }
 
     while molecules_sent < molecule_count {
-        let mut cloned_block = first_block.clone();
+        let mut cloned_block = first_block.with_new_block_no(block_no);
         cloned_block.is_final = false;
 
         // we don't worry about sending more reads than requested
@@ -232,7 +237,7 @@ fn run_benchmark_combiner_thread(
             .unwrap_or(0);
         molecules_sent += current_block_size;
 
-        match combiner_output_tx.send((block_no, cloned_block, Some(molecule_count))) {
+        match combiner_output_tx.send((cloned_block, Some(molecule_count))) {
             Ok(()) => {}
             Err(_) => {
                 // downstream hung up
@@ -259,14 +264,15 @@ fn run_benchmark_combiner_thread(
         None,
         Default::default(),
         true,
+        block_no,
     );
-    let _ = combiner_output_tx.send((block_no, final_block, Some(molecule_count)));
+    let _ = combiner_output_tx.send((final_block, Some(molecule_count)));
 }
 
 #[allow(clippy::needless_pass_by_value)]
 fn run_benchmark_interleaved_thread(
     first_block: io::FastQBlock,
-    combiner_output_tx: crossbeam::channel::Sender<(usize, io::FastQBlocksCombined, Option<usize>)>,
+    combiner_output_tx: crossbeam::channel::Sender<(io::FastQBlocksCombined, Option<usize>)>,
     segment_count: usize,
     molecule_count: usize,
 ) {
@@ -287,8 +293,7 @@ fn run_benchmark_interleaved_thread(
         let out_blocks = out_blocks.clone();
 
         let out = (
-            block_no,
-            io::FastQBlocksCombined::new(out_blocks, None, Default::default(), false),
+            io::FastQBlocksCombined::new(out_blocks, None, Default::default(), false, block_no),
             Some(molecule_count),
         );
 
@@ -315,8 +320,9 @@ fn run_benchmark_interleaved_thread(
         None,
         Default::default(),
         true,
+        block_no,
     );
-    let _ = combiner_output_tx.send((block_no, final_block, Some(molecule_count)));
+    let _ = combiner_output_tx.send((final_block, Some(molecule_count)));
 }
 
 pub struct RunStage0 {
@@ -592,9 +598,7 @@ impl RunStage1 {
                         let segment_order_len = segment_order.len();
                         let input_threads = Vec::new();
                         let (combiner_output_tx, combiner_output_rx) =
-                            bounded::<(usize, io::FastQBlocksCombined, Option<usize>)>(
-                                channel_size,
-                            );
+                            bounded::<(io::FastQBlocksCombined, Option<usize>)>(channel_size);
 
                         // Read the first block
                         let mut parser = ChainedParser::new(
@@ -635,9 +639,7 @@ impl RunStage1 {
                     StructuredInput::Segmented { .. } => {
                         let input_threads = Vec::new();
                         let (combiner_output_tx, combiner_output_rx) =
-                            bounded::<(usize, io::FastQBlocksCombined, Option<usize>)>(
-                                channel_size,
-                            );
+                            bounded::<(io::FastQBlocksCombined, Option<usize>)>(channel_size);
 
                         // Read the first block from each segment
                         let mut first_blocks = Vec::new();
@@ -679,6 +681,7 @@ impl RunStage1 {
                             None,
                             Default::default(),
                             false,
+                            0,
                         );
 
                         let combiner_thread = thread::Builder::new()
@@ -708,7 +711,7 @@ impl RunStage1 {
                     let segment_order_len = segment_order.len();
                     let input_threads = Vec::new();
                     let (combiner_output_tx, combiner_output_rx) =
-                        bounded::<(usize, io::FastQBlocksCombined, Option<usize>)>(channel_size);
+                        bounded::<(io::FastQBlocksCombined, Option<usize>)>(channel_size);
                     let options = input_options.clone();
                     let combiner_thread = thread::Builder::new()
                         .name("InterleavedReader".into())
@@ -777,7 +780,7 @@ impl RunStage1 {
                         raw_rx_readers.push(raw_rx_read);
                     }
                     let (combiner_output_tx, combiner_output_rx) =
-                        bounded::<(usize, io::FastQBlocksCombined, Option<usize>)>(channel_size);
+                        bounded::<(io::FastQBlocksCombined, Option<usize>)>(channel_size);
 
                     {
                         let error_collector = error_collector.clone();
@@ -825,8 +828,7 @@ pub struct RunStage2 {
 
     input_threads: Vec<thread::JoinHandle<()>>,
     combiner_thread: thread::JoinHandle<()>,
-    combiner_output_rx:
-        crossbeam::channel::Receiver<(usize, io::FastQBlocksCombined, Option<usize>)>,
+    combiner_output_rx: crossbeam::channel::Receiver<(io::FastQBlocksCombined, Option<usize>)>,
 
     error_collector: Arc<Mutex<Vec<String>>>,
     allow_overwrite: bool,
@@ -948,8 +950,7 @@ pub struct RunStage3 {
     input_threads: Vec<thread::JoinHandle<()>>,
     combiner_thread: thread::JoinHandle<()>,
     stage_threads: Vec<thread::JoinHandle<()>>,
-    stage_to_output_channel:
-        crossbeam::channel::Receiver<(usize, io::FastQBlocksCombined, Option<usize>)>,
+    stage_to_output_channel: crossbeam::channel::Receiver<(io::FastQBlocksCombined, Option<usize>)>,
     report_collector: Arc<Mutex<Vec<FinalizeReportResult>>>,
     error_collector: Arc<Mutex<Vec<String>>>,
     output_done_tx: crossbeam::channel::Sender<usize>,
@@ -1057,7 +1058,8 @@ impl RunStage3 {
                         return;
                     }
                     let mut output_files = output_files.expect("Output_file was error?");
-                    while let Ok((block_no, block, _expected_read_count)) = input_channel.recv() {
+                    while let Ok((block, _expected_read_count)) = input_channel.recv() {
+                        let block_no = block.block_no();
                         //resort out of order blocks into the right order.
                         buffer.push((block_no, block));
                         loop {

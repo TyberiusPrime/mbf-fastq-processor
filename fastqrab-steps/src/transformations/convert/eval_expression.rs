@@ -200,7 +200,6 @@ impl Step for Box<EvalExpression> {
         &self,
         mut block: FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
-        _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         // Parse and compile the expression for better performance

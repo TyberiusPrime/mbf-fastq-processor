@@ -9827,6 +9827,17 @@ fn test_cases_x_single_step_x_hamming_x_basic_correction_too_close_but_same_labe
 
 #[test]
 
+fn test_cases_x_single_step_x_hamming_x_by_majority_x_simple() {
+    println!("Test case is in: test_cases/single_step/hamming/by_majority/simple");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/hamming/by_majority/simple"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_hamming_x_input_label_is_output_label() {
     println!("Test case is in: test_cases/single_step/hamming/input_label_is_output_label");
     run_test(

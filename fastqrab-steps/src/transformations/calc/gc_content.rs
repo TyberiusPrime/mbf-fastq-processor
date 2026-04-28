@@ -44,7 +44,6 @@ impl Step for GCContent {
         &self,
         _block: FastQBlocksCombined,
         _input_info: &InputInfo,
-        _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         bail!("ExtractGCContent is converted into ExtractBaseContent during expansion")

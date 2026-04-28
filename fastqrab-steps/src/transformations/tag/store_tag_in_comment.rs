@@ -160,7 +160,6 @@ impl Step for StoreTagInComment {
         &self,
         mut block: FastQBlocksCombined,
         _input_info: &InputInfo,
-        _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let error_encountered = std::cell::RefCell::new(Option::<String>::None);

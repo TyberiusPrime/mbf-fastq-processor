@@ -31,7 +31,6 @@ impl Step for ValidateReadNamesPrintable {
         &self,
         block: FastQBlocksCombined,
         _input_info: &InputInfo,
-        _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let reads_in_block = block.segments[0].entries.len();

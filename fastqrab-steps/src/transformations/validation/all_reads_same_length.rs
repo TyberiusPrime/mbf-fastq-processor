@@ -66,7 +66,6 @@ impl Step for ValidateAllReadsSameLength {
         &self,
         block: FastQBlocksCombined,
         _input_info: &InputInfo,
-        _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<(FastQBlocksCombined, bool)> {
         match &self.source {

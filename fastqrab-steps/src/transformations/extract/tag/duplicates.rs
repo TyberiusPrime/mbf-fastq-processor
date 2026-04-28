@@ -88,11 +88,10 @@ impl Step for Duplicates {
         &self,
         mut block: FastQBlocksCombined,
         input_info: &InputInfo,
-        block_no: usize,
         demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         // Initialize filters on first block using dynamic sizing
-        if block_no == 1 {
+        if block.block_no() == 1 {
             let seed = self.seed.unwrap_or(42);
 
             let capacity = calculate_filter_capacity(

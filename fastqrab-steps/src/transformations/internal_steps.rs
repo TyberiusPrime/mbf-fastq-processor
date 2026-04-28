@@ -20,10 +20,9 @@ impl Step for Box<_InternalDelay> {
         &self,
         block: FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
-        block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let seed = block_no; //needs to be reproducible, but different for each block
+        let seed = block.block_no(); //needs to be reproducible, but different for each block
         let seed_bytes = seed.to_le_bytes();
 
         // Extend the seed_bytes to 32 bytes
@@ -63,7 +62,6 @@ impl Step for Box<_InternalReadCount> {
         &self,
         block: FastQBlocksCombined,
         _input_info: &InputInfo,
-        _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         self.count.fetch_add(
@@ -101,7 +99,6 @@ impl Step for Box<_InduceFailure> {
         &self,
         _block: FastQBlocksCombined,
         _input_info: &InputInfo,
-        _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         bail!("Induced failure: {}", self.msg);

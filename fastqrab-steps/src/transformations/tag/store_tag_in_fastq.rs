@@ -180,7 +180,6 @@ impl Step for StoreTagInFastQ {
         &self,
         block: FastQBlocksCombined,
         _input_info: &InputInfo,
-        _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<(FastQBlocksCombined, bool)> {
         let mut error_encountered = None;

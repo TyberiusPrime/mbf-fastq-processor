@@ -163,7 +163,6 @@ impl Step for ConcatTags {
         &self,
         mut block: FastQBlocksCombined,
         _input_info: &InputInfo,
-        _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let num_reads = block.segments[0].entries.len();
