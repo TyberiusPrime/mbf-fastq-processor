@@ -20,7 +20,10 @@
     out_label = 'lane'
 
 [[step]]
-  action ="AssignToReference"
+  action ="HammingCorrect"
+    output = 'label'
+    on_tie = 'fail'
+    on_no_match = 'remove'
   barcodes = "lanes"
   in_label="lane"
   out_label="ref_lane"

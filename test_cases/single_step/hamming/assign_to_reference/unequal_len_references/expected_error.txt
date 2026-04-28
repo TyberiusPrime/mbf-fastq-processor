@@ -1,10 +1,13 @@
+Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
-24 │ [barcodes.b]
-25 │   from_file.filename = 'input_reference.fa'
+27 │ [barcodes.b]
+28 │   from_file.filename = 'input_reference.fa'
    ┆            ┬
    ┆            │
    ┆            ╰──────────────────────────────── Barcodes of different lengths
 ───╯
 Hint: All barcodes in one section must have the same length. Observed lengths: [49, 50]
+
+

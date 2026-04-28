@@ -10,11 +10,11 @@ Error 1/1
 29 │     in_label = 'barcode_extracted'
    ┆                ─────────┬─────────
    ┆                         │
-   ┆                         ╰────────── The same as outlabel
+   ┆                         ╰────────── The same as out_label
 30 │     out_label = 'barcode_extracted'
    ┆                 ─────────┬─────────
    ┆                          │
-   ┆                          ╰────────── The same as inlabel
+   ┆                          ╰────────── The same as in_label
 ───╯
 Hint: Please use different tag names for the input and output labels to avoid overwriting the source tag.
       See https://doc_url.example/version-stripped-from-test/docs/redirects/HammingCorrect

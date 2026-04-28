@@ -118,11 +118,11 @@ BAM output cannot be streamed to stdout and requires `output_hash_uncompressed =
 
 ### Merge demultiplexed
 
-When assigning reads to references using,  you might wish to produce a sorted BAM output file.
+When assigning reads to references using, you might wish to produce a sorted BAM output file.
 
 To do so, you need to 
-* create a tag with reference names 
-    ([AssignToReference]({{< relref "docs/reference/tag-steps/using/AssignToReference.md" >}})
+* create a tag with reference names  using
+    [HammingCorrect]({{< relref "docs/redirects/HammingCorrect.md" >}})
 * Demultiplex on that tag
 * set the output to BAM
 * store the tag in references using `output.bam.tag_to_reference.tag`

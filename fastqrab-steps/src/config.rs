@@ -1466,19 +1466,6 @@ impl PartialConfig {
                                         break;
                                     }
                                 }
-                            } else if let Some(PartialTransformation::AssignToReference(
-                                assign_config,
-                            )) = step.value.as_ref()
-                            {
-                                if let Some(assign_config) = assign_config.toml_value.value.as_ref()
-                                {
-                                    if let Some(barcodes_name) = assign_config.barcodes.as_ref()
-                                        && barcodes_name == barcode_section_name
-                                    {
-                                        found_demultiplex_step = true;
-                                        break;
-                                    }
-                                }
                             }
                         }
                         // Also check if output's tag_to_reference uses this barcode section

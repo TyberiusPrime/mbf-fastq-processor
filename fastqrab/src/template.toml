@@ -565,21 +565,6 @@
 #    comment_separator = '|' # (optional) char to separate comments
 #    region_separator = '_' # (optional) char to separate regions in a tag, if it has multiple
 
-# ==== AssignToReference ====
-## Assign each query sequence to the closest entry in a named reference database.
-## The reference is a FASTA or FASTQ file (optionally compressed).
-## The matched reference name is stored as a string tag.
-## When no entry falls within max_hamming_distance the tag is set to Missing.
-#
-# [[step]]
-#    action = "AssignToReference"
-#    in_label = "query_seq"   # tag holding the query (String or Location)
-#    out_label = "ref_name"   # output string tag with the matched reference name
-#    max_hamming_distance = 2     # 0 for exact match only
-#    barcodes = "barcode_key" # which barcodes to assign to
-#[barcodes.barcode_key]
-#    from_file.filename = "reference.fa"   # FASTA/FASTQ reference file
-
 
 # ==== HammingCorrect ====
 ## Correct a tag to one of a predefined set of 'barcodes' using closest hamming distance.
@@ -590,8 +575,9 @@
 #    out_label = "my_corrected_tag"
 #    barcodes = "mybarcodelist"
 #    max_hamming_distance = 1
+#    output = 'barcodes' # barcode | label
 #    on_no_match = "remove" # 'remove', 'empty', 'keep'
-#    on_tie = "remove" # 'remove', 'empty', 'keep', 'first', 'first_strict', 'fail',
+#    on_tie = "remove" # 'remove', 'empty', 'keep', 'first', 'first_strict', 'fail', 'by_majority'
 #
 #[barcodes.mybarcodelist]
 #    "AAAA" = "ignored" # only read when demultiplexing
@@ -601,6 +587,17 @@
 ## * remove: Remove the hit (location and sequence), useful for FilterByTag later.
 ## * keep: Keep the original tag (and location)
 ## * empty: Keep the original location, but set the tag to empty.
+
+## on_tie controls what happens with ties:
+## * remove: Remove the hit (location and sequence), useful for FilterByTag later.
+## * keep: Keep the original tag (and location)
+## * empty: Keep the original location, but set the tag to empty.
+## first: just use the alphabetically first barcode
+## first_strict: use the alphabetically first barcode, but only if they labels (or their prefixes up to name_split_character) of all tied barcodes matches.
+## fail: complain and end the run
+## by_majority: Correct towards predominant barcodes (see full documentation)
+
+
 
 
 # ==== Lowercase ====

@@ -2,17 +2,17 @@ Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
-35 │ [output]
-36 │     prefix = 'output'
-37 │     output = []
+38 │ [output]
+39 │     prefix = 'output'
+40 │     output = []
    ┆              ─┬
    ┆               │
    ┆               ╰─ These output segments are empty
    ┆
-41 │     [output.bam]
-42 │         tag_to_reference.references_from_barcodes = "barcodes"
-43 │         tag_to_reference.tag="refs"
-44 │         merge_demultiplexed = true
+44 │     [output.bam]
+45 │         tag_to_reference.references_from_barcodes = "barcodes"
+46 │         tag_to_reference.tag="refs"
+47 │         merge_demultiplexed = true
    ┆                               ──┬─
    ┆                                 │
    ┆                                 ╰── Incompatible with empty outputs

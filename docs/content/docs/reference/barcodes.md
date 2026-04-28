@@ -7,9 +7,8 @@ title: "Barcodes section"
 
 Barcode tables supply the sequence-to-sample-name mappings used by
 [Demultiplex]({{< relref "docs/reference/Demultiplex.md" >}}),
-[HammingCorrect]({{< relref "docs/reference/tag-steps/using/HammingCorrect.md" >}}
 and 
-[AssignToReference]({{< relref "docs/reference/tag-steps/using/AssignToReference.md" >}})
+[HammingCorrect]({{< relref "docs/reference/tag-steps/using/HammingCorrect.md" >}}
 ).
 
 Each table is an independent named dictionary.  The name is chosen by the

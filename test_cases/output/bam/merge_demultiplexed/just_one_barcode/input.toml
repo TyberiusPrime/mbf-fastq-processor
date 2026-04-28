@@ -13,7 +13,10 @@
 
 
 [[step]]
-  action = "AssignToReference"
+  action = "HammingCorrect"
+    output = 'label'
+    on_tie = 'fail'
+    on_no_match = 'remove'
   barcodes = 'barcodes'
   in_label='barcode'
   out_label='refs'

@@ -1,8 +1,9 @@
+Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
-24 │ [barcodes.bc]
-25 │     from_file.filename =  'input_reference.fa'
+27 │ [barcodes.bc]
+28 │     from_file.filename =  'input_reference.fa'
    ┆              ┬
    ┆              │
    ┆              ╰───────────────────────────────── Error reading from input_reference.fa
@@ -12,3 +13,5 @@ Hint: open_input_file
       Caused by:
           0: Could not open file "input_reference.fa"
           1: error opening file "input_reference.fa": No such file or directory (os error 2)
+
+

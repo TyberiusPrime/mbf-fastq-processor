@@ -1,19 +1,20 @@
+Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
-20 │ [[step]]
-21 │     action = 'Demultiplex'
-22 │     in_label = 'refs'
+23 │ [[step]]
+24 │     action = 'Demultiplex'
+25 │     in_label = 'refs'
    ┆                ───┬──
    ┆                   │
    ┆                   ╰─── first use for this label for demultiplexing
    ┆
-26 │ [[step]]
-27 │     action = 'Demultiplex'
+29 │ [[step]]
+30 │     action = 'Demultiplex'
    ┆              ──────┬──────
    ┆                    │
    ┆                    ╰─────── In this step
-28 │     in_label = 'refs'
+31 │     in_label = 'refs'
    ┆                ───┬──
    ┆                   │
    ┆                   ╰─── 2nd use of this label for demultiplexing

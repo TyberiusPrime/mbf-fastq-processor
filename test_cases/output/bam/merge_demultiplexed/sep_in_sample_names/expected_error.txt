@@ -1,15 +1,16 @@
+Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
-20 │ [[step]]
-21 │     action = 'Demultiplex'
+23 │ [[step]]
+24 │     action = 'Demultiplex'
    ┆              ──────┬──────
    ┆                    │
    ┆                    ╰─────── In this step
    ┆
-22 │     in_label = 'refs'
-23 │     output_unmatched = true
-24 │     barcodes = 'barcodes'
+25 │     in_label = 'refs'
+26 │     output_unmatched = true
+27 │     barcodes = 'barcodes'
    ┆                          ┬
    ┆                          │
    ┆                          ╰─ Invalid barcode name found
@@ -17,3 +18,7 @@ Error 1/1
 Hint: Barcode names must not contain the output.ix_separator '_'
       Barcode name in question: 'sample_1'
       Change the output.ix_separator in your config or remove it from the barcode name.
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/Demultiplex
+      Or run: `fastqrab template Demultiplex` for more information.
+
+

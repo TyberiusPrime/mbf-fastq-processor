@@ -2,10 +2,10 @@ Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
-34 │     [output.bam]
-35 │         tag_to_reference.references_from_barcodes = "barcodes"
-36 │         tag_to_reference.tag="refs"
-37 │         merge_demultiplexed = true
+37 │     [output.bam]
+38 │         tag_to_reference.references_from_barcodes = "barcodes"
+39 │         tag_to_reference.tag="refs"
+40 │         merge_demultiplexed = true
    ┆                               ──┬─
    ┆                                 │
    ┆                                 ╰── No Demultiplex step found that had in_label = refs

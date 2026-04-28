@@ -1275,32 +1275,10 @@ Count tag occurrence frequencies.
 
 ## Barcode Correction & Demultiplexing
 
-### AssignToReference
-
-Assign each query sequence to the closest entry in a named FASTA/FASTQ reference
-database using Hamming distance.  Outputs the reference sequence name as a string tag.
-When no match is found within `max_hamming_distance`, the tag is set to Missing.
-
-**USE AFTER**: ExtractRegion (to isolate the region to look up)
-**USE BEFORE**: FilterByTag (to discard unassigned reads), StoreTagInComment
-
-```toml
-[[step]]
-    action = 'AssignToReference'
-    in_label = 'query_seq'      # TYPE: existing string/location tag, REQUIRED
-    out_label = 'ref_name'      # TYPE: string tag, REQUIRED
-    max_hamming_distance = 2    # TYPE: u32, REQUIRED – 0 for exact match only
-    barcodes = 'barcode_key'    # TYPE: String, REQUIRED, must match key of barcode section
-
-[barcodes.barcode_key]
-    from_file.filename =  'reference.fa'  # TYPE: path, REQUIRED – FASTA or FASTQ, plain or gzip
-    from_file.read_comment_character = ' ' # TYPE: char, optional, truncate reads at this character if present
-
-```
 
 ### HammingCorrect
 
-Correct barcodes using Hamming distance.
+Correct barcodes using Hamming distance. Output corrected barcode, or barcode label.
 
 **USE BEFORE**: Demultiplex or FilterByTag
 

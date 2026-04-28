@@ -31,7 +31,10 @@
 
 
 [[step]]
-    action = 'AssignToReference'
+    action = 'HammingCorrect'
+    output = 'label'
+    on_tie = 'fail'
+    on_no_match = 'remove'
     in_label = 'query_seq'
     out_label = 'ref_name'
     barcodes = 'ref_barcodes'

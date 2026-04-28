@@ -80,5 +80,5 @@ Notes:
 Correcting a tag for hamming distance is a separate step. 
 See [HammingCorrect]({{< relref "docs/reference/tag-steps/using/HammingCorrect.md" >}}).
 
-Similarity, you can use [AssignToReference]({{< relref "docs/redirects/AssignToReference.md" >}}) 
-if you want to store the lookup's result's in a tag.
+You can also use [HammingCorrect]({{< relref "docs/reference/tag-steps/using/HammingCorrect.md" >}}).
+if you want to assign a barcodes labels (store the lookup's result's in a tag).

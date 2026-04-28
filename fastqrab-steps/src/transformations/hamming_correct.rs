@@ -54,9 +54,10 @@ pub struct HammingCorrect {
 #[tpd]
 #[derive(Debug, JsonSchema, Default)]
 pub enum HammingOutput {
-    #[tpd(alias = "DNA")]
+    #[tpd(alias = "DNA", alias = "barcodes")]
     #[default]
     Barcode,
+    #[tpd(alias = "labels")]
     Label,
 }
 
@@ -82,28 +83,17 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
             && out_label == in_label
         {
             let spans = vec![
-                (self.in_label.span(), "The same as outlabel".to_string()),
-                (self.out_label.span(), "The same as inlabel".to_string()),
+                (self.in_label.span(), "The same as out_label".to_string()),
+                (self.out_label.span(), "The same as in_label".to_string()),
             ];
             self.out_label.state = TomlValueState::Custom { spans };
             self.out_label.help =
                 Some("Please use different tag names for the input and output labels to avoid overwriting the source tag.".to_string())
                 ;
         }
-        self.max_hamming_distance.verify(|v| {
-            if *v == 0 {
-                Err(ValidationFailure::new(
-                    "Must be greater than 0 to perform correction",
-                    Some("Leave off the HammingCorrect step if no correction is desired.\nIf you want to filter by presence in another file, use TagOtherFile + FilterByTag"),
-                ))
-            } else {
-                Ok(())
-            }
-        });
-
+        //0 for max_hamming_distance is a perfectly valid value if you want to use it as a lookup
         if let Some(barcodes_to_use) = self.barcodes.as_ref()
-            && let Some(barcode_data) = parent.barcodes.as_ref()
-            && let Some(barcodes_data) = barcode_data
+            && let Some(Some(barcodes_data)) = parent.barcodes.as_ref()
         {
             match barcodes_data.map.get(barcodes_to_use) {
                 Some(barcodes_section) => {
@@ -133,10 +123,18 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
                 }
             }
         } else {
+            let barcodes_empty = if let Some(Some(barcode_data)) = parent.barcodes.as_ref() {
+                barcode_data.keys.is_empty() 
+                } else {
+                    matches!(parent.barcodes.as_ref(), Some(None))
+            };
+        if barcodes_empty 
+        {
             return Err(ValidationFailure::new(
                 "HammingCorrect step requires a barcodes section to be defined in the config.",
                 Some(&format!("See {}", crate::link_docs("barcodes"))),
             ));
+        }
         }
 
         if let Some(OnTie::ByMajority) = self.on_tie.as_ref() {
@@ -217,7 +215,11 @@ impl TagUser for PartialTaggedVariant<PartialHammingCorrect> {
     ) -> Option<TagUsageInfo<'_>> {
         if let Some(inner) = self.toml_value.value.as_mut() {
             Some(TagUsageInfo {
-                declared_tag: inner.out_label.to_declared_tag(TagValueType::Location),
+                declared_tag: inner.out_label.to_declared_tag(
+                    match inner.output.as_ref().unwrap_or(&HammingOutput::Barcode) {
+                        HammingOutput::Barcode  =>TagValueType::Location,
+                        HammingOutput::Label => TagValueType::String
+                    }),
                 used_tags: vec![
                     inner
                         .in_label
@@ -403,7 +405,6 @@ impl Step for HammingCorrect {
         let output_barcode = matches!(self.output, HammingOutput::Barcode);
         for (read_no_in_block, (input_tag, hit)) in input_tags.iter().zip(hamming_hits).enumerate()
         {
-            //dbg!(read_no_in_block, input_tag, &hit, self.on_no_match, self.on_tie);
             output_hits.push(match hit {
                 None => TagValue::Missing,
                 Some(hit) => {
@@ -418,7 +419,7 @@ impl Step for HammingCorrect {
                                 OnNoMatch::Empty => {
                                     // Create hit with empty sequence
                                     if was_location && output_barcode {
-                                        TagValue::Location(Hits(vec![])) 
+                                        TagValue::Location(Hits(vec![]))
                                     }
                                     else {
                                         TagValue::String("".into())
@@ -443,6 +444,7 @@ impl Step for HammingCorrect {
                             self.output(matched_seq, input_tag, output_barcode)
                         }
                         MatchResult::Tie(items) => {
+
                             match self.on_tie {
                                 OnTie::Remove => TagValue::Missing,
                                 OnTie::Empty =>  {
@@ -457,20 +459,8 @@ impl Step for HammingCorrect {
                                     self.output(items[0].0, input_tag, output_barcode)
                                 }
                                 OnTie::FirstStrict => {
-                                    let all_the_same = match self.name_split_character {
-                                        Some(split_char) => {
-                                            let ref_name = items[0].1
-                                                .splitn(2, |&c| c == split_char)
-                                                .next()
-                                                .unwrap_or(&items[0].1);
-                                            items.iter().all(|(_seq, name)| {
-                                            name
-                                                .splitn(2, |&c| c == split_char)
-                                                .next()
-                                                .unwrap_or(&name) == ref_name
-                                        })},
-                                        None => items.iter().all(|(_seq, name)| *name == items[0].1)
-                                    };
+                                    //self.name_split_character splitting happens in match
+                                    let all_the_same = items.iter().all(|(_seq, name)| *name == items[0].1);
                                     if all_the_same {
                                         self.output(items[0].0, input_tag, output_barcode)
                                     } else {

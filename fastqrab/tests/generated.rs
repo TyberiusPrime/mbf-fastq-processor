@@ -9515,6 +9515,17 @@ fn test_cases_x_single_step_x_forget_tags_x_set_two_forget_one_filter_one() {
 
 #[test]
 
+fn test_cases_x_single_step_x_hamming_x_0_distance_is_ok() {
+    println!("Test case is in: test_cases/single_step/hamming/0_distance_is_ok");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/hamming/0_distance_is_ok"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_hamming_x_assign_to_reference_x_basic() {
     println!("Test case is in: test_cases/single_step/hamming/assign_to_reference/basic");
     run_test(
@@ -9861,17 +9872,6 @@ fn test_cases_x_single_step_x_hamming_x_reference_not_enough_hamming_distance_bu
         std::path::Path::new(
             "../test_cases/single_step/hamming/reference_not_enough_hamming_distance_but_same_seq",
         ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_hamming_x_require_larger_0() {
-    println!("Test case is in: test_cases/single_step/hamming/require_larger_0");
-    run_test(
-        std::path::Path::new("../test_cases/single_step/hamming/require_larger_0"),
         "input.toml",
         1,
     );
