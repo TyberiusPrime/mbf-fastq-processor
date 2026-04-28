@@ -26,6 +26,7 @@ pub(crate) mod edits;
 pub(crate) mod extract;
 pub(crate) mod filters;
 pub(crate) mod hamming_correct;
+pub(crate) mod hamming_exact_counter;
 mod internal_steps;
 pub(crate) mod prelude;
 pub(crate) mod reports;
@@ -360,6 +361,7 @@ pub enum Transformation {
     //
     Demultiplex(demultiplex::Demultiplex),
     HammingCorrect(hamming_correct::HammingCorrect),
+    _HammingExactCounter(hamming_exact_counter::HammingExactCounter),
     //
     #[schemars(skip)]
     _InternalDelay(Box<_InternalDelay>),

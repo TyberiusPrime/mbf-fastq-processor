@@ -1,0 +1,34 @@
+[input]
+  r1 = 'input_read1.fasta'
+  options.fasta_fake_quality ='C'
+
+[output]
+  prefix = 'output'
+  format = 'None'
+
+[[step]]
+  action = 'ExtractRegion'
+  source = 'r1'
+  start = 0
+  len = 4
+  anchor ='left'
+  out_label='bc_raw'
+
+
+[[step]]
+  action = 'HammingCorrect'
+  in_label = 'bc_raw'
+  out_label = 'bc_corr'
+  max_hamming_distance=1
+  on_tie = 'ByMajority'
+  on_no_match = 'Remove'
+  barcodes = 'barcodes'
+  by_majority_threshold = 1.1
+
+[barcodes.barcodes]
+  AGTA= 'two'
+  AGTC = 'one'
+
+
+[[step]]
+  action = "StoreTagsInTable"

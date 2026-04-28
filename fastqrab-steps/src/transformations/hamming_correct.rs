@@ -1,8 +1,9 @@
-use std::sync::Condvar;
+use std::sync::atomic::Ordering;
 
 use hamming_resonate::HammingResonator;
 use indexmap::IndexMap;
 
+use super::hamming_exact_counter::MajorityData;
 use crate::transformations::prelude::*;
 use fastqrab_config::tpd_adapt_u8_from_byte_or_char;
 use fastqrab_dna::dna::init_hamming_resonator;
@@ -31,8 +32,8 @@ pub struct HammingCorrect {
     /// What to do when more than one match an the same distance is found
     pub on_tie: OnTie,
 
-    pub by_majority_min_molecules_to_start: Option<usize>,
-    pub by_majority_threshold: Option<f64>,
+    pub by_majority_min_molecules_to_start: usize,
+    pub by_majority_threshold: f64,
 
     /// names are considered identical if they match up to the first name_split_character
     /// for must-have-hamming-distance considerations
@@ -49,7 +50,7 @@ pub struct HammingCorrect {
 
     #[tpd(skip)]
     #[schemars(skip)]
-    majority: Option<Arc<Mutex<MajorityData>>>,
+    pub majority_data: Option<Arc<MajorityData>>,
 }
 
 #[tpd]
@@ -60,14 +61,6 @@ pub enum HammingOutput {
     Barcode,
     #[tpd(alias = "labels")]
     Label,
-}
-
-#[derive(Debug)]
-struct MajorityData {
-    barcode_counts: IndexMap<BString, usize>,
-    threshold: f64,
-    reads_still_needed: usize,
-    barrier: Arc<(Mutex<bool>, Condvar)>,
 }
 
 impl VerifyIn<PartialConfig> for PartialHammingCorrect {
@@ -136,25 +129,21 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
                 ));
             }
         }
-        self.by_majority_min_molecules_to_start.or(Some(1_000_000));
-        self.by_majority_threshold.or(Some(0.975));
+        self.by_majority_min_molecules_to_start.or(1_000_000);
+        self.by_majority_threshold.or(0.975);
+
+        self.by_majority_threshold.verify(|x| {
+            if *x <= 0.0 || *x > 1.0 {
+                Err(ValidationFailure::new(
+                    "Must be > 0 <= 1".to_string(),
+                    Some("Supply a valid fraction between [0..1)".to_string()),
+                ))
+            } else {
+                Ok(())
+            }
+        });
 
         if let Some(OnTie::ByMajority) = self.on_tie.as_ref() {
-            let majority = MajorityData {
-                barcode_counts: IndexMap::new(),
-                threshold: *self
-                    .by_majority_threshold
-                    .as_ref()
-                    .and_then(|x| x.as_ref())
-                    .expect("just set"),
-                reads_still_needed: *self
-                    .by_majority_min_molecules_to_start
-                    .as_ref()
-                    .and_then(|x| x.as_ref())
-                    .expect("just set"),
-                barrier: Arc::new((Mutex::new(false), Condvar::new())),
-            };
-
             let blocks_in_flight: usize = parent
                 .options
                 .as_ref()
@@ -167,7 +156,11 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
                 .and_then(|options| options.block_size.as_ref())
                 .map(|x| *x)
                 .unwrap_or_else(fastqrab_config::default_block_size);
-            if blocks_in_flight * reads_per_block < majority.reads_still_needed {
+            let reads_wanted = *self
+                .by_majority_min_molecules_to_start
+                .as_ref()
+                .expect("just set above");
+            if blocks_in_flight * reads_per_block < reads_wanted {
                 return Err(ValidationFailure::new(
                     "Not enough reads 'in flight' for ByMajority".to_string(),
                     Some(format!(
@@ -178,14 +171,22 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
                     Having a total number of reads below {reads_still_needed} is not a problem,\n\
                     ByMajority will simply use all reads.",
                         reads_available = blocks_in_flight * reads_per_block,
-                        reads_still_needed = majority.reads_still_needed
+                        reads_still_needed = reads_wanted
                     )),
                 ));
             }
-            self.majority = Some(Some(Arc::new(Mutex::new(majority))));
-        } else {
-            self.majority = Some(None);
+            if reads_wanted % (reads_per_block) != 0 {
+                return Err(ValidationFailure::new(
+                    "by_minority_min_molecules_to_start must be a multiple of options.block_size"
+                        .to_string(),
+                    Some(
+                        "Adjust by_minority_min_molecules_to_start or options.block_size"
+                            .to_string(),
+                    ),
+                ));
+            }
         }
+        self.majority_data = Some(None); //get's overwritten in expand_transformations for ByMajority
 
         Ok(())
     }
@@ -282,7 +283,7 @@ impl HammingCorrect {
             matched_plus_seq.sort_by_key(|(seq, dist, _name)| (*dist, *seq));
             // is there a best one? take that
             if matched_plus_seq[0].1 < matched_plus_seq[1].1 {
-                return Ok(OneMatch(matched_plus_seq[0].0, false));
+                return Ok(OneMatch(matched_plus_seq[0].0, *matched_plus_seq[0].1 == 0));
             } else {
                 let first_different = matched_plus_seq
                     .iter()
@@ -335,23 +336,32 @@ impl Step for HammingCorrect {
 
         let mut output_hits = Vec::new();
 
-        let mut hamming_hits = Vec::with_capacity(input_tags.len());
-        let mut mj = if matches!(self.on_tie, OnTie::ByMajority) {
-            Some(
-                self.majority
-                    .as_ref()
-                    .expect("ByMajority means we have .majority")
-                    .lock()
-                    .expect("mutex poisened"),
+        let (mut barcode_counts, count_here) = if matches!(self.on_tie, OnTie::ByMajority) {
+            //ByMajority is serialized anyway, so no trouble keeping this lock for the runtime
+            //of this function
+            let mj = self
+                .majority_data
+                .as_ref()
+                .expect("ByMajority means we have .majority");
+            dbg!("hamming entering barrier");
+            let (guard, cv) = &*mj.barrier.clone();
+            let _guard = cv
+                .wait_while(guard.lock().expect("Mutex poisened"), |counting_done| {
+                    !*counting_done
+                })
+                .expect("mutex inside condvar poisened");
+            dbg!("hamming leaving barrier");
+            let count_here = block.block_no()
+                > mj.start_counting_in_hamming_at_this_block_no
+                    .load(Ordering::Acquire);
+            (
+                Some(mj.barcode_counts.lock().expect("Mutex poisened?")),
+                count_here,
             )
         } else {
-            None
+            (None, false)
         };
-        //dbg!("block is final", block.is_final);
-
-        // we first match them, and count them if OnTie::ByMajority
-        // to gain the maximum amount of information available.
-        let mut skip_counting_until = 1;
+        let output_barcode = matches!(self.output, HammingOutput::Barcode);
         for input_tag in input_tags {
             let hit = match input_tag {
                 TagValue::Missing => None,
@@ -364,60 +374,7 @@ impl Step for HammingCorrect {
                     unreachable!("Validation was meant to prevent this situation. Bug?")
                 }
             };
-            if matches!(self.on_tie, OnTie::ByMajority)
-                && let Some(mj) = mj.as_mut()
-            {
-                //dbg!(&mj);
-                if mj.reads_still_needed > 0
-                    && let Some(MatchResult::OneMatch(seq, was_exact)) = hit
-                    && was_exact
-                {
-                    //dbg!("pushing barcode to counter");
-                    mj.reads_still_needed -= 1; //doesn't matter if we could use it, we decrease the
-                    // counter  - or our whole 'do we get enough reads' checking might be off.
-                    skip_counting_until += 1;
 
-                    let hits = self.resonator.query(seq)?;
-                    if hits.len() == 1 && hits[0].1 == 0 {
-                        //only count perfect hits
-                        mj.barcode_counts
-                            .entry(seq.into())
-                            .and_modify(|count| *count += 1)
-                            .or_insert(1);
-                    }
-                    if mj.reads_still_needed == 0 {
-                        //dbg!("unlocking barrier");
-                        let mut ready = mj.barrier.0.lock().unwrap();
-                        *ready = true;
-                        mj.barrier.1.notify_all();
-                    }
-                }
-            }
-            hamming_hits.push(hit);
-        }
-        if matches!(self.on_tie, OnTie::ByMajority) {
-            if block.is_final {
-                //dbg!("block is final, unlocking barrier");
-                let mj = mj.as_mut().expect("Must be there if ByMajority is set");
-                let mut ready = mj.barrier.0.lock().unwrap();
-                *ready = true;
-                mj.barrier.1.notify_all();
-            }
-
-            let (lock, cvar) = &*Arc::clone(
-                &mj.as_ref()
-                    .expect("Must be there if ByMajority is set")
-                    .barrier,
-            );
-            //dbg!("Wating on barrier in block {}", block_no);
-            let _guard = cvar
-                .wait_while(lock.lock().unwrap(), |ready| !*ready)
-                .expect("Mutex poisened in condvar");
-        }
-
-        let output_barcode = matches!(self.output, HammingOutput::Barcode);
-        for (read_no_in_block, (input_tag, hit)) in input_tags.iter().zip(hamming_hits).enumerate()
-        {
             output_hits.push(match hit {
                 None => TagValue::Missing,
                 Some(hit) => {
@@ -445,9 +402,13 @@ impl Step for HammingCorrect {
                             }
                         }
                         MatchResult::OneMatch(matched_seq, was_exact) => {
-                            if was_exact && let Some(mj) = mj.as_mut() && matches!(self.on_tie, OnTie::ByMajority) {
-                                if read_no_in_block > skip_counting_until {
-                                        mj.barcode_counts
+                            dbg!(matched_seq, was_exact);
+                            if was_exact && 
+                                let Some(barcode_counts) = barcode_counts.as_mut() 
+                                && matches!(self.on_tie, OnTie::ByMajority) {
+                                dbg!("Counting", matched_seq);
+                                if count_here {
+                                        barcode_counts
                                     //matched_seq == query_seq here.
                                                     .entry(matched_seq.into())
                                                     .and_modify(|count| *count = count.saturating_add(1))
@@ -457,6 +418,7 @@ impl Step for HammingCorrect {
                             self.output(matched_seq, input_tag, output_barcode)
                         }
                         MatchResult::Tie(items) => {
+                            dbg!(&items);
 
                             match self.on_tie {
                                 OnTie::Remove => TagValue::Missing,
@@ -499,13 +461,14 @@ impl Step for HammingCorrect {
                                 }
                                 OnTie::ByMajority => {
                                     let mut best: Option<(&BStr, usize)> = None;
-                                    let mj = mj.as_ref().expect("Majority must be set in OnTie::ByMajority");
+                                    let barcode_counts = barcode_counts.as_ref().expect("Majority must be set in OnTie::ByMajority");
+                                    dbg!(&barcode_counts);
                                     let mut total = 0;
                                     for item in &items {
-                                        //add 1 to all counts,
-                                        //or otherwise the first one would never get in.
-                                        //if we were approximating 1 by 1..
-                                        let count = mj.barcode_counts.get(item.0).map(|x| *x).unwrap_or(0) + 1;
+                                        //add a laplace of 1 
+                                        //which avoids a total of 0 in the extreme case, 
+                                        //I guess
+                                        let count = barcode_counts.get(item.0).map(|x| *x).unwrap_or(0) + 1;
                                         best = Some(match best {
                                             Some(ibest) => if ibest.1 < count {(item.0, count)} else {ibest},
                                             None => (item.0, count)
@@ -513,7 +476,7 @@ impl Step for HammingCorrect {
                                         total += count;
                                     }
                                     let best = best.expect("Items can't have been empty");
-                                    if best.1 as f64 / total as f64 >= mj.threshold {
+                                    if best.1 as f64 / total as f64 >= self.by_majority_threshold {
                                         self.output(best.0, input_tag, output_barcode)
                                     } else {
                                         TagValue::Missing
@@ -533,9 +496,7 @@ impl Step for HammingCorrect {
         Ok((block, true))
     }
 
-    #[doc = " does this transformation need to see all reads, or is it fine to run it in multiple"]
-    #[doc = " threads in parallel?"]
     fn needs_serial(&self) -> bool {
-        self.majority.is_some()
+        self.majority_data.is_some()
     }
 }

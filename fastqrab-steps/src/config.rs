@@ -1,3 +1,5 @@
+use crate::transformations::hamming_correct::OnTie;
+use crate::transformations::hamming_exact_counter::PartialHammingExactCounter;
 use crate::transformations::{PartialTransformation, Transformation};
 use anyhow::{Result, anyhow, bail};
 use bstr::BString;
@@ -596,7 +598,7 @@ impl PartialConfig {
     ///expansion of transforms into their final form
     pub fn expand_transformations(&mut self) {
         self.transform.sync_nested_state(); // since we normally would only update this once
-        // verify is done, but we need accurate info
+        // verify is done, but we need accurate info here now.
         if self.transform.value.is_some() {
             let transform_span = self.transform.span();
             if let Some(mut transforms) = self.transform.value.take() {
@@ -823,6 +825,40 @@ impl PartialConfig {
                                     },
                                 ));
                             }
+                        }
+
+                        Some(PartialTransformation::HammingCorrect(step_config)) => {
+                            let tag_span = step_config.tag_span.clone();
+                            if let Some(step_config) = step_config.toml_value.as_mut()
+                                && let Some(OnTie::ByMajority) = step_config.on_tie.as_ref()
+                                && let Some(barcodes_to_use) = step_config.barcodes.as_ref()
+                                && let Some(Some(barcodes_data)) = self.barcodes.as_ref()
+                                && let Some(barcodes_section) =
+                                    barcodes_data.map.get(barcodes_to_use)
+                                && let Some(barcodes_section) = barcodes_section.as_ref()
+                                && let Some(seq_to_name) = &barcodes_section.seq_to_name
+                            {
+                                let pt = PartialHammingExactCounter::new(
+                                                step_config
+                                                    .in_label
+                                                    .as_ref()
+                                                    .expect("parent was ok")
+                                                    .clone(),
+                                                seq_to_name.clone(),
+                                                *step_config.by_majority_min_molecules_to_start.as_ref().expect("parent was ok, VerifyIn<HammingCorrect> must have set this"),
+                                            );
+                                step_config.majority_data = Some(pt.majority_data.clone());
+                                push_new(PartialTransformation::_HammingExactCounter(
+                                    PartialTaggedVariant {
+                                        toml_value: TomlValue::new_ok_unplaced(
+                                            pt
+                                        ),
+                                        tag_span,
+                                    },
+                                ));
+                            }
+
+                            push_existing(t);
                         }
 
                         _ => {

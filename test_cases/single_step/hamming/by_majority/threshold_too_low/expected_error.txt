@@ -1,0 +1,22 @@
+Error 1/1
+   ╭─config.toml
+   ┆
+18 │ [[step]]
+19 │   action = 'HammingCorrect'
+   ┆            ────────┬───────
+   ┆                    │
+   ┆                    ╰──────── In this step
+   ┆
+20 │   in_label = 'bc_raw'
+21 │   out_label = 'bc_corr'
+22 │   max_hamming_distance=1
+23 │   on_tie = 'ByMajority'
+24 │   on_no_match = 'Remove'
+25 │   barcodes = 'barcodes'
+26 │   by_majority_threshold = 0
+   ┆                           ┬
+   ┆                           │
+   ┆                           ╰─ Must be > 0 <= 1
+───╯
+Hint: Supply a valid fraction between [0..1)
+      See https://tyberiusprime.github.io/fastqrab/v0.8.1/docs/redirects/HammingCorrect
