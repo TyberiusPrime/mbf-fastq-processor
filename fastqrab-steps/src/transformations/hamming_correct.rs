@@ -37,7 +37,6 @@ pub struct HammingCorrect {
     pub by_majority_threshold: f64,
 
     /// names are considered identical if they match up to the first name_split_character
-    /// for must-have-hamming-distance considerations
     #[tpd(with = "tpd_adapt_u8_from_byte_or_char", alias = "name_split_char")]
     pub name_split_character: Option<u8>,
 

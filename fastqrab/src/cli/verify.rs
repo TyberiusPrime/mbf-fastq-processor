@@ -216,13 +216,14 @@ fn populate_working_dir(
     // Set up input files in the temp dir. When prep/test scripts will run (do_copy_input_files),
     // we must copy files so those scripts cannot mutate the originals (e.g. via chmod).
     // Otherwise, symlinks suffice — the TOML is kept verbatim so relative paths still resolve.
-    let toml_value: toml::Value =
-        toml::from_str(raw_config).context("Failed to parse TOML for file setup")?;
+    // If the TOML is syntactically invalid (e.g. duplicate key), parsing fails here but we must
+    // not propagate that error — the subprocess will report it in the proper formatted form.
+    let toml_value: Option<toml::Value> = toml::from_str(raw_config).ok();
 
     if do_copy_input_files {
         copy_input_files(toml_dir, temp_path)?;
     } else {
-        symlink_input_files(&toml_value, toml_dir, temp_path)?;
+        symlink_input_files(toml_value.as_ref(), toml_dir, temp_path)?;
     }
     Ok(())
 }
@@ -246,27 +247,35 @@ fn copy_input_files(toml_dir: &Path, temp_path: &Path) -> Result<()> {
     Ok(())
 }
 
-fn symlink_input_files(toml_value: &toml::Value, toml_dir: &Path, temp_path: &Path) -> Result<()> {
-    // No prep/test scripts — safe to use symlinks so the TOML stays verbatim
-    if let Some(input_table) = toml_value.get("input").and_then(|v| v.as_table()) {
-        for field_name in input_table.keys() {
-            if field_name == "interleaved" || field_name == "options" {
-                continue;
-            }
-            if let Some(value) = input_table.get(field_name) {
-                create_symlinks_for_files(value, toml_dir, temp_path)?;
-            } // cov:excl-line
-        }
-    }
-    if let Some(steps) = toml_value.get("step").and_then(|v| v.as_array()) {
-        for step in steps {
-            if let Some(step_table) = step.as_table() {
-                for filename_key in ["filename", "filenames", "files", "reference"] {
-                    if let Some(value) = step_table.get(filename_key) {
-                        create_symlinks_for_files(value, toml_dir, temp_path)?;
-                    }
+fn symlink_input_files(
+    toml_value: Option<&toml::Value>,
+    toml_dir: &Path,
+    temp_path: &Path,
+) -> Result<()> {
+    // No prep/test scripts — safe to use symlinks so the TOML stays verbatim.
+    // toml_value is None when the config is syntactically invalid; skip TOML-guided symlinks in
+    // that case and fall through to the directory scan so the subprocess can report the error.
+    if let Some(toml_value) = toml_value {
+        if let Some(input_table) = toml_value.get("input").and_then(|v| v.as_table()) {
+            for field_name in input_table.keys() {
+                if field_name == "interleaved" || field_name == "options" {
+                    continue;
                 }
-            } // cov:excl-line
+                if let Some(value) = input_table.get(field_name) {
+                    create_symlinks_for_files(value, toml_dir, temp_path)?;
+                } // cov:excl-line
+            }
+        }
+        if let Some(steps) = toml_value.get("step").and_then(|v| v.as_array()) {
+            for step in steps {
+                if let Some(step_table) = step.as_table() {
+                    for filename_key in ["filename", "filenames", "files", "reference"] {
+                        if let Some(value) = step_table.get(filename_key) {
+                            create_symlinks_for_files(value, toml_dir, temp_path)?;
+                        }
+                    }
+                } // cov:excl-line
+            }
         }
     }
     // Also symlink any ancillary input files (e.g. .bai index alongside .bam)
