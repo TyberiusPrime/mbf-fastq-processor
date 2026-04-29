@@ -9908,6 +9908,28 @@ fn test_cases_x_single_step_x_hamming_x_by_majority_x_threshold_too_low() {
 
 #[test]
 
+fn test_cases_x_single_step_x_hamming_x_duplicate_barcode() {
+    println!("Test case is in: test_cases/single_step/hamming/duplicate_barcode");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/hamming/duplicate_barcode"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_hamming_x_duplicate_barcode_from_file() {
+    println!("Test case is in: test_cases/single_step/hamming/duplicate_barcode_from_file");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/hamming/duplicate_barcode_from_file"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_hamming_x_input_label_is_output_label() {
     println!("Test case is in: test_cases/single_step/hamming/input_label_is_output_label");
     run_test(

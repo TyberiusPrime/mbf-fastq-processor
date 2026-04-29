@@ -1,3 +1,4 @@
+Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
@@ -17,6 +18,10 @@ Error 1/1
 30 │   by_majority_min_molecules_to_start = 7
    ┆                                         ┬
    ┆                                         │
-   ┆                                         ╰─ by_minority_min_molecules_to_start must be a multiple of options.block_size (2)
+   ┆                                         ╰─ by_majority_min_molecules_to_start must be a multiple of options.block_size (2)
 ───╯
-Hint: Adjust either by_minority_min_molecules_to_start or options.block_size
+Hint: Adjust either by_majority_min_molecules_to_start or options.block_size
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/HammingCorrect
+      Or run: `fastqrab template HammingCorrect` for more information.
+
+

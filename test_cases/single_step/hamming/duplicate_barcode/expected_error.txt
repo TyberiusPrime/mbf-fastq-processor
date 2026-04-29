@@ -1,0 +1,10 @@
+   ╭─config.toml
+   ┆
+46 │ [barcodes.barcodes]
+47 │     ATGA = 'label1'
+48 │     ATGA = 'label2'
+   ┆     ──┬─
+   ┆       │
+   ┆       ╰───────────── duplicate key
+───╯
+Hint: See the TOML Spec: https://toml.io/en/v1.1.0

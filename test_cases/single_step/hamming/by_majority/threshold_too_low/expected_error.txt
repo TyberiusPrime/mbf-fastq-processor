@@ -17,9 +17,9 @@ Error 1/1
 26 │   by_majority_threshold = 0
    ┆                           ┬
    ┆                           │
-   ┆                           ╰─ Must be > 0 <= 1
+   ┆                           ╰─ Must be > 0 < 1
 ───╯
-Hint: Supply a valid fraction between [0..1)
+Hint: Supply a valid fraction between (0..1)
       See https://doc_url.example/version-stripped-from-test/docs/redirects/HammingCorrect
       Or run: `fastqrab template HammingCorrect` for more information.
 

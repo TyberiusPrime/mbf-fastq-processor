@@ -1,5 +1,6 @@
-use std::sync::atomic::Ordering;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
+use anyhow::anyhow;
 use hamming_resonate::HammingResonator;
 use indexmap::IndexMap;
 
@@ -51,6 +52,11 @@ pub struct HammingCorrect {
     #[tpd(skip)]
     #[schemars(skip)]
     pub majority_data: Option<Arc<MajorityData>>,
+
+    #[tpd(skip)]
+    #[schemars(skip)]
+    reads_in_this_step: AtomicUsize, // for verification that we really count correctly between
+                                     // HammingExactCounter and HammingCorrect in ByMajority mode
 }
 
 #[tpd]
@@ -73,6 +79,7 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
         Self: Sized + toml_pretty_deser::Visitor,
     {
         //defaults first, error returns later
+        self.reads_in_this_step = Some(AtomicUsize::new(0));
         self.by_majority_min_molecules_to_start.or(1_000_000);
         self.by_majority_threshold.or(0.975);
 
@@ -135,10 +142,10 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
         }
 
         self.by_majority_threshold.verify(|x| {
-            if *x <= 0.0 || *x > 1.0 {
+            if *x <= 0.0 || *x >= 1.0 {
                 Err(ValidationFailure::new(
-                    "Must be > 0 <= 1".to_string(),
-                    Some("Supply a valid fraction between [0..1)".to_string()),
+                    "Must be > 0 < 1".to_string(),
+                    Some("Supply a valid fraction between (0..1)".to_string()),
                 ))
             } else {
                 Ok(())
@@ -162,34 +169,34 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
                 .by_majority_min_molecules_to_start
                 .as_ref()
                 .expect("just set above");
+            if !reads_wanted.is_multiple_of(reads_per_block) {
+                return Err(ValidationFailure::new(
+                    format!(
+                        "by_majority_min_molecules_to_start must be a multiple of options.block_size ({reads_per_block})"
+                    ),
+                    Some(
+                        "Adjust either by_majority_min_molecules_to_start or options.block_size"
+                            .to_string(),
+                    ),
+                ));
+            }
+
             if blocks_in_flight * reads_per_block < reads_wanted {
                 return Err(ValidationFailure::new(
                     "Not enough reads 'in flight' for ByMajority".to_string(),
                     Some(format!(
                         "Using on_tie=ByMajority must first collect enough data. \n\
-                    It s configure to require {reads_still_needed} molecules.\n\
+                    It is configured to require {reads_wanted} molecules.\n\
                     Your options.blocks_in_flight * options.reads_per_block only yield {reads_available} molecules\n\
                     Increase either one.\n\
-                    Having a total number of reads below {reads_still_needed} is not a problem,\n\
+                    Having a total number of reads below {reads_wanted} is not a problem,\n\
                     ByMajority will simply use all reads.",
                         reads_available = blocks_in_flight * reads_per_block,
-                        reads_still_needed = reads_wanted
                     )),
                 ));
             }
-            if !reads_wanted.is_multiple_of(reads_per_block) {
-                return Err(ValidationFailure::new(
-                    format!(
-                        "by_minority_min_molecules_to_start must be a multiple of options.block_size ({reads_per_block})"
-                    ),
-                    Some(
-                        "Adjust either by_minority_min_molecules_to_start or options.block_size"
-                            .to_string(),
-                    ),
-                ));
-            }
         }
-        self.majority_data = Some(None); //get's overwritten in expand_transformations for ByMajority
+        self.majority_data = Some(None); //get's overwritten in expand_transformations for ByMajority, empty default otherwise
 
         Ok(())
     }
@@ -255,7 +262,7 @@ impl HammingCorrect {
         use MatchResult::*;
         let matched = self
             .resonator
-            .query(&BStr::new(&sequence))
+            .query(&sequence)
             .map_err(|e| anyhow::anyhow!("HammingCorrect query failed: {e}"))?;
         if matched.is_empty() {
             return Ok(NoMatch);
@@ -326,6 +333,14 @@ impl HammingCorrect {
             })
         }
     }
+
+    fn output_empty(&self, was_location: bool, output_barcode: bool) -> TagValue {
+        if was_location && output_barcode {
+            TagValue::Location(Hits(vec![]))
+        } else {
+            TagValue::String("".into())
+        }
+    }
 }
 
 impl Step for HammingCorrect {
@@ -336,32 +351,44 @@ impl Step for HammingCorrect {
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<(FastQBlocksCombined, bool)> {
         let input_tags = block.tags.get(&self.in_label).expect("Input tag not found");
+        self.reads_in_this_step
+            .fetch_add(input_tags.len(), Ordering::SeqCst);
 
         let mut output_hits = Vec::new();
 
-        let (mut barcode_counts, count_here) = if matches!(self.on_tie, OnTie::ByMajority) {
-            //ByMajority is serialized anyway, so no trouble keeping this lock for the runtime
-            //of this function
-            let mj = self
-                .majority_data
-                .as_ref()
-                .expect("ByMajority means we have .majority");
-            let (guard, cv) = &*mj.barrier.clone();
-            let _guard = cv
-                .wait_while(guard.lock().expect("Mutex poisened"), |counting_done| {
-                    !*counting_done
-                })
-                .expect("mutex inside condvar poisened");
-            let count_here = block.block_no()
-                > mj.start_counting_in_hamming_at_this_block_no
-                    .load(Ordering::Acquire);
-            (
-                Some(mj.barcode_counts.lock().expect("Mutex poisened?")),
-                count_here,
-            )
-        } else {
-            (None, false)
-        };
+        let (mut barcode_counts, count_here) =
+            if matches!(self.on_tie, OnTie::ByMajority) {
+                //ByMajority is serialized anyway, so no trouble keeping this lock for the runtime
+                //of this function
+                let mj = self
+                    .majority_data
+                    .as_ref()
+                    .expect("ByMajority means we have .majority");
+                if mj.blocks_to_count > 0 {
+                    let (guard, cv) = &*mj.barrier.clone();
+                    let _guard = cv
+                .wait_while(
+                    guard.lock().map_err(|err| {
+                        anyhow!("Mutex poisoned while waiting for majority data to be ready: {err}")
+                    })?,
+                    |counting_done| !*counting_done,
+                )
+                .expect("mutex inside condvar poisoned");
+                }
+                let count_here = block.block_no()
+                    > mj.start_counting_in_hamming_at_this_block_no
+                        .load(Ordering::Acquire);
+                if count_here {
+                    mj.total_reads_considered
+                        .fetch_add(input_tags.len(), Ordering::SeqCst);
+                }
+                (
+                    Some(mj.barcode_counts.lock().expect("Mutex poisoned?")),
+                    count_here,
+                )
+            } else {
+                (None, false)
+            };
         let output_barcode = matches!(self.output, HammingOutput::Barcode);
         for input_tag in input_tags {
             let hit = match input_tag {
@@ -388,13 +415,7 @@ impl Step for HammingCorrect {
                                     TagValue::Missing
                                 }
                                 OnNoMatch::Empty => {
-                                    // Create hit with empty sequence
-                                    if was_location && output_barcode {
-                                        TagValue::Location(Hits(vec![]))
-                                    }
-                                    else {
-                                        TagValue::String("".into())
-                                    }
+                                    self.output_empty(was_location, output_barcode)
                                 }
                                 OnNoMatch::Keep => {
                                     // Keep original hit unchanged
@@ -419,11 +440,7 @@ impl Step for HammingCorrect {
                             match self.on_tie {
                                 OnTie::Remove => TagValue::Missing,
                                 OnTie::Empty =>  {
-                                    if was_location && output_barcode {
-                                        TagValue::Location(Hits(vec![]))
-                                    } else {
-                                        TagValue::String("".into())
-                                    }
+                                    self.output_empty(was_location, output_barcode)
                                 }
                                 OnTie::Keep => input_tag.clone(),
                                 OnTie::First =>{
@@ -493,5 +510,16 @@ impl Step for HammingCorrect {
 
     fn needs_serial(&self) -> bool {
         self.majority_data.is_some()
+    }
+
+    fn finalize(&self, _demultiplex_info: &OptDemultiplex) -> Result<Option<FinalizeReportResult>> {
+        if let Some(mj) = self.majority_data.as_ref() {
+            assert_eq!(
+                mj.total_reads_considered.load(Ordering::Acquire),
+                self.reads_in_this_step.load(Ordering::Acquire),
+                "Mismatch between OnTie::ByMajority considered reads and total reads in this step - bug in your count_here decision making"
+            )
+        }
+        Ok(None)
     }
 }

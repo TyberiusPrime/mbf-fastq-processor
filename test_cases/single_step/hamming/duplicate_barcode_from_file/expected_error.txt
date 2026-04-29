@@ -1,0 +1,9 @@
+   ╭─config.toml
+   ┆
+46 │ [barcodes.barcodes]
+47 │   from_file = {filename = 'input_barcodes.fasta'}
+   ┆                                                  ┬
+   ┆                                                  │
+   ┆                                                  ╰─ Error reading from input_barcodes.fasta
+───╯
+Hint: Duplicate sequence in input_barcodes.fasta: 'ATGA'
