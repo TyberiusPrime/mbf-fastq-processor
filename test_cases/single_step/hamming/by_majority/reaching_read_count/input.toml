@@ -1,3 +1,6 @@
+[options]
+  block_size =2
+
 [input]
   r1 = 'input_read1.fasta'
   options.fasta_fake_quality ='C'
@@ -23,7 +26,8 @@
   on_tie = 'ByMajority'
   on_no_match = 'Remove'
   barcodes = 'barcodes'
-  by_majority_threshold = 0.501
+  by_majority_threshold = 0.47
+  by_majority_min_molecules_to_start = 8
 
 [barcodes.barcodes]
   AGTA= 'two'

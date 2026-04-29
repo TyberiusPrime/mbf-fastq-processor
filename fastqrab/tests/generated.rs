@@ -9827,10 +9827,80 @@ fn test_cases_x_single_step_x_hamming_x_basic_correction_too_close_but_same_labe
 
 #[test]
 
+fn test_cases_x_single_step_x_hamming_x_by_majority_x_min_reads_must_be_multiple_of_blocksize() {
+    println!(
+        "Test case is in: test_cases/single_step/hamming/by_majority/min_reads_must_be_multiple_of_blocksize"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/hamming/by_majority/min_reads_must_be_multiple_of_blocksize",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_hamming_x_by_majority_x_never_seen() {
+    println!("Test case is in: test_cases/single_step/hamming/by_majority/never_seen");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/hamming/by_majority/never_seen"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_hamming_x_by_majority_x_no_pretrain() {
+    println!("Test case is in: test_cases/single_step/hamming/by_majority/no_pretrain");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/hamming/by_majority/no_pretrain"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_hamming_x_by_majority_x_reaching_read_count() {
+    println!("Test case is in: test_cases/single_step/hamming/by_majority/reaching_read_count");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/hamming/by_majority/reaching_read_count"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_hamming_x_by_majority_x_simple() {
     println!("Test case is in: test_cases/single_step/hamming/by_majority/simple");
     run_test(
         std::path::Path::new("../test_cases/single_step/hamming/by_majority/simple"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_hamming_x_by_majority_x_threshold_too_high() {
+    println!("Test case is in: test_cases/single_step/hamming/by_majority/threshold_too_high");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/hamming/by_majority/threshold_too_high"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_hamming_x_by_majority_x_threshold_too_low() {
+    println!("Test case is in: test_cases/single_step/hamming/by_majority/threshold_too_low");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/hamming/by_majority/threshold_too_low"),
         "input.toml",
         1,
     );

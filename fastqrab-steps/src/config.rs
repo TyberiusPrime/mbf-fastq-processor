@@ -132,12 +132,13 @@ pub struct Config {
     #[tpd(nested)]
     pub barcodes: Option<IndexMap<TagLabel, Barcodes>>,
 
+    #[tpd(nested)]
+    pub options: Options,
+
+    // we want the transformations to be able to inspect the options
     #[tpd(alias = "step", alias = "steps", alias = "transforms")]
     #[tpd(nested)]
     pub transform: Vec<Transformation>,
-
-    #[tpd(nested)]
-    pub options: Options,
 
     #[tpd(nested)]
     pub benchmark: Option<Benchmark>,
@@ -838,21 +839,23 @@ impl PartialConfig {
                                 && let Some(barcodes_section) = barcodes_section.as_ref()
                                 && let Some(seq_to_name) = &barcodes_section.seq_to_name
                             {
+                                let by_majority_min_molecules_to_start = *step_config.by_majority_min_molecules_to_start.as_ref().expect("parent was ok, VerifyIn<HammingCorrect> must have set this");
+                                let reads_per_block = self.options.as_ref().and_then(|options| options.block_size.as_ref()).copied().expect("Expect options to have been set/defaulted in at this point");
+                                let blocks_to_count =
+                                    by_majority_min_molecules_to_start / reads_per_block;
                                 let pt = PartialHammingExactCounter::new(
-                                                step_config
-                                                    .in_label
-                                                    .as_ref()
-                                                    .expect("parent was ok")
-                                                    .clone(),
-                                                seq_to_name.clone(),
-                                                *step_config.by_majority_min_molecules_to_start.as_ref().expect("parent was ok, VerifyIn<HammingCorrect> must have set this"),
-                                            );
+                                    step_config
+                                        .in_label
+                                        .as_ref()
+                                        .expect("parent was ok")
+                                        .clone(),
+                                    seq_to_name.clone(),
+                                    blocks_to_count,
+                                );
                                 step_config.majority_data = Some(pt.majority_data.clone());
                                 push_new(PartialTransformation::_HammingExactCounter(
                                     PartialTaggedVariant {
-                                        toml_value: TomlValue::new_ok_unplaced(
-                                            pt
-                                        ),
+                                        toml_value: TomlValue::new_ok_unplaced(pt),
                                         tag_span,
                                     },
                                 ));

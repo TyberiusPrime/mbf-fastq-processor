@@ -1,3 +1,4 @@
+Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
@@ -19,4 +20,7 @@ Error 1/1
    ┆                           ╰─ Must be > 0 <= 1
 ───╯
 Hint: Supply a valid fraction between [0..1)
-      See https://tyberiusprime.github.io/fastqrab/v0.8.1/docs/redirects/HammingCorrect
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/HammingCorrect
+      Or run: `fastqrab template HammingCorrect` for more information.
+
+

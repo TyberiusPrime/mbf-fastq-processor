@@ -82,7 +82,10 @@ impl TagUser for PartialTaggedVariant<PartialHammingExactCounter> {
 }
 
 impl HammingExactCounter {
-    fn signal_downstream_go(&self) {
+    fn signal_downstream_go(&self, count_after_block_no: usize) {
+        self.majority_data
+            .start_counting_in_hamming_at_this_block_no
+            .store(count_after_block_no, Ordering::SeqCst);
         let (lock, cvar) = &*self.majority_data.barrier;
         let mut ready = lock.lock().expect("mutex poisened");
         *ready = true;
@@ -97,11 +100,12 @@ impl Step for HammingExactCounter {
         _input_info: &InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<(FastQBlocksCombined, bool)> {
-        if self.majority_data.blocks_to_count == 0 && block.block_no() == 1{
-            self.signal_downstream_go();
+        if self.majority_data.blocks_to_count == 0 && block.block_no() == 1 {
+            // special case the 'do not precount any reads' case
+            self.signal_downstream_go(0);
         } else {
-            if block.block_no() < self.majority_data.blocks_to_count {
-                dbg!("counting block", block.block_no());
+            if block.block_no() <= self.majority_data.blocks_to_count {
+                // block no is 1 based.
                 let mut local_exact_barcode_match_counter: IndexMap<BString, usize> =
                     IndexMap::new();
                 let input_tags = block.tags.get(&self.in_label).expect("Input tag not found");
@@ -137,9 +141,7 @@ impl Step for HammingExactCounter {
                     .blocks_counted
                     .fetch_add(1, Ordering::SeqCst)
                     + 1;
-                dbg!(counted);
                 if block.is_final {
-                    dbg!(format!("block was final {}", block.block_no()));
                     // we need to somehow delay for the other concurrent blocks to have been counted.
                     // which means that blocks_counted == our block number,.
                     while self.majority_data.blocks_counted.load(Ordering::SeqCst)
@@ -148,17 +150,13 @@ impl Step for HammingExactCounter {
                         //yeah it's a busy wait. Shouldn't last long though.
                         std::thread::yield_now();
                     }
-                    dbg!("Stopped busy wait");
                 }
                 if block.is_final
                     || self.majority_data.blocks_counted.load(Ordering::SeqCst)
                         == self.majority_data.blocks_to_count
                 {
-                    self.signal_downstream_go()
-                   
+                    self.signal_downstream_go(counted)
                 }
-            } else {
-                dbg!("Skipping block", block.block_no());
             }
         }
 

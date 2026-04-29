@@ -1,0 +1,22 @@
+Error 1/1
+   ╭─config.toml
+   ┆
+21 │ [[step]]
+22 │   action = 'HammingCorrect'
+   ┆            ────────┬───────
+   ┆                    │
+   ┆                    ╰──────── In this step
+   ┆
+23 │   in_label = 'bc_raw'
+24 │   out_label = 'bc_corr'
+25 │   max_hamming_distance=1
+26 │   on_tie = 'ByMajority'
+27 │   on_no_match = 'Remove'
+28 │   barcodes = 'barcodes'
+29 │   by_majority_threshold = 0.47
+30 │   by_majority_min_molecules_to_start = 7
+   ┆                                         ┬
+   ┆                                         │
+   ┆                                         ╰─ by_minority_min_molecules_to_start must be a multiple of options.block_size (2)
+───╯
+Hint: Adjust either by_minority_min_molecules_to_start or options.block_size

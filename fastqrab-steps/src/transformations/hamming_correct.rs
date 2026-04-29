@@ -72,6 +72,10 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {
+        //defaults first, error returns later
+        self.by_majority_min_molecules_to_start.or(1_000_000);
+        self.by_majority_threshold.or(0.975);
+
         if let Some(out_label) = self.out_label.as_ref()
             && let Some(in_label) = self.in_label.as_ref()
             && out_label == in_label
@@ -129,8 +133,6 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
                 ));
             }
         }
-        self.by_majority_min_molecules_to_start.or(1_000_000);
-        self.by_majority_threshold.or(0.975);
 
         self.by_majority_threshold.verify(|x| {
             if *x <= 0.0 || *x > 1.0 {
@@ -175,12 +177,13 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
                     )),
                 ));
             }
-            if reads_wanted % (reads_per_block) != 0 {
+            if !reads_wanted.is_multiple_of(reads_per_block) {
                 return Err(ValidationFailure::new(
-                    "by_minority_min_molecules_to_start must be a multiple of options.block_size"
-                        .to_string(),
+                    format!(
+                        "by_minority_min_molecules_to_start must be a multiple of options.block_size ({reads_per_block})"
+                    ),
                     Some(
-                        "Adjust by_minority_min_molecules_to_start or options.block_size"
+                        "Adjust either by_minority_min_molecules_to_start or options.block_size"
                             .to_string(),
                     ),
                 ));
@@ -343,14 +346,12 @@ impl Step for HammingCorrect {
                 .majority_data
                 .as_ref()
                 .expect("ByMajority means we have .majority");
-            dbg!("hamming entering barrier");
             let (guard, cv) = &*mj.barrier.clone();
             let _guard = cv
                 .wait_while(guard.lock().expect("Mutex poisened"), |counting_done| {
                     !*counting_done
                 })
                 .expect("mutex inside condvar poisened");
-            dbg!("hamming leaving barrier");
             let count_here = block.block_no()
                 > mj.start_counting_in_hamming_at_this_block_no
                     .load(Ordering::Acquire);
@@ -402,11 +403,8 @@ impl Step for HammingCorrect {
                             }
                         }
                         MatchResult::OneMatch(matched_seq, was_exact) => {
-                            dbg!(matched_seq, was_exact);
-                            if was_exact && 
-                                let Some(barcode_counts) = barcode_counts.as_mut() 
+                            if was_exact && let Some(barcode_counts) = barcode_counts.as_mut()
                                 && matches!(self.on_tie, OnTie::ByMajority) {
-                                dbg!("Counting", matched_seq);
                                 if count_here {
                                         barcode_counts
                                     //matched_seq == query_seq here.
@@ -418,8 +416,6 @@ impl Step for HammingCorrect {
                             self.output(matched_seq, input_tag, output_barcode)
                         }
                         MatchResult::Tie(items) => {
-                            dbg!(&items);
-
                             match self.on_tie {
                                 OnTie::Remove => TagValue::Missing,
                                 OnTie::Empty =>  {
@@ -462,12 +458,11 @@ impl Step for HammingCorrect {
                                 OnTie::ByMajority => {
                                     let mut best: Option<(&BStr, usize)> = None;
                                     let barcode_counts = barcode_counts.as_ref().expect("Majority must be set in OnTie::ByMajority");
-                                    dbg!(&barcode_counts);
                                     let mut total = 0;
                                     for item in &items {
-                                        //add a laplace of 1 
-                                        //which avoids a total of 0 in the extreme case, 
-                                        //I guess
+                                        //add a laplace of 1
+                                        //which avoids a total of 0 in the extreme case of ,
+                                        //we ain't seen any of these.
                                         let count = barcode_counts.get(item.0).map(|x| *x).unwrap_or(0) + 1;
                                         best = Some(match best {
                                             Some(ibest) => if ibest.1 < count {(item.0, count)} else {ibest},

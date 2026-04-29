@@ -73,7 +73,7 @@ fn parse_interleaved_and_send(
         input_thread_count,
         input_options,
     );
-    let mut block_no = 1;
+    let mut block_no = 1; //block numbers are 1 based. Why though? 
     let mut expected_read_count = None;
     loop {
         let res = parser.parse()?;
