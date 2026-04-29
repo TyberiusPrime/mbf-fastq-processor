@@ -27,7 +27,7 @@ fasteval = {workspace = true}
 indexmap = {workspace = true}
 memchr = {workspace = true}
 mutants = {workspace = true}
-rand = {workspace = true}
+rand = {workspace = true, features = ["thread_rng"] }
 rand_chacha = {workspace = true}
 regex = {workspace = true}
 scalable_cuckoo_filter = {workspace = true}
