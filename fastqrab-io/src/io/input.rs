@@ -63,15 +63,15 @@ impl PartialInputOptions {
                 self.use_rapidgzip.value = Some(find_rapidgzip_in_path().is_some());
             }
             TomlValueState::Ok => {
-                if *self.use_rapidgzip.value.as_ref().expect("State was ok") {
-                    if find_rapidgzip_in_path().is_none() {
-                        self.use_rapidgzip.state = TomlValueState::ValidationFailed {
-                            message: "rapidgzip requested but not found in PATH".to_string(),
-                        };
-                        self.use_rapidgzip.help = Some(
+                if *self.use_rapidgzip.value.as_ref().expect("State was ok")
+                    && find_rapidgzip_in_path().is_none()
+                {
+                    self.use_rapidgzip.state = TomlValueState::ValidationFailed {
+                        message: "rapidgzip requested but not found in PATH".to_string(),
+                    };
+                    self.use_rapidgzip.help = Some(
                                 "Make sure you have a rapidgzip binary on your path, or set use_rapidgzip to false (or leave off for auto-detect).".to_string(),
                             );
-                    }
                 }
             }
             _ => {} // cov:excl-line

@@ -68,9 +68,8 @@ fn all_test_cases_are_generated() {
                 .current_dir("..")
                 .status()
                 .expect("Failed to run update_generated.sh when test cases were missing");
-            assert!(
-                false,
-                "Missing test function: {test_fn}. Rerunning ./dev/ci/update_generated.sh, should just work if you try again",
+            panic!(
+                "Missing test function: {test_fn}. Reran ./dev/ci/update_generated.sh, so it should just work if you try again",
             );
         }
     }

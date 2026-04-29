@@ -42,7 +42,7 @@ impl FailureOptions {
         };
 
         Ok(Some(SimulatedWriteFailure {
-            remaining_bytes: remaining_bytes,
+            remaining_bytes,
             error,
         }))
     }

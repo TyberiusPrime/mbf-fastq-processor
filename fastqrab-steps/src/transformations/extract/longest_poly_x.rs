@@ -98,7 +98,7 @@ impl LongestPolyX {
         }
 
         let check_bases: &[u8] = if base == b'.' {
-            &[b'A', b'C', b'G', b'T']
+            b"ACGT"
         } else {
             std::slice::from_ref(&base)
         };
@@ -126,7 +126,9 @@ impl LongestPolyX {
         for (i, &sym) in seq.iter().enumerate() {
             for bi in 0..num {
                 let is_match = sym == check_bases[bi];
-                let prev = *prefixes[bi].last().unwrap();
+                let prev = *prefixes[bi]
+                    .last()
+                    .expect("Prefixes can't be empty, was filled from check_bases.len()");
                 prefixes[bi].push(prev + if is_match { match_w } else { mis_w });
 
                 if is_match {
@@ -168,7 +170,7 @@ impl LongestPolyX {
     /// contiguous run of exact base matches (no mismatches at all).
     fn longest_exact_run(seq: &[u8], base: u8, min_length: usize) -> Option<(usize, usize)> {
         let check_bases: &[u8] = if base == b'.' {
-            &[b'A', b'C', b'G', b'T']
+            b"ACGT"
         } else {
             std::slice::from_ref(&base)
         };
@@ -183,15 +185,14 @@ impl LongestPolyX {
                         run_start = i;
                         in_run = true;
                     }
-                } else {
-                    if in_run {
+                } else if in_run {
                         let len = i - run_start;
                         if len >= min_length {
                             best = Self::pick_better(best, Some((run_start, len)));
                         }
                         in_run = false;
                     }
-                }
+                
             }
             if in_run {
                 let len = seq.len() - run_start;
@@ -253,7 +254,12 @@ impl LongestPolyX {
         }
 
         // After last barrier.
-        let ss = start_after_barrier(barriers.last().unwrap().1);
+        let ss = start_after_barrier(
+            barriers
+                .last()
+                .expect("Barriers was checked for emptyness above")
+                .1,
+        );
         if ss < n {
             segs.push((ss, n - 1));
         }
@@ -274,7 +280,9 @@ impl LongestPolyX {
         // These are the only useful candidate left-endpoints.
         let mut stack: Vec<usize> = Vec::new();
         for i in seg_start..=seg_end + 1 {
-            if stack.is_empty() || prefix[i] < prefix[*stack.last().unwrap()] {
+            if stack.is_empty()
+                || prefix[i] < prefix[*stack.last().expect("Checked for empty just before")]
+            {
                 stack.push(i);
             }
         }

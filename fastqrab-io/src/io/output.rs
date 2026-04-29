@@ -98,31 +98,31 @@ pub fn write_read_to_bam(
     }
 
     for (bam_tag_bytes, fastqrab_tag_name) in bam_tag_mappings {
-        if let Some(tag_values) = tags.get(*fastqrab_tag_name) {
-            if let Some(tag_value) = tag_values.get(read_index) {
-                let value_opt: Option<Value> = match tag_value {
-                    TagValue::String(s) => Some(Value::String(s.clone())),
-                    TagValue::Location(hits) => {
-                        // Join all hit sequences with commas
-                        if hits.0.is_empty() {
-                            None
-                        } else {
-                            let joined = hits
-                                .0
-                                .iter()
-                                .map(|h| h.sequence.as_ref())
-                                .collect::<Vec<_>>()
-                                .join(b",".as_ref());
-                            Some(Value::String(BString::from(joined)))
-                        }
+        if let Some(tag_values) = tags.get(*fastqrab_tag_name)
+            && let Some(tag_value) = tag_values.get(read_index)
+        {
+            let value_opt: Option<Value> = match tag_value {
+                TagValue::String(s) => Some(Value::String(s.clone())),
+                TagValue::Location(hits) => {
+                    // Join all hit sequences with commas
+                    if hits.0.is_empty() {
+                        None
+                    } else {
+                        let joined = hits
+                            .0
+                            .iter()
+                            .map(|h| h.sequence.as_ref())
+                            .collect::<Vec<_>>()
+                            .join(b",".as_ref());
+                        Some(Value::String(BString::from(joined)))
                     }
-                    TagValue::Numeric(n) => Some(Value::Float(*n as f32)),
-                    TagValue::Bool(b) => Some(Value::UInt8(u8::from(*b))),
-                    TagValue::Missing => None,
-                };
-                if let Some(value) = value_opt {
-                    data_fields.push((Tag::from(*bam_tag_bytes), value));
                 }
+                TagValue::Numeric(n) => Some(Value::Float(*n as f32)),
+                TagValue::Bool(b) => Some(Value::UInt8(u8::from(*b))),
+                TagValue::Missing => None,
+            };
+            if let Some(value) = value_opt {
+                data_fields.push((Tag::from(*bam_tag_bytes), value));
             }
         }
     }
@@ -131,28 +131,28 @@ pub fn write_read_to_bam(
 
     // --- assign reference ----------------------------------------
     let mut reference_sequence_id: Option<usize> = None;
-    if let Some(ref_tag_name) = reference_tag {
-        if let Some(tag_values) = tags.get(ref_tag_name) {
-            //missing > not 'aligned'
-            if let Some(tag_value) = tag_values.get(read_index) {
-                let ref_name = tag_value.to_bstr();
-                // Look up the reference name in the BAM header
-                let key: &[u8] = &ref_name;
-                if !key.is_empty() {
-                    if let Some(idx) = bam_output.header.reference_sequences().get_index_of(key) {
-                        reference_sequence_id = Some(idx);
-                        flags.remove(SamFlags::UNMAPPED);
-                    } else {
-                        bail!(
-                            "Error in Bam tag-to-reference output: \n\
+    if let Some(ref_tag_name) = reference_tag
+        && let Some(tag_values) = tags.get(ref_tag_name)
+    {
+        //missing > not 'aligned'
+        if let Some(tag_value) = tag_values.get(read_index) {
+            let ref_name = tag_value.to_bstr();
+            // Look up the reference name in the BAM header
+            let key: &[u8] = &ref_name;
+            if !key.is_empty() {
+                if let Some(idx) = bam_output.header.reference_sequences().get_index_of(key) {
+                    reference_sequence_id = Some(idx);
+                    flags.remove(SamFlags::UNMAPPED);
+                } else {
+                    bail!(
+                        "Error in Bam tag-to-reference output: \n\
                             the value '{ref_name}' for tag '{ref_tag_name}' was not a valid reference sequence.\n\
                            Check that your output.bam.tag_to_reference.from_bam|from_barcodes derived values match\n\
                            with the actual tag values. Read name involved: '{}'",
-                            BStr::new(read.name()),
-                        );
-                    }
-                } // else stay at 'not aligned'
-            }
+                        BStr::new(read.name()),
+                    );
+                }
+            } // else stay at 'not aligned'
         }
     }
 
@@ -191,7 +191,7 @@ pub fn write_read_to_bam(
             res = res.context("Empty read name not supported by BAM. Check you Rename steps?");
         }
         //bam only allows printable characters. [!-?A-~]
-        if name.iter().any(|&c| c < 33 || c > 126 || c == b'@') {
+        if name.iter().any(|&c| {!(33..=126).contains(&c) || c == b'@'}) {
             res = res.context(format!(
                 "The read name contains characters that are not allowed in the SAM/BAM spec.\n\
                     Remove or replace these characters, or set output.bam.comment_separation_char\n\
@@ -207,6 +207,7 @@ pub fn write_read_to_bam(
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used)]
     use super::*;
     use crate::io::reads::{FastQBlock, FastQElement, FastQRead};
     use fastqrab_config::CompressionFormat;

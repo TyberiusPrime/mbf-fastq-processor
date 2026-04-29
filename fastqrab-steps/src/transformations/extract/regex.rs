@@ -116,7 +116,7 @@ impl TagUser for PartialTaggedVariant<PartialRegex> {
                         TagValueType::Location
                     },
                 ),
-                used_tags: used_tags,
+                used_tags,
                 ..Default::default()
             })
         } else {

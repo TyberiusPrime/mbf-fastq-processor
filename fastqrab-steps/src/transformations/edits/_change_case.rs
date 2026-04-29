@@ -35,9 +35,9 @@ impl Partial_ChangeCase {
         if_tag: TomlValue<Option<ConditionalTagLabel>>,
     ) -> Self {
         Self {
-            target: target,
+            target,
             case_type: TomlValue::new_ok_unplaced(case_type),
-            if_tag: if_tag,
+            if_tag,
         }
     }
 }

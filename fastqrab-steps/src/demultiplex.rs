@@ -209,11 +209,7 @@ impl DemultiplexInfo {
 
     #[must_use]
     pub fn name_to_tag(&self, name: &str) -> Option<Tag> {
-        if let Some(tag) = self.local_name_to_tag.get(name) {
-            return Some(*tag);
-        } else {
-            None
-        }
+        self.local_name_to_tag.get(name).copied()
     }
 }
 

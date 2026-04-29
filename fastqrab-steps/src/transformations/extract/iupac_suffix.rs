@@ -74,7 +74,7 @@ impl IUPACSuffix {
         let max_len = std::cmp::min(seq.len(), query.len());
         for prefix_len in (min_length..=max_len).rev() {
             let suffix_start = seq.len() - prefix_len;
-            let dist = iupac_hamming_distance(&query[..prefix_len], &seq[suffix_start..]) as usize;
+            let dist = iupac_hamming_distance(&query[..prefix_len], &seq[suffix_start..]);
             if dist <= max_mismatches {
                 return Some(prefix_len);
             }

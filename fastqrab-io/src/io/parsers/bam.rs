@@ -211,6 +211,7 @@ impl Parser for BamParser {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used)]
     use super::*;
     use anyhow::Result;
     use noodles::bam;

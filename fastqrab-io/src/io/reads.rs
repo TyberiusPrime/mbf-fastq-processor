@@ -1311,6 +1311,7 @@ impl FastQBlocksCombined {
         }
     }
     #[must_use]
+    #[allow(clippy::len_without_is_empty)]
     pub fn len(&self) -> usize {
         self.segments[0].entries.len()
     }
@@ -2647,7 +2648,7 @@ mod test {
     fn test_owned_postfix() {
         let mut seq1 = FastQElement::Owned(b"AAAAAAAA".to_vec());
         seq1.postfix(b"TTT", &mut vec![]);
-        assert_eq!(seq1.get(&vec![]), b"AAAAAAAATTT");
+        assert_eq!(seq1.get(&[]), b"AAAAAAAATTT");
     }
 
     #[test]
@@ -2674,8 +2675,8 @@ mod test {
         assert_eq!(cloned.entries[0].name.get(&cloned.block), b"read1");
         assert_eq!(cloned.entries[0].seq.get(&cloned.block), b"AAAAAAAA");
         assert_eq!(cloned.entries[0].qual.get(&cloned.block), b"IIIIIIII");
-        assert_eq!(cloned.entries[1].name.get(&vec![]), b"read2");
-        assert_eq!(cloned.entries[1].seq.get(&vec![]), b"CCCCCCCC");
-        assert_eq!(cloned.entries[1].qual.get(&vec![]), b"JJJJJJJJ");
+        assert_eq!(cloned.entries[1].name.get(&[]), b"read2");
+        assert_eq!(cloned.entries[1].seq.get(&[]), b"CCCCCCCC");
+        assert_eq!(cloned.entries[1].qual.get(&[]), b"JJJJJJJJ");
     }
 }

@@ -641,7 +641,10 @@ impl IupacExpander {
     }
 
     fn advance(&mut self) -> bool {
-        let indices = self.indices.as_mut().unwrap();
+        let indices = self
+            .indices
+            .as_mut()
+            .expect("Inner advance called after iterator was exhausted. next() should not do that");
         for i in (0..indices.len()).rev() {
             indices[i] += 1;
             if indices[i] < self.positions[i].len() {

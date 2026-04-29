@@ -221,11 +221,12 @@ impl OutputFile {
 
     fn after_bam_fragment(&mut self) -> Result<()> {
         self.config.fragments_written_in_chunk += 1;
-        if let Some(chunk_size) = self.config.chunk_size {
-            if self.config.fragments_written_in_chunk >= chunk_size {
-                self.rotate_chunk()?;
-            }
+        if let Some(chunk_size) = self.config.chunk_size
+            && self.config.fragments_written_in_chunk >= chunk_size
+        {
+            self.rotate_chunk()?;
         }
+
         Ok(())
     }
 
@@ -462,7 +463,7 @@ impl OutputFileConfig {
                 &self.bam_write_options.reference_sequences,
                 self.compression_threads
                     .and_then(|x| x.try_into().ok())
-                    .unwrap_or(NonZero::try_from(1).unwrap()),
+                    .unwrap_or(NonZero::try_from(1).expect("can't fail")),
             )?), // cov:excl-line
             FileFormat::Fastq => {
                 OutputFileHandle::Fastq(OutputWriter::File(HashedAndCompressedWriter::new(
@@ -627,13 +628,10 @@ fn build_bam_output(
     )?; // cov:excl-line
 
     let mut builder = bgzf::io::multithreaded_writer::Builder::default();
-    match compression_level {
-        Some(level) => {
-            let level = bgzf::io::writer::CompressionLevel::try_from(level)
-                .context("Invalid compression level for BAM BGZF writer")?;
-            builder = builder.set_compression_level(level);
-        }
-        None => {}
+    if let Some(level) = compression_level {
+        let level = bgzf::io::writer::CompressionLevel::try_from(level)
+            .context("Invalid compression level for BAM BGZF writer")?;
+        builder = builder.set_compression_level(level);
     }
     let bgzf_writer = builder
         .set_worker_count(thread_count) //todo: use from config...

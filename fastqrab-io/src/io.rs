@@ -37,7 +37,7 @@ fn apply_to_read(
         bam_include_mapped: Some(include_mapped),
         bam_include_unmapped: Some(include_unmapped),
         read_comment_character: b' ', // ignored here.
-        use_rapidgzip: use_rapidgzip,
+        use_rapidgzip,
         build_rapidgzip_index: None,
         threads_per_segment: Some(get_number_of_cores()), // at this point, we're ready to multicore this
                                                           // hard.

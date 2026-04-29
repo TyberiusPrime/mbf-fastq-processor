@@ -210,13 +210,13 @@ pub enum RemovedTags<'a> {
 }
 impl TagValueType {
     pub fn compatible(self, other: TagValueType) -> bool {
-        match (self, other) {
+        matches!(
+            (self, other),
             (TagValueType::Location, TagValueType::Location)
-            | (TagValueType::String, TagValueType::String)
-            | (TagValueType::Bool, TagValueType::Bool)
-            | (TagValueType::Numeric(_), TagValueType::Numeric(_)) => true,
-            _ => false,
-        }
+                | (TagValueType::String, TagValueType::String)
+                | (TagValueType::Bool, TagValueType::Bool)
+                | (TagValueType::Numeric(_), TagValueType::Numeric(_))
+        )
     }
 }
 
@@ -405,14 +405,14 @@ impl TagLabel {
 
 impl PartialOrd for TagLabel {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.as_ref().cmp(other.as_ref()))
+        Some(self.cmp(other))
     }
 }
 impl Ord for TagLabel {
     //cov:excl-start  - necessary for  Vec<TagLabel> to support sort_unstable
     //but not actually called apparently?
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.as_ref().cmp(&other.as_ref())
+        self.as_ref().cmp(other.as_ref())
     }
     //cov:excl-stop
 }
@@ -494,7 +494,7 @@ impl ToUsedTag for TomlValue<TagLabel> {
         if let Some(name) = self.as_ref() {
             Some(UsedTag {
                 name: name.clone(),
-                accepted_tag_types: accepted_tag_types,
+                accepted_tag_types,
                 toml_source: Rc::new(RefCell::new((&mut self.state, &mut self.help))),
                 further_help: None,
             })
@@ -512,7 +512,7 @@ impl ToUsedTag for TomlValue<MustAdapt<String, TagLabel>> {
         if let Some(name) = self.as_ref().and_then(|x| x.as_ref_post()) {
             Some(UsedTag {
                 name: name.clone(),
-                accepted_tag_types: &accepted_tag_types[..],
+                accepted_tag_types,
                 toml_source: Rc::new(RefCell::new((&mut self.state, &mut self.help))),
                 further_help: None,
             })

@@ -32,42 +32,40 @@ impl ValidateTagLabel for TomlValue<MustAdapt<String, TagLabel>> {
                     } else if let Some(segment_name) = value.strip_prefix("len_") {
                         if segment_name.eq_ignore_ascii_case("all") {
                             Ok(TagLabel::Length(SegmentIndexOrAll::All, value.to_string()))
+                        } else if let Some(position) =
+                            segment_order.iter().position(|x| x == segment_name)
+                        {
+                            Ok(TagLabel::Length(
+                                SegmentIndexOrAll::Indexed(position),
+                                value.to_string(),
+                            ))
+                        } else if tags_available.keys().any(|tag_label| match tag_label {
+                            TagLabel::Normal(name) => name == segment_name,
+                            _ => false,
+                        }) {
+                            Ok(TagLabel::TagLength(
+                                segment_name.to_string(),
+                                value.to_string(),
+                            ))
                         } else {
-                            if let Some(position) =
-                                segment_order.iter().position(|x| x == segment_name)
-                            {
-                                Ok(TagLabel::Length(
-                                    SegmentIndexOrAll::Indexed(position),
-                                    value.to_string(),
-                                ))
-                            } else if tags_available.keys().any(|tag_label| match tag_label {
-                                TagLabel::Normal(name) => name == segment_name,
-                                _ => false,
-                            }) {
-                                Ok(TagLabel::TagLength(
-                                    segment_name.to_string(),
-                                    value.to_string(),
-                                ))
-                            } else {
-                                let mut available: Vec<String> =
-                                    segment_order.iter().map(|x| format!("len_{x}")).collect();
-                                available.push("len_all".to_string());
-                                available.extend(tags_available.keys().filter_map(|k| {
-                                    if let TagLabel::Normal(name) = k {
-                                        Some(name.clone())
-                                    } else {
-                                        None
-                                    }
-                                }));
+                            let mut available: Vec<String> =
+                                segment_order.iter().map(|x| format!("len_{x}")).collect();
+                            available.push("len_all".to_string());
+                            available.extend(tags_available.keys().filter_map(|k| {
+                                if let TagLabel::Normal(name) = k {
+                                    Some(name.clone())
+                                } else {
+                                    None
+                                }
+                            }));
 
-                                Err(ValidationFailure::new(
-                                    "Unknown length tag label".to_string(),
-                                    Some(format!(
-                                        "'{segment_name}' is neither a segment nor a tag name. Choose an existing name.\n{}",
-                                        suggest_alternatives(segment_name, &available)
-                                    )),
-                                ))
-                            }
+                            Err(ValidationFailure::new(
+                                "Unknown length tag label".to_string(),
+                                Some(format!(
+                                    "'{segment_name}' is neither a segment nor a tag name. Choose an existing name.\n{}",
+                                    suggest_alternatives(segment_name, &available)
+                                )),
+                            ))
                         }
                     } else if let Some(incoming_tag_name) = value.strip_prefix("location_") {
                         if tags_available.keys().any(|tag_label| match tag_label {

@@ -210,7 +210,7 @@ fn populate_working_dir(
     do_copy_input_files: bool,
 ) -> Result<()> {
     // Copy the original TOML without modification
-    ex::fs::copy(toml_file, &temp_path.join("config.toml"))
+    ex::fs::copy(toml_file, temp_path.join("config.toml"))
         .context("Failed to copy TOML to temp directory")?;
 
     // Set up input files in the temp dir. When prep/test scripts will run (do_copy_input_files),
@@ -634,29 +634,27 @@ fn cleanup_output_dir(output_dir: Option<&Path>) -> Result<()> {
     use std::os::unix::fs::PermissionsExt;
     if let Some(output_dir) = output_dir
         && output_dir.exists()
+        && let Err(_) = ex::fs::remove_dir_all(output_dir)
     {
-        if let Err(_) = ex::fs::remove_dir_all(output_dir) {
-            //try chmod it to write+executable
-            ex::fs::set_permissions(output_dir, std::fs::Permissions::from_mode(0o755)).ok();
-            //also chmod +x all subdirs...
-            for entry in ex::fs::read_dir(output_dir)? {
-                if let Ok(entry) = entry {
-                    let path = entry.path();
-                    if path.is_dir() {
-                        ex::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755)).ok();
-                    }
-                } // cov:excl-line
-            }
-            ex::fs::remove_dir_all(output_dir).with_context(|| {
-                // cov:excl-start
-                format!(
-                    "Failed to remove existing output directory: {}",
-                    output_dir.display()
-                )
-            })?;
-            // cov:excl-stop
+        //try chmod it to write+executable
+        ex::fs::set_permissions(output_dir, std::fs::Permissions::from_mode(0o755)).ok();
+        //also chmod +x all subdirs...
+        for entry in ex::fs::read_dir(output_dir)?.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                ex::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755)).ok();
+            } // cov:excl-line
         }
+        ex::fs::remove_dir_all(output_dir).with_context(|| {
+            // cov:excl-start
+            format!(
+                "Failed to remove existing output directory: {}",
+                output_dir.display()
+            )
+        })?;
+        // cov:excl-stop
     }
+
     Ok(())
 }
 

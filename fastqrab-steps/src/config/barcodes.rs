@@ -139,7 +139,7 @@ impl VerifyIn<PartialConfig> for PartialBarcodes {
                 return Ok(());
             };
             if values.map.is_empty()
-                && (!self.from_file.as_ref().is_some()
+                && (self.from_file.as_ref().is_none()
                     || matches!(self.from_file.as_ref(), Some(None)))
             {
                 self.barcode_to_name.state = TomlValueState::new_validation_failed(
@@ -183,7 +183,7 @@ impl VerifyIn<PartialConfig> for PartialBarcodes {
                             .as_ref()
                             .and_then(|x| x.options.as_ref())
                             .and_then(|x| x.use_rapidgzip.as_ref())
-                            .map(|x| *x)
+                            .copied()
                             .unwrap_or(false),
                     )?;
                     Some(barcode_to_name.into_iter().collect())
@@ -220,8 +220,8 @@ impl VerifyIn<PartialConfig> for PartialBarcodes {
             for (iupac, name) in iupac_to_name.iter() {
                 lengths.insert(iupac.len());
                 for dna in IupacExpander::new(iupac.as_ref()) {
-                    if let Some(old) = dna_to_name.insert(dna.clone(), name.clone()) {
-                        if old != *name {
+                    if let Some(old) = dna_to_name.insert(dna.clone(), name.clone()) 
+                        && old != *name {
                             // it's ok if we essentially replaced them with themselves
                             return Err(ValidationFailure::new(
                                 format!(
@@ -230,7 +230,7 @@ impl VerifyIn<PartialConfig> for PartialBarcodes {
                                 Some("Verify your input barcodes are disjoint.".to_string()),
                             ));
                         }
-                    }
+                    
                 }
             }
             if lengths.len() > 1 {

@@ -62,14 +62,13 @@ impl TagUser for PartialTaggedVariant<PartialByNumericTag> {
                             "Supply a value between {declared_lower}..={declared_upper}"
                         ));
                     }
-                } else if let Some(Some(upper_threshold)) = inner.max_value.as_ref() {
-                    if *upper_threshold < declared_lower || *upper_threshold > declared_upper {
-                        inner.max_value.state =
-                            TomlValueState::new_validation_failed("Out of range");
-                        inner.max_value.help = Some(format!(
-                            "Supply a value between {declared_lower}..={declared_upper}"
-                        ));
-                    }
+                } else if let Some(Some(upper_threshold)) = inner.max_value.as_ref()
+                    && (*upper_threshold < declared_lower || *upper_threshold > declared_upper)
+                {
+                    inner.max_value.state = TomlValueState::new_validation_failed("Out of range");
+                    inner.max_value.help = Some(format!(
+                        "Supply a value between {declared_lower}..={declared_upper}"
+                    ));
                 }
             }
 

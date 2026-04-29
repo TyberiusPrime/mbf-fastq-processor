@@ -156,13 +156,13 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
                 .options
                 .as_ref()
                 .and_then(|options| options.max_blocks_in_flight.as_ref())
-                .map(|x| *x)
+                .copied()
                 .unwrap_or_else(fastqrab_config::default_blocks_in_flight);
             let reads_per_block = parent
                 .options
                 .as_ref()
                 .and_then(|options| options.block_size.as_ref())
-                .map(|x| *x)
+                .copied()
                 .unwrap_or_else(fastqrab_config::default_block_size);
             let reads_wanted = *self
                 .by_majority_min_molecules_to_start
@@ -261,12 +261,12 @@ impl HammingCorrect {
         use MatchResult::*;
         let matched = self
             .resonator
-            .query(&sequence)
+            .query(sequence)
             .map_err(|e| anyhow::anyhow!("HammingCorrect query failed: {e}"))?;
         if matched.is_empty() {
-            return Ok(NoMatch);
+            Ok(NoMatch)
         } else if matched.len() == 1 {
-            return Ok(OneMatch(matched[0].0, matched[0].1 == 0));
+            Ok(OneMatch(matched[0].0, matched[0].1 == 0))
         } else {
             let mut matched_plus_seq: Vec<_> = matched
                 .iter()
@@ -292,7 +292,7 @@ impl HammingCorrect {
             matched_plus_seq.sort_by_key(|(seq, dist, _name)| (*dist, *seq));
             // is there a best one? take that
             if matched_plus_seq[0].1 < matched_plus_seq[1].1 {
-                return Ok(OneMatch(matched_plus_seq[0].0, *matched_plus_seq[0].1 == 0));
+                Ok(OneMatch(matched_plus_seq[0].0, *matched_plus_seq[0].1 == 0))
             } else {
                 let first_different = matched_plus_seq
                     .iter()
@@ -424,15 +424,15 @@ impl Step for HammingCorrect {
                         }
                         MatchResult::OneMatch(matched_seq, was_exact) => {
                             if was_exact && let Some(barcode_counts) = barcode_counts.as_mut()
-                                && matches!(self.on_tie, OnTie::ByMajority) {
-                                if count_here {
+                                && matches!(self.on_tie, OnTie::ByMajority) 
+                                && count_here {
                                         barcode_counts
                                     //matched_seq == query_seq here.
                                                     .entry(matched_seq.into())
                                                     .and_modify(|count| *count = count.saturating_add(1))
                                                     .or_insert(1);
                                 }
-                            }
+                            
                             self.output(matched_seq, input_tag, output_barcode)
                         }
                         MatchResult::Tie(items) => {
@@ -479,7 +479,7 @@ impl Step for HammingCorrect {
                                         //add a laplace of 1
                                         //which avoids a total of 0 in the extreme case of ,
                                         //we ain't seen any of these.
-                                        let count = barcode_counts.get(item.0).map(|x| *x).unwrap_or(0) + 1;
+                                        let count = barcode_counts.get(item.0).copied().unwrap_or(0) + 1;
                                         best = Some(match best {
                                             Some(ibest) => if ibest.1 < count {(item.0, count)} else {ibest},
                                             None => (item.0, count)

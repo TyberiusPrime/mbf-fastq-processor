@@ -162,7 +162,7 @@ impl TagUser for PartialTaggedVariant<PartialDemultiplex> {
             if let Some(upstream_label_type) = upstream_label_type {
                 match upstream_label_type {
                     TagValueType::Location | TagValueType::String => {
-                        if !inner.output_unmatched.as_ref().is_some() {
+                        if inner.output_unmatched.as_ref().is_none() {
                             self.toml_value.state = TomlValueState::new_validation_failed(
                                 "output_unmatched must be *not* set when using boolean values for demultiplex.",
                             );
@@ -179,12 +179,10 @@ impl TagUser for PartialTaggedVariant<PartialDemultiplex> {
                             } else {
                                 inner.lookup_mode = Some(LookupMode::NoLookup);
                             }
+                        } else if matches!(upstream_label_type, TagValueType::Location) {
+                            inner.lookup_mode = Some(LookupMode::Lookup);
                         } else {
-                            if matches!(upstream_label_type, TagValueType::Location) {
-                                inner.lookup_mode = Some(LookupMode::Lookup);
-                            } else {
-                                inner.lookup_mode = Some(LookupMode::NoLookup);
-                            }
+                            inner.lookup_mode = Some(LookupMode::NoLookup);
                         }
                     }
                     TagValueType::Numeric(_) => {

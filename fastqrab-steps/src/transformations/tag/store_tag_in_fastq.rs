@@ -79,7 +79,7 @@ impl VerifyIn<PartialConfig> for PartialStoreTagInFastQ {
         crate::config::validate_compression_level_u8(
             &self.compression,
             &mut self.compression_level,
-            &self.format.as_ref().unwrap_or(&FileFormat::Fastq), // Default to Fastq for validation
+            self.format.as_ref().unwrap_or(&FileFormat::Fastq), // Default to Fastq for validation
                                                                  // purposes
         );
 

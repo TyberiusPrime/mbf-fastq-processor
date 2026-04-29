@@ -80,7 +80,7 @@ pub fn merge_demultiplexed_bam(
 
         let entry = groups
             .entry(grouped_output_name)
-            .or_insert_with(|| Vec::new());
+            .or_default();
         entry.push((
             tag_output_name.clone(),
             *final_demultiplex_output_tag,
@@ -296,8 +296,8 @@ fn write_merged_bai(
     w.write_all(b"BAI\x01")?;
     w.write_all(&(n_ref as u32).to_le_bytes())?;
 
-    for ref_id in 0..n_ref {
-        if let Some((v_beg, v_end, n_reads)) = ref_spans[ref_id] {
+    for ref_span in ref_spans {
+        if let Some((v_beg, v_end, n_reads)) = ref_span {
             // n_bin = 2: one real bin (4681) + metadata pseudo-bin (37450)
             w.write_all(&2u32.to_le_bytes())?;
 

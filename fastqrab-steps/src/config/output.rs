@@ -50,7 +50,6 @@ toml_pretty_deser::impl_visitor_for_try_from_str!(BamTag, "Invalid BAM tag");
 
 /// Alias so the `#[tpd]` macro can find the "partial" type for `BamTag`
 /// (which is its own visitor – no separate Partial struct is generated).
-
 pub type PartialBamTag = BamTag;
 
 /// Source for reference sequences used by `tag_to_reference` (Feature B).
@@ -72,7 +71,6 @@ pub struct TagToReference {
 }
 
 #[must_use]
-
 /// BAM-specific output options.
 #[derive(Clone, JsonSchema)]
 #[tpd]
@@ -301,7 +299,7 @@ impl VerifyIn<super::PartialConfig> for PartialOutput {
             validate_compression_level_u8(
                 &self.compression,
                 &mut self.compression_level,
-                &self.format.as_ref().unwrap_or(&FileFormat::Fastq),
+                self.format.as_ref().unwrap_or(&FileFormat::Fastq),
             );
         }
         self.verify_compression_and_stdout();
@@ -539,17 +537,13 @@ pub fn validate_compression_level_u8(
                         compression_level.help =
                             Some("Valid range is 0-9 for BAM (and our compressor)".to_string());
                     }
-                } else {
-                    if *level != 0 {
-                        compression_level.state = TomlValueState::ValidationFailed {
-                            message: "Compression level specified for uncompressed output"
-                                .to_string(),
-                        };
-                        compression_level.help = Some(
-                            "Remove compression_level, or set compressed='gzip' or 'zstd'"
-                                .to_string(),
-                        );
-                    }
+                } else if *level != 0 {
+                    compression_level.state = TomlValueState::ValidationFailed {
+                        message: "Compression level specified for uncompressed output".to_string(),
+                    };
+                    compression_level.help = Some(
+                        "Remove compression_level, or set compressed='gzip' or 'zstd'".to_string(),
+                    );
                 }
             }
             Some(CompressionFormat::Gzip) => {

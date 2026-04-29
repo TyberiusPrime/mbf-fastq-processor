@@ -89,7 +89,7 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagsInTable> {
                             .iter()
                             .filter_map(|x| x.as_ref())
                             .filter_map(|x| x.as_ref_post())
-                            .map(|tv| tv.clone())
+                            .cloned()
                             .collect(),
                     );
                 }
@@ -111,9 +111,7 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagsInTable> {
                 .final_in_labels
                 .as_ref()
                 .expect("set just above")
-                .iter()
-                .map(|tag_label| tag_label.clone())
-                .collect();
+                .to_vec();
 
             let toml_source = Rc::new(RefCell::new((
                 &mut self.toml_value.state,

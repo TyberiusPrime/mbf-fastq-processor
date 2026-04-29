@@ -250,8 +250,7 @@ impl<T: std::io::Write + Send + 'static> HashedAndCompressedWriter<T> {
                         None => flate2::Compression::default(),
                     };
                     let parallel_writer = ParCompressBuilder::<Gzip>::new()
-                        .num_threads(threads)
-                        .unwrap()
+                        .num_threads(threads)?
                         .compression_level(compression)
                         .from_writer(hashing_writer);
                     let sendable_writer = ParallelWriter(parallel_writer);
