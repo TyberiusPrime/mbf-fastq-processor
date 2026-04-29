@@ -80,7 +80,7 @@ impl VerifyIn<PartialConfig> for PartialStoreTagInFastQ {
             &self.compression,
             &mut self.compression_level,
             self.format.as_ref().unwrap_or(&FileFormat::Fastq), // Default to Fastq for validation
-                                                                 // purposes
+                                                                // purposes
         );
 
         if parent.output.is_ok()

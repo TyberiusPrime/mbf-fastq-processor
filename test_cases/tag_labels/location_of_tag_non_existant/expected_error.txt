@@ -1,0 +1,15 @@
+Error 1/1
+   ╭─config.toml
+   ┆
+11 │ [[step]]
+12 │   action = 'StoreTagsInTable'
+   ┆            ─────────┬────────
+   ┆                     │
+   ┆                     ╰───────── In this step
+13 │   in_labels = ['polyA', 'location_polyX']
+   ┆                         ────────┬───────
+   ┆                                 │
+   ┆                                 ╰───────── Unknown location tag label
+───╯
+Hint: 'polyX' is not a tag name. Choose an existing name.
+      Did you mean: polyA?

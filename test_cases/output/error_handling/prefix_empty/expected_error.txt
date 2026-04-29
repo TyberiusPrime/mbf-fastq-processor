@@ -1,0 +1,10 @@
+Error 1/1
+  ╭─config.toml
+  ┆
+7 │ [output]
+8 │     prefix = ''
+  ┆              ─┬
+  ┆               │
+  ┆               ╰─ Invalid value
+──╯
+Hint: Must not be empty

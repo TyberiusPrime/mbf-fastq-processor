@@ -43,15 +43,13 @@ pub fn merge_demultiplexed_bam(
         .iter()
         .enumerate()
         .find(|s| s.1.in_label == merge_label)
-        .unwrap_or_else(|| {
-            panic!("No demultiplex step found with in_label='{merge_label}' (this is a bug)")
-        });
+        .expect("No demultiplex step found with in_label='{merge_label}' (this is a bug)");
 
     //  final tag→name mapping
     let final_tag_to_name = match demultiplex_infos.last() {
         Some((_, OptDemultiplex::Yes(info))) => &info.tag_to_name,
         _ => {
-            unreachable!("No demultiplexing active - should not be able to be configured this way");
+            unreachable!("No demultiplexing active - should not be able to be configured this way"); // cov:excl-line
         }
     };
 
@@ -78,9 +76,7 @@ pub fn merge_demultiplexed_bam(
         let grouped_output_name: String = group.join(sep);
         let ref_seq = parts[merge_step_index].to_string();
 
-        let entry = groups
-            .entry(grouped_output_name)
-            .or_default();
+        let entry = groups.entry(grouped_output_name).or_default();
         entry.push((
             tag_output_name.clone(),
             *final_demultiplex_output_tag,
@@ -89,7 +85,7 @@ pub fn merge_demultiplexed_bam(
     }
 
     if groups.is_empty() {
-        unreachable!("Should always have something to combine");
+        unreachable!("Should always have something to combine"); // cov:excl-line
     }
 
     // read the shared header once and build reference-name → position map
@@ -213,9 +209,11 @@ fn merge_bam_files(
         let copied = std::io::copy(&mut src.take(header_size), &mut dst)
             .with_context(|| format!("Error copying header from: {}", src_paths[0].display()))?;
         if copied != header_size {
+            //cov:excl-start
             anyhow::bail!(
-                "Unexpected header size: copied {copied} bytes but expected {header_size} bytes"
+                "Unexpected header size: copied {copied} bytes but expected {header_size} bytes. Some kind of IO issue?"
             );
+            //cov:excl-end
         }
     }
 
@@ -297,7 +295,9 @@ fn write_merged_bai(
     w.write_all(&(n_ref as u32).to_le_bytes())?;
 
     for ref_span in ref_spans {
-        if let Some((v_beg, v_end, n_reads)) = ref_span {
+        if let Some((v_beg, v_end, n_reads)) = ref_span
+            && n_reads > 0
+        {
             // n_bin = 2: one real bin (4681) + metadata pseudo-bin (37450)
             w.write_all(&2u32.to_le_bytes())?;
 

@@ -1,0 +1,10 @@
+[input]
+  r = ['input_interleaved.fq.gz', 'input_interleaved.fasta.gz']
+  interleaved = ['read1', 'read2']
+  options.fasta_fake_quality = 33
+
+[options]
+accept_duplicate_files = true
+
+[output]
+  prefix = 'output'

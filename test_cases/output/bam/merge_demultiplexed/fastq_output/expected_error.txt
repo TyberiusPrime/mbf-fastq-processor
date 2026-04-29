@@ -1,0 +1,12 @@
+Error 1/1
+   ╭─config.toml
+   ┆
+43 │     [output.bam]
+44 │         tag_to_reference.references_from_barcodes = "barcodes"
+45 │         tag_to_reference.tag="refs"
+46 │         merge_demultiplexed = true
+   ┆                               ──┬─
+   ┆                                 │
+   ┆                                 ╰── merge_demultiplexed requires format = 'bam'
+───╯
+Hint: Set [output] format = 'bam' to use merge_demultiplexed.

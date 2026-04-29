@@ -1,0 +1,26 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[output]
+    prefix = 'output'
+    format = 'bam'
+
+    bam.tags = {
+        barcode = 'BC',
+        reg = 'BCA'
+}
+
+[[step]]
+    action = 'ExtractRegion'
+    source = 'read1'
+    anchor = 'start'
+    start = 0
+    length = 6
+    out_label = 'barcode'
+
+
+[[step]]
+    action = 'ExtractRegex'
+    source = 'read1'
+    query = "A..C"
+    out_label = 'reg'

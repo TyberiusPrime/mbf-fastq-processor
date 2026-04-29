@@ -144,12 +144,17 @@ impl TagUser for PartialTaggedVariant<Box<PartialEvalExpression>> {
                                     if toml_source.borrow().1.is_some() {
                                         *toml_source.borrow_mut().1 = Some(format!(
                                             "{}\n{help}",
-                                            toml_source.borrow().1.as_ref().map(|x|x.as_str()).unwrap_or("")
+                                            toml_source
+                                                .borrow()
+                                                .1
+                                                .as_ref()
+                                                .map(|x| x.as_str())
+                                                .unwrap_or("")
                                         ));
                                     } else {
                                         *toml_source.borrow_mut().1 = Some(help);
                                     }
-                                }
+                                } // cov:excl-line
                             }
                             MustAdapt::PostVerify(tag_label) => {
                                 let accepted_tag_types = &[

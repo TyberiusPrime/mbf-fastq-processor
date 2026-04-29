@@ -105,17 +105,13 @@ pub fn write_read_to_bam(
                 TagValue::String(s) => Some(Value::String(s.clone())),
                 TagValue::Location(hits) => {
                     // Join all hit sequences with commas
-                    if hits.0.is_empty() {
-                        None
-                    } else {
-                        let joined = hits
-                            .0
-                            .iter()
-                            .map(|h| h.sequence.as_ref())
-                            .collect::<Vec<_>>()
-                            .join(b",".as_ref());
-                        Some(Value::String(BString::from(joined)))
-                    }
+                    let joined = hits
+                        .0
+                        .iter()
+                        .map(|h| h.sequence.as_ref())
+                        .collect::<Vec<_>>()
+                        .join(b",".as_ref());
+                    Some(Value::String(BString::from(joined)))
                 }
                 TagValue::Numeric(n) => Some(Value::Float(*n as f32)),
                 TagValue::Bool(b) => Some(Value::UInt8(u8::from(*b))),
@@ -124,7 +120,7 @@ pub fn write_read_to_bam(
             if let Some(value) = value_opt {
                 data_fields.push((Tag::from(*bam_tag_bytes), value));
             }
-        }
+        } // cov:excl-line
     }
 
     let data: Data = data_fields.into_iter().collect();
@@ -153,7 +149,7 @@ pub fn write_read_to_bam(
                     );
                 }
             } // else stay at 'not aligned'
-        }
+        } // cov:excl-line
     }
 
     // Query or read names may contain any printable ASCII characters in the range [!-~] apart from '@', so
@@ -191,7 +187,7 @@ pub fn write_read_to_bam(
             res = res.context("Empty read name not supported by BAM. Check you Rename steps?");
         }
         //bam only allows printable characters. [!-?A-~]
-        if name.iter().any(|&c| {!(33..=126).contains(&c) || c == b'@'}) {
+        if name.iter().any(|&c| !(33..=126).contains(&c) || c == b'@') {
             res = res.context(format!(
                 "The read name contains characters that are not allowed in the SAM/BAM spec.\n\
                     Remove or replace these characters, or set output.bam.comment_separation_char\n\

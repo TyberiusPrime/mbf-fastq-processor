@@ -41,7 +41,7 @@ impl ValidateTagLabel for TomlValue<MustAdapt<String, TagLabel>> {
                             ))
                         } else if tags_available.keys().any(|tag_label| match tag_label {
                             TagLabel::Normal(name) => name == segment_name,
-                            _ => false,
+                            _ => false, // cov:excl-line available are always normal
                         }) {
                             Ok(TagLabel::TagLength(
                                 segment_name.to_string(),
@@ -55,7 +55,7 @@ impl ValidateTagLabel for TomlValue<MustAdapt<String, TagLabel>> {
                                 if let TagLabel::Normal(name) = k {
                                     Some(name.clone())
                                 } else {
-                                    None
+                                    None // cov:excl-line available are always normal
                                 }
                             }));
 
@@ -70,7 +70,7 @@ impl ValidateTagLabel for TomlValue<MustAdapt<String, TagLabel>> {
                     } else if let Some(incoming_tag_name) = value.strip_prefix("location_") {
                         if tags_available.keys().any(|tag_label| match tag_label {
                             TagLabel::Normal(name) => name == incoming_tag_name,
-                            _ => false,
+                            _ => false, // cov:excl-line available are always normal
                         }) {
                             Ok(TagLabel::TagLocation {
                                 source: incoming_tag_name.to_string(),
@@ -83,7 +83,7 @@ impl ValidateTagLabel for TomlValue<MustAdapt<String, TagLabel>> {
                                     if let TagLabel::Normal(name) = k {
                                         Some(name.clone())
                                     } else {
-                                        None
+                                        None // cov:excl-line available are always normal
                                     }
                                 })
                                 .collect();
@@ -105,7 +105,7 @@ impl ValidateTagLabel for TomlValue<MustAdapt<String, TagLabel>> {
                         }
                     }
                 }
-                MustAdapt::PostVerify(_) => unreachable!("validate_tag_label called twice"),
+                MustAdapt::PostVerify(_) => unreachable!("validate_tag_label called twice"), // cov:excl-line
             };
 
             match resolved {

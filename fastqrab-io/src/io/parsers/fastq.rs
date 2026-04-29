@@ -400,12 +400,17 @@ pub fn parse_to_fastq_block(
             }
             last_status = PartialStatus::InSpacer;
         } else {
-            //read more bytes please
+            //read more bytes please. But we were already reading more bytes?
+            //maybe a bug in the decompression, handing in empty blocks?
+            //I don't think we can trigger this in normal operation,
+            //but if we do, we just continue with the next block
+            // cov:excl-start
             return Ok(FastQBlockParseResult {
                 status: PartialStatus::InSpacerExpectPlus,
                 partial_read: Some(last_read.expect("last_read must be Some")),
                 windows_mode,
             });
+            // cov:excl-stop
         }
     }
 

@@ -567,25 +567,25 @@ impl FastQBlock {
         res
     }
 
-    pub fn apply_mut_with_tag(
-        &mut self,
-        tags: &IndexMap<TagLabel, Vec<TagValue>>,
-        label: &TagLabel,
-        f: impl Fn(&mut WrappedFastQReadMut, &TagValue),
-    ) {
-        let tags = tags
-            .get(label)
-            .expect("Tag not set, should have been caught earlier");
-        assert_eq!(
-            tags.len(),
-            self.entries.len(),
-            "Tags and entries must have the same length. Label: {label} ",
-        );
-        for (ii, entry) in &mut self.entries.iter_mut().enumerate() {
-            let mut wrapped = WrappedFastQReadMut(entry, &mut self.block);
-            f(&mut wrapped, &tags[ii]);
-        }
-    }
+    // pub fn apply_mut_with_tag(
+    //     &mut self,
+    //     tags: &IndexMap<TagLabel, Vec<TagValue>>,
+    //     label: &TagLabel,
+    //     f: impl Fn(&mut WrappedFastQReadMut, &TagValue),
+    // ) {
+    //     let tags = tags
+    //         .get(label)
+    //         .expect("Tag not set, should have been caught earlier");
+    //     assert_eq!(
+    //         tags.len(),
+    //         self.entries.len(),
+    //         "Tags and entries must have the same length. Label: {label} ",
+    //     );
+    //     for (ii, entry) in &mut self.entries.iter_mut().enumerate() {
+    //         let mut wrapped = WrappedFastQReadMut(entry, &mut self.block);
+    //         f(&mut wrapped, &tags[ii]);
+    //     }
+    // }
 
     #[must_use]
     pub fn split_at(mut self, target_reads_per_block: usize) -> (FastQBlock, FastQBlock) {

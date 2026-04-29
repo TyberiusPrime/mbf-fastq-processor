@@ -1,0 +1,12 @@
+Error 1/1
+  ╭─config.toml
+  ┆
+1 │ [input]
+2 │     seq = ['input.fq', '--stdin--']
+3 │     interleaved = ['read1','read2']
+  ┆                   ────────┬────────
+  ┆                           │
+  ┆                           ╰───────── Invalid use of stdin magic value
+──╯
+Hint: When using '--stdin--' as an input file, it must be the only file listed in the interleaved segment's input. Found 2 times.
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/input-section

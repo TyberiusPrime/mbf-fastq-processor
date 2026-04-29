@@ -1,0 +1,2 @@
+Error in stage 0: ValidateReadNamesPrintable: Read name is 284 characters long, exceeding the SAM/BAM limit of 254.
+Read name (first 80 bytes): 'RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR'

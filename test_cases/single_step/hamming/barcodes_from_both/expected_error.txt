@@ -1,0 +1,14 @@
+Error 1/1
+   ╭─config.toml
+   ┆
+46 │ [barcodes.barcodes]
+47 │   from_file = {filename = 'input_barcodes.fasta'}
+   ┆               ─────────────────┬─────────────────
+   ┆                                │
+   ┆                                ╰────────────────── Conflicts with inline barcodes
+48 │   AGTCT = "hello"
+   ┆           ───┬───
+   ┆              │
+   ┆              ╰──── Conflicts with from_file
+───╯
+Hint: Remove either the manual barcode definition or the from_file section.

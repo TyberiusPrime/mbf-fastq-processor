@@ -163,6 +163,7 @@ impl VerifyIn<PartialOutput> for PartialBamOutputOptions {
             });
 
         // Validate tag_to_reference: exactly one of barcodes or from_bam must be set.
+        //
         if let Some(Some(tag_to_ref)) = self.tag_to_reference.as_mut() {
             let has_barcodes = tag_to_ref
                 .references_from_barcodes

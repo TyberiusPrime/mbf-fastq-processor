@@ -636,9 +636,9 @@ impl IupacExpander {
         Self { positions, indices }
     }
 
-    pub fn count_sequences(&self) -> usize {
-        self.positions.iter().map(|p| p.len()).product()
-    }
+    // pub fn count_sequences(&self) -> usize {
+    //     self.positions.iter().map(|p| p.len()).product()
+    // }
 
     fn advance(&mut self) -> bool {
         let indices = self
@@ -682,13 +682,16 @@ pub fn init_hamming_resonator(
 ) -> Result<HammingResonator, ValidationFailure> {
     let seqs: Vec<BString> = seq_to_name.keys().cloned().collect();
 
-    let resonator = HammingResonator::new(seqs, max_dist as u32).map_err(|e| {
-        ValidationFailure::new(
-            "Failed to initialize".to_string(),
-            Some(format!("Inner error: {e}")),
-        )
-    })?;
-
+    let resonator = HammingResonator::new(seqs, max_dist as u32)
+        //cov:excl-start
+        //we ensure in validation taht the barcodes are all of the same length
+        .map_err(|e| {
+            ValidationFailure::new(
+                "Failed to initialize".to_string(),
+                Some(format!("Inner error: {e}")),
+            )
+        })?;
+    //cov:excl-stop
     Ok(resonator)
 }
 

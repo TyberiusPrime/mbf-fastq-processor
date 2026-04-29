@@ -270,7 +270,7 @@ mod tests {
             true,
             false,
             std::num::NonZero::new(1usize).expect("1 is not zero"),
-        )?;
+        )?; // cov:excl-line
         let ParseResult {
             fastq_block: block,
             was_final: finished,
@@ -293,7 +293,7 @@ mod tests {
             false,
             true,
             std::num::NonZero::new(1usize).expect("1 is not zero"),
-        )?;
+        )?; // cov:excl-line
         let ParseResult {
             fastq_block: block,
             was_final: finished,
@@ -316,7 +316,7 @@ mod tests {
             true,
             true,
             std::num::NonZero::new(1usize).expect("1 is not zero"),
-        )?;
+        )?; // cov:excl-line
         let ParseResult {
             fastq_block: block,
             was_final: finished,

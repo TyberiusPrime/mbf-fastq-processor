@@ -804,12 +804,8 @@ fn resolve_bam_write_options(
             // Extract reference names from barcodes section.
             // Each unique barcode name is one reference; length = barcode sequence length.
             let label = fastqrab_config::TagLabel::Normal(barcodes_key.clone());
-            let barcode_section = barcodes.get(&label).ok_or_else(|| {
-                panic!(
-                    "Barcodes section '{}' not found for tag_to_reference. SHould have been caught in validation.",
-                    barcodes_key
-                )
-            })?;
+            let barcode_section = barcodes.get(&label).expect
+                ("Barcode section not found for tag_to_reference. Should have been caught in validation.");
             // seq_to_name maps sequence -> name; collect unique names with sequence length
             let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
             let mut result: Vec<(String, usize)> = Vec::new();

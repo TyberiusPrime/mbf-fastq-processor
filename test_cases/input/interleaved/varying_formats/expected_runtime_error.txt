@@ -1,0 +1,1 @@
+(input): Interleaved inputs must all have the same format. Found both Fastq and Fasta.

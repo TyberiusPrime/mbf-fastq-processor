@@ -1,0 +1,10 @@
+[input]
+  r = ['input_interleaved.fq']
+  interleaved = ['read1']
+  options.fasta_fake_quality = 33
+
+[options]
+accept_duplicate_files = true
+
+[output]
+  prefix = 'output'

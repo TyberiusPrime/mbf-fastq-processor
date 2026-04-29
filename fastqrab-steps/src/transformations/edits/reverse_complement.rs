@@ -125,12 +125,12 @@ impl Step for ReverseComplement {
                             TagValue::String(bstring) => {
                                 *bstring = reverse_complement_iupac(bstring).into();
                             }
-                            TagValue::Numeric(_) | TagValue::Bool(_) => unreachable!(),
+                            TagValue::Numeric(_) | TagValue::Bool(_) => unreachable!(), // cov:excl-line
                         }
                     }
                 } // cov:excl-line    
             }
-            ResolvedSourceAll::Name { .. } => unreachable!(),
+            ResolvedSourceAll::Name { .. } => unreachable!(), // cov:excl-line
         }
 
         Ok((block, true))

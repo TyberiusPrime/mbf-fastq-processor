@@ -121,7 +121,7 @@ impl Step for Swap {
             match a.cmp(&b) {
                 std::cmp::Ordering::Less => (a, b),
                 std::cmp::Ordering::Equal => {
-                    panic!("Swap same segment. should be prevente by config?!")
+                    panic!("Swap same segment. should be prevente by config?!") // cov:excl-line
                 }
                 std::cmp::Ordering::Greater => (b, a),
             }

@@ -1,0 +1,17 @@
+[input]
+  read1 = 'input_read1.fq'
+
+
+[[step]]
+  action = "ExtractRegex"
+  source = 'read1'
+  query = 'A+'
+  out_label = 'polyA'
+
+[[step]]
+  action = 'StoreTagsInTable'
+  in_labels = ['polyA', 'len_polyX']
+
+[output]
+  format = 'None'
+  prefix = 'output'

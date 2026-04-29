@@ -93,20 +93,14 @@ fn inner_run(
     {
         let suffix = output_config.get_suffix();
         let sep = output_config.ix_separator.as_str();
-        let segment_order = parsed.input.get_segment_order();
         let mut tails: Vec<String> = Vec::new();
         if output_config.interleave.is_some() {
             tails.push(format!("{sep}interleaved.{suffix}"));
-        }
-        let active: Vec<&String> = match &output_config.output {
-            Some(list) => segment_order
-                .iter()
-                .filter(|n| list.iter().any(|l| l == *n))
-                .collect(),
-            None => segment_order.iter().collect(),
-        };
-        for seg in active {
-            tails.push(format!("{sep}{seg}.{suffix}"));
+        } else {
+            let active = output_config.output.as_ref().expect("parent was ok");
+            for seg in active {
+                tails.push(format!("{sep}{seg}.{suffix}"));
+            }
         }
         Some(MergeConfig {
             prefix: output_config.prefix.to_string(),
@@ -118,30 +112,6 @@ fn inner_run(
     } else {
         None
     };
-    //
-    // parsed.output.as_ref().and_then(|o| {
-    //     o.bam.as_ref().and_then(|b| {
-    //         b.merge_demultiplexed.as_ref().map(|value| {
-    //             let suffix = o.get_suffix();
-    //             let sep = &o.ix_separator;
-    //             // Compute segment tails from config rather than filesystem.
-    //             // Each tail is the part of the filename that follows the combined barcode name,
-    //             // e.g. "_read1.bam" or "_interleaved.bam".
-    //
-    //             MergeConfig {
-    //                 prefix: &o.prefix,
-    //                 ix_separator: &o.ix_separator,
-    //             ]
-    //             (
-    //                 o.prefix.clone(),
-    //                 o.ix_separator.clone(),
-    //                 label.to_string(),
-    //                 b.index_merged.unwrap_or(true),
-    //                 tails,
-    //             )
-    //         })
-    //     })
-    // });
     {
         let run = pipeline::RunStage0::new(&parsed);
         let run = run.configure_demultiplex_and_init_stages(

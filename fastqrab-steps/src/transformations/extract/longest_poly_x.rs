@@ -60,7 +60,7 @@ impl LongestPolyX {
         candidate: Option<(usize, usize)>,
     ) -> Option<(usize, usize)> {
         match (current, candidate) {
-            (None, None) => None,
+            (None, None) => None, // cov:excl-line shouldn't happen, should it?
             (Some(existing), None) => Some(existing),
             (None, Some(new_candidate)) => Some(new_candidate),
             (Some(existing), Some(new_candidate)) => {
@@ -186,13 +186,12 @@ impl LongestPolyX {
                         in_run = true;
                     }
                 } else if in_run {
-                        let len = i - run_start;
-                        if len >= min_length {
-                            best = Self::pick_better(best, Some((run_start, len)));
-                        }
-                        in_run = false;
+                    let len = i - run_start;
+                    if len >= min_length {
+                        best = Self::pick_better(best, Some((run_start, len)));
                     }
-                
+                    in_run = false;
+                }
             }
             if in_run {
                 let len = seq.len() - run_start;
@@ -250,7 +249,7 @@ impl LongestPolyX {
                 if ss <= se {
                     segs.push((ss, se));
                 }
-            }
+            } // cov: excl-line
         }
 
         // After last barrier.

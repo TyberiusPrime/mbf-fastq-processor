@@ -1,0 +1,10 @@
+[input]
+    seq = ['input.fq', '--stdin--']
+    interleaved = ['read1','read2']
+
+[[step]]
+    action = 'Head'
+    n = 1
+
+[output]
+    prefix = 'output'

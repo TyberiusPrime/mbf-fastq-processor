@@ -28,6 +28,7 @@
 
 [barcodes.barcodes]
     AA = 'sample1'
+    AT = 'sample3'
     GG = 'sample2'
 
 [output]

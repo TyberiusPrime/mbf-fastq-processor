@@ -1219,8 +1219,9 @@ impl PartialConfig {
                         {
                             entry.used = true;
                             match tag_name {
-                                TagLabel::Normal(_) => unreachable!(),
-                                TagLabel::ReadNo | TagLabel::Length(_, _) => {}
+                                TagLabel::Normal(_) | TagLabel::ReadNo | TagLabel::Length(_, _) => {
+                                    unreachable!() // cov:excl-line
+                                } // cov:excl-line should not have a source_tag
                                 TagLabel::TagLength(_source_tag, _) => {
                                     if !entry.tag_type.compatible(TagValueType::Location)
                                         && !entry.tag_type.compatible(TagValueType::String)
@@ -1353,48 +1354,67 @@ impl PartialConfig {
             } // cov:excl-line
 
             // Mark tags consumed by output.bam as used so they don't trigger "Unused tag"
-            if let Some(Some(output)) = self.output.as_mut() 
-                && let Some(Some(bam_opts)) = output.bam.as_mut() {
-                    if let Some(map_and_keys) = bam_opts.tag_to_bam_tag.as_mut() {
-                        for (toml_tag_label, tag_label) in
-                            map_and_keys.keys.iter_mut().zip(map_and_keys.map.keys())
-                        {
-                            if let Some(meta) = tags_available.get_mut(tag_label.as_ref()) {
-                                meta.used = true;
-                            } else {
-                                toml_tag_label.state = TomlValueState::new_validation_failed(
-                                    "No such tag".to_string(),
-                                );
-                                toml_tag_label.help = Some(offer_alternatives(
-                                    tag_label.as_ref(),
-                                    &tags_available
-                                        .keys()
-                                        .map(|x| x.as_ref())
-                                        .collect::<Vec<_>>(),
-                                ));
-                            }
+            if let Some(Some(output)) = self.output.as_mut()
+                && let Some(Some(bam_opts)) = output.bam.as_mut()
+            {
+                if let Some(map_and_keys) = bam_opts.tag_to_bam_tag.as_mut() {
+                    for (toml_tag_label, tag_label) in
+                        map_and_keys.keys.iter_mut().zip(map_and_keys.map.keys())
+                    {
+                        if let Some(meta) = tags_available.get_mut(tag_label.as_ref()) {
+                            meta.used = true;
+                        } else {
+                            toml_tag_label.state =
+                                TomlValueState::new_validation_failed("No such tag".to_string());
+                            toml_tag_label.help = Some(offer_alternatives(
+                                tag_label.as_ref(),
+                                &tags_available
+                                    .keys()
+                                    .map(|x| x.as_ref())
+                                    .collect::<Vec<_>>(),
+                            ));
                         }
                     }
-                    if let Some(Some(tag_to_ref)) = bam_opts.tag_to_reference.as_mut() 
-                        && let Some(tag_name) = tag_to_ref.tag.as_mut() {
-                            if let Some(meta) = tags_available.get_mut(tag_name.as_str()) {
-                                meta.used = true;
-                            } else {
-                                tag_to_ref.tag.help = Some(offer_alternatives(
-                                    tag_name.as_ref(),
-                                    &tags_available
-                                        .keys()
-                                        .map(|x| x.as_ref())
-                                        .collect::<Vec<_>>(),
-                                ));
-                                tag_to_ref.tag.state = TomlValueState::new_validation_failed(
-                                    "No such tag".to_string(),
+                    //now verify we're using every bam tag only once, and they're upper case.
+                    let mut seen_bam_tags = IndexMap::new();
+                    for bam_tag in map_and_keys.map.values_mut() {
+                        if let Some(bam_tag_value) = bam_tag.as_mut() {
+                            if let Some(other_span) =
+                                seen_bam_tags.insert(bam_tag_value.0, bam_tag.span())
+                            {
+                                bam_tag.state = TomlValueState::Custom {
+                                    spans: vec![
+                                        (bam_tag.span(), "Repeated, 2nd use".to_string()),
+                                        (other_span, "Repeated, 1st use".to_string()),
+                                    ],
+                                };
+                                bam_tag.help = Some(
+                                    "BAM tags must be distinct, \
+                                    can not write two tags into one BAM tag. Rename either one"
+                                        .to_string(),
                                 );
                             }
-                        }
-                    
+                        } // cov:excl-line
+                    }
+                } // cov:excl-line
+                if let Some(Some(tag_to_ref)) = bam_opts.tag_to_reference.as_mut()
+                    && let Some(tag_name) = tag_to_ref.tag.as_mut()
+                {
+                    if let Some(meta) = tags_available.get_mut(tag_name.as_str()) {
+                        meta.used = true;
+                    } else {
+                        tag_to_ref.tag.help = Some(offer_alternatives(
+                            tag_name.as_ref(),
+                            &tags_available
+                                .keys()
+                                .map(|x| x.as_ref())
+                                .collect::<Vec<_>>(),
+                        ));
+                        tag_to_ref.tag.state =
+                            TomlValueState::new_validation_failed("No such tag".to_string());
+                    }
                 }
-            
+            }
 
             //complain about unused tags if there were no tag errors
             //otherwise, mistyping a tag will give you two errors
@@ -1436,29 +1456,28 @@ impl PartialConfig {
         if let Some(transforms) = self.transform.as_mut() {
             for trafo in transforms.iter_mut() {
                 if let Some(PartialTransformation::Demultiplex(demultiplex_config)) = trafo.as_mut()
-                    && let Some(demultiplex_config_value) = demultiplex_config.toml_value.as_ref() 
-                        && let Some(in_label) = demultiplex_config_value.in_label.as_ref() {
-                            let in_label: String = in_label.as_ref().to_string();
-                            if let Some(old) = seen
-                                .insert(in_label.clone(), demultiplex_config_value.in_label.span())
-                            {
-                                let spans = vec![
-                                    (
-                                        demultiplex_config_value.in_label.span(),
-                                        "2nd use of this label for demultiplexing".to_string(),
-                                    ),
-                                    (
-                                        old.clone(),
-                                        "first use for this label for demultiplexing".to_string(),
-                                    ),
-                                ];
-                                demultiplex_config.toml_value.help = Some(
+                    && let Some(demultiplex_config_value) = demultiplex_config.toml_value.as_ref()
+                    && let Some(in_label) = demultiplex_config_value.in_label.as_ref()
+                {
+                    let in_label: String = in_label.as_ref().to_string();
+                    if let Some(old) =
+                        seen.insert(in_label.clone(), demultiplex_config_value.in_label.span())
+                    {
+                        let spans = vec![
+                            (
+                                demultiplex_config_value.in_label.span(),
+                                "2nd use of this label for demultiplexing".to_string(),
+                            ),
+                            (
+                                old.clone(),
+                                "first use for this label for demultiplexing".to_string(),
+                            ),
+                        ];
+                        demultiplex_config.toml_value.help = Some(
                                     "Demultiplexing twice on the same label is nonsentical and unsupported.".to_string());
-                                demultiplex_config.toml_value.state =
-                                    TomlValueState::Custom { spans }
-                            }
-                        }
-                    
+                        demultiplex_config.toml_value.state = TomlValueState::Custom { spans }
+                    }
+                }
             }
         }
     }
@@ -1472,7 +1491,7 @@ impl PartialConfig {
                 for (barcode_section_name, tv_barcodes) in &mut barcodes.map {
                     // is there a Demultiplex step that uses this barcode definition?
                     if let Some(steps) = self.transform.value.as_ref() {
-                        let mut found_demultiplex_step = false;
+                        let mut found_barcode_using_step = false;
                         for step in steps {
                             if let Some(PartialTransformation::Demultiplex(demultiplex_config)) =
                                 step.value.as_ref()
@@ -1481,46 +1500,36 @@ impl PartialConfig {
                                     demultiplex_config.toml_value.value.as_ref()
                                     && let Some(Some(barcodes_name)) =
                                         demultiplex_config.barcodes.as_ref()
-                                        && barcodes_name == barcode_section_name
-                                    {
-                                        found_demultiplex_step = true;
-                                        break;
-                                    }
+                                    && barcodes_name == barcode_section_name
+                                {
+                                    found_barcode_using_step = true;
+                                    break;
+                                }
                             } else if let Some(PartialTransformation::HammingCorrect(
                                 hamming_config,
                             )) = step.value.as_ref()
-                            
                                 && let Some(hamming_config) =
                                     hamming_config.toml_value.value.as_ref()
-                                
-                                    && let Some(barcodes_name) = hamming_config.barcodes.as_ref()
-                                        && barcodes_name == barcode_section_name
-                                    {
-                                        found_demultiplex_step = true;
-                                        break;
-                                    }
-                                
-                            
+                                && let Some(barcodes_name) = hamming_config.barcodes.as_ref()
+                                && barcodes_name == barcode_section_name
+                            {
+                                found_barcode_using_step = true;
+                                break;
+                            }
                         }
                         // Also check if output's tag_to_reference uses this barcode section
-                        if !found_demultiplex_step 
-                            && let Some(Some(output)) = self.output.as_ref() 
-                                && let Some(Some(bam_opts)) = output.bam.as_ref() 
-                                    && let Some(Some(tag_to_ref)) =
-                                        bam_opts.tag_to_reference.as_ref()
-                                    
-                                        && let Some(Some(barcodes_name)) =
-                                            tag_to_ref.references_from_barcodes.as_ref()
-                                            && barcode_section_name.as_ref()
-                                                == barcodes_name.as_str()
-                                        {
-                                            found_demultiplex_step = true;
-                                        }
-                                    
-                                
-                            
-                        
-                        if !found_demultiplex_step {
+                        if !found_barcode_using_step
+                            && let Some(Some(output)) = self.output.as_ref()
+                            && let Some(Some(bam_opts)) = output.bam.as_ref()
+                            && let Some(Some(tag_to_ref)) = bam_opts.tag_to_reference.as_ref()
+                            && let Some(Some(barcodes_name)) =
+                                tag_to_ref.references_from_barcodes.as_ref()
+                            && barcode_section_name.as_ref() == barcodes_name.as_str()
+                        {
+                            found_barcode_using_step = true;
+                        }
+
+                        if !found_barcode_using_step {
                             tv_barcodes.state = TomlValueState::new_validation_failed(
                                 "Barcode section not used in any Demultiplex, HammingCorrect, AssignToReference step, or output.bam.tag_to_reference",
                             );
@@ -1529,8 +1538,7 @@ impl PartialConfig {
                                     .to_string(),
                             );
                         }
-                    }
-                    // cov:excl-line
+                    } // cov:excl-line
                 }
 
                 if let Some(Some(output)) = self.output.as_mut()
@@ -1539,18 +1547,17 @@ impl PartialConfig {
                     && let Some(Some(tag_to_reference)) = bam.tag_to_reference.as_mut()
                     && let Some(Some(from_barcode)) =
                         tag_to_reference.references_from_barcodes.as_ref()
-                
-                    && !barcodes.map.contains_key(from_barcode.as_str()) {
-                        tag_to_reference.references_from_barcodes.help = Some(offer_alternatives(
-                            from_barcode,
-                            &barcodes.map.keys().map(|x| x.as_ref()).collect::<Vec<_>>(),
-                        ));
-                        tag_to_reference.references_from_barcodes.state =
-                            TomlValueState::new_validation_failed(
-                                "Barcode section not found for output.bam.tag_to_reference",
-                            );
-                    }
-                
+                    && !barcodes.map.contains_key(from_barcode.as_str())
+                {
+                    tag_to_reference.references_from_barcodes.help = Some(offer_alternatives(
+                        from_barcode,
+                        &barcodes.map.keys().map(|x| x.as_ref()).collect::<Vec<_>>(),
+                    ));
+                    tag_to_reference.references_from_barcodes.state =
+                        TomlValueState::new_validation_failed(
+                            "Barcode section not found for output.bam.tag_to_reference",
+                        );
+                }
             }
         }
     }
@@ -1576,7 +1583,7 @@ impl PartialConfig {
             return;
         }
         let interleave_empty = match output.interleave.as_ref() {
-            None => false, //misspecified, we already have an error then.
+            None => false, // cov:excl-line misspecified, we already have an error then.
             Some(None) => true,
             Some(Some(x)) => x.is_empty(),
         };
@@ -1608,27 +1615,23 @@ impl PartialConfig {
 
                     if let Some(trafos) = self.transform.value.as_ref() {
                         for trafo in trafos.iter() {
-                            if let Some(PartialTransformation::Demultiplex(
-                                demultiplex_config_toml,
-                            )) = trafo.value.as_ref()
-                            
+                            if let Some(PartialTransformation::Demultiplex(demultiplex_config_toml)) =
+                                trafo.value.as_ref()
                                 && let Some(demultiplex_config) =
                                     demultiplex_config_toml.toml_value.value.as_ref()
-                                
-                                    && let Some(TagLabel::Normal(in_label)) =
+                                && let Some(TagLabel::Normal(in_label)) =
                                     demultiplex_config.in_label.as_ref()
-                                    && matches!(
-                                        demultiplex_config.lookup_mode,
-                                        Some(crate::transformations::demultiplex::LookupMode::NoLookup) | None
-                                    )
-                                {
-                                    available_demultiplex_labels.push(in_label.clone());
-                                    break;
-                                }
-                                
-                            
+                                && matches!(
+                                    demultiplex_config.lookup_mode,
+                                    Some(crate::transformations::demultiplex::LookupMode::NoLookup)
+                                        | None
+                                )
+                            {
+                                available_demultiplex_labels.push(in_label.clone());
+                                break;
+                            }
                         }
-                    }
+                    } // cov:excl-line
                     if !available_demultiplex_labels.contains(ref_label) {
                         bam.merge_demultiplexed.state = TomlValueState::new_validation_failed(
                             format!("No Demultiplex step found that had in_label = {ref_label}",),
@@ -1655,7 +1658,9 @@ impl PartialConfig {
                             .to_string(),
                     );
             }
-            None => {}
+            None => {
+                unreachable!() // cov:excl-line must be set by previous config either way
+            }
         }
     }
 }
@@ -1729,7 +1734,7 @@ impl Config {
                             if let Some(existing) = interleaved_format {
                                 if existing != format {
                                     errors.push(anyhow!(
-                                        "(input): Interleaved inputs must all have the same format. Found both {existing:?} and {format:?} when reading {filename}."
+                                        "(input): Interleaved inputs must all have the same format. Found both {existing:?} and {format:?}."
                                     ));
                                 }
                             } else {

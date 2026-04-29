@@ -20,6 +20,19 @@
     in_label = 'a_count'
     out_label = 'a_rate'
 
+
+[[step]]
+    action = 'CalcBaseContent'
+    out_label = 'x_count'
+    bases_to_count = 'X'
+    relative = false
+    segment = 'read1'
+
+[[step]]
+    action = 'ConvertToRate'
+    in_label = 'x_count'
+    out_label = 'x_rate'
+
 [[step]]
     action = 'StoreTagsInTable'
 

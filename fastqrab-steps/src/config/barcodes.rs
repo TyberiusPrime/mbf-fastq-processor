@@ -81,10 +81,13 @@ impl PartialBarcodesFromFile {
             ));
         }
         if entries.is_empty() {
+            // cov:excl-start
+            // empty file would lead to 'can't detect file format' before we reach this
             Err(ValidationFailure::new(
                 format!("Barcodes: reference file '{filename}' contains no sequences.",),
                 Some("Check your input file.".to_string()),
             ))
+            //cov:excl-end
         } else {
             Ok(entries)
         }
@@ -220,17 +223,17 @@ impl VerifyIn<PartialConfig> for PartialBarcodes {
             for (iupac, name) in iupac_to_name.iter() {
                 lengths.insert(iupac.len());
                 for dna in IupacExpander::new(iupac.as_ref()) {
-                    if let Some(old) = dna_to_name.insert(dna.clone(), name.clone()) 
-                        && old != *name {
-                            // it's ok if we essentially replaced them with themselves
-                            return Err(ValidationFailure::new(
-                                format!(
-                                    "Overlapping sequences after iupac expansion: {dna}->{old}"
-                                ),
-                                Some("Verify your input barcodes are disjoint.".to_string()),
-                            ));
-                        }
-                    
+                    if let Some(old) = dna_to_name.insert(dna.clone(), name.clone())
+                        && old != *name
+                    {
+                        // it's ok if we essentially replaced them with themselves
+                        return Err(ValidationFailure::new(
+                            format!(
+                                "Overlapping sequences after iupac expansion: {dna} {name} -> {old}"
+                            ),
+                            Some("Verify your input barcodes are disjoint.".to_string()),
+                        ));
+                    }
                 }
             }
             if lengths.len() > 1 {

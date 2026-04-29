@@ -159,6 +159,7 @@ impl Step for Progress {
                 .as_secs_f64();
             let rate_total = ii as f64 / elapsed;
             let msg: String = if elapsed > 1.0 {
+                // cov:excl-start hard to trigger in tests without slowing everything down
                 format!(
                     "Processed Total: {} ({:} molecules/s), Elapsed: {}s",
                     thousands_format(ii as f64, 0),
@@ -168,6 +169,7 @@ impl Step for Progress {
                         .elapsed()
                         .as_secs()
                 )
+                // cov:excl-end
             } else {
                 format!(
                     "Processed Total: {}, Elapsed: {}s",

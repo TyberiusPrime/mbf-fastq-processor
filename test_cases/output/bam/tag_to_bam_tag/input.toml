@@ -7,6 +7,7 @@
 
     bam.tags = {
         barcode = 'BC',
+        reg = 'XY'
       # len_read1 = 'XX' # virtual tags currently unsupported
 }
 
@@ -17,3 +18,10 @@
     start = 0
     length = 6
     out_label = 'barcode'
+
+
+[[step]]
+    action = 'ExtractRegex'
+    source = 'read1'
+    query = "A..C"
+    out_label = 'reg'

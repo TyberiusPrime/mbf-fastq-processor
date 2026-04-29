@@ -338,8 +338,8 @@ pub fn find_rapidgzip_in_path() -> Option<PathBuf> {
         // does not happen in testing
         let path = PathBuf::from(p);
         if path.exists() { Some(path) } else { None }
-        // cov:excl-stop
     })
+    // cov:excl-stop
 }
 
 /// Spawns a rapidgzip process to decompress a gzipped file

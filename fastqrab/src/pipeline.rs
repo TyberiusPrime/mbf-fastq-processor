@@ -464,12 +464,17 @@ impl RunStage0 {
                         .collect();
 
                     // Capture the in_label for this step if it is a Demultiplex transformation.
-                    let step_in_label =
-                        if let Transformation::Demultiplex(ref d) = stage.transformation {
-                            d.in_label.to_string()
-                        } else {
-                            String::new() // fallback (should not happen)
-                        };
+                    let step_in_label = if let Transformation::Demultiplex(ref d) =
+                        stage.transformation
+                    {
+                        d.in_label.to_string()
+                    } else {
+                        // cov:excl-start
+                        unreachable!(
+                            "So far, only Demultiplex stages returned barcodes. If this has changed, you need to check and adjust here"
+                        ); 
+                        // cov:excl-stop
+                    };
                     demultiplex_step_infos.push(DemultiplexStepInfo {
                         in_label: step_in_label,
                     });

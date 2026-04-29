@@ -1,0 +1,11 @@
+ReadName	polyA	location_polyA
+Read1	A	read1:7-8
+Read2	A	read1:4-5
+Read3	A	read1:4-5
+Read4	AA	read1:2-4
+Read5	AAA	read1:3-6
+Read6	A	read1:4-5
+Read7	A	read1:12-13
+Read8	A	read1:5-6
+Read9	A	read1:4-5
+Read10	A	read1:0-1

@@ -1,0 +1,29 @@
+[input]
+    read1 = 'input_read1.fq'
+[[step]]
+    action = 'Head'
+    n = 10
+
+
+[[step]]
+  action = 'ExtractRegex'
+  source = 'read1'
+  query = "A..T"
+  out_label = 'rr'
+
+[[step]]
+  action = 'ExtractRegex'
+  source = 'read1'
+  query = "A..T"
+  out_label = 'rr_org'
+
+[[step]]
+    action = 'ReverseComplement'
+    target = 'tag:rr'
+
+[[step]]
+  action = 'StoreTagsInTable'
+
+[output]
+    prefix = 'output'
+    format = 'None'

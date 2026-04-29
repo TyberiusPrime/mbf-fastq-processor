@@ -1,0 +1,24 @@
+[input]
+  read = 'input_read1.fq'
+
+[[step]]
+  action = 'ExtractRegex'
+  query = 'AAA'
+  source = 'read'
+  out_label = 'rr'
+
+
+[[step]]
+  action = 'ReverseComplement' 
+  target = 'tag:rr'
+
+
+[[step]]
+  action = 'StoreTagInSequence'
+  in_value_label = 'rr'
+  in_position_label = 'rr'
+  anchor = 'start'
+
+
+[output]
+  prefix = 'output'

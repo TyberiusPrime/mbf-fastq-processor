@@ -227,7 +227,7 @@ impl std::fmt::Display for TagValueType {
             TagValueType::String => write!(f, "String"),
             TagValueType::Numeric((lower, upper)) => match (lower, upper) {
                 (None, None) => write!(f, "Numeric"),
-                (None, Some(upper)) => write!(f, "Numeric (..={upper})"),
+                (None, Some(upper)) => write!(f, "Numeric (..={upper})"), // cov:excl-line
                 (Some(lower), None) => write!(f, "Numeric ({lower}..)"),
                 (Some(lower), Some(upper)) => write!(f, "Numeric ({lower}..={upper})"),
             },
@@ -394,8 +394,7 @@ impl TagLabel {
 
     pub fn source_tag(&self) -> Option<&String> {
         match self {
-            TagLabel::Normal(_) => None,
-            TagLabel::Length(_segment_index_or_all, _) => None,
+            TagLabel::Normal(_) | TagLabel::Length(_, _) => None,
             TagLabel::TagLength(source_tag, _) => Some(source_tag),
             TagLabel::TagLocation { source, .. } => Some(source),
             TagLabel::ReadNo => None,

@@ -1,0 +1,12 @@
+Error 1/1
+   ╭─config.toml
+   ┆
+54 │     [output.bam]
+55 │         tag_to_reference.references_from_barcodes = "barcodes"
+56 │         tag_to_reference.tag="refss"
+57 │         merge_demultiplexed = true
+   ┆                               ──┬─
+   ┆                                 │
+   ┆                                 ╰── No Demultiplex step found that had in_label = refss
+───╯
+Hint: Either add a Demultiplex step or reuse one of the following: Available are: refs

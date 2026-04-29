@@ -1,0 +1,11 @@
+[input]
+  r = ['input_interleaved.fq', 'input_interleaved.bam']
+  interleaved = ['read1', 'read2']
+  options.bam_include_unmapped = true
+  options.bam_include_mapped = true
+
+[options]
+accept_duplicate_files = true
+
+[output]
+  prefix = 'output'

@@ -424,7 +424,7 @@ impl Step for HammingCorrect {
                         }
                         MatchResult::OneMatch(matched_seq, was_exact) => {
                             if was_exact && let Some(barcode_counts) = barcode_counts.as_mut()
-                                && matches!(self.on_tie, OnTie::ByMajority) 
+                                && matches!(self.on_tie, OnTie::ByMajority)
                                 && count_here {
                                         barcode_counts
                                     //matched_seq == query_seq here.
@@ -432,7 +432,6 @@ impl Step for HammingCorrect {
                                                     .and_modify(|count| *count = count.saturating_add(1))
                                                     .or_insert(1);
                                 }
-                            
                             self.output(matched_seq, input_tag, output_barcode)
                         }
                         MatchResult::Tie(items) => {
