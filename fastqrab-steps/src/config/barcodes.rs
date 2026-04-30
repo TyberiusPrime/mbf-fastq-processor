@@ -36,8 +36,7 @@ pub struct Barcodes {
 #[tpd(no_verify)]
 #[derive(Clone, Debug, JsonSchema)]
 pub struct BarcodesFromFile {
-    #[allow(dead_code)] // only used in PartialBarcodesFromFile.
-    // But necessary for logging, I suppose.
+    #[expect(dead_code , reason="only used in PartialBarcodesFromFile. But necessary for logging")]
     filename: String,
     #[tpd(with = "tpd_adapt_u8_from_byte_or_char", alias = "read_comment_char")]
     pub read_comment_character: Option<u8>,
@@ -260,7 +259,6 @@ impl VerifyIn<PartialConfig> for PartialBarcodes {
 }
 
 /// Validate that IUPAC barcodes are disjoint (don't overlap in their accepted sequences)
-#[allow(clippy::collapsible_if)]
 #[mutants::skip] // yeah, modifying to for j in (i * 1) will still 'work', just perform more checks
 fn validate_barcode_disjointness(barcodes: &mut MapAndKeys<BString, String>) -> bool {
     // First pass: collect all overlapping pairs without mutating anything.

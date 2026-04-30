@@ -78,7 +78,7 @@ impl Step for ConvertToRate {
             super::extract_numeric_tags(
                 segment_index,
                 &self.out_label,
-                #[allow(clippy::cast_precision_loss)]
+                #[expect(clippy::cast_precision_loss, reason="loss is acceptable, it's going to be within u32 range")]
                 |read| {
                     let source = source_iter
                         .next()
@@ -95,7 +95,7 @@ impl Step for ConvertToRate {
                 let source = source_iter
                     .next()
                     .expect("source and segments have same read count");
-                #[allow(clippy::cast_precision_loss)]
+                #[expect(clippy::cast_precision_loss, reason="loss is acceptable, it's going to be within u32 range")]
                 let total_len = molecule
                     .segments
                     .iter()

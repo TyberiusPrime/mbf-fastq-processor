@@ -231,7 +231,7 @@ pub struct FastQBlockParseResult {
     pub windows_mode: bool,
 }
 
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines, reason="it is a large state machine, therefore many lines")]
 pub fn parse_to_fastq_block(
     target_block: &mut FastQBlock,
     mut start_offset: usize,

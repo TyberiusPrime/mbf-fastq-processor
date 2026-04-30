@@ -48,7 +48,7 @@ impl TagValue {
             TagValue::Location(_hits) => true,
             TagValue::String(_bstring) => true,
             // cov:excl-start
-            TagValue::Numeric(_) => panic!("truthy val on numeric tags not supported"),
+            TagValue::Numeric(_) => panic!("truthy val on numeric tags not supported. Do not call this way."),
             // cov:excl-stop
             TagValue::Bool(val) => *val,
         }
@@ -696,7 +696,6 @@ pub fn init_hamming_resonator(
 }
 
 #[cfg(test)]
-#[allow(clippy::bool_assert_comparison)]
 mod test {
     use crate::segments::SegmentIndex;
 

@@ -91,7 +91,7 @@ impl Step for RegionsToLength {
                     );
                 } // cov:excl-stop
             };
-            #[allow(clippy::cast_precision_loss)]
+            #[expect(clippy::cast_precision_loss, reason="it's going to be small enough")]
             lengths.push(TagValue::Numeric(length as f64));
         }
 

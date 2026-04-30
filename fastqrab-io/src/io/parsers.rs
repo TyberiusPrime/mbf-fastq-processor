@@ -36,7 +36,7 @@ pub struct ChainedParser {
     buffer_size: usize,
     input_thread_count: ThreadCount,
     options: InputOptions,
-    expected_read_count: Option<usize>,
+    expected_read_count_power_of_two: Option<usize>,
     first_block_done: bool,
     total_input_file_size: Option<u64>,
     reads_so_far: usize,
@@ -48,12 +48,6 @@ pub struct ChainParseResult {
     pub expected_read_count: Option<usize>,
 }
 
-#[allow(clippy::cast_possible_truncation)]
-#[allow(clippy::cast_sign_loss)]
-#[allow(clippy::cast_precision_loss)]
-fn calc_next_power_of_two(total: usize) -> usize {
-    2usize.pow((total as f64).log2().ceil() as u32)
-}
 
 impl ChainedParser {
     #[must_use]
@@ -91,7 +85,7 @@ impl ChainedParser {
             buffer_size,
             input_thread_count,
             options,
-            expected_read_count: None,
+            expected_read_count_power_of_two: None,
             first_block_done: false,
             total_input_file_size,
             reads_so_far: 0,
@@ -117,9 +111,7 @@ impl ChainedParser {
         Ok(true)
     }
 
-    #[allow(clippy::cast_possible_truncation)]
-    #[allow(clippy::cast_precision_loss)]
-    #[allow(clippy::cast_sign_loss)]
+    #[expect(clippy::cast_sign_loss, reason="Expected_reads -> usize, is always positive")]
     pub fn parse(&mut self) -> Result<ChainParseResult> {
         if !self.ensure_parser()? {
             // cov:excl-start
@@ -133,7 +125,7 @@ impl ChainedParser {
                     first_read_sequential_number: self.reads_so_far,
                 },
                 was_final: true,
-                expected_read_count: self.expected_read_count,
+                expected_read_count: self.expected_read_count_power_of_two,
             });
             // cov:excl-stop
         }
@@ -166,8 +158,8 @@ impl ChainedParser {
                             )
                         })
                         .sum();
-                    let next_power_of_two = total.map(calc_next_power_of_two);
-                    self.expected_read_count = next_power_of_two;
+                    let next_power_of_two = total.map(usize::next_power_of_two);
+                    self.expected_read_count_power_of_two = next_power_of_two;
                 }
                 None => {
                     //this happens for non-bam files!
@@ -191,8 +183,9 @@ impl ChainedParser {
                                 .bytes_per_base();
                             let expected_reads =
                                 total_input_file_size as f64 / (avg_read_length * bytes_per_base);
-                            let next_power_of_two = calc_next_power_of_two(expected_reads as usize);
-                            self.expected_read_count = Some(next_power_of_two);
+                            let expected_reads = expected_reads.ceil() as usize;
+                            let next_power_of_two = expected_reads.next_power_of_two();
+                            self.expected_read_count_power_of_two = Some(next_power_of_two);
                             /* dbg!(
                                 avg_read_length,
                                 bytes_per_base,
@@ -224,7 +217,7 @@ impl ChainedParser {
         Ok(ChainParseResult {
             fastq_block: res.fastq_block,
             was_final: res.was_final,
-            expected_read_count: self.expected_read_count,
+            expected_read_count: self.expected_read_count_power_of_two,
         })
     }
 }

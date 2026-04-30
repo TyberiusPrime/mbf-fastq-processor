@@ -1039,7 +1039,6 @@ impl WrappedFastQReadMut<'_> {
     //     }
     // }
 
-    #[allow(clippy::too_many_lines)]
     pub fn trim_poly_base_suffix(
         &mut self,
         min_length: usize,
@@ -1047,7 +1046,6 @@ impl WrappedFastQReadMut<'_> {
         max_consecutive_mismatches: usize,
         base: u8,
     ) {
-        #[allow(clippy::cast_precision_loss)]
         fn calc_run_length(
             seq: &[u8],
             query: u8,
@@ -1311,7 +1309,7 @@ impl FastQBlocksCombined {
         }
     }
     #[must_use]
-    #[allow(clippy::len_without_is_empty)]
+    #[expect(clippy::len_without_is_empty, reason="We never check for empty?")]
     pub fn len(&self) -> usize {
         self.segments[0].entries.len()
     }
@@ -1373,7 +1371,7 @@ impl FastQBlocksCombined {
         }
     }
 
-    #[allow(clippy::needless_range_loop)] // it's not needless..
+    #[expect(clippy::needless_range_loop, reason="False positve")]
     pub fn apply_mut_with_tag<F>(&mut self, label: &TagLabel, mut f: F)
     where
         F: for<'a> FnMut(&mut [WrappedFastQReadMut<'a>], &TagValue),
@@ -1390,7 +1388,6 @@ impl FastQBlocksCombined {
         }
     }
 
-    #[allow(clippy::needless_range_loop)] // it's not needless..
     pub fn apply_mut_with_tags<F>(&mut self, label: &TagLabel, other_label: &TagLabel, mut f: F)
     where
         F: for<'a> FnMut(&mut [WrappedFastQReadMut<'a>], &TagValue, &TagValue),
@@ -1723,7 +1720,6 @@ impl FastQBlocksCombinedIteratorIncludingTag<'_> {
     }
 }
 
-#[allow(clippy::cast_possible_truncation)]
 #[must_use]
 pub fn longest_suffix_that_is_a_prefix(
     seq: &[u8],
@@ -2075,7 +2071,7 @@ mod test {
         );
     }
     #[test]
-    #[allow(clippy::too_many_lines)]
+    #[expect(clippy::too_many_lines, reason="long test")]
     fn test_trimm_poly_n() {
         fn trim(seq: &str, min_length: usize, max_mismatch_fraction: f32, base: u8) -> String {
             let mut read = get_owned2(seq.as_bytes());

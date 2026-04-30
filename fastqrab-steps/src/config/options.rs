@@ -1,4 +1,4 @@
-#![allow(clippy::struct_field_names)]
+#![expect(clippy::struct_field_names, reason="Top level to also affect tpd partial struct.")]
 use anyhow::{Context, Result};
 use schemars::JsonSchema;
 use toml_pretty_deser::prelude::*;
@@ -122,7 +122,6 @@ impl VerifyIn<PartialConfig> for PartialOptions {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
 mod tests {
     use crate::config::Config;
 

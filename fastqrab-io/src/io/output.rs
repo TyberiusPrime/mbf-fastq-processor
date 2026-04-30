@@ -37,7 +37,7 @@ pub struct BamOutput {
 /// - `bam_tag_mappings`: list of `(bam_tag_bytes, fastqrab_tag_name)` pairs to export (Feature A)
 /// - `reference_tag`: if `Some(tag_name)`, look up that tag's value in the BAM reference
 ///   sequences and set the read's RNAME / alignment start accordingly (Feature B)
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments, reason="they are needed")]
 pub fn write_read_to_bam(
     bam_output: &mut BamOutput,
     read: &WrappedFastQRead<'_>,
@@ -203,7 +203,6 @@ pub fn write_read_to_bam(
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::unwrap_used)]
     use super::*;
     use crate::io::reads::{FastQBlock, FastQElement, FastQRead};
     use fastqrab_config::CompressionFormat;

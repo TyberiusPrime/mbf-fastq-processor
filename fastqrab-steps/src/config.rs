@@ -103,7 +103,7 @@ pub struct Benchmark {
 }
 
 #[derive(Debug, JsonSchema, Default)]
-#[allow(dead_code)] //we currently only use gzip for multi thread considerations, but set them all
+#[expect(dead_code, reason="we currently only use gzip for multi thread considerations, but set them all for consistency")]
 struct InputFormatsObserved {
     fastq: bool,
     fasta: bool,
@@ -927,7 +927,6 @@ impl PartialConfig {
         }
     }
 
-    #[allow(clippy::used_underscore_items)]
     fn expand_reports<
         F: FnMut(PartialTransformation),
         G: FnMut(TomlValue<PartialTransformation>),
@@ -1728,7 +1727,6 @@ impl PartialConfig {
 impl Config {
     /// There are transformations that we need to expand right away,
     /// so we can accurately check the names
-    #[allow(clippy::too_many_lines)]
     pub fn check(self) -> Result<CheckedConfig> {
         self.inner_check(true)
     }
@@ -1770,13 +1768,12 @@ impl Config {
     }
 
     /// Check configuration for validation mode (allows missing input files)
-    #[allow(clippy::too_many_lines)]
     pub fn check_for_validation(self) -> Result<CheckedConfig> {
         self.inner_check(false)
     }
 
-    #[allow(clippy::similar_names)]
-    #[allow(clippy::too_many_lines)]
+    #[expect(clippy::similar_names, reason="domain names are that way")]
+    #[expect(clippy::too_many_lines, reason="validation takes lines")]
     #[mutants::skip] // saw_gzip is only necessary for multi threading, and that's not being
     // observed
     fn check_input_format(&mut self, errors: &mut Vec<anyhow::Error>) -> InputFormatsObserved {
@@ -1910,7 +1907,6 @@ impl Config {
         }
     }
 
-    #[allow(clippy::too_many_lines)]
     fn transforms_to_stages(&mut self) -> Vec<Stage> {
         let allowed_tags_per_stage = self.allowed_tags_per_transformation.clone();
 

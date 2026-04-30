@@ -248,7 +248,7 @@ impl CellRangerProbeAssigner {
                     let left_hand_name = self
                         .left_hand_seq_to_name
                         .get(left_hand_seq.as_bstr())
-                        .unwrap();
+                        .expect("Internal inconsistency between resonator and map");
                     let expected_right_hand_side = self
                         .name_to_seq
                         .get(left_hand_name)
@@ -267,7 +267,9 @@ impl CellRangerProbeAssigner {
                             || right_hand_matches
                                 .iter()
                                 .map(|(rhs, _)| {
-                                    self.right_hand_seq_to_name.get(rhs.as_bstr()).unwrap()
+                                    self.right_hand_seq_to_name
+                                        .get(rhs.as_bstr())
+                                        .expect("Internal inconsistency between resonator and map")
                                         == left_hand_name
                                 })
                                 .all(|x| x)
@@ -291,7 +293,7 @@ impl CellRangerProbeAssigner {
                     let right_hand_name = self
                         .right_hand_seq_to_name
                         .get(right_hand_seq.as_bstr())
-                        .unwrap();
+                        .expect("Internal inconsistency between resonator and map");
                     let expected_left_hand_side = self
                         .name_to_seq
                         .get(right_hand_name)
@@ -311,7 +313,7 @@ impl CellRangerProbeAssigner {
                             || left_hand_matches
                                 .iter()
                                 .map(|(lhs, _)| {
-                                    self.left_hand_seq_to_name.get(lhs.as_bstr()).unwrap()
+                                    self.left_hand_seq_to_name.get(lhs.as_bstr()).expect("Internal inconsistency between resonator and map")
                                         == right_hand_name
                                 })
                                 .all(|x| x)

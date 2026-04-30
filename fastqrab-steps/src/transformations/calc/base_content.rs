@@ -142,7 +142,7 @@ impl BaseContent {
         if considered == 0 {
             0.0
         } else {
-            #[allow(clippy::cast_precision_loss)]
+            #[expect(clippy::cast_precision_loss, reason="loss is acceptable, it's going to be within u32 range")]
             {
                 counted as f64 / considered as f64
             }
@@ -177,7 +177,7 @@ impl TagUser for PartialTaggedVariant<PartialBaseContent> {
 }
 
 impl Step for BaseContent {
-    #[allow(clippy::cast_precision_loss)]
+    #[expect(clippy::cast_precision_loss, reason="loss is acceptable, it's going to be within u32 range")]
     fn apply(
         &self,
         mut block: FastQBlocksCombined,

@@ -1,7 +1,7 @@
 {
   "__": {
-    "version": "_IGNORED_",
-    "cwd": "_IGNORED_",
+    "version": "0.8.1",
+    "cwd": "/home/user/single_step",
     "input_files": {
       "interleaved": null,
       "read1": [
@@ -13,7 +13,7 @@
         "threads_per_segment": 1
       }
     },
-    "repository": "_IGNORED_"
+    "repository": "https://tyberiusprime.github.io/fastqrab/"
   },
   "xyz": {
     "molecule_count": 3,
@@ -99,13 +99,13 @@
         }
       }
     },
-    "initial_filter_capacity": 4,
-    "actual_filter_capacity": 4
+    "initial_filter_capacity": 8,
+    "actual_filter_capacity": 8
   },
   "run_info": {
-    "program_version": "_IGNORED_",
-    "input_toml": "_IGNORED_",
-    "working_directory": "_IGNORED_"
+    "program_version": "0.8.1",
+    "input_toml": "[input]\n    read1 = 'input_read1.fasta'\n\toptions.fasta_fake_quality = 33\n\n\n[[step]]\n    action = 'Report'\n    name = 'xyz'\n    count = true\n    base_statistics = true\n    duplicate_count_per_read = true\n    length_distribution = true\n\n[output]\n    prefix = 'output'\n    report_json=true\n",
+    "working_directory": "/home/user/single_step"
   },
   "report_order": [
     "xyz"

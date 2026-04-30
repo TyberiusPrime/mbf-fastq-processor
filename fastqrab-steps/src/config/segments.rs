@@ -301,7 +301,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceNoAll>> {
 }
 
 impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceAll>> {
-    #[allow(clippy::too_many_lines)]
+    #[expect(clippy::too_many_lines, reason="Validation is tedious")]
     #[track_caller]
     fn validate_segment(&mut self, config: &PartialConfig) {
         if let Some(input_def) = config.input.as_ref() {

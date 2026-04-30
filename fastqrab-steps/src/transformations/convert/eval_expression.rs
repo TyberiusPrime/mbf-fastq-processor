@@ -85,7 +85,7 @@ impl VerifyIn<PartialConfig> for PartialEvalExpression {
 }
 
 // cov:excl-start
-#[allow(clippy::missing_fields_in_debug)]
+#[expect(clippy::missing_fields_in_debug, reason="that is the point")]
 impl std::fmt::Debug for EvalExpression {
     #[mutants::skip]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -199,8 +199,8 @@ impl TagUser for PartialTaggedVariant<Box<PartialEvalExpression>> {
 }
 
 impl Step for Box<EvalExpression> {
-    #[allow(clippy::too_many_lines)]
-    #[allow(clippy::cast_precision_loss)]
+    #[expect(clippy::too_many_lines, reason="Straight forward")]
+    #[expect(clippy::cast_precision_loss, reason="Internal storage is f64, not going to matter in practice")]
     fn apply(
         &self,
         mut block: FastQBlocksCombined,

@@ -143,7 +143,6 @@ pub const fn default_include_read_name() -> bool {
 }
 // Schema helper for string or list of strings
 #[derive(JsonSchema)]
-#[allow(dead_code)]
 pub enum StringOrVecString {
     String(String),
     Vec(Vec<String>),
@@ -740,83 +739,83 @@ mod test {
     #[test]
     fn test_validate_tag_name_valid() {
         // Valid tag names
-        assert!(validate_tag_name("a").is_ok());
-        assert!(validate_tag_name("A").is_ok());
-        assert!(validate_tag_name("_").is_ok());
-        assert!(validate_tag_name("abc").is_ok());
-        assert!(validate_tag_name("ABC").is_ok());
-        assert!(validate_tag_name("a123").is_ok());
-        assert!(validate_tag_name("A123").is_ok());
-        assert!(validate_tag_name("_123").is_ok());
-        assert!(validate_tag_name("tag_name").is_ok());
-        assert!(validate_tag_name("TagName").is_ok());
-        assert!(validate_tag_name("tag123_name").is_ok());
-        assert!(validate_tag_name("_private_tag").is_ok());
+        validate_tag_name("a").unwrap();
+        validate_tag_name("A").unwrap();
+        validate_tag_name("_").unwrap();
+        validate_tag_name("abc").unwrap();
+        validate_tag_name("ABC").unwrap();
+        validate_tag_name("a123").unwrap();
+        validate_tag_name("A123").unwrap();
+        validate_tag_name("_123").unwrap();
+        validate_tag_name("tag_name").unwrap();
+        validate_tag_name("TagName").unwrap();
+        validate_tag_name("tag123_name").unwrap();
+        validate_tag_name("_private_tag").unwrap();
     }
 
     #[test]
     fn test_validate_tag_name_invalid() {
         // Invalid tag names
-        assert!(validate_tag_name("").is_err());
-        assert!(validate_tag_name("123").is_err());
-        assert!(validate_tag_name("123abc").is_err());
-        assert!(validate_tag_name("tag-name").is_err());
-        assert!(validate_tag_name("tag.name").is_err());
-        assert!(validate_tag_name("tag name").is_err());
-        assert!(validate_tag_name("tag@name").is_err());
-        assert!(validate_tag_name("tag/name").is_err());
-        assert!(validate_tag_name("tag\\name").is_err());
-        assert!(validate_tag_name("tag:name").is_err());
-        assert!(validate_tag_name("len_123").is_err());
-        assert!(validate_tag_name("len_shu").is_err());
-        assert!(validate_tag_name("location_shu").is_err());
-        assert!(validate_tag_name("ReadName").is_err());
-        assert!(validate_tag_name("read_no").is_err());
+        validate_tag_name("").unwrap_err();
+        validate_tag_name("123").unwrap_err();
+        validate_tag_name("123abc").unwrap_err();
+        validate_tag_name("tag-name").unwrap_err();
+        validate_tag_name("tag.name").unwrap_err();
+        validate_tag_name("tag name").unwrap_err();
+        validate_tag_name("tag@name").unwrap_err();
+        validate_tag_name("tag/name").unwrap_err();
+        validate_tag_name("tag\\name").unwrap_err();
+        validate_tag_name("tag:name").unwrap_err();
+        validate_tag_name("len_123").unwrap_err();
+        validate_tag_name("len_shu").unwrap_err();
+        validate_tag_name("location_shu").unwrap_err();
+        validate_tag_name("ReadName").unwrap_err();
+        validate_tag_name("read_no").unwrap_err();
     }
 
     #[test]
     fn test_validate_segment_label_valid() {
         // Valid segment labels
         let f = toml_pretty_deser::FieldMatchMode::Exact;
-        assert!(validate_segment_label("a", f).is_ok());
-        assert!(validate_segment_label("A", f).is_ok());
-        assert!(validate_segment_label("_", f).is_ok());
-        assert!(validate_segment_label("abc", f).is_ok());
-        assert!(validate_segment_label("ABC", f).is_ok());
-        assert!(validate_segment_label("123", f).is_err());
-        assert!(validate_segment_label("a123", f).is_ok());
-        assert!(validate_segment_label("A123", f).is_ok());
-        assert!(validate_segment_label("123abc", f).is_err());
-        assert!(validate_segment_label("read1", f).is_ok());
-        assert!(validate_segment_label("READ1", f).is_ok());
-        assert!(validate_segment_label("segment_name", f).is_ok());
-        assert!(validate_segment_label("segment123", f).is_ok());
-        assert!(validate_segment_label("_internal", f).is_ok());
+        validate_segment_label("a", f).unwrap();
+        validate_segment_label("A", f).unwrap();
+        validate_segment_label("_", f).unwrap();
+        validate_segment_label("abc", f).unwrap();
+        validate_segment_label("ABC", f).unwrap();
+        validate_segment_label("123", f).unwrap_err();
+        validate_segment_label("a123", f).unwrap();
+        validate_segment_label("A123", f).unwrap();
+        validate_segment_label("123abc", f).unwrap_err();
+        validate_segment_label("read1", f).unwrap();
+        validate_segment_label("READ1", f).unwrap();
+        validate_segment_label("segment_name", f).unwrap();
+        validate_segment_label("segment123", f).unwrap();
+        validate_segment_label("_internal", f).unwrap();
     }
 
     #[test]
     fn test_validate_segment_label_invalid() {
         // Invalid segment labels
         let f = toml_pretty_deser::FieldMatchMode::Exact;
-        assert!(validate_segment_label("", f).is_err());
-        assert!(validate_segment_label("1", f).is_err());
-        assert!(validate_segment_label("segment-name", f).is_err());
-        assert!(validate_segment_label("segment.name", f).is_err());
-        assert!(validate_segment_label("segment name", f).is_err());
-        assert!(validate_segment_label("segment@name", f).is_err());
-        assert!(validate_segment_label("segment/name", f).is_err());
-        assert!(validate_segment_label("segment\\name", f).is_err());
-        assert!(validate_segment_label("segment:name", f).is_err());
-        assert!(validate_segment_label("fasta_fake_quality", f).is_err());
-        assert!(validate_segment_label("bam_include_mapped", f).is_err());
-        assert!(validate_segment_label("bam_include_unmapped", f).is_err());
-        assert!(validate_segment_label("read_comment_character", f).is_err());
-        assert!(validate_segment_label("use_rapidgzip", f).is_err());
-        assert!(validate_segment_label("build_rapidgzip_index", f).is_err());
-        assert!(validate_segment_label("threads_per_segment", f).is_err());
-        assert!(validate_segment_label("tpd_field_match_mode", f).is_err());
+        validate_segment_label("", f).unwrap_err();
+        validate_segment_label("1", f).unwrap_err();
+        validate_segment_label("segment-name", f).unwrap_err();
+        validate_segment_label("segment.name", f).unwrap_err();
+        validate_segment_label("segment name", f).unwrap_err();
+        validate_segment_label("segment@name", f).unwrap_err();
+        validate_segment_label("segment/name", f).unwrap_err();
+        validate_segment_label("segment\\name", f).unwrap_err();
+        validate_segment_label("segment:name", f).unwrap_err();
+        validate_segment_label("fasta_fake_quality", f).unwrap_err();
+        validate_segment_label("bam_include_mapped", f).unwrap_err();
+        validate_segment_label("bam_include_unmapped", f).unwrap_err();
+        validate_segment_label("read_comment_character", f).unwrap_err();
+        validate_segment_label("use_rapidgzip", f).unwrap_err();
+        validate_segment_label("build_rapidgzip_index", f).unwrap_err();
+        validate_segment_label("threads_per_segment", f).unwrap_err();
+        validate_segment_label("tpd_field_match_mode", f).unwrap_err();
 
         let f = toml_pretty_deser::FieldMatchMode::AnyCase;
-        assert!(validate_segment_label("FaSTA___FAKE-QUALITY", f).is_err());
+        validate_segment_label("FaSTA___FAKE-QUALITY", f).unwrap_err();
     }
 }

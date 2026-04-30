@@ -226,8 +226,7 @@ impl Step for StoreTagsInTable {
                 {
                     if let Some(writer) = writer {
                         writer
-                            .write_record(&header)
-                            .expect("Failed to write header to table");
+                            .write_record(&header)?;
                     }
                 }
             }

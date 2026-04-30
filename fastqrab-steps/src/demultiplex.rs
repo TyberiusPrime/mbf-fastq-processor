@@ -49,19 +49,11 @@ impl<T> DemultiplexedData<T> {
         Self(BTreeMap::new())
     }
 
+    #[expect(clippy::len_without_is_empty, reason="Never queried for is_empty")]
     #[must_use]
     pub fn len(&self) -> usize {
         self.0.len()
     }
-
-    #[allow(dead_code)]
-    #[mutants::skip] // unused, but makes clippy happy
-    #[must_use]
-    // cov:excl-start
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-    // cov:excl-stop
 
     // pub fn iter(&self) -> impl Iterator<Item = (Tag, &T)> {
     //     self.0.iter().map(|(tag, data)| (*tag, data))
@@ -106,39 +98,12 @@ impl<T> DemultiplexedData<T> {
 
 impl<T> IntoIterator for DemultiplexedData<T> {
     type Item = (Tag, T);
-    type IntoIter =
-        std::iter::Map<std::collections::btree_map::IntoIter<Tag, T>, fn((Tag, T)) -> (Tag, T)>;
+    type IntoIter = std::collections::btree_map::IntoIter<u64, T>;
 
-    #[allow(clippy::map_identity)] // you can probably say this much better.
     fn into_iter(self) -> Self::IntoIter {
-        self.0.into_iter().map(|(tag, data)| (tag, data))
+        self.0.into_iter()
     }
 }
-
-// #[allow(clippy::into_iter_without_iter)]
-// impl<'a, T> IntoIterator for &'a DemultiplexedData<T> {
-//     type Item = (Tag, &'a T);
-//     type IntoIter = std::iter::Map<
-//         std::collections::btree_map::Iter<'a, Tag, T>,
-//         fn((&'a Tag, &'a T)) -> (Tag, &'a T),
-//     >;
-//
-//     fn into_iter(self) -> Self::IntoIter {
-//         self.0.iter().map(|(tag, data)| (*tag, data))
-//     }
-// }
-//
-// impl<'a, T> IntoIterator for &'a mut DemultiplexedData<T> {
-//     type Item = (Tag, &'a mut T);
-//     type IntoIter = std::iter::Map<
-//         std::collections::btree_map::IterMut<'a, Tag, T>,
-//         fn((&'a Tag, &'a mut T)) -> (Tag, &'a mut T),
-//     >;
-//
-//     fn into_iter(self) -> Self::IntoIter {
-//         self.0.iter_mut().map(|(tag, data)| (*tag, data))
-//     }
-// }
 
 impl<T> FromIterator<(Tag, T)> for DemultiplexedData<T> {
     fn from_iter<I: IntoIterator<Item = (Tag, T)>>(iter: I) -> Self {
@@ -160,7 +125,7 @@ impl<T> Clone for DemultiplexedData<T> {
 
 /// what the other steps need to know about the demultiplexing
 #[derive(Debug, Clone)]
-#[allow(clippy::module_name_repetitions)]
+#[expect(clippy::module_name_repetitions, reason="Info by itself is not informative")]
 pub struct DemultiplexInfo {
     //step specific, what we need during the runtime.
     //These are full qualified demultiplex1.demultiplex2 -> tag hashes.
@@ -213,7 +178,7 @@ impl DemultiplexInfo {
     }
 }
 
-#[allow(clippy::module_name_repetitions)]
+#[expect(clippy::module_name_repetitions, reason="Info by itself is not informative")]
 pub struct DemultiplexBarcodes {
     pub barcode_to_name: IndexMap<BString, String>,
     pub include_no_barcode: bool,
@@ -227,6 +192,7 @@ pub enum OptDemultiplex {
 }
 
 impl OptDemultiplex {
+    #[expect(clippy::len_without_is_empty, reason="Never queried for is_empty")]
     #[must_use]
     #[mutants::skip] // only used by initial filter capacity calculation
     pub fn len(&self) -> usize {
@@ -236,14 +202,6 @@ impl OptDemultiplex {
         }
     }
 
-    #[must_use]
-    #[allow(dead_code)]
-    #[mutants::skip] // since it's dead, only here to make clippy happy.
-    // cov:excl-start
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
-    // cov:excl-stop
 
     #[must_use]
     pub fn expect(&self, msg: &str) -> &DemultiplexInfo {
@@ -265,7 +223,7 @@ impl OptDemultiplex {
         }
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments, reason="We need them")]
     pub fn open_output_streams(
         &self,
         output_directory: &Path,

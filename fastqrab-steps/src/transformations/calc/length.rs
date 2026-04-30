@@ -59,9 +59,9 @@ impl Step for Length {
         extract_numeric_tags_plus_all(
             self.segment,
             &self.out_label,
-            #[allow(clippy::cast_precision_loss)]
+            #[expect(clippy::cast_precision_loss, reason="loss is acceptable, it's going to be within u32 range")]
             |read| read.seq().len() as f64,
-            #[allow(clippy::cast_precision_loss)]
+            #[expect(clippy::cast_precision_loss, reason="loss is acceptable, it's going to be within u32 range")]
             |reads| {
                 let total_length: usize = reads.iter().map(|read| read.seq().len()).sum();
                 total_length as f64

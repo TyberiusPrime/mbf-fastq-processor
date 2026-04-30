@@ -1,4 +1,4 @@
-#![allow(non_camel_case_types)] // to make derived Partial_* shut up
+#![expect(non_camel_case_types, reason="Derived Partial_* is ok for internals")]
 
 use anyhow::Result;
 use bstr::BString;
