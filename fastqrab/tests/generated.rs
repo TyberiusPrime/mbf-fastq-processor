@@ -1307,6 +1307,17 @@ fn test_cases_x_input_validation_x_unsupported_compression() {
 
 #[test]
 
+fn test_cases_x_integration_x_bam_merge_x_existing_files() {
+    println!("Test case is in: test_cases/integration/bam_merge/existing_files");
+    run_test(
+        std::path::Path::new("../test_cases/integration/bam_merge/existing_files"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_integration_x_basic_x_allow_overwrites() {
     println!("Test case is in: test_cases/integration/basic/allow_overwrites");
     run_test(
@@ -11140,6 +11151,19 @@ fn test_cases_x_single_step_x_store_tag_x_in_comment_with_insert_char_present() 
     run_test(
         std::path::Path::new(
             "../test_cases/single_step/store_tag/in_comment_with_insert_char_present",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_store_tag_x_in_sequence_exceeding_read_length() {
+    println!("Test case is in: test_cases/single_step/store_tag/in_sequence_exceeding_read_length");
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/store_tag/in_sequence_exceeding_read_length",
         ),
         "input.toml",
         1,

@@ -1,0 +1,69 @@
+[input]
+  read = 'input_read1.fq'
+
+[[step]]
+  action = 'ExtractRegex'
+  query = 'AAA'
+  source = 'read'
+  out_label = 'rr'
+
+
+[[step]]
+  action= 'ExtractRegion'
+  start = -1
+  len = 0
+  anchor ='end'
+  source = 'read'
+  out_label = 'badpos'
+
+
+[[step]]
+  action= 'ExtractRegion'
+  start = 101
+  len = 0
+  anchor ='start'
+  source = 'read'
+  out_label = 'goneaftertrunc'
+
+[[step]]
+  action= 'ExtractRegion'
+  start = 0
+  len = 1
+  anchor ='left'
+  source = 'read'
+  out_label = 'goodpos'
+
+[[step]]
+  action = 'ReverseComplement' 
+  target = 'tag:rr'
+
+[[step]]
+  action ='truncate'
+  n = 5
+
+[[step]]
+  action = 'StoreTagInSequence'
+  in_value_label = 'rr'
+  in_position_label = 'badpos'
+  anchor = 'end'
+
+[[step]]
+  action = 'StoreTagInSequence'
+  in_value_label = 'rr'
+  in_position_label = 'goodpos'
+  anchor = 'start'
+
+
+[[step]]
+  action = 'StoreTagInSequence'
+  in_value_label = 'rr'
+  in_position_label = 'goneaftertrunc'
+  anchor = 'start'
+
+
+[[step]]
+  action = 'StoreTagsInTable'
+  in_labels = ['rr', 'location_goodpos','location_badpos', 'location_goneaftertrunc']
+
+[output]
+  prefix = 'output'

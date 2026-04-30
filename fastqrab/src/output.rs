@@ -1438,7 +1438,8 @@ fn write_interleaved_blocks_to_bam(
                         tags,
                         &bam_tag_refs,
                         reference_tag.as_deref(),
-                    )?;
+                    )?; // cov:excl-line hard to test (needs write failure), the usual 'file already
+                    //existed' case is handled much earlier when creating output threads
                     output_file.after_bam_fragment()?;
                 }
                 None => return Ok(()),

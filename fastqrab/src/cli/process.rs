@@ -66,13 +66,7 @@ pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> 
     }
 }
 
-struct MergeConfig {
-    prefix: String,
-    ix_separator: String,
-    reference_label: String,
-    index_merged: bool,
-    segment_tails: Vec<String>,
-}
+use crate::bam_merge::MergeConfig;
 
 fn inner_run(
     mut parsed: CheckedConfig,
@@ -122,7 +116,7 @@ fn inner_run(
         let run = run.create_input_threads(&parsed)?;
         let run = run.create_stage_threads(&mut parsed);
         let parsed = parsed;
-        let run = run.create_output_threads(&parsed, raw_config)?;
+        let run = run.create_output_threads(&parsed, raw_config, merge_config.as_ref())?;
         let run = run.join_threads();
 
         let errors = run.errors;
@@ -132,6 +126,9 @@ fn inner_run(
         }
 
         if let Some(merge_config) = merge_config {
+            let handles = run
+                .merge_bam_handles
+                .expect("merge_bam_handles must be Some when merge_config is Some");
             crate::bam_merge::merge_demultiplexed_bam(
                 output_directory,
                 &merge_config.prefix,
@@ -142,7 +139,8 @@ fn inner_run(
                 &merge_config.segment_tails,
                 merge_config.index_merged,
                 &run.reads_per_tag,
-            )?;
+                handles,
+            )?; // cov:excl-line
         }
 
         drop(parsed);

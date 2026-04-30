@@ -5,6 +5,8 @@ use std::collections::BTreeMap;
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 
+use fastqrab_io::ensure_output_destination_available;
+
 // Standard BGZF EOF block (28 bytes), per the SAM/BGZF specification, section 4.1.2.
 const BGZF_EOF: [u8; 28] = [
     0x1f, 0x8b, 0x08, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0x06, 0x00, 0x42, 0x43, 0x02, 0x00,
@@ -18,6 +20,81 @@ use crate::demultiplex::{OptDemultiplex, Tag};
 pub struct DemultiplexStepInfo {
     /// The `in_label` of the Demultiplex step (as a plain string for easy comparison).
     pub in_label: String,
+}
+
+/// Configuration describing which demultiplexed BAM files to merge.
+/// Computed from `CheckedConfig` before the pipeline runs and passed into
+/// `create_output_threads` so the output files can be created (and existence-checked)
+/// at the same time as every other output file.
+pub struct MergeConfig {
+    pub prefix: String,
+    pub ix_separator: String,
+    pub reference_label: String,
+    pub index_merged: bool,
+    pub segment_tails: Vec<String>,
+}
+
+/// Pre-opened output file handles for the merged BAM (and optional BAI) files.
+/// Created in `create_output_threads` — before any pipeline work starts — so that
+/// a conflicting file is detected early, matching the pattern used for all other
+/// output files.
+pub struct MergeBamHandles {
+    /// dst_path → open file handle, one entry per (group, tail) combination.
+    pub bam_files: BTreeMap<PathBuf, ex::fs::File>,
+    /// bai_path → open file handle, populated only when `index_merged` is true.
+    pub bai_files: BTreeMap<PathBuf, ex::fs::File>,
+}
+
+/// Create and existence-check all merged BAM (and BAI) output files.
+///
+/// Called from `create_output_threads` so that the file handles exist before the
+/// pipeline processes any data, consistent with every other output file.
+pub fn create_merge_output_handles(
+    output_directory: &Path,
+    merge_config: &MergeConfig,
+    demultiplex_infos: &[(usize, OptDemultiplex)],
+    demultiplex_step_infos: &[DemultiplexStepInfo],
+    allow_overwrite: bool,
+) -> Result<MergeBamHandles> {
+    let sep = merge_config.ix_separator.as_str();
+    let prefix = merge_config.prefix.as_str();
+    let (_, groups) = compute_merge_groups(
+        demultiplex_infos,
+        demultiplex_step_infos,
+        &merge_config.reference_label,
+        sep,
+    );
+
+    let mut bam_files = BTreeMap::new();
+    let mut bai_files = BTreeMap::new();
+
+    for group_output_name in groups.keys() {
+        for tail in &merge_config.segment_tails {
+            let dst_name = if group_output_name.is_empty() {
+                format!("{prefix}{tail}")
+            } else {
+                format!("{prefix}{sep}{group_output_name}{tail}")
+            };
+            let dst_path = output_directory.join(&dst_name);
+            ensure_output_destination_available(&dst_path, allow_overwrite)?;
+            let f = ex::fs::File::create(&dst_path)
+                .with_context(|| format!("Failed to create merged BAM: {}", dst_path.display()))?;
+            bam_files.insert(dst_path.clone(), f);
+
+            if merge_config.index_merged {
+                let bai_path = dst_path.with_extension("bam.bai");
+                ensure_output_destination_available(&bai_path, allow_overwrite)?;
+                let g = ex::fs::File::create(&bai_path)
+                    .with_context(|| format!("Failed to create BAI: {}", bai_path.display()))?;
+                bai_files.insert(bai_path, g);
+            }
+        }
+    }
+
+    Ok(MergeBamHandles {
+        bam_files,
+        bai_files,
+    })
 }
 
 /// Merge the demultiplexed BAM files produced for `merge_label` into combined output files.
@@ -37,52 +114,10 @@ pub fn merge_demultiplexed_bam(
     segment_tails: &[String],
     index: bool,
     reads_per_tag: &BTreeMap<Tag, u64>,
+    mut handles: MergeBamHandles,
 ) -> Result<()> {
-    // ── find the merge step ──────────────────────────────────────────────────
-    let (merge_step_index, _merge_step_info) = demultiplex_step_infos
-        .iter()
-        .enumerate()
-        .find(|s| s.1.in_label == merge_label)
-        .expect("No demultiplex step found with in_label='{merge_label}' (this is a bug)");
-
-    //  final tag→name mapping
-    let final_tag_to_name = match demultiplex_infos.last() {
-        Some((_, OptDemultiplex::Yes(info))) => &info.tag_to_name,
-        _ => {
-            unreachable!("No demultiplexing active - should not be able to be configured this way"); // cov:excl-line
-        }
-    };
-
-    // build merge groups: output_name → (filename-infix, demultiplex_tag, reference-seq)
-
-    let mut groups: BTreeMap<String, Vec<(String, u64, String)>> = BTreeMap::new();
-
-    for (final_demultiplex_output_tag, tag_output_name_opt) in final_tag_to_name {
-        let Some(tag_output_name) = tag_output_name_opt else {
-            continue; // no output file for this tag
-        };
-        let parts = tag_output_name.split(sep).collect::<Vec<_>>();
-        assert_eq!(
-            parts.len(),
-            demultiplex_step_infos.len(),
-            "combined name should have one part per step. Did you manage to put the separator into the output names? ",
-        );
-        let group: Vec<&str> = parts
-            .iter()
-            .enumerate()
-            .filter(|(i, _part)| *i != merge_step_index)
-            .map(|(_, part)| *part)
-            .collect();
-        let grouped_output_name: String = group.join(sep);
-        let ref_seq = parts[merge_step_index].to_string();
-
-        let entry = groups.entry(grouped_output_name).or_default();
-        entry.push((
-            tag_output_name.clone(),
-            *final_demultiplex_output_tag,
-            ref_seq,
-        ));
-    }
+    let (_, mut groups) =
+        compute_merge_groups(demultiplex_infos, demultiplex_step_infos, merge_label, sep);
 
     if groups.is_empty() {
         unreachable!("Should always have something to combine"); // cov:excl-line
@@ -110,19 +145,22 @@ pub fn merge_demultiplexed_bam(
         .map(|(i, name)| (name.to_string(), i + 1))
         .collect();
 
-    // merge each group
-
-    for (group_output_name, mut sources) in groups {
+    for (group_output_name, sources) in &mut groups {
         // Sort by header position of the merge-part reference name; unmatched sort last.
-        sources.sort_by_key(|(_merge_part_name ,_demultiplex_tag, ref_seq)| {
+        sources.sort_by_key(|(_merge_part_name, _demultiplex_tag, ref_seq)| {
             if ref_seq == no_barcode_infix() {
                 ref_order.len() + 1
-            } else  {
+            } else {
                 ref_order
-                .get(ref_seq.as_str())
-                .copied()
-                .with_context(||format!("ref_seq {ref_seq} not found in references {ref_order:?} - validation has failed us"))
-                .expect("?")
+                    .get(ref_seq.as_str())
+                    .copied()
+                    .with_context(|| {
+                        //cov:excl-start
+                        format!(
+                            "ref_seq {ref_seq} not found in references {ref_order:?} - validation has failed us. Bug"
+                        )
+                    }) //cov:excl-end
+                    .expect("?")
             }
         });
 
@@ -132,7 +170,6 @@ pub fn merge_demultiplexed_bam(
             } else {
                 format!("{prefix}{sep}{group_output_name}{tail}")
             };
-
             let dst_path = output_directory.join(&dst_name);
 
             let src_paths: Vec<PathBuf> = sources
@@ -142,7 +179,11 @@ pub fn merge_demultiplexed_bam(
                 })
                 .collect();
 
-            let spans = merge_bam_files(&src_paths, &dst_path, header_size)?;
+            let dst_file = handles
+                .bam_files
+                .remove(&dst_path)
+                .expect("BAM handle missing — create_merge_output_handles must have been called");
+            let spans = merge_bam_files(&src_paths, dst_file, &dst_path, header_size)?;
 
             for src in src_paths.iter().map(PathBuf::as_path) {
                 std::fs::remove_file(src)
@@ -151,19 +192,79 @@ pub fn merge_demultiplexed_bam(
 
             if index {
                 let bai_path = dst_path.with_extension("bam.bai");
+                let bai_file = handles.bai_files.remove(&bai_path).expect(
+                    "BAI handle missing — create_merge_output_handles must have been called",
+                );
                 write_merged_bai(
+                    bai_file,
                     &bai_path,
                     &header,
                     &ref_order,
-                    &sources,
+                    sources,
                     &spans,
                     reads_per_tag,
-                )?;
+                )?; //cov:excl-line hard to test (needs write failure), the usual 'file already
+                //existed' case is handled much earlier when creating output threads
             }
         }
     }
 
     Ok(())
+}
+
+/// Compute the merge groups and step index from demultiplex state.
+///
+/// Returns `(merge_step_index, groups)` where groups maps grouped-output-name to a list of
+/// `(filename_infix, demultiplex_tag, ref_seq)` tuples.
+fn compute_merge_groups(
+    demultiplex_infos: &[(usize, OptDemultiplex)],
+    demultiplex_step_infos: &[DemultiplexStepInfo],
+    merge_label: &str,
+    sep: &str,
+) -> (usize, BTreeMap<String, Vec<(String, u64, String)>>) {
+    let (merge_step_index, _merge_step_info) = demultiplex_step_infos
+        .iter()
+        .enumerate()
+        .find(|s| s.1.in_label == merge_label)
+        .expect("No demultiplex step found with in_label='{merge_label}' (this is a bug)");
+
+    let final_tag_to_name = match demultiplex_infos.last() {
+        Some((_, OptDemultiplex::Yes(info))) => &info.tag_to_name,
+        _ => {
+            unreachable!("No demultiplexing active - should not be able to be configured this way"); // cov:excl-line
+        }
+    };
+
+    let mut groups: BTreeMap<String, Vec<(String, u64, String)>> = BTreeMap::new();
+
+    for (final_demultiplex_output_tag, tag_output_name_opt) in final_tag_to_name {
+        let Some(tag_output_name) = tag_output_name_opt else {
+            continue;
+        };
+        let parts = tag_output_name.split(sep).collect::<Vec<_>>();
+        assert_eq!(
+            parts.len(),
+            demultiplex_step_infos.len(),
+            "combined name should have one part per step. Did you manage to put the separator into the output names? ",
+        );
+        let group: Vec<&str> = parts
+            .iter()
+            .enumerate()
+            .filter(|(i, _part)| *i != merge_step_index)
+            .map(|(_, part)| *part)
+            .collect();
+        let grouped_output_name: String = group.join(sep);
+        let ref_seq = parts[merge_step_index].to_string();
+
+        let entry = groups.entry(grouped_output_name).or_default();
+        entry.push((
+            tag_output_name.clone(),
+            *final_demultiplex_output_tag,
+            ref_seq,
+        ));
+    }
+
+    (merge_step_index, groups)
 }
 
 fn read_bam_header(path: &Path) -> Result<(sam::Header, u64)> {
@@ -196,12 +297,10 @@ fn read_bam_header(path: &Path) -> Result<(sam::Header, u64)> {
 /// virtual offset is `coffset << 16` (uoffset is always 0 at every BGZF block boundary).
 fn merge_bam_files(
     src_paths: &[PathBuf],
+    mut dst: ex::fs::File,
     dst_path: &Path,
     header_size: u64,
 ) -> Result<Vec<(u64, u64)>> {
-    let mut dst = ex::fs::File::create(dst_path)
-        .with_context(|| format!("Failed to create BAM file: {}", dst_path.display()))?;
-
     // ── copy header bytes verbatim from first source ─────────────────────────
     {
         let src = std::fs::File::open(&src_paths[0])
@@ -244,7 +343,7 @@ fn merge_bam_files(
 
     // ── terminate with BGZF EOF block ────────────────────────────────────────
     dst.write_all(&BGZF_EOF)
-        .context("Failed to write BGZF EOF")?;
+        .with_context(|| format!("Failed to write BGZF EOF to: {}", dst_path.display()))?;
 
     Ok(spans)
 }
@@ -259,6 +358,7 @@ fn merge_bam_files(
 /// Bin 4681 covers [0, 16 384) on every reference — correct for reads at position 0 (0-based)
 /// shorter than 16 384 bp, which holds for all typical short-read sequencing data.
 fn write_merged_bai(
+    f: ex::fs::File,
     bai_path: &Path,
     header: &sam::Header,
     ref_order: &indexmap::IndexMap<String, usize>,
@@ -286,8 +386,6 @@ fn write_merged_bai(
         }
     }
 
-    let f = ex::fs::File::create(bai_path)
-        .with_context(|| format!("Cannot create BAI: {}", bai_path.display()))?;
     let mut w = std::io::BufWriter::new(f);
 
     // magic + n_ref

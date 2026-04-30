@@ -1004,6 +1004,7 @@ impl RunStage3 {
         self,
         parsed: &CheckedConfig,
         raw_config: String,
+        merge_config: Option<&crate::bam_merge::MergeConfig>,
     ) -> Result<RunStage4> {
         let input_channel = self.stage_to_output_channel;
         let output_buffer_size = parsed.options.output_buffer_size;
@@ -1023,6 +1024,18 @@ impl RunStage3 {
             self.report_json,
             self.allow_overwrite,
         )?;
+
+        let merge_bam_handles = merge_config
+            .map(|mc| {
+                crate::bam_merge::create_merge_output_handles(
+                    &self.output_directory,
+                    mc,
+                    &self.demultiplex_infos,
+                    &self.demultiplex_step_infos,
+                    self.allow_overwrite,
+                )
+            })
+            .transpose()?;
 
         let output_directory = self.output_directory.clone();
         let report_collector = self.report_collector.clone();
@@ -1181,6 +1194,7 @@ impl RunStage3 {
             demultiplex_infos: self.demultiplex_infos,
             demultiplex_step_infos: self.demultiplex_step_infos,
             reads_per_demultiplex_tag: self.reads_per_tag,
+            merge_bam_handles,
         })
     }
 }
@@ -1193,6 +1207,7 @@ pub struct RunStage4 {
     pub demultiplex_infos: Vec<(usize, OptDemultiplex)>,
     pub demultiplex_step_infos: Vec<DemultiplexStepInfo>,
     reads_per_demultiplex_tag: Arc<Mutex<BTreeMap<crate::demultiplex::Tag, u64>>>,
+    pub merge_bam_handles: Option<crate::bam_merge::MergeBamHandles>,
 }
 
 impl RunStage4 {
@@ -1220,6 +1235,7 @@ impl RunStage4 {
             demultiplex_infos: self.demultiplex_infos,
             demultiplex_step_infos: self.demultiplex_step_infos,
             reads_per_tag,
+            merge_bam_handles: self.merge_bam_handles,
         }
     }
 }
@@ -1229,6 +1245,7 @@ pub struct RunStage5 {
     pub demultiplex_infos: Vec<(usize, OptDemultiplex)>,
     pub demultiplex_step_infos: Vec<DemultiplexStepInfo>,
     pub reads_per_tag: BTreeMap<crate::demultiplex::Tag, u64>,
+    pub merge_bam_handles: Option<crate::bam_merge::MergeBamHandles>,
 }
 
 #[cfg(test)]

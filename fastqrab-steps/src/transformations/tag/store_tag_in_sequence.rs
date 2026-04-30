@@ -77,7 +77,6 @@ impl Step for StoreTagInSequence {
         }
 
         let mut insert_infos: Vec<Option<InsertInfo>> = Vec::with_capacity(block.len());
-        let error_encountered = std::cell::RefCell::new(Option::<String>::None);
 
         block.apply_mut_with_tags(
             &self.in_value_label,
@@ -134,14 +133,14 @@ impl Step for StoreTagInSequence {
                 let seq = read.seq();
 
                 if insert_pos > seq.len() {
-                    *error_encountered.borrow_mut() = Some(format!(
+                    //cov:excl-start
+                    panic!(
                         "StoreTagInSequence: insert position {insert_pos} exceeds read length \
-                        {} on segment {seg_idx}. Suggestion: verify the position tag \
+                        {} on segment {seg_idx}. THis should have been prevent upstream and is a bug.
                         coordinates are within the read.",
                         seq.len(),
-                    ));
-                    insert_infos.push(None);
-                    return;
+                    );
+                    //cov:excl-end
                 }
 
                 let mut new_seq = Vec::with_capacity(seq.len() + insert_bytes.len());
@@ -164,10 +163,6 @@ impl Step for StoreTagInSequence {
                 }));
             },
         );
-
-        if let Some(error_msg) = error_encountered.borrow().as_ref() {
-            return Err(anyhow::anyhow!("{error_msg}"));
-        }
 
         // Shift all location tags whose start is >= the insertion point, and
         // invalidate any that straddle it (start before, end after).
