@@ -163,7 +163,7 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
                 .as_ref()
                 .and_then(|options| options.block_size.as_ref())
                 .copied()
-                .unwrap_or_else(fastqrab_config::default_block_size);
+                .unwrap_or_else(||fastqrab_config::default_block_size().into());
             let reads_wanted = *self
                 .by_majority_min_molecules_to_start
                 .as_ref()

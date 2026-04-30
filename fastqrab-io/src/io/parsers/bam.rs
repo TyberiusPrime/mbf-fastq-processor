@@ -6,6 +6,7 @@ use noodles::bam::{self, record::Record};
 use noodles::bgzf;
 use noodles::csi::binning_index::{BinningIndex, ReferenceSequence};
 use std::path::{Path, PathBuf};
+use std::num::NonZero;
 
 use crate::io::parsers::{ParseResult, Parser};
 use crate::io::{FastQBlock, FastQRead};
@@ -14,7 +15,7 @@ type BamReader = bam::io::Reader<bgzf::io::MultithreadedReader<File>>;
 
 pub struct BamParser {
     reader: BamReader,
-    target_reads_per_block: usize,
+    target_reads_per_block: NonZero<usize>,
     include_mapped: bool,
     include_unmapped: bool,
     record: Record,
@@ -22,6 +23,8 @@ pub struct BamParser {
     any_seen: bool,
 }
 
+/// # Panics
+/// when read count > usize limit
 pub fn bam_read_count_from_index(
     filename: impl AsRef<Path>,
     include_mapped: bool,
@@ -100,7 +103,7 @@ impl BamParser {
     pub fn new(
         file: File,
         filename: PathBuf,
-        target_reads_per_block: usize,
+        target_reads_per_block: NonZero<usize>,
         include_mapped: bool,
         include_unmapped: bool,
         cores: std::num::NonZero<usize>,
@@ -143,7 +146,7 @@ impl Parser for BamParser {
         };
 
         loop {
-            if block.entries.len() >= self.target_reads_per_block {
+            if block.entries.len() >= self.target_reads_per_block.into() {
                 self.any_seen = true;
                 return Ok(ParseResult {
                     fastq_block: block,
@@ -154,56 +157,53 @@ impl Parser for BamParser {
             let state = &mut self.reader;
 
             self.record = Record::default();
-            match state.read_record(&mut self.record)? {
-                0 => {
-                    //nothing read.
-                    if block.entries.is_empty() && !self.any_seen {
-                        bail!(
-                            "An input file ({}) provided no reads. Please check your inputs.",
-                            self.filename.display()
-                        );
-                    }
-                    return Ok(ParseResult {
-                        fastq_block: block,
-                        was_final: true,
-                    });
+            if state.read_record(&mut self.record)? == 0 {
+                //nothing read.
+                if block.entries.is_empty() && !self.any_seen {
+                    bail!(
+                        "An input file ({}) provided no reads. Please check your inputs.",
+                        self.filename.display()
+                    );
                 }
-                _ => {
-                    if !self.should_yield_record(&self.record) {
-                        continue;
-                    }
-                    // let name = self
-                    //     .record
-                    //     .name()
-                    //     .map(|n| n.as_bytes().to_vec())
-                    //     .unwrap_or_default();
-                    // let seq: Vec<u8> = self.record.sequence().iter().collect();
-                    // let qual: Vec<u8> = if self.record.quality_scores().is_empty() {
-                    //     vec![b'!'; seq.len()]
-                    // } else {
-                    //     self.record
-                    //         .quality_scores()
-                    //         .iter()
-                    //         .map(|q| q + 33)
-                    //         .collect()
-                    // };
-                    // let read = FastQRead::new(
-                    //     FastQElement::Owned(name),
-                    //     FastQElement::Owned(seq),
-                    //     FastQElement::Owned(qual),
-                    // )
-                    // .with_context(|| "Failed to convert BAM record into FastQ-like read")?;
-                    let seq = self.record.sequence();
-                    let qual = self.record.quality_scores();
-                    let read = FastQRead::new(
-                        block.append_element(
-                            self.record.name().map(|n| n.as_bytes()).unwrap_or_default(),
-                        ),
-                        block.append_element_from_iter(seq.iter(), seq.len()),
-                        block.append_element_from_iter(qual.iter().map(|q| q + 33), qual.len()),
-                    )?; // cov:excl-line
-                    block.entries.push(read);
+                return Ok(ParseResult {
+                    fastq_block: block,
+                    was_final: true,
+                });
+            } else {
+                if !self.should_yield_record(&self.record) {
+                    continue;
                 }
+                // let name = self
+                //     .record
+                //     .name()
+                //     .map(|n| n.as_bytes().to_vec())
+                //     .unwrap_or_default();
+                // let seq: Vec<u8> = self.record.sequence().iter().collect();
+                // let qual: Vec<u8> = if self.record.quality_scores().is_empty() {
+                //     vec![b'!'; seq.len()]
+                // } else {
+                //     self.record
+                //         .quality_scores()
+                //         .iter()
+                //         .map(|q| q + 33)
+                //         .collect()
+                // };
+                // let read = FastQRead::new(
+                //     FastQElement::Owned(name),
+                //     FastQElement::Owned(seq),
+                //     FastQElement::Owned(qual),
+                // )
+                // .with_context(|| "Failed to convert BAM record into FastQ-like read")?;
+                let seq = self.record.sequence();
+                let qual = self.record.quality_scores();
+                let read = FastQRead::new(
+                    block.append_element(
+                        self.record.name().map(|n| n.as_bytes()).unwrap_or_default(),
+                    ),
+                    block.append_element_from_iter(seq.iter(), seq.len()),
+                    block.append_element_from_iter(qual.iter().map(|q| q + 33), qual.len()),
+                )?; // cov:excl-line
+                block.entries.push(read);
             }
         }
     }
@@ -265,7 +265,7 @@ mod tests {
         let mut parser = BamParser::new(
             file,
             temp.path().to_owned(),
-            10,
+            NonZero::new(10).unwrap(),
             true,
             false,
             std::num::NonZero::new(1usize).expect("1 is not zero"),
@@ -288,7 +288,7 @@ mod tests {
         let mut parser = BamParser::new(
             file,
             temp.path().to_owned(),
-            10,
+            NonZero::new(10).unwrap(),
             false,
             true,
             std::num::NonZero::new(1usize).expect("1 is not zero"),
@@ -311,7 +311,7 @@ mod tests {
         let mut parser = BamParser::new(
             file,
             temp.path().to_owned(),
-            10,
+            NonZero::new(10).unwrap(),
             true,
             true,
             std::num::NonZero::new(1usize).expect("1 is not zero"),

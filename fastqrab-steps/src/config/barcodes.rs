@@ -94,6 +94,7 @@ impl PartialBarcodesFromFile {
 }
 
 impl VerifyIn<PartialConfig> for PartialBarcodes {
+    #[expect(clippy::too_many_lines, reason="needed")] 
     fn verify(
         &mut self,
         parent: &PartialConfig,
@@ -127,7 +128,7 @@ impl VerifyIn<PartialConfig> for PartialBarcodes {
             if let Some(bad_value) = values
                 .map
                 .values_mut()
-                .find(|v| v.as_ref().map(|x| x.as_str()) == Some(no_barcode_infix()))
+                .find(|v| v.as_ref().map(String::as_str) == Some(no_barcode_infix()))
             {
                 bad_value.state = TomlValueState::new_validation_failed(format!(
                     "Must not be '{}'",
@@ -139,7 +140,7 @@ impl VerifyIn<PartialConfig> for PartialBarcodes {
                         .to_string(),
                 );
                 return Ok(());
-            };
+            }
             if values.map.is_empty()
                 && (self.from_file.as_ref().is_none()
                     || matches!(self.from_file.as_ref(), Some(None)))
@@ -154,7 +155,7 @@ impl VerifyIn<PartialConfig> for PartialBarcodes {
                 );
                 return Ok(());
             }
-        };
+        }
 
         let iupac_to_name: Option<Vec<(BString, String)>> =
             if let Some(Some(from_file)) = self.from_file.as_ref() {
@@ -202,7 +203,7 @@ impl VerifyIn<PartialConfig> for PartialBarcodes {
                             .map
                             .iter()
                             .map(|(k, v)| {
-                                (k.clone(), v.value.as_ref().cloned().expect("parent was ok"))
+                                (k.clone(), v.value.clone().expect("parent was ok"))
                             })
                             .collect(),
                     )
@@ -219,7 +220,7 @@ impl VerifyIn<PartialConfig> for PartialBarcodes {
             let mut dna_to_name: IndexMap<BString, String> = IndexMap::new();
             let mut lengths: HashSet<usize> = HashSet::new();
 
-            for (iupac, name) in iupac_to_name.iter() {
+            for (iupac, name) in &iupac_to_name {
                 lengths.insert(iupac.len());
                 for dna in IupacExpander::new(iupac.as_ref()) {
                     if let Some(old) = dna_to_name.insert(dna.clone(), name.clone())
@@ -300,7 +301,7 @@ fn validate_barcode_disjointness(barcodes: &mut MapAndKeys<BString, String>) -> 
                     index_i,
                     index_j,
                     spans,
-                })
+                });
             }
         }
     }

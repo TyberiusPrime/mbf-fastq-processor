@@ -1,4 +1,4 @@
-#![allow(clippy::struct_excessive_bools)] // can't make clippy not complain about Reports otherwise.
+//#![expect(clippy::struct_excessive_bools, reason=" can't make clippy not complain about Reports otherwise")]
 
 pub(crate) mod common;
 mod inspect;

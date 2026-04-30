@@ -29,17 +29,15 @@ impl TryFrom<&str> for BamTag {
         let bytes = s.as_bytes();
         if bytes.len() != 2 {
             return Err(format!(
-                "BAM tag must be exactly 2 characters; got '{}' ({} chars). \
+                "BAM tag must be exactly 2 characters; got '{s}' ({} chars). \
                  BAM auxiliary tag names are exactly 2 ASCII alphanumeric characters.",
-                s,
                 bytes.len()
             ));
         }
         if !bytes.iter().all(|&b| b.is_ascii_alphanumeric()) {
             return Err(format!(
-                "BAM tag must be 2 alphanumeric ASCII characters; got '{}'. \
+                "BAM tag must be 2 alphanumeric ASCII characters; got '{s}'. \
                  Only [A-Za-z0-9] are allowed.",
-                s
             ));
         }
         Ok(BamTag([bytes[0], bytes[1]]))

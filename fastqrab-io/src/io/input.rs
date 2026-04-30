@@ -1,6 +1,7 @@
 use anyhow::{Context, Result, bail};
 use ex::Wrapper;
 use schemars::JsonSchema;
+use std::num::NonZero;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::{fs, io::Read, path::Path};
@@ -144,9 +145,11 @@ impl InputFile {
         }
     }
 
+    /// # Errors
+    /// On invalid options for this file type.
     pub fn get_parser(
         self,
-        target_reads_per_block: usize,
+        target_reads_per_block: NonZero<usize>,
         buffer_size: usize,
         thread_count: ThreadCount,
         options: &crate::io::input::InputOptions,
@@ -235,6 +238,8 @@ pub enum DetectedInputFormat {
     Bam,
 }
 
+/// # Errors
+/// On io errors, on invalid / undecidable file types
 pub fn detect_input_format(path: &Path) -> Result<(DetectedInputFormat, CompressionFormat)> {
     if path == Path::new(STDIN_MAGIC_PATH) {
         return Ok((DetectedInputFormat::Fastq, CompressionFormat::Uncompressed));
@@ -282,6 +287,9 @@ pub fn detect_input_format(path: &Path) -> Result<(DetectedInputFormat, Compress
     }
 }
 
+/// # Errors
+///
+/// When the file can't be opened
 pub fn open_file(filename: impl AsRef<Path>) -> Result<ex::fs::File> {
     let fh = ex::fs::File::open(filename.as_ref()).context(format!(
         "Could not open file \"{}\"",

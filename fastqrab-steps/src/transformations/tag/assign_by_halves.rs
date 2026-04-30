@@ -266,15 +266,14 @@ impl CellRangerProbeAssigner {
                         if right_hand_matches.is_empty()
                             || right_hand_matches
                                 .iter()
-                                .map(|(rhs, _)| {
+                                .all(|(rhs, _)| {
                                     self.right_hand_seq_to_name
                                         .get(rhs.as_bstr())
                                         .expect("Internal inconsistency between resonator and map")
                                         == left_hand_name
                                 })
-                                .all(|x| x)
                         {
-                            return Ok(Some(&left_hand_name[..]));
+                            return Ok(Some(left_hand_name.as_str()));
                         }
                     }
                 }
@@ -312,13 +311,12 @@ impl CellRangerProbeAssigner {
                         if left_hand_matches.is_empty()
                             || left_hand_matches
                                 .iter()
-                                .map(|(lhs, _)| {
+                                .all(|(lhs, _)| {
                                     self.left_hand_seq_to_name.get(lhs.as_bstr()).expect("Internal inconsistency between resonator and map")
                                         == right_hand_name
                                 })
-                                .all(|x| x)
                         {
-                            return Ok(Some(&right_hand_name[..]));
+                            return Ok(Some(right_hand_name.as_str()));
                         }
                     }
                 }

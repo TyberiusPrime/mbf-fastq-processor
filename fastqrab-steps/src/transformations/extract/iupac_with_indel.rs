@@ -8,7 +8,7 @@ use fastqrab_config::{dna::Anchor, tpd_adapt_iupac_bstring};
 #[derive(Clone, JsonSchema)]
 #[tpd]
 #[derive(Debug)]
-#[allow(clippy::upper_case_acronyms)]
+//#[expect(clippy::upper_case_acronyms, reason="Domain name")]
 pub struct IUPACWithIndel {
     #[tpd(with = "tpd_adapt_iupac_bstring")]
     #[schemars(with = "String")]

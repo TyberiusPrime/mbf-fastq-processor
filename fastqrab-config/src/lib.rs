@@ -2,7 +2,7 @@ use anyhow::{Result, bail};
 use bstr::BString;
 use regex::bytes::Regex;
 use schemars::JsonSchema;
-use std::cell::RefCell;
+use std::{cell::RefCell, num::NonZero};
 use std::fmt;
 use std::rc::Rc;
 use toml_pretty_deser::{MustAdapt, TomlValue, TomlValueState, ValidationFailure};
@@ -97,13 +97,17 @@ impl FileFormat {
 }
 //
 // Default functions for common values
+#[must_use]
 pub fn default_region_separator() -> bstr::BString {
     b"_".into()
 }
 
+#[must_use]
 pub fn default_comment_separator() -> u8 {
     b'|'
 }
+
+#[must_use]
 pub fn default_comment_insert_char() -> u8 {
     b' '
 }
@@ -123,8 +127,12 @@ pub const fn default_output_buffer_size() -> usize {
 
 #[must_use]
 #[mutants::skip]
-pub const fn default_block_size() -> usize {
-    10000 // in 'molecules', ie. read1, read2, index1, index2 tuples.
+/// # Panics
+/// Never.
+pub const fn default_block_size() -> NonZero<usize> {
+    NonZero::new(
+    10000 )// in 'molecules', ie. read1, read2, index1, index2 tuples.
+    .expect("Can not fail")
 }
 
 #[must_use]
@@ -138,6 +146,7 @@ pub const fn default_spot_check_read_pairing() -> bool {
     true
 }
 
+#[must_use]
 pub const fn default_include_read_name() -> bool {
     true
 }
@@ -166,6 +175,7 @@ pub struct UsedTag<'a> {
 }
 
 impl UsedTag<'_> {
+    #[must_use]
     pub fn add_help(mut self, line: impl AsRef<str>) -> Self {
         self.further_help = match self.further_help.take() {
             //cov:excl-start
@@ -208,6 +218,7 @@ pub enum RemovedTags<'a> {
     Some(Vec<(TagLabel, &'a mut TomlValue<TagLabel>)>),
 }
 impl TagValueType {
+    #[must_use]
     pub fn compatible(self, other: TagValueType) -> bool {
         matches!(
             (self, other),
@@ -270,7 +281,7 @@ pub fn tpd_adapt_bstring_uppercase(input: TomlValue<String>) -> TomlValue<BStrin
 fn err_invalid_base(org_c: u8) -> String {
     format!(
         "Invalid DNA base: '{}' (ascii: {org_c}). Allowed letters are A, C, G, T and N.",
-        std::char::from_u32(org_c as u32).unwrap_or(std::char::REPLACEMENT_CHARACTER)
+        std::char::from_u32(org_c.into()).unwrap_or(std::char::REPLACEMENT_CHARACTER)
     )
 }
 
@@ -381,6 +392,7 @@ pub enum TagLabel {
 }
 
 impl TagLabel {
+    #[must_use]
     pub fn is_virtual(&self) -> bool {
         matches!(
             self,
@@ -391,12 +403,12 @@ impl TagLabel {
         )
     }
 
+    #[must_use]
     pub fn source_tag(&self) -> Option<&String> {
         match self {
-            TagLabel::Normal(_) | TagLabel::Length(_, _) => None,
+            TagLabel::Normal(_) | TagLabel::Length(_, _) | TagLabel::ReadNo => None,
             TagLabel::TagLength(source_tag, _) => Some(source_tag),
             TagLabel::TagLocation { source, .. } => Some(source),
-            TagLabel::ReadNo => None,
         }
     }
 }
@@ -581,6 +593,12 @@ pub fn offer_alternatives<T: AsRef<str>>(current: &str, available: &[T]) -> Stri
 
 /// Validates that a tag name conforms to the pattern [a-zA-Z_][a-zA-Z0-9_]*
 /// (starts with a letter or underscore, followed by zero or more alphanumeric characters or underscores)
+///
+/// # Panics
+/// when `tag_name.is_empty()` lies
+///
+/// # Errors
+/// Empty tag, invalid characters, etc
 pub fn validate_tag_name(tag_name: &str) -> Result<()> {
     if tag_name.is_empty() {
         bail!(
@@ -690,6 +708,10 @@ impl TryFrom<&str> for SegmentLabel {
 }
 /// Validates that a segment label conforms to the pattern [a-zA-Z0-9_]+
 /// (one or more alphanumeric characters or underscores)
+///
+/// # Errors
+///
+/// On invalid segment labels
 pub fn validate_segment_label(
     label: &str,
     match_mode: toml_pretty_deser::prelude::FieldMatchMode,

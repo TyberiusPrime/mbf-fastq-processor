@@ -64,9 +64,12 @@ pub const DEFAULT_INITIAL_FILTER_CAPACITY: usize = 134_217_728; // 2^27. Scaleab
 ///
 /// # Returns
 /// Capacity adjusted for demultiplexing
-#[allow(clippy::cast_precision_loss)]
-#[allow(clippy::cast_possible_truncation)]
-#[allow(clippy::cast_sign_loss)]
+#[expect(
+    clippy::cast_precision_loss,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    reason = "Range is too low for precision loss, precision loss is irrelevant."
+)]
 #[mutants::skip] // changing the base_capacity will just make things slow, not fail
 pub(crate) fn calculate_filter_capacity(
     configured_capacity: Option<usize>,
@@ -107,7 +110,7 @@ pub(crate) fn initial_filter_elements(
 
 /// Format a numeric value for use in read comments, truncating floats to 4 decimal places
 /// using scientific format
-#[allow(clippy::cast_possible_truncation)]
+#[expect(clippy::cast_possible_truncation, reason="Loss is ok")]
 pub(crate) fn format_numeric_for_comment(value: f64) -> String {
     // Check if the value is effectively an integer
     if value.fract() == 0.0 {

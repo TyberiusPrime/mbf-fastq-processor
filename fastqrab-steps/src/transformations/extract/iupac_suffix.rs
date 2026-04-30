@@ -63,7 +63,6 @@ impl VerifyIn<PartialConfig> for PartialIUPACSuffix {
 }
 
 impl IUPACSuffix {
-    #[allow(clippy::cast_possible_truncation)]
     fn longest_suffix_that_is_a_prefix(
         seq: &[u8],
         query: &[u8],

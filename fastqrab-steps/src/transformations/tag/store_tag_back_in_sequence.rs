@@ -32,9 +32,12 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagBackInSequence> {
 }
 
 impl Step for StoreTagBackInSequence {
-    #[allow(clippy::cast_precision_loss)]
-    #[allow(clippy::cast_possible_truncation)]
-    #[allow(clippy::cast_sign_loss)]
+    #[expect(
+        clippy::cast_precision_loss,
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        reason = "Avg quality calculation won't be affected"
+    )]
     fn apply(
         &self,
         mut block: FastQBlocksCombined,

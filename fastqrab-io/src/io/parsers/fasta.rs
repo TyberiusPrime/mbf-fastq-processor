@@ -3,6 +3,7 @@ use bio::io::fasta::{self, FastaRead, Record as FastaRecord};
 use ex::fs::File;
 use niffler;
 use std::{
+    num::NonZero,
     io::{BufReader, Read},
     path::PathBuf,
 };
@@ -17,16 +18,18 @@ type BoxedFastaReader = fasta::Reader<BufReader<Box<dyn Read + Send>>>;
 
 pub struct FastaParser {
     reader: BoxedFastaReader,
-    target_reads_per_block: usize,
+    target_reads_per_block: NonZero<usize>,
     fake_quality_char: u8,
     compression_format: niffler::send::compression::Format,
 }
 
 impl FastaParser {
+    /// # Panics
+    /// when rapidgzip & stdin are specified together (validation prevents this)
     pub fn new(
         file: File,
         filename: Option<&PathBuf>,
-        target_reads_per_block: usize,
+        target_reads_per_block: NonZero<usize>,
         fake_quality_phred: u8,
         decompression_options: DecompressionOptions,
     ) -> Result<FastaParser> {
@@ -80,7 +83,7 @@ impl Parser for FastaParser {
         let mut qual = vec![self.fake_quality_char; 100];
 
         loop {
-            if block.entries.len() >= self.target_reads_per_block {
+            if block.entries.len() >= self.target_reads_per_block.into() {
                 return Ok(ParseResult {
                     fastq_block: block,
                     was_final: false,
@@ -151,7 +154,7 @@ mod tests {
         let mut parser = FastaParser::new(
             file,
             Some(temp.path().to_owned()).as_ref(),
-            10,
+            NonZero::new(10).unwrap(),
             30,
             DecompressionOptions::Default,
         )?; // cov:excl-line
@@ -167,18 +170,21 @@ mod tests {
         let first = reads
             .next()
             .expect("test should have expected number of reads");
+        #[expect(clippy::match_wildcard_for_single_variants, reason="thats what I want")]
         match first.name {
             FastQElement::Local(_) => assert_eq!(first.name.get(&block.block), b"read1".to_vec()),
             // cov:excl-start
             _ => panic!("expected Local name"),
             // cov:excl-stop
         }
+        #[expect(clippy::match_wildcard_for_single_variants, reason="thats what I want")]
         match first.seq {
             FastQElement::Local(_) => assert_eq!(first.seq.get(&block.block), b"ACGT".to_vec()),
             // cov:excl-start
             _ => panic!("expected Local sequence"),
             // cov:excl-stop
         }
+        #[expect(clippy::match_wildcard_for_single_variants, reason="thats what I want")]
         match first.qual {
             FastQElement::Local(_) => assert_eq!(first.qual.get(&block.block), vec![30; 4]),
             // cov:excl-start
@@ -189,6 +195,7 @@ mod tests {
         let second = reads
             .next()
             .expect("test should have expected number of reads");
+        #[expect(clippy::match_wildcard_for_single_variants, reason="thats what I want")]
         match second.name {
             FastQElement::Local(_) => {
                 assert_eq!(second.name.get(&block.block), b"read2 description".to_vec());
@@ -197,12 +204,14 @@ mod tests {
             _ => panic!("expected Local name"),
             // cov:excl-stop
         }
+        #[expect(clippy::match_wildcard_for_single_variants, reason="thats what I want")]
         match second.seq {
             FastQElement::Local(_) => assert_eq!(second.seq.get(&block.block), b"TGCA".to_vec()),
             // cov:excl-start
             _ => panic!("expected Local sequence"),
             // cov:excl-stop
         }
+        #[expect(clippy::match_wildcard_for_single_variants, reason="thats what I want")]
         match second.qual {
             FastQElement::Local(_) => assert_eq!(second.qual.get(&block.block), vec![30; 4]),
             // cov:excl-start

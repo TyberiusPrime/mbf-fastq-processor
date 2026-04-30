@@ -16,7 +16,7 @@ pub trait ValidateTagLabel {
 
 impl ValidateTagLabel for TomlValue<MustAdapt<String, TagLabel>> {
     /// validate a (virtual) tag based on segment names and co.
-    /// must be called in get_used_tags, not in verify
+    /// must be called in `get_used_tags`, not in verify
     fn validate_incoming_tag_label(
         &mut self,
         tags_available: &IndexMap<TagLabel, TagMetadata>,
@@ -31,13 +31,13 @@ impl ValidateTagLabel for TomlValue<MustAdapt<String, TagLabel>> {
                         Ok(TagLabel::ReadNo)
                     } else if let Some(segment_name) = value.strip_prefix("len_") {
                         if segment_name.eq_ignore_ascii_case("all") {
-                            Ok(TagLabel::Length(SegmentIndexOrAll::All, value.to_string()))
+                            Ok(TagLabel::Length(SegmentIndexOrAll::All, value.clone()))
                         } else if let Some(position) =
                             segment_order.iter().position(|x| x == segment_name)
                         {
                             Ok(TagLabel::Length(
                                 SegmentIndexOrAll::Indexed(position),
-                                value.to_string(),
+                                value.clone(),
                             ))
                         } else if tags_available.keys().any(|tag_label| match tag_label {
                             TagLabel::Normal(name) => name == segment_name,
@@ -45,7 +45,7 @@ impl ValidateTagLabel for TomlValue<MustAdapt<String, TagLabel>> {
                         }) {
                             Ok(TagLabel::TagLength(
                                 segment_name.to_string(),
-                                value.to_string(),
+                                value.clone(),
                             ))
                         } else {
                             let mut available: Vec<String> =
@@ -74,7 +74,7 @@ impl ValidateTagLabel for TomlValue<MustAdapt<String, TagLabel>> {
                         }) {
                             Ok(TagLabel::TagLocation {
                                 source: incoming_tag_name.to_string(),
-                                definition: value.to_string(),
+                                definition: value.clone(),
                             })
                         } else {
                             let available: Vec<String> = tags_available
@@ -97,7 +97,7 @@ impl ValidateTagLabel for TomlValue<MustAdapt<String, TagLabel>> {
                         }
                     } else {
                         match validate_tag_name(value) {
-                            Ok(()) => Ok(TagLabel::Normal(value.to_string())),
+                            Ok(()) => Ok(TagLabel::Normal(value.clone())),
                             Err(e) => Err(ValidationFailure::new(
                                 "Invalid label".to_string(),
                                 Some(format!("{e}")),

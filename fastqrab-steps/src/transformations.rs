@@ -1,4 +1,4 @@
-#![expect(non_camel_case_types, reason="Derived Partial_* is ok for internals")]
+#![expect(non_camel_case_types, reason = "Derived Partial_* is ok for internals")]
 
 use anyhow::Result;
 use bstr::BString;
@@ -150,7 +150,6 @@ pub struct FinalizeReportResult {
 }
 
 #[derive(Debug, Clone)]
-#[allow(clippy::struct_excessive_bools)]
 pub struct InputInfo {
     pub segment_order: Vec<String>,
     pub barcodes_data: IndexMap<TagLabel, crate::config::Barcodes>,
@@ -401,7 +400,6 @@ fn extract_regions(
     out
 }
 
-#[allow(clippy::too_many_lines)]
 fn extract_from_resolved_source(
     read_no: usize,
     block: &FastQBlocksCombined,
@@ -533,7 +531,7 @@ fn extract_from_resolved_source(
     res.0.map(|seq| (seq, res.1))
 }
 
-#[allow(clippy::cast_sign_loss)]
+#[expect(clippy::cast_sign_loss, reason = "Checked before")]
 fn extract_from_sequence(
     sequence: &[u8],
     sub_sequence_start: usize,

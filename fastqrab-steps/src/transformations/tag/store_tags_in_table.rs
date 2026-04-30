@@ -28,7 +28,7 @@ pub struct StoreTagsInTable {
 
     include_read_name: bool,
 
-    #[allow(dead_code)] //only used in deser
+    #[expect(dead_code, reason="only used in deser")]
     #[tpd(alias = "tags")]
     #[tpd(adapt_in_verify(String))]
     in_labels: Option<Vec<TagLabel>>,

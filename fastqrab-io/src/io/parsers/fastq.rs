@@ -2,6 +2,7 @@ use anyhow::{Context, Result, bail};
 use bstr::BString;
 use niffler;
 use std::{io::Read, path::PathBuf};
+use std::num::NonZero;
 
 use crate::io::parsers::{ParseResult, Parser};
 use crate::io::{
@@ -13,7 +14,7 @@ pub struct FastqParser {
     current_reader: Box<dyn Read + Send>,
     current_block: Option<FastQBlock>,
     buf_size: usize,
-    target_reads_per_block: usize,
+    target_reads_per_block: NonZero<usize>,
     last_partial: Option<FastQRead>,
     last_status: PartialStatus,
     windows_mode: Option<bool>,
@@ -21,10 +22,12 @@ pub struct FastqParser {
 }
 
 impl FastqParser {
+    /// # Panics
+    /// when rapidgzip & stdin are specified together (validation prevents this)
     pub fn new(
         file: std::fs::File,
         filename: Option<&PathBuf>,
-        target_reads_per_block: usize,
+        target_reads_per_block: NonZero<usize>,
         buf_size: usize,
         decompression_options: DecompressionOptions,
     ) -> Result<FastqParser> {
@@ -113,7 +116,7 @@ impl FastqParser {
             .expect("current_block must be initialized")
             .entries
             .len()
-            < self.target_reads_per_block
+            < self.target_reads_per_block.into()
         {
             let block_start = start;
 
@@ -231,7 +234,10 @@ pub struct FastQBlockParseResult {
     pub windows_mode: bool,
 }
 
-#[expect(clippy::too_many_lines, reason="it is a large state machine, therefore many lines")]
+#[expect(
+    clippy::too_many_lines,
+    reason = "it is a large state machine, therefore many lines"
+)]
 pub fn parse_to_fastq_block(
     target_block: &mut FastQBlock,
     mut start_offset: usize,
@@ -287,41 +293,39 @@ pub fn parse_to_fastq_block(
             .expect("last_read must be Some in this code path");
         let next_newline = newline_iterator.next();
         // debug!("Continue reading inname Next_newline: {next_newline:?}");
-        match next_newline {
-            Some(next_newline) => {
-                match &mut last_read2.name {
-                    FastQElement::Owned(name) => {
-                        name.extend_from_slice(&input[pos..start_offset + next_newline]);
-                    }
-                    // cov:excl-start
-                    FastQElement::Local(_) => panic!("Should not happen"),
-                    // cov:excl-stop
-                }
-                pos = start_offset + next_newline + newline_length;
-                last_status = PartialStatus::InSeq;
-            }
-            None => {
-                let (status, name_end) = if windows_mode && input[stop - 1] == b'\r' {
-                    (PartialStatus::InNameNewline, stop - 1)
-                } else {
-                    (PartialStatus::InName, stop)
-                };
 
-                match &mut last_read2.name {
-                    FastQElement::Owned(name) => {
-                        name.extend_from_slice(&input[pos..name_end]);
-                    }
-                    // cov:excl-start
-                    FastQElement::Local(_) => panic!("Should not happen"),
-                    // cov:excl-stop
+        if let Some(next_newline) = next_newline {
+            match &mut last_read2.name {
+                FastQElement::Owned(name) => {
+                    name.extend_from_slice(&input[pos..start_offset + next_newline]);
                 }
-                // debug!("Returning in name 1 {:?}", last_read.as_ref().unwrap());
-                return Ok(FastQBlockParseResult {
-                    status,
-                    partial_read: Some(last_read.expect("last_read must be Some")),
-                    windows_mode,
-                });
+                // cov:excl-start
+                FastQElement::Local(_) => panic!("Should not happen"),
+                // cov:excl-stop
             }
+            pos = start_offset + next_newline + newline_length;
+            last_status = PartialStatus::InSeq;
+        } else {
+            let (status, name_end) = if windows_mode && input[stop - 1] == b'\r' {
+                (PartialStatus::InNameNewline, stop - 1)
+            } else {
+                (PartialStatus::InName, stop)
+            };
+
+            match &mut last_read2.name {
+                FastQElement::Owned(name) => {
+                    name.extend_from_slice(&input[pos..name_end]);
+                }
+                // cov:excl-start
+                FastQElement::Local(_) => panic!("Should not happen"),
+                // cov:excl-stop
+            }
+            // debug!("Returning in name 1 {:?}", last_read.as_ref().unwrap());
+            return Ok(FastQBlockParseResult {
+                status,
+                partial_read: Some(last_read.expect("last_read must be Some")),
+                windows_mode,
+            });
         }
         // debug!( "Continue reading name: {next_newline} {} {}", input.len(), std::str::from_utf8(&input[..next_newline]).unwrap());
     }
@@ -331,40 +335,37 @@ pub fn parse_to_fastq_block(
             .expect("last_read must be Some in this code path");
         let next_newline = newline_iterator.next();
         // debug!("Continue reading inseq Next_newline: {next_newline:?}");
-        match next_newline {
-            Some(next_newline) => {
-                match &mut last_read2.seq {
-                    FastQElement::Owned(seq) => {
-                        seq.extend_from_slice(&input[pos..start_offset + next_newline]);
-                    }
-                    // cov:excl-start
-                    FastQElement::Local(_) => unreachable!(),
-                    // cov:excl-stop
+        if let Some(next_newline) = next_newline {
+            match &mut last_read2.seq {
+                FastQElement::Owned(seq) => {
+                    seq.extend_from_slice(&input[pos..start_offset + next_newline]);
                 }
-                pos = start_offset + next_newline + newline_length;
+                // cov:excl-start
+                FastQElement::Local(_) => unreachable!(),
+                // cov:excl-stop
             }
-            None => {
-                let (status, seq_end) = if windows_mode && input[stop - 1] == b'\r' {
-                    (PartialStatus::InSeqNewline, stop - 1)
-                } else {
-                    (PartialStatus::InSeq, stop)
-                };
+            pos = start_offset + next_newline + newline_length;
+        } else {
+            let (status, seq_end) = if windows_mode && input[stop - 1] == b'\r' {
+                (PartialStatus::InSeqNewline, stop - 1)
+            } else {
+                (PartialStatus::InSeq, stop)
+            };
 
-                match &mut last_read2.seq {
-                    FastQElement::Owned(seq) => {
-                        seq.extend_from_slice(&input[pos..seq_end]);
-                    }
-                    // cov:excl-start
-                    FastQElement::Local(_) => panic!("Should not happen"),
-                    // cov:excl-stop
+            match &mut last_read2.seq {
+                FastQElement::Owned(seq) => {
+                    seq.extend_from_slice(&input[pos..seq_end]);
                 }
-                // debug!("Returning in seq1: {:?}", last_read.as_ref().unwrap());
-                return Ok(FastQBlockParseResult {
-                    status,
-                    partial_read: Some(last_read.expect("last_read must be Some")),
-                    windows_mode,
-                });
+                // cov:excl-start
+                FastQElement::Local(_) => panic!("Should not happen"),
+                // cov:excl-stop
             }
+            // debug!("Returning in seq1: {:?}", last_read.as_ref().unwrap());
+            return Ok(FastQBlockParseResult {
+                status,
+                partial_read: Some(last_read.expect("last_read must be Some")),
+                windows_mode,
+            });
         }
         if pos < stop && input[pos] != b'+' {
             bail!(
@@ -416,29 +417,26 @@ pub fn parse_to_fastq_block(
 
     if PartialStatus::InSpacer == last_status {
         let next_newline = newline_iterator.next();
-        match next_newline {
-            Some(next_newline) => {
-                // println!(
-                //     "Continue reading spacer: {next_newline} {} '{}'",
-                //     input.len(),
-                //     std::str::from_utf8(&input[pos..pos + next_newline]).unwrap()
-                // );
-                pos = start_offset + next_newline + newline_length;
-            }
-            None => {
-                let status = if windows_mode && input[stop - 1] == b'\r' {
-                    PartialStatus::InSpacerNewline
-                } else {
-                    PartialStatus::InSpacer
-                };
+        if let Some(next_newline) = next_newline {
+            // println!(
+            //     "Continue reading spacer: {next_newline} {} '{}'",
+            //     input.len(),
+            //     std::str::from_utf8(&input[pos..pos + next_newline]).unwrap()
+            // );
+            pos = start_offset + next_newline + newline_length;
+        } else {
+            let status = if windows_mode && input[stop - 1] == b'\r' {
+                PartialStatus::InSpacerNewline
+            } else {
+                PartialStatus::InSpacer
+            };
 
-                // println!("Returning in spacer");
-                return Ok(FastQBlockParseResult {
-                    status,
-                    partial_read: Some(last_read.expect("last_read must be Some")),
-                    windows_mode,
-                });
-            }
+            // println!("Returning in spacer");
+            return Ok(FastQBlockParseResult {
+                status,
+                partial_read: Some(last_read.expect("last_read must be Some")),
+                windows_mode,
+            });
         }
 
         last_status = PartialStatus::InQual;
@@ -448,8 +446,7 @@ pub fn parse_to_fastq_block(
             .as_mut()
             .expect("last_read must be Some in this code path");
         let next_newline = newline_iterator.next();
-        match next_newline {
-            Some(next_newline) => {
+            if let Some(next_newline) = next_newline {
                 // println!(
                 //     "Continue reading qual: {next_newline} {} {}. First byte: {}. newline byte: {}. windows mode: {}",
                 //     input.len(),
@@ -468,7 +465,7 @@ pub fn parse_to_fastq_block(
                 }
                 pos = start_offset + next_newline + newline_length;
             }
-            None => {
+            else {
                 let (status, qual_end) = if windows_mode && input[stop - 1] == b'\r' {
                     (PartialStatus::InQualNewline, stop - 1)
                 } else {
@@ -489,7 +486,6 @@ pub fn parse_to_fastq_block(
                     windows_mode,
                 });
             }
-        }
     }
     if let Some(last_read) = last_read {
         last_read.verify().with_context(|| {
@@ -537,8 +533,8 @@ pub fn parse_to_fastq_block(
             }
         }
         let end_of_name = newline_iterator.next();
-        let (name_start, name_end) = match end_of_name {
-            Some(end_of_name) => {
+        let (name_start, name_end) = {
+            if let Some(end_of_name) = end_of_name {
                 let r = (pos + 1, end_of_name + start_offset);
                 if r.0 >= r.1 {
                     bail!("Empty name in input FASTQ. Verify your input files are proper FASTQ.");
@@ -546,7 +542,7 @@ pub fn parse_to_fastq_block(
                 pos = start_offset + end_of_name + newline_length;
                 r
             }
-            None => {
+            else {
                 let name_end = if windows_mode && input[stop - 1] == b'\r' {
                     status = PartialStatus::InNameNewline;
                     stop - 1
@@ -566,13 +562,13 @@ pub fn parse_to_fastq_block(
             }
         };
         let end_of_seq = newline_iterator.next();
-        let (seq_start, seq_end) = match end_of_seq {
-            Some(end_of_seq) => {
+        let (seq_start, seq_end) = {
+            if let Some(end_of_seq) = end_of_seq {
                 let r = (pos, end_of_seq + start_offset);
                 pos = start_offset + end_of_seq + newline_length;
                 r
             }
-            None => {
+            else {
                 let seq_end = if windows_mode && input[stop - 1] == b'\r' {
                     status = PartialStatus::InSeqNewline;
                     stop - 1
@@ -598,11 +594,11 @@ pub fn parse_to_fastq_block(
             );
         }
         let end_of_spacer = newline_iterator.next();
-        match end_of_spacer {
-            Some(end_of_spacer) => {
+        
+            if let Some(end_of_spacer) = end_of_spacer {
                 pos = start_offset + end_of_spacer + newline_length;
             }
-            None => {
+            else{
                 if windows_mode && input[stop - 1] == b'\r' {
                     status = PartialStatus::InSpacerNewline;
                 } else {
@@ -617,15 +613,15 @@ pub fn parse_to_fastq_block(
                 // debug!("Returning in spacer {:?}", partial_read.as_ref().unwrap());
                 break;
             }
-        }
+        
         let end_of_qual = newline_iterator.next();
-        let (qual_start, qual_end) = match end_of_qual {
-            Some(end_of_qual) => {
+        let (qual_start, qual_end) = {
+            if let Some(end_of_qual) = end_of_qual {
                 let r = (pos, end_of_qual + start_offset);
                 pos = start_offset + end_of_qual + newline_length;
                 r
             }
-            None => {
+            else {
                 let qual_end = if windows_mode && input[stop - 1] == b'\r' {
                     status = PartialStatus::InQualNewline;
                     stop - 1

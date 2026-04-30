@@ -103,7 +103,7 @@ pub fn create_merge_output_handles(
 /// * Intermediary files are removed after merging.
 /// * If `index` is true a `.bai` index is written beside each merged file.
 /// * `segment_tails` are the per-segment file suffixes derived from config (e.g. `["_read1.bam"]`).
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments, reason = "We need them")]
 pub fn merge_demultiplexed_bam(
     output_directory: &Path,
     prefix: &str,
@@ -134,7 +134,7 @@ pub fn merge_demultiplexed_bam(
             .next()
             .and_then(|x| x.first())
             .expect("groups non-empty, groups must have files")
-            .0;
+            .filename_infix;
         let path = output_directory.join(format!("{prefix}{sep}{any_source_infix}{first_tail}"));
         read_bam_header(&path)?
     };
@@ -147,17 +147,18 @@ pub fn merge_demultiplexed_bam(
 
     for (group_output_name, sources) in &mut groups {
         // Sort by header position of the merge-part reference name; unmatched sort last.
-        sources.sort_by_key(|(_merge_part_name, _demultiplex_tag, ref_seq)| {
-            if ref_seq == no_barcode_infix() {
+        sources.sort_by_key(|group_info| {
+            if group_info.ref_seq == no_barcode_infix() {
                 ref_order.len() + 1
             } else {
                 ref_order
-                    .get(ref_seq.as_str())
+                    .get(group_info.ref_seq.as_str())
                     .copied()
                     .with_context(|| {
                         //cov:excl-start
                         format!(
-                            "ref_seq {ref_seq} not found in references {ref_order:?} - validation has failed us. Bug"
+                            "ref_seq {ref_seq} not found in references {ref_order:?} - validation has failed us. Bug",
+                            ref_seq = group_info.ref_seq
                         )
                     }) //cov:excl-end
                     .expect("?")
@@ -174,8 +175,11 @@ pub fn merge_demultiplexed_bam(
 
             let src_paths: Vec<PathBuf> = sources
                 .iter()
-                .map(|(filename_infix, _demultiplex_tag, _refseq)| {
-                    output_directory.join(format!("{prefix}{sep}{filename_infix}{tail}"))
+                .map(|group_info| {
+                    output_directory.join(format!(
+                        "{prefix}{sep}{filename_infix}{tail}",
+                        filename_infix = group_info.filename_infix
+                    ))
                 })
                 .collect();
 
@@ -216,12 +220,17 @@ pub fn merge_demultiplexed_bam(
 ///
 /// Returns `(merge_step_index, groups)` where groups maps grouped-output-name to a list of
 /// `(filename_infix, demultiplex_tag, ref_seq)` tuples.
+struct GroupInfo {
+    filename_infix: String,
+    demultiplex_tag: u64,
+    ref_seq: String,
+}
 fn compute_merge_groups(
     demultiplex_infos: &[(usize, OptDemultiplex)],
     demultiplex_step_infos: &[DemultiplexStepInfo],
     merge_label: &str,
     sep: &str,
-) -> (usize, BTreeMap<String, Vec<(String, u64, String)>>) {
+) -> (usize, BTreeMap<String, Vec<GroupInfo>>) {
     let (merge_step_index, _merge_step_info) = demultiplex_step_infos
         .iter()
         .enumerate()
@@ -235,7 +244,7 @@ fn compute_merge_groups(
         }
     };
 
-    let mut groups: BTreeMap<String, Vec<(String, u64, String)>> = BTreeMap::new();
+    let mut groups: BTreeMap<String, Vec<GroupInfo>> = BTreeMap::new();
 
     for (final_demultiplex_output_tag, tag_output_name_opt) in final_tag_to_name {
         let Some(tag_output_name) = tag_output_name_opt else {
@@ -257,11 +266,11 @@ fn compute_merge_groups(
         let ref_seq = parts[merge_step_index].to_string();
 
         let entry = groups.entry(grouped_output_name).or_default();
-        entry.push((
-            tag_output_name.clone(),
-            *final_demultiplex_output_tag,
+        entry.push(GroupInfo {
+            filename_infix: tag_output_name.clone(),
+            demultiplex_tag: *final_demultiplex_output_tag,
             ref_seq,
-        ));
+        });
     }
 
     (merge_step_index, groups)
@@ -362,8 +371,8 @@ fn write_merged_bai(
     bai_path: &Path,
     header: &sam::Header,
     ref_order: &indexmap::IndexMap<String, usize>,
-    sources: &[(String, u64, String)], // (combined_tag, combined_name, merge_part_name)
-    spans: &[(u64, u64)],              // (v_beg, v_end) per source, same order as sources
+    sources: &[GroupInfo], // (combined_tag, combined_name, merge_part_name)
+    spans: &[(u64, u64)],  // (v_beg, v_end) per source, same order as sources
     reads_per_tag: &BTreeMap<Tag, u64>,
 ) -> Result<()> {
     let n_ref = header.reference_sequences().len();
@@ -373,12 +382,12 @@ fn write_merged_bai(
     let mut ref_spans: Vec<Option<(u64, u64, u64)>> = vec![None; n_ref];
     let mut n_no_coor: u64 = 0;
 
-    for (i, (_demultiplex_infix, demultiplex_tag, ref_seq)) in sources.iter().enumerate() {
+    for (i, group_info) in sources.iter().enumerate() {
         let n_reads = reads_per_tag
-            .get(demultiplex_tag)
+            .get(&group_info.demultiplex_tag)
             .copied()
             .expect("No read count found");
-        if let Some(&ref_id) = ref_order.get(ref_seq.as_str()) {
+        if let Some(&ref_id) = ref_order.get(group_info.ref_seq.as_str()) {
             let (v_beg, v_end) = spans[i];
             ref_spans[ref_id - 1] = Some((v_beg, v_end, n_reads));
         } else {

@@ -158,7 +158,7 @@ impl TagUser for PartialTaggedVariant<PartialConcatTags> {
 }
 
 impl Step for ConcatTags {
-    #[allow(clippy::too_many_lines)]
+    #[expect(clippy::too_many_lines, reason="it takes that many")]
     fn apply(
         &self,
         mut block: FastQBlocksCombined,

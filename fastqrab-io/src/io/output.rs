@@ -38,6 +38,7 @@ pub struct BamOutput {
 /// - `reference_tag`: if `Some(tag_name)`, look up that tag's value in the BAM reference
 ///   sequences and set the read's RNAME / alignment start accordingly (Feature B)
 #[expect(clippy::too_many_arguments, reason="they are needed")]
+#[expect(clippy::too_many_lines, reason="they are needed")]
 pub fn write_read_to_bam(
     bam_output: &mut BamOutput,
     read: &WrappedFastQRead<'_>,
@@ -97,6 +98,7 @@ pub fn write_read_to_bam(
         data_fields.push((tag, Value::String(BString::from(comment))));
     }
 
+    #[expect(clippy::cast_possible_truncation, reason="BAM is f32")]
     for (bam_tag_bytes, fastqrab_tag_name) in bam_tag_mappings {
         if let Some(tag_values) = tags.get(*fastqrab_tag_name)
             && let Some(tag_value) = tag_values.get(read_index)
@@ -206,6 +208,7 @@ mod tests {
     use super::*;
     use crate::io::reads::{FastQBlock, FastQElement, FastQRead};
     use fastqrab_config::CompressionFormat;
+    use indexmap::IndexMap;
     use noodles::bam::record::Record as BamRecord;
     use std::str::FromStr;
     use std::sync::Arc;
@@ -255,7 +258,7 @@ mod tests {
                 segment_index,
                 segment_count,
                 b' ',
-                &Default::default(),
+                &IndexMap::default(),
                 &[],
                 None,
             )

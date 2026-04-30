@@ -1,4 +1,5 @@
 use anyhow::Result;
+use std::num::NonZero;
 use std::path::PathBuf;
 
 use crate::io::input::InputOptions;
@@ -32,7 +33,7 @@ pub struct ChainedParser {
     current: Option<Box<dyn Parser>>,
     current_filename: Option<PathBuf>,
     bam_index_paths: Option<Vec<std::path::PathBuf>>,
-    target_reads_per_block: usize,
+    target_reads_per_block: NonZero<usize>,
     buffer_size: usize,
     input_thread_count: ThreadCount,
     options: InputOptions,
@@ -48,12 +49,11 @@ pub struct ChainParseResult {
     pub expected_read_count: Option<usize>,
 }
 
-
 impl ChainedParser {
     #[must_use]
     pub fn new(
         mut files: Vec<InputFile>,
-        target_reads_per_block: usize,
+        target_reads_per_block: NonZero<usize>,
         buffer_size: usize,
         input_thread_count: ThreadCount,
         options: InputOptions,
@@ -111,7 +111,13 @@ impl ChainedParser {
         Ok(true)
     }
 
-    #[expect(clippy::cast_sign_loss, reason="Expected_reads -> usize, is always positive")]
+    /// # Panics
+    /// When `ensure_parser` doesn't ensure
+    /// when bam options not set correctly by validation
+    #[expect(
+        clippy::cast_sign_loss,
+        reason = "Expected_reads -> usize, is always positive"
+    )]
     pub fn parse(&mut self) -> Result<ChainParseResult> {
         if !self.ensure_parser()? {
             // cov:excl-start
@@ -142,59 +148,61 @@ impl ChainedParser {
             //and from there and a basic assumption on compression,
             //we can work out how many reads we expect in the rest of the files.
             self.first_block_done = true;
-            match &self.bam_index_paths {
-                Some(paths) => {
-                    let total: Option<usize> = paths
-                        .iter()
-                        .map(|path| {
-                            bam_read_count_from_index(
-                                path,
-                                self.options
-                                    .bam_include_mapped
-                                    .expect("must have been set by validation"),
-                                self.options
-                                    .bam_include_unmapped
-                                    .expect("must have been set by validation"),
-                            )
-                        })
-                        .sum();
-                    let next_power_of_two = total.map(usize::next_power_of_two);
-                    self.expected_read_count_power_of_two = next_power_of_two;
-                }
-                None => {
-                    //this happens for non-bam files!
-                    let reads_so_far = res.fastq_block.entries.len();
-                    assert!(reads_so_far > 0, "First block done, but no reads read???");
-                    if reads_so_far > 0 {
-                        //sheer paranoia, but downstream has to cope with this being
-                        //unknown anyway for non-file inputs
-                        if let Some(total_input_file_size) = self.total_input_file_size {
-                            let avg_read_length =
-                                res.fastq_block
-                                    .entries
-                                    .iter()
-                                    .map(|e| e.seq.len())
-                                    .sum::<usize>() as f64
-                                    / reads_so_far as f64;
-                            let bytes_per_base = self
-                                .current
-                                .as_ref()
-                                .expect("Current always set at this place")
-                                .bytes_per_base();
-                            let expected_reads =
-                                total_input_file_size as f64 / (avg_read_length * bytes_per_base);
-                            let expected_reads = expected_reads.ceil() as usize;
-                            let next_power_of_two = expected_reads.next_power_of_two();
-                            self.expected_read_count_power_of_two = Some(next_power_of_two);
-                            /* dbg!(
-                                avg_read_length,
-                                bytes_per_base,
-                                total_input_file_size,
-                                expected_reads
-                            ); */
-                        } // cov:excl-line
+            if let Some(paths) = &self.bam_index_paths {
+                let total: Option<usize> = paths
+                    .iter()
+                    .map(|path| {
+                        bam_read_count_from_index(
+                            path,
+                            self.options
+                                .bam_include_mapped
+                                .expect("must have been set by validation"),
+                            self.options
+                                .bam_include_unmapped
+                                .expect("must have been set by validation"),
+                        )
+                    })
+                    .sum();
+                let next_power_of_two = total.map(usize::next_power_of_two);
+                self.expected_read_count_power_of_two = next_power_of_two;
+            } else {
+                //this happens for non-bam files!
+                let reads_so_far = res.fastq_block.entries.len();
+                assert!(reads_so_far > 0, "First block done, but no reads read???");
+                if reads_so_far > 0 {
+                    //sheer paranoia, but downstream has to cope with this being
+                    //unknown anyway for non-file inputs
+                    #[expect(
+                        clippy::cast_precision_loss,
+                        clippy::cast_possible_truncation,
+                        reason = "entries is going to be smaller than 2**52"
+                    )]
+                    if let Some(total_input_file_size) = self.total_input_file_size {
+                        let avg_read_length = res
+                            .fastq_block
+                            .entries
+                            .iter()
+                            .map(|e| e.seq.len())
+                            .sum::<usize>() as f64
+                            / reads_so_far as f64;
+                        let bytes_per_base = self
+                            .current
+                            .as_ref()
+                            .expect("Current always set at this place")
+                            .bytes_per_base();
+                        let expected_reads =
+                            total_input_file_size as f64 / (avg_read_length * bytes_per_base);
+                        let expected_reads = expected_reads.ceil() as usize;
+                        let next_power_of_two = expected_reads.next_power_of_two();
+                        self.expected_read_count_power_of_two = Some(next_power_of_two);
+                        /* dbg!(
+                            avg_read_length,
+                            bytes_per_base,
+                            total_input_file_size,
+                            expected_reads
+                        ); */
                     } // cov:excl-line
-                }
+                } // cov:excl-line
             }
         }
 

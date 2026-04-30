@@ -1,4 +1,3 @@
-#![expect(clippy::struct_field_names, reason="Top level to also affect tpd partial struct.")]
 use anyhow::{Context, Result};
 use schemars::JsonSchema;
 use toml_pretty_deser::prelude::*;
@@ -82,7 +81,7 @@ impl VerifyIn<PartialConfig> for PartialOptions {
     where
         Self: Sized,
     {
-        self.block_size.or_with(default_block_size);
+        self.block_size.or_with(||default_block_size().into());
         self.max_blocks_in_flight.or_with(default_blocks_in_flight);
         self.buffer_size.or_with(default_buffer_size);
         self.output_buffer_size.or_with(default_output_buffer_size);

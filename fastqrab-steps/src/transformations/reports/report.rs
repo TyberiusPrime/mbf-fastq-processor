@@ -6,7 +6,7 @@ use crate::transformations::prelude::*;
 #[derive(JsonSchema)]
 #[tpd]
 #[derive(Debug)]
-#[allow(clippy::struct_excessive_bools)]
+#[expect(clippy::struct_excessive_bools, reason="It has a lot of on/off options")]
 pub struct Report {
     pub name: String,
     pub count: bool,

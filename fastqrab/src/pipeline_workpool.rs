@@ -70,7 +70,7 @@ enum CanTake {
 }
 
 impl WorkpoolCoordinator {
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments, reason="needed")]
     pub fn new(
         stages: Vec<Stage>,
         max_blocks_in_flight: usize,
@@ -120,7 +120,7 @@ impl WorkpoolCoordinator {
         (coordinator, stages_for_workers)
     }
 
-    #[allow(clippy::too_many_lines)]
+    #[expect(clippy::too_many_lines, reason="needed")]
     pub fn run(mut self, demultiplex_infos: &[(usize, OptDemultiplex)]) {
         loop {
             // Check if we're at capacity
@@ -314,7 +314,6 @@ impl WorkpoolCoordinator {
         Ok(())
     }
 
-    #[allow(clippy::if_same_then_else)]
     fn stage_can_take_block(
         stage_progress: &[StageProgress],
         stage_index: usize,

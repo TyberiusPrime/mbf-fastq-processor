@@ -9,7 +9,7 @@ use super::prelude::*;
 #[derive(Clone, JsonSchema)]
 #[tpd(no_verify)]
 #[derive(Debug)]
-#[allow(dead_code)]
+#[expect(dead_code, reason="Must have an internal field for TDP")]
 pub struct _InternalDelay {
     ignored: Option<u8>, //tpd does not like empty structs
 }

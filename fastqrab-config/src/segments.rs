@@ -100,6 +100,8 @@ pub enum ResolvedSourceAll {
 
 impl ResolvedSourceAll {
     #[must_use]
+    /// # Panics
+    /// when segment index is out of bounds
     pub fn get_name(&self, segment_order: &[String]) -> String {
         match self {
             ResolvedSourceAll::Segment(SegmentIndexOrAll::Indexed(idx)) => {

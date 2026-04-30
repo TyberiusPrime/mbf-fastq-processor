@@ -293,6 +293,8 @@ impl<T: std::io::Write + Send + 'static> HashedAndCompressedWriter<T> {
         Ok(Self { compressed_writer })
     }
 
+    /// # Panics
+    /// if the hashing writer finish fails 
     pub fn finish(self) -> (Option<String>, Option<String>) {
         let (uncompressed_hasher, inner) = self
             .compressed_writer
@@ -389,7 +391,7 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn fail_for_test_writer_errors_after_budget_single_write() -> io::Result<()> {
+    fn fail_for_test_writer_errors_after_budget_single_write() {
         let cursor = Cursor::new(Vec::new());
         let failure = SimulatedWriteFailure {
             remaining_bytes: 4,
@@ -419,6 +421,5 @@ mod tests {
 
         let _ = writer.finish();
 
-        Ok(())
     }
 }

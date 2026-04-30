@@ -177,7 +177,6 @@ fn find_poly_tail(
     }
 }
 
-#[allow(clippy::cast_precision_loss)]
 fn calc_run_length(
     seq: &[u8],
     query: u8,

@@ -15,17 +15,15 @@ pub enum HistogramData {
 }
 
 impl HistogramData {
-    #[allow(clippy::cast_possible_truncation)]
-    #[allow(clippy::single_match)]
+    #[expect(
+        clippy::cast_possible_truncation,
+        reason = "precision loss for huge values is ok"
+    )]
     pub fn add_value(&mut self, tag_value: &TagValue) {
         match tag_value {
             TagValue::Missing => {
-                match self {
-                    HistogramData::String(hash_map) => {
-                        *hash_map.entry(String::new()).or_insert(0) += 1;
-                    }
-                    _ => {} // cov:excl-line
-                            // Don't count missing values otherwise.
+                if let HistogramData::String(hash_map) = self {
+                    *hash_map.entry(String::new()).or_insert(0) += 1;
                 }
             }
             TagValue::String(s) => {

@@ -146,7 +146,7 @@ impl Step for Kmers {
                 let count = count_kmers_in_database(read.seq(), k, kmer_db);
                 count as f64
             },
-            #[allow(clippy::cast_precision_loss)]
+            #[expect(clippy::cast_precision_loss, reason="loss is acceptable, it's going to be within u32 range")]
             |reads| {
                 let total_count: usize = reads
                     .iter()

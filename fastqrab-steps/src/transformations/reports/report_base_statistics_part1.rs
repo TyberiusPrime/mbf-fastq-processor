@@ -10,7 +10,7 @@ pub struct BaseStatisticsPart1 {
     expected_errors_from_quality_curve: Vec<f64>,
 }
 
-#[allow(clippy::from_over_into)]
+#[expect(clippy::from_over_into, reason="Orphan rules")]
 impl Into<serde_json::Value> for BaseStatisticsPart1 {
     fn into(self) -> serde_json::Value {
         serde_json::value::to_value(self).expect("Failed to serialize?")

@@ -129,7 +129,10 @@ impl Step for Progress {
         Ok(None)
     }
 
-    #[allow(clippy::cast_precision_loss)]
+    #[expect(
+        clippy::cast_precision_loss,
+        reason = "Number of reads is not going to be that high. And if it is, the loss of precision is ok."
+    )]
     #[mutants::skip] // we're not testing number values
     fn apply(
         &self,
@@ -185,10 +188,11 @@ impl Step for Progress {
         Ok((block, true))
     }
 
-    #[allow(
+    #[expect(
         clippy::cast_sign_loss,
         clippy::cast_possible_truncation,
-        clippy::cast_precision_loss
+        clippy::cast_precision_loss,
+        reason = "loss of precision is ok for giant read counts"
     )]
     fn finalize(&self, _demultiplex_info: &OptDemultiplex) -> Result<Option<FinalizeReportResult>> {
         let elapsed = self

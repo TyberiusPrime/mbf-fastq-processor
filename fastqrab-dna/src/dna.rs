@@ -42,6 +42,9 @@ pub enum TagValue {
 }
 
 impl TagValue {
+    /// # Panics
+    /// when used on a `TagValue::Numeric`
+    #[must_use]
     pub fn truthy_val(&self) -> bool {
         match self {
             TagValue::Missing => false,
@@ -54,6 +57,7 @@ impl TagValue {
         }
     }
 
+    #[must_use]
     pub fn as_numeric(&self) -> Option<f64> {
         match self {
             TagValue::Numeric(n) => Some(*n),
@@ -61,6 +65,7 @@ impl TagValue {
         }
     }
 
+    #[must_use]
     pub fn as_sequence(&self) -> Option<&Hits> {
         match self {
             TagValue::Location(h) => Some(h),
@@ -75,7 +80,9 @@ impl TagValue {
         }
     }
 
-    pub fn to_bstr<'a>(&'a self) -> Cow<'a, BStr> {
+    #[must_use]
+    #[expect(clippy::elidable_lifetime_names, reason="Conflicting lints")]
+    pub fn to_bstr<'a> (&'a self) -> Cow<'a, BStr> {
         match &self {
             TagValue::Missing => Cow::Borrowed(BStr::new(b"")),
             TagValue::Location(hits) => Cow::Owned(hits.joined_sequence(None).into()),
@@ -93,11 +100,13 @@ impl TagValue {
 }
 
 impl HitRegion {
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.len == 0
     }
 }
 impl Hits {
+    #[must_use]
     pub fn new(start: usize, len: usize, segment_index: SegmentIndex, sequence: BString) -> Self {
         Hits(vec![Hit {
             location: Some(HitRegion {
@@ -109,10 +118,12 @@ impl Hits {
         }])
     }
 
+    #[must_use]
     pub fn new_multiple(regions: Vec<Hit>) -> Self {
         Hits(regions)
     }
 
+    #[must_use]
     pub fn joined_sequence(&self, separator: Option<&[u8]>) -> Vec<u8> {
         let mut res = Vec::new();
         let mut first = true;
@@ -126,6 +137,7 @@ impl Hits {
         res
     }
 
+    #[must_use]
     pub fn covered_len(&self) -> usize {
         let mut total = 0;
         for hit in &self.0 {
@@ -136,6 +148,7 @@ impl Hits {
         total
     }
 
+    #[must_use]
     pub fn location(&self, segment_order: &[String]) -> BString {
         let mut seq = BString::new("".into());
         let mut first = true;
@@ -172,6 +185,7 @@ pub enum Anchor {
     Anywhere,
 }
 
+#[must_use]
 pub fn find_iupac(
     reference: &[u8],
     pattern: &[u8],
@@ -182,7 +196,6 @@ pub fn find_iupac(
     if reference.len() < pattern.len() {
         return None;
     }
-
     // Pure Rust implementation with optimizations for IUPAC pattern matching.
     // N in the PATTERN is treated as a wildcard, N in the REFERENCE is an uncertain base.
     match anchor {
@@ -232,6 +245,9 @@ fn iupac_alignment_score(a: u8, b: u8) -> i32 {
     }
 }
 
+
+/// # Panics
+/// When the aligner doesn't stick to the start & end requirements (bug)
 pub fn find_iupac_with_indel(
     reference: &[u8],
     query: &[u8],
@@ -324,6 +340,7 @@ pub fn find_iupac_with_indel(
 /// Optimized pure Rust implementation with early exit on perfect matches.
 /// Returns the start position of the best match, or None if no match within `max_mismatches`.
 #[inline]
+#[must_use]
 pub fn iupac_find_best(pattern: &[u8], reference: &[u8], max_mismatches: usize) -> Option<usize> {
     let query_len = pattern.len();
     let mut best_pos = None;
@@ -367,8 +384,9 @@ pub fn iupac_find_best(pattern: &[u8], reference: &[u8], max_mismatches: usize) 
 // }
 
 //check the complet string is valid dna + iupac, upper case only
+#[must_use]
 pub fn first_non_iupac(input: &[u8]) -> Option<u8> {
-    input.iter().map(|c| c.to_ascii_uppercase()).find(|char| {
+    input.iter().map(u8::to_ascii_uppercase).find(|char| {
         !matches!(
             char,
             b'A' | b'T'
@@ -389,6 +407,8 @@ pub fn first_non_iupac(input: &[u8]) -> Option<u8> {
         )
     })
 }
+
+#[must_use]
 pub fn all_iupac_or_underscore(input: &[u8]) -> bool {
     input.iter().all(|&char| {
         matches!(
@@ -416,6 +436,7 @@ pub fn all_iupac_or_underscore(input: &[u8]) -> bool {
 /// Reverse complement a DNA sequence
 /// Handles standard bases (ATCGN) in upper and lowercase
 /// non DNA characters are passed through unchanged
+#[must_use]
 pub fn reverse_complement(seq: &[u8]) -> Vec<u8> {
     seq.iter()
         .rev()
@@ -439,6 +460,10 @@ pub fn reverse_complement(seq: &[u8]) -> Vec<u8> {
 /// Reverse complement a DNA sequence considering IUPAC ambiguity codes.
 /// Handles standard bases (ATCGN) in upper and lowercase
 /// non DNA characters are passed through unchanged
+///
+/// # Panics
+/// On newline (our parsers never have newlines)
+#[must_use]
 pub fn reverse_complement_iupac(input: &[u8]) -> Vec<u8> {
     let mut new_seq = Vec::new();
     for char in input.iter().rev() {
@@ -484,6 +509,11 @@ pub fn reverse_complement_iupac(input: &[u8]) -> Vec<u8> {
 }
 
 /// Straight up hamming distance. No frills.
+///
+/// # Panics
+///
+/// on unequal lengths
+#[must_use]
 pub fn hamming_distance(a: &[u8], b: &[u8]) -> usize {
     assert_eq!(
         a.len(),
@@ -501,7 +531,11 @@ pub fn hamming_distance(a: &[u8], b: &[u8]) -> usize {
 
 /// Calculate IUPAC-aware Hamming distance between a pattern and a sequence.
 /// N in the pattern matches any base. N in the sequence is treated as uncertain (mismatch).
+///
+/// # Panics
+/// on unequal lengths
 #[inline]
+#[must_use]
 pub fn iupac_hamming_distance(iupac_reference: &[u8], atcg_query: &[u8]) -> usize {
     assert_eq!(
         iupac_reference.len(),
@@ -566,6 +600,7 @@ fn iupac_hamming_distance_with_limit(
 }
 
 /// Check if two IUPAC barcode patterns can accept the same sequence
+#[must_use]
 pub fn iupac_overlapping(pattern1: &[u8], pattern2: &[u8]) -> bool {
     // Different lengths cannot overlap
     if pattern1.len() != pattern2.len() {
@@ -676,13 +711,17 @@ impl Iterator for IupacExpander {
     }
 }
 
+///
+/// # Errors
+///
+/// when seqs are of unequal length
 pub fn init_hamming_resonator(
     seq_to_name: &IndexMap<BString, String>,
     max_dist: u8,
 ) -> Result<HammingResonator, ValidationFailure> {
     let seqs: Vec<BString> = seq_to_name.keys().cloned().collect();
 
-    let resonator = HammingResonator::new(seqs, max_dist as u32)
+    let resonator = HammingResonator::new(seqs, max_dist.into())
         //cov:excl-start
         //we ensure in validation taht the barcodes are all of the same length
         .map_err(|e| {
@@ -717,7 +756,7 @@ mod test {
     #[test]
     #[should_panic(expected = "New line in DNA sequence")]
     fn test_rev_complement_panics_on_newline() {
-        super::reverse_complement_iupac(b"AGCT\n");
+        let _ = super::reverse_complement_iupac(b"AGCT\n");
     }
 
     #[test]
@@ -908,6 +947,7 @@ mod test {
     }
 
     #[test]
+    #[expect(clippy::too_many_lines, reason="it's a test")]
     fn test_find_iupac_with_indel() {
         // Perfect match behaves like the mismatch-only variant.
         assert_eq!(

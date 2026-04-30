@@ -265,7 +265,7 @@ If you have paired end reads, name two 'virtual' segments, e.g. ['read1','read2'
         let Some(segments) = self.segments.as_mut() else {
             return Ok(());
         };
-        let mut segment_order: Vec<String> = segments.map.keys().map(|x| x.0.to_string()).collect();
+        let mut segment_order: Vec<String> = segments.map.keys().map(|x| x.0.clone()).collect();
         segment_order.sort(); //always alphabetical...
         if segment_order.is_empty() {
             self.segments.state = TomlValueState::ValidationFailed {
@@ -324,7 +324,7 @@ If you have paired end reads, name two 'virtual' segments, e.g. ['read1','read2'
                     .iter()
                     .map(|tv| tv.as_ref().expect("parent was ok?").clone())
                     .collect();
-                (k.0.to_string(), files)
+                (k.0.clone(), files)
             })
             .collect();
         self.structured = Some(StructuredInput::Segmented {
@@ -425,6 +425,9 @@ impl Input {
 
 impl PartialInput {
     #[must_use]
+    /// # Panics
+    /// if config parsing did not set structured input
+    #[must_use]
     pub fn segment_count(&self) -> usize {
         match self
             .structured
@@ -435,6 +438,9 @@ impl PartialInput {
             | StructuredInput::Segmented { segment_order, .. } => segment_order.len(),
         }
     }
+   
+    /// # Panics
+    /// if config parsing did not set structured input
     #[must_use]
     pub fn get_segment_order(&self) -> &Vec<String> {
         match self

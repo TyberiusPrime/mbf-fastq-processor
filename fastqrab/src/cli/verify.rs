@@ -563,7 +563,7 @@ fn verify_processor_success(
     Ok(())
 }
 
-#[allow(clippy::too_many_arguments)]
+#[expect(clippy::too_many_arguments, reason="We need them")]
 fn run_processor_and_verify(
     current_exe: &Path,
     expected_failure: Option<&ExpectedFailure>,
@@ -637,12 +637,12 @@ fn cleanup_output_dir(output_dir: Option<&Path>) -> Result<()> {
         && let Err(_) = ex::fs::remove_dir_all(output_dir)
     {
         //try chmod it to write+executable
-        ex::fs::set_permissions(output_dir, std::fs::Permissions::from_mode(0o755)).ok();
+        let _ = ex::fs::set_permissions(output_dir, std::fs::Permissions::from_mode(0o755));
         //also chmod +x all subdirs...
         for entry in ex::fs::read_dir(output_dir)?.flatten() {
             let path = entry.path();
             if path.is_dir() {
-                ex::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755)).ok();
+                let _ = ex::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755));
             } // cov:excl-line
         }
         ex::fs::remove_dir_all(output_dir).with_context(|| {
@@ -878,7 +878,7 @@ pub fn decompress_file(path: &Path) -> Result<Vec<u8>> {
 }
 
 #[must_use]
-#[allow(clippy::cast_precision_loss)]
+#[expect(clippy::cast_precision_loss, reason="loss is acceptable")]
 pub fn calculate_size_difference_percent(len_a: u64, len_b: u64) -> f64 {
     if len_a > 0 {
         ((len_b as f64 - len_a as f64).abs() / len_a as f64) * 100.0

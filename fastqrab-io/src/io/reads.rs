@@ -2,6 +2,7 @@ use anyhow::{Result, bail};
 use bstr::{BStr, BString};
 use indexmap::IndexMap;
 use std::marker::PhantomData;
+use std::num::NonZero;
 use std::ops::Range;
 
 use fastqrab_config::{TagLabel, segments::SegmentIndexOrAll};
@@ -76,6 +77,8 @@ impl FastQElement {
         }
     }
 
+    /// # Panics
+    /// When the len exceeds usize
     pub fn replace<'a>(&'a mut self, new_value: &[u8], block: &'a mut Vec<u8>) {
         match self {
             FastQElement::Owned(_) => {
@@ -317,18 +320,24 @@ impl FastQRead {
         Ok(())
     }
 
+    /// # Panics
+    /// When lengths differ after cutting
     pub fn cut_start(&mut self, n: usize) {
         self.seq.cut_start(n);
         self.qual.cut_start(n);
         assert_eq!(self.seq.len(), self.qual.len());
     }
 
+    /// # Panics
+    /// When lengths differ after cutting
     pub fn cut_end(&mut self, n: usize) {
         self.seq.cut_end(n);
         self.qual.cut_end(n);
         assert_eq!(self.seq.len(), self.qual.len());
     }
 
+    /// # Panics
+    /// When lengths differ after cutting
     pub fn max_len(&mut self, n: usize) {
         let len = self.seq.len().min(n);
         self.seq.cut_end(self.seq.len() - len);
@@ -365,6 +374,7 @@ pub struct FastQBlock {
 }
 
 // cov:excl-start
+#[expect(clippy::missing_fields_in_debug, reason = "the point")]
 impl std::fmt::Debug for FastQBlock {
     #[mutants::skip] // debugging only.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -446,6 +456,8 @@ impl FastQBlock {
         }
     }
 
+    /// # Panics
+    /// When read construction fails, because of unequal length afterward
     pub fn append_read(&mut self, read: &WrappedFastQRead<'_>) {
         let local_read = FastQRead::new(
             self.append_element(read.0.name.get(read.1)),
@@ -478,6 +490,8 @@ impl FastQBlock {
     }
 
     /// Add a byte iterator as a `FastQElement::Local` by extending the block
+    /// # Panics
+    /// When expected and actual final len differ?
     pub fn append_element_from_iter<T>(&mut self, iter: T, len: usize) -> FastQElement
     where
         T: Iterator<Item = u8>,
@@ -535,6 +549,8 @@ impl FastQBlock {
         }
     }
 
+    /// # Panics
+    /// when conditions & tag column have different lengths
     pub fn apply_mut_conditional(
         &mut self,
         mut f: impl FnMut(&mut WrappedFastQReadMut),
@@ -587,11 +603,14 @@ impl FastQBlock {
     //     }
     // }
 
+    /// # Panics
+    /// When run with less than two entries? Don't think that can happen
     #[must_use]
-    pub fn split_at(mut self, target_reads_per_block: usize) -> (FastQBlock, FastQBlock) {
-        if self.len() <= target_reads_per_block {
+    pub fn split_at(mut self, target_reads_per_block: NonZero<usize>) -> (FastQBlock, FastQBlock) {
+        if self.len() <= target_reads_per_block.into() {
             (self, FastQBlock::empty())
         } else {
+            let target_reads_per_block: usize = target_reads_per_block.into();
             let mut right: Vec<FastQRead> = self.entries.drain(target_reads_per_block..).collect();
             let left = self.entries;
             //let (left, right) = self.entries.split_at(target_reads_per_block);
@@ -669,10 +688,9 @@ impl FastQBlock {
     }
 
     #[must_use]
-    pub fn split_interleaved(self, interleave_count: usize) -> Vec<FastQBlock> {
-        assert!(interleave_count > 1);
+    pub fn split_interleaved(self, interleave_count: NonZero<usize>) -> Vec<FastQBlock> {
         let mut outputs = Vec::new();
-        for _ in 0..interleave_count {
+        for _ in 0..interleave_count.into() {
             outputs.push(FastQBlock {
                 block: self.block.clone(),
                 entries: Vec::new(),
@@ -976,12 +994,16 @@ impl WrappedFastQReadMut<'_> {
         self.0.max_len(n);
     }
 
+    /// # Panics
+    /// when the len invariant is violated
     pub fn prefix(&mut self, seq: &[u8], qual: &[u8]) {
         self.0.seq.prefix(seq, self.1);
         self.0.qual.prefix(qual, self.1);
         assert_eq!(self.0.seq.len(), self.0.qual.len());
     }
 
+    /// # Panics
+    /// when the len invariant is violated
     pub fn postfix(&mut self, seq: &[u8], qual: &[u8]) {
         self.0.seq.postfix(seq, self.1);
         self.0.qual.postfix(qual, self.1);
@@ -993,12 +1015,16 @@ impl WrappedFastQReadMut<'_> {
         self.0.qual.reverse(self.1);
     }
 
+    /// # Panics
+    /// when the len invariant is violated
     pub fn replace_seq(&mut self, new_seq: &[u8], new_qual: &[u8]) {
         assert!(new_seq.len() == new_qual.len());
         self.0.seq.replace(new_seq, self.1);
         self.0.qual.replace(new_qual, self.1);
     }
 
+    /// # Panics
+    /// when the len invariant is violated
     pub fn replace_seq_keep_qual(&mut self, new_seq: &[u8]) {
         assert!(new_seq.len() == self.0.qual.len());
         self.0.seq.replace(new_seq, self.1);
@@ -1039,6 +1065,10 @@ impl WrappedFastQReadMut<'_> {
     //     }
     // }
 
+    /// # Panics
+    /// when the len invariant is violated
+    #[expect(clippy::too_many_lines, reason = "we need them")]
+    #[expect(clippy::cast_precision_loss, reason = "acceptable")]
     pub fn trim_poly_base_suffix(
         &mut self,
         min_length: usize,
@@ -1238,6 +1268,9 @@ pub struct FastQBlocksCombined {
 }
 
 impl FastQBlocksCombined {
+    /// # Panics
+    ///  if segments is empty
+    #[must_use]
     pub fn new(
         segments: Vec<FastQBlock>,
         output_tags: Option<Vec<DemultiplexTag>>,
@@ -1259,9 +1292,12 @@ impl FastQBlocksCombined {
         }
     }
 
+    #[must_use]
     pub fn block_no(&self) -> usize {
         self.block_no
     }
+
+    #[must_use]
     pub fn iter_segment_indices(&self, idx: SegmentIndexOrAll) -> Vec<usize> {
         match idx {
             SegmentIndexOrAll::All => (0..self.segments.len()).collect(),
@@ -1269,7 +1305,7 @@ impl FastQBlocksCombined {
         }
     }
 
-    /// create an empty one with the same options filled, and same block_no
+    /// create an empty one with the same options filled, and same `block_no`
     #[must_use]
     pub fn empty(&self) -> FastQBlocksCombined {
         FastQBlocksCombined {
@@ -1309,7 +1345,7 @@ impl FastQBlocksCombined {
         }
     }
     #[must_use]
-    #[expect(clippy::len_without_is_empty, reason="We never check for empty?")]
+    #[expect(clippy::len_without_is_empty, reason = "We never check for empty?")]
     pub fn len(&self) -> usize {
         self.segments[0].entries.len()
     }
@@ -1320,6 +1356,8 @@ impl FastQBlocksCombined {
     //     self.segments[0].entries.is_empty()
     // }
 
+    /// # Panics
+    /// when the new length is larger
     pub fn resize(&mut self, len: usize) {
         for v in &mut self.segments {
             v.entries.resize_with(len, || {
@@ -1344,13 +1382,16 @@ impl FastQBlocksCombined {
         }
     }
 
+    /// # Panics
+    /// when used on demultiplexed blocks
     pub fn drain(&mut self, range: Range<usize>) {
         for v in &mut self.segments {
             v.entries.drain(range.clone());
         }
-        if self.output_tags.is_some() {
-            panic!("Drain used on a demultiplexd block. I don't think that's sensible") // cov:excl-line
-        }
+        assert!(
+            self.output_tags.is_none(),
+            "Drain used on a demultiplexed block. I don't think that's sensible"
+        );
         // if let Some(output_tags) = &mut self.output_tags {
         //     output_tags.drain(range.clone()); // cov:excl-line currently not being used, since we
         //     // only use drain in the non-demultiplexing case, completeness and future use.
@@ -1371,7 +1412,9 @@ impl FastQBlocksCombined {
         }
     }
 
-    #[expect(clippy::needless_range_loop, reason="False positve")]
+    #[expect(clippy::needless_range_loop, reason = "False positve")]
+    /// # Panics
+    /// when the tag is missing
     pub fn apply_mut_with_tag<F>(&mut self, label: &TagLabel, mut f: F)
     where
         F: for<'a> FnMut(&mut [WrappedFastQReadMut<'a>], &TagValue),
@@ -1388,6 +1431,8 @@ impl FastQBlocksCombined {
         }
     }
 
+    /// # Panics
+    /// when the tag is missing
     pub fn apply_mut_with_tags<F>(&mut self, label: &TagLabel, other_label: &TagLabel, mut f: F)
     where
         F: for<'a> FnMut(&mut [WrappedFastQReadMut<'a>], &TagValue, &TagValue),
@@ -1409,6 +1454,8 @@ impl FastQBlocksCombined {
         }
     }
 
+    /// # Panics
+    /// When the segments have different read counts
     pub fn sanity_check(&self) -> Result<()> {
         let mut count = None;
         for (ii, v) in self.segments.iter().enumerate() {
@@ -1511,6 +1558,8 @@ impl FastQBlocksCombined {
     } */
 
     /// Apply a boolean filter (vec) to all segments and tags
+    /// # Panics
+    /// when the tag is missing
     pub fn apply_bool_filter(&mut self, keep: &[bool]) {
         let should: usize = keep.iter().map(|x| usize::from(*x)).sum();
         for segment_block in &mut self.segments {
@@ -1725,11 +1774,10 @@ pub fn longest_suffix_that_is_a_prefix(
     seq: &[u8],
     query: &[u8],
     max_mismatches: usize,
-    min_length: usize,
+    min_length: NonZero<usize>,
 ) -> Option<usize> {
-    assert!(min_length >= 1);
     let max_len = std::cmp::min(seq.len(), query.len());
-    for prefix_len in (min_length..=max_len).rev() {
+    for prefix_len in (min_length.into()..=max_len).rev() {
         let suffix_start = seq.len() - prefix_len;
         let dist = hamming(&seq[suffix_start..], &query[..prefix_len]) as usize;
         if dist <= max_mismatches {
@@ -1745,43 +1793,43 @@ mod test {
     #[test]
     fn test_longest_suffix_that_is_a_prefix() {
         assert_eq!(
-            longest_suffix_that_is_a_prefix(b"ACGTAGCT", b"ACGT", 0, 1),
+            longest_suffix_that_is_a_prefix(b"ACGTAGCT", b"ACGT", 0, NonZero::new(1).unwrap()),
             None
         );
         assert_eq!(
-            longest_suffix_that_is_a_prefix(b"ACGTACGTACGT", b"ACGT", 0, 1),
+            longest_suffix_that_is_a_prefix(b"ACGTACGTACGT", b"ACGT", 0, NonZero::new(1).unwrap()),
             Some(4)
         );
         assert_eq!(
-            longest_suffix_that_is_a_prefix(b"ACGTACGTACGC", b"ACGT", 1, 1),
+            longest_suffix_that_is_a_prefix(b"ACGTACGTACGC", b"ACGT", 1, NonZero::new(1).unwrap()),
             Some(4)
         );
         assert_eq!(
-            longest_suffix_that_is_a_prefix(b"ACGTACGTACGC", b"ACGT", 0, 1),
+            longest_suffix_that_is_a_prefix(b"ACGTACGTACGC", b"ACGT", 0, NonZero::new(1).unwrap()),
             None
         );
         assert_eq!(
-            longest_suffix_that_is_a_prefix(b"ACGTACGTACG", b"ACGT", 0, 1),
+            longest_suffix_that_is_a_prefix(b"ACGTACGTACG", b"ACGT", 0, NonZero::new(1).unwrap()),
             Some(3)
         );
         assert_eq!(
-            longest_suffix_that_is_a_prefix(b"ACGTACGTAC", b"ACGT", 0, 1),
+            longest_suffix_that_is_a_prefix(b"ACGTACGTAC", b"ACGT", 0, NonZero::new(1).unwrap()),
             Some(2)
         );
         assert_eq!(
-            longest_suffix_that_is_a_prefix(b"ACGTACGTA", b"ACGT", 0, 1),
+            longest_suffix_that_is_a_prefix(b"ACGTACGTA", b"ACGT", 0, NonZero::new(1).unwrap()),
             Some(1)
         );
         assert_eq!(
-            longest_suffix_that_is_a_prefix(b"ACG", b"ACGT", 0, 1),
+            longest_suffix_that_is_a_prefix(b"ACG", b"ACGT", 0, NonZero::new(1).unwrap()),
             Some(3)
         );
         assert_eq!(
-            longest_suffix_that_is_a_prefix(b"ACGTACGTACG", b"ACGT", 0, 3),
+            longest_suffix_that_is_a_prefix(b"ACGTACGTACG", b"ACGT", 0, NonZero::new(3).unwrap()),
             Some(3)
         );
         assert_eq!(
-            longest_suffix_that_is_a_prefix(b"ACGTACGTACG", b"ACGT", 0, 4),
+            longest_suffix_that_is_a_prefix(b"ACGTACGTACG", b"ACGT", 0, NonZero::new(4).unwrap()),
             None
         );
     }
@@ -1955,6 +2003,7 @@ mod test {
     }
 
     #[test]
+    #[expect(clippy::too_many_lines, reason="needed")]
     fn test_trim_poly_n_local() {
         fn trim(seq: &str, min_length: usize, max_mismatch_fraction: f32, base: u8) -> String {
             let (mut read, mut data) = get_local2(seq.as_bytes());
@@ -2071,7 +2120,7 @@ mod test {
         );
     }
     #[test]
-    #[expect(clippy::too_many_lines, reason="long test")]
+    #[expect(clippy::too_many_lines, reason = "long test")]
     fn test_trimm_poly_n() {
         fn trim(seq: &str, min_length: usize, max_mismatch_fraction: f32, base: u8) -> String {
             let mut read = get_owned2(seq.as_bytes());

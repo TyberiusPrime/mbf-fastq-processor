@@ -16,6 +16,7 @@ use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::path::Path;
 use std::rc::Rc;
+use std::fmt::Write;
 use toml_pretty_deser::{prelude::*, suggest_alternatives};
 
 mod barcodes;
@@ -173,7 +174,7 @@ impl VerifyIn<TPDRoot> for PartialConfig {
         self.options.or_with(|| PartialOptions {
             threads: TomlValue::new_ok(None, 0..0),
             max_blocks_in_flight: TomlValue::new_ok(default_blocks_in_flight(), 0..0),
-            block_size: TomlValue::new_ok(default_block_size(), 0..0),
+            block_size: TomlValue::new_ok(default_block_size().into(), 0..0),
             buffer_size: TomlValue::new_ok(default_buffer_size(), 0..0),
             output_buffer_size: TomlValue::new_ok(default_output_buffer_size(), 0..0),
             accept_duplicate_files: TomlValue::new_ok(false, 0..0),
@@ -462,8 +463,7 @@ impl PartialConfig {
                     .output
                     .as_ref()
                     .and_then(|x| x.as_ref())
-                    .map(|x| x.len())
-                    .unwrap_or(1)
+                    .map_or(1, Vec::len)
                     != 0;
                 let has_interleave = o
                     .interleave
@@ -598,7 +598,9 @@ impl PartialConfig {
         }
     }
 
-    ///expansion of transforms into their final form
+    /// expansion of transforms into their final form
+    /// # Panics
+    /// When `used_tags declares` one tag multiple times
     pub fn expand_transformations(&mut self) {
         self.transform.sync_nested_state(); // since we normally would only update this once
         // verify is done, but we need accurate info here now.
@@ -1067,17 +1069,18 @@ impl PartialConfig {
             .collect::<Vec<_>>()
             .join(", ");
         let mut help_str = format!(
-            "This transform requires tag '{label}' to be one of the following types: [{str_supposed_tag_types}],\n\
+            "This transform requires tag '{tag_name}' to be one of the following types: [{str_supposed_tag_types}],\n\
                                         but it is actually of type '{actual_tag_type}'.",
-            label = tag_name,
         );
         if let Some(further_help) = further_help.as_ref() {
-            help_str.push_str(&format!("\n{further_help}"));
+            write!(help_str, "\n{further_help}");
         }
 
         *toml_source.borrow_mut().1 = Some(help_str);
     }
 
+    /// # Panics
+    /// Tag declared twice
     pub fn verify_transformation_labels(&mut self) {
         use crate::transformations::TagUser;
         let mut allowed_tags_per_stage: Vec<Vec<TagLabel>> = Vec::new();
@@ -1100,13 +1103,10 @@ impl PartialConfig {
                 //         errors.push(e.context(format!("[step {step_no} ({t})]:")));
                 //         continue; // skip further processing of this transform if validation failed
                 //     }
-                let tag_info = match trafo.get_tag_usage(&tags_available, segment_order) {
-                    Some(t) => t,
-                    None => {
+                let Some(tag_info) = trafo.get_tag_usage(&tags_available, segment_order) else {
                         any_tag_errors = true;
                         //break;
                         continue;
-                    }
                 };
                 let mut tags_used_here: Vec<TagLabel> = Vec::new();
                 match tag_info.removed_tags {
@@ -1133,7 +1133,7 @@ impl PartialConfig {
                                     tag_name.as_ref(),
                                     &tags_available
                                         .keys()
-                                        .map(|x| x.as_ref())
+                                        .map(AsRef::as_ref)
                                         .collect::<Vec<_>>(),
                                 ));
                                 continue; //no point on doing anything else with this tag
@@ -1379,8 +1379,8 @@ impl PartialConfig {
                     //now verify we're using every bam tag only once, and they're upper case.
                     let mut seen_bam_tags = IndexMap::new();
                     for bam_tag in map_and_keys.map.values_mut() {
-                        if let Some(bam_tag_value) = bam_tag.as_mut() {
-                            if let Some(other_span) =
+                        if let Some(bam_tag_value) = bam_tag.as_mut() 
+                            && let Some(other_span) =
                                 seen_bam_tags.insert(bam_tag_value.0, bam_tag.span())
                             {
                                 bam_tag.state = TomlValueState::Custom {
@@ -1395,7 +1395,7 @@ impl PartialConfig {
                                         .to_string(),
                                 );
                             }
-                        } // cov:excl-line
+                         // cov:excl-line
                     }
                 } // cov:excl-line
                 if let Some(Some(tag_to_ref)) = bam_opts.tag_to_reference.as_mut()
@@ -1458,8 +1458,8 @@ impl PartialConfig {
 
             let mut seen = IndexMap::new();
             for trafo in just_trafos {
-                if let PartialTransformation::StoreTagsInTable(step_info_toml) = trafo {
-                    if let Some(step_info_toml) = step_info_toml.toml_value.as_mut() {
+                if let PartialTransformation::StoreTagsInTable(step_info_toml) = trafo 
+                    && let Some(step_info_toml) = step_info_toml.toml_value.as_mut() {
                         let infix = step_info_toml.infix.as_ref().expect(
                             "VerifyIn of StroeTagsInTable must have happend, infix must be a value",
                         );
@@ -1497,7 +1497,7 @@ impl PartialConfig {
                             }
                         }
                     }
-                }
+                
             }
         } // cov:excl-line 
     }
@@ -2040,83 +2040,83 @@ mod tests {
     #[test]
     fn test_validate_tag_name_valid() {
         // Valid tag names
-        assert!(validate_tag_name("a").is_ok());
-        assert!(validate_tag_name("A").is_ok());
-        assert!(validate_tag_name("_").is_ok());
-        assert!(validate_tag_name("abc").is_ok());
-        assert!(validate_tag_name("ABC").is_ok());
-        assert!(validate_tag_name("a123").is_ok());
-        assert!(validate_tag_name("A123").is_ok());
-        assert!(validate_tag_name("_123").is_ok());
-        assert!(validate_tag_name("tag_name").is_ok());
-        assert!(validate_tag_name("TagName").is_ok());
-        assert!(validate_tag_name("tag123_name").is_ok());
-        assert!(validate_tag_name("_private_tag").is_ok());
+        validate_tag_name("a").unwrap();
+        validate_tag_name("A").unwrap();
+        validate_tag_name("_").unwrap();
+        validate_tag_name("abc").unwrap();
+        validate_tag_name("ABC").unwrap();
+        validate_tag_name("a123").unwrap();
+        validate_tag_name("A123").unwrap();
+        validate_tag_name("_123").unwrap();
+        validate_tag_name("tag_name").unwrap();
+        validate_tag_name("TagName").unwrap();
+        validate_tag_name("tag123_name").unwrap();
+        validate_tag_name("_private_tag").unwrap();
     }
 
     #[test]
     fn test_validate_tag_name_invalid() {
         // Invalid tag names
-        assert!(validate_tag_name("").is_err());
-        assert!(validate_tag_name("123").is_err());
-        assert!(validate_tag_name("123abc").is_err());
-        assert!(validate_tag_name("tag-name").is_err());
-        assert!(validate_tag_name("tag.name").is_err());
-        assert!(validate_tag_name("tag name").is_err());
-        assert!(validate_tag_name("tag@name").is_err());
-        assert!(validate_tag_name("tag/name").is_err());
-        assert!(validate_tag_name("tag\\name").is_err());
-        assert!(validate_tag_name("tag:name").is_err());
-        assert!(validate_tag_name("len_123").is_err());
-        assert!(validate_tag_name("len_shu").is_err());
-        assert!(validate_tag_name("ReadName").is_err());
-        assert!(validate_tag_name("read_no").is_err());
+        validate_tag_name("").unwrap_err();
+        validate_tag_name("123").unwrap_err();
+        validate_tag_name("123abc").unwrap_err();
+        validate_tag_name("tag-name").unwrap_err();
+        validate_tag_name("tag.name").unwrap_err();
+        validate_tag_name("tag name").unwrap_err();
+        validate_tag_name("tag@name").unwrap_err();
+        validate_tag_name("tag/name").unwrap_err();
+        validate_tag_name("tag\\name").unwrap_err();
+        validate_tag_name("tag:name").unwrap_err();
+        validate_tag_name("len_123").unwrap_err();
+        validate_tag_name("len_shu").unwrap_err();
+        validate_tag_name("ReadName").unwrap_err();
+        validate_tag_name("read_no").unwrap_err();
     }
 
     #[test]
     fn test_validate_segment_label_valid() {
         // Valid segment labels
         let f = toml_pretty_deser::FieldMatchMode::Exact;
-        assert!(validate_segment_label("a", f).is_ok());
-        assert!(validate_segment_label("A", f).is_ok());
-        assert!(validate_segment_label("_", f).is_ok());
-        assert!(validate_segment_label("abc", f).is_ok());
-        assert!(validate_segment_label("ABC", f).is_ok());
-        assert!(validate_segment_label("123", f).is_err());
-        assert!(validate_segment_label("a123", f).is_ok());
-        assert!(validate_segment_label("A123", f).is_ok());
-        assert!(validate_segment_label("123abc", f).is_err());
-        assert!(validate_segment_label("read1", f).is_ok());
-        assert!(validate_segment_label("READ1", f).is_ok());
-        assert!(validate_segment_label("segment_name", f).is_ok());
-        assert!(validate_segment_label("segment123", f).is_ok());
-        assert!(validate_segment_label("_internal", f).is_ok());
+        validate_segment_label("a", f).unwrap();
+        validate_segment_label("A", f).unwrap();
+        validate_segment_label("_", f).unwrap();
+        validate_segment_label("abc", f).unwrap();
+        validate_segment_label("ABC", f).unwrap();
+        validate_segment_label("123", f).unwrap_err();
+        validate_segment_label("a123", f).unwrap();
+        validate_segment_label("A123", f).unwrap();
+        validate_segment_label("123abc", f).unwrap_err();
+        validate_segment_label("read1", f).unwrap();
+        validate_segment_label("READ1", f).unwrap();
+        validate_segment_label("segment_name", f).unwrap();
+        validate_segment_label("segment123", f).unwrap();
+        validate_segment_label("_internal", f).unwrap();
     }
 
     #[test]
     fn test_validate_segment_label_invalid() {
         // Invalid segment labels
         let f = toml_pretty_deser::FieldMatchMode::Exact;
-        assert!(validate_segment_label("", f).is_err());
-        assert!(validate_segment_label("1", f).is_err());
-        assert!(validate_segment_label("segment-name", f).is_err());
-        assert!(validate_segment_label("segment.name", f).is_err());
-        assert!(validate_segment_label("segment name", f).is_err());
-        assert!(validate_segment_label("segment@name", f).is_err());
-        assert!(validate_segment_label("segment/name", f).is_err());
-        assert!(validate_segment_label("segment\\name", f).is_err());
-        assert!(validate_segment_label("segment:name", f).is_err());
-        assert!(validate_segment_label("fasta_fake_quality", f).is_err());
-        assert!(validate_segment_label("bam_include_mapped", f).is_err());
-        assert!(validate_segment_label("bam_include_unmapped", f).is_err());
-        assert!(validate_segment_label("read_comment_character", f).is_err());
-        assert!(validate_segment_label("use_rapidgzip", f).is_err());
-        assert!(validate_segment_label("build_rapidgzip_index", f).is_err());
-        assert!(validate_segment_label("threads_per_segment", f).is_err());
-        assert!(validate_segment_label("tpd_field_match_mode", f).is_err());
+        validate_segment_label("", f).unwrap_err();
+        validate_segment_label("1", f).unwrap_err();
+        validate_segment_label("segment-name", f).unwrap_err();
+        validate_segment_label("segment.name", f).unwrap_err();
+        validate_segment_label("segment name", f).unwrap_err();
+        validate_segment_label("segment@name", f).unwrap_err();
+        validate_segment_label("segment/name", f).unwrap_err();
+        validate_segment_label("segment\\name", f).unwrap_err();
+        validate_segment_label("segment:name", f).unwrap_err();
+        validate_segment_label("fasta_fake_quality", f).unwrap_err();
+        validate_segment_label("bam_include_mapped", f).unwrap_err();
+        validate_segment_label("bam_include_unmapped", f).unwrap_err();
+        validate_segment_label("read_comment_character", f).unwrap_err();
+        validate_segment_label("use_rapidgzip", f).unwrap_err();
+        validate_segment_label("build_rapidgzip_index", f).unwrap_err();
+        validate_segment_label("threads_per_segment", f).unwrap_err();
+        validate_segment_label("tpd_field_match_mode", f).unwrap_err();
 
         let f = toml_pretty_deser::FieldMatchMode::AnyCase;
-        assert!(validate_segment_label("FaSTA___FAKE-QUALITY", f).is_err());
+        validate_segment_label("FaSTA___FAKE-QUALITY", f).unwrap_err();
     }
 
     #[test]

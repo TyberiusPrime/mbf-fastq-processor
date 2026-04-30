@@ -301,7 +301,7 @@ impl OutputFileHandle {
 }
 
 impl OutputFileConfig {
-    #[allow(clippy::too_many_arguments)]
+    #[expect(clippy::too_many_arguments, reason="We need them")]
     fn new_file(
         directory: impl AsRef<Path>,
         basename: &str,
@@ -533,6 +533,7 @@ impl OutputFileConfig {
         Ok(new_filename)
     }
 
+    #[expect(clippy::string_slice, reason="TODO Needs fixing!")]
     fn rename_existing_files(&self) -> Result<()> {
         let old_chunk_digit_count = self.chunk_digit_count - 1;
         let min_value = 0;
@@ -732,7 +733,6 @@ pub struct OutputReports {
     pub json: Option<BufWriter<ex::fs::File>>,
 }
 
-#[allow(clippy::fn_params_excessive_bools)]
 impl OutputReports {
     fn new(
         output_directory: &Path,
@@ -851,7 +851,6 @@ fn resolve_bam_write_options(
     })
 }
 
-#[allow(clippy::too_many_lines)]
 fn open_one_set_of_output_files(
     parsed_config: &CheckedConfig,
     output_directory: &Path,
@@ -979,9 +978,9 @@ impl OutputFiles {
         let mut output_segments = BTreeMap::new();
         for (k, v) in self.output_segments {
             let inner = Arc::try_unwrap(v)
-                .map_err(|_| anyhow!("Arc had multiple references"))?
+                .map_err(|_e| anyhow!("Arc had multiple references:"))?
                 .into_inner()
-                .map_err(|_| anyhow!("Mutex was poisoned"))?;
+                .map_err(|err| anyhow!("Mutex was poisoned: {err:?}"))?;
             output_segments.insert(k, inner.into_writer()?);
         }
         Ok(OutputFilesReadyToWrite {
@@ -991,7 +990,6 @@ impl OutputFiles {
     }
 }
 
-#[allow(clippy::fn_params_excessive_bools)]
 pub fn open_output_files(
     parsed_config: &CheckedConfig,
     output_directory: &Path,
@@ -1056,7 +1054,6 @@ pub fn open_output_files(
     }
 }
 
-#[allow(clippy::if_not_else)]
 pub fn output_block(
     block: &io::FastQBlocksCombined,
     //that's one set of OutputFastqs per (demultiplexd) output
@@ -1093,7 +1090,6 @@ pub fn output_block(
     Ok(())
 }
 
-#[allow(clippy::if_not_else)]
 fn output_block_demultiplex(
     block: &io::FastQBlocksCombined,
     output_files: &mut OutputFastqs<OutputFile>,
@@ -1230,7 +1226,6 @@ where
     Ok(())
 }
 
-#[allow(clippy::redundant_closure_for_method_calls)] // can't go WrappedFastQRead::as_fasta - lifetime issues
 fn output_block_inner(
     output_file: &mut OutputFile,
     block: Option<&io::FastQBlock>,
@@ -1271,8 +1266,6 @@ fn output_block_inner(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
-#[allow(clippy::redundant_closure_for_method_calls)] // can't go WrappedFastQRead::as_fasta - lifetime issues
 fn output_block_interleaved(
     output_file: &mut OutputFile,
     blocks_to_interleave: &[&io::FastQBlock],

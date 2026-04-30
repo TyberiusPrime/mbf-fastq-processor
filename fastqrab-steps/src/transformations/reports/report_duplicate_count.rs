@@ -9,7 +9,7 @@ pub struct DuplicateCountData {
     duplication_filter: Option<OurCuckCooFilter<[u8]>>,
 }
 
-#[allow(clippy::from_over_into)]
+#[expect(clippy::from_over_into, reason="Orphan rules")]
 impl Into<serde_json::Value> for DuplicateCountData {
     fn into(self) -> serde_json::Value {
         self.duplicate_count.into()

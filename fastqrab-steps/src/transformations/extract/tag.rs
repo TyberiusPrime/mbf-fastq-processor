@@ -40,7 +40,6 @@ impl ApproxOrExactFilter {
         )))
     }
 
-    #[allow(dead_code)]
     pub fn contains(&self, seq: &FragmentEntry) -> bool {
         match self {
             ApproxOrExactFilter::Exact(hashset) => hashset.contains(&seq.to_continuous_vec()),
@@ -68,7 +67,6 @@ impl ApproxOrExactFilter {
         }
     }
 
-    #[allow(dead_code)]
     pub fn insert(&mut self, seq: &FragmentEntry) {
         match self {
             ApproxOrExactFilter::Exact(hashset) => {

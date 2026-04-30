@@ -60,8 +60,6 @@ impl TagUser for PartialTaggedVariant<PartialReverseComplement> {
 }
 
 impl Step for ReverseComplement {
-    #[allow(clippy::redundant_closure_for_method_calls)] // otherwise the FnOnce is not general
-    // enough
     fn apply(
         &self,
         mut block: FastQBlocksCombined,

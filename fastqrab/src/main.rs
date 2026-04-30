@@ -8,7 +8,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines, reason="cli is complex")]
 fn build_cli() -> Command {
     // Construct version string with git commit hash
     // Using const_format doesn't work here due to option_env, so we leak the string
@@ -287,8 +287,8 @@ fn handle_toml_arg(config_file: Option<&String>) -> PathBuf {
     }
 }
 
-#[allow(clippy::case_sensitive_file_extension_comparisons)]
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::case_sensitive_file_extension_comparisons, reason="it's .bam, not .BAM")]
+#[expect(clippy::too_many_lines, reason="main entry point")]
 fn main() -> Result<()> {
     // Support environment-based completion generation (modern approach)
     // Usage: COMPLETE=bash fastqrab
@@ -464,7 +464,6 @@ fn validate_config_file(toml_path: &Path) {
     }
 }
 
-#[allow(clippy::needless_pass_by_value)]
 fn verify_config_file(toml_file: &Path, output_dir: Option<PathBuf>, unsafe_prep: bool) {
     match fastqrab::verify_outputs(toml_file, output_dir.as_deref(), unsafe_prep) {
         Ok(()) => {

@@ -9,7 +9,7 @@ pub struct BaseStatisticsPart2 {
     per_position_counts: Vec<PositionCount>,
 }
 
-#[allow(clippy::from_over_into)]
+#[expect(clippy::from_over_into, reason="Orphan rules")]
 impl Into<serde_json::Value> for BaseStatisticsPart2 {
     fn into(self) -> serde_json::Value {
         let c = self
@@ -110,11 +110,11 @@ impl Step for Box<_ReportBaseStatisticsPart2> {
             }
             let seq: &[u8] = read.seq();
 
-            // Optimized: use unsafe to eliminate bounds checking
-            // Safety: We just resized to ensure read_len capacity, and we only iterate up to read_len
-            // BASE_TO_INDEX always returns 0-4, which is within bounds of the [0; 5] array
-            // (and we enforce that with a const assertion above)
             for ii in 0..read_len {
+                // Optimized: use unsafe to eliminate bounds checking
+                // Safety: We just resized to ensure read_len capacity, and we only iterate up to read_len
+                // BASE_TO_INDEX always returns 0-4, which is within bounds of the [0; 5] array
+                // (and we enforce that with a const assertion above)
                 unsafe {
                     let base: u8 = *seq.get_unchecked(ii);
                     let idx = *BASE_TO_INDEX.get_unchecked(base as usize);

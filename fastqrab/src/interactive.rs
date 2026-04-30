@@ -318,7 +318,6 @@ fn modify_output_for_interactive(doc: &mut DocumentMut) {
 }
 
 /// Inject `Head`, `FilterReservoirSample` at start and Inspect at end of transform steps
-#[allow(clippy::cast_possible_wrap)]
 fn inject_interactive_steps(doc: &mut DocumentMut, config: &InteractiveConfig) {
     // Create `Head` step table
     let mut head_table = Table::new();
@@ -378,6 +377,7 @@ fn inject_interactive_steps(doc: &mut DocumentMut, config: &InteractiveConfig) {
 }
 
 /// Display successful processing results
+#[expect(clippy::string_slice, reason="just returned from find")]
 fn display_success(output: &str) {
     println!("{}", "─".repeat(80));
     println!("Processing completed successfully [{}]", get_local_time());
@@ -414,7 +414,6 @@ fn display_error(error: &anyhow::Error) {
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::unwrap_used)]
     use super::*;
     use std::path::PathBuf;
 

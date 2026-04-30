@@ -50,11 +50,6 @@ impl TagUser for PartialTaggedVariant<PartialComplexity> {
 }
 
 impl Step for Complexity {
-    #[expect(
-        clippy::cast_sign_loss,
-        clippy::cast_possible_truncation,
-        clippy::cast_precision_loss,
-        reason="loss is acceptable, it's going to be within u32 range")]
     fn apply(
         &self,
         mut block: FastQBlocksCombined,

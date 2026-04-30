@@ -199,8 +199,6 @@ impl TagUser for PartialTaggedVariant<Box<PartialEvalExpression>> {
 }
 
 impl Step for Box<EvalExpression> {
-    #[expect(clippy::too_many_lines, reason="Straight forward")]
-    #[expect(clippy::cast_precision_loss, reason="Internal storage is f64, not going to matter in practice")]
     fn apply(
         &self,
         mut block: FastQBlocksCombined,

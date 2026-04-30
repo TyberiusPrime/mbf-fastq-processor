@@ -3,12 +3,7 @@ use crossbeam::channel::{bounded, unbounded};
 use fastqrab_steps::no_barcode_infix;
 use indexmap::IndexMap;
 use std::{
-    cell::OnceCell,
-    collections::BTreeMap,
-    panic,
-    path::{Path, PathBuf},
-    sync::{Arc, Mutex},
-    thread,
+    cell::OnceCell, collections::BTreeMap, num::NonZero, panic, path::{Path, PathBuf}, sync::{Arc, Mutex}, thread
 };
 
 use crate::{
@@ -24,12 +19,12 @@ use fastqrab_io::io::{
     parsers::{ChainedParser, ThreadCount},
 };
 
-#[allow(clippy::collapsible_if)]
+#[expect(clippy::collapsible_if, reason="obscures")]
 fn parse_and_send(
     readers: Vec<io::InputFile>,
     raw_tx: &crossbeam::channel::Sender<(io::FastQBlock, Option<usize>)>,
     buffer_size: usize,
-    block_size: usize,
+    block_size: NonZero<usize>,
     input_thread_count: ThreadCount,
     input_options: InputOptions,
 ) -> Result<()> {
@@ -63,7 +58,7 @@ fn parse_interleaved_and_send(
     segment_count: usize,
     buffer_size: usize,
     input_thread_count: ThreadCount,
-    block_size: usize,
+    block_size: NonZero<usize>,
     input_options: InputOptions,
 ) -> Result<()> {
     let mut parser = ChainedParser::new(
@@ -116,7 +111,7 @@ fn parse_interleaved_and_send(
     Ok(())
 }
 
-#[allow(clippy::needless_pass_by_value)]
+//#[allow(clippy::needless_pass_by_value)]
 fn run_combiner_thread(
     raw_rx_readers: Vec<crossbeam::channel::Receiver<(io::FastQBlock, Option<usize>)>>,
     combiner_output_tx: crossbeam::channel::Sender<(io::FastQBlocksCombined, Option<usize>)>,
@@ -202,7 +197,7 @@ fn run_combiner_thread(
     }
 }
 
-#[allow(clippy::needless_pass_by_value)]
+//#[expect(clippy::needless_pass_by_value)]
 fn run_benchmark_combiner_thread(
     first_block: io::FastQBlocksCombined,
     combiner_output_tx: crossbeam::channel::Sender<(io::FastQBlocksCombined, Option<usize>)>,
@@ -269,7 +264,7 @@ fn run_benchmark_combiner_thread(
     let _ = combiner_output_tx.send((final_block, Some(molecule_count)));
 }
 
-#[allow(clippy::needless_pass_by_value)]
+//#[allow(clippy::needless_pass_by_value)]
 fn run_benchmark_interleaved_thread(
     first_block: io::FastQBlock,
     combiner_output_tx: crossbeam::channel::Sender<(io::FastQBlocksCombined, Option<usize>)>,
@@ -346,7 +341,7 @@ impl RunStage0 {
         }
     }
 
-    #[allow(clippy::too_many_lines)]
+    #[expect(clippy::too_many_lines, reason="needed")]
     pub fn configure_demultiplex_and_init_stages(
         self,
         parsed: &mut CheckedConfig,
@@ -424,7 +419,7 @@ impl RunStage0 {
                             )
                         })?
                 };
-                #[allow(clippy::cast_precision_loss)]
+                //#[expect(clippy::cast_precision_loss)]
                 if let Some(new_demultiplex_barcodes) = new_demultiplex_barcodes {
                     let barcode_count = new_demultiplex_barcodes.barcode_to_name.len()
                         + usize::from(new_demultiplex_barcodes.include_no_barcode);
@@ -550,7 +545,6 @@ impl RunStage0 {
     }
 }
 
-#[allow(clippy::struct_excessive_bools)]
 pub struct RunStage1 {
     input_info: transformations::InputInfo,
     output_directory: PathBuf,
@@ -562,7 +556,7 @@ pub struct RunStage1 {
 }
 
 impl RunStage1 {
-    #[allow(clippy::too_many_lines, clippy::similar_names)]
+    #[expect(clippy::too_many_lines, clippy::similar_names, reason="needed. rx/tx is clear enough")]
     pub fn create_input_threads(self, parsed: &CheckedConfig) -> Result<RunStage2> {
         let orig_hook = panic::take_hook();
         panic::set_hook(Box::new(move |panic_info| {
@@ -583,7 +577,7 @@ impl RunStage1 {
         let mut input_files =
             crate::io::open_input_files(input_config).context("Error opening input files")?;
 
-        let block_size = parsed.options.block_size;
+        let block_size = NonZero::new(parsed.options.block_size).expect("block_size must have been validate > 0");
         let buffer_size = parsed.options.buffer_size;
         let channel_size = 2;
         let error_collector = Arc::new(Mutex::new(Vec::<String>::new()));
@@ -822,7 +816,6 @@ impl RunStage1 {
     }
 }
 
-#[allow(clippy::struct_excessive_bools)]
 pub struct RunStage2 {
     input_info: transformations::InputInfo,
     output_directory: PathBuf,
@@ -839,7 +832,6 @@ pub struct RunStage2 {
     allow_overwrite: bool,
 }
 impl RunStage2 {
-    #[allow(clippy::too_many_lines)]
     pub fn create_stage_threads(self, parsed: &mut CheckedConfig) -> RunStage3 {
         self.create_workpool_pipeline(parsed)
     }
@@ -943,7 +935,6 @@ impl RunStage2 {
     }
 }
 
-#[allow(clippy::struct_excessive_bools)]
 pub struct RunStage3 {
     output_directory: PathBuf,
     demultiplex_infos: Vec<(usize, OptDemultiplex)>,
@@ -999,7 +990,7 @@ fn collect_thread_failures(
 }
 
 impl RunStage3 {
-    #[allow(clippy::too_many_lines)]
+    #[expect(clippy::too_many_lines, reason="needed")]
     pub fn create_output_threads(
         self,
         parsed: &CheckedConfig,
@@ -1091,7 +1082,7 @@ impl RunStage3 {
                             }
                             if let Some(send_idx) = send {
                                 let to_output = buffer.remove(send_idx);
-                                output_done_tx.send(block_no).ok(); // this can happen when the coordinator exited because
+                                let _ = output_done_tx.send(block_no); // this can happen when the coordinator exited because
                                 // an error
                                 if let Err(e) = output_block(
                                     &to_output.1,
@@ -1252,7 +1243,6 @@ pub struct RunStage5 {
 mod tests {
     use super::bits_needed_to_represent;
     #[test]
-    #[allow(clippy::unwrap_used)]
     fn test_bits_needed_to_represent() {
         assert_eq!(bits_needed_to_represent(0), 1);
         assert_eq!(bits_needed_to_represent(1), 1);

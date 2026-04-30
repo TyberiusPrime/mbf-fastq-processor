@@ -78,7 +78,6 @@ impl LongestPolyX {
     /// O(n) algorithm: compute prefix sums and barrier runs for all bases in a
     /// single pass over the sequence, then find the longest valid subarray per
     /// barrier-free segment using a monotone-stack approach.
-    #[allow(clippy::cast_precision_loss)]
     fn find_best(
         seq: &[u8],
         base: u8,
