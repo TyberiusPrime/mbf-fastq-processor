@@ -249,7 +249,7 @@ impl LongestPolyX {
                 if ss <= se {
                     segs.push((ss, se));
                 }
-            } // cov: excl-line
+            } // cov:excl-line
         }
 
         // After last barrier.

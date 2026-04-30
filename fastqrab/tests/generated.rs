@@ -193,6 +193,17 @@ fn test_cases_x_demultiplex_x_no_matching_barcodes() {
 
 #[test]
 
+fn test_cases_x_demultiplex_x_no_matching_barcodes_no_lookup() {
+    println!("Test case is in: test_cases/demultiplex/no_matching_barcodes_no_lookup");
+    run_test(
+        std::path::Path::new("../test_cases/demultiplex/no_matching_barcodes_no_lookup"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_demultiplex_x_quantify_tag() {
     println!("Test case is in: test_cases/demultiplex/quantify_tag");
     run_test(
@@ -340,6 +351,19 @@ fn test_cases_x_demultiplex_x_simple_on_string_tag() {
     println!("Test case is in: test_cases/demultiplex/simple_on_string_tag");
     run_test(
         std::path::Path::new("../test_cases/demultiplex/simple_on_string_tag"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_demultiplex_x_simple_on_string_tag_contains_label_forced() {
+    println!("Test case is in: test_cases/demultiplex/simple_on_string_tag_contains_label_forced");
+    run_test(
+        std::path::Path::new(
+            "../test_cases/demultiplex/simple_on_string_tag_contains_label_forced",
+        ),
         "input.toml",
         1,
     );
@@ -4500,38 +4524,6 @@ fn test_cases_x_single_step_x_error_handling_x_extraction_x_store_tag_in_comment
     run_test(
         std::path::Path::new(
             "../test_cases/single_step/error_handling/extraction/store_tag_in_comment/seperator_in_value",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_error_handling_x_extraction_x_store_tags_in_table_x_same_infix_twice()
-{
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/extraction/store_tags_in_table/same_infix_twice"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/extraction/store_tags_in_table/same_infix_twice",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_error_handling_x_extraction_x_store_tags_in_table_x_store_tags_in_table_no_tags_defined()
- {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/extraction/store_tags_in_table/store_tags_in_table_no_tags_defined"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/extraction/store_tags_in_table/store_tags_in_table_no_tags_defined",
         ),
         "input.toml",
         1,
@@ -9817,6 +9809,19 @@ fn test_cases_x_single_step_x_hamming_x_assign_to_reference_x_file_not_found() {
 
 #[test]
 
+fn test_cases_x_single_step_x_hamming_x_assign_to_reference_x_from_name_regex() {
+    println!("Test case is in: test_cases/single_step/hamming/assign_to_reference/from_name_regex");
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/hamming/assign_to_reference/from_name_regex",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_hamming_x_assign_to_reference_x_fuzzy() {
     println!("Test case is in: test_cases/single_step/hamming/assign_to_reference/fuzzy");
     run_test(
@@ -10038,6 +10043,17 @@ fn test_cases_x_single_step_x_hamming_x_basic_correction_keep() {
 
 #[test]
 
+fn test_cases_x_single_step_x_hamming_x_basic_correction_split_regions() {
+    println!("Test case is in: test_cases/single_step/hamming/basic_correction_split_regions");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/hamming/basic_correction_split_regions"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_hamming_x_basic_correction_too_close() {
     println!("Test case is in: test_cases/single_step/hamming/basic_correction_too_close");
     run_test(
@@ -10116,6 +10132,21 @@ fn test_cases_x_single_step_x_hamming_x_by_majority_x_no_pretrain() {
 
 #[test]
 
+fn test_cases_x_single_step_x_hamming_x_by_majority_x_not_enough_blocks_in_flight() {
+    println!(
+        "Test case is in: test_cases/single_step/hamming/by_majority/not_enough_blocks_in_flight"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/hamming/by_majority/not_enough_blocks_in_flight",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_hamming_x_by_majority_x_reaching_read_count() {
     println!("Test case is in: test_cases/single_step/hamming/by_majority/reaching_read_count");
     run_test(
@@ -10131,6 +10162,17 @@ fn test_cases_x_single_step_x_hamming_x_by_majority_x_simple() {
     println!("Test case is in: test_cases/single_step/hamming/by_majority/simple");
     run_test(
         std::path::Path::new("../test_cases/single_step/hamming/by_majority/simple"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_hamming_x_by_majority_x_string_tag() {
+    println!("Test case is in: test_cases/single_step/hamming/by_majority/string_tag");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/hamming/by_majority/string_tag"),
         "input.toml",
         1,
     );
@@ -10219,6 +10261,28 @@ fn test_cases_x_single_step_x_hamming_x_missing_barcode() {
     println!("Test case is in: test_cases/single_step/hamming/missing_barcode");
     run_test(
         std::path::Path::new("../test_cases/single_step/hamming/missing_barcode"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_hamming_x_missing_barcodes_empty_section() {
+    println!("Test case is in: test_cases/single_step/hamming/missing_barcodes_empty_section");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/hamming/missing_barcodes_empty_section"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_hamming_x_on_tie() {
+    println!("Test case is in: test_cases/single_step/hamming/on_tie");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/hamming/on_tie"),
         "input.toml",
         1,
     );
@@ -11088,6 +11152,56 @@ fn test_cases_x_single_step_x_store_tag_x_in_sequence_missing() {
     println!("Test case is in: test_cases/single_step/store_tag/in_sequence_missing");
     run_test(
         std::path::Path::new("../test_cases/single_step/store_tag/in_sequence_missing"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_store_tag_x_in_table_identical_infix_x_not_set() {
+    println!("Test case is in: test_cases/single_step/store_tag/in_table_identical_infix/not_set");
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/store_tag/in_table_identical_infix/not_set",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_store_tag_x_in_table_identical_infix_x_set() {
+    println!("Test case is in: test_cases/single_step/store_tag/in_table_identical_infix/set");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/store_tag/in_table_identical_infix/set"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_store_tag_x_in_table_output_file_unwritable() {
+    println!("Test case is in: test_cases/single_step/store_tag/in_table_output_file_unwritable");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/store_tag/in_table_output_file_unwritable"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_store_tag_x_store_tags_in_table_no_tags_defined() {
+    println!(
+        "Test case is in: test_cases/single_step/store_tag/store_tags_in_table_no_tags_defined"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/store_tag/store_tags_in_table_no_tags_defined",
+        ),
         "input.toml",
         1,
     );

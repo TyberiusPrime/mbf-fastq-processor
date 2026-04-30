@@ -11,7 +11,7 @@ use crate::transformations::prelude::*;
 /// HammingCorrect in ByMajority mode.
 ///
 /// It's created in expand_transformations
-#[tpd]
+#[tpd(no_verify)]
 #[derive(JsonSchema, Debug, Clone)]
 pub struct HammingExactCounter {
     in_label: TagLabel,
@@ -54,16 +54,6 @@ impl PartialHammingExactCounter {
     }
 }
 
-impl VerifyIn<PartialConfig> for PartialHammingExactCounter {
-    fn verify(
-        &mut self,
-        _parent: &PartialConfig,
-        _options: &VerifyOptions,
-    ) -> std::result::Result<(), ValidationFailure> {
-        unreachable!("Created in code");
-    }
-}
-
 impl TagUser for PartialTaggedVariant<PartialHammingExactCounter> {
     fn get_tag_usage(
         &mut self,
@@ -92,8 +82,9 @@ impl HammingExactCounter {
             .store(count_after_block_no, Ordering::SeqCst);
         let (lock, cvar) = &*self.majority_data.barrier;
         let mut ready = lock.lock().map_err(|err| {
+            //cov:excl-start
             anyhow!("Mutex poisoned while waiting for majority data to be ready: {err}")
-        })?;
+        })?; //cov:excl-stop
         *ready = true;
         cvar.notify_all();
         Ok(())
@@ -117,7 +108,7 @@ impl Step for HammingExactCounter {
             for input_tag in input_tags {
                 let seq = match input_tag {
                     TagValue::Missing => continue,
-                    TagValue::Numeric(_) | TagValue::Bool(_) => unreachable!(),
+                    TagValue::Numeric(_) | TagValue::Bool(_) => unreachable!(), //cov:excl-line
                     TagValue::Location(hits) => BString::new(hits.joined_sequence(None)),
                     TagValue::String(bstring) => bstring.clone(),
                 };
@@ -134,8 +125,9 @@ impl Step for HammingExactCounter {
                 .fetch_add(input_tags.len(), Ordering::SeqCst);
             {
                 let mut bc = self.majority_data.barcode_counts.lock().map_err(|err| {
+                    //cov:excl-start
                     anyhow!("Mutex poisoned while waiting for majority data to be ready: {err}")
-                })?;
+                })?; //cov:excl-stop
                 for (key, value) in local_exact_barcode_match_counter.into_iter() {
                     bc.entry(key)
                         .and_modify(|count| *count = count.saturating_add(value))

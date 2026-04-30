@@ -202,6 +202,8 @@ impl VerifyIn<TPDRoot> for PartialConfig {
         self.verify_head_rapidgzip_conflict();
         self.expand_transformations();
         self.verify_transformation_labels();
+        self.verify_table_infixes_unique();
+
         self.verify_demultiplex_unique();
         self.verify_barcodes_used();
         self.verify_merge_demultiplexed();
@@ -1449,6 +1451,56 @@ impl PartialConfig {
                 }
             }
         }
+    }
+
+    pub fn verify_table_infixes_unique(&mut self) {
+        if let Some(transformations) = self.transform.value.as_mut() {
+            let just_trafos = transformations.iter_mut().filter_map(|t| t.value.as_mut());
+
+            let mut seen = IndexMap::new();
+            for trafo in just_trafos {
+                if let PartialTransformation::StoreTagsInTable(step_info_toml) = trafo {
+                    if let Some(step_info_toml) = step_info_toml.toml_value.as_mut() {
+                        let infix = step_info_toml.infix.as_ref().expect(
+                            "VerifyIn of StroeTagsInTable must have happend, infix must be a value",
+                        );
+                        if let Some(old_span) =
+                            seen.insert(infix.to_string(), step_info_toml.infix.span().clone())
+                        {
+                            if infix.is_empty() {
+                                step_info_toml.infix.state = TomlValueState::Custom {
+                                    spans: vec![
+                                        (
+                                            step_info_toml.infix.span().clone(),
+                                            "2nd use of empty infix".to_string(),
+                                        ),
+                                        (old_span, "1st use of empty infix".to_string()),
+                                    ],
+                                };
+                                step_info_toml.infix.help = Some(
+                                "Two StoreTagsInTable transformations with the same infix would write to the same file.\n\
+                                Add infix = 'something' to at least one of them.".to_string(),
+                                );
+                            } else {
+                                step_info_toml.infix.state = TomlValueState::Custom {
+                                    spans: vec![
+                                        (
+                                            step_info_toml.infix.span().clone(),
+                                            "2nd use of this infix".to_string(),
+                                        ),
+                                        (old_span, "1st use of this infix".to_string()),
+                                    ],
+                                };
+                                step_info_toml.infix.help = Some(
+                                "Two StoreTagsInTable transformations with the same infix would write to the same file.\n\
+                                Rename one of them.".to_string(),
+                            );
+                            }
+                        }
+                    }
+                }
+            }
+        } // cov:excl-line 
     }
 
     pub fn verify_demultiplex_unique(&mut self) {

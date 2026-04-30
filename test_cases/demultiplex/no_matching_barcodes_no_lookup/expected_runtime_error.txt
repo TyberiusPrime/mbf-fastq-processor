@@ -1,0 +1,4 @@
+Error finalizing report: Demultiplex step for label 'an12' did not observe any matching barcodes.
+Please check that the barcodes section matches the data,
+or that the correct tag label is used.
+You might need to set tag_contains_barcode=true to trigger the lookup barcode->sequence.

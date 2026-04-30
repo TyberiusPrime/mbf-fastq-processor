@@ -1,0 +1,12 @@
+ReadName	barcode_extracted	corrected
+XCGA664392.1|barcode_extracted=CGA	CGA	CGA
+XCGA664392.1|barcode_extracted=CGA	CGA	CGA
+XCGA664392.1|barcode_extracted=CGA	CGA	CGA
+XCGT664392.2|barcode_extracted=CGT	CGT	CGA
+XCCC664392.3|barcode_extracted=CCC	CCC	CGC
+XAGT664392.4|barcode_extracted=AGT	AGT	AGT
+XCGT664392.5|barcode_extracted=CGT	CGT	CGA
+XACT664392.6|barcode_extracted=ACT	ACT	AGT
+XACC664392.6|barcode_extracted=ACC	ACC	
+XERR664392.7|barcode_extracted=ERR	ERR	
+ERR664392.8|barcode_extracted=		

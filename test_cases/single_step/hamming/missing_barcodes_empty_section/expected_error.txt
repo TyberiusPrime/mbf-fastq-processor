@@ -1,0 +1,45 @@
+Error Details ==
+Error 1/2
+   ╭─config.toml
+   ┆
+27 │ [[step]]
+28 │     action = 'HammingCorrect'
+   ┆              ────────┬───────
+   ┆                      │
+   ┆                      ╰──────── In this step
+   ┆
+29 │ 	in_label = 'barcode_extracted'
+30 │ 	out_label = 'corrected'
+31 │ 	on_no_match = 'remove'
+32 │     on_tie = 'fail'
+33 │     max_hamming_distance=1
+   ┆                           ┬
+   ┆                           │
+   ┆                           ╰─ Missing required key: 'barcodes'.
+───╯
+Hint: See https://doc_url.example/version-stripped-from-test/docs/redirects/HammingCorrect
+      Or run: `fastqrab template HammingCorrect` for more information.
+
+Error 2/2
+   ╭─config.toml
+   ┆
+27 │ [[step]]
+28 │     action = 'HammingCorrect'
+   ┆              ────────┬───────
+   ┆                      │
+   ┆                      ╰──────── In this step
+   ┆
+29 │ 	in_label = 'barcode_extracted'
+30 │ 	out_label = 'corrected'
+31 │ 	on_no_match = 'remove'
+32 │     on_tie = 'fail'
+33 │     max_hamming_distance=1
+   ┆                           ┬
+   ┆                           │
+   ┆                           ╰─ HammingCorrect step requires a barcodes section to be defined in the config.
+───╯
+Hint: See https://doc_url.example/version-stripped-from-test/docs/redirects/barcodes
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/HammingCorrect
+      Or run: `fastqrab template HammingCorrect` for more information.
+
+

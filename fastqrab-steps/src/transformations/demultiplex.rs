@@ -162,13 +162,6 @@ impl TagUser for PartialTaggedVariant<PartialDemultiplex> {
             if let Some(upstream_label_type) = upstream_label_type {
                 match upstream_label_type {
                     TagValueType::Location | TagValueType::String => {
-                        if inner.output_unmatched.as_ref().is_none() {
-                            self.toml_value.state = TomlValueState::new_validation_failed(
-                                "output_unmatched must be *not* set when using boolean values for demultiplex.",
-                            );
-                            self.toml_value.help =
-                                Some("Remove output_unmatched=true (or false)".to_string());
-                        }
                         if let Some(Some(tag_contains_barcode)) =
                             inner.tag_contains_barcode.as_ref()
                         {
@@ -185,9 +178,11 @@ impl TagUser for PartialTaggedVariant<PartialDemultiplex> {
                             inner.lookup_mode = Some(LookupMode::NoLookup);
                         }
                     }
+                    // cov:excl-start
                     TagValueType::Numeric(_) => {
                         //will be complained about because of allowed tag modes below
                     }
+                    // cov:excl-stop
                     TagValueType::Bool => {
                         // if inner.output_unmatched.as_ref().is_some() {
                         //     self.toml_value.state = TomlValueState::new_validation_failed(
@@ -301,7 +296,7 @@ impl Step for Demultiplex {
                             self.any_hit_observed
                                 .store(true, std::sync::atomic::Ordering::Relaxed);
                         }
-                    }
+                    } // cov:excl-line
                 }
             }
         }
@@ -321,8 +316,10 @@ impl Step for Demultiplex {
                     or that the correct tag label is used.",
                 self.in_label
             );
-            if matches!(self.lookup_mode, LookupMode::NoLookup) {
-                msg.push_str("You might need to set tag_contains_barcode=true to trigger the lookup barcode->sequence.");
+            if matches!(self.lookup_mode, LookupMode::NoLookup)
+                && self.tag_contains_barcode.is_none()
+            {
+                msg.push_str("\nYou might need to set tag_contains_barcode=true to trigger the lookup barcode->sequence.");
             }
             bail!(msg);
         }

@@ -472,7 +472,7 @@ impl RunStage0 {
                         // cov:excl-start
                         unreachable!(
                             "So far, only Demultiplex stages returned barcodes. If this has changed, you need to check and adjust here"
-                        ); 
+                        );
                         // cov:excl-stop
                     };
                     demultiplex_step_infos.push(DemultiplexStepInfo {

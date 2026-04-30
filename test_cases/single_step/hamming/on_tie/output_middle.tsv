@@ -1,0 +1,6 @@
+ReadName	barcode_extracted	corrected_on_tie_empty	corrected_on_tie_first	corrected_on_tie_first_strict	corrected_on_tie_first_strict_split	corrected_on_tie_keep	corrected_on_tie_remove
+ERR664392.1|barcode_extracted=CTCC	CTCC		CTCA		CTCA	CTCC	
+ERR664392.2|barcode_extracted=GGCG	GGCG		GGCA		GGCA	GGCG	
+ERR664392.4|barcode_extracted=GGAA	GGAA	GGCA	GGCA	GGCA	GGCA	GGCA	GGCA
+ERR664392.5|barcode_extracted=TTCA	TTCA	CTCA	CTCA	CTCA	CTCA	CTCA	CTCA
+ERR664392.9|barcode_extracted=CTGG	CTGG	CTCG	CTCG	CTCG	CTCG	CTCG	CTCG

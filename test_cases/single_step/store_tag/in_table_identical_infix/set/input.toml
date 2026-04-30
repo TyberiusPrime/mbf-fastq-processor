@@ -1,23 +1,19 @@
 [input]
     read1 = 'input_read1.fq'
 
-[[step]]
-    action = 'Head'
-    n = 4
 
 [[step]]
-	action = "CalcLength"
-	out_label="len"
-
-[[step]]
-    action = 'StoreTagsInTable'
-    infix = 'tags'
+    action = 'CalcLength'
+    segment = 'read1'
+    out_label = 'length'
 
 [[step]]
     action = 'StoreTagsInTable'
-    infix = 'tags'
+    infix = 'table'
 
+[[step]]
+    action = 'StoreTagsInTable'
+    infix = 'table'
 
 [output]
     prefix = 'output'
-    format = 'None'

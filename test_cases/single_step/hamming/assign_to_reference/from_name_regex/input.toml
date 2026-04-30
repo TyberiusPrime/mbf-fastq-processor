@@ -1,0 +1,32 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[output]
+    prefix = 'output'
+    format = 'none'
+
+[[step]]
+    action = 'ExtractRegex'
+    source = "name:read1"
+    query = "bc:([AGCT]+)"
+    replacement = "$1"
+    out_label = 'query_seq'
+
+[[step]]
+    action = 'HammingCorrect'
+    output = 'label'
+    on_tie = 'fail'
+    on_no_match = 'empty'
+    in_label = 'query_seq'
+    out_label = 'ref_name'
+    barcodes = 'ref_barcodes'
+    max_hamming_distance = 0
+
+[barcodes.ref_barcodes]
+    from_file = {
+	    filename = 'input_reference.fa',
+	    read_comment_character = ' '
+  }
+
+[[step]]
+    action = 'StoreTagsInTable'

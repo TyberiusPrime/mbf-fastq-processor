@@ -1,0 +1,111 @@
+[input]
+    read1 = 'input_read1.fq.gz'
+
+[output]
+    prefix = 'output'
+    format = 'fastq'
+	compression = 'raw'
+
+# First test without shared barcodes - use inline for HammingCorrect
+[[step]]
+    action = 'Head'
+    n = 10
+
+[[step]]
+    action = 'ExtractRegion'
+    source = "read1"
+	anchor = "start"
+    start = 0
+    length = 4
+    out_label = 'barcode_extracted'
+
+[[step]]
+	action = "StoreTagInComment"
+	in_label = "barcode_extracted"
+
+# This should work as basic functionality test
+[[step]]
+    action = 'HammingCorrect'
+	in_label = 'barcode_extracted'
+	out_label = 'corrected_on_tie_remove'
+	barcodes = 'barcodes'
+	on_no_match = 'remove'
+    on_tie = 'remove'
+	max_hamming_distance=1
+
+[[step]]
+    action = 'HammingCorrect'
+	in_label = 'barcode_extracted'
+	out_label = 'corrected_on_tie_keep'
+	barcodes = 'barcodes'
+	on_no_match = 'remove'
+    on_tie = 'keep'
+	max_hamming_distance=1
+
+[[step]]
+    action = 'HammingCorrect'
+	in_label = 'barcode_extracted'
+	out_label = 'corrected_on_tie_empty'
+	barcodes = 'barcodes'
+	on_no_match = 'remove'
+    on_tie = 'empty'
+	max_hamming_distance=1
+
+[[step]]
+    action = 'HammingCorrect'
+	in_label = 'barcode_extracted'
+	out_label = 'corrected_on_tie_first'
+	barcodes = 'barcodes'
+	on_no_match = 'remove'
+    on_tie = 'first'
+	max_hamming_distance=1
+
+[[step]]
+    action = 'HammingCorrect'
+	in_label = 'barcode_extracted'
+	out_label = 'corrected_on_tie_first_strict_split'
+	barcodes = 'barcodes'
+	on_no_match = 'remove'
+    on_tie = 'first_strict'
+	max_hamming_distance=1
+    name_split_char = '-'
+
+[[step]]
+    action = 'HammingCorrect'
+	in_label = 'barcode_extracted'
+	out_label = 'corrected_on_tie_first_strict'
+	barcodes = 'barcodes'
+	on_no_match = 'remove'
+    on_tie = 'first_strict'
+	max_hamming_distance=1
+
+[[step]]
+	action = "StoreTagsInTable"
+    infix = "pre"
+
+[[step]] # a no op on the ties, a deletion on the not matched
+	action = 'FilterByTag'
+	in_label = 'corrected_on_tie_empty'
+	keep_or_remove = 'keep'
+
+[[step]]
+	action = "StoreTagsInTable"
+    infix = "middle"
+
+
+[[step]]
+	action = 'FilterByTag'
+	in_label = 'corrected_on_tie_remove'
+	keep_or_remove = 'keep'
+
+[[step]]
+	action = "StoreTagsInTable"
+    infix = "post"
+
+
+
+[barcodes.barcodes]
+    CTCA = 'label-1'
+    CTCG = 'label-2'
+    GGCA = 'label-3'
+    GGCC = 'label-4'

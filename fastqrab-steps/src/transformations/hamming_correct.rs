@@ -108,9 +108,9 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
                         self.resonator = Some(Arc::new(init_hamming_resonator(
                             seq_to_name,
                             *max_hamming_distance,
-                        )?));
+                        )?)); // cov:excl-line // we check length before, so this shouldn't fail.
                         self.seq_to_name = Some(seq_to_name.clone());
-                    }
+                    } //cov:excl-line
                     // otherwise the barcode section wasn't ok and we'll never
                     // be turned into a concrete HammingCorrect.
                 }
@@ -127,7 +127,7 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
                 }
             }
         } else {
-            let barcodes_empty = if let Some(Some(barcode_data)) = parent.barcodes.as_ref() {
+            let barcodes_empty = if let Some(Some(barcode_data)) = parent.barcodes.value.as_ref() {
                 barcode_data.keys.is_empty()
             } else {
                 matches!(parent.barcodes.as_ref(), Some(None))
@@ -186,7 +186,7 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
                     Some(format!(
                         "Using on_tie=ByMajority must first collect enough data. \n\
                     It is configured to require {reads_wanted} molecules.\n\
-                    Your options.blocks_in_flight * options.reads_per_block only yield {reads_available} molecules\n\
+                    Your options.blocks_in_flight * options.reads_per_block only yield {reads_available} molecules.\n\
                     Increase either one.\n\
                     Having a total number of reads below {reads_wanted} is not a problem,\n\
                     ByMajority will simply use all reads.",
@@ -368,8 +368,8 @@ impl Step for HammingCorrect {
                     let _guard = cv
                 .wait_while(
                     guard.lock().map_err(|err| {
-                        anyhow!("Mutex poisoned while waiting for majority data to be ready: {err}")
-                    })?,
+                        anyhow!("Mutex poisoned while waiting for majority data to be ready: {err}") // cov:excl-line
+                    })?, // cov:excl-line
                     |counting_done| !*counting_done,
                 )
                 .expect("mutex inside condvar poisoned");
@@ -398,7 +398,7 @@ impl Step for HammingCorrect {
                 }
                 TagValue::String(bstring) => Some(self.match_sequence(bstring.as_ref())?),
                 TagValue::Numeric(_) | TagValue::Bool(_) => {
-                    unreachable!("Validation was meant to prevent this situation. Bug?")
+                    unreachable!("Validation was meant to prevent this situation. Bug?") // cov:excl-line
                 }
             };
 
@@ -457,7 +457,7 @@ impl Step for HammingCorrect {
                                     let query_seq = match input_tag {
                                         TagValue::Location(hit) => hit.joined_sequence(None),
                                         TagValue::String(seq) => seq.to_vec(),
-                                        _ => unreachable!()
+                                        _ => unreachable!() // cov:excl-line
                                     };
                                     bail!(
                                     "HammingCorrect on in_label={} \n\

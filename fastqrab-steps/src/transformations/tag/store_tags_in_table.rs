@@ -14,7 +14,7 @@ type InLabels = Vec<TagLabel>;
 #[derive(Debug)]
 pub struct StoreTagsInTable {
     #[tpd(default)]
-    infix: String,
+    pub infix: String, // pub for verification inspection
     #[tpd(default)]
     compression: CompressionFormat,
 
@@ -37,6 +37,8 @@ pub struct StoreTagsInTable {
     #[schemars(skip)]
     final_in_labels: InLabels,
 }
+
+impl PartialStoreTagsInTable {}
 
 impl VerifyIn<PartialConfig> for PartialStoreTagsInTable {
     fn verify(

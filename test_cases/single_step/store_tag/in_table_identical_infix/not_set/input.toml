@@ -1,0 +1,17 @@
+[input]
+    read1 = 'input_read1.fq'
+
+
+[[step]]
+    action = 'CalcLength'
+    segment = 'read1'
+    out_label = 'length'
+
+[[step]]
+    action = 'StoreTagsInTable'
+
+[[step]]
+    action = 'StoreTagsInTable'
+
+[output]
+    prefix = 'output'

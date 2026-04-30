@@ -1,0 +1,23 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'Head'
+    n = 4
+
+
+[[step]]
+  action = 'ExtractRegion'
+  out_label = 'tag'
+  start = 0
+  len = 2
+  anchor = 'left'
+  source = 'read1'
+
+[[step]]
+    action = 'StoreTagsInTable'
+    infix = 'tags'
+
+[output]
+    prefix = 'output'
+    format = 'None'

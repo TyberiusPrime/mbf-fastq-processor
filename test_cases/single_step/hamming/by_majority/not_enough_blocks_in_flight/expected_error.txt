@@ -1,0 +1,32 @@
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+22 │ [[step]]
+23 │   action = 'HammingCorrect'
+   ┆            ────────┬───────
+   ┆                    │
+   ┆                    ╰──────── In this step
+   ┆
+24 │   in_label = 'bc_raw'
+25 │   out_label = 'bc_corr'
+26 │   max_hamming_distance=1
+27 │   on_tie = 'ByMajority'
+28 │   on_no_match = 'Remove'
+29 │   barcodes = 'barcodes'
+30 │   by_majority_threshold = 0.47
+31 │   by_majority_min_molecules_to_start = 8
+   ┆                                         ┬
+   ┆                                         │
+   ┆                                         ╰─ Not enough reads 'in flight' for ByMajority
+───╯
+Hint: Using on_tie=ByMajority must first collect enough data. 
+      It is configured to require 8 molecules.
+      Your options.blocks_in_flight * options.reads_per_block only yield 2 molecules.
+      Increase either one.
+      Having a total number of reads below 8 is not a problem,
+      ByMajority will simply use all reads.
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/HammingCorrect
+      Or run: `fastqrab template HammingCorrect` for more information.
+
+

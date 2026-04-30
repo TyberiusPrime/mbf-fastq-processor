@@ -1,0 +1,29 @@
+[input]
+    read1 = 'input_read1.fq.gz'
+
+[output]
+    prefix = 'output'
+
+[[step]]
+    action = 'ExtractRegion'
+	source = "name:read1"
+    anchor = "End"
+    start = -1
+    length = 1 # and just like that, no barcode *can* match.
+    out_label = 'an12'
+
+[[step]]
+	action = "StoreTagInComment"
+	in_label = 'an12'
+
+[[step]]
+    action = 'Demultiplex'
+    in_label = 'an12'
+	barcodes='B123'
+
+    output_unmatched = true
+
+[barcodes.B123]
+    CT = 'ct'
+    TT = 't'
+
