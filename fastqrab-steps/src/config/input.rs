@@ -427,7 +427,6 @@ impl PartialInput {
     #[must_use]
     /// # Panics
     /// if config parsing did not set structured input
-    #[must_use]
     pub fn segment_count(&self) -> usize {
         match self
             .structured

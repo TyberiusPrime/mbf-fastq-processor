@@ -141,7 +141,7 @@ impl WorkpoolCoordinator {
                                 self
                                 .error_collector
                                 .lock()
-                                .unwrap_or_else(|p| p.into_inner())
+                                .unwrap_or_else(std::sync::PoisonError::into_inner)
                                 .push(
                                     "No incoming blocks and no completed work; terminating coordinator."
                                         .to_string(),
@@ -161,7 +161,7 @@ impl WorkpoolCoordinator {
                                 self
                                     .error_collector
                                     .lock()
-                                    .unwrap_or_else(|p| p.into_inner())
+                                    .unwrap_or_else(std::sync::PoisonError::into_inner)
                                     .push(
                                         "Output pipe closed unexpectedly; terminating coordinator."
                                             .to_string(),
@@ -218,7 +218,7 @@ impl WorkpoolCoordinator {
                                 self
                                     .error_collector
                                     .lock()
-                                    .unwrap_or_else(|p| p.into_inner())
+                                    .unwrap_or_else(std::sync::PoisonError::into_inner)
                                     .push(
                                         "Output pipe closed unexpectedly; terminating coordinator."
                                             .to_string(),
@@ -342,7 +342,7 @@ impl WorkpoolCoordinator {
             Ok(())
         } else {
             // cov:excl-start
-            bail!("Failed to send work item for block {}", block_no);
+            bail!("Failed to send work item for block {block_no}");
             // cov:excl-stop
         }
     }
@@ -365,7 +365,7 @@ impl WorkpoolCoordinator {
             // Handle error - for now, continue pipeline with empty block
             self.error_collector
                 .lock()
-                .unwrap_or_else(|p| p.into_inner())
+                .unwrap_or_else(std::sync::PoisonError::into_inner)
                 .push(format!("Error in stage {stage_index}: {error:?}"));
             bail!("error detected");
         }
@@ -440,7 +440,7 @@ impl WorkpoolCoordinator {
             .is_err()
         {
             //cov:excl-start
-            bail!("Failed to send completed block {} to output", block_no);
+            bail!("Failed to send completed block {block_no} to output");
             // cov:excl-stop
         }
         self.queue_stalled()
@@ -562,6 +562,7 @@ fn process_work_item(
                         }
                     }
                 };
+                #[expect(clippy::cast_precision_loss, reason="Unlikely to exceed f64 precise regions")]
                 let read_lengths: Vec<TagValue> = read_lengths
                     .into_iter()
                     .map(|x| TagValue::Numeric(x as f64))
@@ -570,6 +571,7 @@ fn process_work_item(
             }
             TagLabel::Normal(_) => {}
             TagLabel::TagLength(tag_name, _) => {
+                #[expect(clippy::cast_precision_loss, reason="Unlikely to exceed f64 precise regions")]
                 let tag_lengths: Vec<TagValue> = work_item
                     .block
                     .tags
@@ -613,6 +615,7 @@ fn process_work_item(
                 let start = work_item.block.segments[0].first_read_sequential_number;
                 let end = work_item.block.segments[0].first_read_sequential_number
                     + work_item.block.segments[0].entries.len();
+                #[expect(clippy::cast_precision_loss, reason="Unlikely to exceed f64 precise regions")]
                 let read_nos: Vec<TagValue> =
                     (start..end).map(|x| TagValue::Numeric(x as f64)).collect();
                 work_item.block.tags.insert(tag.clone(), read_nos);

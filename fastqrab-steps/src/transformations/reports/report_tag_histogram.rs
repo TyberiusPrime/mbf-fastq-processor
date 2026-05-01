@@ -91,7 +91,7 @@ impl From<HistogramData> for serde_json::Value {
             //json only does string keys
             HistogramData::Integer(map) => map.iter().map(|(k, v)| (k.to_string(), *v)).collect(),
             HistogramData::ZeroToOne(map) => {
-                map.iter().map(|(k, v)| (format!("{:.2}", k), *v)).collect()
+                map.iter().map(|(k, v)| (format!("{k:.2}"), *v)).collect()
             }
 
             HistogramData::Bool(false_count, true_count) => {

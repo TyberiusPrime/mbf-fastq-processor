@@ -1,6 +1,7 @@
-#![allow(clippy::unwrap_used)]
+#![expect(clippy::unwrap_used, reason="it's tests")]
 use bstr::ByteSlice;
 use std::path::{Path, PathBuf};
+use std::num::NonZero;
 
 use fastqrab_io::io::{FastQBlock, parsers::ThreadCount};
 
@@ -24,14 +25,13 @@ fn test_bufsize_variations(input_fastq_filename: &str, bufsize_range: &[usize]) 
     let mut last: Option<Vec<FastQBlock>> = None;
 
     for bufsize in bufsize_range {
-        dbg!(bufsize);
         let file = ex::fs::File::open(filename).unwrap();
 
         let input_file =
             fastqrab_io::io::input::InputFile::Fastq(file, Some(PathBuf::from(filename)));
         let mut p = input_file
             .get_parser(
-                10000,
+                NonZero::new(10_000).expect("can't happen"),
                 *bufsize,
                 ThreadCount(std::num::NonZero::new(1usize).expect("1 is not zero")),
                 &fastqrab_io::io::input::InputOptions {

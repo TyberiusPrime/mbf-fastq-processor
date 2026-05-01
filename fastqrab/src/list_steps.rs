@@ -4,6 +4,9 @@ use std::fmt::Write;
 use crate::transformations::Transformation;
 
 /// List all available transformation steps with their descriptions
+///
+/// # Panics
+/// If Schema fails?
 #[must_use]
 pub fn list_steps() -> Vec<(String, String)> {
     let schema = schema_for!(Transformation);

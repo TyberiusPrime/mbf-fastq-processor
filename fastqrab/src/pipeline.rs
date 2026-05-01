@@ -3,7 +3,13 @@ use crossbeam::channel::{bounded, unbounded};
 use fastqrab_steps::no_barcode_infix;
 use indexmap::IndexMap;
 use std::{
-    cell::OnceCell, collections::BTreeMap, num::NonZero, panic, path::{Path, PathBuf}, sync::{Arc, Mutex}, thread
+    cell::OnceCell,
+    collections::BTreeMap,
+    num::NonZero,
+    panic,
+    path::{Path, PathBuf},
+    sync::{Arc, Mutex},
+    thread,
 };
 
 use crate::{
@@ -19,7 +25,7 @@ use fastqrab_io::io::{
     parsers::{ChainedParser, ThreadCount},
 };
 
-#[expect(clippy::collapsible_if, reason="obscures")]
+#[expect(clippy::collapsible_if, reason = "obscures")]
 fn parse_and_send(
     readers: Vec<io::InputFile>,
     raw_tx: &crossbeam::channel::Sender<(io::FastQBlock, Option<usize>)>,
@@ -55,7 +61,7 @@ fn parse_and_send(
 fn parse_interleaved_and_send(
     readers: Vec<io::InputFile>,
     combiner_output_tx: &crossbeam::channel::Sender<(io::FastQBlocksCombined, Option<usize>)>,
-    segment_count: usize,
+    segment_count: NonZero<usize>,
     buffer_size: usize,
     input_thread_count: ThreadCount,
     block_size: NonZero<usize>,
@@ -113,10 +119,10 @@ fn parse_interleaved_and_send(
 
 //#[allow(clippy::needless_pass_by_value)]
 fn run_combiner_thread(
-    raw_rx_readers: Vec<crossbeam::channel::Receiver<(io::FastQBlock, Option<usize>)>>,
-    combiner_output_tx: crossbeam::channel::Sender<(io::FastQBlocksCombined, Option<usize>)>,
+    raw_rx_readers: &Vec<crossbeam::channel::Receiver<(io::FastQBlock, Option<usize>)>>,
+    combiner_output_tx: &crossbeam::channel::Sender<(io::FastQBlocksCombined, Option<usize>)>,
     largest_segment_idx: usize,
-    error_collector: Arc<Mutex<Vec<String>>>,
+    error_collector: &Arc<Mutex<Vec<String>>>,
 ) {
     //I need to receive the blocks (from all segment input threads)
     //and then, match them up into something that's the same length!
@@ -124,7 +130,7 @@ fn run_combiner_thread(
     let expected_read_count = OnceCell::new();
     loop {
         let mut blocks = Vec::new();
-        for receiver in &raw_rx_readers {
+        for receiver in raw_rx_readers {
             //since we read the channels in order,
             //the resulting blocks will also be in order.
             if let Ok((block, block_expected_read_count)) = receiver.recv() {
@@ -143,7 +149,7 @@ fn run_combiner_thread(
                 for other_receiver in &raw_rx_readers[1..] {
                     if let Ok((_block, _block_expected_read_count)) = other_receiver.recv() {
                         error_collector.lock()
-                            .unwrap_or_else(|p| p.into_inner())
+                            .unwrap_or_else(std::sync::PoisonError::into_inner)
                             .push("Unequal number of reads in the segment inputs (first < later). Check your fastqs for identical read counts".to_string());
                     }
                 }
@@ -168,7 +174,7 @@ fn run_combiner_thread(
                 return;
             } else {
                 error_collector.lock()
-                    .unwrap_or_else(|p| p.into_inner())
+                    .unwrap_or_else(std::sync::PoisonError::into_inner)
                     .push("Unequal number of reads in the segment inputs (first > later). Check your fastqs for identical read counts".to_string());
 
                 return;
@@ -178,7 +184,7 @@ fn run_combiner_thread(
         let first_len = blocks[0].len();
         if !blocks.iter().all(|b| b.len() == first_len) {
             error_collector.lock()
-                .unwrap_or_else(|p| p.into_inner())
+                .unwrap_or_else(std::sync::PoisonError::into_inner)
                 .push("Unequal block sizes in input segments. This suggests your fastqs have different numbers of reads.".to_string());
             return;
         }
@@ -199,8 +205,8 @@ fn run_combiner_thread(
 
 //#[expect(clippy::needless_pass_by_value)]
 fn run_benchmark_combiner_thread(
-    first_block: io::FastQBlocksCombined,
-    combiner_output_tx: crossbeam::channel::Sender<(io::FastQBlocksCombined, Option<usize>)>,
+    first_block: &io::FastQBlocksCombined,
+    combiner_output_tx: &crossbeam::channel::Sender<(io::FastQBlocksCombined, Option<usize>)>,
     molecule_count: usize,
 ) {
     let mut block_no = 1;
@@ -267,8 +273,8 @@ fn run_benchmark_combiner_thread(
 //#[allow(clippy::needless_pass_by_value)]
 fn run_benchmark_interleaved_thread(
     first_block: io::FastQBlock,
-    combiner_output_tx: crossbeam::channel::Sender<(io::FastQBlocksCombined, Option<usize>)>,
-    segment_count: usize,
+    combiner_output_tx: &crossbeam::channel::Sender<(io::FastQBlocksCombined, Option<usize>)>,
+    segment_count: NonZero<usize>,
     molecule_count: usize,
 ) {
     let mut block_no = 1;
@@ -325,6 +331,10 @@ pub struct RunStage0 {
     report_json: bool,
 }
 
+#[expect(
+    clippy::cast_possible_truncation,
+    reason = "Can not be more thon usize::BITS, so 32, no truncation possible"
+)]
 fn bits_needed_to_represent(count: usize) -> u16 {
     if count <= 1 {
         1u16
@@ -341,7 +351,7 @@ impl RunStage0 {
         }
     }
 
-    #[expect(clippy::too_many_lines, reason="needed")]
+    #[expect(clippy::too_many_lines, reason = "needed")]
     pub fn configure_demultiplex_and_init_stages(
         self,
         parsed: &mut CheckedConfig,
@@ -556,7 +566,11 @@ pub struct RunStage1 {
 }
 
 impl RunStage1 {
-    #[expect(clippy::too_many_lines, clippy::similar_names, reason="needed. rx/tx is clear enough")]
+    #[expect(
+        clippy::too_many_lines,
+        clippy::similar_names,
+        reason = "needed. rx/tx is clear enough"
+    )]
     pub fn create_input_threads(self, parsed: &CheckedConfig) -> Result<RunStage2> {
         let orig_hook = panic::take_hook();
         panic::set_hook(Box::new(move |panic_info| {
@@ -577,7 +591,8 @@ impl RunStage1 {
         let mut input_files =
             crate::io::open_input_files(input_config).context("Error opening input files")?;
 
-        let block_size = NonZero::new(parsed.options.block_size).expect("block_size must have been validate > 0");
+        let block_size = NonZero::new(parsed.options.block_size)
+            .expect("block_size must have been validate > 0");
         let buffer_size = parsed.options.buffer_size;
         let channel_size = 2;
         let error_collector = Arc::new(Mutex::new(Vec::<String>::new()));
@@ -594,7 +609,8 @@ impl RunStage1 {
 
                 match &parsed.input.structured {
                     StructuredInput::Interleaved { segment_order, .. } => {
-                        let segment_order_len = segment_order.len();
+                        let segment_order_len = NonZero::new(segment_order.len())
+                            .expect("Must have at least one segment");
                         let input_threads = Vec::new();
                         let (combiner_output_tx, combiner_output_rx) =
                             bounded::<(io::FastQBlocksCombined, Option<usize>)>(channel_size);
@@ -626,7 +642,7 @@ impl RunStage1 {
                             .spawn(move || {
                                 run_benchmark_interleaved_thread(
                                     first_block.fastq_block,
-                                    combiner_output_tx,
+                                    &combiner_output_tx,
                                     segment_order_len,
                                     molecule_count,
                                 );
@@ -687,8 +703,8 @@ impl RunStage1 {
                             .name("BenchmarkCombiner".into())
                             .spawn(move || {
                                 run_benchmark_combiner_thread(
-                                    first_combined,
-                                    combiner_output_tx,
+                                    &first_combined,
+                                    &combiner_output_tx,
                                     molecule_count,
                                 );
                             })
@@ -707,7 +723,8 @@ impl RunStage1 {
             match &parsed.input.structured {
                 StructuredInput::Interleaved { segment_order, .. } => {
                     let error_collector = error_collector.clone();
-                    let segment_order_len = segment_order.len();
+                    let segment_order_len =
+                        NonZero::new(segment_order.len()).expect("Must have at least one segment");
                     let input_threads = Vec::new();
                     let (combiner_output_tx, combiner_output_rx) =
                         bounded::<(io::FastQBlocksCombined, Option<usize>)>(channel_size);
@@ -729,7 +746,7 @@ impl RunStage1 {
                             // cov:excl-start
                             error_collector
                                 .lock()
-                                .unwrap_or_else(|p| p.into_inner())
+                                .unwrap_or_else(std::sync::PoisonError::into_inner)
                                 .push(format!("Error in interleaved parsing thread: {e:?}"));
                             // cov:excl-stop
                         }
@@ -768,7 +785,7 @@ impl RunStage1 {
                                 ) {
                                     error_collector
                                     .lock()
-                                    .unwrap_or_else(|p| p.into_inner())
+                                    .unwrap_or_else(std::sync::PoisonError::into_inner)
                                     .push(format!(
                                         "Error in reading thread for segment {segment_name}: {e:?}"
                                     ));
@@ -787,10 +804,10 @@ impl RunStage1 {
                             .name("Combiner".into())
                             .spawn(move || {
                                 run_combiner_thread(
-                                    raw_rx_readers,
-                                    combiner_output_tx,
+                                    &raw_rx_readers,
+                                    &combiner_output_tx,
                                     largest_segment_idx,
-                                    error_collector,
+                                    &error_collector,
                                 );
                             })
                             .expect("Thread spawning failed. OS resource exhaustion?");
@@ -961,7 +978,7 @@ fn collect_thread_failures(
     let mut stage_errors = Vec::new();
     for s in error_collector
         .lock()
-        .unwrap_or_else(|p| p.into_inner())
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
         .drain(..)
     {
         stage_errors.push(s);
@@ -990,7 +1007,7 @@ fn collect_thread_failures(
 }
 
 impl RunStage3 {
-    #[expect(clippy::too_many_lines, reason="needed")]
+    #[expect(clippy::too_many_lines, reason = "needed")]
     pub fn create_output_threads(
         self,
         parsed: &CheckedConfig,
@@ -1061,7 +1078,7 @@ impl RunStage3 {
                         // cov:excl-start
                         error_collector
                             .lock()
-                            .unwrap_or_else(|p| p.into_inner())
+                            .unwrap_or_else(std::sync::PoisonError::into_inner)
                             .push(format!("Error in output thread: {e:?}"));
                         // cov:excl-stop
                         return;
@@ -1093,7 +1110,7 @@ impl RunStage3 {
                                 ) {
                                     error_collector
                                         .lock()
-                                        .unwrap_or_else(|p| p.into_inner())
+                                        .unwrap_or_else(std::sync::PoisonError::into_inner)
                                         .push(format!("Error in output thread: {e:?}"));
                                     return;
                                 }
@@ -1116,7 +1133,7 @@ impl RunStage3 {
                     ); */
 
                     {
-                        let mut counts = reads_per_tag.lock().unwrap_or_else(|p| p.into_inner());
+                        let mut counts = reads_per_tag.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
                         for (tag, fastqs) in &output_files.output_segments {
                             counts.insert(*tag, fastqs.total_fragment_written());
                         }
@@ -1125,7 +1142,7 @@ impl RunStage3 {
                         if let Err(e) = set_of_output_files.1.finish() {
                             error_collector
                                 .lock()
-                                .unwrap_or_else(|p| p.into_inner())
+                                .unwrap_or_else(std::sync::PoisonError::into_inner)
                                 .push(format!("Error finishing output files: {e:?}"));
                             return;
                         }
@@ -1148,7 +1165,7 @@ impl RunStage3 {
                                 Err(e) => {
                                     error_collector
                                         .lock()
-                                        .unwrap_or_else(|p| p.into_inner())
+                                        .unwrap_or_else(std::sync::PoisonError::into_inner)
                                         .push(format!("Error writing json report: {e:?}"));
                                     return;
                                     // cov:excl-stop
@@ -1169,7 +1186,7 @@ impl RunStage3 {
                     {
                         error_collector
                             .lock()
-                            .unwrap_or_else(|p| p.into_inner())
+                            .unwrap_or_else(std::sync::PoisonError::into_inner)
                             .push(format!("Error writing html report: {e:?}"));
                     }
                     // cov:excl-stop

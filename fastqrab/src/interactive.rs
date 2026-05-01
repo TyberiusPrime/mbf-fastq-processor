@@ -322,18 +322,33 @@ fn inject_interactive_steps(doc: &mut DocumentMut, config: &InteractiveConfig) {
     // Create `Head` step table
     let mut head_table = Table::new();
     head_table.insert("action", value("Head"));
-    head_table.insert("n", value(config.head_count as i64));
+    head_table.insert(
+        "n",
+        value(i64::try_from(config.head_count).expect("Head count exceeded JSON number range i64")),
+    );
 
     // Create `FilterReservoirSample` step table
     let mut sample_table = Table::new();
     sample_table.insert("action", value("FilterReservoirSample"));
-    sample_table.insert("n", value(config.sample_count as i64));
+    sample_table.insert(
+        "n",
+        value(
+            i64::try_from(config.sample_count)
+                .expect("sample count exceeded JSON number range i64"),
+        ),
+    );
     sample_table.insert("seed", value(42_i64));
 
     // Create Inspect step table
     let mut inspect_table = Table::new();
     inspect_table.insert("action", value("Inspect"));
-    inspect_table.insert("n", value(config.inspect_count as i64));
+    inspect_table.insert(
+        "n",
+        value(
+            i64::try_from(config.inspect_count)
+                .expect("inspect count exceeded JSON number range i64"),
+        ),
+    );
     inspect_table.insert("infix", value("inspect"));
     inspect_table.insert("segment", value("All"));
 
@@ -377,7 +392,7 @@ fn inject_interactive_steps(doc: &mut DocumentMut, config: &InteractiveConfig) {
 }
 
 /// Display successful processing results
-#[expect(clippy::string_slice, reason="just returned from find")]
+#[expect(clippy::string_slice, reason = "just returned from find")]
 fn display_success(output: &str) {
     println!("{}", "─".repeat(80));
     println!("Processing completed successfully [{}]", get_local_time());

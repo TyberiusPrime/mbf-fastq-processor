@@ -8,6 +8,8 @@ use crate::config::Config;
 use crate::output::OutputRunMarker;
 use crate::pipeline;
 
+/// # Panics
+/// When there are bugs in verification
 pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> Result<()> {
     let output_directory = output_directory.to_owned();
     let raw_config = crate::cli::read_config_raw(toml_file)?;
@@ -98,7 +100,7 @@ fn inner_run(
             }
         }
         Some(MergeConfig {
-            prefix: output_config.prefix.to_string(),
+            prefix: output_config.prefix.clone(),
             ix_separator: sep.to_string(),
             reference_label: reference_tag.clone(),
             index_merged: bam_output_config.index_merged,

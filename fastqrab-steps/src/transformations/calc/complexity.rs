@@ -56,6 +56,7 @@ impl Step for Complexity {
         _input_info: &InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
+        #[expect(clippy::cast_precision_loss, reason="Read lengths unlikely to exceed f64 precise regions")]
         extract_numeric_tags_plus_all(
             self.segment,
             &self.out_label,

@@ -71,6 +71,7 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagsInTable> {
         segment_order: &[String],
     ) -> Option<TagUsageInfo<'_>> {
         if let Some(inner) = self.toml_value.value.as_mut() {
+            #[expect(clippy::single_match_else, reason="clearer")]
             match inner.in_labels.value.as_mut() {
                 Some(Some(in_labels)) => {
                     //they're not ok yet...
@@ -113,7 +114,7 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagsInTable> {
                 .final_in_labels
                 .as_ref()
                 .expect("set just above")
-                .to_vec();
+                .clone();
 
             let toml_source = Rc::new(RefCell::new((
                 &mut self.toml_value.state,

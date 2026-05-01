@@ -219,7 +219,7 @@ impl Step for MergeReads {
                 };
 
             // Try to find overlap and merge
-            let merge_result = try_merge_reads(
+            let merge_result = merge_reads(
                 read1_seq,
                 read1_qual,
                 &read2_seq_processed,
@@ -228,8 +228,7 @@ impl Step for MergeReads {
                 min_overlap,
                 max_mismatch_rate,
                 max_mismatch_count,
-            )
-            .expect("Merge failed");
+            );
 
             // Apply the merge result and track if merged
             let was_merged = match merge_result {
@@ -304,7 +303,7 @@ enum MergeResult {
 /// Try to merge two reads by finding their overlap
 /// seq2 should already be processed (reverse complemented if needed)
 #[expect(clippy::too_many_arguments, reason="we need them")]
-fn try_merge_reads(
+fn merge_reads(
     seq1: &[u8],
     qual1: &[u8],
     seq2: &[u8],
@@ -313,7 +312,7 @@ fn try_merge_reads(
     min_overlap: usize,
     max_mismatch_rate: f64,
     max_mismatch_count: usize,
-) -> Result<MergeResult> {
+) -> MergeResult {
     match algorithm {
         Algorithm::Fastp => {
             let ov = find_best_overlap_fastp(
@@ -326,13 +325,13 @@ fn try_merge_reads(
             if let Some((offset, overlap_len)) = ov {
                 // Merge the reads
                 let (merged_seq, merged_qual) =
-                    merge_at_offset_fastp(seq1, qual1, seq2, qual2, offset, overlap_len)?;
-                Ok(MergeResult::Merged {
+                    merge_at_offset_fastp(seq1, qual1, seq2, qual2, offset, overlap_len);
+                MergeResult::Merged {
                     merged_seq,
                     merged_qual,
-                })
+                }
             } else {
-                Ok(MergeResult::NoOverlap)
+                MergeResult::NoOverlap
             }
         }
     }
@@ -453,7 +452,7 @@ fn merge_at_offset_fastp(
     qual2: &[u8],
     offset: isize,
     overlap_len: usize,
-) -> Result<(Vec<u8>, Vec<u8>)> {
+) ->(Vec<u8>, Vec<u8>) {
     #[expect(clippy::too_many_arguments, reason="we need them")]
     fn append_overlap(
         seq1: &[u8],
@@ -542,7 +541,7 @@ fn merge_at_offset_fastp(
         );
     }
 
-    Ok((merged_seq, merged_qual))
+    (merged_seq, merged_qual)
 }
 
 #[cfg(test)]
@@ -576,8 +575,7 @@ mod tests {
             b"./0./0./0???@@@>>>",
             0,
             18,
-        )
-        .expect("merge failed");
+        );
         assert_eq!(&r.0, b"AAAAAAAAATTATTAAAA");
         //assert_eq!(&r.1, b"cccc");
     }

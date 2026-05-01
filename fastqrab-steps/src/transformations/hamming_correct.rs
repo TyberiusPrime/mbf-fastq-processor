@@ -36,7 +36,7 @@ pub struct HammingCorrect {
     pub by_majority_min_molecules_to_start: usize,
     pub by_majority_threshold: f64,
 
-    /// names are considered identical if they match up to the first name_split_character
+    /// names are considered identical if they match up to the first `name_split_character`
     #[tpd(with = "tpd_adapt_u8_from_byte_or_char", alias = "name_split_char")]
     pub name_split_character: Option<u8>,
 
@@ -99,32 +99,29 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
         if let Some(barcodes_to_use) = self.barcodes.as_ref()
             && let Some(Some(barcodes_data)) = parent.barcodes.as_ref()
         {
-            match barcodes_data.map.get(barcodes_to_use) {
-                Some(barcodes_section) => {
-                    if let Some(barcodes_section) = barcodes_section.as_ref()
-                        && let Some(seq_to_name) = &barcodes_section.seq_to_name
-                        && let Some(max_hamming_distance) = self.max_hamming_distance.as_ref()
-                    {
-                        self.resonator = Some(Arc::new(init_hamming_resonator(
-                            seq_to_name,
-                            *max_hamming_distance,
-                        )?)); // cov:excl-line // we check length before, so this shouldn't fail.
-                        self.seq_to_name = Some(seq_to_name.clone());
-                    } //cov:excl-line
-                    // otherwise the barcode section wasn't ok and we'll never
-                    // be turned into a concrete HammingCorrect.
-                }
-                None => {
-                    self.barcodes.help = Some(offer_alternatives(
-                        barcodes_to_use.as_ref(),
-                        &barcodes_data.map.keys().collect::<Vec<_>>(),
-                    ));
+            if let Some(barcodes_section) = barcodes_data.map.get(barcodes_to_use) {
+                if let Some(barcodes_section) = barcodes_section.as_ref()
+                    && let Some(seq_to_name) = &barcodes_section.seq_to_name
+                    && let Some(max_hamming_distance) = self.max_hamming_distance.as_ref()
+                {
+                    self.resonator = Some(Arc::new(init_hamming_resonator(
+                        seq_to_name,
+                        *max_hamming_distance,
+                    )?)); // cov:excl-line // we check length before, so this shouldn't fail.
+                    self.seq_to_name = Some(seq_to_name.clone());
+                } //cov:excl-line
+            // otherwise the barcode section wasn't ok and we'll never
+            // be turned into a concrete HammingCorrect.
+            } else {
+                self.barcodes.help = Some(offer_alternatives(
+                    barcodes_to_use.as_ref(),
+                    &barcodes_data.map.keys().collect::<Vec<_>>(),
+                ));
 
-                    self.barcodes.state = TomlValueState::ValidationFailed {
-                        message: "Barcodes section not found".to_string(),
-                    };
-                    return Ok(());
-                }
+                self.barcodes.state = TomlValueState::ValidationFailed {
+                    message: "Barcodes section not found".to_string(),
+                };
+                return Ok(());
             }
         } else {
             let barcodes_empty = if let Some(Some(barcode_data)) = parent.barcodes.value.as_ref() {
@@ -163,7 +160,7 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
                 .as_ref()
                 .and_then(|options| options.block_size.as_ref())
                 .copied()
-                .unwrap_or_else(||fastqrab_config::default_block_size().into());
+                .unwrap_or_else(|| fastqrab_config::default_block_size().into());
             let reads_wanted = *self
                 .by_majority_min_molecules_to_start
                 .as_ref()
@@ -258,7 +255,7 @@ enum MatchResult<'a> {
 
 impl HammingCorrect {
     fn match_sequence(&self, sequence: &BStr) -> Result<MatchResult<'_>> {
-        use MatchResult::*;
+        use MatchResult::{NoMatch, OneMatch, Tie};
         let matched = self
             .resonator
             .query(sequence)
@@ -333,7 +330,7 @@ impl HammingCorrect {
         }
     }
 
-    fn output_empty(&self, was_location: bool, output_barcode: bool) -> TagValue {
+    fn output_empty(was_location: bool, output_barcode: bool) -> TagValue {
         if was_location && output_barcode {
             TagValue::Location(Hits(vec![]))
         } else {
@@ -414,7 +411,7 @@ impl Step for HammingCorrect {
                                     TagValue::Missing
                                 }
                                 OnNoMatch::Empty => {
-                                    self.output_empty(was_location, output_barcode)
+                                    Self::output_empty(was_location, output_barcode)
                                 }
                                 OnNoMatch::Keep => {
                                     // Keep original hit unchanged
@@ -438,7 +435,7 @@ impl Step for HammingCorrect {
                             match self.on_tie {
                                 OnTie::Remove => TagValue::Missing,
                                 OnTie::Empty =>  {
-                                    self.output_empty(was_location, output_barcode)
+                                    Self::output_empty(was_location, output_barcode)
                                 }
                                 OnTie::Keep => input_tag.clone(),
                                 OnTie::First =>{
@@ -486,6 +483,7 @@ impl Step for HammingCorrect {
                                         total += count;
                                     }
                                     let best = best.expect("Items can't have been empty");
+                                    #[expect(clippy::cast_precision_loss, reason="If lengths reach f64 imprecison region, precision loss would be acceptable")]
                                     if best.1 as f64 / total as f64 >= self.by_majority_threshold {
                                         self.output(best.0, input_tag, output_barcode)
                                     } else {
@@ -516,7 +514,7 @@ impl Step for HammingCorrect {
                 mj.total_reads_considered.load(Ordering::Acquire),
                 self.reads_in_this_step.load(Ordering::Acquire),
                 "Mismatch between OnTie::ByMajority considered reads and total reads in this step - bug in your count_here decision making"
-            )
+            );
         }
         Ok(None)
     }

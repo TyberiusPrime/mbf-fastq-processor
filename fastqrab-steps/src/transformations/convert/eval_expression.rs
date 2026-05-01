@@ -148,8 +148,7 @@ impl TagUser for PartialTaggedVariant<Box<PartialEvalExpression>> {
                                                 .borrow()
                                                 .1
                                                 .as_ref()
-                                                .map(|x| x.as_str())
-                                                .unwrap_or("")
+                                                .map_or("", String::as_str)
                                         ));
                                     } else {
                                         *toml_source.borrow_mut().1 = Some(help);

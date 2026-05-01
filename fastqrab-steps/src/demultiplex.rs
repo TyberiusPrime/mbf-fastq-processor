@@ -203,6 +203,8 @@ impl OptDemultiplex {
     }
 
 
+    /// # Panics
+    /// when called on a `OptDemultiplex::No` - as the name suggests
     #[must_use]
     pub fn expect(&self, msg: &str) -> &DemultiplexInfo {
         match self {

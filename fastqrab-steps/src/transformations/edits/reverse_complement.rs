@@ -97,7 +97,7 @@ impl Step for ReverseComplement {
                 match segment_index_or_all {
                     SegmentIndexOrAll::All => {
                         for idx in 0..block.segments.len() {
-                            block.filter_tag_locations(SegmentIndex(idx), ftl, condition.as_deref())
+                            block.filter_tag_locations(SegmentIndex(idx), ftl, condition.as_deref());
                         }
                     }
                     SegmentIndexOrAll::Indexed(segment) => block.filter_tag_locations(
@@ -116,7 +116,7 @@ impl Step for ReverseComplement {
                                 for hit_region in &mut hits.0 {
                                     for ii in 0..hit_region.sequence.len() {
                                         hit_region.sequence[ii] =
-                                            reverse_complement_iupac(&[hit_region.sequence[ii]])[0]
+                                            reverse_complement_iupac(&[hit_region.sequence[ii]])[0];
                                     }
                                 }
                             }

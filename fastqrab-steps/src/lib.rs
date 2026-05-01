@@ -2,6 +2,7 @@ pub mod config;
 pub mod demultiplex;
 pub mod transformations;
 
+#[must_use]
 pub fn link_docs(step_name: &str) -> String {
     format!(
         "{}v{}/docs/redirects/{}",
@@ -24,6 +25,7 @@ pub fn join_nonempty<'a>(parts: impl IntoIterator<Item = &'a str>, separator: &s
     result
 }
 
+#[must_use]
 pub fn no_barcode_infix() -> &'static str {
     "nobarcode"
 }

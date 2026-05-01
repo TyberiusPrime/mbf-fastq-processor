@@ -14,9 +14,9 @@ use indexmap::IndexMap;
 use schemars::JsonSchema;
 use std::cell::RefCell;
 use std::collections::BTreeMap;
+use std::fmt::Write;
 use std::path::Path;
 use std::rc::Rc;
-use std::fmt::Write;
 use toml_pretty_deser::{prelude::*, suggest_alternatives};
 
 mod barcodes;
@@ -104,7 +104,10 @@ pub struct Benchmark {
 }
 
 #[derive(Debug, JsonSchema, Default)]
-#[expect(dead_code, reason="we currently only use gzip for multi thread considerations, but set them all for consistency")]
+#[expect(
+    dead_code,
+    reason = "we currently only use gzip for multi thread considerations, but set them all for consistency"
+)]
 struct InputFormatsObserved {
     fastq: bool,
     fasta: bool,
@@ -1073,7 +1076,7 @@ impl PartialConfig {
                                         but it is actually of type '{actual_tag_type}'.",
         );
         if let Some(further_help) = further_help.as_ref() {
-            write!(help_str, "\n{further_help}");
+            let _ = write!(help_str, "\n{further_help}");
         }
 
         *toml_source.borrow_mut().1 = Some(help_str);
@@ -1104,9 +1107,9 @@ impl PartialConfig {
                 //         continue; // skip further processing of this transform if validation failed
                 //     }
                 let Some(tag_info) = trafo.get_tag_usage(&tags_available, segment_order) else {
-                        any_tag_errors = true;
-                        //break;
-                        continue;
+                    any_tag_errors = true;
+                    //break;
+                    continue;
                 };
                 let mut tags_used_here: Vec<TagLabel> = Vec::new();
                 match tag_info.removed_tags {
@@ -1131,10 +1134,7 @@ impl PartialConfig {
                                 ));
                                 toml_source.help = Some(offer_alternatives(
                                     tag_name.as_ref(),
-                                    &tags_available
-                                        .keys()
-                                        .map(AsRef::as_ref)
-                                        .collect::<Vec<_>>(),
+                                    &tags_available.keys().map(AsRef::as_ref).collect::<Vec<_>>(),
                                 ));
                                 continue; //no point on doing anything else with this tag
                             }
@@ -1153,70 +1153,63 @@ impl PartialConfig {
                         let toml_source = &used_tag_info.toml_source;
                         //no need to check if empty, empty will never be present
                         let entry = tags_available.get_mut(tag_name);
-                        match entry {
-                            Some(metadata) => {
-                                metadata.used = true;
-                                if tag_types
-                                    .iter()
-                                    .any(|tag_type| tag_type.compatible(metadata.tag_type))
-                                {
-                                    if !tag_info.must_see_all_tags {
-                                        //otherwise, we already have the tag in the list.
-                                        if tags_used_here.contains(tag_name) {
-                                            // cov:excl-start
-                                            panic!(
-                                                "tag declared twice in used_tags, fix that! {tag_name}"
-                                            );
-                                            // cov:excl-stop
-                                        } else {
-                                            tags_used_here.push(tag_name.clone());
-                                        }
+                        if let Some(metadata) = entry {
+                            metadata.used = true;
+                            if tag_types
+                                .iter()
+                                .any(|tag_type| tag_type.compatible(metadata.tag_type))
+                            {
+                                if !tag_info.must_see_all_tags {
+                                    //otherwise, we already have the tag in the list.
+                                    if tags_used_here.contains(tag_name) {
+                                        // cov:excl-start
+                                        panic!(
+                                            "tag declared twice in used_tags, fix that! {tag_name}"
+                                        );
+                                        // cov:excl-stop
+                                    } else {
+                                        tags_used_here.push(tag_name.clone());
                                     }
-                                } else {
-                                    any_tag_errors = true;
-                                    Self::_set_type_error(
-                                        toml_source,
-                                        &format!("{}", tag_name),
-                                        tag_types,
-                                        &metadata.tag_type,
-                                        used_tag_info.further_help.as_ref(),
-                                    );
                                 }
-                            }
-                            None => {
+                            } else {
                                 any_tag_errors = true;
-                                *toml_source.borrow_mut().0 = TomlValueState::new_validation_failed(
-                                    format!("No such tag: '{tag_name}'"),
+                                Self::_set_type_error(
+                                    toml_source,
+                                    tag_name.as_ref(),
+                                    tag_types,
+                                    &metadata.tag_type,
+                                    used_tag_info.further_help.as_ref(),
                                 );
-                                if all_tags_ever.contains_key(tag_name.as_ref()) {
-                                    *toml_source.borrow_mut().1 = Some(format!(
-                                        "Tag '{tag_name}' was generated by a previous step, but it is not available at this point.\n\
+                            }
+                        } else {
+                            any_tag_errors = true;
+                            *toml_source.borrow_mut().0 = TomlValueState::new_validation_failed(
+                                format!("No such tag: '{tag_name}'"),
+                            );
+                            if all_tags_ever.contains_key(tag_name.as_ref()) {
+                                *toml_source.borrow_mut().1 = Some(format!(
+                                    "Tag '{tag_name}' was generated by a previous step, but it is not available at this point.\n\
                                         This likely means that it was removed (forgotten) by an intermediate step.\n{}",
-                                        offer_alternatives(
-                                            tag_name.as_ref(),
-                                            &tags_available
-                                                .keys()
-                                                .map(|x| x.as_ref())
-                                                .collect::<Vec<_>>()
-                                        )
-                                    ));
-                                } else {
-                                    *toml_source.borrow_mut().1 = Some(offer_alternatives(
+                                    offer_alternatives(
                                         tag_name.as_ref(),
                                         &tags_available
                                             .keys()
-                                            .map(|x| x.as_ref())
-                                            .collect::<Vec<_>>(),
-                                    ));
-                                }
+                                            .map(AsRef::as_ref)
+                                            .collect::<Vec<_>>()
+                                    )
+                                ));
+                            } else {
+                                *toml_source.borrow_mut().1 = Some(offer_alternatives(
+                                    tag_name.as_ref(),
+                                    &tags_available.keys().map(AsRef::as_ref).collect::<Vec<_>>(),
+                                ));
                             }
                         }
                     } else {
                         if let Some(source_tag) = tag_name.source_tag()
                             && let Some(entry) =
                                 //todo get rid of the alloc?
-                                tags_available
-                                    .get_mut(&TagLabel::Normal(source_tag.to_string()))
+                                tags_available.get_mut(&TagLabel::Normal(source_tag.clone()))
                         {
                             entry.used = true;
                             match tag_name {
@@ -1369,33 +1362,30 @@ impl PartialConfig {
                                 TomlValueState::new_validation_failed("No such tag".to_string());
                             toml_tag_label.help = Some(offer_alternatives(
                                 tag_label.as_ref(),
-                                &tags_available
-                                    .keys()
-                                    .map(|x| x.as_ref())
-                                    .collect::<Vec<_>>(),
+                                &tags_available.keys().map(AsRef::as_ref).collect::<Vec<_>>(),
                             ));
                         }
                     }
                     //now verify we're using every bam tag only once, and they're upper case.
                     let mut seen_bam_tags = IndexMap::new();
                     for bam_tag in map_and_keys.map.values_mut() {
-                        if let Some(bam_tag_value) = bam_tag.as_mut() 
+                        if let Some(bam_tag_value) = bam_tag.as_mut()
                             && let Some(other_span) =
                                 seen_bam_tags.insert(bam_tag_value.0, bam_tag.span())
-                            {
-                                bam_tag.state = TomlValueState::Custom {
-                                    spans: vec![
-                                        (bam_tag.span(), "Repeated, 2nd use".to_string()),
-                                        (other_span, "Repeated, 1st use".to_string()),
-                                    ],
-                                };
-                                bam_tag.help = Some(
-                                    "BAM tags must be distinct, \
+                        {
+                            bam_tag.state = TomlValueState::Custom {
+                                spans: vec![
+                                    (bam_tag.span(), "Repeated, 2nd use".to_string()),
+                                    (other_span, "Repeated, 1st use".to_string()),
+                                ],
+                            };
+                            bam_tag.help = Some(
+                                "BAM tags must be distinct, \
                                     can not write two tags into one BAM tag. Rename either one"
-                                        .to_string(),
-                                );
-                            }
-                         // cov:excl-line
+                                    .to_string(),
+                            );
+                        }
+                        // cov:excl-line
                     }
                 } // cov:excl-line
                 if let Some(Some(tag_to_ref)) = bam_opts.tag_to_reference.as_mut()
@@ -1406,10 +1396,7 @@ impl PartialConfig {
                     } else {
                         tag_to_ref.tag.help = Some(offer_alternatives(
                             tag_name.as_ref(),
-                            &tags_available
-                                .keys()
-                                .map(|x| x.as_ref())
-                                .collect::<Vec<_>>(),
+                            &tags_available.keys().map(AsRef::as_ref).collect::<Vec<_>>(),
                         ));
                         tag_to_ref.tag.state =
                             TomlValueState::new_validation_failed("No such tag".to_string());
@@ -1452,52 +1439,54 @@ impl PartialConfig {
         }
     }
 
+    /// # Panics
+    /// If `StoreTagsInTable` didn't set it's `infix`
     pub fn verify_table_infixes_unique(&mut self) {
         if let Some(transformations) = self.transform.value.as_mut() {
             let just_trafos = transformations.iter_mut().filter_map(|t| t.value.as_mut());
 
             let mut seen = IndexMap::new();
             for trafo in just_trafos {
-                if let PartialTransformation::StoreTagsInTable(step_info_toml) = trafo 
-                    && let Some(step_info_toml) = step_info_toml.toml_value.as_mut() {
-                        let infix = step_info_toml.infix.as_ref().expect(
-                            "VerifyIn of StroeTagsInTable must have happend, infix must be a value",
-                        );
-                        if let Some(old_span) =
-                            seen.insert(infix.to_string(), step_info_toml.infix.span().clone())
-                        {
-                            if infix.is_empty() {
-                                step_info_toml.infix.state = TomlValueState::Custom {
-                                    spans: vec![
-                                        (
-                                            step_info_toml.infix.span().clone(),
-                                            "2nd use of empty infix".to_string(),
-                                        ),
-                                        (old_span, "1st use of empty infix".to_string()),
-                                    ],
-                                };
-                                step_info_toml.infix.help = Some(
+                if let PartialTransformation::StoreTagsInTable(step_info_toml) = trafo
+                    && let Some(step_info_toml) = step_info_toml.toml_value.as_mut()
+                {
+                    let infix = step_info_toml.infix.as_ref().expect(
+                        "VerifyIn of StoreTagsInTable must have happend, infix must be a value",
+                    );
+                    if let Some(old_span) =
+                        seen.insert(infix.clone(), step_info_toml.infix.span().clone())
+                    {
+                        if infix.is_empty() {
+                            step_info_toml.infix.state = TomlValueState::Custom {
+                                spans: vec![
+                                    (
+                                        step_info_toml.infix.span().clone(),
+                                        "2nd use of empty infix".to_string(),
+                                    ),
+                                    (old_span, "1st use of empty infix".to_string()),
+                                ],
+                            };
+                            step_info_toml.infix.help = Some(
                                 "Two StoreTagsInTable transformations with the same infix would write to the same file.\n\
                                 Add infix = 'something' to at least one of them.".to_string(),
                                 );
-                            } else {
-                                step_info_toml.infix.state = TomlValueState::Custom {
-                                    spans: vec![
-                                        (
-                                            step_info_toml.infix.span().clone(),
-                                            "2nd use of this infix".to_string(),
-                                        ),
-                                        (old_span, "1st use of this infix".to_string()),
-                                    ],
-                                };
-                                step_info_toml.infix.help = Some(
+                        } else {
+                            step_info_toml.infix.state = TomlValueState::Custom {
+                                spans: vec![
+                                    (
+                                        step_info_toml.infix.span().clone(),
+                                        "2nd use of this infix".to_string(),
+                                    ),
+                                    (old_span, "1st use of this infix".to_string()),
+                                ],
+                            };
+                            step_info_toml.infix.help = Some(
                                 "Two StoreTagsInTable transformations with the same infix would write to the same file.\n\
                                 Rename one of them.".to_string(),
                             );
-                            }
                         }
                     }
-                
+                }
             }
         } // cov:excl-line 
     }
@@ -1610,7 +1599,7 @@ impl PartialConfig {
                 {
                     tag_to_reference.references_from_barcodes.help = Some(offer_alternatives(
                         from_barcode,
-                        &barcodes.map.keys().map(|x| x.as_ref()).collect::<Vec<_>>(),
+                        &barcodes.map.keys().map(AsRef::as_ref).collect::<Vec<_>>(),
                     ));
                     tag_to_reference.references_from_barcodes.state =
                         TomlValueState::new_validation_failed(
@@ -1630,7 +1619,7 @@ impl PartialConfig {
         };
         if let Some(None) = bam.merge_demultiplexed.as_ref() {
             return;
-        };
+        }
 
         // Must be BAM format
         if output.format.as_ref() != Some(&FileFormat::Bam) {
@@ -1673,7 +1662,7 @@ impl PartialConfig {
                     //None if set to 'no such tag'
 
                     if let Some(trafos) = self.transform.value.as_ref() {
-                        for trafo in trafos.iter() {
+                        for trafo in trafos {
                             if let Some(PartialTransformation::Demultiplex(demultiplex_config_toml)) =
                                 trafo.value.as_ref()
                                 && let Some(demultiplex_config) =
@@ -1772,8 +1761,8 @@ impl Config {
         self.inner_check(false)
     }
 
-    #[expect(clippy::similar_names, reason="domain names are that way")]
-    #[expect(clippy::too_many_lines, reason="validation takes lines")]
+    #[expect(clippy::similar_names, reason = "domain names are that way")]
+    #[expect(clippy::too_many_lines, reason = "validation takes lines")]
     #[mutants::skip] // saw_gzip is only necessary for multi threading, and that's not being
     // observed
     fn check_input_format(&mut self, errors: &mut Vec<anyhow::Error>) -> InputFormatsObserved {
@@ -1786,41 +1775,40 @@ impl Config {
             StructuredInput::Interleaved { files, .. } => {
                 let mut interleaved_format: Option<DetectedInputFormat> = None;
                 for filename in files {
-                    match io::input::detect_input_format(Path::new(filename)) {
-                        Ok((format, compression_format)) => {
-                            if let Some(existing) = interleaved_format {
-                                if existing != format {
-                                    errors.push(anyhow!(
+                    if let Ok((format, compression_format)) =
+                        io::input::detect_input_format(Path::new(filename))
+                    {
+                        if let Some(existing) = interleaved_format {
+                            if existing != format {
+                                errors.push(anyhow!(
                                         "(input): Interleaved inputs must all have the same format. Found both {existing:?} and {format:?}."
                                     ));
-                                }
-                            } else {
-                                interleaved_format = Some(format);
                             }
-                            match format {
-                                DetectedInputFormat::Fastq => {
-                                    saw_fastq = true;
-                                    if compression_format == CompressionFormat::Gzip {
-                                        saw_gzip = true;
-                                    }
-                                }
-                                DetectedInputFormat::Fasta => {
-                                    saw_fasta = true;
-                                    if compression_format == CompressionFormat::Gzip {
-                                        saw_gzip = true;
-                                    }
-                                }
-                                DetectedInputFormat::Bam => saw_bam = true,
-                            }
+                        } else {
+                            interleaved_format = Some(format);
                         }
-                        Err(_) => {
-                            //ignore for now. We'll complain again later,
-                            //but here we're only checking the consistency within the configuration
-                        } /* errors.push(
-                          e.context(format!(
-                              "(input): Failed to detect input format for interleaved file '{filename}'."
-                          )),) */
-                          ,
+                        match format {
+                            DetectedInputFormat::Fastq => {
+                                saw_fastq = true;
+                                if compression_format == CompressionFormat::Gzip {
+                                    saw_gzip = true;
+                                }
+                            }
+                            DetectedInputFormat::Fasta => {
+                                saw_fasta = true;
+                                if compression_format == CompressionFormat::Gzip {
+                                    saw_gzip = true;
+                                }
+                            }
+                            DetectedInputFormat::Bam => saw_bam = true,
+                        }
+                    } else {
+                        //ignore for now. We'll complain again later,
+                        //but here we're only checking the consistency within the configuration
+                        /* errors.push(
+                        e.context(format!(
+                            "(input): Failed to detect input format for interleaved file '{filename}'."
+                        )),) */
                     }
                 }
             }
@@ -1832,41 +1820,41 @@ impl Config {
                     let mut segment_format: Option<DetectedInputFormat> = None;
                     if let Some(files) = segment_files.get(segment_name) {
                         for filename in files {
-                            match io::input::detect_input_format(Path::new(filename)) {
-                                Ok((format, compression_format)) => {
-                                    if let Some(existing) = segment_format {
-                                        if existing != format {
-                                            errors.push(anyhow!(
+                            if let Ok((format, compression_format)) =
+                                io::input::detect_input_format(Path::new(filename))
+                            {
+                                if let Some(existing) = segment_format {
+                                    if existing != format {
+                                        errors.push(anyhow!(
                                                 "(input): Segment '{segment_name}' mixes input formats {existing:?} and {format:?}. Mixing formats like this is not supported."
                                             ));
-                                        }
-                                    } else {
-                                        segment_format = Some(format);
                                     }
-                                    match format {
-                                        DetectedInputFormat::Fastq => {
-                                            saw_fastq = true;
-                                            if compression_format == CompressionFormat::Gzip {
-                                                saw_gzip = true;
-                                            }
-                                        }
-                                        DetectedInputFormat::Fasta => {
-                                            saw_fasta = true;
-                                            if compression_format == CompressionFormat::Gzip {
-                                                saw_gzip = true;
-                                            }
-                                        }
-                                        DetectedInputFormat::Bam => saw_bam = true,
-                                    }
+                                } else {
+                                    segment_format = Some(format);
                                 }
-                                Err(_) => {
-                                    //ignore for now. We'll complain again later,
-                                    //but here we're only checking the consistency within the configuration
-                                } /* errors.push(
-                                      e.context(format!(
-                                          "(input): Failed to detect input format for file '{filename}' in segment '{segment_name}'."
-                                      )),
-                                  ), */
+                                match format {
+                                    DetectedInputFormat::Fastq => {
+                                        saw_fastq = true;
+                                        if compression_format == CompressionFormat::Gzip {
+                                            saw_gzip = true;
+                                        }
+                                    }
+                                    DetectedInputFormat::Fasta => {
+                                        saw_fasta = true;
+                                        if compression_format == CompressionFormat::Gzip {
+                                            saw_gzip = true;
+                                        }
+                                    }
+                                    DetectedInputFormat::Bam => saw_bam = true,
+                                }
+                            } else {
+                                //ignore for now. We'll complain again later,
+                                //but here we're only checking the consistency within the configuration
+                                /* errors.push(
+                                    e.context(format!(
+                                        "(input): Failed to detect input format for file '{filename}' in segment '{segment_name}'."
+                                    )),
+                                ), */
                             }
                         }
                     } // cov:excl-line

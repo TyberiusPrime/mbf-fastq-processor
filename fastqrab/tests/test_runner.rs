@@ -1,10 +1,11 @@
-#![allow(clippy::unwrap_used)]
+#![expect(clippy::unwrap_used, reason="it's tests")]
 use anyhow::{Context, Result};
 use std::env;
 use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
 
-#[allow(clippy::missing_panics_doc)]
+/// # Panics
+/// When the test fails
 pub fn run_test(path: &std::path::Path, toml_name: &str, test_no_in_directory: usize) {
     #[cfg(target_os = "windows")]
     if path.join("skip_windows").exists() {
@@ -50,8 +51,7 @@ fn run_verify_test(
         if test_case_dir
             .file_name()
             .and_then(|ostr| ostr.as_bytes().iter().last())
-            .map(|x| x & 1 == 1)
-            .unwrap_or(false)
+            .is_some_and(|x| x & 1 == 1)
         {
             test_case_dir.canonicalize().unwrap().join("actual")
         } else {

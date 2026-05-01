@@ -5,7 +5,6 @@ use std::path::PathBuf;
 use walkdir::WalkDir;
 
 #[test]
-#[allow(clippy::unwrap_used)]
 fn all_test_cases_are_generated() {
     let generated = fs::read_to_string("tests/generated.rs").expect("Failed to read generated.rs");
 
@@ -81,9 +80,10 @@ fn verify_all_shell_scripts_pass_shellcheck() {
         .arg("--version")
         .output();
 
-    if shellcheck.is_err() || !shellcheck.expect("shellcheck failure").status.success() {
-        panic!("shellcheck not available");
-    }
+    assert!(
+        shellcheck.is_ok() && shellcheck.expect("shellcheck failure").status.success(),
+        "shellcheck not available"
+    );
 
     for search_dir in &[
         PathBuf::from("../test_cases"),
@@ -110,14 +110,13 @@ fn verify_all_shell_scripts_pass_shellcheck() {
                 .output()
                 .expect("Failed to run shellcheck");
 
-            if !output.status.success() {
-                panic!(
-                    "shellcheck failed for {} .\nstdout: {}\nstderr: {}",
-                    entry.path().display(),
-                    String::from_utf8_lossy(&output.stdout),
-                    String::from_utf8_lossy(&output.stderr)
-                );
-            }
+            assert!(
+                output.status.success(),
+                "shellcheck failed for {} .\nstdout: {}\nstderr: {}",
+                entry.path().display(),
+                String::from_utf8_lossy(&output.stdout),
+                String::from_utf8_lossy(&output.stderr)
+            );
         }
     }
 }

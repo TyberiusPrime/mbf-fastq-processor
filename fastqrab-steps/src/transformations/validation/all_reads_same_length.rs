@@ -34,7 +34,7 @@ impl VerifyIn<PartialConfig> for PartialValidateAllReadsSameLength {
         {
             self.source_name = Some(source.get_name(input_def.get_segment_order()));
         } else {
-            self.source_name = Some("".to_string()); // $'well get an error anyway, just not
+            self.source_name = Some(String::new()); // $'well get an error anyway, just not
             // another one about source_name being unset
         }
 

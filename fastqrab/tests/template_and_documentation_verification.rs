@@ -1,4 +1,4 @@
-#![allow(clippy::unwrap_used)]
+#![expect(clippy::unwrap_used, reason="it's tests")]
 use indexmap::IndexMap;
 use regex::Regex;
 use schemars::schema_for;
@@ -126,6 +126,7 @@ fn check_target_pattern_in_text(text: &str, transformation: &str, expected_patte
     true // Skip transformations without target fields
 }
 
+#[expect(clippy::string_slice, reason="using find")]
 fn extract_section_from_template(template_content: &str, transformation: &str) -> String {
     let action_pattern = format!("# ==== {transformation} ====");
     let start = template_content.find(&action_pattern).unwrap_or_else(|| {
@@ -140,6 +141,7 @@ fn extract_section_from_template(template_content: &str, transformation: &str) -
     template_content[after_first_newline..stop].replace("\n#", "\n")
 }
 
+#[expect(clippy::string_slice, reason="using find")]
 fn collect_actions(section: &str) -> Vec<String> {
     section
         .lines()
@@ -195,7 +197,7 @@ const ACTIONS_REQUIRING_TWO_TAGS: &[&str] = &["ConcatTags", "StoreTagInSequence"
 
 const TAG_DECLARING_CONVERT_STEPS: &[&str] = &["ConvertToRate", "ConvertRegionsToLength"];
 
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::string_slice, reason="using find")]
 fn prep_config_to_parse(extracted_section: &str) -> String {
     // Check if this is a complete configuration that already has [input] and [output] sections
     let has_input_section = extracted_section.contains("[input]");
@@ -585,6 +587,7 @@ fn extract_schema_fields_with_aliases(transformation: &str) -> IndexMap<String, 
 
 /// Extract field aliases from Rust source code for a given transformation
 /// Returns a map of `field_name` -> Vec<alias>
+#[expect(clippy::string_slice, reason="using find")]
 fn extract_field_aliases_from_source(
     transformation: &str,
 ) -> Option<IndexMap<String, Vec<String>>> {
@@ -653,6 +656,7 @@ fn extract_field_aliases_from_source(
 }
 
 /// Find the struct file for a transformation (enum name).
+#[expect(clippy::string_slice, reason="using find")]
 fn find_struct_file_for_transformation(transformation: &str) -> Option<PathBuf> {
     //todo: find a better method
     let transformations_content = fs::read_to_string("src/transformations.rs").ok()?;
@@ -925,7 +929,7 @@ fn extract_transformation_from_filename(file_path: &Path) -> Option<String> {
         .map(str::to_string)
 }
 
-#[allow(clippy::type_complexity)]
+#[expect(clippy::type_complexity, reason="don't care")]
 fn extract_toml_from_markdown(
     file_path: &Path,
 ) -> Result<Option<Vec<(String, usize)>>, Box<dyn std::error::Error>> {
@@ -1008,7 +1012,7 @@ fn prep_temp_reference_fasta() -> (TempDir, PathBuf) {
 }
 
 #[test]
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::string_slice, reason="using find")]
 fn test_documentation_toml_examples_parse() {
     let doc_files = get_all_doc_files();
     let mut failed_files = Vec::new();
@@ -1499,6 +1503,19 @@ fn test_readme_toml_examples_validate() {
 //
 // }
 
+fn collect_rs_files(dir: &Path, out: &mut Vec<PathBuf>) {
+    if let Ok(entries) = fs::read_dir(dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                collect_rs_files(&path, out);
+            } else if path.extension().and_then(|e| e.to_str()) == Some("rs") {
+                out.push(path);
+            }
+        }
+    }
+}
+
 #[test]
 fn test_every_link_docs_target_has_a_redirect_page() {
     // link_docs() is called two ways:
@@ -1513,19 +1530,6 @@ fn test_every_link_docs_target_has_a_redirect_page() {
 
     // --- 2. Literal link_docs("...") call sites ---
     let link_docs_re = Regex::new(r#"link_docs\(\s*"([^"]+)"\s*\)"#).unwrap();
-
-    fn collect_rs_files(dir: &Path, out: &mut Vec<PathBuf>) {
-        if let Ok(entries) = fs::read_dir(dir) {
-            for entry in entries.flatten() {
-                let path = entry.path();
-                if path.is_dir() {
-                    collect_rs_files(&path, out);
-                } else if path.extension().and_then(|e| e.to_str()) == Some("rs") {
-                    out.push(path);
-                }
-            }
-        }
-    }
 
     let src_roots = [Path::new("src"), Path::new("../fastqrab-steps/src")];
     let mut literal_targets: Vec<(String, PathBuf)> = Vec::new();
@@ -1582,6 +1586,7 @@ fn test_every_link_docs_target_has_a_redirect_page() {
 }
 
 #[test]
+#[expect(clippy::string_slice, reason="using find")]
 fn test_flake_rust_version_matches_msrv() {
     // Verify that the Rust version used in flake.nix exactly matches the MSRV declared in Cargo.toml.
     // This ensures we actually build and test on the minimum supported version.

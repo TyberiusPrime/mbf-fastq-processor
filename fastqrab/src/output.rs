@@ -301,7 +301,7 @@ impl OutputFileHandle {
 }
 
 impl OutputFileConfig {
-    #[expect(clippy::too_many_arguments, reason="We need them")]
+    #[expect(clippy::too_many_arguments, reason = "We need them")]
     fn new_file(
         directory: impl AsRef<Path>,
         basename: &str,
@@ -353,7 +353,7 @@ impl OutputFileConfig {
         do_compressed_hash: bool,
         compression_level: Option<u8>,
         compression_threads: Option<usize>,
-    ) -> Result<Self> {
+    ) -> Self {
         match format {
             FileFormat::Fastq | FileFormat::Fasta => {}
             FileFormat::Bam => {
@@ -367,7 +367,7 @@ impl OutputFileConfig {
             FileFormat::None => unreachable!("Cannot emit 'none' format to stdout"),
             // cov:excl-stop
         }
-        Ok(Self {
+        Self {
             directory: PathBuf::new(),
             basename: "stdout".to_string(),
             suffix: String::new(),
@@ -383,7 +383,7 @@ impl OutputFileConfig {
             chunk_digit_count: 0,
             fragments_written_in_chunk: 0,
             bam_write_options: BamWriteOptions::default(), // unused since it's not bam.
-        })
+        }
     }
 
     fn into_writer(self) -> Result<OutputFile> {
@@ -533,7 +533,7 @@ impl OutputFileConfig {
         Ok(new_filename)
     }
 
-    #[expect(clippy::string_slice, reason="TODO Needs fixing!")]
+    #[expect(clippy::string_slice, reason = "TODO Needs fixing!")]
     fn rename_existing_files(&self) -> Result<()> {
         let old_chunk_digit_count = self.chunk_digit_count - 1;
         let min_value = 0;
@@ -783,7 +783,7 @@ fn resolve_bam_write_options(
 ) -> Result<BamWriteOptions> {
     let bam_opts = output_config.bam.as_ref();
 
-    let comment_separation_char = bam_opts.map(|b| b.comment_separation_char).unwrap_or(b' ');
+    let comment_separation_char = bam_opts.map_or(b' ', |b| b.comment_separation_char);
 
     let tag_to_bam_tags: Vec<([u8; 2], String)> = bam_opts
         .map(|b| {
@@ -870,83 +870,82 @@ fn open_one_set_of_output_files(
             let include_compressed_hashes = output_config.output_hash_compressed;
             let bam_write_options =
                 resolve_bam_write_options(output_config, &parsed_config.barcodes)?;
-            let (interleaved_file, segment_files) = match output_config.format {
-                FileFormat::None => (None, Vec::new()),
-                _ => {
-                    let infix_str = infix.unwrap_or("");
-                    let interleaved_file = if output_config.stdout {
-                        assert!(
-                            output_config.interleave.is_some(),
-                            "config check did not make certain interleave is set when stdout is set"
-                        );
-                        Some(OutputFileConfig::new_stdout(
-                            output_config.format,
-                            output_config.compression,
-                            false,
-                            false,
-                            output_config.compression_level,
-                            output_config.compression_threads,
-                        )?) // cov:excl-line
-                    } else if let Some(interleaved_segments) = &output_config.interleave {
-                        //interleaving is handled by outputing both to the read1 output
-                        ////interleaving requires read2 to be set, checked in validation
-                        let interleaved_basename = join_nonempty(
-                            vec![prefix.as_str(), infix_str, "interleaved"],
-                            &ix_separator,
-                        );
-                        let interleave_count = interleaved_segments.len();
-                        Some(OutputFileConfig::new_file(
-                            output_directory,
-                            &interleaved_basename,
-                            &suffix,
-                            output_config.format,
-                            output_config.compression,
-                            include_uncompressed_hashes,
-                            include_compressed_hashes,
-                            output_config.compression_level,
-                            output_config.compression_threads,
-                            simulated_failure.as_ref(),
-                            allow_overwrite,
-                            // when interleaving chunk size is molecule count for the interleaved
-                            // files
-                            // so the you end up with with the same number of files if you mix
-                            // interleaved and non-interleaved output
-                            output_config.chunksize.map(|x| x * interleave_count),
-                            bam_write_options.clone(),
-                        )?) // cov:excl-line
-                    } else {
-                        None
-                    };
-                    let mut segment_files = Vec::new();
-                    if let Some(output) = output_config.output.as_ref() {
-                        for name in parsed_config.input.get_segment_order() {
-                            segment_files.push(if output.iter().any(|x| x == name) {
-                                let basename = join_nonempty(
-                                    vec![prefix.as_str(), infix_str, name.as_str()],
-                                    &ix_separator,
-                                );
-                                Some(OutputFileConfig::new_file(
-                                    output_directory,
-                                    &basename,
-                                    &suffix,
-                                    output_config.format,
-                                    output_config.compression,
-                                    include_uncompressed_hashes,
-                                    include_compressed_hashes,
-                                    output_config.compression_level,
-                                    output_config.compression_threads,
-                                    simulated_failure.as_ref(),
-                                    allow_overwrite,
-                                    output_config.chunksize,
-                                    bam_write_options.clone(),
-                                )?)
-                            } else {
-                                None
-                            });
-                        }
+            let (interleaved_file, segment_files) = if output_config.format == FileFormat::None {
+                (None, Vec::new())
+            } else {
+                let infix_str = infix.unwrap_or("");
+                let interleaved_file = if output_config.stdout {
+                    assert!(
+                        output_config.interleave.is_some(),
+                        "config check did not make certain interleave is set when stdout is set"
+                    );
+                    Some(OutputFileConfig::new_stdout(
+                        output_config.format,
+                        output_config.compression,
+                        false,
+                        false,
+                        output_config.compression_level,
+                        output_config.compression_threads,
+                    )) // cov:excl-line
+                } else if let Some(interleaved_segments) = &output_config.interleave {
+                    //interleaving is handled by outputing both to the read1 output
+                    ////interleaving requires read2 to be set, checked in validation
+                    let interleaved_basename = join_nonempty(
+                        vec![prefix.as_str(), infix_str, "interleaved"],
+                        &ix_separator,
+                    );
+                    let interleave_count = interleaved_segments.len();
+                    Some(OutputFileConfig::new_file(
+                        output_directory,
+                        &interleaved_basename,
+                        &suffix,
+                        output_config.format,
+                        output_config.compression,
+                        include_uncompressed_hashes,
+                        include_compressed_hashes,
+                        output_config.compression_level,
+                        output_config.compression_threads,
+                        simulated_failure.as_ref(),
+                        allow_overwrite,
+                        // when interleaving chunk size is molecule count for the interleaved
+                        // files
+                        // so the you end up with with the same number of files if you mix
+                        // interleaved and non-interleaved output
+                        output_config.chunksize.map(|x| x * interleave_count),
+                        bam_write_options.clone(),
+                    )?) // cov:excl-line
+                } else {
+                    None
+                };
+                let mut segment_files = Vec::new();
+                if let Some(output) = output_config.output.as_ref() {
+                    for name in parsed_config.input.get_segment_order() {
+                        segment_files.push(if output.iter().any(|x| x == name) {
+                            let basename = join_nonempty(
+                                vec![prefix.as_str(), infix_str, name.as_str()],
+                                &ix_separator,
+                            );
+                            Some(OutputFileConfig::new_file(
+                                output_directory,
+                                &basename,
+                                &suffix,
+                                output_config.format,
+                                output_config.compression,
+                                include_uncompressed_hashes,
+                                include_compressed_hashes,
+                                output_config.compression_level,
+                                output_config.compression_threads,
+                                simulated_failure.as_ref(),
+                                allow_overwrite,
+                                output_config.chunksize,
+                                bam_write_options.clone(),
+                            )?)
+                        } else {
+                            None
+                        });
                     }
-                    (interleaved_file, segment_files)
                 }
+                (interleaved_file, segment_files)
             };
 
             OutputFastqs {

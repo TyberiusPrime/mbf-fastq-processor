@@ -50,10 +50,8 @@ impl TagUser for PartialTaggedVariant<PartialByNumericTag> {
                 && let Some(TagValueType::Numeric((declared_lower, declared_upper))) =
                     tags_available.get(in_label).map(|x| x.tag_type)
             {
-                let declared_lower: f64 = declared_lower
-                    .map(|x| x.into())
-                    .unwrap_or(f64::NEG_INFINITY);
-                let declared_upper: f64 = declared_upper.map(|x| x.into()).unwrap_or(f64::INFINITY);
+                let declared_lower: f64 = declared_lower.map_or(f64::NEG_INFINITY, Into::into);
+                let declared_upper: f64 = declared_upper.map_or(f64::INFINITY, Into::into);
                 if let Some(Some(lower_threshold)) = inner.min_value.as_ref() {
                     if *lower_threshold < declared_lower || *lower_threshold > declared_upper {
                         inner.min_value.state =

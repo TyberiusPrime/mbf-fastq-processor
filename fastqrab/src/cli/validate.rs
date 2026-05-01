@@ -25,8 +25,7 @@ pub fn validate_config(toml_file: &Path) -> Result<Vec<String>> {
     {
         anyhow::bail!(
             "Cannot read configuration from stdin ('-') when the configuration also uses stdin \
-             ('{}') for FASTQ input. Use a config file on disk instead.",
-            STDIN_MAGIC_PATH
+             ('{STDIN_MAGIC_PATH}') for FASTQ input. Use a config file on disk instead."
         );
     }
 

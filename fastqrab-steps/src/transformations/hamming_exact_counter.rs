@@ -8,9 +8,9 @@ use std::sync::{
 use crate::transformations::prelude::*;
 
 /// This transformation counts exact hamming matches until we've got enough counts to over to
-/// HammingCorrect in ByMajority mode.
+/// `HammingCorrect` in `ByMajority` mode.
 ///
-/// It's created in expand_transformations
+/// It's created in `expand_transformations`
 #[tpd(no_verify)]
 #[derive(JsonSchema, Debug, Clone)]
 pub struct HammingExactCounter {
@@ -128,7 +128,7 @@ impl Step for HammingExactCounter {
                     //cov:excl-start
                     anyhow!("Mutex poisoned while waiting for majority data to be ready: {err}")
                 })?; //cov:excl-stop
-                for (key, value) in local_exact_barcode_match_counter.into_iter() {
+                for (key, value) in local_exact_barcode_match_counter {
                     bc.entry(key)
                         .and_modify(|count| *count = count.saturating_add(value))
                         .or_insert(value);
@@ -150,7 +150,7 @@ impl Step for HammingExactCounter {
                 counted = block.block_no(); // or reload blocks_counted, but this is cheaper
             }
             if block.is_final || counted == self.majority_data.blocks_to_count {
-                self.signal_downstream_go(counted)?
+                self.signal_downstream_go(counted)?;
             }
         }
 

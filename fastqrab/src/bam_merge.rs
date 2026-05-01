@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use fastqrab_steps::no_barcode_infix;
 use noodles::{bam, sam};
 use std::collections::BTreeMap;
@@ -39,9 +39,9 @@ pub struct MergeConfig {
 /// a conflicting file is detected early, matching the pattern used for all other
 /// output files.
 pub struct MergeBamHandles {
-    /// dst_path → open file handle, one entry per (group, tail) combination.
+    /// `dst_path` → open file handle, one entry per (group, tail) combination.
     pub bam_files: BTreeMap<PathBuf, ex::fs::File>,
-    /// bai_path → open file handle, populated only when `index_merged` is true.
+    /// `bai_path` → open file handle, populated only when `index_merged` is true.
     pub bai_files: BTreeMap<PathBuf, ex::fs::File>,
 }
 
@@ -49,6 +49,7 @@ pub struct MergeBamHandles {
 ///
 /// Called from `create_output_threads` so that the file handles exist before the
 /// pipeline processes any data, consistent with every other output file.
+#[expect(clippy::similar_names, reason = "domain names")]
 pub fn create_merge_output_handles(
     output_directory: &Path,
     merge_config: &MergeConfig,
@@ -399,7 +400,11 @@ fn write_merged_bai(
 
     // magic + n_ref
     w.write_all(b"BAI\x01")?;
-    w.write_all(&(n_ref as u32).to_le_bytes())?;
+    if n_ref > 2_147_483_648 {
+        //bam actually has 2^31 as max number of sequences
+        bail!("Maximum number of references in BAM exceeded");
+    }
+    w.write_all(&(u32::try_from(n_ref).expect("Too many segments for BAM format")).to_le_bytes())?;
 
     for ref_span in ref_spans {
         if let Some((v_beg, v_end, n_reads)) = ref_span

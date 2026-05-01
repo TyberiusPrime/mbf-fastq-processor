@@ -109,7 +109,7 @@ impl TagUser for PartialTaggedVariant<PartialRegex> {
                         .source
                         .as_ref()
                         .and_then(|x| x.as_ref_post())
-                        .is_some_and(|x| x.is_name())
+                        .is_some_and(SegmentOrNameIndex::is_name)
                     {
                         TagValueType::String
                     } else {
@@ -153,7 +153,7 @@ impl Step for Regex {
                             // only those we listed in use_tags.
                             let query = format!("[[{tag_name}]]");
                             let value = tags[read_no].to_bstr();
-                            replacement = replacement.replace(query, value.as_bytes())
+                            replacement = replacement.replace(query, value.as_bytes());
                         }
                         Some(replacement.into())
                     } else {

@@ -764,6 +764,8 @@ pub(crate) fn compare_files(expected: &Path, actual: &Path, input_dir: &Path) ->
     Ok(())
 }
 
+/// # Panics
+/// When the internal regexps get broken
 #[must_use]
 pub fn normalize_report_content(content: &str, input_dir: Option<&Path>) -> String {
     let normalize_re = Regex::new(
@@ -800,6 +802,8 @@ pub fn normalize_report_content(content: &str, input_dir: Option<&Path>) -> Stri
     }
 }
 
+/// # Panics
+/// When the internal regexps get broken
 #[must_use]
 pub fn normalize_progress_content(content: &str) -> String {
     let float_re = Regex::new(r"\d+[._0-9]*").expect("invalid float regex");
@@ -1199,11 +1203,7 @@ mod test {
             let result = calculate_size_difference_percent(len_a, len_b);
             assert!(
                 (result - expected).abs() < f64::EPSILON,
-                "Failed for len_a: {}, len_b: {}: expected {}, got {}",
-                len_a,
-                len_b,
-                expected,
-                result
+                "Failed for len_a: {len_a}, len_b: {len_b}: expected {expected}, got {result}",
             );
         }
     }

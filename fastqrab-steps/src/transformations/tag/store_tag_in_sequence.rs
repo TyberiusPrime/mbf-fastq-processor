@@ -92,13 +92,10 @@ impl Step for StoreTagInSequence {
                 }
 
                 // Find the location that defines the insert position
-                let hits = match position_tag.as_sequence() {
-                    Some(h) => h,
-                    None => {
+                let Some(hits) = position_tag.as_sequence() else {
                         insert_infos.push(None);
                         return;
-                    }
-                };
+                    };
 
                 // Select the anchor hit region based on anchor direction
                 let anchor_region: Option<&HitRegion> = match self.anchor {
@@ -114,13 +111,10 @@ impl Step for StoreTagInSequence {
                         .max_by_key(|loc| loc.start + loc.len),
                 };
 
-                let region = match anchor_region {
-                    Some(r) => r,
-                    None => {
+                let Some(region) = anchor_region else {
                         // Position tag has no location info — skip
                         insert_infos.push(None);
                         return;
-                    }
                 };
 
                 let insert_pos = match self.anchor {
@@ -132,16 +126,12 @@ impl Step for StoreTagInSequence {
                 let read = &mut reads[seg_idx];
                 let seq = read.seq();
 
-                if insert_pos > seq.len() {
-                    //cov:excl-start
-                    panic!(
+                assert!(insert_pos <= seq.len(),
                         "StoreTagInSequence: insert position {insert_pos} exceeds read length \
                         {} on segment {seg_idx}. THis should have been prevent upstream and is a bug.
                         coordinates are within the read.",
                         seq.len(),
-                    );
-                    //cov:excl-end
-                }
+                );
 
                 let mut new_seq = Vec::with_capacity(seq.len() + insert_bytes.len());
                 new_seq.extend_from_slice(&seq[..insert_pos]);

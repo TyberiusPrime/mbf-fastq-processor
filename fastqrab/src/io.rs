@@ -2,6 +2,8 @@ use anyhow::{Context, Result};
 
 use fastqrab_io::io::{InputFiles, SegmentsCombined, open_input_file, total_file_size};
 
+/// # Panics
+/// `Sgement_order` / segments mismatch
 pub fn open_input_files(input_config: &crate::config::Input) -> Result<InputFiles> {
     match &input_config.structured {
         crate::config::StructuredInput::Interleaved {

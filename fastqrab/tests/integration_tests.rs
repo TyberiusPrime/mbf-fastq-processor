@@ -1,4 +1,4 @@
-#![allow(clippy::unwrap_used)]
+#![expect(clippy::unwrap_used, reason="It's tests")]
 
 use bstr::{BString, ByteSlice};
 use indexmap::IndexMap;
@@ -518,7 +518,7 @@ fn find_toml_files(dir: &Path, files: &mut Vec<std::path::PathBuf>) {
     }
 }
 #[test]
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines, reason="it's a test")]
 fn test_every_demultiplexed_data_transform_has_test() {
     // This test verifies that every transformation that uses DemultiplexedData
     // has at least one test case where it occurs after a Demultiplex step.
@@ -2283,9 +2283,7 @@ prefix = 'output'"
 
     assert!(
         verify_cmd.status.success(),
-        "Verify should pass with matching _error. stdout: {}\nstderr: {}",
-        stdout,
-        stderr
+        "Verify should pass with matching _error. stdout: {stdout}\nstderr: {stderr}",
     );
 }
 
@@ -2324,9 +2322,7 @@ prefix = 'output'"
 
     assert!(
         verify_cmd.status.success(),
-        "Verify should pass with matching error regex. stdout: {}\nstderr: {}",
-        stdout,
-        stderr
+        "Verify should pass with matching error regex. stdout: {stdout}\nstderr: {stderr}",
     );
 }
 
@@ -2375,8 +2371,7 @@ prefix = 'output'"
     );
     assert!(
         stderr.contains("Expected validation failure but 'validate' command succeeded"),
-        "Should report unexpected success, got: {}",
-        stderr
+        "Should report unexpected success, got: {stderr}",
     );
 }
 
@@ -2418,8 +2413,7 @@ prefix = 'output'"
     );
     assert!(
         stderr.contains("did not fail in the way that was expected"),
-        "Should report failure mismatch, got: {}",
-        stderr
+        "Should report failure mismatch, got: {stderr}",
     );
 }
 
@@ -2461,8 +2455,7 @@ prefix = 'output'"
     );
     assert!(
         stderr.contains("Expected validation failure but 'validate' command succeeded."),
-        "Should report failure mismatch, got: {}",
-        stderr
+        "Should report failure mismatch, got: {stderr}",
     );
 }
 
@@ -2504,8 +2497,7 @@ prefix = 'output'"
     );
     assert!(
         stderr.contains("Configuration validation failed, but a runtime error was expected."),
-        "Should report failure mismatch, got: {}",
-        stderr
+        "Should report failure mismatch, got: {stderr}",
     );
 }
 
@@ -2548,9 +2540,7 @@ prefix = 'output'"
 
     assert!(
         verify_cmd.status.success(),
-        "Verify should pass with matching runtime_error. stdout: {}\nstderr: {}",
-        stdout,
-        stderr
+        "Verify should pass with matching runtime_error. stdout: {stdout}\nstderr: {stderr}",
     );
 }
 
@@ -2593,9 +2583,7 @@ prefix = 'output'"
 
     assert!(
         verify_cmd.status.success(),
-        "Verify should pass with matching runtime_error regex. stdout: {}\nstderr: {}",
-        stdout,
-        stderr
+        "Verify should pass with matching runtime_error regex. stdout: {stdout}\nstderr: {stderr}",
     );
 }
 
@@ -2648,8 +2636,7 @@ prefix = 'output'"
     );
     assert!(
         stderr.contains("Expected runtime failure but 'process' command succeeded"),
-        "Should report unexpected success, got: {}",
-        stderr
+        "Should report unexpected success, got: {stderr}",
     );
 }
 
@@ -2695,8 +2682,7 @@ prefix = 'output'"
     );
     assert!(
         stderr.contains("did not fail in the way that was expected"),
-        "Should report panic mismatch, got: {}",
-        stderr
+        "Should report panic mismatch, got: {stderr}",
     );
 }
 
@@ -2839,7 +2825,7 @@ n = 1
         .arg("--output-dir")
         .arg(temp_path.canonicalize().unwrap().join("actual_output"))
         .current_dir(temp_path);
-    println!("{:?}", verify_cmd);
+    println!("{verify_cmd:?}");
 
     let verify_cmd = verify_cmd.output().unwrap();
     //
@@ -3609,7 +3595,7 @@ fn test_verify_failing_test_sh_is_detected() {
 
 // ── stdout / stderr stream-file branch coverage ─────────────────────────────
 
-/// Run process first so expected output_read1.fq exists, then add an extra
+/// Run process first so expected `output_read1.fq` exists, then add an extra
 /// expected `stdout` (or `stderr`) file; verify must then report it missing.
 fn setup_with_expected_output(temp_path: &std::path::Path) -> PathBuf {
     let config_path = minimal_config_and_input(temp_path);

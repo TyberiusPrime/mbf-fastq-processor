@@ -210,12 +210,12 @@ impl Step for Inspect {
         let mut iter = block.get_pseudo_iter_including_tag();
         let name_read = |read: &WrappedFastQRead, read_idx: usize| {
             let mut out = read.name().to_vec();
-            for (key, values) in block.tags.iter() {
+            for (key, values) in &block.tags {
                 let str_key: &str = key.as_ref();
                 out.push(b' ');
                 out.extend_from_slice(str_key.as_bytes());
                 out.push(b'=');
-                out.extend_from_slice(&values[read_idx].to_bstr())
+                out.extend_from_slice(&values[read_idx].to_bstr());
             }
             out
         };

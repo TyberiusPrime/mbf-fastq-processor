@@ -586,6 +586,7 @@ fn extract_from_sequence(
     }
 }
 
+#[must_use]
 pub fn read_name_canonical_prefix(name: &[u8], readname_end_char: Option<u8>) -> &[u8] {
     if let Some(separator) = readname_end_char {
         if let Some(position) = memchr::memchr(separator, name) {
@@ -598,6 +599,7 @@ pub fn read_name_canonical_prefix(name: &[u8], readname_end_char: Option<u8>) ->
     }
 }
 
+#[must_use]
 pub fn read_name_canonical_prefix_strict(
     name: &[u8],
     readname_end_char: Option<u8>,

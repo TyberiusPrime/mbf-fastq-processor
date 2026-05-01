@@ -1,4 +1,3 @@
-#![allow(clippy::unwrap_used)]
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use std::fs;
 use tempfile::TempDir;
@@ -31,9 +30,9 @@ impl BenchmarkConfig {
 
 fn run_benchmark_pipeline(config: &BenchmarkConfig) -> std::time::Duration {
     let sample_file = std::env::current_dir()
-        .unwrap()
+        .expect("failed to get current dir")
         .parent() // Go up from fastqrab to project root
-        .unwrap()
+        .expect("Could not find project root by going up from binary?")
         .join("test_cases/sample_data/fastp_606.fq.gz");
     let str_sample_file = sample_file.to_string_lossy();
 
@@ -73,7 +72,8 @@ fn run_benchmark_pipeline(config: &BenchmarkConfig) -> std::time::Duration {
     start.elapsed()
 }
 
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines, reason="every benchmark is 4 lines")]
+#[expect(clippy::useless_format, reason="consistency")]
 fn benchmark_key_steps(c: &mut Criterion) {
     let mut group = c.benchmark_group("step_benchmarks");
     group.sample_size(10);
@@ -84,17 +84,17 @@ fn benchmark_key_steps(c: &mut Criterion) {
     let thread_count = 12; // Fixed thread count for consistency
 
     let kmer_file = std::env::current_dir()
-        .unwrap()
+        .expect("failed to get current dir")
         .parent() // Go up from fastqrab to project root
-        .unwrap()
+        .expect("Could not find project root by going up from current dir")
         .join("test_cases/sample_data/fasta/input_kmers.fa");
     let str_kmer_file = kmer_file.to_string_lossy();
-    let reference_file = std::env::current_dir()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("test_cases/sample_data/fasta/input_reference_50mers.fa");
-    let str_reference_file = reference_file.to_string_lossy();
+    // let reference_file = std::env::current_dir()
+    //     .expect("failed to get current dir")
+    //     .parent()
+    //     .expect("Could not find project root by going up from current dir")
+    //     .join("test_cases/sample_data/fasta/input_reference_50mers.fa");
+    // let str_reference_file = reference_file.to_string_lossy();
     let benchmarks = vec![
         BenchmarkConfig::new(
             "Progress",
