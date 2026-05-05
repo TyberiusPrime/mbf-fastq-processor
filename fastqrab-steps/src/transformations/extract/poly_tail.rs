@@ -177,7 +177,10 @@ fn find_poly_tail(
     }
 }
 
-#[expect(clippy::cast_precision_loss, reason="seq.len() will fit into an f64 for realistic values")]
+#[expect(
+    clippy::cast_precision_loss,
+    reason = "seq.len() will fit into an f64 for realistic values"
+)]
 fn calc_run_length(
     seq: &[u8],
     query: u8,

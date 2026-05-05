@@ -302,7 +302,7 @@ enum MergeResult {
 
 /// Try to merge two reads by finding their overlap
 /// seq2 should already be processed (reverse complemented if needed)
-#[expect(clippy::too_many_arguments, reason="we need them")]
+#[expect(clippy::too_many_arguments, reason = "we need them")]
 fn merge_reads(
     seq1: &[u8],
     qual1: &[u8],
@@ -345,9 +345,16 @@ fn merge_reads(
 /// Mutation testing really is having a field day with this,
 /// and devising test cases that cover all the branches & loop conditions
 /// is somewhat tricky.
-#[expect(clippy::cast_possible_truncation,reason="u64 to usize is fine for our target systems")]
-#[expect(clippy::cast_sign_loss,clippy::cast_precision_loss, reason="max_mismatch_rate is 0..=1")]
-#[expect(clippy::nonminimal_bool, reason="it's clearer this way")]
+#[expect(
+    clippy::cast_possible_truncation,
+    reason = "u64 to usize is fine for our target systems"
+)]
+#[expect(
+    clippy::cast_sign_loss,
+    clippy::cast_precision_loss,
+    reason = "max_mismatch_rate is 0..=1"
+)]
+#[expect(clippy::nonminimal_bool, reason = "it's clearer this way")]
 fn find_best_overlap_fastp(
     seq1: &[u8],
     seq2: &[u8], //must already have been reverse complemented
@@ -444,7 +451,7 @@ fn find_best_overlap_fastp(
 }
 
 /// fastp is documented to prefer R1 bases, no matter what.
-#[expect(clippy::cast_sign_loss, reason="Sign is checked before")]
+#[expect(clippy::cast_sign_loss, reason = "Sign is checked before")]
 fn merge_at_offset_fastp(
     seq1: &[u8],
     qual1: &[u8],
@@ -452,8 +459,8 @@ fn merge_at_offset_fastp(
     qual2: &[u8],
     offset: isize,
     overlap_len: usize,
-) ->(Vec<u8>, Vec<u8>) {
-    #[expect(clippy::too_many_arguments, reason="we need them")]
+) -> (Vec<u8>, Vec<u8>) {
+    #[expect(clippy::too_many_arguments, reason = "we need them")]
     fn append_overlap(
         seq1: &[u8],
         qual1: &[u8],

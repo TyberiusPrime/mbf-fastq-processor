@@ -72,8 +72,8 @@ fn run_benchmark_pipeline(config: &BenchmarkConfig) -> std::time::Duration {
     start.elapsed()
 }
 
-#[expect(clippy::too_many_lines, reason="every benchmark is 4 lines")]
-#[expect(clippy::useless_format, reason="consistency")]
+#[expect(clippy::too_many_lines, reason = "every benchmark is 4 lines")]
+#[expect(clippy::useless_format, reason = "consistency")]
 fn benchmark_key_steps(c: &mut Criterion) {
     let mut group = c.benchmark_group("step_benchmarks");
     group.sample_size(10);

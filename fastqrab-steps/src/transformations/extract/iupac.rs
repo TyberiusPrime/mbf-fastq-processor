@@ -9,7 +9,7 @@ use fastqrab_config::{StringOrVecString, dna::Anchor, tpd_adapt_iupac_bstring};
 /// If multiple strings are provided, the first hit wins.
 #[derive(Clone, JsonSchema)]
 #[tpd]
-#[expect(clippy::upper_case_acronyms, reason="Domain name")]
+#[expect(clippy::upper_case_acronyms, reason = "Domain name")]
 #[derive(Debug)]
 pub struct IUPAC {
     #[tpd(with = "tpd_adapt_iupac_bstring")]

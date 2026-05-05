@@ -2,9 +2,9 @@ use anyhow::{Result, bail};
 use bstr::BString;
 use regex::bytes::Regex;
 use schemars::JsonSchema;
-use std::{cell::RefCell, num::NonZero};
 use std::fmt;
 use std::rc::Rc;
+use std::{cell::RefCell, num::NonZero};
 use toml_pretty_deser::{MustAdapt, TomlValue, TomlValueState, ValidationFailure};
 use typed_floats::tf64::NonNaN;
 
@@ -130,9 +130,8 @@ pub const fn default_output_buffer_size() -> usize {
 /// # Panics
 /// Never.
 pub const fn default_block_size() -> NonZero<usize> {
-    NonZero::new(
-    10000 )// in 'molecules', ie. read1, read2, index1, index2 tuples.
-    .expect("Can not fail")
+    NonZero::new(10000) // in 'molecules', ie. read1, read2, index1, index2 tuples.
+        .expect("Can not fail")
 }
 
 #[must_use]

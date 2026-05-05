@@ -3,8 +3,8 @@ use bio::io::fasta::{self, FastaRead, Record as FastaRecord};
 use ex::fs::File;
 use niffler;
 use std::{
-    num::NonZero,
     io::{BufReader, Read},
+    num::NonZero,
     path::PathBuf,
 };
 
@@ -170,21 +170,30 @@ mod tests {
         let first = reads
             .next()
             .expect("test should have expected number of reads");
-        #[expect(clippy::match_wildcard_for_single_variants, reason="thats what I want")]
+        #[expect(
+            clippy::match_wildcard_for_single_variants,
+            reason = "thats what I want"
+        )]
         match first.name {
             FastQElement::Local(_) => assert_eq!(first.name.get(&block.block), b"read1".to_vec()),
             // cov:excl-start
             _ => panic!("expected Local name"),
             // cov:excl-stop
         }
-        #[expect(clippy::match_wildcard_for_single_variants, reason="thats what I want")]
+        #[expect(
+            clippy::match_wildcard_for_single_variants,
+            reason = "thats what I want"
+        )]
         match first.seq {
             FastQElement::Local(_) => assert_eq!(first.seq.get(&block.block), b"ACGT".to_vec()),
             // cov:excl-start
             _ => panic!("expected Local sequence"),
             // cov:excl-stop
         }
-        #[expect(clippy::match_wildcard_for_single_variants, reason="thats what I want")]
+        #[expect(
+            clippy::match_wildcard_for_single_variants,
+            reason = "thats what I want"
+        )]
         match first.qual {
             FastQElement::Local(_) => assert_eq!(first.qual.get(&block.block), vec![30; 4]),
             // cov:excl-start
@@ -195,7 +204,10 @@ mod tests {
         let second = reads
             .next()
             .expect("test should have expected number of reads");
-        #[expect(clippy::match_wildcard_for_single_variants, reason="thats what I want")]
+        #[expect(
+            clippy::match_wildcard_for_single_variants,
+            reason = "thats what I want"
+        )]
         match second.name {
             FastQElement::Local(_) => {
                 assert_eq!(second.name.get(&block.block), b"read2 description".to_vec());
@@ -204,14 +216,20 @@ mod tests {
             _ => panic!("expected Local name"),
             // cov:excl-stop
         }
-        #[expect(clippy::match_wildcard_for_single_variants, reason="thats what I want")]
+        #[expect(
+            clippy::match_wildcard_for_single_variants,
+            reason = "thats what I want"
+        )]
         match second.seq {
             FastQElement::Local(_) => assert_eq!(second.seq.get(&block.block), b"TGCA".to_vec()),
             // cov:excl-start
             _ => panic!("expected Local sequence"),
             // cov:excl-stop
         }
-        #[expect(clippy::match_wildcard_for_single_variants, reason="thats what I want")]
+        #[expect(
+            clippy::match_wildcard_for_single_variants,
+            reason = "thats what I want"
+        )]
         match second.qual {
             FastQElement::Local(_) => assert_eq!(second.qual.get(&block.block), vec![30; 4]),
             // cov:excl-start

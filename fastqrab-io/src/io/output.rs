@@ -37,8 +37,8 @@ pub struct BamOutput {
 /// - `bam_tag_mappings`: list of `(bam_tag_bytes, fastqrab_tag_name)` pairs to export (Feature A)
 /// - `reference_tag`: if `Some(tag_name)`, look up that tag's value in the BAM reference
 ///   sequences and set the read's RNAME / alignment start accordingly (Feature B)
-#[expect(clippy::too_many_arguments, reason="they are needed")]
-#[expect(clippy::too_many_lines, reason="they are needed")]
+#[expect(clippy::too_many_arguments, reason = "they are needed")]
+#[expect(clippy::too_many_lines, reason = "they are needed")]
 pub fn write_read_to_bam(
     bam_output: &mut BamOutput,
     read: &WrappedFastQRead<'_>,
@@ -98,7 +98,7 @@ pub fn write_read_to_bam(
         data_fields.push((tag, Value::String(BString::from(comment))));
     }
 
-    #[expect(clippy::cast_possible_truncation, reason="BAM is f32")]
+    #[expect(clippy::cast_possible_truncation, reason = "BAM is f32")]
     for (bam_tag_bytes, fastqrab_tag_name) in bam_tag_mappings {
         if let Some(tag_values) = tags.get(*fastqrab_tag_name)
             && let Some(tag_value) = tag_values.get(read_index)

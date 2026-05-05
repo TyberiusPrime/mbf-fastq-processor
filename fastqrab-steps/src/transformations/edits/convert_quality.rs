@@ -45,13 +45,13 @@ let q_back: PHREDProb = PHREDProb::from(p);  // -10 * log10(P)
 
 */
 
-#[expect(clippy::cast_possible_truncation, reason="no loss in range")]
+#[expect(clippy::cast_possible_truncation, reason = "no loss in range")]
 fn phred_to_solexa(q_phred: i16) -> i16 {
     let val = 10f64.powf(f64::from(q_phred) / 10.0) - 1.0;
     (10.0 * val.log10()).round() as i16
 }
 
-#[expect(clippy::cast_possible_truncation, reason="no loss in range")]
+#[expect(clippy::cast_possible_truncation, reason = "no loss in range")]
 fn solexa_to_phred(q_solexa: i16) -> i16 {
     (10.0 * ((10f64.powf(f64::from(q_solexa) / 10.0) + 1.0).log10())).round() as i16
 }

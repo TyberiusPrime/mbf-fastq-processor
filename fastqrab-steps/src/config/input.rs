@@ -437,7 +437,7 @@ impl PartialInput {
             | StructuredInput::Segmented { segment_order, .. } => segment_order.len(),
         }
     }
-   
+
     /// # Panics
     /// if config parsing did not set structured input
     #[must_use]

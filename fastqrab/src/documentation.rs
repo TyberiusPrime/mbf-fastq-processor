@@ -21,7 +21,7 @@ pub fn get_template(step: Option<&str>) -> Option<Cow<'static, str>> {
     }
 }
 
-#[expect(clippy::string_slice, reason="just returned from find")]
+#[expect(clippy::string_slice, reason = "just returned from find")]
 fn search_query(query: &str, template: &'static str) -> Option<Cow<'static, str>> {
     if let Some(start_idx) = template.to_lowercase().find(query) {
         let rest = &template[start_idx + query.len()..];

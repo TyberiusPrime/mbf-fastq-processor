@@ -7,7 +7,7 @@ use crate::transformations::prelude::*;
 #[derive(Clone, JsonSchema)]
 #[tpd(no_verify)]
 #[derive(Debug)]
-#[expect(dead_code, reason="TDP needs inner field")]
+#[expect(dead_code, reason = "TDP needs inner field")]
 pub struct ValidateReadNamesPrintable {
     #[schemars(skip)]
     ignored: Option<u8>, // tpd dislikes empty structs

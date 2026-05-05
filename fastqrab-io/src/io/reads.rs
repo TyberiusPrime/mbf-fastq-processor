@@ -2008,7 +2008,7 @@ mod test {
     }
 
     #[test]
-    #[expect(clippy::too_many_lines, reason="needed")]
+    #[expect(clippy::too_many_lines, reason = "needed")]
     fn test_trim_poly_n_local() {
         fn trim(seq: &str, min_length: usize, max_mismatch_fraction: f32, base: u8) -> String {
             let (mut read, mut data) = get_local2(seq.as_bytes());

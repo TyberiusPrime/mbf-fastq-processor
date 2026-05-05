@@ -49,7 +49,7 @@ impl<T> DemultiplexedData<T> {
         Self(BTreeMap::new())
     }
 
-    #[expect(clippy::len_without_is_empty, reason="Never queried for is_empty")]
+    #[expect(clippy::len_without_is_empty, reason = "Never queried for is_empty")]
     #[must_use]
     pub fn len(&self) -> usize {
         self.0.len()
@@ -125,7 +125,10 @@ impl<T> Clone for DemultiplexedData<T> {
 
 /// what the other steps need to know about the demultiplexing
 #[derive(Debug, Clone)]
-#[expect(clippy::module_name_repetitions, reason="Info by itself is not informative")]
+#[expect(
+    clippy::module_name_repetitions,
+    reason = "Info by itself is not informative"
+)]
 pub struct DemultiplexInfo {
     //step specific, what we need during the runtime.
     //These are full qualified demultiplex1.demultiplex2 -> tag hashes.
@@ -178,7 +181,10 @@ impl DemultiplexInfo {
     }
 }
 
-#[expect(clippy::module_name_repetitions, reason="Info by itself is not informative")]
+#[expect(
+    clippy::module_name_repetitions,
+    reason = "Info by itself is not informative"
+)]
 pub struct DemultiplexBarcodes {
     pub barcode_to_name: IndexMap<BString, String>,
     pub include_no_barcode: bool,
@@ -192,7 +198,7 @@ pub enum OptDemultiplex {
 }
 
 impl OptDemultiplex {
-    #[expect(clippy::len_without_is_empty, reason="Never queried for is_empty")]
+    #[expect(clippy::len_without_is_empty, reason = "Never queried for is_empty")]
     #[must_use]
     #[mutants::skip] // only used by initial filter capacity calculation
     pub fn len(&self) -> usize {
@@ -201,7 +207,6 @@ impl OptDemultiplex {
             Self::Yes(info) => info.tag_to_name.len(),
         }
     }
-
 
     /// # Panics
     /// when called on a `OptDemultiplex::No` - as the name suggests
@@ -225,7 +230,7 @@ impl OptDemultiplex {
         }
     }
 
-    #[expect(clippy::too_many_arguments, reason="We need them")]
+    #[expect(clippy::too_many_arguments, reason = "We need them")]
     pub fn open_output_streams(
         &self,
         output_directory: &Path,

@@ -28,7 +28,7 @@ pub struct StoreTagsInTable {
 
     include_read_name: bool,
 
-    #[expect(dead_code, reason="only used in deser")]
+    #[expect(dead_code, reason = "only used in deser")]
     #[tpd(alias = "tags")]
     #[tpd(adapt_in_verify(String))]
     in_labels: Option<Vec<TagLabel>>,
@@ -71,7 +71,7 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagsInTable> {
         segment_order: &[String],
     ) -> Option<TagUsageInfo<'_>> {
         if let Some(inner) = self.toml_value.value.as_mut() {
-            #[expect(clippy::single_match_else, reason="clearer")]
+            #[expect(clippy::single_match_else, reason = "clearer")]
             match inner.in_labels.value.as_mut() {
                 Some(Some(in_labels)) => {
                     //they're not ok yet...
@@ -226,8 +226,7 @@ impl Step for StoreTagsInTable {
                     .iter_mut()
                 {
                     if let Some(writer) = writer {
-                        writer
-                            .write_record(&header)?;
+                        writer.write_record(&header)?;
                     }
                 }
             }

@@ -1,4 +1,4 @@
-#![expect(clippy::unwrap_used, reason="It's tests")]
+#![expect(clippy::unwrap_used, reason = "It's tests")]
 
 use bstr::{BString, ByteSlice};
 use indexmap::IndexMap;
@@ -518,7 +518,7 @@ fn find_toml_files(dir: &Path, files: &mut Vec<std::path::PathBuf>) {
     }
 }
 #[test]
-#[expect(clippy::too_many_lines, reason="it's a test")]
+#[expect(clippy::too_many_lines, reason = "it's a test")]
 fn test_every_demultiplexed_data_transform_has_test() {
     // This test verifies that every transformation that uses DemultiplexedData
     // has at least one test case where it occurs after a Demultiplex step.

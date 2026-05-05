@@ -81,7 +81,7 @@ impl TagUser for PartialTaggedVariant<PartialTrimAtTag> {
 }
 
 impl Step for TrimAtTag {
-    #[expect(clippy::too_many_lines, reason="straightforward, but tedious")]
+    #[expect(clippy::too_many_lines, reason = "straightforward, but tedious")]
     fn apply(
         &self,
         mut block: FastQBlocksCombined,

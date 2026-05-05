@@ -563,7 +563,7 @@ fn verify_processor_success(
     Ok(())
 }
 
-#[expect(clippy::too_many_arguments, reason="We need them")]
+#[expect(clippy::too_many_arguments, reason = "We need them")]
 fn run_processor_and_verify(
     current_exe: &Path,
     expected_failure: Option<&ExpectedFailure>,
@@ -882,7 +882,7 @@ pub fn decompress_file(path: &Path) -> Result<Vec<u8>> {
 }
 
 #[must_use]
-#[expect(clippy::cast_precision_loss, reason="loss is acceptable")]
+#[expect(clippy::cast_precision_loss, reason = "loss is acceptable")]
 pub fn calculate_size_difference_percent(len_a: u64, len_b: u64) -> f64 {
     if len_a > 0 {
         ((len_b as f64 - len_a as f64).abs() / len_a as f64) * 100.0

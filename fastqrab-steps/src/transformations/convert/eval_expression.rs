@@ -85,7 +85,7 @@ impl VerifyIn<PartialConfig> for PartialEvalExpression {
 }
 
 // cov:excl-start
-#[expect(clippy::missing_fields_in_debug, reason="that is the point")]
+#[expect(clippy::missing_fields_in_debug, reason = "that is the point")]
 impl std::fmt::Debug for EvalExpression {
     #[mutants::skip]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

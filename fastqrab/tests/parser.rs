@@ -1,7 +1,7 @@
-#![expect(clippy::unwrap_used, reason="it's tests")]
+#![expect(clippy::unwrap_used, reason = "it's tests")]
 use bstr::ByteSlice;
-use std::path::{Path, PathBuf};
 use std::num::NonZero;
+use std::path::{Path, PathBuf};
 
 use fastqrab_io::io::{FastQBlock, parsers::ThreadCount};
 

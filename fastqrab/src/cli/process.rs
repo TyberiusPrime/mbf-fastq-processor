@@ -18,7 +18,10 @@ pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> 
         Ok(config) => config,
         Err(e) => {
             let pretty = e.pretty("config.toml");
-            #[expect(clippy::dbg_macro, reason="Used explicitly to get debug information in case of failure in TPD")]
+            #[expect(
+                clippy::dbg_macro,
+                reason = "Used explicitly to get debug information in case of failure in TPD"
+            )]
             if pretty.trim().is_empty() {
                 // shouldn't happen, but if it does, we got this error
                 // cov:excl-start

@@ -5,8 +5,8 @@ use noodles::bam::bai;
 use noodles::bam::{self, record::Record};
 use noodles::bgzf;
 use noodles::csi::binning_index::{BinningIndex, ReferenceSequence};
-use std::path::{Path, PathBuf};
 use std::num::NonZero;
+use std::path::{Path, PathBuf};
 
 use crate::io::parsers::{ParseResult, Parser};
 use crate::io::{FastQBlock, FastQRead};

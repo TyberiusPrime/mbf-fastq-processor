@@ -12,7 +12,7 @@ use fastqrab_dna::dna::{Hits, TagValue};
 #[derive(Clone, JsonSchema)]
 #[tpd]
 #[derive(Debug)]
-#[expect(clippy::struct_field_names, reason="Step != the actual data")]
+#[expect(clippy::struct_field_names, reason = "Step != the actual data")]
 pub struct Regions {
     #[tpd(nested)]
     pub regions: Vec<RegionDefinition>, //validated to be non_empty in transformations::validate_regions

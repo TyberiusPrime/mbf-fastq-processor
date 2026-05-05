@@ -345,13 +345,12 @@ impl CellRangerProbeAssigner {
         hits: &Vec<(&'b BStr, u32)>,
         half_seq_to_name: &IndexMap<BString, String>,
     ) -> Vec<(&'b BStr, u32)> {
-        fn split_name(name: & str, name_split_char: Option<u8>) -> & str {
+        fn split_name(name: &str, name_split_char: Option<u8>) -> &str {
             match name_split_char {
                 None => name,
-                Some(split_char) => {
-                    name.split_once(split_char as char)
-                        .map_or(name, |(first_part, _)| first_part)
-                }
+                Some(split_char) => name
+                    .split_once(split_char as char)
+                    .map_or(name, |(first_part, _)| first_part),
             }
         }
 
@@ -362,7 +361,7 @@ impl CellRangerProbeAssigner {
                 half_seq_to_name
                     .get(hits[0].0)
                     .expect("Internal inconsistency between resonator and map"),
-                    self.name_split_char,
+                self.name_split_char,
             );
             let all_names_equal = hits.iter().all(|(seq, _)| {
                 let name = split_name(

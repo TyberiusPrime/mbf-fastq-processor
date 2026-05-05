@@ -110,7 +110,7 @@ pub(crate) fn initial_filter_elements(
 
 /// Format a numeric value for use in read comments, truncating floats to 4 decimal places
 /// using scientific format
-#[expect(clippy::cast_possible_truncation, reason="Loss is ok")]
+#[expect(clippy::cast_possible_truncation, reason = "Loss is ok")]
 pub(crate) fn format_numeric_for_comment(value: f64) -> String {
     // Check if the value is effectively an integer
     if value.fract() == 0.0 {

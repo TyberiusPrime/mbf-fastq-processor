@@ -9,7 +9,7 @@ pub struct BaseStatisticsPart2 {
     per_position_counts: Vec<PositionCount>,
 }
 
-#[expect(clippy::from_over_into, reason="Orphan rules")]
+#[expect(clippy::from_over_into, reason = "Orphan rules")]
 impl Into<serde_json::Value> for BaseStatisticsPart2 {
     fn into(self) -> serde_json::Value {
         let c = self

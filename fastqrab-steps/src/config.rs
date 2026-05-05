@@ -838,7 +838,10 @@ impl PartialConfig {
                         Some(PartialTransformation::HammingCorrect(step_config)) => {
                             let tag_span = step_config.tag_span.clone();
                             if let Some(step_config) = step_config.toml_value.as_mut()
-                                && matches!(step_config.on_tie.as_ref(), Some(OnTie::ByMajority | OnTie::ByEditProbability))
+                                && matches!(
+                                    step_config.on_tie.as_ref(),
+                                    Some(OnTie::ByMajority | OnTie::ByEditProbability)
+                                )
                                 && let Some(barcodes_to_use) = step_config.barcodes.as_ref()
                                 && let Some(Some(barcodes_data)) = self.barcodes.as_ref()
                                 && let Some(barcodes_section) =

@@ -5,7 +5,7 @@ use crate::transformations::prelude::*;
 #[derive(Clone, JsonSchema)]
 #[tpd(no_verify)]
 #[derive(Debug)]
-#[expect(dead_code, reason ="TDP needs at least one field")]
+#[expect(dead_code, reason = "TDP needs at least one field")]
 pub struct ForgetAllTags {
     ignored: Option<u8>, //tdp dislikes empty structs
 }

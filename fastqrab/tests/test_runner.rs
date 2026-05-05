@@ -1,4 +1,4 @@
-#![expect(clippy::unwrap_used, reason="it's tests")]
+#![expect(clippy::unwrap_used, reason = "it's tests")]
 use anyhow::{Context, Result};
 use std::env;
 use std::os::unix::ffi::OsStrExt;

@@ -89,7 +89,8 @@ impl TagUser for PartialTaggedVariant<PartialQualifiedBases> {
 impl Step for QualifiedBases {
     #[expect(
         clippy::cast_precision_loss,
-        reason="loss is acceptable, it's going to be within u32 range")]
+        reason = "loss is acceptable, it's going to be within u32 range"
+    )]
     fn apply(
         &self,
         mut block: FastQBlocksCombined,

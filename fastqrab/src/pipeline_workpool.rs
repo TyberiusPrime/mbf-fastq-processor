@@ -70,7 +70,7 @@ enum CanTake {
 }
 
 impl WorkpoolCoordinator {
-    #[expect(clippy::too_many_arguments, reason="needed")]
+    #[expect(clippy::too_many_arguments, reason = "needed")]
     pub fn new(
         stages: Vec<Stage>,
         max_blocks_in_flight: usize,
@@ -120,7 +120,7 @@ impl WorkpoolCoordinator {
         (coordinator, stages_for_workers)
     }
 
-    #[expect(clippy::too_many_lines, reason="needed")]
+    #[expect(clippy::too_many_lines, reason = "needed")]
     pub fn run(mut self, demultiplex_infos: &[(usize, OptDemultiplex)]) {
         loop {
             // Check if we're at capacity
@@ -562,7 +562,10 @@ fn process_work_item(
                         }
                     }
                 };
-                #[expect(clippy::cast_precision_loss, reason="Unlikely to exceed f64 precise regions")]
+                #[expect(
+                    clippy::cast_precision_loss,
+                    reason = "Unlikely to exceed f64 precise regions"
+                )]
                 let read_lengths: Vec<TagValue> = read_lengths
                     .into_iter()
                     .map(|x| TagValue::Numeric(x as f64))
@@ -615,7 +618,10 @@ fn process_work_item(
                 let start = work_item.block.segments[0].first_read_sequential_number;
                 let end = work_item.block.segments[0].first_read_sequential_number
                     + work_item.block.segments[0].entries.len();
-                #[expect(clippy::cast_precision_loss, reason="Unlikely to exceed f64 precise regions")]
+                #[expect(
+                    clippy::cast_precision_loss,
+                    reason = "Unlikely to exceed f64 precise regions"
+                )]
                 let read_nos: Vec<TagValue> =
                     (start..end).map(|x| TagValue::Numeric(x as f64)).collect();
                 work_item.block.tags.insert(tag.clone(), read_nos);

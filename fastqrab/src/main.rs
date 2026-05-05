@@ -8,7 +8,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-#[expect(clippy::too_many_lines, reason="cli is complex")]
+#[expect(clippy::too_many_lines, reason = "cli is complex")]
 fn build_cli() -> Command {
     // Construct version string with git commit hash
     // Using const_format doesn't work here due to option_env, so we leak the string
@@ -462,7 +462,7 @@ fn validate_config_file(toml_path: &Path) {
     }
 }
 
-#[expect(clippy::needless_pass_by_value, reason="it's only a test")]
+#[expect(clippy::needless_pass_by_value, reason = "it's only a test")]
 fn verify_config_file(toml_file: &Path, output_dir: Option<PathBuf>, unsafe_prep: bool) {
     match fastqrab::verify_outputs(toml_file, output_dir.as_deref(), unsafe_prep) {
         Ok(()) => {

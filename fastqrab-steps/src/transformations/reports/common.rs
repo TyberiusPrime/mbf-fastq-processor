@@ -7,7 +7,7 @@ pub const PHRED33OFFSET: u8 = 33;
 // phred score (33 sanger encoding) to probability of error
 // python: ([1.0] * 33 + [10**(q/-10) for q in range(0,256)])[:256]
 // the 33 is the correct offset.
-#[expect(clippy::unreadable_literal, reason="these are precomputed values")]
+#[expect(clippy::unreadable_literal, reason = "these are precomputed values")]
 //#[expect(clippy::excessive_precision, reason="can't be bothered to clip them to f64 bits, that's what compilers are for")]
 pub const Q_LOOKUP: [f64; 256] = [
     1.0,

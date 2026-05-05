@@ -43,10 +43,7 @@ impl ValidateTagLabel for TomlValue<MustAdapt<String, TagLabel>> {
                             TagLabel::Normal(name) => name == segment_name,
                             _ => false, // cov:excl-line available are always normal
                         }) {
-                            Ok(TagLabel::TagLength(
-                                segment_name.to_string(),
-                                value.clone(),
-                            ))
+                            Ok(TagLabel::TagLength(segment_name.to_string(), value.clone()))
                         } else {
                             let mut available: Vec<String> =
                                 segment_order.iter().map(|x| format!("len_{x}")).collect();

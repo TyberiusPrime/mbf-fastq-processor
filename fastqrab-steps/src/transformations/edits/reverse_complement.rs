@@ -97,7 +97,11 @@ impl Step for ReverseComplement {
                 match segment_index_or_all {
                     SegmentIndexOrAll::All => {
                         for idx in 0..block.segments.len() {
-                            block.filter_tag_locations(SegmentIndex(idx), ftl, condition.as_deref());
+                            block.filter_tag_locations(
+                                SegmentIndex(idx),
+                                ftl,
+                                condition.as_deref(),
+                            );
                         }
                     }
                     SegmentIndexOrAll::Indexed(segment) => block.filter_tag_locations(

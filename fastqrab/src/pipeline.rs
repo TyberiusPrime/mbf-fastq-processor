@@ -1133,7 +1133,9 @@ impl RunStage3 {
                     ); */
 
                     {
-                        let mut counts = reads_per_tag.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+                        let mut counts = reads_per_tag
+                            .lock()
+                            .unwrap_or_else(std::sync::PoisonError::into_inner);
                         for (tag, fastqs) in &output_files.output_segments {
                             counts.insert(*tag, fastqs.total_fragment_written());
                         }

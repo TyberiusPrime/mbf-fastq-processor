@@ -1,7 +1,7 @@
 // this file is written by dev/update_tests.py
 // there is a test case that will inform you if tests are missing and you need
 // to rerun dev/update_tests.py
-#![expect(clippy::should_panic_without_expect, reason="generated")]
+#![expect(clippy::should_panic_without_expect, reason = "generated")]
 mod test_runner;
 use test_runner::run_test;
 

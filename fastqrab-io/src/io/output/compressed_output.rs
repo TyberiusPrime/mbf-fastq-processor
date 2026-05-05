@@ -294,7 +294,7 @@ impl<T: std::io::Write + Send + 'static> HashedAndCompressedWriter<T> {
     }
 
     /// # Panics
-    /// if the hashing writer finish fails 
+    /// if the hashing writer finish fails
     pub fn finish(self) -> (Option<String>, Option<String>) {
         let (uncompressed_hasher, inner) = self
             .compressed_writer
@@ -420,6 +420,5 @@ mod tests {
         assert_eq!(subsequent.kind(), io::ErrorKind::Other);
 
         let _ = writer.finish();
-
     }
 }

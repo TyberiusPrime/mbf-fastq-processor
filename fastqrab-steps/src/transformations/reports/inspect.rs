@@ -100,7 +100,10 @@ impl VerifyIn<PartialConfig> for PartialInspect {
 }
 
 // cov:excl-start
-#[expect(clippy::missing_fields_in_debug, reason="that's why we have a manual Debug impl")]
+#[expect(
+    clippy::missing_fields_in_debug,
+    reason = "that's why we have a manual Debug impl"
+)]
 impl std::fmt::Debug for Inspect {
     #[mutants::skip]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

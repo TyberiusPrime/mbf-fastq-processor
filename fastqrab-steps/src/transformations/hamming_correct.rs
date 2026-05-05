@@ -33,9 +33,9 @@ pub struct HammingCorrect {
     /// What to do when more than one match an the same distance is found
     pub on_tie: OnTie,
 
-    #[tpd(alias="by_majority_min_molecules_to_start")]
+    #[tpd(alias = "by_majority_min_molecules_to_start")]
     pub on_tie_min_molecules_to_start: usize,
-    #[tpd(alias="by_majority_threshold")]
+    #[tpd(alias = "by_majority_threshold")]
     pub on_tie_threshold: f64,
 
     /// names are considered identical if they match up to the first `name_split_character`
@@ -150,7 +150,7 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
             }
         });
         if matches!(self.on_tie.as_ref(), Some(OnTie::ByEditProbability)) {
-            self.max_hamming_distance.verify(|dist|  {
+            self.max_hamming_distance.verify(|dist| {
                 if *dist != 1 {
                     Err(ValidationFailure::new(
                         "ByEditProbability requires max_hamming_distance == 1".to_string(),
@@ -159,11 +159,13 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
                 } else {
                     Ok(())
                 }
-            }
-            );
+            });
         }
 
-        if matches!(self.on_tie.as_ref(), Some(OnTie::ByMajority | OnTie::ByEditProbability)) {
+        if matches!(
+            self.on_tie.as_ref(),
+            Some(OnTie::ByMajority | OnTie::ByEditProbability)
+        ) {
             let blocks_in_flight: usize = parent
                 .options
                 .as_ref()
@@ -254,11 +256,7 @@ impl TagUser for PartialTaggedVariant<PartialHammingCorrect> {
                         HammingOutput::Label => TagValueType::String,
                     },
                 ),
-                used_tags: vec![
-                    inner
-                        .in_label
-                        .to_used_tag(input_kinds),
-                ],
+                used_tags: vec![inner.in_label.to_used_tag(input_kinds)],
                 ..Default::default()
             })
         } else {
@@ -280,56 +278,54 @@ impl HammingCorrect {
 
         if let Some((key, _value)) = self.seq_to_name.get_key_value(sequence) {
             Ok(OneMatch(key.as_ref(), true))
-        }
-        else {
-
-        let matched = self
-            .resonator
-            .query(sequence)
-            .map_err(|e| anyhow::anyhow!("HammingCorrect query failed: {e}"))?;
-        if matched.is_empty() {
-            Ok(NoMatch)
-        } else if matched.len() == 1 {
-            Ok(OneMatch(matched[0].0, matched[0].1 == 0))
         } else {
-            let mut matched_plus_seq: Vec<_> = matched
-                .iter()
-                .map(|(seq, dist)| {
-                    let seq_name: BString = self
-                        .seq_to_name
-                        .get(*seq)
-                        .expect("Must be in there?!")
-                        .as_bytes()
-                        .into();
-                    let seq_name = match self.name_split_character {
-                        Some(split_char) => seq_name
-                            .splitn(2, |&c| c == split_char)
-                            .next()
-                            .unwrap_or(&seq_name)
-                            .into(),
-                        None => seq_name,
-                    };
-                    (*seq, dist, seq_name)
-                })
-                .collect();
-
-            matched_plus_seq.sort_by_key(|(seq, dist, _name)| (*dist, *seq));
-            // is there a best one? take that
-            if matched_plus_seq[0].1 < matched_plus_seq[1].1 {
-                Ok(OneMatch(matched_plus_seq[0].0, *matched_plus_seq[0].1 == 0))
+            let matched = self
+                .resonator
+                .query(sequence)
+                .map_err(|e| anyhow::anyhow!("HammingCorrect query failed: {e}"))?;
+            if matched.is_empty() {
+                Ok(NoMatch)
+            } else if matched.len() == 1 {
+                Ok(OneMatch(matched[0].0, matched[0].1 == 0))
             } else {
-                let first_different = matched_plus_seq
+                let mut matched_plus_seq: Vec<_> = matched
                     .iter()
-                    .position(|(_seq, dist, _name)| *dist > matched_plus_seq[0].1)
-                    .unwrap_or(matched_plus_seq.len());
-                matched_plus_seq.truncate(first_different);
-                Ok(Tie(matched_plus_seq
-                    .into_iter()
-                    .map(|(seq, _dist, name)| (seq, name))
-                    .collect()))
+                    .map(|(seq, dist)| {
+                        let seq_name: BString = self
+                            .seq_to_name
+                            .get(*seq)
+                            .expect("Must be in there?!")
+                            .as_bytes()
+                            .into();
+                        let seq_name = match self.name_split_character {
+                            Some(split_char) => seq_name
+                                .splitn(2, |&c| c == split_char)
+                                .next()
+                                .unwrap_or(&seq_name)
+                                .into(),
+                            None => seq_name,
+                        };
+                        (*seq, dist, seq_name)
+                    })
+                    .collect();
+
+                matched_plus_seq.sort_by_key(|(seq, dist, _name)| (*dist, *seq));
+                // is there a best one? take that
+                if matched_plus_seq[0].1 < matched_plus_seq[1].1 {
+                    Ok(OneMatch(matched_plus_seq[0].0, *matched_plus_seq[0].1 == 0))
+                } else {
+                    let first_different = matched_plus_seq
+                        .iter()
+                        .position(|(_seq, dist, _name)| *dist > matched_plus_seq[0].1)
+                        .unwrap_or(matched_plus_seq.len());
+                    matched_plus_seq.truncate(first_different);
+                    Ok(Tie(matched_plus_seq
+                        .into_iter()
+                        .map(|(seq, _dist, name)| (seq, name))
+                        .collect()))
+                }
             }
         }
-    }
     }
 
     fn output(&self, matched_seq: &BStr, input_tag: &TagValue, output_barcode: bool) -> TagValue {
@@ -416,7 +412,9 @@ impl Step for HammingCorrect {
         let output_barcode = matches!(self.output, HammingOutput::Barcode);
         let mut read_iter = block.get_pseudo_iter();
         for input_tag in input_tags {
-            let read = read_iter.pseudo_next().context("Read & tag count mismatch!?")?;
+            let read = read_iter
+                .pseudo_next()
+                .context("Read & tag count mismatch!?")?;
             let hit = match input_tag {
                 TagValue::Missing => None,
                 TagValue::Location(hits) => {
@@ -527,7 +525,7 @@ impl Step for HammingCorrect {
                                         .iter()
                                         .map(|(seq, _name)| (*seq, barcode_counts.get(*seq).copied().unwrap_or(0)))
                                         .collect();
-                                    let (observed_sequence, observed_qualities) = 
+                                    let (observed_sequence, observed_qualities) =
                                             if let TagValue::Location(hit) = input_tag {
                                                 (hit.joined_sequence(None), read.hit_to_qualities(hit))
                                             } else if let TagValue::String(_seq) = input_tag {
@@ -539,7 +537,7 @@ impl Step for HammingCorrect {
                                             The location tag {in_label} has lost it's location data (due to editing), can't retrieve qualities.", in_label=self.in_label))?;
                                     if let Some(best_seq) = correct_barcode_via_base_editing_likelihood(
                                         self.on_tie_threshold,
-                                        BStr::new(&observed_sequence), 
+                                        BStr::new(&observed_sequence),
                                         &observed_qualities,
                                         &candidates,
                                     ) {
@@ -603,19 +601,20 @@ pub fn correct_barcode_via_base_editing_likelihood<'a>(
             .iter()
             .zip(cand.iter())
             .position(|(a, b)| a != b)
-            .expect(
-                "Candidates must be at 1 hamming distance from observed sequence.",
-            );
+            .expect("Candidates must be at 1 hamming distance from observed sequence.");
 
         let qv = qual[diff_pos].min(66); // we clamp it here to prevent sequencer overconfidence /
         // actually let the prior from the barcode count count.
         let phred_edit_probability = 10f64.powf(-(f64::from(qv) - 33.0) / 10.0);
-        #[expect(clippy::cast_precision_loss, reason="If counts reach f64 imprecison region, precision loss would be acceptable")]
+        #[expect(
+            clippy::cast_precision_loss,
+            reason = "If counts reach f64 imprecison region, precision loss would be acceptable"
+        )]
         let likelihood = phred_edit_probability * (1 + raw_count) as f64;
 
         total += likelihood;
 
-        // Tiebreak on likelihood ties by lex-greater sequence 
+        // Tiebreak on likelihood ties by lex-greater sequence
         // hence tuple comparison.
         let tup = Some((likelihood, cand));
         if tup > best {

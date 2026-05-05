@@ -109,12 +109,7 @@ impl HitRegion {
 }
 impl Hits {
     #[must_use]
-    pub fn new(
-        start: usize,
-        len: usize,
-        segment_index: SegmentIndex,
-        sequence: BString,
-    ) -> Self {
+    pub fn new(start: usize, len: usize, segment_index: SegmentIndex, sequence: BString) -> Self {
         Hits(vec![Hit {
             location: Some(HitRegion {
                 start,

@@ -141,12 +141,18 @@ impl Step for Kmers {
         super::extract_numeric_tags_plus_all(
             self.segment,
             &self.out_label,
-            #[expect(clippy::cast_precision_loss, reason="loss is acceptable, it's going to be within u32 range")]
+            #[expect(
+                clippy::cast_precision_loss,
+                reason = "loss is acceptable, it's going to be within u32 range"
+            )]
             |read| {
                 let count = count_kmers_in_database(read.seq(), k, kmer_db);
                 count as f64
             },
-            #[expect(clippy::cast_precision_loss, reason="loss is acceptable, it's going to be within u32 range")]
+            #[expect(
+                clippy::cast_precision_loss,
+                reason = "loss is acceptable, it's going to be within u32 range"
+            )]
             |reads| {
                 let total_count: usize = reads
                     .iter()
