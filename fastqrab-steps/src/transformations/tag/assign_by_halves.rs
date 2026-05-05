@@ -252,13 +252,13 @@ impl CellRangerProbeAssigner {
 
             if left_hand_matches.len() > 1 {
                 left_hand_matches = self.combine_name_identical_tied_matches(
-                    left_hand_matches,
+                    &left_hand_matches,
                     &self.left_hand_seq_to_name,
                 );
             }
             if right_hand_matches.len() > 1 {
                 right_hand_matches = self.combine_name_identical_tied_matches(
-                    right_hand_matches,
+                    &right_hand_matches,
                     &self.right_hand_seq_to_name,
                 );
             }
@@ -342,16 +342,15 @@ impl CellRangerProbeAssigner {
 
     fn combine_name_identical_tied_matches<'b>(
         &'b self,
-        hits: Vec<(&'b BStr, u32)>,
+        hits: &Vec<(&'b BStr, u32)>,
         half_seq_to_name: &IndexMap<BString, String>,
     ) -> Vec<(&'b BStr, u32)> {
-        fn split_name<'a>(name: &'a str, name_split_char: Option<u8>) -> &'a str {
+        fn split_name(name: & str, name_split_char: Option<u8>) -> & str {
             match name_split_char {
                 None => name,
                 Some(split_char) => {
                     name.split_once(split_char as char)
-                        .map(|(first_part, _)| first_part)
-                        .unwrap_or(name)
+                        .map_or(name, |(first_part, _)| first_part)
                 }
             }
         }

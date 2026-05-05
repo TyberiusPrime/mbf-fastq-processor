@@ -1715,12 +1715,11 @@ pub struct CombinedFastQBlock<'a> {
 }
 
 impl CombinedFastQBlock<'_> {
+    #[must_use]
     pub fn hit_to_qualities(&self, hits: &Hits) -> Option<BString> {
         let mut res = BString::new(Vec::new());
         for hit in &hits.0 {
-            let Some(location) = hit.location.as_ref() else {
-                return None
-            };
+            let location = hit.location.as_ref()?;
             let seqment_quality = self.segments[location.segment_index.0].qual();
             res.push_str(&seqment_quality[location.start..location.start + location.len]);
         }

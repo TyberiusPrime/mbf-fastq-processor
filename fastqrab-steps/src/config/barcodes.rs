@@ -233,7 +233,7 @@ impl VerifyIn<PartialConfig> for PartialBarcodes {
             {
                 let lengths: HashSet<_> = iupac_to_name.keys().map(|k| k.len()).collect();
                 let mut lengths: Vec<_> = lengths.into_iter().collect();
-                lengths.sort();
+                lengths.sort_unstable();
                 return Err(ValidationFailure::new(
                     "Barcodes of different lengths".to_string(),
                     Some(format!(

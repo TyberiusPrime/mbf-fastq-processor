@@ -610,6 +610,7 @@ pub fn correct_barcode_via_base_editing_likelihood<'a>(
         let qv = qual[diff_pos].min(66); // we clamp it here to prevent sequencer overconfidence /
         // actually let the prior from the barcode count count.
         let phred_edit_probability = 10f64.powf(-(f64::from(qv) - 33.0) / 10.0);
+        #[expect(clippy::cast_precision_loss, reason="If counts reach f64 imprecison region, precision loss would be acceptable")]
         let likelihood = phred_edit_probability * (1 + raw_count) as f64;
 
         total += likelihood;

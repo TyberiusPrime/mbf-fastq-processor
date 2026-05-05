@@ -126,12 +126,14 @@ impl Step for StoreTagInSequence {
                 let read = &mut reads[seg_idx];
                 let seq = read.seq();
 
+                // cov:excl-start
                 assert!(insert_pos <= seq.len(),
                         "StoreTagInSequence: insert position {insert_pos} exceeds read length \
-                        {} on segment {seg_idx}. THis should have been prevent upstream and is a bug.
+                        {} on segment {seg_idx}. This should have been prevent upstream and is a bug.
                         coordinates are within the read.",
                         seq.len(),
                 );
+                // cov:excl-end
 
                 let mut new_seq = Vec::with_capacity(seq.len() + insert_bytes.len());
                 new_seq.extend_from_slice(&seq[..insert_pos]);
