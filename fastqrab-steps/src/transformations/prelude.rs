@@ -21,7 +21,7 @@ pub(crate) use crate::demultiplex::{
 
 pub(crate) use anyhow::{Context, Result, bail};
 pub(crate) use fastqrab_io::io::{
-    FastQBlocksCombined, output::compressed_output::OutputWriter, reads::NewLocation,
+    FastQBlocksCombined, output::chunked_writer::TextRecordSink, reads::NewLocation,
     reads::WrappedFastQReadCommon,
 };
 

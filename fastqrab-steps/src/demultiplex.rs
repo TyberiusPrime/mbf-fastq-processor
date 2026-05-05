@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 
 use crate::join_nonempty;
 use fastqrab_io::CompressionFormat;
-use fastqrab_io::io::compressed_output::{HashedAndCompressedWriter, OutputWriter};
+use fastqrab_io::io::output::chunked_writer::{DataSink, SinkConfig, TextRecordSink};
 
 pub type Tag = u64;
 
@@ -18,10 +18,10 @@ pub struct DemultiplexedData<T>(BTreeMap<Tag, T>);
 pub type DemultiplexTagToName = BTreeMap<Tag, Option<String>>;
 
 #[derive(Default, Clone)]
-pub struct DemultiplexedOutputFiles(pub DemultiplexedData<Option<Box<OutputWriter>>>);
+pub struct DemultiplexedOutputFiles(pub DemultiplexedData<Option<Box<TextRecordSink>>>);
 
 impl DemultiplexedOutputFiles {
-    pub fn take(&mut self) -> DemultiplexedData<Option<Box<OutputWriter>>> {
+    pub fn take(&mut self) -> DemultiplexedData<Option<Box<TextRecordSink>>> {
         self.0.replace(DemultiplexedData::new())
     }
 }
@@ -286,18 +286,18 @@ impl OptDemultiplex {
             if let Some(filename) = opt_filename {
                 let filename = output_directory.join(filename);
                 fastqrab_io::ensure_output_destination_available(&filename, allow_overwrite)?;
-                let file_handle = ex::fs::File::create(&filename).with_context(|| {
+                let sink = DataSink::create_file(&filename).with_context(|| {
                     format!("Could not open output file: {}", filename.display()) // cov:excl-line
                 })?; // cov:excl-line
-                let buffered_writer = HashedAndCompressedWriter::new(
-                    file_handle,
-                    compression_format,
+                let sink_config = SinkConfig {
+                    compression: compression_format,
+                    compression_level,
+                    compression_threads: Some(1),
                     hash_uncompressed,
                     hash_compressed,
-                    compression_level,
-                    Some(1),
-                    None,
-                )?; // cov:excl-line
+                    simulated_failure: None,
+                };
+                let buffered_writer = TextRecordSink::new(sink, &sink_config)?;
                 streams.insert(tag, Some(Box::new(buffered_writer)));
             } else {
                 streams.insert(tag, None);

@@ -7,7 +7,7 @@ use fastqrab_config::{
     default_block_size, default_blocks_in_flight, default_buffer_size, default_output_buffer_size,
     default_spot_check_read_pairing,
 };
-use fastqrab_io::io::output::compressed_output::{SimulatedWriteError, SimulatedWriteFailure};
+use fastqrab_io::io::output::simulated_failure::{SimulatedWriteError, SimulatedWriteFailure};
 
 #[derive(Clone, Default, JsonSchema)]
 #[tpd(no_verify)]

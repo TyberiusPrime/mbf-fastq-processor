@@ -5,7 +5,7 @@ use crate::transformations::prelude::*;
 use fastqrab_config::{default_include_read_name, default_region_separator, tpd_adapt_bstring};
 use fastqrab_io::CompressionFormat;
 
-type OutputHandles = Arc<Mutex<DemultiplexedData<Option<csv::Writer<Box<OutputWriter>>>>>>;
+type OutputHandles = Arc<Mutex<DemultiplexedData<Option<csv::Writer<Box<TextRecordSink>>>>>>;
 type InLabels = Vec<TagLabel>;
 
 /// Store all currently defined tags in a TSV

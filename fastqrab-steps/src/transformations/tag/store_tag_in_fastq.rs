@@ -317,7 +317,7 @@ impl Step for StoreTagInFastQ {
             .take();
         for (_tag, writer) in output_streams {
             if let Some(writer) = writer {
-                let (_, _) = writer.finish();
+                let _ = writer.finish()?;
             }
             // Finalize the writer to ensure all data is flushed and hashes are computed
         }

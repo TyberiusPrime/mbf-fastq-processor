@@ -13,8 +13,7 @@ pub use reads::{
     WrappedFastQRead, WrappedFastQReadMut, longest_suffix_that_is_a_prefix,
 };
 
-pub use output::compressed_output;
-pub use output::{BamOutput, write_read_to_bam};
+pub use output::simulated_failure;
 pub use parsers::bam_read_count_from_index;
 
 pub mod input;

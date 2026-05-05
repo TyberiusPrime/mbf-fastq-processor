@@ -4,18 +4,18 @@ use std::rc::Rc;
 
 use crate::transformations::prelude::*;
 use fastqrab_io::io::WrappedFastQRead;
-use fastqrab_io::io::output::compressed_output::HashedAndCompressedWriter;
+use fastqrab_io::io::output::chunked_writer::{DataSink, SinkConfig};
 use fastqrab_io::{CompressionFormat, FileFormat};
 
 pub type NameSeqQualTuple = (Vec<u8>, Vec<u8>, Vec<u8>, DemultiplexTag);
 
-struct DebugFile(ex::fs::File);
+struct DebugSink(DataSink);
 
 // cov:excl-start
-impl std::fmt::Debug for DebugFile {
+impl std::fmt::Debug for DebugSink {
     #[mutants::skip]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "ex::fs::File(...)")
+        write!(f, "DataSink(...)")
     }
 }
 // cov:excl-stop
@@ -49,7 +49,7 @@ pub struct Inspect {
     #[tpd(skip, default)]
     #[schemars(skip)]
     //we write either interleaved (one file) or one segment (one file)
-    writer: Arc<Mutex<Option<DebugFile>>>,
+    writer: Arc<Mutex<Option<DebugSink>>>,
 
     #[tpd(skip, default)]
     #[schemars(skip)]
@@ -184,8 +184,8 @@ impl Step for Inspect {
         let full_path = output_directory.join(format!("{base}.{format_suffix}"));
         fastqrab_io::ensure_output_destination_available(&full_path, allow_overwrite)?;
 
-        let report_file = ex::fs::File::create(full_path)?;
-        self.writer = Arc::new(Mutex::new(Some(DebugFile(report_file))));
+        let report_sink = DataSink::create_file(&full_path)?;
+        self.writer = Arc::new(Mutex::new(Some(DebugSink(report_sink))));
 
         if let OptDemultiplex::Yes(info) = demultiplex_info {
             self.demultiplex_names = Some(
@@ -264,22 +264,22 @@ impl Step for Inspect {
         let collector = self.collector.lock().expect("collector mutex poisoned");
         let collected = self.collected.load(std::sync::atomic::Ordering::Relaxed);
         // Build filename with format-specific suffix
-        let report_file_handle = self
+        let report_sink = self
             .writer
             .lock()
             .expect("writer mutex poisoned")
             .take()
             .expect("writer must be set during initialization");
 
-        let mut writer = HashedAndCompressedWriter::new(
-            report_file_handle.0,
-            self.compression,
-            false, // hash_uncompressed
-            false, // hash_compressed
-            self.compression_level,
-            None, // compression_threads
-            None,
-        )?; // cov:excl-line
+        let sink_config = SinkConfig {
+            compression: self.compression,
+            compression_level: self.compression_level,
+            compression_threads: None,
+            hash_uncompressed: false,
+            hash_compressed: false,
+            simulated_failure: None,
+        };
+        let mut writer = TextRecordSink::new(report_sink.0, &sink_config)?; // cov:excl-line
         if !collector.is_empty() {
             let reads_to_write = collected.min(self.n);
             match self.format {
@@ -331,7 +331,7 @@ impl Step for Inspect {
             }
         } // cov:excl-line
 
-        writer.finish();
+        let _ = writer.finish()?;
         Ok(None)
     }
 }

@@ -167,7 +167,8 @@ pub struct TagUsageInfo<'a> {
 }
 
 #[enum_dispatch(PartialTransformation)]
-pub trait TagUser {
+pub trait TagUser { 
+    // not part of step since it needs to be done on the pre-verified transformations
     #[mutants::skip] // this *is* Default::default()
     fn get_tag_usage(
         &mut self,
