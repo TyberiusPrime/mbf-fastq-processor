@@ -1,0 +1,30 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[output]
+    prefix = 'output'
+    format = 'fastq'
+    compression = 'raw'
+
+[[step]]
+    action = 'ExtractRegion'
+    source = "read1"
+    anchor = "start"
+    start = 0
+    length = 50
+    out_label = 'query_seq'
+
+[[step]]
+    action = 'AssignByHalves'
+    in_label = 'query_seq'
+    out_label = 'query_seq23'
+    barcodes = 'probes'
+
+[[step]]
+    action = 'StoreTagInComment'
+    in_label = 'probe_name'
+
+[barcodes]
+# [barcodes.probes]
+#     AAAAAAAAAAAAAAAAAAAACCCCCGGGGGTTTTTTTTTTTTTTTTTTTT = 'probe1'
+#     TTTTTTTTTTTTTTTTTTTTGGGGGCCCCCAAAAAAAAAAAAAAAAAAAA = 'probe2'

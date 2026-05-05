@@ -1,0 +1,19 @@
+Error 1/1
+   ╭─config.toml
+   ┆
+29 │ [[step]]
+30 │     action = 'HammingCorrect'
+   ┆              ────────┬───────
+   ┆                      │
+   ┆                      ╰──────── In this step
+   ┆
+31 │     in_label = 'bc_raw'
+32 │     out_label = 'corrected'
+33 │     barcodes = 'barcodes'
+34 │     output = 'label'
+35 │     max_hamming_distance = 2
+   ┆                            ┬
+   ┆                            │
+   ┆                            ╰─ ByEditProbability requires max_hamming_distance == 1
+───╯
+Hint: Set max_hamming_distance to 1

@@ -1,0 +1,16 @@
+   ╭─config.toml
+   ┆
+17 │ [[step]]
+18 │     action = 'AssignByHalves'
+   ┆              ────────┬───────
+   ┆                      │
+   ┆                      ╰──────── In this step
+   ┆
+19 │     in_label = 'query_seq'
+20 │     out_label = 'query_seq_fixed'
+21 │     barcodes = 'probes'
+   ┆                ────┬───
+   ┆                    │
+   ┆                    ╰──── Barcodes section not found
+───╯
+Hint: Did you mean: 'probez'?

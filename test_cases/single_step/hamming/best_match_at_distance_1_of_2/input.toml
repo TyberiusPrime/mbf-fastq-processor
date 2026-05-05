@@ -1,0 +1,36 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[output]
+    prefix = 'output'
+    format = 'fastq'
+    compression = 'raw'
+
+[[step]]
+    action = 'ExtractRegion'
+    source = "read1"
+    anchor = "start"
+    start = 0
+    length = 8
+    out_label = 'bc_raw'
+
+# alpha is at hamming distance 1 from the query (pos 6: G->C),
+# beta  is at hamming distance 2 from the query (pos 0 + pos 6).
+# With max_hamming_distance=2 both are within reach, but the closer
+# match (alpha) must win without falling into OnTie handling.
+[[step]]
+    action = 'HammingCorrect'
+    in_label = 'bc_raw'
+    out_label = 'corrected'
+    barcodes = 'barcodes'
+    max_hamming_distance = 2
+    on_no_match = 'remove'
+    on_tie = 'fail'
+
+[[step]]
+    action = 'StoreTagInComment'
+    in_label = 'corrected'
+
+[barcodes.barcodes]
+    ACGTACGT = 'alpha'
+    TCGTACGT = 'beta'

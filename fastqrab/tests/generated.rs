@@ -2463,6 +2463,83 @@ fn test_cases_x_single_step_x_calccomplexity() {
 
 #[test]
 
+fn test_cases_x_single_step_x_assign_by_halves_x_based_on_string_tag() {
+    println!("Test case is in: test_cases/single_step/assign_by_halves/based_on_string_tag");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/assign_by_halves/based_on_string_tag"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_assign_by_halves_x_basic() {
+    println!("Test case is in: test_cases/single_step/assign_by_halves/basic");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/assign_by_halves/basic"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_assign_by_halves_x_broken_barcodes() {
+    println!("Test case is in: test_cases/single_step/assign_by_halves/broken_barcodes");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/assign_by_halves/broken_barcodes"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_assign_by_halves_x_empty_barcodes_defined() {
+    println!("Test case is in: test_cases/single_step/assign_by_halves/empty_barcodes_defined");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/assign_by_halves/empty_barcodes_defined"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_assign_by_halves_x_in_must_be_unequal_out() {
+    println!("Test case is in: test_cases/single_step/assign_by_halves/in_must_be_unequal_out");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/assign_by_halves/in_must_be_unequal_out"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_assign_by_halves_x_missing_barcode_section() {
+    println!("Test case is in: test_cases/single_step/assign_by_halves/missing_barcode_section");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/assign_by_halves/missing_barcode_section"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_assign_by_halves_x_no_barcodes_defined() {
+    println!("Test case is in: test_cases/single_step/assign_by_halves/no_barcodes_defined");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/assign_by_halves/no_barcodes_defined"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_auto_x_detect_x_on_x_stderr() {
     println!("Test case is in: test_cases/single_step/auto-detect-on-stderr");
     run_test(
@@ -10099,6 +10176,58 @@ fn test_cases_x_single_step_x_hamming_x_basic_correction_too_close_but_same_labe
     run_test(
         std::path::Path::new(
             "../test_cases/single_step/hamming/basic_correction_too_close_but_same_label_after_split",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_hamming_x_best_match_at_distance_1_of_2() {
+    println!("Test case is in: test_cases/single_step/hamming/best_match_at_distance_1_of_2");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/hamming/best_match_at_distance_1_of_2"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_hamming_x_by_edit_probability_x_basic() {
+    println!("Test case is in: test_cases/single_step/hamming/by_edit_probability/basic");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/hamming/by_edit_probability/basic"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_hamming_x_by_edit_probability_x_lost_due_to_editing() {
+    println!(
+        "Test case is in: test_cases/single_step/hamming/by_edit_probability/lost_due_to_editing"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/hamming/by_edit_probability/lost_due_to_editing",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_hamming_x_by_edit_probability_x_must_have_dist_1() {
+    println!(
+        "Test case is in: test_cases/single_step/hamming/by_edit_probability/must_have_dist_1"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/hamming/by_edit_probability/must_have_dist_1",
         ),
         "input.toml",
         1,

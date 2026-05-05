@@ -1,0 +1,28 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[output]
+    prefix = 'output'
+    format = 'fastq'
+    compression = 'raw'
+
+[[step]]
+    action = 'ExtractRegex'
+    source = "name:read1"
+    query = "BC:(.{50})"
+    replacement = "$1"
+    out_label = 'query_seq'
+
+[[step]]
+    action = 'AssignByHalves'
+    in_label = 'query_seq'
+    out_label = 'probe_name'
+    barcodes = 'probes'
+
+[[step]]
+    action = 'StoreTagInComment'
+    in_label = 'probe_name'
+
+[barcodes.probes]
+    AAAAAAAAAAAAAAAAAAAACCCCCGGGGGTTTTTTTTTTTTTTTTTTTT = 'probe1'
+    TTTTTTTTTTTTTTTTTTTTGGGGGCCCCCAAAAAAAAAAAAAAAAAAAA = 'probe2'

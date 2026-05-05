@@ -1,0 +1,14 @@
+Error 1/1
+   ╭─config.toml
+   ┆
+27 │  [barcodes.probes]
+28 │      AAAAAAAAAAAAAAAAAAAACCCCCGGGGGTTTTTTTTTTTTTTTTTTTN = 'probe1'
+   ┆      ─────────────────────────┬────────────────────────
+   ┆                               │
+   ┆                               ╰──────────────────────────────────── Overlaps with AAAAAAAAAAAAAAAAAAAACCCCCGGGGGTTTTTTTTTTTTTTTTTTTT
+29 │      AAAAAAAAAAAAAAAAAAAACCCCCGGGGGTTTTTTTTTTTTTTTTTTTT = 'probe2'
+   ┆      ─────────────────────────┬────────────────────────
+   ┆                               │
+   ┆                               ╰──────────────────────────────────── Overlaps with AAAAAAAAAAAAAAAAAAAACCCCCGGGGGTTTTTTTTTTTTTTTTTTTN
+───╯
+Hint: IUPAC patterns overlap, but lead to different barcodes.

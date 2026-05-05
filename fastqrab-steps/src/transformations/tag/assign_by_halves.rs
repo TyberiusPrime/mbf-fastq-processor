@@ -61,8 +61,8 @@ impl VerifyIn<PartialConfig> for PartialAssignByHalves {
         }
 
         if let Some(barcodes_to_use) = self.barcodes.as_ref()
-            && let Some(barcode_data) = parent.barcodes.as_ref()
-            && let Some(barcodes_data) = barcode_data
+            && let Some(Some(barcodes_data)) = parent.barcodes.as_ref()
+            && !barcodes_data.keys.is_empty()
         {
             if let Some(barcodes_section) = barcodes_data.map.get(barcodes_to_use) {
                 if let Some(barcodes_section) = barcodes_section.as_ref()
@@ -75,10 +75,10 @@ impl VerifyIn<PartialConfig> for PartialAssignByHalves {
                         } else {
                             None
                         },
-                    )?));
-                }
-                // otherwise the barcode section wasn't ok and we'll never
-                // be turned into a concrete AssignToReference.
+                    )?)); // cov:excl-line
+                } // cov:excl-line
+            // otherwise the barcode section wasn't ok and we'll never
+            // be turned into a concrete AssignToReference.
             } else {
                 self.barcodes.help = Some(offer_alternatives(
                     barcodes_to_use.as_ref(),
@@ -91,10 +91,17 @@ impl VerifyIn<PartialConfig> for PartialAssignByHalves {
                 return Ok(());
             }
         } else {
-            // return Err(ValidationFailure::new(
-            //     "AssignToReference step requires a barcodes section to be defined in the config.",
-            //     Some(&format!("See {}", crate::link_docs("barcodes"))),
-            // ));
+            let barcodes_empty = if let Some(Some(barcode_data)) = parent.barcodes.value.as_ref() {
+                barcode_data.keys.is_empty()
+            } else {
+                matches!(parent.barcodes.as_ref(), Some(None))
+            };
+            if barcodes_empty {
+                return Err(ValidationFailure::new(
+                    "AssignByHalves step requires a barcodes section to be defined in the config.",
+                    Some(&format!("See {}", crate::link_docs("barcodes"))),
+                ));
+            }
         }
 
         Ok(())
@@ -137,22 +144,20 @@ impl Step for AssignByHalves {
         let mut output_tags: Vec<TagValue> = Vec::with_capacity(input_tags.len());
 
         for input_tag in input_tags {
-            let query_seq: Option<&[u8]> = match input_tag {
-                TagValue::String(s) => Some(s.as_ref()),
-                TagValue::Location(hits) => hits.0.first().map(|hit| hit.sequence.as_ref()),
-                TagValue::Missing | TagValue::Bool(_) | TagValue::Numeric(_) => None,
+            let hit = match input_tag {
+                TagValue::String(s) => engine
+                    .query(s.as_ref())
+                    .map_err(|e| anyhow::anyhow!("AssignToProbe query failed: {e}"))?,
+                TagValue::Location(hits) => engine
+                    .query(BStr::new(&hits.joined_sequence(None)))
+                    .map_err(|e| anyhow::anyhow!("AssignToProbe query failed: {e}"))?,
+                TagValue::Missing => None,
+                TagValue::Bool(_) | TagValue::Numeric(_) => unreachable!(), // cov:excl-line
             };
 
-            let tag_value = if let Some(query) = query_seq {
-                let hit = engine
-                    .query(query.into())
-                    .map_err(|e| anyhow::anyhow!("AssignToProbe query failed: {e}"))?;
-                match hit {
-                    Some(reference_id) => TagValue::String(reference_id.into()),
-                    None => TagValue::Missing,
-                }
-            } else {
-                TagValue::Missing
+            let tag_value = match hit {
+                Some(reference_id) => TagValue::String(reference_id.as_bytes().into()),
+                None => TagValue::Missing,
             };
 
             output_tags.push(tag_value);
@@ -187,7 +192,7 @@ impl CellRangerProbeAssigner {
                 .map(|(k, v)| (k[..k.len() / 2].into(), v.clone()))
                 .collect::<IndexMap<BString, String>>()),
             max_hamming_distance_for_better_half,
-        )?;
+        )?; // cov:excl-line
         let left_hand_seq_to_name = seq_to_name
             .iter()
             .map(|(k, v)| (k[..k.len() / 2].into(), v.clone()))
@@ -209,12 +214,12 @@ impl CellRangerProbeAssigner {
             .iter()
             .map(|(k, v)| (v.clone(), k.clone()))
             .collect::<IndexMap<String, BString>>();
-        if seq_to_name.len() != name_to_seq.len() {
-            return Err(ValidationFailure::new(
-                "Duplicate probe names found in barcodes section.",
-                Some("For this assignment method, all barcodes must have unique names"),
-            ));
-        }
+        // if seq_to_name.len() != name_to_seq.len() { // why actuall?
+        //     return Err(ValidationFailure::new(
+        //         "Duplicate probe names found in barcodes section.",
+        //         Some("For this assignment method, all barcodes must have unique names"),
+        //     ));
+        // }
         Ok(Self {
             seq_to_name,
             name_to_seq,

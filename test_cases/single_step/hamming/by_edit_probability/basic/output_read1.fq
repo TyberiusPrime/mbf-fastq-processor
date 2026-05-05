@@ -1,0 +1,16 @@
+@ExactAlpha|corrected=alpha
+AAAAAAAAAAAAAAAA
++
+IIIIIIIIIIIIIIII
+@TieLowQAtAlphaPos|corrected=alpha
+AAAACAAAAAAAAAAA
++
+IIII!IIIIIIIIIII
+@TieLowQAtBetaPos|corrected=beta
+AAAACAAAAAAAAAAA
++
+IIIIIIIIIII!IIII
+@TieAmbiguousBothLowQ|corrected=
+AAAACAAAAAAAAAAA
++
+!!!!!!!!!!!!!!!!

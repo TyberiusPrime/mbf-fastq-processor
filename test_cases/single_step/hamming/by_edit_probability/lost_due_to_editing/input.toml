@@ -1,0 +1,53 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[output]
+    prefix = 'output'
+    format = 'fastq'
+    compression = 'raw'
+
+# Two barcodes at hamming distance 2 from each other.
+# alpha = AAAAAAAAAAAAAAAA (all A)
+# beta  = AAAACAAAAAAGAAAA (differs at pos 4 and pos 11)
+#
+# A query of "AAAACAAAAAAAAAAA" sits at d=1 from BOTH barcodes (tie):
+#   alpha differs from query at pos 4
+#   beta  differs from query at pos 11
+#
+# OnTie = ByEditProbability picks the candidate whose differing
+# position has the LOWER base quality (= higher per-base error
+# probability), since that position is the most plausible sequencing
+# error.
+[[step]]
+    action = 'ExtractRegion'
+    source = "read1"
+    anchor = "start"
+    start = 0
+    length = 16
+    out_label = 'bc_raw'
+
+[[step]]
+  action = 'CutStart'
+  segment = 'read1'
+  n = 1
+  
+
+[[step]]
+    action = 'HammingCorrect'
+    in_label = 'bc_raw'
+    out_label = 'corrected'
+    barcodes = 'barcodes'
+    output = 'label'
+    max_hamming_distance = 1
+    on_no_match = 'remove'
+    on_tie = 'by_edit_probability'
+    by_majority_min_molecules_to_start = 0
+    by_majority_threshold = 0.95
+
+[[step]]
+    action = 'StoreTagInComment'
+    in_label = 'corrected'
+
+[barcodes.barcodes]
+    AAAAAAAAAAAAAAAA = 'alpha'
+    AAAACAAAAAAGAAAA = 'beta'

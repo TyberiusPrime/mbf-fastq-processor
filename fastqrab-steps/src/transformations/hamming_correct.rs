@@ -528,13 +528,14 @@ impl Step for HammingCorrect {
                                     let (observed_sequence, observed_qualities) =
                                             if let TagValue::Location(hit) = input_tag {
                                                 (hit.joined_sequence(None), read.hit_to_qualities(hit))
-                                            } else if let TagValue::String(_seq) = input_tag {
-                                                unreachable!("Validation should have prevented ByEditProbability on String tags")
+                                            } else if let TagValue::String(_seq) = input_tag { // cov:excl-line
+                                                unreachable!("Validation should have prevented ByEditProbability on String tags") // cov:excl-line
                                             } else {
                                                 unreachable!() // cov:excl-line
                                             };
-                                    let observed_qualities = observed_qualities.with_context(||format!("Hamming correction with ByEditProbability impossible.\
-                                            The location tag {in_label} has lost it's location data (due to editing), can't retrieve qualities.", in_label=self.in_label))?;
+                                    let observed_qualities = observed_qualities.with_context(||format!("Hamming correction with ByEditProbability impossible.\n\
+                                            The location tag {in_label} has lost it's location data (due to editing), can't retrieve qualities.\n\
+                                            Maybe you can reorder your steps?", in_label=self.in_label))?;
                                     if let Some(best_seq) = correct_barcode_via_base_editing_likelihood(
                                         self.on_tie_threshold,
                                         BStr::new(&observed_sequence),
@@ -624,4 +625,83 @@ pub fn correct_barcode_via_base_editing_likelihood<'a>(
 
     let (best_like, best_seq) = best?;
     (best_like / total >= p_threshold).then_some(best_seq)
+}
+
+#[cfg(test)]
+mod test_correct_barcode_via_base_editing_likelihood {
+    use super::correct_barcode_via_base_editing_likelihood;
+    use bstr::BStr;
+
+    fn b(s: &[u8]) -> &BStr {
+        BStr::new(s)
+    }
+
+    #[test]
+    fn single_candidate_passes_threshold() {
+        // With one candidate, mass = 1.0, regardless of quality / count.
+        let observed = b(b"ACGT");
+        let qual = b"IIII"; // Q40
+        let candidates = [(b(b"ACGA"), 0usize)];
+        let res = correct_barcode_via_base_editing_likelihood(0.5, observed, qual, &candidates);
+        assert_eq!(res, Some(b(b"ACGA")));
+    }
+
+    #[test]
+    fn no_candidates_returns_none() {
+        let observed = b(b"ACGT");
+        let qual = b"IIII";
+        let candidates: [(&BStr, usize); 0] = [];
+        let res = correct_barcode_via_base_editing_likelihood(0.5, observed, qual, &candidates);
+        assert_eq!(res, None);
+    }
+
+    #[test]
+    fn picks_lower_quality_position_when_counts_equal() {
+        // Differing positions get different qualities.
+        // Higher edit-probability (lower Q) wins when counts match.
+        let observed = b(b"AAAAAAAA");
+        // pos 0 = '!' (Q0, p_edit = 1.0); pos 4 = 'I' (Q40, p_edit = 1e-4).
+        let qual: &[u8] = &[b'!', b'I', b'I', b'I', b'I', b'I', b'I', b'I'];
+        // cand1 differs at pos 0 (low quality -> high p_edit -> wins)
+        // cand2 differs at pos 4 (high quality -> low p_edit -> loses)
+        let candidates = [(b(b"TAAAAAAA"), 0usize), (b(b"AAAATAAA"), 0usize)];
+        let res = correct_barcode_via_base_editing_likelihood(0.5, observed, qual, &candidates);
+        assert_eq!(res, Some(b(b"TAAAAAAA")));
+    }
+
+    #[test]
+    fn higher_count_wins_when_qualities_equal() {
+        let observed = b(b"AAAAAAAA");
+        let qual: &[u8] = &[b'I'; 8];
+        // Both differ at pos 0; counts decide.
+        let candidates = [(b(b"TAAAAAAA"), 1usize), (b(b"CAAAAAAA"), 99usize)];
+        let res = correct_barcode_via_base_editing_likelihood(0.5, observed, qual, &candidates);
+        assert_eq!(res, Some(b(b"CAAAAAAA")));
+    }
+
+    #[test]
+    fn ambiguous_returns_none_below_threshold() {
+        // Two equal candidates -> each gets 0.5 of the mass; 0.99 threshold not reached.
+        let observed = b(b"AAAAAAAA");
+        let qual: &[u8] = &[b'!', b'I', b'I', b'I', b'!', b'I', b'I', b'I'];
+        // Both diff positions are Q0 -> p_edit = 1, counts equal -> 50/50 split.
+        let candidates = [(b(b"TAAAAAAA"), 5usize), (b(b"AAAATAAA"), 5usize)];
+        let res = correct_barcode_via_base_editing_likelihood(0.99, observed, qual, &candidates);
+        assert_eq!(res, None);
+        //but if both of them reach the threshold, we take the lexicographic first one
+        let res = correct_barcode_via_base_editing_likelihood(0.50, observed, qual, &candidates);
+        assert_eq!(res, Some(b(b"TAAAAAAA")));
+    }
+
+    #[test]
+    fn quality_clamped_to_q66() {
+        // Quality bytes above Q66 (b'!' + 66 = 99 = 'c') get clamped to Q66.
+        // Two candidates at the same diff position, with extremely high quality,
+        // should still be distinguishable by count.
+        let observed = b(b"AAAA");
+        let qual: &[u8] = &[b'~', b'~', b'~', b'~']; // '~' = 126, beyond Q66
+        let candidates = [(b(b"TAAA"), 0usize), (b(b"CAAA"), 10usize)];
+        let res = correct_barcode_via_base_editing_likelihood(0.5, observed, qual, &candidates);
+        assert_eq!(res, Some(b(b"CAAA")));
+    }
 }

@@ -1,0 +1,16 @@
+Error 1/2
+   ╭─config.toml
+   ┆
+17 │ [[step]]
+18 │     action = 'AssignByHalves'
+   ┆              ────────┬───────
+   ┆                      │
+   ┆                      ╰──────── In this step
+   ┆
+19 │     in_label = 'query_seq'
+20 │     out_label = 'query_seq23'
+21 │     barcodes = 'probes'
+   ┆                        ┬
+   ┆                        │
+   ┆                        ╰─ AssignByHalves step requires a barcodes section to be defined in the config.
+───╯
