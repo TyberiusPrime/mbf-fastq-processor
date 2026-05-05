@@ -406,7 +406,7 @@ mod test {
             .into_iter()
             .collect(),
         );
-        let engine = CellRangerProbeAssigner::new(seq_to_name).unwrap();
+        let engine = CellRangerProbeAssigner::new(seq_to_name, None).unwrap();
         //perfect queries
         assert_eq!(
             engine
@@ -534,7 +534,7 @@ mod test {
             .into_iter()
             .collect(),
         );
-        let engine = CellRangerProbeAssigner::new(seq_to_name).unwrap();
+        let engine = CellRangerProbeAssigner::new(seq_to_name, None).unwrap();
         assert_eq!(
             engine
                 .query("AAAAAAAAAAAAAAAAAAAACCCCCCCCCCTTTTTTTTTTTTTTTTTTTT".into())
@@ -560,7 +560,7 @@ mod test {
             .into_iter()
             .collect(),
         );
-        let engine = CellRangerProbeAssigner::new(seq_to_name).unwrap();
+        let engine = CellRangerProbeAssigner::new(seq_to_name, None).unwrap();
         assert_eq!(
             engine
                 .query("GGAATGTAGCTGGCTCCGGCTATGTTCCAGGGAGGTCTCGCAGGTAAACT".into())

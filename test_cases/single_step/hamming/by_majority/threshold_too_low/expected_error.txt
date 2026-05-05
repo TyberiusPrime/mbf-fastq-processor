@@ -14,10 +14,10 @@ Error 1/1
 23 │   on_tie = 'ByMajority'
 24 │   on_no_match = 'Remove'
 25 │   barcodes = 'barcodes'
-26 │   by_majority_threshold = 0
-   ┆                           ┬
-   ┆                           │
-   ┆                           ╰─ Must be > 0 < 1
+26 │   by_majority_threshold = -1
+   ┆                           ─┬
+   ┆                            │
+   ┆                            ╰─ Must be >= 0 <= 1
 ───╯
 Hint: Supply a valid fraction between (0..1)
       See https://doc_url.example/version-stripped-from-test/docs/redirects/HammingCorrect

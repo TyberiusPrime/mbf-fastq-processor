@@ -33,7 +33,9 @@ pub struct HammingCorrect {
     /// What to do when more than one match an the same distance is found
     pub on_tie: OnTie,
 
-    pub by_majority_min_molecules_to_start: usize,
+    #[tpd(alias="by_majority_min_molecules_to_start")]
+    pub on_tie_min_molecules_to_start: usize,
+    #[tpd(alias="by_majority_threshold")]
     pub on_tie_threshold: f64,
 
     /// names are considered identical if they match up to the first `name_split_character`
@@ -79,7 +81,7 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
     {
         //defaults first, error returns later
         self.reads_in_this_step = Some(AtomicUsize::new(0));
-        self.by_majority_min_molecules_to_start.or(1_000_000);
+        self.on_tie_min_molecules_to_start.or(1_000_000);
         self.on_tie_threshold.or(0.975);
 
         if let Some(out_label) = self.out_label.as_ref()
@@ -175,16 +177,16 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
                 .copied()
                 .unwrap_or_else(|| fastqrab_config::default_block_size().into());
             let reads_wanted = *self
-                .by_majority_min_molecules_to_start
+                .on_tie_min_molecules_to_start
                 .as_ref()
                 .expect("just set above");
             if !reads_wanted.is_multiple_of(reads_per_block) {
                 return Err(ValidationFailure::new(
                     format!(
-                        "by_majority_min_molecules_to_start must be a multiple of options.block_size ({reads_per_block})"
+                        "on_tie_min_molecules_to_start must be a multiple of options.block_size ({reads_per_block})"
                     ),
                     Some(
-                        "Adjust either by_majority_min_molecules_to_start or options.block_size"
+                        "Adjust either on_tie_min_molecules_to_start or options.block_size"
                             .to_string(),
                     ),
                 ));
@@ -275,6 +277,12 @@ enum MatchResult<'a> {
 impl HammingCorrect {
     fn match_sequence(&self, sequence: &BStr) -> Result<MatchResult<'_>> {
         use MatchResult::{NoMatch, OneMatch, Tie};
+
+        if let Some((key, _value)) = self.seq_to_name.get_key_value(sequence) {
+            Ok(OneMatch(key.as_ref(), true))
+        }
+        else {
+
         let matched = self
             .resonator
             .query(sequence)
@@ -321,6 +329,7 @@ impl HammingCorrect {
                     .collect()))
             }
         }
+    }
     }
 
     fn output(&self, matched_seq: &BStr, input_tag: &TagValue, output_barcode: bool) -> TagValue {

@@ -846,10 +846,10 @@ impl PartialConfig {
                                 && let Some(barcodes_section) = barcodes_section.as_ref()
                                 && let Some(seq_to_name) = &barcodes_section.seq_to_name
                             {
-                                let by_majority_min_molecules_to_start = *step_config.by_majority_min_molecules_to_start.as_ref().expect("parent was ok, VerifyIn<HammingCorrect> must have set this");
+                                let on_tie_min_molecules_to_start = *step_config.on_tie_min_molecules_to_start.as_ref().expect("parent was ok, VerifyIn<HammingCorrect> must have set this");
                                 let reads_per_block = self.options.as_ref().and_then(|options| options.block_size.as_ref()).copied().expect("Expect options to have been set/defaulted in at this point");
                                 let blocks_to_count =
-                                    by_majority_min_molecules_to_start / reads_per_block;
+                                    on_tie_min_molecules_to_start / reads_per_block;
                                 let pt = PartialHammingExactCounter::new(
                                     step_config
                                         .in_label

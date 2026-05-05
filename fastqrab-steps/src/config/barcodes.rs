@@ -17,15 +17,16 @@ use crate::{config::PartialConfig, no_barcode_infix};
 #[derive(Clone, Debug, JsonSchema)]
 #[tpd]
 pub struct Barcodes {
+    #[tpd(nested)]
+    pub from_file: Option<BarcodesFromFile>,
+
     //this configuration value is empty after parsing
     //(saves turning them into TomlValues and back).
+    //
     //Values are in dna_to_name
     #[schemars(with = "BTreeMap<String, String>")]
     #[tpd(absorb_remaining)]
     pub barcode_to_name: IndexMap<BString, String>,
-
-    #[tpd(nested)]
-    pub from_file: Option<BarcodesFromFile>,
 
     // built during init.
     #[tpd(skip, default)]
@@ -36,7 +37,10 @@ pub struct Barcodes {
 #[tpd(no_verify)]
 #[derive(Clone, Debug, JsonSchema)]
 pub struct BarcodesFromFile {
-    #[expect(dead_code , reason="only used in PartialBarcodesFromFile. But necessary for logging")]
+    #[expect(
+        dead_code,
+        reason = "only used in PartialBarcodesFromFile. But necessary for logging"
+    )]
     filename: String,
     #[tpd(with = "tpd_adapt_u8_from_byte_or_char", alias = "read_comment_char")]
     pub read_comment_character: Option<u8>,
@@ -94,7 +98,7 @@ impl PartialBarcodesFromFile {
 }
 
 impl VerifyIn<PartialConfig> for PartialBarcodes {
-    #[expect(clippy::too_many_lines, reason="needed")] 
+    #[expect(clippy::too_many_lines, reason = "needed")]
     fn verify(
         &mut self,
         parent: &PartialConfig,
@@ -157,7 +161,7 @@ impl VerifyIn<PartialConfig> for PartialBarcodes {
             }
         }
 
-        let iupac_to_name: Option<Vec<(BString, String)>> =
+        let iupac_to_name: Option<IndexMap<BString, String>> =
             if let Some(Some(from_file)) = self.from_file.as_ref() {
                 if let Some(barcode_to_name) = self.barcode_to_name.as_ref()
                     && !barcode_to_name.map.is_empty()
@@ -189,7 +193,7 @@ impl VerifyIn<PartialConfig> for PartialBarcodes {
                             .copied()
                             .unwrap_or(false),
                     )?;
-                    Some(barcode_to_name.into_iter().collect())
+                    Some(barcode_to_name)
                 }
             } else if let Some(barcode_to_name) = self.barcode_to_name.as_mut()
                 && matches!(self.from_file.as_ref(), Some(None))
@@ -202,9 +206,7 @@ impl VerifyIn<PartialConfig> for PartialBarcodes {
                         barcode_to_name
                             .map
                             .iter()
-                            .map(|(k, v)| {
-                                (k.clone(), v.value.clone().expect("parent was ok"))
-                            })
+                            .map(|(k, v)| (k.clone(), v.value.clone().expect("parent was ok")))
                             .collect(),
                     )
                 } else {
@@ -218,10 +220,31 @@ impl VerifyIn<PartialConfig> for PartialBarcodes {
 
         if let Some(iupac_to_name) = iupac_to_name {
             let mut dna_to_name: IndexMap<BString, String> = IndexMap::new();
-            let mut lengths: HashSet<usize> = HashSet::new();
+
+            if !iupac_to_name.is_empty()
+                && let first_len = iupac_to_name
+                    .keys()
+                    .next()
+                    .map(|k| k.len())
+                    .expect("just checked")
+                && iupac_to_name
+                    .iter()
+                    .any(|(iupac, _)| iupac.len() != first_len)
+            {
+                let lengths: HashSet<_> = iupac_to_name.keys().map(|k| k.len()).collect();
+                let mut lengths: Vec<_> = lengths.into_iter().collect();
+                lengths.sort();
+                return Err(ValidationFailure::new(
+                    "Barcodes of different lengths".to_string(),
+                    Some(format!(
+                        "All barcodes in one section must have the same length. Observed lengths: {lengths:?}"
+                    )),
+                ));
+            }
 
             for (iupac, name) in &iupac_to_name {
-                lengths.insert(iupac.len());
+                //this isn't free (about 100ms for 1.5 million barcodes
+                //we could hide it behind an option, but I don' think it's worth it right now.
                 for dna in IupacExpander::new(iupac.as_ref()) {
                     if let Some(old) = dna_to_name.insert(dna.clone(), name.clone())
                         && old != *name
@@ -235,16 +258,6 @@ impl VerifyIn<PartialConfig> for PartialBarcodes {
                         ));
                     }
                 }
-            }
-            if lengths.len() > 1 {
-                let mut lengths: Vec<_> = lengths.into_iter().collect();
-                lengths.sort_unstable();
-                return Err(ValidationFailure::new(
-                    "Barcodes of different lengths".to_string(),
-                    Some(format!(
-                        "All barcodes in one section must have the same length. Observed lengths: {lengths:?}"
-                    )),
-                ));
             }
 
             self.barcode_to_name.value = Some(MapAndKeys {

@@ -29,6 +29,7 @@
 	    filename = 'input_reference.fa',
 	    read_comment_character = ' '
   }
+  expand_iupac = false
 
 [[step]]
     action = 'StoreTagInComment'

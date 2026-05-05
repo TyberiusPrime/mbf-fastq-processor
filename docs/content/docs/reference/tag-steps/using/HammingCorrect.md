@@ -13,10 +13,10 @@ Correct a tag to one of a predefined set of 'barcodes' using closest hamming dis
 
     max_hamming_distance = 1
     on_no_match = 'remove' # 'remove', 'empty', 'keep'
-    on_tie = 'remove' # 'remove', 'empty', 'keep', 'first', 'first_strict', 'fail', 'by_majority'
+    on_tie = 'remove' # 'remove', 'empty', 'keep', 'first', 'first_strict', 'fail', 'by_majority', 'by_edit_probability'
     name_split_character = '|' # optional
-    by_majority_threshold = 0.975 # optional, default 0.975. Adjusted frequency: (n+1) / (N+k)
-    by_majority_min_molecules_to_start = 1_000_000 # optional, default 1_000_000. See below
+    on_tie_threshold = 0.975 # optional, default 0.975. Adjusted frequency: (n+1) / (N+k)
+    on_tie_min_molecules_to_start = 1_000_000 # optional, default 1_000_000. See below
 
 [barcodes.mybarcodelist]
     "AAAA" = "label_ignored" # only read when demultiplexing 
@@ -40,7 +40,7 @@ to 'barcode'
 
 
 `on_tie` controls what happens when if the tag can't be corrected uniquely, i.e. how to handle 
-multiple equally good matches within `max_hamming_distance` (lower distance matches are always prefered).
+multiple equally good matches within `max_hamming_distance` (lower distance matches are always preferred).
 
 * remove: Remove the hit (location and sequence), 
    useful for [FilterByTag]({{< relref "docs/reference/filter-steps/FilterByTag.md" >}}) later.
@@ -52,6 +52,7 @@ multiple equally good matches within `max_hamming_distance` (lower distance matc
   Otherwise, see fail.
 * fail: Throw a runtime error
 * by_majority: Break ties toward the majority barcode. See below.
+* by_edit_probability: Break ties by majority barcode, moderated by per-base-edit probababilities (max hamming: 1)
  
 Note that hamming_correction removes the location information on tags if
 they spanned more than one region. (This is an implementation limitation, not a conceptual one).
@@ -92,3 +93,15 @@ If there are fewer reads in your dataset than `by_majority_min_molecules_to_star
 all of them are considered for the frequency estimation.
 
 
+## By edit probability tie breaking
+`ByEditProbability` assigns read sequences that are equidistant to multiple barcodes to 
+most likely barcode, where the 'likelihood score' is defined as `p(edit) * (count + 1)`.
+p(edit) is clamped to a lower bound of phred 33 (0.0005)).
+Technically, the score that can exceed 1.0. 
+
+The barcode with the highest score is picked. 
+
+Clean barcode occurrence is estimated as above in the ByMajority section.
+
+The likelihood score must exceed the `on_tie_threshold` parameter (which defaults to 0.975)
+for any barcode to be reported.

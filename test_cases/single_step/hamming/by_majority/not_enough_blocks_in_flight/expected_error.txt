@@ -18,14 +18,14 @@ Error 1/1
 31 │   by_majority_min_molecules_to_start = 8
    ┆                                         ┬
    ┆                                         │
-   ┆                                         ╰─ Not enough reads 'in flight' for ByMajority
+   ┆                                         ╰─ Not enough reads 'in flight' for ByMajority|ByEditProbability
 ───╯
-Hint: Using on_tie=ByMajority must first collect enough data. 
+Hint: Using on_tie=ByMajority (or ByEditProbability) must first collect enough data. 
       It is configured to require 8 molecules.
       Your options.blocks_in_flight * options.reads_per_block only yield 2 molecules.
       Increase either one.
       Having a total number of reads below 8 is not a problem,
-      ByMajority will simply use all reads.
+      ByMajority|ByEditProbability will simply use all reads.
       See https://doc_url.example/version-stripped-from-test/docs/redirects/HammingCorrect
       Or run: `fastqrab template HammingCorrect` for more information.
 

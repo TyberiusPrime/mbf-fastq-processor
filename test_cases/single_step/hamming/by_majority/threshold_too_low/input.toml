@@ -23,7 +23,7 @@
   on_tie = 'ByMajority'
   on_no_match = 'Remove'
   barcodes = 'barcodes'
-  by_majority_threshold = 0
+  by_majority_threshold = -1
 
 [barcodes.barcodes]
   AGTA= 'two'
