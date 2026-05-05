@@ -291,6 +291,7 @@
               ps: with ps; [
                 scipy
                 pysam
+                pandas
                 toml
               ]
             ))

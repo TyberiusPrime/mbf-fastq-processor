@@ -1,5 +1,5 @@
 use anyhow::{Result, bail};
-use bstr::{BStr, BString};
+use bstr::{BStr, BString, ByteVec};
 use indexmap::IndexMap;
 use std::marker::PhantomData;
 use std::num::NonZero;
@@ -1714,13 +1714,19 @@ pub struct CombinedFastQBlock<'a> {
     pub segments: Vec<WrappedFastQRead<'a>>,
 }
 
-// impl CombinedFastQBlock<'_> {
-//     /// get us a stand alone `FastQRead`
-//     #[must_use]
-//     pub fn owned(&self) -> Vec<FastQRead> {
-//         self.segments.iter().map(WrappedFastQRead::owned).collect()
-//     }
-// }
+impl CombinedFastQBlock<'_> {
+    pub fn hit_to_qualities(&self, hits: &Hits) -> Option<BString> {
+        let mut res = BString::new(Vec::new());
+        for hit in &hits.0 {
+            let Some(location) = hit.location.as_ref() else {
+                return None
+            };
+            let seqment_quality = self.segments[location.segment_index.0].qual();
+            res.push_str(&seqment_quality[location.start..location.start + location.len]);
+        }
+        Some(res)
+    }
+}
 
 impl FastQBlocksCombinedIterator<'_> {
     pub fn pseudo_next(&mut self) -> Option<CombinedFastQBlock<'_>> {

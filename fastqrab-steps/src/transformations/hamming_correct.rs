@@ -34,7 +34,7 @@ pub struct HammingCorrect {
     pub on_tie: OnTie,
 
     pub by_majority_min_molecules_to_start: usize,
-    pub by_majority_threshold: f64,
+    pub on_tie_threshold: f64,
 
     /// names are considered identical if they match up to the first `name_split_character`
     #[tpd(with = "tpd_adapt_u8_from_byte_or_char", alias = "name_split_char")]
@@ -80,7 +80,7 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
         //defaults first, error returns later
         self.reads_in_this_step = Some(AtomicUsize::new(0));
         self.by_majority_min_molecules_to_start.or(1_000_000);
-        self.by_majority_threshold.or(0.975);
+        self.on_tie_threshold.or(0.975);
 
         if let Some(out_label) = self.out_label.as_ref()
             && let Some(in_label) = self.in_label.as_ref()
@@ -137,18 +137,31 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
             }
         }
 
-        self.by_majority_threshold.verify(|x| {
-            if *x <= 0.0 || *x >= 1.0 {
+        self.on_tie_threshold.verify(|x| {
+            if *x < 0.0 || *x >= 1.0 {
                 Err(ValidationFailure::new(
-                    "Must be > 0 < 1".to_string(),
+                    "Must be >= 0 <= 1".to_string(),
                     Some("Supply a valid fraction between (0..1)".to_string()),
                 ))
             } else {
                 Ok(())
             }
         });
+        if matches!(self.on_tie.as_ref(), Some(OnTie::ByEditProbability)) {
+            self.max_hamming_distance.verify(|dist|  {
+                if *dist != 1 {
+                    Err(ValidationFailure::new(
+                        "ByEditProbability requires max_hamming_distance == 1".to_string(),
+                        Some("Set max_hamming_distance to 1".to_string()),
+                    ))
+                } else {
+                    Ok(())
+                }
+            }
+            );
+        }
 
-        if let Some(OnTie::ByMajority) = self.on_tie.as_ref() {
+        if matches!(self.on_tie.as_ref(), Some(OnTie::ByMajority | OnTie::ByEditProbability)) {
             let blocks_in_flight: usize = parent
                 .options
                 .as_ref()
@@ -179,14 +192,14 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
 
             if blocks_in_flight * reads_per_block < reads_wanted {
                 return Err(ValidationFailure::new(
-                    "Not enough reads 'in flight' for ByMajority".to_string(),
+                    "Not enough reads 'in flight' for ByMajority|ByEditProbability".to_string(),
                     Some(format!(
-                        "Using on_tie=ByMajority must first collect enough data. \n\
+                        "Using on_tie=ByMajority (or ByEditProbability) must first collect enough data. \n\
                     It is configured to require {reads_wanted} molecules.\n\
                     Your options.blocks_in_flight * options.reads_per_block only yield {reads_available} molecules.\n\
                     Increase either one.\n\
                     Having a total number of reads below {reads_wanted} is not a problem,\n\
-                    ByMajority will simply use all reads.",
+                    ByMajority|ByEditProbability will simply use all reads.",
                         reads_available = blocks_in_flight * reads_per_block,
                     )),
                 ));
@@ -216,7 +229,8 @@ pub enum OnTie {
     FirstStrict,
     Fail,
     ByMajority, // cell ranger like, 0.975, but we update blockwise, instead of reading everything
-                // at once
+    // at once
+    ByEditProbability,
 }
 
 impl TagUser for PartialTaggedVariant<PartialHammingCorrect> {
@@ -226,6 +240,11 @@ impl TagUser for PartialTaggedVariant<PartialHammingCorrect> {
         _segment_order: &[String],
     ) -> Option<TagUsageInfo<'_>> {
         if let Some(inner) = self.toml_value.value.as_mut() {
+            let input_kinds = if let Some(OnTie::ByEditProbability) = inner.on_tie.as_ref() {
+                &[TagValueType::Location][..] //needs qualities
+            } else {
+                &[TagValueType::String, TagValueType::Location][..]
+            };
             Some(TagUsageInfo {
                 declared_tag: inner.out_label.to_declared_tag(
                     match inner.output.as_ref().unwrap_or(&HammingOutput::Barcode) {
@@ -236,7 +255,7 @@ impl TagUser for PartialTaggedVariant<PartialHammingCorrect> {
                 used_tags: vec![
                     inner
                         .in_label
-                        .to_used_tag(&[TagValueType::String, TagValueType::Location]),
+                        .to_used_tag(input_kinds),
                 ],
                 ..Default::default()
             })
@@ -323,7 +342,7 @@ impl HammingCorrect {
             } else {
                 self.seq_to_name
                     .get(matched_seq)
-                    .expect("Cant have a matching barcode without a label")
+                    .expect("Cant have a matching barcode without a label. One of the correction functions is returning an uncorrected barcode when it should return TagValue::Missing?")
                     .as_bytes()
                     .into()
             })
@@ -353,7 +372,7 @@ impl Step for HammingCorrect {
         let mut output_hits = Vec::new();
 
         let (mut barcode_counts, count_here) =
-            if matches!(self.on_tie, OnTie::ByMajority) {
+            if matches!(self.on_tie, OnTie::ByMajority | OnTie::ByEditProbability) {
                 //ByMajority is serialized anyway, so no trouble keeping this lock for the runtime
                 //of this function
                 let mj = self
@@ -386,7 +405,9 @@ impl Step for HammingCorrect {
                 (None, false)
             };
         let output_barcode = matches!(self.output, HammingOutput::Barcode);
+        let mut read_iter = block.get_pseudo_iter();
         for input_tag in input_tags {
+            let read = read_iter.pseudo_next().context("Read & tag count mismatch!?")?;
             let hit = match input_tag {
                 TagValue::Missing => None,
                 TagValue::Location(hits) => {
@@ -421,7 +442,7 @@ impl Step for HammingCorrect {
                         }
                         MatchResult::OneMatch(matched_seq, was_exact) => {
                             if was_exact && let Some(barcode_counts) = barcode_counts.as_mut()
-                                && matches!(self.on_tie, OnTie::ByMajority)
+                                //&& matches!(self.on_tie, OnTie::ByMajority | OnTie::ByEditProbability)
                                 && count_here {
                                         barcode_counts
                                     //matched_seq == query_seq here.
@@ -469,7 +490,7 @@ impl Step for HammingCorrect {
                                 }
                                 OnTie::ByMajority => {
                                     let mut best: Option<(&BStr, usize)> = None;
-                                    let barcode_counts = barcode_counts.as_ref().expect("Majority must be set in OnTie::ByMajority");
+                                    let barcode_counts = barcode_counts.as_ref().expect("Barcode_counts must be set in OnTie::ByMajority");
                                     let mut total = 0;
                                     for item in &items {
                                         //add a laplace of 1
@@ -484,12 +505,39 @@ impl Step for HammingCorrect {
                                     }
                                     let best = best.expect("Items can't have been empty");
                                     #[expect(clippy::cast_precision_loss, reason="If lengths reach f64 imprecison region, precision loss would be acceptable")]
-                                    if best.1 as f64 / total as f64 >= self.by_majority_threshold {
+                                    if best.1 as f64 / total as f64 >= self.on_tie_threshold {
                                         self.output(best.0, input_tag, output_barcode)
                                     } else {
                                         TagValue::Missing
                                     }
 
+                                }
+                                OnTie::ByEditProbability => {
+                                    let barcode_counts = barcode_counts.as_ref().expect("Barcode_counts must be set in OnTie::ByEditProbability");
+                                    let candidates: Vec<_> = items
+                                        .iter()
+                                        .map(|(seq, _name)| (*seq, barcode_counts.get(*seq).copied().unwrap_or(0)))
+                                        .collect();
+                                    let (observed_sequence, observed_qualities) = 
+                                            if let TagValue::Location(hit) = input_tag {
+                                                (hit.joined_sequence(None), read.hit_to_qualities(hit))
+                                            } else if let TagValue::String(_seq) = input_tag {
+                                                unreachable!("Validation should have prevented ByEditProbability on String tags")
+                                            } else {
+                                                unreachable!() // cov:excl-line
+                                            };
+                                    let observed_qualities = observed_qualities.with_context(||format!("Hamming correction with ByEditProbability impossible.\
+                                            The location tag {in_label} has lost it's location data (due to editing), can't retrieve qualities.", in_label=self.in_label))?;
+                                    if let Some(best_seq) = correct_barcode_via_base_editing_likelihood(
+                                        self.on_tie_threshold,
+                                        BStr::new(&observed_sequence), 
+                                        &observed_qualities,
+                                        &candidates,
+                                    ) {
+                                        self.output(best_seq, input_tag, output_barcode)
+                                    } else {
+                                        TagValue::Missing
+                                    }
                                 }
                             }
                         }
@@ -518,4 +566,53 @@ impl Step for HammingCorrect {
         }
         Ok(None)
     }
+}
+
+/// Compute the posterior over Hamming-1 'known' neighbors of `observed`,
+/// weighting each by the per-base error probability at the differing position
+/// and a Laplace-smoothed prior count. Returns the corrected barcode if its
+/// posterior mass exceeds `p_threshold`, otherwise `None` (ambiguous).
+///
+/// `qual` is Illumina Phred+33 (clamped to Q66, matching `BC_MAX_QV`).
+/// `candidates` must each be at Hamming distance exactly 1 from `observed`
+/// and have the same length.
+pub fn correct_barcode_via_base_editing_likelihood<'a>(
+    p_threshold: f64,
+    observed: &BStr,
+    qual: &[u8],
+    candidates: &'a [(&'a BStr, usize)],
+) -> Option<&'a BStr> {
+    debug_assert_eq!(observed.len(), qual.len());
+
+    let mut total = 0.0_f64;
+    let mut best: Option<(f64, &'a BStr)> = None;
+
+    for &(cand, raw_count) in candidates {
+        debug_assert_eq!(cand.len(), observed.len());
+
+        let diff_pos = observed
+            .iter()
+            .zip(cand.iter())
+            .position(|(a, b)| a != b)
+            .expect(
+                "Candidates must be at 1 hamming distance from observed sequence.",
+            );
+
+        let qv = qual[diff_pos].min(66); // we clamp it here to prevent sequencer overconfidence /
+        // actually let the prior from the barcode count count.
+        let phred_edit_probability = 10f64.powf(-(f64::from(qv) - 33.0) / 10.0);
+        let likelihood = phred_edit_probability * (1 + raw_count) as f64;
+
+        total += likelihood;
+
+        // Tiebreak on likelihood ties by lex-greater sequence 
+        // hence tuple comparison.
+        let tup = Some((likelihood, cand));
+        if tup > best {
+            best = tup;
+        }
+    }
+
+    let (best_like, best_seq) = best?;
+    (best_like / total >= p_threshold).then_some(best_seq)
 }

@@ -29,3 +29,4 @@ the search string.
 The replacement supports replacing other tag's values into your string. Use
 `[[tag]]` to achieve that.
 
+The quality of these extracted tags is always 'I'.

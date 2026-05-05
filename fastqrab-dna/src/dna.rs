@@ -51,7 +51,9 @@ impl TagValue {
             TagValue::Location(_hits) => true,
             TagValue::String(_bstring) => true,
             // cov:excl-start
-            TagValue::Numeric(_) => panic!("truthy val on numeric tags not supported. Do not call this way."),
+            TagValue::Numeric(_) => {
+                panic!("truthy val on numeric tags not supported. Do not call this way.")
+            }
             // cov:excl-stop
             TagValue::Bool(val) => *val,
         }
@@ -81,8 +83,8 @@ impl TagValue {
     }
 
     #[must_use]
-    #[expect(clippy::elidable_lifetime_names, reason="Conflicting lints")]
-    pub fn to_bstr<'a> (&'a self) -> Cow<'a, BStr> {
+    #[expect(clippy::elidable_lifetime_names, reason = "Conflicting lints")]
+    pub fn to_bstr<'a>(&'a self) -> Cow<'a, BStr> {
         match &self {
             TagValue::Missing => Cow::Borrowed(BStr::new(b"")),
             TagValue::Location(hits) => Cow::Owned(hits.joined_sequence(None).into()),
@@ -107,7 +109,12 @@ impl HitRegion {
 }
 impl Hits {
     #[must_use]
-    pub fn new(start: usize, len: usize, segment_index: SegmentIndex, sequence: BString) -> Self {
+    pub fn new(
+        start: usize,
+        len: usize,
+        segment_index: SegmentIndex,
+        sequence: BString,
+    ) -> Self {
         Hits(vec![Hit {
             location: Some(HitRegion {
                 start,
@@ -244,7 +251,6 @@ fn iupac_alignment_score(a: u8, b: u8) -> i32 {
         -1
     }
 }
-
 
 /// # Panics
 /// When the aligner doesn't stick to the start & end requirements (bug)
@@ -947,7 +953,7 @@ mod test {
     }
 
     #[test]
-    #[expect(clippy::too_many_lines, reason="it's a test")]
+    #[expect(clippy::too_many_lines, reason = "it's a test")]
     fn test_find_iupac_with_indel() {
         // Perfect match behaves like the mismatch-only variant.
         assert_eq!(

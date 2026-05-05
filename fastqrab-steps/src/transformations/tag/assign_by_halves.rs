@@ -68,8 +68,14 @@ impl VerifyIn<PartialConfig> for PartialAssignByHalves {
                 if let Some(barcodes_section) = barcodes_section.as_ref()
                     && let Some(seq_to_name) = &barcodes_section.seq_to_name
                 {
-                    self.engine =
-                        Some(Arc::new(CellRangerProbeAssigner::new(seq_to_name.clone())?));
+                    self.engine = Some(Arc::new(CellRangerProbeAssigner::new(
+                        seq_to_name.clone(),
+                        if let Some(Some(nc)) = self.name_split_character.as_ref() {
+                            Some(*nc)
+                        } else {
+                            None
+                        },
+                    )?));
                 }
                 // otherwise the barcode section wasn't ok and we'll never
                 // be turned into a concrete AssignToReference.
@@ -166,10 +172,14 @@ struct CellRangerProbeAssigner {
     right_hand_resonator: HammingResonator,
     right_hand_seq_to_name: IndexMap<BString, String>,
     rescue_min_score: i32,
+    name_split_char: Option<u8>,
 }
 
 impl CellRangerProbeAssigner {
-    fn new(seq_to_name: Arc<IndexMap<BString, String>>) -> Result<Self, ValidationFailure> {
+    fn new(
+        seq_to_name: Arc<IndexMap<BString, String>>,
+        name_split_char: Option<u8>,
+    ) -> Result<Self, ValidationFailure> {
         let max_hamming_distance_for_better_half = 1;
         let left_hand_resonator = init_hamming_resonator(
             &(seq_to_name
@@ -213,11 +223,13 @@ impl CellRangerProbeAssigner {
             right_hand_resonator,
             right_hand_seq_to_name,
             rescue_min_score: 30,
+            name_split_char,
         })
     }
 
     #[expect(
-        clippy::cast_possible_truncation, clippy::cast_possible_wrap,
+        clippy::cast_possible_truncation,
+        clippy::cast_possible_wrap,
         reason = "can't have loss at reasonable lengths"
     )]
     fn query(&self, query: &BStr) -> Result<Option<&str>> {
@@ -235,8 +247,21 @@ impl CellRangerProbeAssigner {
             //Scoring is matches - mismatches == len() - 2 * mismatches
             let left_hand = query[..query.len() / 2].into();
             let right_hand = query[query.len() / 2..].into();
-            let left_hand_matches = self.left_hand_resonator.query(left_hand)?;
-            let right_hand_matches = self.right_hand_resonator.query(right_hand)?;
+            let mut left_hand_matches = self.left_hand_resonator.query(left_hand)?;
+            let mut right_hand_matches = self.right_hand_resonator.query(right_hand)?;
+
+            if left_hand_matches.len() > 1 {
+                left_hand_matches = self.combine_name_identical_tied_matches(
+                    left_hand_matches,
+                    &self.left_hand_seq_to_name,
+                );
+            }
+            if right_hand_matches.len() > 1 {
+                right_hand_matches = self.combine_name_identical_tied_matches(
+                    right_hand_matches,
+                    &self.right_hand_seq_to_name,
+                );
+            }
 
             if left_hand_matches.len() == 1 {
                 //attempt rescue
@@ -313,6 +338,47 @@ impl CellRangerProbeAssigner {
             }
             Ok(None)
         }
+    }
+
+    fn combine_name_identical_tied_matches<'b>(
+        &'b self,
+        hits: Vec<(&'b BStr, u32)>,
+        half_seq_to_name: &IndexMap<BString, String>,
+    ) -> Vec<(&'b BStr, u32)> {
+        fn split_name<'a>(name: &'a str, name_split_char: Option<u8>) -> &'a str {
+            match name_split_char {
+                None => name,
+                Some(split_char) => {
+                    name.split_once(split_char as char)
+                        .map(|(first_part, _)| first_part)
+                        .unwrap_or(name)
+                }
+            }
+        }
+
+        debug_assert!(!hits.is_empty(), "can not be called without hits");
+        let all_distances_equal = hits.iter().all(|(_, dist)| *dist == hits[0].1);
+        if all_distances_equal {
+            let first_name = split_name(
+                half_seq_to_name
+                    .get(hits[0].0)
+                    .expect("Internal inconsistency between resonator and map"),
+                    self.name_split_char,
+            );
+            let all_names_equal = hits.iter().all(|(seq, _)| {
+                let name = split_name(
+                    half_seq_to_name
+                        .get(seq.as_bstr())
+                        .expect("Internal inconsistency between resonator and map"),
+                    self.name_split_char,
+                );
+                name == first_name
+            });
+            if all_names_equal {
+                return vec![hits[0]];
+            }
+        }
+        vec![]
     }
 }
 
