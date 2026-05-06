@@ -1,8 +1,4 @@
-use std::{
-    io::Write,
-    path::{Path, PathBuf},
-    sync::{Arc, Mutex},
-};
+use std::sync::{Arc, Mutex};
 
 use super::common::{default_progress_n, thousands_format};
 use crate::transformations::prelude::*;
@@ -28,13 +24,9 @@ pub struct Progress {
     pub n: usize,
     pub output_infix: Option<String>,
 
-    #[schemars(with = "String")]
-    pub filename: Option<PathBuf>,
-
-    //output lock
     #[schemars(skip)]
     #[tpd(skip, default)]
-    lock: Arc<Mutex<()>>,
+    writer: Arc<Mutex<Option<ChunkedRecordWriter>>>,
 }
 
 impl VerifyIn<PartialConfig> for PartialProgress {
@@ -73,14 +65,13 @@ impl VerifyIn<PartialConfig> for PartialProgress {
 
 impl Progress {
     pub fn output(&self, msg: &str) {
-        let _guard = self.lock.lock().expect("lock must not be poisoned");
-        if let Some(filename) = self.filename.as_ref() {
-            let mut report_file = ex::fs::OpenOptions::new()
-                .create(true)
-                .append(true)
-                .open(filename)
-                .expect("failed to open progress file");
-            writeln!(report_file, "{msg}").expect("failed to write to progress file");
+        let mut guard = self.writer.lock().expect("writer lock must not be poisoned");
+        if let Some(writer) = guard.as_mut() {
+            let mut bytes = msg.as_bytes().to_vec();
+            bytes.push(b'\n');
+            writer
+                .write_text_record(&bytes)
+                .expect("failed to write to progress file");
         } else {
             println!("{msg}");
         }
@@ -88,42 +79,42 @@ impl Progress {
 }
 
 impl TagUser for PartialTaggedVariant<PartialProgress> {
-    //default is ok, no tags
+    fn declare_output_files(&self) -> Vec<OutputDeclaration> {
+        if let Some(inner) = self.toml_value.value.as_ref() {
+            if let Some(infix) = inner.output_infix.as_ref().and_then(|x| x.as_ref()) {
+                return vec![OutputDeclaration {
+                    id: "progress".to_string(),
+                    target: WriteTargetConfig::File {
+                        infix_parts: vec![infix.clone()],
+                        suffix: "progress".to_string(),
+                    },
+                    sink_config: SinkConfig::default(),
+                    format: fastqrab_io::FileFormat::Text,
+                    chunk_policy: ChunkPolicy::default(),
+                    bam_options: None,
+                    singleton: true,
+                    span: inner.output_infix.span(),
+                }];
+            }
+        }
+        vec![]
+    }
 }
 
 impl Step for Progress {
-    // it actually doesn't. Since we're using a lock interneally.
-    // fn needs_serial(&self) -> bool {
-    //     false
-    // }
-
     fn init(
         &mut self,
         _input_info: &InputInfo,
-        output_prefix: &str,
-        output_directory: &Path,
-        output_ix_separator: &str,
+        mut output_files: StepOutputFiles,
         _demultiplex_info: &OptDemultiplex,
-        allow_overwrite: bool,
     ) -> Result<Option<DemultiplexBarcodes>> {
-        if let Some(output_infix) = &self.output_infix {
-            let base =
-                crate::join_nonempty([output_prefix, output_infix.as_str()], output_ix_separator);
-            self.filename = Some(output_directory.join(format!("{base}.progress")));
-
-            fastqrab_io::ensure_output_destination_available(
-                self.filename
-                    .as_ref()
-                    .expect("filename must be set when output_infix is provided"),
-                allow_overwrite,
-            )?; // cov:excl-line
-
-            //create empty file so we are sure we can write there
-            let _ = ex::fs::File::create(
-                self.filename
-                    .as_ref()
-                    .expect("filename must be set when output_infix is provided"),
-            )?; // cov:excl-line
+        if self.output_infix.is_some() {
+            // Get the single (tag-0) writer for this non-demultiplexed output
+            let mut per_tag = output_files.take("progress");
+            let writer = per_tag
+                .remove(&0)
+                .expect("tag 0 writer must exist for progress output");
+            *self.writer.lock().expect("poisoned") = Some(writer);
         }
         self.start_time = Some(std::time::Instant::now());
         Ok(None)
@@ -145,14 +136,12 @@ impl Step for Progress {
                 .total_count
                 .lock()
                 .expect("total_count lock must not be poisoned");
-            //    println!("Thread {:?}", thread::current().id());
             let val = *counter;
             let next = *counter + block.len();
             *counter = next;
             drop(counter);
             (val, next)
         };
-        //now for any multiple of n that's in the range, we print a message
         let offset = counter % self.n;
         for ii in ((counter + offset)..next).step_by(self.n) {
             let elapsed = self
@@ -212,6 +201,10 @@ impl Step for Progress {
             thousands_format(count as f64 / elapsed, 2),
         );
         self.output(&msg);
+
+        if let Some(writer) = self.writer.lock().expect("poisoned").take() {
+            let _ = writer.finish()?;
+        }
 
         Ok(None)
     }

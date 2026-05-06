@@ -60,6 +60,11 @@ pub enum FileFormat {
     Fastq,
     Fasta,
     Bam,
+    /// Generic text output (TSV, JSON, progress files, etc.). Uses the same
+    /// write path as Fastq/Fasta but without implying a specific record format.
+    #[tpd(skip)]
+    #[schemars(skip)]
+    Text,
     None,
 }
 
@@ -71,6 +76,7 @@ impl FileFormat {
             FileFormat::Fasta => "fasta",
             FileFormat::Bam => "bam",
             // cov:excl-start
+            FileFormat::Text => unreachable!("Text format has no default suffix — use WriteTargetConfig::File suffix instead"),
             FileFormat::None => unreachable!("No output has no suffix either"), // cov:excl-stop
         }
     }
@@ -91,7 +97,7 @@ impl FileFormat {
                 compression.apply_suffix(base)
             }
             FileFormat::Bam => self.default_suffix().to_string(),
-            FileFormat::None => String::new(),
+            FileFormat::Text | FileFormat::None => String::new(),
         }
     }
 }

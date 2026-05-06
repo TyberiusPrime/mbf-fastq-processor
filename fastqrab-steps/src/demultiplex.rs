@@ -1,12 +1,12 @@
 use anyhow::{Context, Result};
 use bstr::{BStr, BString};
 use indexmap::IndexMap;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 
 use crate::join_nonempty;
 use fastqrab_io::CompressionFormat;
-use fastqrab_io::io::output::chunked_writer::{DataSink, SinkConfig, TextRecordSink};
+use fastqrab_io::io::output::chunked_writer::{ChunkedRecordWriter, DataSink, SinkConfig, TextRecordSink};
 
 pub type Tag = u64;
 
@@ -36,6 +36,38 @@ impl std::fmt::Debug for DemultiplexedOutputFiles {
     }
 }
 // cov:excl-stop
+
+/// Per-step output writers passed to [`Step::init`].
+///
+/// Keyed by the `id` from each [`OutputDeclaration`]; the value is one
+/// [`ChunkedRecordWriter`] per active demultiplex tag (or just tag `0` when
+/// there is no demultiplexing).
+pub struct StepOutputFiles(pub HashMap<String, DemultiplexedData<ChunkedRecordWriter>>);
+
+impl StepOutputFiles {
+    #[must_use]
+    pub fn empty() -> Self {
+        Self(HashMap::new())
+    }
+
+    /// Take all writers for a declared output id. Panics if the id is unknown.
+    #[must_use]
+    pub fn take(&mut self, id: &str) -> DemultiplexedData<ChunkedRecordWriter> {
+        self.0
+            .remove(id)
+            .unwrap_or_else(|| panic!("StepOutputFiles: unknown output id '{id}'"))
+    }
+
+    /// Insert writers for a declared output id.
+    pub fn insert(&mut self, id: String, data: DemultiplexedData<ChunkedRecordWriter>) {
+        self.0.insert(id, data);
+    }
+
+    /// Iterate over all (id, writers) pairs, consuming self.
+    pub fn into_iter(self) -> impl Iterator<Item = (String, DemultiplexedData<ChunkedRecordWriter>)> {
+        self.0.into_iter()
+    }
+}
 
 impl<T> Default for DemultiplexedData<T> {
     fn default() -> Self {
@@ -87,6 +119,11 @@ impl<T> DemultiplexedData<T> {
     #[must_use]
     pub fn get_mut(&mut self, tag: &Tag) -> Option<&mut T> {
         self.0.get_mut(tag)
+    }
+
+    #[must_use]
+    pub fn remove(&mut self, tag: &Tag) -> Option<T> {
+        self.0.remove(tag)
     }
 
     #[must_use]

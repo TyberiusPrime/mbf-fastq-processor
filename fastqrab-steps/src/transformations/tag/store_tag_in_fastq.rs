@@ -1,5 +1,3 @@
-use std::io::Write;
-
 use super::{format_numeric_for_comment, store_tag_in_comment};
 use crate::transformations::prelude::*;
 use fastqrab_config::{
@@ -40,14 +38,16 @@ pub struct StoreTagInFastQ {
     #[tpd(default)]
     format: FileFormat,
     #[tpd(default)]
+    #[expect(dead_code, reason = "only used in verification")]
     compression: CompressionFormat,
     #[tpd(default)]
+    #[expect(dead_code, reason = "only used in verification")]
     compression_level: Option<u8>,
 
     // Internal state for collecting reads during apply
     #[tpd(skip, default)]
     #[schemars(skip)]
-    output_streams: Option<Arc<Mutex<DemultiplexedOutputFiles>>>,
+    output_handles: Option<Arc<Mutex<DemultiplexedData<Option<ChunkedRecordWriter>>>>>,
 }
 
 impl VerifyIn<PartialConfig> for PartialStoreTagInFastQ {
@@ -141,6 +141,36 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagInFastQ> {
             None // cov:excl-line
         }
     }
+
+    fn declare_output_files(&self) -> Vec<OutputDeclaration> {
+        if let Some(inner) = self.toml_value.value.as_ref() {
+            if let Some(in_label) = inner.in_label.as_ref().and_then(|v| v.as_ref_post()) {
+                let format = inner.format.as_ref().copied().unwrap_or_default();
+                let compression = inner.compression.as_ref().copied().unwrap_or_default();
+                return vec![OutputDeclaration {
+                    id: "tag_fastq".to_string(),
+                    target: WriteTargetConfig::File {
+                        infix_parts: vec![format!("tag.{in_label}")],
+                        suffix: format.get_suffix(compression, None),
+                    },
+                    sink_config: SinkConfig {
+                        compression,
+                        compression_level: inner.compression_level.as_ref().and_then(|x| x.as_ref()).copied(),
+                        compression_threads: Some(1),
+                        hash_uncompressed: false,
+                        hash_compressed: false,
+                        simulated_failure: None,
+                    },
+                    format,
+                    chunk_policy: ChunkPolicy::default(),
+                    bam_options: None,
+                    singleton: false,
+                    span: inner.in_label.span(),
+                }];
+            }
+        }
+        vec![]
+    }
 }
 
 impl Step for StoreTagInFastQ {
@@ -154,24 +184,15 @@ impl Step for StoreTagInFastQ {
     fn init(
         &mut self,
         _input_info: &InputInfo,
-        output_prefix: &str,
-        output_directory: &Path,
-        output_ix_separator: &str,
-        demultiplex_info: &OptDemultiplex,
-        allow_overwrite: bool,
+        mut output_files: StepOutputFiles,
+        _demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<DemultiplexBarcodes>> {
-        self.output_streams = Some(Arc::new(Mutex::new(demultiplex_info.open_output_streams(
-            output_directory,
-            output_prefix,
-            &format!("tag.{}", self.in_label),
-            self.format.default_suffix(),
-            output_ix_separator,
-            self.compression,
-            self.compression_level,
-            false,
-            false,
-            allow_overwrite,
-        )?))); // cov:excl-line
+        let per_tag = output_files.take("tag_fastq");
+        let mut handles = DemultiplexedData::new();
+        for (tag, writer) in per_tag {
+            handles.insert(tag, Some(writer));
+        }
+        self.output_handles = Some(Arc::new(Mutex::new(handles)));
         Ok(None)
     }
 
@@ -213,16 +234,13 @@ impl Step for StoreTagInFastQ {
                     // Determine which output stream to use based on demultiplexing
                     let output_idx = block.output_tags.as_ref().map_or(0, |x| x[ii]);
 
-                    if let Some(writer) = self
-                        .output_streams
+                    let mut output_handles = self
+                        .output_handles
                         .as_ref()
                         .expect("Should have been set in init")
                         .lock()
-                        .expect("lock poisoned")
-                        .0
-                        .get_mut(&output_idx)
-                        .expect("output stream must exist for index")
-                    {
+                        .expect("lock poisoned");
+                    if let Some(Some(writer)) = output_handles.get_mut(&output_idx) {
                         //if we have demultiplex & no-unmatched-output, this happens
                         let mut name = wrapped.name().to_vec();
                         if let Some(comment_tags) = self.comment_tags.as_ref() {
@@ -270,28 +288,30 @@ impl Step for StoreTagInFastQ {
                             }
                         }
 
+                        let mut buf = Vec::new();
                         match self.format {
-                            FileFormat::Fastq => {
-                                writer.write_all(b"@")?;
-                                writer.write_all(&name)?;
-                                writer.write_all(b"\n")?;
-                                writer.write_all(&seq)?;
-                                writer.write_all(b"\n+\n")?;
-                                writer.write_all(&qual)?;
-                                writer.write_all(b"\n")?;
+                            FileFormat::Fastq | FileFormat::None | FileFormat::Text => {
+                                buf.push(b'@');
+                                buf.extend_from_slice(&name);
+                                buf.push(b'\n');
+                                buf.extend_from_slice(&seq);
+                                buf.extend_from_slice(b"\n+\n");
+                                buf.extend_from_slice(&qual);
+                                buf.push(b'\n');
                             }
                             FileFormat::Fasta => {
-                                writer.write_all(b">")?;
-                                writer.write_all(&name)?;
-                                writer.write_all(b"\n")?;
-                                writer.write_all(&seq)?;
-                                writer.write_all(b"\n")?;
+                                buf.push(b'>');
+                                buf.extend_from_slice(&name);
+                                buf.push(b'\n');
+                                buf.extend_from_slice(&seq);
+                                buf.push(b'\n');
                             }
                             // cov:excl-start
-                            FileFormat::Bam | FileFormat::None => {
+                            FileFormat::Bam => {
                                 unreachable!("Unsupported format encountered after validation")
                             } // cov:excl-stop
                         }
+                        writer.write_text_record(&buf)?;
                     }
                 } // cov:excl-line
             }
@@ -307,21 +327,18 @@ impl Step for StoreTagInFastQ {
         &self,
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<crate::transformations::FinalizeReportResult>> {
-        // Flush all output streams
-        let output_streams = self
-            .output_streams
+        for (_tag, writer) in self
+            .output_handles
             .as_ref()
-            .expect("output streams should have been set in init")
+            .expect("output_handles should have been set in init")
             .lock()
             .expect("lock poisoned")
-            .take();
-        for (_tag, writer) in output_streams {
-            if let Some(writer) = writer {
+            .iter_mut()
+        {
+            if let Some(writer) = writer.take() {
                 let _ = writer.finish()?;
             }
-            // Finalize the writer to ensure all data is flushed and hashes are computed
         }
-
         Ok(None)
     }
 }

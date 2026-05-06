@@ -624,6 +624,39 @@ fn create_bam_header(reference_sequences: &[(String, usize)]) -> noodles::sam::H
 // Layer 6: ChunkedRecordWriter
 // ---------------------------------------------------------------------------
 
+/// Directory- and prefix-free file target. The pipeline resolves this to a
+/// full [`WriteTarget`] by prepending the output directory and prefix.
+#[derive(Clone, Debug)]
+pub enum WriteTargetConfig {
+    /// A file in the output directory. Each element of `infix_parts` is joined
+    /// with the pipeline's output prefix and demultiplex name using the
+    /// configured ix_separator. `suffix` is the complete file extension
+    /// (e.g. `"tsv"`, `"progress"`, `"qr.json"`).
+    File { infix_parts: Vec<String>, suffix: String },
+    Stdout,
+}
+
+/// Everything a step needs to tell the pipeline about one output file it wants.
+#[derive(Clone, Debug)]
+pub struct OutputDeclaration {
+    /// Step-local key used to retrieve the corresponding writer from
+    /// [`StepOutputFiles`] inside [`Step::init`].
+    pub id: String,
+    pub target: WriteTargetConfig,
+    pub sink_config: SinkConfig,
+    pub format: FileFormat,
+    pub chunk_policy: ChunkPolicy,
+    pub bam_options: Option<BamSinkOptions>,
+    /// If true, always produce a single writer (tag 0) regardless of demultiplexing.
+    /// Use this for steps that write one aggregate output file (Inspect, Progress).
+    pub singleton: bool,
+    /// Byte range in the config source pointing at the field most responsible
+    /// for this output (e.g. the `infix` or `in_label` field). Used by
+    /// conflict-detection to produce precise error spans. Set to `0..0` when
+    /// called from the runtime path (pipeline), where spans are not needed.
+    pub span: std::ops::Range<usize>,
+}
+
 pub enum WriteTarget {
     Files(ChunkPaths),
     Stdout,
@@ -726,6 +759,19 @@ pub struct ChunkPolicy {
     pub records_per_chunk: Option<usize>,
 }
 
+// cov:excl-start
+impl std::fmt::Debug for ChunkedRecordWriter {
+    #[mutants::skip]
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ChunkedRecordWriter")
+            .field("format", &self.format)
+            .field("chunk_index", &self.chunk_index)
+            .field("records_in_chunk", &self.records_in_chunk)
+            .finish_non_exhaustive()
+    }
+}
+// cov:excl-stop
+
 pub struct ChunkedRecordWriter {
     format: FileFormat,
     target: WriteTarget,
@@ -734,6 +780,9 @@ pub struct ChunkedRecordWriter {
     bam_options: Option<BamSinkOptions>,
     bam_thread_count: NonZero<usize>,
     allow_overwrite: bool,
+
+    /// Bytes written at the top of every chunk. Set via [`Self::set_header`].
+    header: Option<Vec<u8>>,
 
     active: ActiveSink,
     chunk_index: usize,
@@ -802,6 +851,7 @@ impl ChunkedRecordWriter {
             bam_options,
             bam_thread_count,
             allow_overwrite,
+            header: None,
             active: ActiveSink::Idle,
             chunk_index: 0,
             digit_count,
@@ -810,6 +860,23 @@ impl ChunkedRecordWriter {
         };
         me.open_active_sink()?;
         Ok(me)
+    }
+
+    /// Set bytes that are written at the start of every chunk (including the
+    /// current one). Intended for CSV/TSV column headers and similar preambles.
+    /// Not supported for BAM writers.
+    pub fn set_header(&mut self, header: Vec<u8>) -> Result<()> {
+        match &mut self.active {
+            ActiveSink::Text(sink) => {
+                sink.write_all(&header).context("Writing chunk header")?;
+            }
+            ActiveSink::Bam(_) => {
+                anyhow::bail!("set_header is not supported for BAM ChunkedRecordWriter");
+            }
+            ActiveSink::Idle => unreachable!("active sink is Idle outside of rotation"),
+        }
+        self.header = Some(header);
+        Ok(())
     }
 
     pub fn write_text_record(&mut self, encoded: &[u8]) -> Result<()> {
@@ -906,7 +973,7 @@ impl ChunkedRecordWriter {
             WriteTarget::Stdout => DataSink::stdout(),
         };
         self.active = match self.format {
-            FileFormat::Fastq | FileFormat::Fasta => {
+            FileFormat::Fastq | FileFormat::Fasta | FileFormat::Text => {
                 ActiveSink::Text(TextRecordSink::new(sink, &self.sink_config)?)
             }
             FileFormat::Bam => {
@@ -923,6 +990,13 @@ impl ChunkedRecordWriter {
             }
             FileFormat::None => unreachable!("Cannot open ChunkedRecordWriter with format None"),
         };
+        // Re-emit the header at the top of every chunk after the first (the
+        // first chunk's header is written by set_header() itself).
+        if self.chunk_index > 0 {
+            if let (Some(header), ActiveSink::Text(sink)) = (&self.header, &mut self.active) {
+                sink.write_all(header).context("Writing chunk header on rotation")?;
+            }
+        }
         Ok(())
     }
 

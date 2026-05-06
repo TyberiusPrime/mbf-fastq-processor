@@ -154,7 +154,7 @@ impl OutputStreamConfig {
             FileFormat::Bam => unreachable!(
                 "BAM output is not supported on stdout. Should have been caught in validation. Bug."
             ),
-            FileFormat::None => unreachable!("Cannot emit 'none' format to stdout"),
+            FileFormat::Text | FileFormat::None => unreachable!("Cannot emit 'text' or 'none' format to stdout via this path"),
         }
         Self {
             target: WriteTarget::Stdout,
@@ -668,7 +668,7 @@ fn output_block_inner(
             }
         }
         // cov:excl-start
-        FileFormat::None => unreachable!("Cannot output with format 'None'"),
+        FileFormat::Text | FileFormat::None => unreachable!("Cannot output reads with format 'Text' or 'None'"),
         // cov:excl-stop
     }
     Ok(())
@@ -730,7 +730,7 @@ fn output_block_interleaved(
                     let _ = segment_index;
                 }
                 // cov:excl-start
-                FileFormat::None => unreachable!("Cannot output with format 'None'"),
+                FileFormat::Text | FileFormat::None => unreachable!("Cannot output reads with format 'Text' or 'None'"),
                 // cov:excl-stop
             }
         }

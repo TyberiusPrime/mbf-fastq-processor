@@ -2,9 +2,9 @@ use std::collections::BTreeMap;
 
 use crate::transformations::prelude::*;
 use fastqrab_config::{default_region_separator, tpd_adapt_bstring};
-use fastqrab_io::CompressionFormat;
 
 type QuantifyTagCollector = Arc<Mutex<DemultiplexedData<BTreeMap<Vec<u8>, usize>>>>;
+type OutputHandles = Arc<Mutex<DemultiplexedData<Option<ChunkedRecordWriter>>>>;
 
 /// Write a histogram of tag values to a JSON file.
 #[derive(Clone, JsonSchema)]
@@ -24,7 +24,7 @@ pub struct QuantifyTag {
 
     #[tpd(skip, default)]
     #[schemars(skip)]
-    pub output_streams: Option<Arc<Mutex<DemultiplexedOutputFiles>>>,
+    output_handles: Option<OutputHandles>,
 }
 
 impl VerifyIn<PartialConfig> for PartialQuantifyTag {
@@ -56,13 +56,34 @@ impl TagUser for PartialTaggedVariant<PartialQuantifyTag> {
             None // cov:excl-line
         }
     }
+
+    fn declare_output_files(&self) -> Vec<OutputDeclaration> {
+        if let Some(inner) = self.toml_value.value.as_ref() {
+            if let Some(infix) = inner.infix.as_ref() {
+                return vec![OutputDeclaration {
+                    id: "qr".to_string(),
+                    target: WriteTargetConfig::File {
+                        infix_parts: vec![infix.clone()],
+                        suffix: "qr.json".to_string(),
+                    },
+                    sink_config: SinkConfig::default(),
+                    format: fastqrab_io::FileFormat::Text,
+                    chunk_policy: ChunkPolicy::default(),
+                    bam_options: None,
+                    singleton: false,
+                    span: inner.infix.span(),
+                }];
+            }
+        }
+        vec![]
+    }
 }
 
 impl Step for QuantifyTag {
     fn transmits_premature_termination(&self) -> bool {
         false
     }
-    #[mutants::skip] //better to have the pipeline know about it than blocking in our 
+    #[mutants::skip] //better to have the pipeline know about it than blocking in our
     //internal lock
     fn needs_serial(&self) -> bool {
         true
@@ -71,29 +92,19 @@ impl Step for QuantifyTag {
     fn init(
         &mut self,
         _input_info: &InputInfo,
-        output_prefix: &str,
-        output_directory: &Path,
-        output_ix_separator: &str,
-        demultiplex_info: &OptDemultiplex,
-        allow_overwrite: bool,
+        mut output_files: StepOutputFiles,
+        _demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<DemultiplexBarcodes>> {
+        let per_tag = output_files.take("qr");
+
         let mut collector = DemultiplexedData::new();
-        for tag in demultiplex_info.iter_tags() {
+        let mut handles = DemultiplexedData::new();
+        for (tag, writer) in per_tag {
             collector.insert(tag, BTreeMap::new());
+            handles.insert(tag, Some(writer));
         }
         self.collector = Some(Arc::new(Mutex::new(collector)));
-        self.output_streams = Some(Arc::new(Mutex::new(demultiplex_info.open_output_streams(
-            output_directory,
-            output_prefix,
-            &self.infix,
-            "qr.json",
-            output_ix_separator,
-            CompressionFormat::Uncompressed,
-            None,
-            false,
-            false,
-            allow_overwrite,
-        )?))); // cov:excl-line
+        self.output_handles = Some(Arc::new(Mutex::new(handles)));
 
         Ok(None)
     }
@@ -116,20 +127,20 @@ impl Step for QuantifyTag {
             .expect("Tag not found. Should have been caught in validation");
         if let Some(demultiplex_tags) = &block.output_tags {
             for (tag_val, demultiplex_tag) in hits.iter().zip(demultiplex_tags) {
-                if let Some(hit) = tag_val.as_sequence() {
-                    *collector
-                        .get_mut(demultiplex_tag)
-                        .expect("value must exist in histogram_values")
+                if let Some(hit) = tag_val.as_sequence()
+                    && let Some(inner) = collector.get_mut(demultiplex_tag)
+                {
+                    *inner
                         .entry(hit.joined_sequence(Some(&self.region_separator)))
                         .or_insert(0) += 1;
                 }
             }
         } else {
             for tag_val in hits {
-                if let Some(hit) = tag_val.as_sequence() {
-                    *collector
-                        .get_mut(&0)
-                        .expect("value must exist in histogram_values")
+                if let Some(hit) = tag_val.as_sequence()
+                    && let Some(inner) = collector.get_mut(&0)
+                {
+                    *inner
                         .entry(hit.joined_sequence(Some(&self.region_separator)))
                         .or_insert(0) += 1;
                 }
@@ -140,38 +151,35 @@ impl Step for QuantifyTag {
     }
 
     fn finalize(&self, _demultiplex_info: &OptDemultiplex) -> Result<Option<FinalizeReportResult>> {
-        use std::io::Write;
         let collector = self
             .collector
             .as_ref()
             .expect("collector should have been set in init")
             .lock()
             .expect("Lock poisoned");
-        let output_streams = self
-            .output_streams
+        let mut handles = self
+            .output_handles
             .as_ref()
-            .expect("output streams should have been set in init")
+            .expect("output_handles should have been set in init")
             .lock()
-            .expect("Lock poisoned")
-            .take();
-        for (tag, stream) in output_streams {
-            if let Some(mut stream) = stream {
+            .expect("Lock poisoned");
+        for (tag, writer_opt) in handles.iter_mut() {
+            if let Some(mut writer) = writer_opt.take() {
                 let mut str_collector: Vec<(String, usize)> = collector
                     .get(&tag)
                     .expect("value must exist in histogram_values")
                     .iter()
                     .map(|(k, v)| (String::from_utf8_lossy(k).to_string(), *v))
                     .collect();
-                //sort by count descending, then alphabetically by string
                 str_collector.sort_by(|a, b| {
                     b.1.cmp(&a.1)
                         .then_with(|| a.0.to_lowercase().cmp(&b.0.to_lowercase()))
                 });
-                // we want something that keeps the order
                 let str_collector: indexmap::IndexMap<String, usize> =
                     str_collector.into_iter().collect();
                 let json = serde_json::to_string_pretty(&str_collector)?;
-                stream.write_all(json.as_bytes())?;
+                writer.write_text_record(json.as_bytes())?;
+                let _ = writer.finish()?;
             }
         }
         Ok(None)

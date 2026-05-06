@@ -8,15 +8,15 @@ use prelude::TagMetadata;
 use rand::SeedableRng;
 use scalable_cuckoo_filter::ScalableCuckooFilter;
 use schemars::JsonSchema;
-use std::path::Path;
 use toml_pretty_deser::prelude::*;
 
-use crate::demultiplex::{DemultiplexBarcodes, OptDemultiplex};
+use crate::demultiplex::{DemultiplexBarcodes, OptDemultiplex, StepOutputFiles};
 use fastqrab_config::{
     DeclaredTag, RemovedTags, TagLabel, UsedTag,
     dna::TagValue,
     segments::{ResolvedSourceNoAll, SegmentIndex},
 };
+use fastqrab_io::io::output::chunked_writer::OutputDeclaration;
 use fastqrab_io::io::{FastQBlocksCombined, reads::WrappedFastQReadCommon};
 
 pub(crate) mod calc;
@@ -167,7 +167,7 @@ pub struct TagUsageInfo<'a> {
 }
 
 #[enum_dispatch(PartialTransformation)]
-pub trait TagUser { 
+pub trait TagUser {
     // not part of step since it needs to be done on the pre-verified transformations
     #[mutants::skip] // this *is* Default::default()
     fn get_tag_usage(
@@ -187,6 +187,17 @@ pub trait TagUser {
         _transformations_before_this_one: &[TomlValue<PartialTransformation>],
     ) {
     }
+
+    /// Return declarations for each output file this step would create.
+    /// Called at config-verification time to detect filename conflicts.
+    /// Each declaration's `span` should point at the config field most
+    /// responsible for the filename (e.g. `infix`, `in_label`), falling
+    /// back to the step's own top-level span when no better field exists.
+    /// Steps that produce side-output files override this; the default
+    /// returns an empty vec.
+    fn declare_output_files(&self) -> Vec<OutputDeclaration> {
+        vec![]
+    }
 }
 
 #[enum_dispatch(Transformation)]
@@ -195,14 +206,12 @@ pub trait Step {
         //default does nothing
     }
 
+
     fn init(
         &mut self,
         _input_info: &InputInfo,
-        _output_prefix: &str,
-        _output_directory: &Path,
-        _output_ix_separator: &str,
+        _output_files: StepOutputFiles,
         _demultiplex_info: &OptDemultiplex,
-        _allow_overwrite: bool,
     ) -> Result<Option<DemultiplexBarcodes>> {
         Ok(None)
     }

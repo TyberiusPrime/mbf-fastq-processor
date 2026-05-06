@@ -84,11 +84,8 @@ impl Step for Report {
     fn init(
         &mut self,
         _input_info: &InputInfo,
-        _output_prefix: &str,
-        _output_directory: &Path,
-        _output_ix_separator: &str,
+        _output_files: StepOutputFiles,
         _demultiplex_info: &OptDemultiplex,
-        _allow_overwrite: bool,
     ) -> Result<Option<DemultiplexBarcodes>> {
         unreachable!("Should not be reached - should be expanded into individual parts before");
     }

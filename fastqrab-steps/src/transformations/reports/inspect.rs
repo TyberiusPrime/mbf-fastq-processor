@@ -1,24 +1,11 @@
 use std::cell::RefCell;
-use std::io::Write;
 use std::rc::Rc;
 
 use crate::transformations::prelude::*;
 use fastqrab_io::io::WrappedFastQRead;
-use fastqrab_io::io::output::chunked_writer::{DataSink, SinkConfig};
 use fastqrab_io::{CompressionFormat, FileFormat};
 
 pub type NameSeqQualTuple = (Vec<u8>, Vec<u8>, Vec<u8>, DemultiplexTag);
-
-struct DebugSink(DataSink);
-
-// cov:excl-start
-impl std::fmt::Debug for DebugSink {
-    #[mutants::skip]
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "DataSink(...)")
-    }
-}
-// cov:excl-stop
 
 /// Inspect reads within the workflow
 #[derive(JsonSchema)]
@@ -31,6 +18,10 @@ pub struct Inspect {
     segment: SegmentIndexOrAll,
 
     pub infix: String,
+    #[tpd(skip, default)]
+    #[schemars(skip)]
+    #[allow(dead_code)]
+    resolved_segment_name: String,
     #[tpd(default)]
     pub suffix: Option<String>,
     #[tpd(default)]
@@ -48,8 +39,7 @@ pub struct Inspect {
 
     #[tpd(skip, default)]
     #[schemars(skip)]
-    //we write either interleaved (one file) or one segment (one file)
-    writer: Arc<Mutex<Option<DebugSink>>>,
+    writer: Arc<Mutex<Option<ChunkedRecordWriter>>>,
 
     #[tpd(skip, default)]
     #[schemars(skip)]
@@ -87,6 +77,13 @@ impl VerifyIn<PartialConfig> for PartialInspect {
                 .map(crate::config::PartialInput::get_segment_order)
         {
             let n = self.n.as_ref().map_or(0, |x| *x);
+            let target_name = match segment {
+                SegmentIndexOrAll::All => "interleaved".to_string(),
+                SegmentIndexOrAll::Indexed(idx) => {
+                    segment_order.get(*idx).cloned().unwrap_or_default()
+                }
+            };
+            self.resolved_segment_name = Some(target_name);
             self.collector = Some(Arc::new(Mutex::new(match segment {
                 SegmentIndexOrAll::All => (0..segment_order.len())
                     .map(|_| Vec::with_capacity(n))
@@ -123,6 +120,44 @@ impl std::fmt::Debug for Inspect {
 // cov:excl-stop
 
 impl TagUser for PartialTaggedVariant<PartialInspect> {
+    fn declare_output_files(&self) -> Vec<OutputDeclaration> {
+        let Some(inner) = self.toml_value.value.as_ref() else {
+            return vec![];
+        };
+        let infix = inner.infix.as_ref().cloned().unwrap_or_default();
+        let segment_name = inner
+            .resolved_segment_name
+            .as_deref()
+            .unwrap_or_default()
+            .to_string();
+        let mut infix_parts = vec![infix];
+        if !segment_name.is_empty() {
+            infix_parts.push(segment_name);
+        }
+        let compression = inner.compression.as_ref().copied().unwrap_or_default();
+        let compression_level = inner.compression_level.as_ref().and_then(|x| x.as_ref()).copied();
+        let format = inner.format.as_ref().copied().unwrap_or_default();
+        let custom_suffix = inner.suffix.as_ref().and_then(|opt| opt.as_ref());
+        let suffix = format.get_suffix(compression, custom_suffix);
+        vec![OutputDeclaration {
+            id: "inspect".to_string(),
+            target: WriteTargetConfig::File { infix_parts, suffix },
+            sink_config: SinkConfig {
+                compression,
+                compression_level,
+                compression_threads: None,
+                hash_uncompressed: false,
+                hash_compressed: false,
+                simulated_failure: None,
+            },
+            format,
+            chunk_policy: ChunkPolicy::default(),
+            bam_options: None,
+            singleton: true,
+            span: inner.infix.span(),
+        }]
+    }
+
     fn get_tag_usage(
         &mut self,
         tags_available: &IndexMap<TagLabel, TagMetadata>,
@@ -160,32 +195,15 @@ impl Step for Inspect {
 
     fn init(
         &mut self,
-        input_info: &InputInfo,
-        output_prefix: &str,
-        output_directory: &Path,
-        output_ix_separator: &str,
+        _input_info: &InputInfo,
+        mut output_files: StepOutputFiles,
         demultiplex_info: &OptDemultiplex,
-        allow_overwrite: bool,
     ) -> Result<Option<DemultiplexBarcodes>> {
-        let format_suffix = self
-            .format
-            .get_suffix(self.compression, self.suffix.as_ref());
-
-        let target = match self.segment {
-            SegmentIndexOrAll::Indexed(idx) => input_info.segment_order[idx].clone(),
-            SegmentIndexOrAll::All => "interleaved".to_string(),
-        };
-
-        let base = crate::join_nonempty(
-            [output_prefix, self.infix.as_str(), target.as_str()],
-            output_ix_separator,
-        );
-
-        let full_path = output_directory.join(format!("{base}.{format_suffix}"));
-        fastqrab_io::ensure_output_destination_available(&full_path, allow_overwrite)?;
-
-        let report_sink = DataSink::create_file(&full_path)?;
-        self.writer = Arc::new(Mutex::new(Some(DebugSink(report_sink))));
+        let mut per_tag = output_files.take("inspect");
+        let writer = per_tag
+            .remove(&0)
+            .expect("tag 0 writer must exist for inspect output");
+        *self.writer.lock().expect("poisoned") = Some(writer);
 
         if let OptDemultiplex::Yes(info) = demultiplex_info {
             self.demultiplex_names = Some(
@@ -263,44 +281,36 @@ impl Step for Inspect {
     fn finalize(&self, _demultiplex_info: &OptDemultiplex) -> Result<Option<FinalizeReportResult>> {
         let collector = self.collector.lock().expect("collector mutex poisoned");
         let collected = self.collected.load(std::sync::atomic::Ordering::Relaxed);
-        // Build filename with format-specific suffix
-        let report_sink = self
+        let mut writer = self
             .writer
             .lock()
             .expect("writer mutex poisoned")
             .take()
             .expect("writer must be set during initialization");
 
-        let sink_config = SinkConfig {
-            compression: self.compression,
-            compression_level: self.compression_level,
-            compression_threads: None,
-            hash_uncompressed: false,
-            hash_compressed: false,
-            simulated_failure: None,
-        };
-        let mut writer = TextRecordSink::new(report_sink.0, &sink_config)?; // cov:excl-line
         if !collector.is_empty() {
             let reads_to_write = collected.min(self.n);
+            let mut buf = Vec::with_capacity(256);
             match self.format {
-                FileFormat::None | FileFormat::Fastq => {
+                FileFormat::None | FileFormat::Fastq | FileFormat::Text => {
                     for read_idx in 0..reads_to_write {
                         for segment_reads in collector.iter() {
                             if let Some((name, seq, qual, tag)) = segment_reads.get(read_idx) {
-                                writer.write_all(b"@")?;
-                                writer.write_all(name)?;
+                                buf.clear();
+                                buf.push(b'@');
+                                buf.extend_from_slice(name);
                                 if let Some(demux_names) = &self.demultiplex_names
                                     && let Some(demux_name) = demux_names.get(tag)
                                 {
-                                    writer.write_all(b" _Demultiplex=")?;
-                                    writer.write_all(demux_name.as_bytes())?;
+                                    buf.extend_from_slice(b" _Demultiplex=");
+                                    buf.extend_from_slice(demux_name.as_bytes());
                                 }
-
-                                writer.write_all(b"\n")?;
-                                writer.write_all(seq)?;
-                                writer.write_all(b"\n+\n")?;
-                                writer.write_all(qual)?;
-                                writer.write_all(b"\n")?;
+                                buf.push(b'\n');
+                                buf.extend_from_slice(seq);
+                                buf.extend_from_slice(b"\n+\n");
+                                buf.extend_from_slice(qual);
+                                buf.push(b'\n');
+                                writer.write_text_record(&buf)?;
                             } // cov:excl-line
                         }
                     }
@@ -309,24 +319,26 @@ impl Step for Inspect {
                     for read_idx in 0..reads_to_write {
                         for segment_reads in collector.iter() {
                             if let Some((name, seq, _qual, tag)) = segment_reads.get(read_idx) {
-                                writer.write_all(b">")?;
-                                writer.write_all(name)?;
+                                buf.clear();
+                                buf.push(b'>');
+                                buf.extend_from_slice(name);
                                 if let Some(demux_names) = &self.demultiplex_names
                                     && let Some(demux_name) = demux_names.get(tag)
                                 {
-                                    writer.write_all(b" Demultiplex=")?;
-                                    writer.write_all(demux_name.as_bytes())?;
+                                    buf.extend_from_slice(b" Demultiplex=");
+                                    buf.extend_from_slice(demux_name.as_bytes());
                                 }
-                                writer.write_all(b"\n")?;
-                                writer.write_all(seq)?;
-                                writer.write_all(b"\n")?;
+                                buf.push(b'\n');
+                                buf.extend_from_slice(seq);
+                                buf.push(b'\n');
+                                writer.write_text_record(&buf)?;
                             } // cov:excl-line
                         }
                     }
                 }
                 // cov:excl-start
                 FileFormat::Bam => {
-                    panic!("Bam not valid - should have been cought in verify");
+                    panic!("Bam not valid - should have been caught in verify");
                 } // cov:excl-stop
             }
         } // cov:excl-line

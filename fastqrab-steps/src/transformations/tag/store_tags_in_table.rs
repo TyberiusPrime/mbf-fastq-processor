@@ -3,9 +3,9 @@ use std::rc::Rc;
 
 use crate::transformations::prelude::*;
 use fastqrab_config::{default_include_read_name, default_region_separator, tpd_adapt_bstring};
-use fastqrab_io::CompressionFormat;
+use fastqrab_io::{CompressionFormat, FileFormat};
 
-type OutputHandles = Arc<Mutex<DemultiplexedData<Option<csv::Writer<Box<TextRecordSink>>>>>>;
+type OutputHandles = Arc<Mutex<DemultiplexedData<Option<ChunkedRecordWriter>>>>;
 type InLabels = Vec<TagLabel>;
 
 /// Store all currently defined tags in a TSV
@@ -16,7 +16,11 @@ pub struct StoreTagsInTable {
     #[tpd(default)]
     pub infix: String, // pub for verification inspection
     #[tpd(default)]
+    #[expect(dead_code, reason = "only used in verification")]
     compression: CompressionFormat,
+    #[tpd(default)]
+    #[expect(dead_code, reason = "only used in verification")]
+    compression_level: Option<u8>,
 
     #[schemars(with = "String")]
     #[tpd(with = "tpd_adapt_bstring")]
@@ -49,22 +53,49 @@ impl VerifyIn<PartialConfig> for PartialStoreTagsInTable {
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {
-        // //test case says we accept this
-        // self.infix.verify(|infix: &String| {
-        //     if infix.is_empty() {
-        //         Err(ValidationFailure::new("Infix must not be empty", None))
-        //     } else {
-        //         Ok(())
-        //     }
-        // });
         self.region_separator.or_with(default_region_separator);
         self.include_read_name.or_with(default_include_read_name);
+
+        crate::config::validate_compression_level_u8(
+            &self.compression,
+            &mut self.compression_level,
+            &FileFormat::Fastq, // Default to Fastq for validation purposes
+        );
 
         Ok(())
     }
 }
 
 impl TagUser for PartialTaggedVariant<PartialStoreTagsInTable> {
+    fn declare_output_files(&self) -> Vec<OutputDeclaration> {
+        if let Some(inner) = self.toml_value.value.as_ref() {
+            let infix = inner.infix.as_ref().cloned().unwrap_or_default();
+            let compression = inner.compression.as_ref().copied().unwrap_or_default();
+            let suffix = compression.apply_suffix("tsv");
+            return vec![OutputDeclaration {
+                id: "tsv".to_string(),
+                target: WriteTargetConfig::File {
+                    infix_parts: vec![infix],
+                    suffix,
+                },
+                sink_config: SinkConfig {
+                    compression,
+                    compression_level: inner.compression_level.as_ref().and_then(|x| x.as_ref()).copied(),
+                    compression_threads: Some(1),
+                    hash_uncompressed: false,
+                    hash_compressed: false,
+                    simulated_failure: None,
+                },
+                format: fastqrab_io::FileFormat::Text,
+                chunk_policy: ChunkPolicy::default(),
+                bam_options: None,
+                singleton: false,
+                span: inner.infix.span(),
+            }];
+        }
+        vec![]
+    }
+
     fn get_tag_usage(
         &mut self,
         tags_available: &IndexMap<TagLabel, TagMetadata>,
@@ -82,16 +113,15 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagsInTable> {
                         inner.in_labels.state = TomlValueState::ValidationFailed {
                             message: "May not be an empty list".to_string(),
                         };
-                        inner.in_labels.help =
-                            Some("Set to a non-empty list of tag labels. Or leave off to store all (regular) tags.".to_string());
+                        inner.in_labels.help = Some("Set to a non-empty list of tag labels. Or leave off to store all (regular) tags.".to_string());
                         inner.final_in_labels = Some(Vec::new());
                         return None;
                     }
                     inner.final_in_labels = Some(
                         in_labels
                             .iter()
-                            .filter_map(|x| x.as_ref())
-                            .filter_map(|x| x.as_ref_post())
+                            .filter_map(|tag| tag.as_ref())
+                            .filter_map(|v| v.as_ref_post())
                             .cloned()
                             .collect(),
                     );
@@ -144,46 +174,44 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagsInTable> {
     }
 }
 
+fn format_tsv_row(fields: &[Vec<u8>]) -> Vec<u8> {
+    let mut row = Vec::new();
+    for (i, field) in fields.iter().enumerate() {
+        if i > 0 {
+            row.push(b'\t');
+        }
+        row.extend_from_slice(field);
+    }
+    row.push(b'\n');
+    row
+}
+
 impl Step for StoreTagsInTable {
     fn init(
         &mut self,
         _input_info: &InputInfo,
-        output_prefix: &str,
-        output_directory: &Path,
-        output_ix_separator: &str,
-        demultiplex_info: &OptDemultiplex,
-        allow_overwrite: bool,
+        mut output_files: StepOutputFiles,
+        _demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<DemultiplexBarcodes>> {
-        // Determine file extension based on compression
-        let buffered_writers = demultiplex_info.open_output_streams(
-            output_directory,
-            output_prefix,
-            self.infix.as_str(),
-            "tsv",
-            output_ix_separator,
-            self.compression,
-            None,
-            false,
-            false,
-            allow_overwrite,
-        )?;
+        let per_tag = output_files.take("tsv");
 
-        self.output_handles = Some(Arc::new(Mutex::new(
-            buffered_writers
-                .0
-                .into_iter()
-                .map(|(tag, opt_buffered_writer)| {
-                    (
-                        tag,
-                        opt_buffered_writer.map(|buffered_writer| {
-                            csv::WriterBuilder::new()
-                                .delimiter(b'\t')
-                                .from_writer(buffered_writer)
-                        }),
-                    )
-                })
-                .collect(),
-        )));
+        // Build header bytes and call set_header on each writer
+        let tag_list = &self.final_in_labels;
+        let mut header_fields: Vec<Vec<u8>> = Vec::new();
+        if self.include_read_name {
+            header_fields.push(b"ReadName".to_vec());
+        }
+        for tag in tag_list {
+            header_fields.push(tag.as_ref().as_bytes().to_vec());
+        }
+        let header_bytes = format_tsv_row(&header_fields);
+
+        let mut handles = DemultiplexedData::new();
+        for (tag, mut writer) in per_tag {
+            writer.set_header(header_bytes.clone())?;
+            handles.insert(tag, Some(writer));
+        }
+        self.output_handles = Some(Arc::new(Mutex::new(handles)));
 
         Ok(None)
     }
@@ -203,35 +231,6 @@ impl Step for StoreTagsInTable {
         input_info: &InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        if block.block_no() == 1 {
-            // first block, output header
-
-            let tag_list = &self.final_in_labels;
-            // Write header
-            {
-                let mut header = Vec::new();
-                if self.include_read_name {
-                    header.push("ReadName");
-                }
-                for tag in tag_list {
-                    header.push(tag.as_ref());
-                }
-
-                for (_demultiplex_tag, writer) in self
-                    .output_handles
-                    .as_ref()
-                    .expect("was set in init?")
-                    .lock()
-                    .expect("lock poisoned")
-                    .iter_mut()
-                {
-                    if let Some(writer) = writer {
-                        writer.write_record(&header)?;
-                    }
-                }
-            }
-        }
-
         let output_tags = block.output_tags.as_ref();
         let mut ii = 0;
         let mut iter = block.segments[0].get_pseudo_iter();
@@ -243,11 +242,8 @@ impl Step for StoreTagsInTable {
             .expect("lock poisoned");
         while let Some(read) = iter.pseudo_next() {
             let output_tag = output_tags.map_or(0, |x| x[ii]);
-            if let Some(writer) = output_handles
-                .get_mut(&output_tag)
-                .expect("output_handle must exist for tag")
-            {
-                let mut record = Vec::new();
+            if let Some(Some(writer)) = output_handles.get_mut(&output_tag) {
+                let mut record: Vec<Vec<u8>> = Vec::new();
                 if self.include_read_name {
                     record.push(
                         read.name_without_comment(input_info.comment_insert_char)
@@ -274,26 +270,25 @@ impl Step for StoreTagsInTable {
                     );
                 }
                 ii += 1;
-                writer
-                    .write_record(record)
-                    .expect("Failed to write record to table");
+                let row = format_tsv_row(&record);
+                writer.write_text_record(&row)?;
             } // cov:excl-line
         }
 
         Ok((block, true))
     }
+
     fn finalize(&self, _demultiplex_info: &OptDemultiplex) -> Result<Option<FinalizeReportResult>> {
-        // Flush all output handles
-        for handle in self
+        for (_tag, writer) in self
             .output_handles
             .as_ref()
             .expect("was set in init")
             .lock()
-            .expect("Locks poisened")
+            .expect("lock poisoned")
             .iter_mut()
         {
-            if let Some(mut writer) = handle.1.take() {
-                writer.flush().expect("Failed final csv flush");
+            if let Some(writer) = writer.take() {
+                let _ = writer.finish()?;
             }
         }
         Ok(None)

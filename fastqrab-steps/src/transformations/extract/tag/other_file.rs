@@ -180,11 +180,8 @@ impl Step for OtherFile {
     fn init(
         &mut self,
         input_info: &InputInfo,
-        _output_prefix: &str,
-        _output_directory: &Path,
-        _output_ix_separator: &str,
+        _output_files: StepOutputFiles,
         _demultiplex_info: &OptDemultiplex,
-        _allow_overwrite: bool,
     ) -> Result<Option<DemultiplexBarcodes>> {
         let mut filter: ApproxOrExactFilter = if self.false_positive_rate == 0.0 {
             ApproxOrExactFilter::Exact(HashSet::new())

@@ -108,11 +108,8 @@ impl Step for Kmers {
     fn init(
         &mut self,
         input_info: &InputInfo,
-        _output_prefix: &str,
-        _output_directory: &Path,
-        _output_ix_separator: &str,
+        _output_files: StepOutputFiles,
         _demultiplex_info: &OptDemultiplex,
-        _allow_overwrite: bool,
     ) -> Result<Option<DemultiplexBarcodes>> {
         let db = build_kmer_database(
             &self.filename,

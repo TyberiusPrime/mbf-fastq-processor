@@ -172,11 +172,8 @@ impl Step for Box<_ReportTagHistogram> {
     fn init(
         &mut self,
         _input_info: &InputInfo,
-        _output_prefix: &str,
-        _output_directory: &Path,
-        _output_ix_separator: &str,
+        _output_files: StepOutputFiles,
         demultiplex_info: &OptDemultiplex,
-        _allow_overwrite: bool,
     ) -> Result<Option<DemultiplexBarcodes>> {
         let mut data = self.data.lock().expect("Lock poisoned");
         for valid_tag in demultiplex_info.iter_tags() {

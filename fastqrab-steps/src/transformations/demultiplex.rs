@@ -221,11 +221,8 @@ impl Step for Demultiplex {
     fn init(
         &mut self,
         _input_info: &InputInfo,
-        _output_prefix: &str,
-        _output_directory: &Path,
-        _output_ix_separator: &str,
+        _output_files: StepOutputFiles,
         _demultiplex_info: &OptDemultiplex,
-        _allow_override: bool,
     ) -> Result<Option<DemultiplexBarcodes>> {
         assert!(
             !self

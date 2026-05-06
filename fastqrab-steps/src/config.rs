@@ -1,6 +1,6 @@
 use crate::transformations::hamming_correct::OnTie;
 use crate::transformations::hamming_exact_counter::PartialHammingExactCounter;
-use crate::transformations::{PartialTransformation, Transformation};
+use crate::transformations::{PartialTransformation, TagUser, Transformation};
 use anyhow::{Result, anyhow, bail};
 use bstr::BString;
 use fastqrab_config::{RemovedTags, TagLabel, TagValueType, default_blocks_in_flight};
@@ -8,6 +8,7 @@ use fastqrab_config::{
     default_block_size, default_buffer_size, default_output_buffer_size,
     default_spot_check_read_pairing,
 };
+use fastqrab_io::io::output::chunked_writer::OutputDeclaration;
 use fastqrab_io::io::{self, DetectedInputFormat};
 use fastqrab_io::{CompressionFormat, FileFormat};
 use indexmap::IndexMap;
@@ -119,6 +120,7 @@ struct InputFormatsObserved {
 pub struct Stage {
     pub transformation: Transformation,
     pub allowed_tags: Vec<TagLabel>,
+    pub output_declarations: Vec<OutputDeclaration>,
 }
 
 #[derive(JsonSchema)]
@@ -152,6 +154,10 @@ pub struct Config {
 
     #[tpd(skip)]
     pub allowed_tags_per_transformation: Vec<Vec<TagLabel>>,
+
+    #[tpd(skip)]
+    #[schemars(skip)]
+    pub output_declarations_per_transformation: Vec<Vec<OutputDeclaration>>,
 }
 
 #[derive(Debug)]
@@ -206,7 +212,7 @@ impl VerifyIn<TPDRoot> for PartialConfig {
         self.verify_head_rapidgzip_conflict();
         self.expand_transformations();
         self.verify_transformation_labels();
-        self.verify_table_infixes_unique();
+        self.verify_output_filenames_unique();
 
         self.verify_demultiplex_unique();
         self.verify_barcodes_used();
@@ -1442,56 +1448,69 @@ impl PartialConfig {
         }
     }
 
-    /// # Panics
-    /// If `StoreTagsInTable` didn't set it's `infix`
-    pub fn verify_table_infixes_unique(&mut self) {
-        if let Some(transformations) = self.transform.value.as_mut() {
-            let just_trafos = transformations.iter_mut().filter_map(|t| t.value.as_mut());
+    /// Detect output filename conflicts across all steps.
+    ///
+    /// Each step's `TagUser::declare_output_files()` carries a `span` pointing
+    /// at the config field most responsible for the filename (e.g. `infix`).
+    pub fn verify_output_filenames_unique(&mut self) {
+        use fastqrab_io::io::output::chunked_writer::WriteTargetConfig;
 
-            let mut seen = IndexMap::new();
-            for trafo in just_trafos {
-                if let PartialTransformation::StoreTagsInTable(step_info_toml) = trafo
-                    && let Some(step_info_toml) = step_info_toml.toml_value.as_mut()
-                {
-                    let infix = step_info_toml.infix.as_ref().expect(
-                        "VerifyIn of StoreTagsInTable must have happend, infix must be a value",
-                    );
-                    if let Some(old_span) =
-                        seen.insert(infix.clone(), step_info_toml.infix.span().clone())
-                    {
-                        if infix.is_empty() {
-                            step_info_toml.infix.state = TomlValueState::Custom {
-                                spans: vec![
-                                    (
-                                        step_info_toml.infix.span().clone(),
-                                        "2nd use of empty infix".to_string(),
-                                    ),
-                                    (old_span, "1st use of empty infix".to_string()),
-                                ],
-                            };
-                            step_info_toml.infix.help = Some(
-                                "Two StoreTagsInTable transformations with the same infix would write to the same file.\n\
-                                Add infix = 'something' to at least one of them.".to_string(),
-                                );
-                        } else {
-                            step_info_toml.infix.state = TomlValueState::Custom {
-                                spans: vec![
-                                    (
-                                        step_info_toml.infix.span().clone(),
-                                        "2nd use of this infix".to_string(),
-                                    ),
-                                    (old_span, "1st use of this infix".to_string()),
-                                ],
-                            };
-                            step_info_toml.infix.help = Some(
-                                "Two StoreTagsInTable transformations with the same infix would write to the same file.\n\
-                                Rename one of them.".to_string(),
-                            );
-                        }
+        // First pass (immutable): collect declarations and detect conflicts.
+        type ConflictEntry = (usize, std::ops::Range<usize>);
+        let mut key_to_entries: IndexMap<(Vec<String>, String), Vec<ConflictEntry>> =
+            IndexMap::new();
+        let mut all_decls: Vec<Vec<OutputDeclaration>> = Vec::new();
+
+        if let Some(transforms) = self.transform.value.as_ref() {
+            for (idx, tv_transform) in transforms.iter().enumerate() {
+                let decls = tv_transform
+                    .value
+                    .as_ref()
+                    .map(|t| t.declare_output_files())
+                    .unwrap_or_default();
+                for decl in &decls {
+                    if let WriteTargetConfig::File { ref infix_parts, ref suffix } = decl.target {
+                        key_to_entries
+                            .entry((infix_parts.clone(), suffix.clone()))
+                            .or_default()
+                            .push((idx, decl.span.clone()));
                     }
                 }
+                all_decls.push(decls);
             }
-        } // cov:excl-line 
+        }
+        self.output_declarations_per_transformation = Some(all_decls);
+
+        // Second pass (mutable): report conflicts.
+        for ((infix_parts, suffix), entries) in key_to_entries {
+            if entries.len() > 1 {
+                if let Some(transforms) = self.transform.value.as_mut() {
+                    let spans: Vec<_> = entries
+                        .iter()
+                        .enumerate()
+                        .map(|(n, (_, span))| {
+                            (
+                                span.clone(),
+                                format!(
+                                    "{}step writing to this file",
+                                    if n == 0 { "1st " } else { "2nd " }
+                                ),
+                            )
+                        })
+                        .collect();
+                    let file_hint = if infix_parts.is_empty() {
+                        format!("suffix .{suffix}")
+                    } else {
+                        format!("infix '{}', suffix .{suffix}", infix_parts.join("_"))
+                    };
+                    transforms[entries[0].0].state = TomlValueState::Custom { spans };
+                    transforms[entries[0].0].help = Some(format!(
+                        "Two steps would write to the same output file ({file_hint}).\n\
+                        Change the infix in one of them to avoid the conflict."
+                    ));
+                }
+            }
+        }
     }
 
     pub fn verify_demultiplex_unique(&mut self) {
@@ -1900,15 +1919,18 @@ impl Config {
 
     fn transforms_to_stages(&mut self) -> Vec<Stage> {
         let allowed_tags_per_stage = self.allowed_tags_per_transformation.clone();
+        let output_declarations_per_stage = self.output_declarations_per_transformation.clone();
 
         let stages: Vec<Stage> = self
             .transform
             .drain(..)
             .zip(allowed_tags_per_stage)
-            .filter(|(t, _)| !matches!(t, Transformation::Report { .. }))
-            .map(|(t, tags)| Stage {
+            .zip(output_declarations_per_stage)
+            .filter(|((t, _), _)| !matches!(t, Transformation::Report { .. }))
+            .map(|((t, tags), decls)| Stage {
                 transformation: t,
                 allowed_tags: tags.into_iter().collect(),
+                output_declarations: decls,
             })
             .collect();
 

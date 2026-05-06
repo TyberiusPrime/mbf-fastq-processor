@@ -16,12 +16,16 @@ pub use fastqrab_config::{
 };
 
 pub(crate) use crate::demultiplex::{
-    DemultiplexBarcodes, DemultiplexedData, DemultiplexedOutputFiles, OptDemultiplex,
+    DemultiplexBarcodes, DemultiplexedData, OptDemultiplex, StepOutputFiles,
 };
 
 pub(crate) use anyhow::{Context, Result, bail};
 pub(crate) use fastqrab_io::io::{
-    FastQBlocksCombined, output::chunked_writer::TextRecordSink, reads::NewLocation,
+    FastQBlocksCombined,
+    output::chunked_writer::{
+        ChunkPolicy, ChunkedRecordWriter, OutputDeclaration, SinkConfig, WriteTargetConfig,
+    },
+    reads::NewLocation,
     reads::WrappedFastQReadCommon,
 };
 

@@ -48,11 +48,8 @@ impl Step for Box<_ReportBaseStatisticsPart1> {
     fn init(
         &mut self,
         input_info: &InputInfo,
-        _output_prefix: &str,
-        _output_directory: &Path,
-        _output_ix_separator: &str,
+        _output_files: StepOutputFiles,
         demultiplex_info: &OptDemultiplex,
-        _allow_overwrite: bool,
     ) -> Result<Option<DemultiplexBarcodes>> {
         for valid_tag in demultiplex_info.iter_tags() {
             self.data
