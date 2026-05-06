@@ -74,7 +74,8 @@ def find_failed_error_tests(base_dir: Path) -> list:
             continue
         for candidate in ("expected_error.txt", "expected_runtime_error.txt"):
             expected_file = test_dir / candidate
-            if expected_file.exists():
+            if (expected_file.exists()
+                    and not (test_dir / "should_panic").exists()):
                 seen.add(test_dir)
                 results.append((stderr_file, expected_file, test_dir))
                 break
