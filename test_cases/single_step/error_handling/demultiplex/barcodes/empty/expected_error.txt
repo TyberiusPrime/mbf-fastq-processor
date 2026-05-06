@@ -1,9 +1,9 @@
 Error 1/1
-  ╭─config.toml
-1 │ [input]
-  ┆ ┬
-  ┆ │
-  ┆ ╰─────── At least one barcode mapping must be provided
-──╯
-Hint: Add at least one barcode mapping (IUPAC='name') under this section, 
-      or read the from a file using from_file={filename='...'}
+   ╭─config.toml
+21 │ [barcodes.test_barcodes]
+   ┆                         ┬
+   ┆                         │
+   ┆                         ╰─ Empty barcode section
+───╯
+Hint: Add at least one barcode mapping (IUPAC='name') under this section,
+      or read them from a file using from_file={filename='...'}

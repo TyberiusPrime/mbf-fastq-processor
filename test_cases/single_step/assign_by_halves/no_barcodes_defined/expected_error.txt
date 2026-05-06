@@ -10,7 +10,9 @@ Error 1/2
 19 │     in_label = 'query_seq'
 20 │     out_label = 'query_seq23'
 21 │     barcodes = 'probes'
-   ┆                        ┬
-   ┆                        │
-   ┆                        ╰─ AssignByHalves step requires a barcodes section to be defined in the config.
+   ┆                ────┬───
+   ┆                    │
+   ┆                    ╰──── No barcodes sections defined
 ───╯
+Hint: Add a [barcodes.<name>] section in your TOML to define the barcodes.
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/AssignByHalves

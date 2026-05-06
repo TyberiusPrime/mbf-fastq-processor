@@ -189,15 +189,13 @@ impl VerifyIn<PartialConfig> for PartialBarcodes {
                 && (self.from_file.as_ref().is_none()
                     || matches!(self.from_file.as_ref(), Some(None)))
             {
-                self.barcode_to_name.state = TomlValueState::new_validation_failed(
-                    "At least one barcode mapping must be provided",
-                );
-                self.barcode_to_name.help = Some(
-                    "Add at least one barcode mapping (IUPAC='name') under this section, \n\
-                    or read the from a file using from_file={filename='...'}"
-                        .to_string(),
-                );
-                return Ok(());
+                return Err(ValidationFailure::new(
+                    "Empty barcode section",
+                    Some(
+                        "Add at least one barcode mapping (IUPAC='name') under this section,\n\
+                        or read them from a file using from_file={filename='...'}",
+                    ),
+                ));
             }
         }
 

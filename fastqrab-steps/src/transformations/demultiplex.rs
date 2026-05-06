@@ -205,6 +205,13 @@ impl TagUser for PartialTaggedVariant<PartialDemultiplex> {
                         TagValueType::Location,
                     ][..],
                 )],
+                used_barcodes: inner
+                    .barcodes
+                    .as_ref()
+                    .and_then(Option::as_ref)
+                    .cloned()
+                    .into_iter()
+                    .collect(),
                 ..Default::default()
             })
         } else {

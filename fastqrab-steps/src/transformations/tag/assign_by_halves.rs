@@ -62,7 +62,6 @@ impl VerifyIn<PartialConfig> for PartialAssignByHalves {
 
         if let Some(barcodes_to_use) = self.barcodes.as_ref()
             && let Some(Some(barcodes_data)) = parent.barcodes.as_ref()
-            && !barcodes_data.keys.is_empty()
         {
             if let Some(barcodes_section) = barcodes_data.map.get(barcodes_to_use) {
                 if let Some(barcodes_section) = barcodes_section.as_ref()
@@ -90,18 +89,15 @@ impl VerifyIn<PartialConfig> for PartialAssignByHalves {
                 };
                 return Ok(());
             }
-        } else {
-            let barcodes_empty = if let Some(Some(barcode_data)) = parent.barcodes.value.as_ref() {
-                barcode_data.keys.is_empty()
-            } else {
-                matches!(parent.barcodes.as_ref(), Some(None))
-            };
-            if barcodes_empty {
-                return Err(ValidationFailure::new(
-                    "AssignByHalves step requires a barcodes section to be defined in the config.",
-                    Some(&format!("See {}", crate::link_docs("barcodes"))),
-                ));
-            }
+        } else if self.barcodes.as_ref().is_some()
+            && !matches!(parent.barcodes.value.as_ref(), Some(Some(_)))
+        {
+            self.barcodes.help = Some(
+                "Add a [barcodes.<name>] section in your TOML to define the barcodes.".to_string(),
+            );
+            self.barcodes.state =
+                TomlValueState::new_validation_failed("No barcodes sections defined".to_string());
+            return Ok(());
         }
 
         Ok(())
@@ -123,6 +119,7 @@ impl TagUser for PartialTaggedVariant<PartialAssignByHalves> {
                         .in_label
                         .to_used_tag(&[TagValueType::String, TagValueType::Location]),
                 ],
+                used_barcodes: inner.barcodes.as_ref().cloned().into_iter().collect(),
                 ..Default::default()
             })
         } else {

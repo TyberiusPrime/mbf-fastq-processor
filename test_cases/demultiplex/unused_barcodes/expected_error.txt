@@ -7,9 +7,9 @@ Error 1/2
 21 │     TT = 'tt'
    ┆              ┬
    ┆              │
-   ┆              ╰─ Barcode section not used in any Demultiplex, HammingCorrect, AssignToReference step, or output.bam.tag_to_reference
+   ┆              ╰─ Barcode section not referenced by any step
 ───╯
-Hint: Add a Demultiplex step, or remove this barcode section
+Hint: Add a step that uses this barcode section, use it in `output.bam.references_from_barcodes`, or remove it.
 
 Error 2/2
    ╭─config.toml
@@ -19,8 +19,8 @@ Error 2/2
 25 │     AT = 'at'
    ┆              ┬
    ┆              │
-   ┆              ╰─ Barcode section not used in any Demultiplex, HammingCorrect, AssignToReference step, or output.bam.tag_to_reference
+   ┆              ╰─ Barcode section not referenced by any step
 ───╯
-Hint: Add a Demultiplex step, or remove this barcode section
+Hint: Add a step that uses this barcode section, use it in `output.bam.references_from_barcodes`, or remove it.
 
 

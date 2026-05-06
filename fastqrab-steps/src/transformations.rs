@@ -18,6 +18,7 @@ use fastqrab_config::{
 };
 use fastqrab_io::io::output::chunked_writer::OutputDeclaration;
 use fastqrab_io::io::{FastQBlocksCombined, reads::WrappedFastQReadCommon};
+use std::collections::HashSet;
 
 pub(crate) mod calc;
 pub(crate) mod convert;
@@ -161,6 +162,7 @@ pub struct InputInfo {
 #[derive(Default, Debug)]
 pub struct TagUsageInfo<'a> {
     pub used_tags: Vec<Option<UsedTag<'a>>>,
+    pub used_barcodes: HashSet<TagLabel>,
     pub removed_tags: RemovedTags<'a>,
     pub declared_tag: Option<DeclaredTag<'a>>,
     pub must_see_all_tags: bool,

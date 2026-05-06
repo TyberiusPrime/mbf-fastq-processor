@@ -125,18 +125,15 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
                 };
                 return Ok(());
             }
-        } else {
-            let barcodes_empty = if let Some(Some(barcode_data)) = parent.barcodes.value.as_ref() {
-                barcode_data.keys.is_empty()
-            } else {
-                matches!(parent.barcodes.as_ref(), Some(None))
-            };
-            if barcodes_empty {
-                return Err(ValidationFailure::new(
-                    "HammingCorrect step requires a barcodes section to be defined in the config.",
-                    Some(&format!("See {}", crate::link_docs("barcodes"))),
-                ));
-            }
+        } else if self.barcodes.as_ref().is_some()
+            && !matches!(parent.barcodes.value.as_ref(), Some(Some(_)))
+        {
+            self.barcodes.help = Some(
+                "Add a [barcodes.<name>] section in your TOML to define the barcodes.".to_string(),
+            );
+            self.barcodes.state =
+                TomlValueState::new_validation_failed("No barcodes sections defined".to_string());
+            return Ok(());
         }
 
         self.on_tie_threshold.verify(|x| {
@@ -257,6 +254,7 @@ impl TagUser for PartialTaggedVariant<PartialHammingCorrect> {
                     },
                 ),
                 used_tags: vec![inner.in_label.to_used_tag(input_kinds)],
+                used_barcodes: inner.barcodes.as_ref().cloned().into_iter().collect(),
                 ..Default::default()
             })
         } else {

@@ -9,13 +9,10 @@ Error 1/1
    ┆
 29 │ 	in_label = 'barcode_extracted'
 30 │ 	out_label = 'corrected'
-31 │ 	barcodes = 'barcodes'
-32 │ 	on_no_match = 'remove'
-33 │     on_tie = 'fail'
-34 │     max_hamming_distance=1
-   ┆                           ┬
-   ┆                           │
-   ┆                           ╰─ HammingCorrect step requires a barcodes section to be defined in the config.
+31 │     barcodes = 'barcodes'
+   ┆                ─────┬────
+   ┆                     │
+   ┆                     ╰───── No barcodes sections defined
 ───╯
-Hint: See https://doc_url.example/version-stripped-from-test/docs/redirects/barcodes
+Hint: Add a [barcodes.<name>] section in your TOML to define the barcodes.
       See https://doc_url.example/version-stripped-from-test/docs/redirects/HammingCorrect

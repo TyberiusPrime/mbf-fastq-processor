@@ -211,11 +211,11 @@ impl VerifyIn<TPDRoot> for PartialConfig {
         self.verify_for_any_output();
         self.verify_head_rapidgzip_conflict();
         self.expand_transformations();
-        self.verify_transformation_labels();
+        let used_barcode_sections = self.verify_transformation_labels();
         self.verify_output_filenames_unique();
 
         self.verify_demultiplex_unique();
-        self.verify_barcodes_used();
+        self.verify_barcodes_used(&used_barcode_sections);
         self.verify_merge_demultiplexed();
         //todo: verify labels, barcodes, segment_names disjoint
 
@@ -1093,10 +1093,12 @@ impl PartialConfig {
 
     /// # Panics
     /// Tag declared twice
-    pub fn verify_transformation_labels(&mut self) {
+    pub fn verify_transformation_labels(&mut self) -> std::collections::HashSet<TagLabel> {
         use crate::transformations::TagUser;
         let mut allowed_tags_per_stage: Vec<Vec<TagLabel>> = Vec::new();
         let mut tags_available: IndexMap<TagLabel, TagMetadata> = IndexMap::new();
+        let mut used_barcode_sections: std::collections::HashSet<TagLabel> =
+            std::collections::HashSet::new();
         if let Some(transformations) = self.transform.value.as_mut() //the trafos have no final
         //looked up tags yet.
             && let Some(input) = self.input.as_ref()
@@ -1120,6 +1122,7 @@ impl PartialConfig {
                     //break;
                     continue;
                 };
+                used_barcode_sections.extend(tag_info.used_barcodes.iter().cloned());
                 let mut tags_used_here: Vec<TagLabel> = Vec::new();
                 match tag_info.removed_tags {
                     RemovedTags::None => {}
@@ -1289,7 +1292,7 @@ impl PartialConfig {
             }
             self.allowed_tags_per_transformation = Some(allowed_tags_per_stage);
 
-            //now verify the tags don't overlap barcodes or segments
+            //now verify the tags don't overlap barcodes or segments - they must be disjonit
             if let Some(Some(barcodes)) = self.barcodes.as_mut() {
                 for tv_barcode in &mut barcodes.keys {
                     if let Some(barcode_name) = tv_barcode.as_ref() {
@@ -1446,6 +1449,7 @@ impl PartialConfig {
                 }
             }
         }
+        used_barcode_sections
     }
 
     /// Detect output filename conflicts across all steps.
@@ -1548,71 +1552,38 @@ impl PartialConfig {
         }
     }
 
-    fn verify_barcodes_used(&mut self) {
+    fn verify_barcodes_used(
+        &mut self,
+        used_barcode_sections: &std::collections::HashSet<TagLabel>,
+    ) {
         // Check that barcode names are unique across all barcodes sections
         if self.input.is_ok() {
             // we clear transforms otherwise
 
             if let Some(Some(barcodes)) = self.barcodes.as_mut() {
                 for (barcode_section_name, tv_barcodes) in &mut barcodes.map {
-                    // is there a Demultiplex step that uses this barcode definition?
-                    if let Some(steps) = self.transform.value.as_ref() {
-                        let mut found_barcode_using_step = false;
-                        for step in steps {
-                            if let Some(PartialTransformation::Demultiplex(demultiplex_config)) =
-                                step.value.as_ref()
-                            {
-                                if let Some(demultiplex_config) =
-                                    demultiplex_config.toml_value.value.as_ref()
-                                    && let Some(Some(barcodes_name)) =
-                                        demultiplex_config.barcodes.as_ref()
-                                    && barcodes_name == barcode_section_name
-                                {
-                                    found_barcode_using_step = true;
-                                    break;
-                                }
-                            } else if let Some(PartialTransformation::HammingCorrect(
-                                hamming_config,
-                            )) = step.value.as_ref()
-                                && let Some(hamming_config) =
-                                    hamming_config.toml_value.value.as_ref()
-                                && let Some(barcodes_name) = hamming_config.barcodes.as_ref()
-                                && barcodes_name == barcode_section_name
-                            {
-                                found_barcode_using_step = true;
-                                break;
-                            } else if let Some(PartialTransformation::AssignByHalves(step_config)) =
-                                step.value.as_ref()
-                                && let Some(step_config) = step_config.toml_value.value.as_ref()
-                                && let Some(barcodes_name) = step_config.barcodes.as_ref()
-                                && barcodes_name == barcode_section_name
-                            {
-                                found_barcode_using_step = true;
-                                break;
-                            }
-                        }
-                        // Also check if output's tag_to_reference uses this barcode section
-                        if !found_barcode_using_step
-                            && let Some(Some(output)) = self.output.as_ref()
-                            && let Some(Some(bam_opts)) = output.bam.as_ref()
-                            && let Some(Some(tag_to_ref)) = bam_opts.tag_to_reference.as_ref()
-                            && let Some(Some(barcodes_name)) =
-                                tag_to_ref.references_from_barcodes.as_ref()
-                            && barcode_section_name.as_ref() == barcodes_name.as_str()
-                        {
-                            found_barcode_using_step = true;
-                        }
+                    let mut found_barcode_using_step =
+                        used_barcode_sections.contains(barcode_section_name);
+                    // Also check wether the  output's tag_to_reference uses this barcode section
+                    if !found_barcode_using_step
+                        && let Some(Some(output)) = self.output.as_ref()
+                        && let Some(Some(bam_opts)) = output.bam.as_ref()
+                        && let Some(Some(tag_to_ref)) = bam_opts.tag_to_reference.as_ref()
+                        && let Some(Some(barcodes_name)) =
+                            tag_to_ref.references_from_barcodes.as_ref()
+                        && barcode_section_name.as_ref() == barcodes_name.as_str()
+                    {
+                        found_barcode_using_step = true;
+                    }
 
-                        if !found_barcode_using_step {
-                            tv_barcodes.state = TomlValueState::new_validation_failed(
-                                "Barcode section not used in any Demultiplex, HammingCorrect, AssignToReference step, or output.bam.tag_to_reference",
-                            );
-                            tv_barcodes.help = Some(
-                                "Add a Demultiplex step, or remove this barcode section"
-                                    .to_string(),
-                            );
-                        }
-                    } // cov:excl-line
+                    if !found_barcode_using_step {
+                        tv_barcodes.state = TomlValueState::new_validation_failed(
+                            "Barcode section not referenced by any step",
+                        );
+                        tv_barcodes.help = Some(
+                            "Add a step that uses this barcode section, use it in `output.bam.references_from_barcodes`, or remove it.".to_string(),
+                        );
+                    }
                 }
 
                 if let Some(Some(output)) = self.output.as_mut()
