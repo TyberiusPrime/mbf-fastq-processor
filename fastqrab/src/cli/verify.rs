@@ -504,7 +504,9 @@ fn verify_processor_success(
 
     if !uses_stdout {
         let expected_files = find_output_files(expected_dir, output_prefix).unwrap_or_default();
-        if expected_files.is_empty() {
+        let has_expected_stream =
+            expected_dir.join("stdout").exists() || expected_dir.join("stderr").exists();
+        if expected_files.is_empty() && !has_expected_stream {
             bail!(
                 "No expected output files found in {} with prefix '{}'",
                 expected_dir.display(),

@@ -11396,6 +11396,43 @@ fn test_cases_x_single_step_x_store_tag_x_in_table_output_file_unwritable() {
 
 #[test]
 
+fn test_cases_x_single_step_x_store_tag_x_in_table_output_stdout() {
+    println!("Test case is in: test_cases/single_step/store_tag/in_table_output_stdout");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/store_tag/in_table_output_stdout"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_store_tag_x_in_table_output_stdout_demultiplex() {
+    println!(
+        "Test case is in: test_cases/single_step/store_tag/in_table_output_stdout_demultiplex"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/store_tag/in_table_output_stdout_demultiplex",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_store_tag_x_in_table_output_stdout_twice() {
+    println!("Test case is in: test_cases/single_step/store_tag/in_table_output_stdout_twice");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/store_tag/in_table_output_stdout_twice"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_store_tag_x_store_tags_in_table_no_tags_defined() {
     println!(
         "Test case is in: test_cases/single_step/store_tag/store_tags_in_table_no_tags_defined"

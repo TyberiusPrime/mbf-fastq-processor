@@ -87,10 +87,7 @@ impl TagUser for PartialTaggedVariant<PartialProgress> {
             if let Some(infix) = inner.output_infix.as_ref().and_then(|x| x.as_ref()) {
                 return vec![OutputDeclaration {
                     id: "progress".to_string(),
-                    target: WriteTargetConfig::File {
-                        infix_parts: vec![infix.clone()],
-                        suffix: "progress".to_string(),
-                    },
+                    target: WriteTargetConfig::new(vec![infix.clone()], "progress".to_string()),
                     sink_config: SinkConfig::default(),
                     format: fastqrab_io::FileFormat::Text,
                     chunk_policy: ChunkPolicy::default(),

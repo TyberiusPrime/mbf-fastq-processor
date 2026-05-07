@@ -347,12 +347,15 @@ fn resolve_bam_write_options(
         (None, Vec::new())
     };
 
-    Ok(BamWriteOptions {
+    let mut opts = BamWriteOptions {
         comment_separation_char,
         tag_to_bam_tags,
         tag_to_reference,
-        reference_sequences,
-    })
+        reference_sequences: std::sync::Arc::new(reference_sequences),
+        shared_header: None,
+    };
+    opts.build_shared_header();
+    Ok(opts)
 }
 
 fn build_sink_config(
@@ -381,6 +384,7 @@ fn open_one_set_of_output_files(
     output_directory: &Path,
     infix: Option<&str>,
     allow_overwrite: bool,
+    bam_write_options: BamWriteOptions,
 ) -> Result<OutputFastqs<OutputStreamConfig>> {
     let simulated_failure = parsed_config
         .options
@@ -391,8 +395,6 @@ fn open_one_set_of_output_files(
         Some(output_config) => {
             let prefix = &output_config.prefix;
             let suffix = output_config.get_suffix();
-            let bam_write_options =
-                resolve_bam_write_options(output_config, &parsed_config.barcodes)?;
             let sink_config = build_sink_config(output_config, simulated_failure.as_ref());
             let bam_threads = bam_thread_count(output_config);
             let (interleaved_file, segment_files) = if output_config.format == FileFormat::None {
@@ -514,23 +516,19 @@ pub fn open_output_files(
     report_json: bool,
     allow_overwrite: bool,
 ) -> Result<OutputFiles> {
-    let output_reports = match &parsed_config.output {
-        Some(output_config) => OutputReports::new(
-            output_directory,
-            &output_config.prefix,
-            report_html,
-            report_json,
-            allow_overwrite,
-        )?, // cov:excl-line
-        None =>
+    let output_config = parsed_config.output.as_ref().expect(
         // cov:excl-start
-        {
-            unreachable!(
-                "Should not be reached, output config should have been checked in validation"
-            )
-        } // cov:excl-stop
-          ,
-    };
+        "Should not be reached, output config should have been checked in validation",
+        // cov:excl-stop
+    );
+    let output_reports = OutputReports::new(
+        output_directory,
+        &output_config.prefix,
+        report_html,
+        report_json,
+        allow_overwrite,
+    )?; // cov:excl-line
+    let bam_write_options = resolve_bam_write_options(output_config, &parsed_config.barcodes)?;
     match demultiplexed {
         OptDemultiplex::No => {
             let output_files = open_one_set_of_output_files(
@@ -538,6 +536,7 @@ pub fn open_output_files(
                 output_directory,
                 None,
                 allow_overwrite,
+                bam_write_options,
             )?;
             Ok(OutputFiles {
                 output_segments: vec![(0, Arc::new(Mutex::new(output_files)))]
@@ -558,6 +557,7 @@ pub fn open_output_files(
                         output_directory,
                         Some(output_key),
                         allow_overwrite,
+                        bam_write_options.clone(),
                     )?)); // cov:excl-line
                     res.insert(*tag, output);
                 }

@@ -1,0 +1,26 @@
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+36 │ [[step]]
+37 │     action = "StoreTagsInTable"
+   ┆              ─────────┬────────
+   ┆                       │
+   ┆                       ╰───────── In this step
+38 │     infix = '--stdout--'
+   ┆             ──────┬─────
+   ┆                   │
+   ┆                   ╰────── 1st step writing to stdout
+   ┆
+40 │ [[step]]
+41 │ 	action = "StoreTagsInTable"
+42 │     infix = '--stdout--'
+   ┆             ──────┬─────
+   ┆                   │
+   ┆                   ╰────── 2nd step writing to stdout
+───╯
+Hint: Multiple steps write to stdout. Only one step may write to stdout at a time.
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/StoreTagsInTable
+      Or run: `fastqrab template StoreTagsInTable` for more information.
+
+

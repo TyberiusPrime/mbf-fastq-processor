@@ -358,7 +358,21 @@ pub struct BamSinkOptions {
     pub comment_separation_char: u8,
     pub tag_to_bam_tags: Vec<([u8; 2], String)>,
     pub tag_to_reference: Option<String>,
-    pub reference_sequences: Vec<(String, usize)>,
+    pub reference_sequences: Arc<Vec<(String, usize)>>,
+    /// Pre-built and shared across all demultiplexed sinks so that the O(N)
+    /// header construction happens exactly once, not once per output file.
+    pub shared_header: Option<Arc<noodles::sam::Header>>,
+}
+
+impl BamSinkOptions {
+    /// Build the SAM/BAM header from `reference_sequences` and cache it in
+    /// `shared_header`. Call this once before cloning the options for each
+    /// demultiplexed output so all sinks share the same Arc.
+    pub fn build_shared_header(&mut self) {
+        if self.shared_header.is_none() {
+            self.shared_header = Some(Arc::new(create_bam_header(&self.reference_sequences)));
+        }
+    }
 }
 
 type BamStack = noodles::bgzf::io::multithreaded_writer::MultithreadedWriter<
@@ -393,7 +407,10 @@ impl BamRecordSink {
             .build_from_writer(fail);
 
         let mut writer = noodles::bam::io::Writer::from(bgzf);
-        let header = Arc::new(create_bam_header(&options.reference_sequences));
+        let header = options
+            .shared_header
+            .clone()
+            .unwrap_or_else(|| Arc::new(create_bam_header(&options.reference_sequences)));
         writer
             .write_header(&header)
             .context("Failed to write BAM header")?;
@@ -633,19 +650,47 @@ fn create_bam_header(reference_sequences: &[(String, usize)]) -> noodles::sam::H
 // Layer 6: ChunkedRecordWriter
 // ---------------------------------------------------------------------------
 
+/// Private inner type for the [`WriteTargetConfig::File`] variant.
+/// Fields are private to force construction through [`WriteTargetConfig::new`].
+#[derive(Clone, Debug)]
+pub struct FileTarget {
+    infix_parts: Vec<String>,
+    suffix: String,
+}
+
+impl FileTarget {
+    pub fn infix_parts(&self) -> &[String] {
+        &self.infix_parts
+    }
+    pub fn suffix(&self) -> &str {
+        &self.suffix
+    }
+}
+
 /// Directory- and prefix-free file target. The pipeline resolves this to a
 /// full [`WriteTarget`] by prepending the output directory and prefix.
+///
+/// Construct via [`WriteTargetConfig::new`]; do not build variants directly.
 #[derive(Clone, Debug)]
 pub enum WriteTargetConfig {
-    /// A file in the output directory. Each element of `infix_parts` is joined
-    /// with the pipeline's output prefix and demultiplex name using the
-    /// configured ix_separator. `suffix` is the complete file extension
-    /// (e.g. `"tsv"`, `"progress"`, `"qr.json"`).
-    File {
-        infix_parts: Vec<String>,
-        suffix: String,
-    },
+    /// A file in the output directory. See [`FileTarget`] for field access.
+    File(FileTarget),
     Stdout,
+}
+
+impl WriteTargetConfig {
+    /// Construct a `WriteTargetConfig`. If `infix_parts == ["--stdout--"]`,
+    /// returns [`Stdout`][Self::Stdout]; otherwise returns [`File`][Self::File].
+    pub fn new(infix_parts: Vec<String>, suffix: String) -> Self {
+        if infix_parts == ["--stdout--"] {
+            Self::Stdout
+        } else {
+            Self::File(FileTarget {
+                infix_parts,
+                suffix,
+            })
+        }
+    }
 }
 
 /// Everything a step needs to tell the pipeline about one output file it wants.

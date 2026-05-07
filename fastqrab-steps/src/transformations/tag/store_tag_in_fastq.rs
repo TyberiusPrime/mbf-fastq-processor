@@ -149,10 +149,10 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagInFastQ> {
                 let compression = inner.compression.as_ref().copied().unwrap_or_default();
                 return vec![OutputDeclaration {
                     id: "tag_fastq".to_string(),
-                    target: WriteTargetConfig::File {
-                        infix_parts: vec![format!("tag.{in_label}")],
-                        suffix: format.get_suffix(compression, None),
-                    },
+                    target: WriteTargetConfig::new(
+                        vec![format!("tag.{in_label}")],
+                        format.get_suffix(compression, None),
+                    ),
                     sink_config: SinkConfig {
                         compression,
                         compression_level: inner

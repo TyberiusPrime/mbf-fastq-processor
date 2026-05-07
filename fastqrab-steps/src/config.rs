@@ -1473,13 +1473,9 @@ impl PartialConfig {
                     .map(|t| t.declare_output_files())
                     .unwrap_or_default();
                 for decl in &decls {
-                    if let WriteTargetConfig::File {
-                        ref infix_parts,
-                        ref suffix,
-                    } = decl.target
-                    {
+                    if let WriteTargetConfig::File(ft) = &decl.target {
                         key_to_entries
-                            .entry((infix_parts.clone(), suffix.clone()))
+                            .entry((ft.infix_parts().to_vec(), ft.suffix().to_string()))
                             .or_default()
                             .push((idx, decl.span.clone()));
                     }
@@ -1487,6 +1483,32 @@ impl PartialConfig {
                 all_decls.push(decls);
             }
         }
+        // Collect stdout-related errors before moving all_decls.
+        // stdout_entries: (transform_idx, span) for each non-singleton stdout declaration.
+        // stdout_has_demux_before: parallel vec; true if a Demultiplex step preceded that transform.
+        let mut stdout_entries: Vec<(usize, std::ops::Range<usize>)> = Vec::new();
+        let mut stdout_has_demux_before: Vec<bool> = Vec::new();
+        {
+            let mut seen_demux = false;
+            if let Some(transforms) = self.transform.value.as_ref() {
+                for (idx, tv_transform) in transforms.iter().enumerate() {
+                    let has_demux_before = seen_demux;
+                    if matches!(
+                        tv_transform.value.as_ref(),
+                        Some(PartialTransformation::Demultiplex(_))
+                    ) {
+                        seen_demux = true;
+                    }
+                    for decl in all_decls.get(idx).into_iter().flatten() {
+                        if matches!(decl.target, WriteTargetConfig::Stdout) && !decl.singleton {
+                            stdout_entries.push((idx, decl.span.clone()));
+                            stdout_has_demux_before.push(has_demux_before);
+                        }
+                    }
+                }
+            }
+        }
+
         self.output_declarations_per_transformation = Some(all_decls);
 
         // Second pass (mutable): report conflicts.
@@ -1517,6 +1539,44 @@ impl PartialConfig {
                         Change the infix in one of them to avoid the conflict."
                     ));
                 }
+            }
+        }
+
+        // Third pass (mutable): report stdout errors.
+        if let Some(transforms) = self.transform.value.as_mut() {
+            // Stdout after demultiplex (non-singleton) is invalid.
+            for (entry_idx, (idx, span)) in stdout_entries.iter().enumerate() {
+                if stdout_has_demux_before[entry_idx] {
+                    transforms[*idx].state = TomlValueState::Custom {
+                        spans: vec![(span.clone(), "this step writes to stdout".to_string())],
+                    };
+                    transforms[*idx].help = Some(
+                        "Cannot write to stdout after a Demultiplex step — output from multiple \
+                         barcodes would be interleaved. Use an infix to write to a file instead."
+                            .to_string(),
+                    );
+                }
+            }
+            // Multiple non-singleton stdout outputs are invalid.
+            if stdout_entries.len() > 1 {
+                let spans: Vec<_> = stdout_entries
+                    .iter()
+                    .enumerate()
+                    .map(|(n, (_, span))| {
+                        (
+                            span.clone(),
+                            format!(
+                                "{}step writing to stdout",
+                                if n == 0 { "1st " } else { "2nd " }
+                            ),
+                        )
+                    })
+                    .collect();
+                transforms[stdout_entries[0].0].state = TomlValueState::Custom { spans };
+                transforms[stdout_entries[0].0].help = Some(
+                    "Multiple steps write to stdout. Only one step may write to stdout at a time."
+                        .to_string(),
+                );
             }
         }
     }
