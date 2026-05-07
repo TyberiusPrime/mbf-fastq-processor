@@ -6,7 +6,9 @@ use std::path::{Path, PathBuf};
 
 use crate::join_nonempty;
 use fastqrab_io::CompressionFormat;
-use fastqrab_io::io::output::chunked_writer::{ChunkedRecordWriter, DataSink, SinkConfig, TextRecordSink};
+use fastqrab_io::io::output::chunked_writer::{
+    ChunkedRecordWriter, DataSink, SinkConfig, TextRecordSink,
+};
 
 pub type Tag = u64;
 
@@ -64,7 +66,9 @@ impl StepOutputFiles {
     }
 
     /// Iterate over all (id, writers) pairs, consuming self.
-    pub fn into_iter(self) -> impl Iterator<Item = (String, DemultiplexedData<ChunkedRecordWriter>)> {
+    pub fn into_iter(
+        self,
+    ) -> impl Iterator<Item = (String, DemultiplexedData<ChunkedRecordWriter>)> {
         self.0.into_iter()
     }
 }

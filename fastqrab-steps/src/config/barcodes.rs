@@ -1,13 +1,15 @@
 use fastqrab_config::tpd_adapt_u8_from_byte_or_char;
 use fastqrab_dna::dna::{self, IupacExpander, iupac_overlapping};
 
-use anyhow::{Result, bail};
+use anyhow::{Context, Result, bail};
 use bstr::BString;
-use fastqrab_io::io::apply_to_read_names_and_sequences;
+use fastqrab_io::io::{apply_to_read_names_and_sequences, input::open_text_file};
 use indexmap::IndexMap;
 use schemars::JsonSchema;
 use std::{
     collections::{BTreeMap, HashSet},
+    io::BufReader,
+    path::{Path, PathBuf},
     sync::Arc,
 };
 use toml_pretty_deser::prelude::*;
@@ -46,6 +48,30 @@ pub struct BarcodesFromFile {
     pub read_comment_character: Option<u8>,
 }
 
+fn read_barcodes_from_txt(filename: &Path, entries: &mut IndexMap<BString, String>) -> Result<()> {
+    use bstr::io::BufReadExt;
+    let file = open_text_file(filename)?;
+    let buffered = BufReader::new(file);
+    let mut target_len = None;
+    for line in buffered.byte_lines() {
+        let line: BString = line?.into();
+        match target_len {
+            None => {
+                target_len = Some(line.len());
+            }
+            Some(old_len) => {
+                if old_len != line.len() {
+                    bail!("Unequal line lengths detected in {}", filename.display());
+                }
+            }
+        }
+        let str_line: String = String::from_utf8(line.to_vec())
+            .context("Expected DNA, found something non-utf8-encoded?")?;
+        entries.insert(line, str_line);
+    }
+    Ok(())
+}
+
 impl PartialBarcodesFromFile {
     fn load_from_file(
         &self,
@@ -78,10 +104,24 @@ impl PartialBarcodesFromFile {
             },
             use_rapidgzip,
         ) {
-            return Err(ValidationFailure::new(
-                format!("Error reading from {filename}"),
-                Some(format!("{err:?}")),
-            ));
+            if entries.is_empty() && filename.contains(".txt") {
+                if let Err(second_err) =
+                    read_barcodes_from_txt(&PathBuf::from(filename), &mut entries)
+                {
+                    return Err(ValidationFailure::new(
+                        format!("Error reading from {filename}"),
+                        Some(format!(
+                            "Tried as sequence file:\n\t{err:?}\n\n\
+                            Tried as text file of one barcode-per-line:\n\t{second_err:?}"
+                        )),
+                    ));
+                }
+            } else {
+                return Err(ValidationFailure::new(
+                    format!("Error reading from {filename}"),
+                    Some(format!("{err:?}")),
+                ));
+            }
         }
         if entries.is_empty() {
             // cov:excl-start

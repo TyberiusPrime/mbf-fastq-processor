@@ -155,7 +155,11 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagInFastQ> {
                     },
                     sink_config: SinkConfig {
                         compression,
-                        compression_level: inner.compression_level.as_ref().and_then(|x| x.as_ref()).copied(),
+                        compression_level: inner
+                            .compression_level
+                            .as_ref()
+                            .and_then(|x| x.as_ref())
+                            .copied(),
                         compression_threads: Some(1),
                         hash_uncompressed: false,
                         hash_compressed: false,

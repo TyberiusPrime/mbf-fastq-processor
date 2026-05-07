@@ -9,13 +9,13 @@ use std::sync::{Arc, Mutex};
 use crate::config::CheckedConfig;
 use crate::demultiplex::OptDemultiplex;
 use crate::transformations::FinalizeReportResult;
+use fastqrab_io::FileFormat;
 use fastqrab_io::ensure_output_destination_available;
 use fastqrab_io::io::output::chunked_writer::{
     BamSinkOptions, ChunkPaths, ChunkPolicy, ChunkedRecordWriter, SinkConfig, WriteTarget,
 };
 use fastqrab_io::io::output::simulated_failure::SimulatedWriteFailure;
 use fastqrab_io::io::{self, Tags};
-use fastqrab_io::FileFormat;
 use fastqrab_steps::join_nonempty;
 
 /// Runtime BAM write options derived from config at file-open time.
@@ -154,7 +154,9 @@ impl OutputStreamConfig {
             FileFormat::Bam => unreachable!(
                 "BAM output is not supported on stdout. Should have been caught in validation. Bug."
             ),
-            FileFormat::Text | FileFormat::None => unreachable!("Cannot emit 'text' or 'none' format to stdout via this path"),
+            FileFormat::Text | FileFormat::None => {
+                unreachable!("Cannot emit 'text' or 'none' format to stdout via this path")
+            }
         }
         Self {
             target: WriteTarget::Stdout,
@@ -190,7 +192,10 @@ pub struct OutputFastqs<T> {
 impl OutputFastqs<OutputStreamConfig> {
     pub fn into_writer(self) -> Result<OutputFastqs<ChunkedRecordWriter>> {
         Ok(OutputFastqs {
-            interleaved_file: self.interleaved_file.map(OutputStreamConfig::build).transpose()?,
+            interleaved_file: self
+                .interleaved_file
+                .map(OutputStreamConfig::build)
+                .transpose()?,
             segment_files: self
                 .segment_files
                 .into_iter()
@@ -616,8 +621,10 @@ fn output_block_demultiplex(
         }
     }
     if let Some(interleaved_file) = &mut output_files.interleaved_file {
-        let blocks_to_interleave: Vec<_> =
-            interleave_order.iter().map(|&i| &block.segments[i]).collect();
+        let blocks_to_interleave: Vec<_> = interleave_order
+            .iter()
+            .map(|&i| &block.segments[i])
+            .collect();
         output_block_interleaved(
             interleaved_file,
             &blocks_to_interleave,
@@ -668,8 +675,9 @@ fn output_block_inner(
             }
         }
         // cov:excl-start
-        FileFormat::Text | FileFormat::None => unreachable!("Cannot output reads with format 'Text' or 'None'"),
-        // cov:excl-stop
+        FileFormat::Text | FileFormat::None => {
+            unreachable!("Cannot output reads with format 'Text' or 'None'")
+        } // cov:excl-stop
     }
     Ok(())
 }
@@ -730,8 +738,9 @@ fn output_block_interleaved(
                     let _ = segment_index;
                 }
                 // cov:excl-start
-                FileFormat::Text | FileFormat::None => unreachable!("Cannot output reads with format 'Text' or 'None'"),
-                // cov:excl-stop
+                FileFormat::Text | FileFormat::None => {
+                    unreachable!("Cannot output reads with format 'Text' or 'None'")
+                } // cov:excl-stop
             }
         }
     }

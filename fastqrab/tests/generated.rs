@@ -10391,6 +10391,39 @@ fn test_cases_x_single_step_x_hamming_x_empty_barcode_file() {
 
 #[test]
 
+fn test_cases_x_single_step_x_hamming_x_from_file_x_txt() {
+    println!("Test case is in: test_cases/single_step/hamming/from_file/txt");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/hamming/from_file/txt"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_hamming_x_from_file_x_txt_gz() {
+    println!("Test case is in: test_cases/single_step/hamming/from_file/txt_gz");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/hamming/from_file/txt_gz"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_hamming_x_from_file_x_txt_unequal_lines() {
+    println!("Test case is in: test_cases/single_step/hamming/from_file/txt_unequal_lines");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/hamming/from_file/txt_unequal_lines"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_hamming_x_input_label_is_output_label() {
     println!("Test case is in: test_cases/single_step/hamming/input_label_is_output_label");
     run_test(

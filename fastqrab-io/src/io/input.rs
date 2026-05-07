@@ -287,6 +287,13 @@ pub fn detect_input_format(path: &Path) -> Result<(DetectedInputFormat, Compress
     }
 }
 
+pub fn open_text_file(maybe_compressed_filename: impl AsRef<Path>) -> Result<Box<dyn Read + Send>> {
+    let in_stream = open_file(maybe_compressed_filename)?;
+    let (reader, _format) =
+        niffler::send::get_reader(Box::new(in_stream)).context("Problem detecting file format")?;
+    Ok(reader)
+}
+
 /// # Errors
 ///
 /// When the file can't be opened

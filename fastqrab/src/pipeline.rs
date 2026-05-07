@@ -15,7 +15,7 @@ use std::{
 use crate::{
     bam_merge::DemultiplexStepInfo,
     config::{CheckedConfig, StructuredInput},
-    demultiplex::{DemultiplexBarcodes, DemultiplexedData, DemultiplexInfo, OptDemultiplex},
+    demultiplex::{DemultiplexBarcodes, DemultiplexInfo, DemultiplexedData, OptDemultiplex},
     output::{open_output_files, output_block, output_html_report, output_json_report},
     transformations::{self, FinalizeReportResult, Step, Transformation},
 };
@@ -66,7 +66,10 @@ fn build_step_output_files(
 
             let target = match &decl.target {
                 WriteTargetConfig::Stdout => WriteTarget::Stdout,
-                WriteTargetConfig::File { infix_parts, suffix } => {
+                WriteTargetConfig::File {
+                    infix_parts,
+                    suffix,
+                } => {
                     let basename = join_nonempty(
                         std::iter::once(output_prefix)
                             .chain(infix_parts.iter().map(String::as_str))

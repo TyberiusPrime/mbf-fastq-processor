@@ -76,7 +76,9 @@ impl FileFormat {
             FileFormat::Fasta => "fasta",
             FileFormat::Bam => "bam",
             // cov:excl-start
-            FileFormat::Text => unreachable!("Text format has no default suffix — use WriteTargetConfig::File suffix instead"),
+            FileFormat::Text => unreachable!(
+                "Text format has no default suffix — use WriteTargetConfig::File suffix instead"
+            ),
             FileFormat::None => unreachable!("No output has no suffix either"), // cov:excl-stop
         }
     }

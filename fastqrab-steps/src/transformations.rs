@@ -206,7 +206,6 @@ pub trait Step {
         //default does nothing
     }
 
-
     fn init(
         &mut self,
         _input_info: &InputInfo,

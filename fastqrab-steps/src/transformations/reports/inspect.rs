@@ -135,13 +135,20 @@ impl TagUser for PartialTaggedVariant<PartialInspect> {
             infix_parts.push(segment_name);
         }
         let compression = inner.compression.as_ref().copied().unwrap_or_default();
-        let compression_level = inner.compression_level.as_ref().and_then(|x| x.as_ref()).copied();
+        let compression_level = inner
+            .compression_level
+            .as_ref()
+            .and_then(|x| x.as_ref())
+            .copied();
         let format = inner.format.as_ref().copied().unwrap_or_default();
         let custom_suffix = inner.suffix.as_ref().and_then(|opt| opt.as_ref());
         let suffix = format.get_suffix(compression, custom_suffix);
         vec![OutputDeclaration {
             id: "inspect".to_string(),
-            target: WriteTargetConfig::File { infix_parts, suffix },
+            target: WriteTargetConfig::File {
+                infix_parts,
+                suffix,
+            },
             sink_config: SinkConfig {
                 compression,
                 compression_level,

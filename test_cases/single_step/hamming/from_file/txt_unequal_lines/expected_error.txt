@@ -1,0 +1,17 @@
+Error 1/1
+   ╭─config.toml
+   ┆
+46 │ [barcodes.barcodes]
+47 │   from_file = {filename = "input_barcodes.txt"}
+   ┆                                                ┬
+   ┆                                                │
+   ┆                                                ╰─ Error reading from input_barcodes.txt
+───╯
+Hint: Tried as sequence file:
+      	open_input_file
+      
+      Caused by:
+          Could not detect input format for input_barcodes.txt. Expected FASTA, FASTQ, or BAM.
+      
+      Tried as text file of one barcode-per-line:
+      	Unequal line lengths detected in input_barcodes.txt

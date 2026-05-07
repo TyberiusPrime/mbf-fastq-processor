@@ -7,8 +7,9 @@ title: "Barcodes section"
 
 Barcode tables supply the sequence-to-sample-name mappings used by
 [Demultiplex]({{< relref "docs/reference/Demultiplex.md" >}}),
-and 
 [HammingCorrect]({{< relref "docs/reference/tag-steps/using/HammingCorrect.md" >}}
+and 
+[AssignByHalves]({{< relref "docs/redirects/AssignByHalves.md" >}})
 ).
 
 Each table is an independent named dictionary.  The name is chosen by the
@@ -65,12 +66,19 @@ CCCCCC = "sample-2"
         read_name_comment_character = " " # optional
 ```
 
-Barcodes can be read from a FASTA / FASTQ / BAM file.
+Barcodes can be read from a FASTA / FASTQ / BAM / txt file.
+
 If read_name_comment_character is provided, read names are cut
 off at that character. Defaults to no truncation.
 
 Note that this file is considered part of the configuration - 
 `fastqrab validate` will fail if it is not present.
+
+Txt files are files that contain '.txt' in their filename
+and one barcode per line. All lines must have the same lengths.
+Detection is automatic. They may be compressed (gzip,zstd).
+The labels are automatically set to the barcodes, making this format
+more suitable for hamming correction than assignments.
 
 
 ## Constraints

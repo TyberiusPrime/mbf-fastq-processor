@@ -103,7 +103,11 @@ impl<W: Write> HashLayer<W> {
     pub fn new(inner: W, enabled: bool) -> Self {
         Self {
             inner,
-            hasher: if enabled { Some(sha2::Sha256::new()) } else { None },
+            hasher: if enabled {
+                Some(sha2::Sha256::new())
+            } else {
+                None
+            },
         }
     }
 
@@ -231,9 +235,10 @@ impl<W: Write + Send + 'static> CompressionLayer<W> {
                         inner: par,
                     }))
                 } else {
-                    Ok(CompressionLayer::GzipSingle(
-                        flate2::write::GzEncoder::new(inner, compression),
-                    ))
+                    Ok(CompressionLayer::GzipSingle(flate2::write::GzEncoder::new(
+                        inner,
+                        compression,
+                    )))
                 }
             }
             CompressionFormat::Zstd => {
@@ -294,9 +299,7 @@ pub struct SinkHashes {
     pub compressed: Option<String>,
 }
 
-type TextStack = HashLayer<
-    FailForTestLayer<CompressionLayer<HashLayer<BufWriter<DataSink>>>>,
->;
+type TextStack = HashLayer<FailForTestLayer<CompressionLayer<HashLayer<BufWriter<DataSink>>>>>;
 
 pub struct TextRecordSink {
     inner: TextStack,
@@ -463,6 +466,7 @@ fn write_one_bam_record<W>(
 where
     W: Write,
 {
+    use crate::io::reads::WrappedFastQReadCommon;
     use anyhow::bail;
     use bstr::{BStr, BString};
     use fastqrab_dna::dna::TagValue;
@@ -474,7 +478,6 @@ where
             Data, QualityScores as SamQualityScores, Sequence as SamSequence, data::field::Value,
         },
     };
-    use crate::io::reads::WrappedFastQReadCommon;
 
     let mut flags = SamFlags::UNMAPPED;
     if segment_count > 1 {
@@ -508,7 +511,10 @@ where
 
     let mut data_fields: Vec<(Tag, Value)> = Vec::new();
     if let Some(comment) = comment {
-        data_fields.push((Tag::from([b'C', b'O']), Value::String(BString::from(comment))));
+        data_fields.push((
+            Tag::from([b'C', b'O']),
+            Value::String(BString::from(comment)),
+        ));
     }
 
     #[expect(clippy::cast_possible_truncation, reason = "BAM is f32")]
@@ -590,7 +596,10 @@ where
         } else if name_b.is_empty() {
             res = res.context("Empty read name not supported by BAM. Check you Rename steps?");
         }
-        if name_b.iter().any(|&c| !(33..=126).contains(&c) || c == b'@') {
+        if name_b
+            .iter()
+            .any(|&c| !(33..=126).contains(&c) || c == b'@')
+        {
             res = res.context(format!(
                 "The read name contains characters that are not allowed in the SAM/BAM spec.\n\
                     Remove or replace these characters, or set output.bam.comment_separation_char\n\
@@ -632,7 +641,10 @@ pub enum WriteTargetConfig {
     /// with the pipeline's output prefix and demultiplex name using the
     /// configured ix_separator. `suffix` is the complete file extension
     /// (e.g. `"tsv"`, `"progress"`, `"qr.json"`).
-    File { infix_parts: Vec<String>, suffix: String },
+    File {
+        infix_parts: Vec<String>,
+        suffix: String,
+    },
     Stdout,
 }
 
@@ -799,7 +811,10 @@ enum ActiveSink {
 
 impl ChunkedRecordWriter {
     /// Construct, validating writability and opening the first chunk.
-    #[expect(clippy::too_many_arguments, reason = "they are all needed at construction time")]
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "they are all needed at construction time"
+    )]
     pub fn new(
         format: FileFormat,
         target: WriteTarget,
@@ -829,9 +844,7 @@ impl ChunkedRecordWriter {
             #[cfg(unix)]
             {
                 use std::os::unix::fs::FileTypeExt;
-                let is_fifo = metadata
-                    .as_ref()
-                    .is_some_and(|m| m.file_type().is_fifo());
+                let is_fifo = metadata.as_ref().is_some_and(|m| m.file_type().is_fifo());
                 if is_fifo && chunk_policy.records_per_chunk.is_some() {
                     anyhow::bail!(
                         "Chunked output is not supported when writing to named pipes: {}",
@@ -977,10 +990,9 @@ impl ChunkedRecordWriter {
                 ActiveSink::Text(TextRecordSink::new(sink, &self.sink_config)?)
             }
             FileFormat::Bam => {
-                let opts = self
-                    .bam_options
-                    .clone()
-                    .ok_or_else(|| anyhow::anyhow!("BAM options missing for BAM ChunkedRecordWriter"))?;
+                let opts = self.bam_options.clone().ok_or_else(|| {
+                    anyhow::anyhow!("BAM options missing for BAM ChunkedRecordWriter")
+                })?;
                 ActiveSink::Bam(BamRecordSink::new(
                     sink,
                     &self.sink_config,
@@ -994,7 +1006,8 @@ impl ChunkedRecordWriter {
         // first chunk's header is written by set_header() itself).
         if self.chunk_index > 0 {
             if let (Some(header), ActiveSink::Text(sink)) = (&self.header, &mut self.active) {
-                sink.write_all(header).context("Writing chunk header on rotation")?;
+                sink.write_all(header)
+                    .context("Writing chunk header on rotation")?;
             }
         }
         Ok(())

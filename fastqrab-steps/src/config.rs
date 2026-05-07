@@ -1469,7 +1469,11 @@ impl PartialConfig {
                     .map(|t| t.declare_output_files())
                     .unwrap_or_default();
                 for decl in &decls {
-                    if let WriteTargetConfig::File { ref infix_parts, ref suffix } = decl.target {
+                    if let WriteTargetConfig::File {
+                        ref infix_parts,
+                        ref suffix,
+                    } = decl.target
+                    {
                         key_to_entries
                             .entry((infix_parts.clone(), suffix.clone()))
                             .or_default()

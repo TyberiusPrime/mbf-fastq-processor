@@ -65,7 +65,10 @@ impl VerifyIn<PartialConfig> for PartialProgress {
 
 impl Progress {
     pub fn output(&self, msg: &str) {
-        let mut guard = self.writer.lock().expect("writer lock must not be poisoned");
+        let mut guard = self
+            .writer
+            .lock()
+            .expect("writer lock must not be poisoned");
         if let Some(writer) = guard.as_mut() {
             let mut bytes = msg.as_bytes().to_vec();
             bytes.push(b'\n');
