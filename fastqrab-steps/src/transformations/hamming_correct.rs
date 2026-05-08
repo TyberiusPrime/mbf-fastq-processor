@@ -288,7 +288,7 @@ impl HammingCorrect {
 
         if let Some((idx, key, _value)) = self.seq_to_name.get_full(sequence) {
             return Ok(OneMatch {
-                seq: BStr::new(key.as_slice()),
+                seq: key.as_ref(),
                 idx,
                 was_exact: true,
             });
@@ -449,8 +449,11 @@ impl Step for HammingCorrect {
                     TagValue::Location(hits) => {
                         let seq = hits.joined_sequence_cow(None);
                         let res = self.match_sequence(BStr::new(seq.as_ref()))?;
-                        if needs_qualities {
+                        if needs_qualities && matches!(res, MatchResult::Tie(..)){
                             qualities.push(read.hit_to_qualities(hits));
+                        }
+                        else {
+                            qualities.push(None);
                         }
                         Some(res)
                     }
