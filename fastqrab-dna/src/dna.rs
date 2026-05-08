@@ -139,6 +139,16 @@ impl Hits {
         res
     }
 
+    /// Like `joined_sequence`, but borrows when there is a single hit (no allocation).
+    #[must_use]
+    pub fn joined_sequence_cow(&self, separator: Option<&[u8]>) -> Cow<'_, [u8]> {
+        if self.0.len() == 1 {
+            Cow::Borrowed(self.0[0].sequence.as_slice())
+        } else {
+            Cow::Owned(self.joined_sequence(separator))
+        }
+    }
+
     #[must_use]
     pub fn covered_len(&self) -> usize {
         let mut total = 0;
