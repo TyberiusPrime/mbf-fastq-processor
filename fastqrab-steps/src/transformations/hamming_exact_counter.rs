@@ -1,4 +1,5 @@
 use anyhow::anyhow;
+use rustc_hash::FxHashMap;
 use std::sync::{
     Condvar,
     atomic::{AtomicUsize, Ordering},
@@ -27,6 +28,9 @@ pub struct HammingExactCounter {
 #[derive(Debug, Clone)]
 pub struct MajorityData {
     pub seq_to_name: Arc<IndexMap<BString, String>>,
+    /// FxHash-backed sequence -> position-in-`seq_to_name` lookup. The default
+    /// IndexMap hasher (SipHash) dominates the hot path on short DNA keys.
+    pub seq_to_idx: Arc<FxHashMap<BString, usize>>,
     /// One counter per barcode in `seq_to_name`, indexed by its position there.
     pub barcode_counts: Arc<Vec<AtomicUsize>>,
     pub barrier: Arc<(Mutex<bool>, Condvar)>,
@@ -42,10 +46,16 @@ impl PartialHammingExactCounter {
         seq_to_name: Arc<IndexMap<BString, String>>,
         blocks_to_count: usize,
     ) -> Self {
+        let seq_to_idx: FxHashMap<BString, usize> = seq_to_name
+            .keys()
+            .enumerate()
+            .map(|(i, k)| (k.clone(), i))
+            .collect();
         Self {
             in_label: TomlValue::new_ok_unplaced(in_label),
             majority_data: Some(Arc::new(MajorityData {
                 barcode_counts: Arc::new(build_atomic_counts(seq_to_name.len())),
+                seq_to_idx: Arc::new(seq_to_idx),
                 seq_to_name,
                 blocks_to_count,
                 blocks_counted: Arc::new(AtomicUsize::new(0)),
@@ -116,13 +126,15 @@ impl Step for HammingExactCounter {
                     TagValue::Location(hits) => {
                         let seq = hits.joined_sequence_cow(None);
                         self.majority_data
-                            .seq_to_name
-                            .get_index_of(BStr::new(seq.as_ref()))
+                            .seq_to_idx
+                            .get(BStr::new(seq.as_ref()))
+                            .copied()
                     }
                     TagValue::String(bstring) => self
                         .majority_data
-                        .seq_to_name
-                        .get_index_of(BStr::new(bstring.as_slice())),
+                        .seq_to_idx
+                        .get(BStr::new(bstring.as_slice()))
+                        .copied(),
                 };
                 if let Some(idx) = idx {
                     counts[idx].fetch_add(1, Ordering::Relaxed);

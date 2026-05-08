@@ -3,6 +3,8 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use anyhow::anyhow;
 use hamming_resonate::HammingResonator;
 use indexmap::IndexMap;
+use rayon::prelude::*;
+use rustc_hash::FxHashMap;
 
 use super::hamming_exact_counter::MajorityData;
 use crate::transformations::prelude::*;
@@ -45,6 +47,13 @@ pub struct HammingCorrect {
     #[tpd(skip)]
     #[schemars(skip)]
     seq_to_name: Arc<IndexMap<BString, String>>,
+
+    /// FxHash-backed sequence -> position-in-`seq_to_name` lookup. Built once at
+    /// verify-time; used for the hot exact-match path which is dominated by hashing
+    /// short DNA keys (default IndexMap hasher is SipHash, far slower on tiny keys).
+    #[tpd(skip)]
+    #[schemars(skip)]
+    seq_to_idx: Arc<FxHashMap<BString, usize>>,
 
     #[tpd(skip)]
     #[schemars(skip)]
@@ -111,6 +120,12 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
                         *max_hamming_distance,
                     )?)); // cov:excl-line // we check length before, so this shouldn't fail.
                     self.seq_to_name = Some(seq_to_name.clone());
+                    let idx_map: FxHashMap<BString, usize> = seq_to_name
+                        .keys()
+                        .enumerate()
+                        .map(|(i, k)| (k.clone(), i))
+                        .collect();
+                    self.seq_to_idx = Some(Arc::new(idx_map));
                 } //cov:excl-line
             // otherwise the barcode section wasn't ok and we'll never
             // be turned into a concrete HammingCorrect.
@@ -286,7 +301,11 @@ impl HammingCorrect {
     fn match_sequence(&self, sequence: &BStr) -> Result<MatchResult<'_>> {
         use MatchResult::{NoMatch, OneMatch, Tie};
 
-        if let Some((idx, key, _value)) = self.seq_to_name.get_full(sequence) {
+        if let Some(&idx) = self.seq_to_idx.get(sequence) {
+            let (key, _value) = self
+                .seq_to_name
+                .get_index(idx)
+                .expect("seq_to_idx and seq_to_name out of sync");
             return Ok(OneMatch {
                 seq: key.as_ref(),
                 idx,
@@ -302,9 +321,10 @@ impl HammingCorrect {
         } else if matched.len() == 1 {
             let seq = matched[0].0;
             let idx = self
-                .seq_to_name
-                .get_index_of(seq)
-                .expect("Resonator returned a sequence not in seq_to_name");
+                .seq_to_idx
+                .get(seq)
+                .copied()
+                .expect("Resonator returned a sequence not in seq_to_idx");
             Ok(OneMatch {
                 seq,
                 idx,
@@ -314,10 +334,14 @@ impl HammingCorrect {
             let mut matched_plus_seq: Vec<_> = matched
                 .iter()
                 .map(|(seq, dist)| {
-                    let (idx, _key, name) = self
+                    let idx = *self
+                        .seq_to_idx
+                        .get(*seq)
+                        .expect("Resonator returned a sequence not in seq_to_idx");
+                    let (_key, name) = self
                         .seq_to_name
-                        .get_full(*seq)
-                        .expect("Resonator returned a sequence not in seq_to_name");
+                        .get_index(idx)
+                        .expect("seq_to_idx and seq_to_name out of sync");
                     let seq_name: BString = name.as_bytes().into();
                     let seq_name = match self.name_split_character {
                         Some(split_char) => seq_name
@@ -430,54 +454,44 @@ impl Step for HammingCorrect {
         let output_barcode = matches!(self.output, HammingOutput::Barcode);
         let needs_qualities = matches!(self.on_tie, OnTie::ByEditProbability);
 
-        // Phase 1: matching (resonator-hot). Also pull qualities here so we can
-        // walk the read iterator in lockstep with input_tags.
-        let mut matches: Vec<Option<MatchResult<'_>>> = Vec::with_capacity(input_tags.len());
-        let mut qualities: Vec<Option<BString>> = if needs_qualities {
-            Vec::with_capacity(input_tags.len())
-        } else {
-            Vec::new()
-        };
-        {
-            let mut read_iter = block.get_pseudo_iter();
-            for input_tag in input_tags {
-                let read = read_iter
-                    .pseudo_next()
-                    .context("Read & tag count mismatch!?")?;
+        // Phase 1a: matching (resonator-hot) — parallel across input_tags.
+        let mut results: Vec<(Option<MatchResult<'_>>, Option<BString>)> = input_tags
+            .par_iter()
+            .map(|input_tag| -> Result<_> {
                 let m = match input_tag {
                     TagValue::Missing => None,
                     TagValue::Location(hits) => {
                         let seq = hits.joined_sequence_cow(None);
-                        let res = self.match_sequence(BStr::new(seq.as_ref()))?;
-                        if needs_qualities && matches!(res, MatchResult::Tie(..)){
-                            qualities.push(read.hit_to_qualities(hits));
-                        }
-                        else {
-                            qualities.push(None);
-                        }
-                        Some(res)
+                        Some(self.match_sequence(BStr::new(seq.as_ref()))?)
                     }
-                    TagValue::String(bstring) => {
-                        let res = self.match_sequence(bstring.as_ref())?;
-                        if needs_qualities {
-                            qualities.push(None);
-                        }
-                        Some(res)
-                    }
+                    TagValue::String(bstring) => Some(self.match_sequence(bstring.as_ref())?),
                     TagValue::Numeric(_) | TagValue::Bool(_) => {
                         unreachable!("Validation was meant to prevent this situation. Bug?") // cov:excl-line
                     }
                 };
-                if needs_qualities && matches!(input_tag, TagValue::Missing) {
-                    qualities.push(None);
+                Ok((m, None))
+            })
+            .collect::<Result<Vec<_>>>()?;
+
+        // Phase 1b: pull qualities serially (read iterator is forward-only),
+        // only for Location ties when ByEditProbability is in effect.
+        if needs_qualities {
+            let mut read_iter = block.get_pseudo_iter();
+            for (input_tag, slot) in input_tags.iter().zip(results.iter_mut()) {
+                let read = read_iter
+                    .pseudo_next()
+                    .context("Read & tag count mismatch!?")?;
+                if let (TagValue::Location(hits), Some(MatchResult::Tie(..))) =
+                    (input_tag, &slot.0)
+                {
+                    slot.1 = read.hit_to_qualities(hits);
                 }
-                matches.push(m);
             }
         }
 
         // Phase 2: count updates + output construction (counts-hot).
         let mut output_hits = Vec::with_capacity(input_tags.len());
-        for (i, (input_tag, hit)) in input_tags.iter().zip(matches.into_iter()).enumerate() {
+        for (input_tag, (hit, quality)) in input_tags.iter().zip(results.into_iter()) {
             output_hits.push(match hit {
                 None => TagValue::Missing,
                 Some(hit) => {
@@ -562,7 +576,7 @@ impl Step for HammingCorrect {
                                         .collect();
                                     let (observed_sequence, observed_qualities) =
                                             if let TagValue::Location(hit) = input_tag {
-                                                (hit.joined_sequence(None), qualities[i].clone())
+                                                (hit.joined_sequence(None), quality.clone())
                                             } else if let TagValue::String(_seq) = input_tag { // cov:excl-line
                                                 unreachable!("Validation should have prevented ByEditProbability on String tags") // cov:excl-line
                                             } else {
