@@ -441,6 +441,76 @@ report_html = false
         }
     }
 
+    // For StoreSingleCellData: create tags for cell_tag, gene_tag, umi_tag fields
+    if extracted_section.contains("StoreSingleCellData") {
+        for field in &["cell_tag", "gene_tag", "umi_tag"] {
+            for line in extracted_section.lines() {
+                if line.contains(field) && !line.trim_start().starts_with('#') {
+                    if let Some(start) = line.find(field) {
+                        let after = &line[start..];
+                        if let Some(quote_start) = after.find(['\'', '"']) {
+                            let quote_char = after.chars().nth(quote_start).unwrap();
+                            let after_quote = &after[quote_start + 1..];
+                            if let Some(quote_end) = after_quote.find(quote_char) {
+                                let label = &after_quote[..quote_end];
+                                if !created_tags.contains(label) {
+                                    write!(
+                                        &mut config,
+                                        r#"
+[[step]]
+    action = "ExtractRegion"
+    segment = "read1"
+    start = 0
+    length = 8
+    out_label = "{label}"
+    anchor = "Start"
+"#
+                                    )
+                                    .unwrap();
+                                    created_tags.insert(label.to_string());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // Add barcodes sections for cell_barcodes and gene_barcodes if not already present
+        for field in &["cell_barcodes", "gene_barcodes"] {
+            for line in extracted_section.lines() {
+                if line.contains(field) && !line.trim_start().starts_with('#') {
+                    if let Some(start) = line.find(field) {
+                        let after = &line[start..];
+                        if let Some(eq_pos) = after.find('=') {
+                            let after_eq = &after[eq_pos + 1..];
+                            if let Some(quote_start) = after_eq.find(['\'', '"']) {
+                                let quote_char = after_eq.chars().nth(quote_start).unwrap();
+                                let after_quote = &after_eq[quote_start + 1..];
+                                if let Some(quote_end) = after_quote.find(quote_char) {
+                                    let name = &after_quote[..quote_end];
+                                    let section_key = format!("[barcodes.{name}]");
+                                    if !extracted_section.contains(&section_key)
+                                        && !config.contains(&section_key)
+                                    {
+                                        write!(
+                                            &mut config,
+                                            r"
+[barcodes.{name}]
+    'AAAAAAAA' = 'entry-1'
+    'CCCCCCCC' = 'entry-2'
+"
+                                        )
+                                        .unwrap();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // Add barcodes section if Demultiplex or HammingCorrect is present
     if actions
         .iter()

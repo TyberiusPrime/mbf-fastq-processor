@@ -11433,6 +11433,90 @@ fn test_cases_x_single_step_x_store_tag_x_in_table_output_stdout_twice() {
 
 #[test]
 
+fn test_cases_x_single_step_x_store_tag_x_store_single_cell_data_x_basic() {
+    println!("Test case is in: test_cases/single_step/store_tag/store_single_cell_data/basic");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/store_tag/store_single_cell_data/basic"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_store_tag_x_store_single_cell_data_x_compressed() {
+    println!("Test case is in: test_cases/single_step/store_tag/store_single_cell_data/compressed");
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/store_tag/store_single_cell_data/compressed",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_store_tag_x_store_single_cell_data_x_label_lookup() {
+    println!(
+        "Test case is in: test_cases/single_step/store_tag/store_single_cell_data/label_lookup"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/store_tag/store_single_cell_data/label_lookup",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_store_tag_x_store_single_cell_data_x_umi_nonuniform() {
+    println!(
+        "Test case is in: test_cases/single_step/store_tag/store_single_cell_data/umi_nonuniform"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/store_tag/store_single_cell_data/umi_nonuniform",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_store_tag_x_store_single_cell_data_x_umi_too_long() {
+    println!(
+        "Test case is in: test_cases/single_step/store_tag/store_single_cell_data/umi_too_long"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/store_tag/store_single_cell_data/umi_too_long",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_store_tag_x_store_single_cell_data_x_with_demultiplex() {
+    println!(
+        "Test case is in: test_cases/single_step/store_tag/store_single_cell_data/with_demultiplex"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/store_tag/store_single_cell_data/with_demultiplex",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_store_tag_x_store_tags_in_table_no_tags_defined() {
     println!(
         "Test case is in: test_cases/single_step/store_tag/store_tags_in_table_no_tags_defined"

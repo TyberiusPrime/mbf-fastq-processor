@@ -1,0 +1,65 @@
+[input]
+    read1 = 'input.fq'
+
+[barcodes.samples]
+    AA = "sample1"
+    GG = "sample2"
+
+[barcodes.cells]
+    AAAA = "cell_A"
+    TTTT = "cell_T"
+
+[barcodes.genes]
+    CCCC = "gene_C"
+    GGGG = "gene_G"
+
+[[step]]
+    action = "ExtractRegion"
+    source = "read1"
+    anchor = "start"
+    start = 0
+    length = 2
+    out_label = "sample_bc"
+
+[[step]]
+    action = "Demultiplex"
+    in_label = "sample_bc"
+    barcodes = "samples"
+    output_unmatched = true
+
+[[step]]
+    action = "ExtractRegion"
+    source = "read1"
+    anchor = "start"
+    start = 2
+    length = 4
+    out_label = "cell_bc"
+
+[[step]]
+    action = "ExtractRegion"
+    source = "read1"
+    anchor = "start"
+    start = 6
+    length = 4
+    out_label = "gene_bc"
+
+[[step]]
+    action = "ExtractRegion"
+    source = "read1"
+    anchor = "start"
+    start = 10
+    length = 4
+    out_label = "umi"
+
+[[step]]
+    action = "StoreSingleCellData"
+    cell_tag = "cell_bc"
+    gene_tag = "gene_bc"
+    umi_tag = "umi"
+    cell_barcodes = "cells"
+    gene_barcodes = "genes"
+
+[output]
+    prefix = "output"
+    format = "None"
+    compression = "raw"

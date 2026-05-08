@@ -23,7 +23,7 @@ pub struct Barcodes {
     pub from_file: Option<BarcodesFromFile>,
 
     //this configuration value is empty after parsing
-    //(saves turning them into TomlValues and back).
+    //(saves turning barcodes from files into TomlValues and back).
     //
     //Values are in dna_to_name
     #[schemars(with = "BTreeMap<String, String>")]

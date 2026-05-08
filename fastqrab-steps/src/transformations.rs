@@ -338,6 +338,7 @@ pub enum Transformation {
     StoreTagInFastQ(tag::StoreTagInFastQ),
     #[tpd(alias = "StoreTagInTable")]
     StoreTagsInTable(tag::StoreTagsInTable),
+    StoreSingleCellData(tag::StoreSingleCellData),
     // //other
     QuantifyTag(tag::QuantifyTag),
     //

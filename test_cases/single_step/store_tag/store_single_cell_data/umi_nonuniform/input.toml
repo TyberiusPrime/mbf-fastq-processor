@@ -1,0 +1,62 @@
+[input]
+    read1 = 'input.fq'
+
+[barcodes.cells]
+    AAAA = "cell_A"
+    TTTT = "cell_T"
+
+[barcodes.genes]
+    CCCC = "gene_C"
+    GGGG = "gene_G"
+
+# UMI barcodes with different-length names to produce non-uniform UMI lengths
+[barcodes.umis]
+    TTTT = "TTTT"    # 4-char name
+    AAAA = "AAAAA"   # 5-char name
+
+[[step]]
+    action = "ExtractRegion"
+    source = "read1"
+    anchor = "start"
+    start = 0
+    length = 4
+    out_label = "cell_bc"
+
+[[step]]
+    action = "ExtractRegion"
+    source = "read1"
+    anchor = "start"
+    start = 4
+    length = 4
+    out_label = "gene_bc"
+
+[[step]]
+    action = "ExtractRegion"
+    source = "read1"
+    anchor = "start"
+    start = 8
+    length = 4
+    out_label = "umi_raw"
+
+[[step]]
+    action = "HammingCorrect"
+    in_label = "umi_raw"
+    out_label = "umi"
+    barcodes = "umis"
+    output = "label"
+    max_hamming_distance = 0
+    on_no_match = "Remove"
+    on_tie = "fail"
+
+[[step]]
+    action = "StoreSingleCellData"
+    cell_tag = "cell_bc"
+    gene_tag = "gene_bc"
+    umi_tag = "umi"
+    cell_barcodes = "cells"
+    gene_barcodes = "genes"
+
+[output]
+    prefix = "output"
+    format = "None"
+    compression = "raw"

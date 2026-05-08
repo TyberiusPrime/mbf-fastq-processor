@@ -1,0 +1,1 @@
+UMI is 17bp, maximum supported length is 16bp

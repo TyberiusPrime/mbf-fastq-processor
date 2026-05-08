@@ -930,6 +930,58 @@ fn benchmark_key_steps(c: &mut Criterion) {
             molecule_count,
             thread_count,
         ),
+        BenchmarkConfig::new(
+            "StoreSingleCellData",
+            r#"[barcodes.cells]
+    'AAAAAAAA' = 'cell_1'
+    'CCCCCCCC' = 'cell_2'
+    'GGGGGGGG' = 'cell_3'
+    'TTTTTTTT' = 'cell_4'
+
+[barcodes.genes]
+    'AAAACCCC' = 'gene_1'
+    'CCCCGGGG' = 'gene_2'
+    'GGGGATTT' = 'gene_3'
+
+[[step]]
+    action = "ExtractRegion"
+    segment = "read1"
+    start = 0
+    length = 8
+    out_label = "cell_bc"
+    anchor = "Start"
+
+[[step]]
+    action = "ExtractRegion"
+    segment = "read1"
+    start = 8
+    length = 8
+    out_label = "gene_bc"
+    anchor = "Start"
+
+[[step]]
+    action = "ExtractRegion"
+    segment = "read1"
+    start = 16
+    length = 12
+    out_label = "umi"
+    anchor = "Start"
+
+[[step]]
+    action = "StoreSingleCellData"
+    cell_tag = "cell_bc"
+    gene_tag = "gene_bc"
+    umi_tag = "umi"
+    cell_barcodes = "cells"
+    gene_barcodes = "genes"
+
+[output]
+    prefix = "output"
+    format = "None"
+    compression = "raw""#,
+            molecule_count,
+            thread_count,
+        ),
         //         BenchmarkConfig::new( //needs an active output config
         //             "StoreTagsInTable",
         //             r#"[[step]]

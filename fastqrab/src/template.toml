@@ -903,6 +903,23 @@
 #    include_read_name = true # (optional) include the ReadName column. Default: true
 
 
+# ==== StoreSingleCellData ====
+## Collect (gene_idx, cell_idx, umi) triples and write a sorted row-binary file.
+## cell_tag accepts a barcode sequence (Location) or corrected label (String from AssignByHalves).
+## Outputs: {prefix}_{infix}scd.bin + cell_barcodes.txt + genes.txt
+## With demultiplexing: one .bin per group, shared lookup tables.
+# [[step]]
+#    action = "StoreSingleCellData"
+#    cell_tag = "cell_bc"           # tag with cell-barcode sequence or label
+#    gene_tag = "gene_bc"           # tag with gene-barcode sequence
+#    umi_tag = "umi"                # tag with raw UMI sequence
+#    cell_barcodes = "cells"        # [barcodes.cells] section name
+#    gene_barcodes = "genes"        # [barcodes.genes] section name
+##   tag_contains_barcode = true    # (optional) true=sequence, false=label; auto-detected if omitted
+##   infix = ""                     # (optional) filename infix
+##   compression = "Raw"            # (optional) Raw, Gzip, Zstd — for .bin only
+
+
 # ==== StoreTagInFastQ ====
 ## Store the content of a tag in a fastq file.
 ## Needs a 'location 'tag'.

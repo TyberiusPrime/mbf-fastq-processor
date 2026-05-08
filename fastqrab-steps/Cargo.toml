@@ -28,6 +28,7 @@ indexmap = {workspace = true}
 memchr = {workspace = true}
 mutants = {workspace = true}
 rand = {workspace = true, features = ["thread_rng"] }
+rayon = {workspace = true}
 rand_chacha = {workspace = true}
 regex = {workspace = true}
 scalable_cuckoo_filter = {workspace = true}
