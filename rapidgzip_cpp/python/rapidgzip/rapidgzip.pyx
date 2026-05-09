@@ -1,0 +1,1 @@
+../../librapidarchive/python/rapidgzip/rapidgzip.pyx

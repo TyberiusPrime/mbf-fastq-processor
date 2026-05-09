@@ -1,0 +1,414 @@
+ ▐▛███▜▌   Claude Code v2.1.113
+▝▜█████▛▘  Sonnet 4.6 · Claude Pro
+  ▘▘ ▝▝    /project
+
+❯ /clear                                                                        
+  ⎿  (no content)
+
+❯ /usage 
+  ⎿  Status dialog dismissed
+
+❯ /usage 
+  ⎿  Status dialog dismissed
+
+❯ Our implementation is currently limited by gzip decompression speed. We're    
+  using the python-wrapped, c++-template implemented rapidgzip. That's not      
+  something I can hack on. Read the paper at https://arxiv.org/pdf/2308.08955 , 
+   the source code is in @rapidgzip_cpp. You can run a compiled rapidgzip with  
+  'rapidgzip'. Turn it into a rust crate. It's a tall order, so write a         
+  detailed todo plan first.                                                     
+  ⎿  Listed directory rapidgzip_cpp/
+
+  Read 1 file, listed 2 directories (ctrl+o to expand)
+
+● Bash(cat /project/rapidgzip_cpp/README.md | sed -n '300,500p')
+  ⎿                                  started with non-decoding work. If 0 i
+     s
+                                     given, then the parallelism will be
+     … +152 lines (ctrl+o to expand)
+
+  Read 1 file, listed 1 directory (ctrl+o to expand)
+
+● Bash(find /project/rapidgzip_cpp/src -name '*.hpp' -o -name '*.cpp' | xargs wc
+       -l 2>/dev/null | tail -1)
+  ⎿  0
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+● Bash(rapidgzip --version 2>&1 | head -5; which rapidgzip)
+  ⎿  rapidgzip, CLI to the parallelized, indexed, and seekable gzip decodin
+     g library rapidgzip version 0.14.5
+     /nix/store/gdj5f5f2icrkadb475my24102cfnq5ws-python3.13-rapidgzip-0.14.
+     5/bin/rapidgzip
+
+● Bash(find /project/rapidgzip_cpp/src -type f \( -name '*.hpp' -o -name '*.cpp'
+       \) | wc -l; find /project/rapidgzip_cpp/src -type f \( -name '*.hpp' -o
+      -name '*.cpp'…)
+  ⎿  0
+     0
+
+  Read 3 files, listed 1 directory (ctrl+o to expand)
+
+● I read the paper abstract+architecture sections of the README, and surveyed
+  the C++ tree. Here's the lay of the land plus a phased plan.
+
+  What we're porting
+
+  rapidgzip is ~12k LOC in src/rapidgzip/ plus ~5–10k LOC of supporting code
+  (core/, huffman/, filereader/). Header-only, heavily templated C++17. Key
+  modules:
+
+  - gzip/deflate.hpp (2k LOC) — DEFLATE decoder with the speculative path that
+  lets a thread start mid-stream without knowing the previous 32 KiB window.
+  Emits "marker bytes" for unresolved back-refs.
+  - gzip/gzip.hpp, crc32.hpp, format.hpp — gzip framing, CRC-32.
+  - huffman/* — multiple Huffman decoders (LUT-cached, reversed-bits-cached,
+  ISA-L). The fast paths matter; without them the parallel speedup evaporates.
+  - blockfinder/* — finding deflate block boundaries by trying to decode at
+  every bit offset and checking for self-consistency. The precodecheck LUTs
+  prune ~99% of false starts.
+  - GzipChunkFetcher.hpp, ChunkData.hpp — the parallel-prefetch + cache machine.
+   This is what the paper is about: workers decode chunks speculatively, results
+   sit in an LRU, a serializing pass propagates real windows and rewrites
+  markers.
+  - ParallelGzipReader.hpp (1.5k LOC) — the file-like façade.
+  - IndexFileFormat.hpp (1k LOC) — indexed_gzip-compatible .gzi index.
+
+  The pugz/rapidgzip trick: split the file into ~4 MiB chunks at byte offsets,
+  each worker scans for a plausible deflate block start, decodes producing real
+  bytes for literals and markers (sentinel u16s) for back-references whose
+  target window is still unknown. Once chunk N's true 32 KiB sliding-window tail
+   is known, chunk N+1's markers get rewritten in a cheap second pass. The cache
+   + prefetcher hides this serialization.
+
+  Goals / non-goals
+
+  Goal: a Rust crate rapidgzip exposing a Read + Seek (and async optional)
+  reader over .gz files that decompresses in parallel, plus index export/import
+  compatible with the existing .gzi format. API target: similar ergonomics to
+  flate2's MultiGzDecoder plus a seek_to_uncompressed_offset / export_index /
+  import_index.
+
+  Non-goals (initial): Python bindings, bzip2 (indexed_bzip2), zstd, the
+  --ranges/-L CLI niceties, ISA-L integration, Score-P tracing. Bgzf fast-path
+  can come later.
+
+  Phased plan
+
+  Phase 0 — scaffolding & ground truth (1–2 days)
+
+  - Create rapidgzip-rs/ workspace: crates rapidgzip-bitreader,
+  rapidgzip-deflate, rapidgzip-gzip, rapidgzip-index, rapidgzip (top-level).
+  - Set up a corpus of test files: small hand-crafted, Silesia, 4 GiB base64,
+  multi-stream concat, pigz-produced, bgzip-produced, empty stored blocks.
+  Include the silesia.zip already in rapidgzip_cpp/.
+  - Test harness: golden round-trip — decompress with rapidgzip CLI and with our
+   crate, compare byte-for-byte and CRC. Wire this into CI from day 1; nothing
+  merges without this passing on the corpus.
+
+  Phase 1 — single-threaded inflate (1–2 weeks, the hard part)
+
+  - BitReader over a Read + Seek-able source with bit-level positioning. Port
+  from core/BitStringFinder.hpp + gzip/definitions.hpp. Needs peek<N>(),
+  read<N>(), byte-align, tell-bit. Bench against a naïve impl.
+  - CRC-32 — use crc32fast crate (matches what zlib does). Don't reinvent.
+  - Huffman decoders. Start with one fast LUT decoder:
+  HuffmanCodingReversedBitsCached (the "default" non-ISA-L path). Skip the
+  others until benchmarks demand them.
+  - DEFLATE decoder, normal mode (window known, no speculation): stored, fixed,
+  dynamic blocks. This is ~1500 lines of deflate.hpp. Validate against a corpus
+  of deterministic gz files. At this point we beat flate2 on nothing — we just
+  match it.
+  - Gzip framing (header parse, footer CRC/ISIZE check, multi-stream).
+  - Public API milestone: GzipReader: Read that decompresses serially and
+  matches flate2 output bit-for-bit on corpus.
+
+  Phase 2 — speculative inflate + markers (1–2 weeks)
+
+  - Add the marker emission path to the deflate decoder: when starting without a
+   window, every back-reference to data outside the current chunk's
+  already-emitted bytes becomes a 16-bit marker referencing an offset in the
+  unknown prefix. Port from the "two-stage decoding" in deflate.hpp +
+  MarkerReplacement.hpp.
+  - ChunkData equivalent: stores either resolved bytes or a mixed buffer of
+  bytes + markers, plus the chunk's own 32 KiB sliding-window tail and a flag
+  for "fully resolved".
+  - Marker resolution pass: given previous chunk's resolved 32 KiB window, walk
+  this chunk's marker positions and substitute real bytes. Port from
+  MarkerReplacement.hpp.
+  - Test: decompose a known gzip into chunks at random byte boundaries, decode
+  each speculatively, resolve in order, compare to single-threaded output.
+
+  Phase 3 — block finder (1 week)
+
+  - Port blockfinder/DynamicHuffman.hpp precode validity checks. The LUT in
+  blockfinder/precodecheck/ is a perf-critical, bit-twiddly LUT — port the LUT
+  generation as build.rs or as a constant include! of a generated .rs.
+  - Bit-by-bit scanner that, starting from a byte offset, finds the next
+  plausible dynamic-Huffman deflate block header. Port GzipBlockFinder.hpp.
+  - Validate: candidate offsets returned must be a strict superset of the true
+  offsets (false positives are OK, false negatives are not). Test against gzip
+  files where we know all true block boundaries (we can find these by
+  single-thread decoding once and recording).
+
+  Phase 4 — parallel chunk fetcher (1–2 weeks)
+
+  - Replace core/ThreadPool.hpp + core/BlockFetcher.hpp with rayon for the
+  worker pool and a hand-rolled prefetch/LRU cache. Port GzipChunkFetcher.hpp's
+  state machine but in idiomatic Rust (channels instead of futures-with-mutex).
+  - Window propagation pipeline: worker decodes chunk speculatively → result
+  enters cache keyed by compressed offset → a single serializing task walks
+  chunks in order, propagates 32 KiB windows, rewrites markers, marks chunks
+  "ready". Reads block on the next-needed chunk being ready.
+  - Prefetch policy: port core/Prefetcher.hpp FetchMultiStream. Detect
+  sequential vs random access, prefetch ahead by N chunks.
+  - Tests: matches single-threaded output for sequential read across the full
+  corpus, with RAYON_NUM_THREADS 1, 2, 8, 64.
+
+  Phase 5 — random access & index (3–5 days)
+
+  - Index format: port IndexFileFormat.hpp. The format is shared with
+  indexed_gzip. Round-trip test: import an index produced by upstream rapidgzip,
+   verify our reader produces identical bytes when seeking; export an index from
+   our reader, verify upstream rapidgzip accepts it.
+  - Seek impl: bisect index, seek BitReader to the recorded compressed bit
+  offset, prime decoder with the recorded 32 KiB window, decode forward to the
+  requested uncompressed offset.
+
+  Phase 6 — perf parity (open-ended)
+
+  - Benchmark vs. C++ rapidgzip at -P 1, 8, 64 on Silesia and base64. Target:
+  within 20% on first pass.
+  - If short: profile. Likely culprits in order — Huffman decoder (port
+  HuffmanCodingDoubleLiteralCached), bit reader inlining, allocator pressure
+  (port FasterVector/AlignedAllocator ideas), chunk size tuning.
+  - Optional: isa-l via FFI behind a feature flag for the indexed-decode fast
+  path (the README shows it's where the C++ version gets its top numbers).
+
+  Phase 7 — public API & polish
+
+  - Crate-level API: RapidgzipReader::new(impl Read+Seek), with_threads(n),
+  import_index, export_index, seek_uncompressed. Implement Read, Seek.
+  - CLI binary rapidgzip-rs mirroring -d -P -c --import-index --export-index.
+  Skip --analyze/--ranges initially.
+  - Docs, examples, README with benchmark table.
+
+  Key risks / decisions to flag now
+
+  1. DEFLATE-with-markers is the load-bearing piece. It's the most subtle code
+  in the whole repo and the one place where a Rust port can't lean on existing
+  crates — flate2/miniz_oxide don't have a marker mode. Budget accordingly;
+  phase 2 may slip.
+  2. Huffman decoder choice is a perf cliff. The C++ benchmarks show 2–3× spread
+   between decoder variants. Plan to port at least the ShortBitsCached and
+  DoubleLiteralCached variants if we want competitive numbers.
+  3. unsafe budget. The bit reader and Huffman LUT lookups will want unsafe for
+  unchecked indexing. Decide upfront whether we accept that or pay the
+  bounds-check tax. Recommend: unsafe allowed in bitreader and huffman only,
+  with // SAFETY: comments and miri in CI.
+  4. Async vs sync. The C++ API is sync. Recommend matching that and leaving an
+  async adapter for later — a tokio::task::spawn_blocking wrapper is enough for
+  users who need it.
+  5. No header-only-template magic in Rust. The C++ uses template<typename 
+  T_ChunkData> etc. for zero-cost configurability. In Rust, default to concrete
+  types and only introduce generics where benchmarks show monomorphization buys
+  something.
+  6. Endianness / SIMD. The C++ has hand-rolled little-endian-assuming bit ops.
+  Be explicit in Rust; gate any SIMD behind cfg checks.
+
+  Estimated total effort
+
+  Roughly 6–10 person-weeks to phase 5 (functional, parallel, indexed),
+  +open-ended to close the perf gap. Phase 1 + 2 are the long poles; everything
+  after is more mechanical.
+
+  Want me to start on Phase 0 (workspace + corpus + golden test harness) so we
+  have ground truth before any porting begins? Or do you want to revise the plan
+   first?
+
+✻ Baked for 1m 59s
+
+❯ two things: We don't care about random access, it's all about getting the     
+  giant files streamed into serialized blocks as fast as possible.              
+  Second: GZI is secondary, does not need to be compatible, we can just         
+  serialize out our own index (and it's a subgoal for a later phase).           
+                                                                                
+  Essentially, the API would be 'read_gz(filename, (un)bounded_channel)' and    
+  just throw the decoded blocks back at us for processing. Natural              
+  backpropagation there. Or an iterator, if that's easier to implement (I have  
+  my doubts).                                                                   
+                                                                                
+  Testing: There's little sense in byte-wise & crc comparison - just use a      
+  strong & fast hash like sha256 on the output files.                           
+                                                                                
+  We have no need to stick to the C++ implementation at all. We are free to use 
+   the 'rapidgzip-trick' in our own rust channel based approach - the c++ impl  
+  seems to be heavily overengineered for just a 'parallel                       
+  decode-halfway-and-record-boundaries' and 'fix up serially when available'    
+  strategy.                                                                     
+                                                                                
+  Revise the phases accordingly!                                                
+
+● Good simplifications. Here's the revised plan.
+
+  API target
+
+  pub fn read_gz(
+      path: impl AsRef<Path>,
+      sink: Sender<Vec<u8>>,        // bounded → natural backpressure
+      config: Config,                // num_threads, chunk_size_bytes
+  ) -> Result<DecodeStats>;
+
+  Blocks until EOF or error; sink receives decompressed blocks in stream order.
+  Iterator wrapper (Receiver-as-Iterator) is free. Skip iterator-as-primary —
+  it'd mean either inverting control or building our own thread-pool harness,
+  both worse than just owning the threads internally.
+
+  What drops out
+
+  Compared to the prior plan, gone or deferred:
+  - No Seek, no random access → no LRU cache, no prefetcher logic, no BlockMap.
+  - No .gzi interop → IndexFileFormat.hpp (1k LOC) becomes a much smaller "phase
+   6 nice-to-have" with our own format.
+  - No ChunkFetcher state machine → the channel pipeline is the orchestration.
+  - No BlockFinder cache/queue → just a single scanner thread feeding work
+  items.
+  - No public Read impl required → we don't pretend to be a file. Caller drives
+  via channel.
+
+  Revised pipeline (idiomatic Rust)
+
+  [reader thread]    → reads .gz, scans for chunk-boundary candidate bit-offsets
+                       produces WorkItem{ chunk_idx, start_bit, end_bit_hint,
+  raw_bytes }
+                                                  │
+                                                  ▼ work_tx (bounded)
+                         ┌──────────── rayon / N worker threads ────────────┐
+  [workers]              │ decode speculatively → ChunkResult{               │
+                         │   chunk_idx, body: Vec<MaybeMarker>,              │
+                         │   tail_window: [u8; 32 KiB],                      │
+                         │   end_bit, ok: bool                              │
+                         │ }                                                 │
+                         └───────────────────────────┬───────────────────────┘
+                                                     ▼ result_tx (bounded)
+  [serializer thread]    receives results, reorders by chunk_idx,
+                         carries forward the prev-chunk tail window,
+                         resolves markers in-place, ships Vec<u8> to user sink.
+
+  Two channels, three roles. That's the whole architecture. Backpressure on
+  result_tx naturally throttles workers when the user is slow.
+
+  The reader-thread scanning and worker decoding both need a deflate decoder,
+  but that's the same code path either ran in a different mode (scan-only vs
+  scan+emit). Probably one impl with a mode: Scan | Decode enum.
+
+  Revised phases
+
+  Phase 0 — scaffolding & test harness (1–2 days)
+
+  - Workspace: rapidgzip (top crate), rapidgzip-deflate (bit reader + inflate +
+  markers), rapidgzip-bin (CLI).
+  - Corpus: small handcrafted, Silesia, 4 GiB base64, multi-stream concat,
+  pigz/bgzip-produced. (rapidgzip_cpp/silesia.zip is already on disk.)
+  - Test harness: gunzip <f.gz> | sha256sum vs our_decoder <f.gz> | sha256sum.
+  Wire into CI on day 1.
+  - Bench harness using criterion driven by a read_gz → /dev/null consumer.
+
+  Phase 1 — single-threaded inflate (1–2 weeks, the hard part)
+
+  Same as before — this part is unavoidable. Deliverable: a
+  decode_gz_serial(reader, sink) that's correct on the corpus. Likely 30–50% the
+   speed of flate2; that's fine, we'll use this only as the worker's inner loop
+  and as a correctness oracle.
+
+  - BitReader (peek<N>/read<N>/byte-align/tell-bit).
+  - One Huffman decoder — the LUT-cached reversed-bits one. Keep ports of the
+  others as TODO.
+  - DEFLATE: stored / fixed / dynamic blocks, window-known mode only.
+  - Gzip framing + multi-stream + footer CRC/ISIZE check (use crc32fast).
+
+  Phase 2 — speculative inflate with markers (1–2 weeks)
+
+  Add the "no window" mode to the deflate decoder. Output of a chunk is Vec<u16>
+   where < 256 is a literal byte and >= 256 encodes "back-reference to position
+  X in the unresolved prefix" (or a different sentinel scheme — TBD by what's
+  fastest to resolve). Plus the chunk's last-32-KiB tail.
+
+  - Marker emit on the speculative path.
+  - Marker resolve pass: given prev tail, walk markers, substitute. This is a
+  tight memcpy-ish loop.
+  - Test: chop a known gzip into chunks at the real block boundaries (found by
+  single-thread decode), feed each to speculative decoder, resolve in order,
+  sha256 must match.
+
+  Phase 3 — block-boundary scanner (1 week)
+
+  Port the precode-validity LUT and the bit-by-bit dynamic-Huffman header
+  scanner from blockfinder/. False positives OK, false negatives not. Test
+  against ground truth (boundaries observed during a phase-1 serial decode).
+
+  This phase is only needed because chunk starts must align to deflate block
+  headers. If a candidate scanner misses the next true boundary, the
+  corresponding worker chunk is wasted.
+
+  Phase 4 — parallel pipeline (1 week, much smaller than before)
+
+  Wire the three-role pipeline above using crossbeam-channel (bounded). Workers
+  via std::thread spawned once at start, not rayon — work is too coarse-grained
+  for rayon's fork-join model and we want stable stream order.
+
+  - Reader thread: mmap or buffered read, scan for boundaries, emit work items
+  every ~4 MiB compressed.
+  - Workers: speculative decode.
+  - Serializer: a tiny reorder buffer (BTreeMap<chunk_idx, ChunkResult>), pop
+  next-expected, resolve markers using rolling 32 KiB tail, push bytes to user
+  sink. The reorder buffer is also the natural place to bound memory: cap its
+  size, block workers when full.
+  - Failure handling: if a worker's speculative decode fails (chose a bad
+  start), the serializer falls back to a synchronous decode of that compressed
+  range using the now-known tail window. This is the correctness backstop for
+  boundary-scanner false positives.
+
+  Phase 5 — perf (open-ended)
+
+  Bench against rapidgzip (CLI) and pigz on Silesia + base64 + a real fastq.gz.
+  First-pass target: within 2× of C++ rapidgzip at the same thread count. Likely
+   tuning knobs in order of expected payoff:
+  1. Faster Huffman decoder (DoubleLiteralCached port).
+  2. BitReader inlining / unsafe unchecked LUT indexing (gated behind miri-clean
+   // SAFETY:).
+  3. Marker representation — Vec<u16> may be too fat; consider a sidecar
+  Vec<MarkerRef> with bytes in a Vec<u8>.
+  4. Chunk size tuning per file (the C++ code has 4 MiB compressed default).
+  5. Optional: ISA-L FFI behind a feature flag.
+
+  Phase 6 — own index format (deferred, nice-to-have)
+
+  Once phase 4 works, dumping (compressed_bit_offset, uncompressed_offset, 32 
+  KiB window) per chunk-boundary is ~50 lines. Format: bincode or postcard. No
+  upstream-compat constraint. Drop in when there's a concrete need.
+
+  Key risks (revised)
+
+  1. Phase 2 still load-bearing. Speculative deflate is the part no Rust crate
+  gives us. Unchanged.
+  2. Boundary-scanner false-positive rate. If it's high, lots of wasted worker
+  effort. The C++ paper claims it's manageable (<<1% after precode pruning).
+  Validate empirically in phase 3 before committing to phase 4.
+  3. No unsafe-free fast Huffman. Same as before — accept unsafe in bitreader +
+  huffman modules with miri in CI.
+  4. The fallback path in phase 4 must actually work. If a worker reports
+  "couldn't decode", the serializer needs to decode that compressed range
+  serially (it has the real prev window by then). This is the safety net that
+  makes false-positive boundaries OK. Don't skip it.
+
+  Total effort estimate
+
+  4–7 person-weeks to a streaming, parallel, correctness-tested decoder. Phase
+  1+2 are still ~70% of the work; phases 3–4 collapse compared to the prior plan
+   because the streaming-only API removes the cache/prefetcher/seek layers
+  entirely.
+
+  Good to start on Phase 0?
+
+✻ Baked for 1m 6s
