@@ -3,7 +3,6 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use anyhow::anyhow;
 use hamming_resonate::HammingResonator;
 use indexmap::IndexMap;
-use rayon::prelude::*;
 use rustc_hash::FxHashMap;
 
 use super::hamming_exact_counter::MajorityData;
@@ -46,22 +45,29 @@ pub struct HammingCorrect {
 
     #[tpd(skip)]
     #[schemars(skip)]
-    seq_to_name: Arc<IndexMap<BString, String>>,
+    pub(crate) seq_to_name: Arc<IndexMap<BString, String>>,
 
     /// FxHash-backed sequence -> position-in-`seq_to_name` lookup. Built once at
     /// verify-time; used for the hot exact-match path which is dominated by hashing
     /// short DNA keys (default IndexMap hasher is SipHash, far slower on tiny keys).
     #[tpd(skip)]
     #[schemars(skip)]
-    seq_to_idx: Arc<FxHashMap<BString, usize>>,
+    pub(crate) seq_to_idx: Arc<FxHashMap<BString, usize>>,
 
     #[tpd(skip)]
     #[schemars(skip)]
-    resonator: Arc<HammingResonator>,
+    pub(crate) resonator: Arc<HammingResonator>,
 
     #[tpd(skip)]
     #[schemars(skip)]
     pub majority_data: Option<Arc<MajorityData>>,
+
+    /// Side channel from the parallel `_HammingPreMatch` step. Set by
+    /// `expand_transformations` for ByMajority/ByEditProbability; `None` for
+    /// non-counting modes (which do phase 1 inline).
+    #[tpd(skip)]
+    #[schemars(skip)]
+    pub pre_match: Option<Arc<PreMatchData>>,
 
     #[tpd(skip)]
     #[schemars(skip)]
@@ -222,6 +228,7 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
             }
         }
         self.majority_data = Some(None); //get's overwritten in expand_transformations for ByMajority, empty default otherwise
+        self.pre_match = Some(None); //ditto
 
         Ok(())
     }
@@ -279,110 +286,148 @@ impl TagUser for PartialTaggedVariant<PartialHammingCorrect> {
 }
 
 #[derive(Debug)]
-enum MatchResult<'a> {
+pub enum MatchResultOwned {
     NoMatch,
     OneMatch {
-        seq: &'a BStr,
         idx: usize,
         was_exact: bool,
     },
-    Tie(Vec<TieCandidate<'a>>),
+    /// Indices of tied candidates, sorted by (dist, seq) so position 0 is the
+    /// canonical "first" choice for `OnTie::First`.
+    Tie(Vec<usize>),
 }
 
 #[derive(Debug)]
-struct TieCandidate<'a> {
-    seq: &'a BStr,
-    idx: usize,
-    /// label name, post `name_split_character` split — used for `FirstStrict` and `Fail`.
-    name: BString,
+pub struct MatchSlot {
+    pub result: Option<MatchResultOwned>,
+    /// Only filled for `Location` ties when `ByEditProbability` is in effect.
+    pub quality: Option<BString>,
 }
 
-impl HammingCorrect {
-    fn match_sequence(&self, sequence: &BStr) -> Result<MatchResult<'_>> {
-        use MatchResult::{NoMatch, OneMatch, Tie};
+/// Shared state between `_HammingPreMatch` and the resolver `HammingCorrect`.
+/// `pending` carries match results from the parallel matcher to the serial
+/// resolver, keyed by `block_no`. The pipeline's per-step ordering guarantees
+/// the resolver picks up the entry the matcher just inserted for that block.
+#[derive(Debug)]
+pub struct PreMatchData {
+    pub seq_to_name: Arc<IndexMap<BString, String>>,
+    pub seq_to_idx: Arc<FxHashMap<BString, usize>>,
+    pub resonator: Arc<HammingResonator>,
+    pub needs_qualities: bool,
+    pub pending: Mutex<FxHashMap<usize, Vec<MatchSlot>>>,
+}
 
-        if let Some(&idx) = self.seq_to_idx.get(sequence) {
-            let (key, _value) = self
-                .seq_to_name
-                .get_index(idx)
-                .expect("seq_to_idx and seq_to_name out of sync");
-            return Ok(OneMatch {
-                seq: key.as_ref(),
-                idx,
-                was_exact: true,
-            });
-        }
-        let matched = self
-            .resonator
-            .query(sequence)
-            .map_err(|e| anyhow::anyhow!("HammingCorrect query failed: {e}"))?;
-        if matched.is_empty() {
-            Ok(NoMatch)
-        } else if matched.len() == 1 {
-            let seq = matched[0].0;
-            let idx = self
-                .seq_to_idx
-                .get(seq)
-                .copied()
+fn match_sequence(
+    seq_to_idx: &FxHashMap<BString, usize>,
+    resonator: &HammingResonator,
+    sequence: &BStr,
+) -> Result<MatchResultOwned> {
+    use MatchResultOwned::{NoMatch, OneMatch, Tie};
+
+    if let Some(&idx) = seq_to_idx.get(sequence) {
+        return Ok(OneMatch {
+            idx,
+            was_exact: true,
+        });
+    }
+    let matched = resonator
+        .query(sequence)
+        .map_err(|e| anyhow::anyhow!("HammingCorrect query failed: {e}"))?;
+    if matched.is_empty() {
+        return Ok(NoMatch);
+    }
+    if matched.len() == 1 {
+        let seq = matched[0].0;
+        let idx = *seq_to_idx
+            .get(seq)
+            .expect("Resonator returned a sequence not in seq_to_idx");
+        return Ok(OneMatch {
+            idx,
+            was_exact: matched[0].1 == 0,
+        });
+    }
+    let mut indexed: Vec<(usize, &BStr, u32)> = matched
+        .iter()
+        .map(|(seq, dist)| {
+            let idx = *seq_to_idx
+                .get(*seq)
                 .expect("Resonator returned a sequence not in seq_to_idx");
-            Ok(OneMatch {
-                seq,
-                idx,
-                was_exact: matched[0].1 == 0,
-            })
-        } else {
-            let mut matched_plus_seq: Vec<_> = matched
-                .iter()
-                .map(|(seq, dist)| {
-                    let idx = *self
-                        .seq_to_idx
-                        .get(*seq)
-                        .expect("Resonator returned a sequence not in seq_to_idx");
-                    let (_key, name) = self
-                        .seq_to_name
-                        .get_index(idx)
-                        .expect("seq_to_idx and seq_to_name out of sync");
-                    let seq_name: BString = name.as_bytes().into();
-                    let seq_name = match self.name_split_character {
-                        Some(split_char) => seq_name
-                            .splitn(2, |&c| c == split_char)
-                            .next()
-                            .unwrap_or(&seq_name)
-                            .into(),
-                        None => seq_name,
-                    };
-                    (*seq, dist, idx, seq_name)
-                })
-                .collect();
+            (idx, *seq, *dist)
+        })
+        .collect();
+    indexed.sort_by_key(|(_idx, seq, dist)| (*dist, *seq));
+    if indexed[0].2 < indexed[1].2 {
+        return Ok(OneMatch {
+            idx: indexed[0].0,
+            was_exact: indexed[0].2 == 0,
+        });
+    }
+    let min_dist = indexed[0].2;
+    let cut = indexed
+        .iter()
+        .position(|(_, _, d)| *d > min_dist)
+        .unwrap_or(indexed.len());
+    indexed.truncate(cut);
+    Ok(Tie(indexed.into_iter().map(|(idx, _, _)| idx).collect()))
+}
 
-            matched_plus_seq.sort_by_key(|(seq, dist, _idx, _name)| (*dist, *seq));
-            // is there a best one? take that
-            if matched_plus_seq[0].1 < matched_plus_seq[1].1 {
-                Ok(OneMatch {
-                    seq: matched_plus_seq[0].0,
-                    idx: matched_plus_seq[0].2,
-                    was_exact: *matched_plus_seq[0].1 == 0,
-                })
-            } else {
-                let first_different = matched_plus_seq
-                    .iter()
-                    .position(|(_seq, dist, _idx, _name)| *dist > matched_plus_seq[0].1)
-                    .unwrap_or(matched_plus_seq.len());
-                matched_plus_seq.truncate(first_different);
-                Ok(Tie(matched_plus_seq
-                    .into_iter()
-                    .map(|(seq, _dist, idx, name)| TieCandidate { seq, idx, name })
-                    .collect()))
+fn run_match_phase(
+    seq_to_idx: &FxHashMap<BString, usize>,
+    resonator: &HammingResonator,
+    input_tags: &[TagValue],
+    needs_qualities: bool,
+    block: Option<&FastQBlocksCombined>,
+) -> Result<Vec<MatchSlot>> {
+    let mut results: Vec<MatchSlot> = Vec::with_capacity(input_tags.len());
+    for input_tag in input_tags {
+        let result = match input_tag {
+            TagValue::Missing => None,
+            TagValue::Location(hits) => {
+                let seq = hits.joined_sequence_cow(None);
+                Some(match_sequence(seq_to_idx, resonator, BStr::new(seq.as_ref()))?)
+            }
+            TagValue::String(bstring) => Some(match_sequence(
+                seq_to_idx,
+                resonator,
+                bstring.as_ref(),
+            )?),
+            TagValue::Numeric(_) | TagValue::Bool(_) => {
+                unreachable!("Validation was meant to prevent this situation. Bug?") // cov:excl-line
+            }
+        };
+        results.push(MatchSlot {
+            result,
+            quality: None,
+        });
+    }
+    if needs_qualities && let Some(block) = block {
+        let mut read_iter = block.get_pseudo_iter();
+        for (input_tag, slot) in input_tags.iter().zip(results.iter_mut()) {
+            let read = read_iter
+                .pseudo_next()
+                .context("Read & tag count mismatch!?")?;
+            if let (TagValue::Location(hits), Some(MatchResultOwned::Tie(_))) =
+                (input_tag, &slot.result)
+            {
+                slot.quality = read.hit_to_qualities(hits);
             }
         }
     }
+    Ok(results)
+}
 
-    fn output(&self, matched_seq: &BStr, input_tag: &TagValue, output_barcode: bool) -> TagValue {
+impl HammingCorrect {
+
+    fn output(&self, matched_idx: usize, input_tag: &TagValue, output_barcode: bool) -> TagValue {
+        let (matched_seq, matched_name) = self
+            .seq_to_name
+            .get_index(matched_idx)
+            .expect("seq_to_name index out of range");
         if let TagValue::Location(hit_sequences) = input_tag
             && output_barcode
         {
             let new_hit = Hit {
-                sequence: matched_seq.into(),
+                sequence: matched_seq.clone(),
                 location: if hit_sequences.0.len() == 1 {
                     hit_sequences.0[0].location.clone()
                 } else {
@@ -392,13 +437,9 @@ impl HammingCorrect {
             TagValue::Location(Hits::new_multiple(vec![new_hit]))
         } else {
             TagValue::String(if output_barcode {
-                matched_seq.into()
+                matched_seq.clone()
             } else {
-                self.seq_to_name
-                    .get(matched_seq)
-                    .expect("Cant have a matching barcode without a label. One of the correction functions is returning an uncorrected barcode when it should return TagValue::Missing?")
-                    .as_bytes()
-                    .into()
+                matched_name.as_bytes().into()
             })
         }
     }
@@ -454,75 +495,77 @@ impl Step for HammingCorrect {
         let output_barcode = matches!(self.output, HammingOutput::Barcode);
         let needs_qualities = matches!(self.on_tie, OnTie::ByEditProbability);
 
-        // Phase 1a: matching (resonator-hot) — parallel across input_tags.
-        let mut results: Vec<(Option<MatchResult<'_>>, Option<BString>)> = input_tags
-            .par_iter()
-            .map(|input_tag| -> Result<_> {
-                let m = match input_tag {
-                    TagValue::Missing => None,
-                    TagValue::Location(hits) => {
-                        let seq = hits.joined_sequence_cow(None);
-                        Some(self.match_sequence(BStr::new(seq.as_ref()))?)
-                    }
-                    TagValue::String(bstring) => Some(self.match_sequence(bstring.as_ref())?),
-                    TagValue::Numeric(_) | TagValue::Bool(_) => {
-                        unreachable!("Validation was meant to prevent this situation. Bug?") // cov:excl-line
-                    }
-                };
-                Ok((m, None))
-            })
-            .collect::<Result<Vec<_>>>()?;
-
-        // Phase 1b: pull qualities serially (read iterator is forward-only),
-        // only for Location ties when ByEditProbability is in effect.
-        if needs_qualities {
-            let mut read_iter = block.get_pseudo_iter();
-            for (input_tag, slot) in input_tags.iter().zip(results.iter_mut()) {
-                let read = read_iter
-                    .pseudo_next()
-                    .context("Read & tag count mismatch!?")?;
-                if let (TagValue::Location(hits), Some(MatchResult::Tie(..))) =
-                    (input_tag, &slot.0)
-                {
-                    slot.1 = read.hit_to_qualities(hits);
-                }
-            }
-        }
+        // Phase 1: matching. If a `_HammingPreMatch` step ran ahead of us in
+        // parallel, pop its results from the side channel; otherwise match
+        // inline (this path is `needs_serial=false` so the pipeline already
+        // parallelizes across blocks).
+        let results: Vec<MatchSlot> = if let Some(pre) = self.pre_match.as_ref() {
+            pre.pending
+                .lock()
+                .map_err(|e| anyhow!("PreMatch pending mutex poisoned: {e}"))?
+                .remove(&block.block_no())
+                .expect("PreMatch results missing for this block — pipeline ordering bug")
+        } else {
+            run_match_phase(
+                &self.seq_to_idx,
+                &self.resonator,
+                input_tags,
+                needs_qualities,
+                Some(&block),
+            )?
+        };
 
         // Phase 2: count updates + output construction (counts-hot).
         let mut output_hits = Vec::with_capacity(input_tags.len());
-        for (input_tag, (hit, quality)) in input_tags.iter().zip(results.into_iter()) {
-            output_hits.push(match hit {
+        for (input_tag, slot) in input_tags.iter().zip(results.into_iter()) {
+            let MatchSlot { result, quality } = slot;
+            output_hits.push(match result {
                 None => TagValue::Missing,
                 Some(hit) => {
                     let was_location = matches!(input_tag, TagValue::Location(_));
                     match hit {
-                        MatchResult::NoMatch => match self.on_no_match {
+                        MatchResultOwned::NoMatch => match self.on_no_match {
                             OnNoMatch::Remove => TagValue::Missing,
                             OnNoMatch::Empty => Self::output_empty(was_location, output_barcode),
                             OnNoMatch::Keep => input_tag.clone(),
                         },
-                        MatchResult::OneMatch { seq: matched_seq, idx, was_exact } => {
+                        MatchResultOwned::OneMatch { idx, was_exact } => {
                             if was_exact && let Some(counts) = barcode_counts && count_here {
                                 counts[idx].fetch_add(1, Ordering::Relaxed);
                             }
-                            self.output(matched_seq, input_tag, output_barcode)
+                            self.output(idx, input_tag, output_barcode)
                         }
-                        MatchResult::Tie(items) => {
+                        MatchResultOwned::Tie(items) => {
                             match self.on_tie {
                                 OnTie::Remove => TagValue::Missing,
-                                OnTie::Empty =>  {
+                                OnTie::Empty => {
                                     Self::output_empty(was_location, output_barcode)
                                 }
                                 OnTie::Keep => input_tag.clone(),
-                                OnTie::First =>{
-                                    self.output(items[0].seq, input_tag, output_barcode)
+                                OnTie::First => {
+                                    self.output(items[0], input_tag, output_barcode)
                                 }
                                 OnTie::FirstStrict => {
-                                    //self.name_split_character splitting happens in match
-                                    let all_the_same = items.iter().all(|c| c.name == items[0].name);
+                                    let split = self.name_split_character;
+                                    let canonical_name = |idx: usize| -> &[u8] {
+                                        let (_k, name) = self
+                                            .seq_to_name
+                                            .get_index(idx)
+                                            .expect("seq_to_name index out of range");
+                                        let bytes = name.as_bytes();
+                                        match split {
+                                            Some(split_char) => bytes
+                                                .splitn(2, |&c| c == split_char)
+                                                .next()
+                                                .unwrap_or(bytes),
+                                            None => bytes,
+                                        }
+                                    };
+                                    let first = canonical_name(items[0]);
+                                    let all_the_same =
+                                        items.iter().all(|&i| canonical_name(i) == first);
                                     if all_the_same {
-                                        self.output(items[0].seq, input_tag, output_barcode)
+                                        self.output(items[0], input_tag, output_barcode)
                                     } else {
                                         TagValue::Missing
                                     }
@@ -533,7 +576,16 @@ impl Step for HammingCorrect {
                                         TagValue::String(seq) => seq.to_vec(),
                                         _ => unreachable!() // cov:excl-line
                                     };
-                                    let display: Vec<_> = items.iter().map(|c| (c.seq, &c.name)).collect();
+                                    let display: Vec<_> = items
+                                        .iter()
+                                        .map(|&i| {
+                                            let (k, n) = self
+                                                .seq_to_name
+                                                .get_index(i)
+                                                .expect("seq_to_name index out of range");
+                                            (BStr::new(k.as_slice()), n)
+                                        })
+                                        .collect();
                                     bail!(
                                     "HammingCorrect on in_label={} \n\
                                      Uncorrectable sequence '{}', \n\
@@ -547,17 +599,17 @@ impl Step for HammingCorrect {
                                 }
                                 OnTie::ByMajority => {
                                     let counts = barcode_counts.expect("Barcode_counts must be set in OnTie::ByMajority");
-                                    let mut best: Option<(&BStr, usize)> = None;
+                                    let mut best: Option<(usize, usize)> = None;
                                     let mut total = 0;
-                                    for item in &items {
+                                    for &idx in &items {
                                         //add a laplace of 1
                                         //which avoids a total of 0 in the extreme case of ,
                                         //we ain't seen any of these.
-                                        let count = counts[item.idx].load(Ordering::Relaxed) + 1;
+                                        let count = counts[idx].load(Ordering::Relaxed) + 1;
                                         best = Some(match best {
-                                            Some(ibest) => if ibest.1 < count {(item.seq, count)} else {ibest},
-                                            None => (item.seq, count)
-                                            });
+                                            Some(ibest) => if ibest.1 < count { (idx, count) } else { ibest },
+                                            None => (idx, count),
+                                        });
                                         total += count;
                                     }
                                     let best = best.expect("Items can't have been empty");
@@ -572,11 +624,21 @@ impl Step for HammingCorrect {
                                     let counts = barcode_counts.expect("Barcode_counts must be set in OnTie::ByEditProbability");
                                     let candidates: Vec<_> = items
                                         .iter()
-                                        .map(|c| (c.seq, counts[c.idx].load(Ordering::Relaxed)))
+                                        .map(|&i| {
+                                            let (k, _n) = self
+                                                .seq_to_name
+                                                .get_index(i)
+                                                .expect("seq_to_name index out of range");
+                                            (BStr::new(k.as_slice()), i, counts[i].load(Ordering::Relaxed))
+                                        })
+                                        .collect();
+                                    let candidates_for_likelihood: Vec<(&BStr, usize)> = candidates
+                                        .iter()
+                                        .map(|(seq, _idx, c)| (*seq, *c))
                                         .collect();
                                     let (observed_sequence, observed_qualities) =
                                             if let TagValue::Location(hit) = input_tag {
-                                                (hit.joined_sequence(None), quality.clone())
+                                                (hit.joined_sequence(None), quality)
                                             } else if let TagValue::String(_seq) = input_tag { // cov:excl-line
                                                 unreachable!("Validation should have prevented ByEditProbability on String tags") // cov:excl-line
                                             } else {
@@ -589,9 +651,14 @@ impl Step for HammingCorrect {
                                         self.on_tie_threshold,
                                         BStr::new(&observed_sequence),
                                         &observed_qualities,
-                                        &candidates,
+                                        &candidates_for_likelihood,
                                     ) {
-                                        self.output(best_seq, input_tag, output_barcode)
+                                        let best_idx = candidates
+                                            .iter()
+                                            .find(|(s, _, _)| *s == best_seq)
+                                            .map(|(_, i, _)| *i)
+                                            .expect("best_seq came from candidates");
+                                        self.output(best_idx, input_tag, output_barcode)
                                     } else {
                                         TagValue::Missing
                                     }
@@ -600,8 +667,7 @@ impl Step for HammingCorrect {
                         }
                     }
                 }
-            }
-            );
+            });
         }
         // Add the corrected tags to the output
         block.tags.insert(self.out_label.clone(), output_hits);
@@ -622,6 +688,85 @@ impl Step for HammingCorrect {
             );
         }
         Ok(None)
+    }
+}
+
+/// Parallel matcher half of the split `HammingCorrect` pipeline. Created in
+/// `expand_transformations` for `OnTie::ByMajority | OnTie::ByEditProbability`
+/// and inserted between `_HammingExactCounter` and `HammingCorrect`.
+///
+/// Runs phase 1 (the resonator-hot lookup) without `needs_serial` so the
+/// pipeline can fan it across worker threads. Results land in `shared.pending`
+/// keyed by `block_no`; the downstream serial `HammingCorrect` step pops them.
+#[tpd(no_verify)]
+#[derive(JsonSchema, Debug, Clone)]
+pub struct _HammingPreMatch {
+    in_label: TagLabel,
+
+    #[tpd(skip)]
+    #[schemars(skip)]
+    pub shared: Arc<PreMatchData>,
+}
+
+impl Partial_HammingPreMatch {
+    pub(crate) fn new(in_label: TagLabel, shared: Arc<PreMatchData>) -> Self {
+        Self {
+            in_label: TomlValue::new_ok_unplaced(in_label),
+            shared: Some(shared),
+        }
+    }
+}
+
+impl TagUser for PartialTaggedVariant<Partial_HammingPreMatch> {
+    fn get_tag_usage(
+        &mut self,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
+        _segment_order: &[String],
+    ) -> Option<TagUsageInfo<'_>> {
+        if let Some(inner) = self.toml_value.value.as_mut() {
+            Some(TagUsageInfo {
+                used_tags: vec![
+                    inner
+                        .in_label
+                        .to_used_tag(&[TagValueType::String, TagValueType::Location]),
+                ],
+                ..Default::default()
+            })
+        } else {
+            None // cov:excl-line
+        }
+    }
+}
+
+impl Step for _HammingPreMatch {
+    fn apply(
+        &self,
+        block: FastQBlocksCombined,
+        _input_info: &InputInfo,
+        _demultiplex_info: &OptDemultiplex,
+    ) -> Result<(FastQBlocksCombined, bool)> {
+        let input_tags = block
+            .tags
+            .get(&self.in_label)
+            .expect("Input tag not found");
+        let results = run_match_phase(
+            &self.shared.seq_to_idx,
+            &self.shared.resonator,
+            input_tags,
+            self.shared.needs_qualities,
+            Some(&block),
+        )?;
+        let block_no = block.block_no();
+        self.shared
+            .pending
+            .lock()
+            .map_err(|e| anyhow!("PreMatch pending mutex poisoned: {e}"))?
+            .insert(block_no, results);
+        Ok((block, true))
+    }
+
+    fn needs_serial(&self) -> bool {
+        false
     }
 }
 
