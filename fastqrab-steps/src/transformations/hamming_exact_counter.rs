@@ -1,11 +1,15 @@
 use anyhow::anyhow;
-use bstr::ByteSlice;
+use rustc_hash::FxHashMap;
 use std::sync::{
     Condvar,
     atomic::{AtomicUsize, Ordering},
 };
 
 use crate::transformations::prelude::*;
+
+fn build_atomic_counts(len: usize) -> Vec<AtomicUsize> {
+    (0..len).map(|_| AtomicUsize::new(0)).collect()
+}
 
 /// This transformation counts exact hamming matches until we've got enough counts to over to
 /// `HammingCorrect` in `ByMajority` mode.
@@ -23,8 +27,12 @@ pub struct HammingExactCounter {
 
 #[derive(Debug, Clone)]
 pub struct MajorityData {
-    seq_to_name: Arc<IndexMap<BString, String>>,
-    pub barcode_counts: Arc<Mutex<IndexMap<BString, usize>>>,
+    pub seq_to_name: Arc<IndexMap<BString, String>>,
+    /// FxHash-backed sequence -> position-in-`seq_to_name` lookup. The default
+    /// IndexMap hasher (SipHash) dominates the hot path on short DNA keys.
+    pub seq_to_idx: Arc<FxHashMap<BString, usize>>,
+    /// One counter per barcode in `seq_to_name`, indexed by its position there.
+    pub barcode_counts: Arc<Vec<AtomicUsize>>,
     pub barrier: Arc<(Mutex<bool>, Condvar)>,
     blocks_counted: Arc<AtomicUsize>,
     pub blocks_to_count: usize,
@@ -38,10 +46,16 @@ impl PartialHammingExactCounter {
         seq_to_name: Arc<IndexMap<BString, String>>,
         blocks_to_count: usize,
     ) -> Self {
+        let seq_to_idx: FxHashMap<BString, usize> = seq_to_name
+            .keys()
+            .enumerate()
+            .map(|(i, k)| (k.clone(), i))
+            .collect();
         Self {
             in_label: TomlValue::new_ok_unplaced(in_label),
             majority_data: Some(Arc::new(MajorityData {
-                barcode_counts: Arc::new(Mutex::new(IndexMap::new())),
+                barcode_counts: Arc::new(build_atomic_counts(seq_to_name.len())),
+                seq_to_idx: Arc::new(seq_to_idx),
                 seq_to_name,
                 blocks_to_count,
                 blocks_counted: Arc::new(AtomicUsize::new(0)),
@@ -103,37 +117,32 @@ impl Step for HammingExactCounter {
 
         if block.block_no() <= self.majority_data.blocks_to_count {
             // block no is 1 based.
-            let mut local_exact_barcode_match_counter: IndexMap<BString, usize> = IndexMap::new();
             let input_tags = block.tags.get(&self.in_label).expect("Input tag not found");
+            let counts = &*self.majority_data.barcode_counts;
             for input_tag in input_tags {
-                let seq = match input_tag {
+                let idx = match input_tag {
                     TagValue::Missing => continue,
                     TagValue::Numeric(_) | TagValue::Bool(_) => unreachable!(), //cov:excl-line
-                    TagValue::Location(hits) => BString::new(hits.joined_sequence(None)),
-                    TagValue::String(bstring) => bstring.clone(),
+                    TagValue::Location(hits) => {
+                        let seq = hits.joined_sequence_cow(None);
+                        self.majority_data
+                            .seq_to_idx
+                            .get(BStr::new(seq.as_ref()))
+                            .copied()
+                    }
+                    TagValue::String(bstring) => self
+                        .majority_data
+                        .seq_to_idx
+                        .get(BStr::new(bstring.as_slice()))
+                        .copied(),
                 };
-                let is_exact = self.majority_data.seq_to_name.contains_key(seq.as_bstr());
-                if is_exact {
-                    local_exact_barcode_match_counter
-                        .entry(seq)
-                        .and_modify(|count| *count = count.saturating_add(1))
-                        .or_insert(1);
+                if let Some(idx) = idx {
+                    counts[idx].fetch_add(1, Ordering::Relaxed);
                 }
             }
             self.majority_data
                 .total_reads_considered
                 .fetch_add(input_tags.len(), Ordering::SeqCst);
-            {
-                let mut bc = self.majority_data.barcode_counts.lock().map_err(|err| {
-                    //cov:excl-start
-                    anyhow!("Mutex poisoned while waiting for majority data to be ready: {err}")
-                })?; //cov:excl-stop
-                for (key, value) in local_exact_barcode_match_counter {
-                    bc.entry(key)
-                        .and_modify(|count| *count = count.saturating_add(value))
-                        .or_insert(value);
-                }
-            }
             let mut counted = self
                 .majority_data
                 .blocks_counted

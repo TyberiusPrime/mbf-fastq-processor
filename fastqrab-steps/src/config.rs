@@ -1,4 +1,4 @@
-use crate::transformations::hamming_correct::OnTie;
+use crate::transformations::hamming_correct::{OnTie, Partial_HammingPreMatch, PreMatchData};
 use crate::transformations::hamming_exact_counter::PartialHammingExactCounter;
 use crate::transformations::{PartialTransformation, TagUser, Transformation};
 use anyhow::{Result, anyhow, bail};
@@ -872,6 +872,44 @@ impl PartialConfig {
                                 push_new(PartialTransformation::_HammingExactCounter(
                                     PartialTaggedVariant {
                                         toml_value: TomlValue::new_ok_unplaced(pt),
+                                        tag_span: tag_span.clone(),
+                                    },
+                                ));
+
+                                // Build the shared PreMatchData and insert the
+                                // parallel matcher right before HammingCorrect.
+                                let resonator = step_config
+                                    .resonator
+                                    .as_ref()
+                                    .expect("verify must have built the resonator")
+                                    .clone();
+                                let seq_to_idx = step_config
+                                    .seq_to_idx
+                                    .as_ref()
+                                    .expect("verify must have built seq_to_idx")
+                                    .clone();
+                                let needs_qualities = matches!(
+                                    step_config.on_tie.as_ref(),
+                                    Some(OnTie::ByEditProbability)
+                                );
+                                let shared = std::sync::Arc::new(PreMatchData {
+                                    seq_to_name: seq_to_name.clone(),
+                                    seq_to_idx,
+                                    resonator,
+                                    needs_qualities,
+                                    pending: std::sync::Mutex::new(Default::default()),
+                                });
+                                step_config.pre_match = Some(Some(shared.clone()));
+                                let in_label = step_config
+                                    .in_label
+                                    .as_ref()
+                                    .expect("parent was ok")
+                                    .clone();
+                                push_new(PartialTransformation::_HammingPreMatch(
+                                    PartialTaggedVariant {
+                                        toml_value: TomlValue::new_ok_unplaced(
+                                            Partial_HammingPreMatch::new(in_label, shared),
+                                        ),
                                         tag_span,
                                     },
                                 ));

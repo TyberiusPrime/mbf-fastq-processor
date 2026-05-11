@@ -373,6 +373,9 @@ pub enum Transformation {
     Demultiplex(demultiplex::Demultiplex),
     HammingCorrect(hamming_correct::HammingCorrect),
     _HammingExactCounter(hamming_exact_counter::HammingExactCounter),
+    #[schemars(skip)]
+    #[tpd(skip)]
+    _HammingPreMatch(hamming_correct::_HammingPreMatch),
     AssignByHalves(tag::AssignByHalves),
     //
     #[schemars(skip)]
