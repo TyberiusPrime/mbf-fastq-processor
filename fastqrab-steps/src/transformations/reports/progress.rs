@@ -74,7 +74,7 @@ impl Progress {
             bytes.push(b'\n');
             writer
                 .write_text_record(&bytes)
-                .expect("failed to write to progress file");
+                .expect("failed to write to progress file"); //todo: proper error handling
         } else {
             println!("{msg}");
         }

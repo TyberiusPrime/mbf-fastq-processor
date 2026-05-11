@@ -1,0 +1,45 @@
+[options]
+  block_size = 500
+
+[input]
+  r1 = 'input_read1.fq.gz'
+  options.fasta_fake_quality ='C'
+
+[output]
+  prefix = 'output'
+  format = 'None'
+
+[[step]]
+  action = 'ExtractRegion'
+  source = 'r1'
+  start = 0
+  len = 4
+  anchor ='left'
+  out_label='bc_raw'
+
+# [[step]]
+#   action= 'head'
+#   n = 3600
+
+[[step]]
+  action = 'HammingCorrect'
+  in_label = 'bc_raw'
+  out_label = 'bc_corr'
+  max_hamming_distance=1
+  on_tie = 'ByMajority'
+  on_tie_dump_counts = true
+  on_no_match = 'Remove'
+  on_tie_min_molecules_to_start = 1000
+  barcodes = 'barcodes'
+  by_majority_threshold = 0.47
+
+[barcodes.barcodes]
+  CAGC = "CAGC"
+  CAGT = "CAGT"
+  CATT = "CATT"
+  CTTT = "CTTT"
+
+
+[[step]]
+  action = "StoreTagsInTable"
+  compression = 'zstd'

@@ -293,6 +293,19 @@ pub struct SinkConfig {
     pub simulated_failure: Option<SimulatedWriteFailure>,
 }
 
+impl SinkConfig {
+    pub fn new_uncompressed_unhashed() -> Self {
+        Self {
+            compression: CompressionFormat::Uncompressed,
+            compression_level: None,
+            compression_threads: None,
+            hash_uncompressed: false,
+            hash_compressed: false,
+            simulated_failure: None,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct SinkHashes {
     pub uncompressed: Option<String>,
@@ -814,6 +827,14 @@ impl ChunkPaths {
 #[derive(Clone, Copy, Debug, Default)]
 pub struct ChunkPolicy {
     pub records_per_chunk: Option<usize>,
+}
+
+impl ChunkPolicy {
+    pub fn no_chunks() -> Self {
+        ChunkPolicy {
+            records_per_chunk: None,
+        }
+    }
 }
 
 // cov:excl-start

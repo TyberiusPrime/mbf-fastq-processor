@@ -10221,6 +10221,17 @@ fn test_cases_x_single_step_x_hamming_x_by_edit_probability_x_basic() {
 
 #[test]
 
+fn test_cases_x_single_step_x_hamming_x_by_edit_probability_x_dump_counts() {
+    println!("Test case is in: test_cases/single_step/hamming/by_edit_probability/dump_counts");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/hamming/by_edit_probability/dump_counts"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_hamming_x_by_edit_probability_x_lost_due_to_editing() {
     println!(
         "Test case is in: test_cases/single_step/hamming/by_edit_probability/lost_due_to_editing"
@@ -10244,6 +10255,17 @@ fn test_cases_x_single_step_x_hamming_x_by_edit_probability_x_must_have_dist_1()
         std::path::Path::new(
             "../test_cases/single_step/hamming/by_edit_probability/must_have_dist_1",
         ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_hamming_x_by_majority_x_dump_counts() {
+    println!("Test case is in: test_cases/single_step/hamming/by_majority/dump_counts");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/hamming/by_majority/dump_counts"),
         "input.toml",
         1,
     );

@@ -6,8 +6,8 @@ pub(crate) use super::{
 pub(crate) use crate::config::{PartialConfig, TagMetadata, ValidateSegment, ValidateTagLabel};
 
 pub use fastqrab_config::{
-    ConditionalTagLabel, RemovedTags, TagLabel, TagValueType, ToDeclaredTag, ToUsedTag, ToUsedTags,
-    UsedTag,
+    ConditionalTagLabel, FileFormat, RemovedTags, TagLabel, TagValueType, ToDeclaredTag, ToUsedTag,
+    ToUsedTags, UsedTag,
     dna::{Hit, HitRegion, Hits, TagValue},
     offer_alternatives,
     segments::{

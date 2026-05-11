@@ -38,6 +38,12 @@ pub struct HammingCorrect {
     #[tpd(alias = "by_majority_threshold")]
     pub on_tie_threshold: f64,
 
+    #[tpd(default)]
+    pub on_tie_dump_counts: bool,
+    #[tpd(skip)]
+    #[schemars(skip)]
+    count_writer: Arc<Mutex<Option<ChunkedRecordWriter>>>,
+
     /// names are considered identical if they match up to the first `name_split_character`
     #[tpd(with = "tpd_adapt_u8_from_byte_or_char", alias = "name_split_char")]
     pub name_split_character: Option<u8>,
@@ -207,6 +213,7 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
             }
         }
         self.majority_data = Some(None); //get's overwritten in expand_transformations for ByMajority, empty default otherwise
+        self.count_writer = Some(Arc::new(Mutex::new(None)));
 
         Ok(())
     }
@@ -260,6 +267,29 @@ impl TagUser for PartialTaggedVariant<PartialHammingCorrect> {
         } else {
             None // cov:excl-line
         }
+    }
+
+    fn declare_output_files(&self) -> Vec<OutputDeclaration> {
+        if let Some(inner) = self.toml_value.as_ref() {
+            if inner.on_tie_dump_counts.as_ref().is_some_and(|x| *x)
+                && let Some(in_label) = inner.in_label.as_ref()
+            {
+                return vec![OutputDeclaration {
+                    id: "counts".to_string(),
+                    target: WriteTargetConfig::new(
+                        vec![format!("{}.counts", in_label)],
+                        "tsv".to_string(),
+                    ),
+                    sink_config: SinkConfig::new_uncompressed_unhashed(),
+                    format: FileFormat::Text,
+                    chunk_policy: ChunkPolicy::no_chunks(),
+                    bam_options: None,
+                    singleton: true,
+                    span: inner.on_tie_dump_counts.span(),
+                }];
+            }
+        }
+        return vec![];
     }
 }
 
@@ -362,6 +392,23 @@ impl HammingCorrect {
 }
 
 impl Step for HammingCorrect {
+    fn init(
+        &mut self,
+        _input_info: &InputInfo,
+        mut output_files: StepOutputFiles,
+        _demultiplex_info: &OptDemultiplex,
+    ) -> Result<Option<DemultiplexBarcodes>> {
+        if self.on_tie_dump_counts {
+            let mut count_dump_file = output_files.take("counts");
+            let writer = count_dump_file
+                .remove(&0)
+                .expect("tag 0 writer must exist, this is singleton:true");
+            *self.count_writer.lock().expect("poisoned") = Some(writer);
+        }
+
+        Ok(None)
+    }
+
     fn apply(
         &self,
         mut block: FastQBlocksCombined,
@@ -569,6 +616,19 @@ impl Step for HammingCorrect {
                 self.reads_in_this_step.load(Ordering::Acquire),
                 "Mismatch between OnTie::ByMajority considered reads and total reads in this step - bug in your count_here decision making"
             );
+            if let Some(mut writer) = self.count_writer.lock().expect("Mutex poisoned").take() {
+                let barcode_counts = mj.barcode_counts.lock().expect("Mutex poisoned");
+                let mut records = barcode_counts
+                    .iter()
+                    .map(|(seq, count)| format!("{}\t{}\n", seq, count))
+                    .collect::<Vec<_>>();
+                records.sort(); //sort by sequence for easier diffing between runs
+                writer.write_text_record(b"Barcode\tCount\n")?;
+                for record in records {
+                    writer.write_text_record(&record.as_bytes())?;
+                }
+                let _ = writer.finish()?;
+            }
         }
         Ok(None)
     }
