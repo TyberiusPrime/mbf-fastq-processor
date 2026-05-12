@@ -10,7 +10,7 @@ use scalable_cuckoo_filter::ScalableCuckooFilter;
 use schemars::JsonSchema;
 use toml_pretty_deser::prelude::*;
 
-use crate::demultiplex::{DemultiplexBarcodes, OptDemultiplex, StepOutputFiles};
+use crate::{config::ThreadingConfiguration, demultiplex::{DemultiplexBarcodes, OptDemultiplex, StepOutputFiles}};
 use fastqrab_config::{
     DeclaredTag, RemovedTags, TagLabel, UsedTag,
     dna::TagValue,
@@ -157,6 +157,7 @@ pub struct InputInfo {
     pub comment_insert_char: u8,
     pub initial_filter_capacity: Option<usize>,
     pub use_rapidgzip: bool,
+    pub threading_configuration: ThreadingConfiguration
 }
 
 #[derive(Default, Debug)]

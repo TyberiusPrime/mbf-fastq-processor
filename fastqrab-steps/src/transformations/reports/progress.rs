@@ -1,4 +1,4 @@
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, atomic::AtomicUsize};
 
 use super::common::{default_progress_n, thousands_format};
 use crate::transformations::prelude::*;
@@ -17,7 +17,7 @@ fn format_seconds_to_hhmmss(seconds: u64) -> String {
 pub struct Progress {
     #[schemars(skip)]
     #[tpd(skip, default)]
-    pub total_count: Arc<Mutex<usize>>,
+    pub total_count: Arc<AtomicUsize>,
     #[schemars(skip)]
     #[tpd(skip, default)]
     pub start_time: Option<std::time::Instant>,
@@ -104,7 +104,7 @@ impl TagUser for PartialTaggedVariant<PartialProgress> {
 impl Step for Progress {
     fn init(
         &mut self,
-        _input_info: &InputInfo,
+        input_info: &InputInfo,
         mut output_files: StepOutputFiles,
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<DemultiplexBarcodes>> {
@@ -117,6 +117,13 @@ impl Step for Progress {
             *self.writer.lock().expect("poisoned") = Some(writer);
         }
         self.start_time = Some(std::time::Instant::now());
+        // report thread configuration
+        self.output(&format!(
+            "Thread config: per_input_segment {}, processing: {}, per_output_file: {}",
+            input_info.threading_configuration.n_input_per_segment,
+            input_info.threading_configuration.n_processing,
+            input_info.threading_configuration.n_output,
+        ));
         Ok(None)
     }
 
@@ -132,17 +139,13 @@ impl Step for Progress {
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let (counter, next) = {
-            let mut counter = self
-                .total_count
-                .lock()
-                .expect("total_count lock must not be poisoned");
-            let val = *counter;
-            let next = *counter + block.len();
-            *counter = next;
-            drop(counter);
+            let len = block.len();
+            let val = self.total_count.fetch_add(len, std::sync::atomic::Ordering::Relaxed);
+            let next = val + len;
             (val, next)
         };
         let offset = counter % self.n;
+        //todo: Why are we printing multiple times per block?
         for ii in ((counter + offset)..next).step_by(self.n) {
             let elapsed = self
                 .start_time
@@ -174,6 +177,10 @@ impl Step for Progress {
             };
             self.output(&msg);
         }
+        //not quite deterministic since it might come before or after other blocks-in-flight
+        if block.is_final {
+            self.output("Final block passed Progress stage.");
+        }
         Ok((block, true))
     }
 
@@ -189,10 +196,7 @@ impl Step for Progress {
             .unwrap_or_else(std::time::Instant::now)
             .elapsed()
             .as_secs_f64();
-        let count: usize = *self
-            .total_count
-            .lock()
-            .expect("total_count lock must not be poisoned");
+        let count: usize = self.total_count.load(std::sync::atomic::Ordering::SeqCst) as usize;
         let msg = format!(
             "Took {:.2} s ({}) to process {} molecules for an effective rate of {:} molecules/s",
             elapsed,

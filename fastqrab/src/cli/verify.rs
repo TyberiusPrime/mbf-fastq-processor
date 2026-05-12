@@ -813,6 +813,8 @@ pub fn normalize_progress_content(content: &str) -> String {
 
     let int_re = Regex::new(r"\b\d+\b").expect("invalid int regex");
     let normalized = int_re.replace_all(&normalized, "_IGNORED_").into_owned();
+    //it's not quite deterministic with the last (few) Processed in output order.
+    let normalized = normalized.replace("Final block passed Progress stage.\n","");
 
     // Strip absolute paths, preserving any separator character that precedes them.
     // e.g. "from /tmp/abc/foo.fq" -> "from foo.fq" (space preserved).

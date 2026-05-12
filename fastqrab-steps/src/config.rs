@@ -123,6 +123,13 @@ pub struct Stage {
     pub output_declarations: Vec<OutputDeclaration>,
 }
 
+#[derive(Debug, Clone)]
+pub struct ThreadingConfiguration {
+    pub n_input_per_segment: std::num::NonZeroUsize,
+    pub n_output: std::num::NonZeroUsize,
+    pub n_processing: std::num::NonZeroUsize,
+}
+
 #[derive(JsonSchema)]
 #[tpd(root)]
 #[derive(Debug)]
@@ -169,6 +176,7 @@ pub struct CheckedConfig {
     pub barcodes: IndexMap<TagLabel, Barcodes>,
     pub benchmark: Option<Benchmark>,
     pub report_labels: Vec<String>,
+    pub threading_configuration: ThreadingConfiguration,
 }
 
 impl VerifyIn<TPDRoot> for PartialConfig {
@@ -1822,12 +1830,18 @@ impl Config {
         let stages = self.transforms_to_stages();
         //self.transform is now empty, the trafos have been expanded into steps.
         assert!(self.transform.is_empty());
-        if check_input_files_exist {
+        let threading_configuration = if check_input_files_exist {
             //todo :if we figure out a way to have VerifyIn do this only
             // when requested, we could have better error messages.
             let input_formats_observed = self.check_input_format(&mut errors);
-            self.configure_multithreading(&input_formats_observed);
-        }
+            self.configure_multithreading(&input_formats_observed)
+        } else {
+            ThreadingConfiguration {
+                n_input_per_segment: std::num::NonZeroUsize::new(1).expect("Can't fail"),
+                n_output: std::num::NonZeroUsize::new(1).expect("Can't fail"),
+                n_processing: std::num::NonZeroUsize::new(1).expect("Can't fail"),
+            }
+        };
 
         // Return collected errors if any
         if !errors.is_empty() {
@@ -1848,6 +1862,7 @@ impl Config {
             barcodes: self.barcodes.unwrap_or_default(),
             benchmark: self.benchmark,
             report_labels: self.report_labels,
+            threading_configuration,
         })
     }
 
@@ -2011,7 +2026,10 @@ impl Config {
     }
 
     #[mutants::skip] // yeah, no rapidgzip doesn't change the result
-    fn configure_multithreading(&mut self, input_formats_observed: &InputFormatsObserved) {
+    fn configure_multithreading(
+        &mut self,
+        input_formats_observed: &InputFormatsObserved,
+    ) -> ThreadingConfiguration {
         let segment_count = self.input.parser_count();
         let can_multicore_input = input_formats_observed.gzip;
         // self.input_formats_observed.saw_bam as of 2025-12-16, multi core bam isn't faster. I
@@ -2050,6 +2068,15 @@ impl Config {
         {
             // otherwise, we can fall back
             self.input.options.use_rapidgzip = false;
+        }
+
+        ThreadingConfiguration {
+            n_input_per_segment: std::num::NonZeroUsize::new(input_threads_per_segment)
+                .expect("Thread count must be > 0"),
+            n_output: std::num::NonZeroUsize::new(output_threads)
+                .expect("Thread count must be > 0"),
+            n_processing: std::num::NonZeroUsize::new(thread_count)
+                .expect("Thread count must be > 0"),
         }
     }
 }

@@ -442,6 +442,7 @@ impl RunStage0 {
             comment_insert_char: parsed.input.options.read_comment_character,
             initial_filter_capacity: None, // Filled after the first block.
             use_rapidgzip: parsed.input.options.use_rapidgzip,
+            threading_configuration: parsed.threading_configuration.clone(),
         };
         let mut demultiplex_infos: Vec<(usize, OptDemultiplex)> = Vec::new();
         let mut demultiplex_step_infos: Vec<DemultiplexStepInfo> = Vec::new();

@@ -89,7 +89,10 @@ pub struct StoreSingleCellData {
     /// Whether cell_tag values are barcode sequences (true) or corrected labels (false).
     /// Default: auto-detect — true for Location tags, false for String tags.
     #[tpd(default)]
-    #[expect(dead_code, reason = "only read in get_tag_usage via PartialStoreSingleCellData")]
+    #[expect(
+        dead_code,
+        reason = "only read in get_tag_usage via PartialStoreSingleCellData"
+    )]
     tag_contains_barcode: Option<bool>,
 
     /// Infix for output filenames
@@ -433,7 +436,7 @@ impl Step for StoreSingleCellData {
             };
 
             for (_tag, entries) in entries_map.iter_mut() {
-                entries.par_sort_unstable();
+                entries.par_sort_unstable(); //must also sort by umi to be reproducible in output
             }
 
             let umi_len = *self.max_umi_len.lock().expect("lock poisoned");
