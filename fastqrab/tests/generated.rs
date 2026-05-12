@@ -11455,22 +11455,13 @@ fn test_cases_x_single_step_x_store_tag_x_in_table_output_stdout_twice() {
 
 #[test]
 
-fn test_cases_x_single_step_x_store_tag_x_store_single_cell_data_x_basic() {
-    println!("Test case is in: test_cases/single_step/store_tag/store_single_cell_data/basic");
-    run_test(
-        std::path::Path::new("../test_cases/single_step/store_tag/store_single_cell_data/basic"),
-        "input.toml",
-        1,
+fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_umi_aggr_cluster_x_basic() {
+    println!(
+        "Test case is in: test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_cluster/basic"
     );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_store_tag_x_store_single_cell_data_x_compressed() {
-    println!("Test case is in: test_cases/single_step/store_tag/store_single_cell_data/compressed");
     run_test(
         std::path::Path::new(
-            "../test_cases/single_step/store_tag/store_single_cell_data/compressed",
+            "../test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_cluster/basic",
         ),
         "input.toml",
         1,
@@ -11479,13 +11470,13 @@ fn test_cases_x_single_step_x_store_tag_x_store_single_cell_data_x_compressed() 
 
 #[test]
 
-fn test_cases_x_single_step_x_store_tag_x_store_single_cell_data_x_label_lookup() {
+fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_umi_aggr_exact_x_basic() {
     println!(
-        "Test case is in: test_cases/single_step/store_tag/store_single_cell_data/label_lookup"
+        "Test case is in: test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_exact/basic"
     );
     run_test(
         std::path::Path::new(
-            "../test_cases/single_step/store_tag/store_single_cell_data/label_lookup",
+            "../test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_exact/basic",
         ),
         "input.toml",
         1,
@@ -11494,13 +11485,13 @@ fn test_cases_x_single_step_x_store_tag_x_store_single_cell_data_x_label_lookup(
 
 #[test]
 
-fn test_cases_x_single_step_x_store_tag_x_store_single_cell_data_x_umi_nonuniform() {
+fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_umi_aggr_none_x_basic() {
     println!(
-        "Test case is in: test_cases/single_step/store_tag/store_single_cell_data/umi_nonuniform"
+        "Test case is in: test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_none/basic"
     );
     run_test(
         std::path::Path::new(
-            "../test_cases/single_step/store_tag/store_single_cell_data/umi_nonuniform",
+            "../test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_none/basic",
         ),
         "input.toml",
         1,
@@ -11509,13 +11500,13 @@ fn test_cases_x_single_step_x_store_tag_x_store_single_cell_data_x_umi_nonunifor
 
 #[test]
 
-fn test_cases_x_single_step_x_store_tag_x_store_single_cell_data_x_umi_too_long() {
+fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_umi_aggr_none_x_compressed() {
     println!(
-        "Test case is in: test_cases/single_step/store_tag/store_single_cell_data/umi_too_long"
+        "Test case is in: test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_none/compressed"
     );
     run_test(
         std::path::Path::new(
-            "../test_cases/single_step/store_tag/store_single_cell_data/umi_too_long",
+            "../test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_none/compressed",
         ),
         "input.toml",
         1,
@@ -11524,13 +11515,62 @@ fn test_cases_x_single_step_x_store_tag_x_store_single_cell_data_x_umi_too_long(
 
 #[test]
 
-fn test_cases_x_single_step_x_store_tag_x_store_single_cell_data_x_with_demultiplex() {
+fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_umi_aggr_none_x_label_lookup()
+{
     println!(
-        "Test case is in: test_cases/single_step/store_tag/store_single_cell_data/with_demultiplex"
+        "Test case is in: test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_none/label_lookup"
     );
     run_test(
         std::path::Path::new(
-            "../test_cases/single_step/store_tag/store_single_cell_data/with_demultiplex",
+            "../test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_none/label_lookup",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_umi_aggr_none_x_umi_nonuniform()
+ {
+    println!(
+        "Test case is in: test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_none/umi_nonuniform"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_none/umi_nonuniform",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_umi_aggr_none_x_umi_too_long()
+{
+    println!(
+        "Test case is in: test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_none/umi_too_long"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_none/umi_too_long",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_umi_aggr_none_x_with_demultiplex()
+ {
+    println!(
+        "Test case is in: test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_none/with_demultiplex"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_none/with_demultiplex",
         ),
         "input.toml",
         1,

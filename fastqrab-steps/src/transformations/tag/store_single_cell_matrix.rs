@@ -1,6 +1,9 @@
+use std::collections::{HashSet, VecDeque};
+
 use crate::transformations::prelude::*;
 use bstr::{BStr, BString};
 use fastqrab_io::{CompressionFormat, FileFormat};
+use petgraph::graph::UnGraph;
 use rayon::prelude::*;
 
 type WriterHandle = Arc<Mutex<Option<ChunkedRecordWriter>>>;
@@ -66,6 +69,8 @@ enum LookupMode {
 enum UMIAggregation {
     None,
     Exact,
+    #[tpd(alias = "1MM")]
+    Cluster,
 }
 /// Collect (gene_idx, cell_idx, umi_2bit) triples per read, then write binary
 /// data file(s) and lookup tables on finalize.
@@ -545,30 +550,196 @@ fn aggregate_to_matrix(
     umi_aggregation: UMIAggregation,
 ) -> IndexMap<(u32, u32), u32> {
     match umi_aggregation {
-        UMIAggregation::None => {
-            let mut matrix = IndexMap::new();
-            let mut counter = 1u32;
-            let mut last = None;
-            for entry in &entries {
-                let gene_id = entry[0];
-                let cell_id = entry[1];
-                //let umi = entry[2];
-                let key = Some((gene_id, cell_id));
-                if last != key {
-                    matrix.insert((gene_id, cell_id), counter);
-                    last = key;
-                    counter = 1;
-                } else {
+        UMIAggregation::None => aggregate_to_matrix_none(entries),
+        UMIAggregation::Exact => aggregate_to_matrix_exact(entries),
+        UMIAggregation::Cluster => aggregate_to_matrix_cluster(entries),
+    }
+}
+
+fn aggregate_to_matrix_none(entries: Vec<[u32; 3]>) -> IndexMap<(u32, u32), u32> {
+    let mut matrix = IndexMap::new();
+    let mut counter = 0u32; //doesn't matter though, overwritten in first loop.
+    let mut last = None;
+    for entry in &entries {
+        let gene_id = entry[0];
+        let cell_id = entry[1];
+        //let umi = entry[2];
+        let key = (gene_id, cell_id);
+        match last {
+            Some(last_key) if last_key == key => {
+                //same gene & cell
+                counter = counter.saturating_add(1);
+            }
+            Some(last_key) => {
+                // different gene & cell -> push last
+                matrix.insert(last_key, counter);
+                last = Some(key);
+                counter = 1;
+            }
+            None => {
+                //first trip through the loop
+                last = Some(key);
+                counter = 1;
+            }
+        }
+    }
+    if let Some(last) = last {
+        matrix.insert(last, counter);
+    }
+    matrix
+}
+
+fn aggregate_to_matrix_exact(entries: Vec<[u32; 3]>) -> IndexMap<(u32, u32), u32> {
+    let mut matrix = IndexMap::new();
+    let mut counter = 0u32;
+    let mut last = None;
+    let mut seen = std::collections::HashSet::new(); //todo: profile what to use here?
+    for entry in &entries {
+        let gene_id = entry[0];
+        let cell_id = entry[1];
+        let umi = entry[2];
+        let key = (gene_id, cell_id);
+        match last {
+            Some(last_key) if last_key == key => {
+                //same gene & cell
+                if seen.insert(umi) {
                     counter = counter.saturating_add(1);
                 }
             }
-            if let Some(last) = last {
-                matrix.insert(last, counter);
+            Some(last_key) => {
+                // different gene & cell -> push last
+                matrix.insert(last_key, counter);
+                last = Some(key);
+                counter = 1;
+                seen.clear();
+                seen.insert(umi);
             }
-            matrix
+            None => {
+                //first trip through the loop
+                last = Some(key);
+                counter = 1;
+                seen.insert(umi);
+            }
         }
-        UMIAggregation::Exact => {
-            todo!()
+    }
+    if let Some(last) = last {
+        matrix.insert(last, counter);
+    }
+    dbg!(&matrix);
+    matrix
+}
+
+#[inline]
+fn hamming_bp_16(a: u32, b: u32) -> u32 {
+    // XOR marks differing bits within each 2-bit base.
+    let x = a ^ b;
+
+    // Collapse each 2-bit lane to 1 bit:
+    // 00 -> 0
+    // 01,10,11 -> 1
+    let y = (x | (x >> 1)) & 0x5555_5555;
+
+    y.count_ones()
+}
+
+///Aggregate each disjoint subgraph of umis within one hamming distance from each other
+///to
+fn aggregate_to_matrix_cluster(entries: Vec<[u32; 3]>) -> IndexMap<(u32, u32), u32> {
+    if entries.len() < 2 {
+        return [((entries[0][0], entries[0][1]), 1)].into_iter().collect();
+    }
+
+    let mut matrix = IndexMap::new();
+    let mut last = None;
+    let mut seen = std::collections::HashSet::new(); //todo: profile what to use here?
+    for entry in &entries {
+        let gene_id = entry[0];
+        let cell_id = entry[1];
+        let umi = entry[2];
+        let key = (gene_id, cell_id);
+        match last {
+            Some(last_key) if last_key == key => {
+                seen.insert(umi);
+            }
+            Some(last_key) => {
+                // different gene & cell -> push last
+                matrix.insert(last_key, umi_cluster_count(&seen));
+                last = Some(key);
+                seen.clear();
+                seen.insert(umi);
+            }
+            None => {
+                //first trip through the loop
+                last = Some(key);
+                seen.insert(umi);
+            }
         }
+    }
+    if let Some(last) = last {
+        matrix.insert(last, umi_cluster_count(&seen));
+    }
+    dbg!(&matrix);
+    matrix
+}
+///
+/// Returns a vector of components, each as a Vec<N> of node values.
+pub fn connected_components_values_undirected<E>(graph: &UnGraph<u32, E>) -> Vec<Vec<u32>> {
+    let mut visited = HashSet::new();
+    let mut components = Vec::new();
+
+    for start in graph.node_indices() {
+        if visited.contains(&start) {
+            continue;
+        }
+
+        let mut component = Vec::new();
+        let mut queue = VecDeque::new();
+        queue.push_back(start);
+        visited.insert(start);
+
+        while let Some(node) = queue.pop_front() {
+            component.push(graph[node].clone());
+            for neighbor in graph.neighbors(node) {
+                if visited.insert(neighbor) {
+                    queue.push_back(neighbor);
+                }
+            }
+        }
+
+        components.push(component);
+    }
+
+    components
+}
+
+fn umi_cluster_count(umis: &std::collections::HashSet<u32>) -> u32 {
+    use std::collections::HashMap;
+    let max_hamming = 1;
+    let mut graph = UnGraph::<u32, ()>::new_undirected(); //todo: do not store edge
+    //weights...
+    let mut nodes = HashMap::new();
+    for umi in umis.iter() {
+        let node_index = graph.add_node(*umi);
+        nodes.insert(umi, node_index);
+    }
+    let mut any_connected = false;
+    for (umi1, umi2) in umis.iter().flat_map(|umi1| {
+        umis.iter()
+            .filter(move |umi2| umi1 < *umi2)
+            .map(move |umi2| (umi1, umi2))
+    }) {
+        let dist = hamming_bp_16(*umi1, *umi2);
+        if dist <= max_hamming {
+            let node1 = nodes.get(umi1).expect("UMI should be in the graph");
+            let node2 = nodes.get(umi2).expect("UMI should be in the graph");
+            graph.add_edge(*node1, *node2, ());
+            any_connected = true;
+        }
+    }
+    if any_connected {
+        let connected_components = connected_components_values_undirected(&graph);
+        connected_components.len() as u32
+    } else {
+        umis.len() as u32
     }
 }

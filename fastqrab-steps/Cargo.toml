@@ -1,44 +1,45 @@
 [package]
-name = "fastqrab-steps"
-edition.workspace = true
-version.workspace = true
-rust-version.workspace = true
-authors.workspace = true
-license.workspace = true
-repository.workspace = true
-homepage.workspace = true
-readme.workspace = true
-description.workspace = true
-keywords.workspace = true
-categories.workspace = true
-exclude.workspace = true
+  name = "fastqrab-steps"
+  edition.workspace = true
+  version.workspace = true
+  rust-version.workspace = true
+  authors.workspace = true
+  license.workspace = true
+  repository.workspace = true
+  homepage.workspace = true
+  readme.workspace = true
+  description.workspace = true
+  keywords.workspace = true
+  categories.workspace = true
+  exclude.workspace = true
 
 [lints]
-workspace = true
+  workspace = true
 
 [dependencies]
-anyhow = {workspace = true}
-bio = {workspace = true}
-bstr = {workspace = true}
-csv = {workspace = true}
-enum_dispatch = {workspace = true}
-ex = {workspace = true}
-fasteval = {workspace = true}
-indexmap = {workspace = true}
-memchr = {workspace = true}
-mutants = {workspace = true}
-rand = {workspace = true, features = ["thread_rng"] }
-rayon = {workspace = true}
-rand_chacha = {workspace = true}
-regex = {workspace = true}
-rustc-hash = {workspace = true}
-scalable_cuckoo_filter = {workspace = true}
-schemars = {workspace = true}
-serde = {workspace = true}
-serde_json = {workspace = true}
-toml-pretty-deser = {workspace = true}
-fastqrab-config = {workspace = true}
-fastqrab-dna = {workspace = true}
-fastqrab-io = {workspace = true}
-hamming-resonate = {workspace = true}
+  anyhow = {workspace = true}
+  bio = {workspace = true}
+  bstr = {workspace = true}
+  csv = {workspace = true}
+  enum_dispatch = {workspace = true}
+  ex = {workspace = true}
+  fasteval = {workspace = true}
+  fastqrab-config = {workspace = true}
+  fastqrab-dna = {workspace = true}
+  fastqrab-io = {workspace = true}
+  hamming-resonate = {workspace = true}
+  indexmap = {workspace = true}
+  memchr = {workspace = true}
+  mutants = {workspace = true}
+  petgraph = {workspace = true}
+  rand_chacha = {workspace = true}
+  rand = {workspace = true, features = ["thread_rng"] }
+  rayon = {workspace = true}
+  regex = {workspace = true}
+  rustc-hash = {workspace = true}
+  scalable_cuckoo_filter = {workspace = true}
+  schemars = {workspace = true}
+  serde_json = {workspace = true}
+  serde = {workspace = true}
+  toml-pretty-deser = {workspace = true}
 typed_floats.workspace = true
