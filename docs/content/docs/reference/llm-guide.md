@@ -1270,6 +1270,7 @@ Collect per-read (gene, cell barcode, UMI) index triples, sort by (gene, cell), 
     cell_tag = 'cell_bc'              # TYPE: existing tag (Location or String), REQUIRED
     gene_tag = 'gene_bc'              # TYPE: existing tag (Location or String sequence), REQUIRED
     umi_tag = 'umi'                   # TYPE: existing tag (Location or String), REQUIRED
+    umi_aggregation = 'exact'         # TYPE: 'Exact'|'None' - which UMI to aggregate
     cell_barcodes = 'cells'           # TYPE: barcodes section name, REQUIRED
     gene_barcodes = 'genes'           # TYPE: barcodes section name, REQUIRED
     tag_contains_barcode = true       # TYPE: bool, OPTIONAL (true=sequence, false=label; auto-detected if omitted)

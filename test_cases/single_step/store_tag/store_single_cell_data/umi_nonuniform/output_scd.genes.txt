@@ -1,3 +1,0 @@
-unmatched
-gene_C
-gene_G

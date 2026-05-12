@@ -904,20 +904,22 @@
 
 
 # ==== StoreSingleCellData ====
-## Collect (gene_idx, cell_idx, umi) triples and write a sorted row-binary file.
-## cell_tag accepts a barcode sequence (Location) or corrected label (String from AssignByHalves).
-## Outputs: {prefix}_{infix}scd.bin + cell_barcodes.txt + genes.txt
-## With demultiplexing: one .bin per group, shared lookup tables.
+## Collect per-read (gene, cell barcode, UMI) index triples in memory,
+## and an output a MatrixMarket (https://math.nist.gov/MatrixMarket/formats.html) formatted count matrix.
+
+## Outputs: {prefix}_{infix}scd.matrix.mtx + barcodes.txt + features.txt
+## With demultiplexing: one .matrix.mtx per group, shared lookup tables.
 # [[step]]
 #    action = "StoreSingleCellData"
 #    cell_tag = "cell_bc"           # tag with cell-barcode sequence or label
 #    gene_tag = "gene_bc"           # tag with gene-barcode sequence
 #    umi_tag = "umi"                # tag with raw UMI sequence
+#    umi_aggregation = "Exact"      # Deduplicate counts on UMIs. Valid are: Exact, None,
 #    cell_barcodes = "cells"        # [barcodes.cells] section name
 #    gene_barcodes = "genes"        # [barcodes.genes] section name
 ##   tag_contains_barcode = true    # (optional) true=sequence, false=label; auto-detected if omitted
 ##   infix = ""                     # (optional) filename infix
-##   compression = "Raw"            # (optional) Raw, Gzip, Zstd — for .bin only
+##   compression = "Raw"            # (optional) Raw, Gzip, Zstd — for all output files
 
 
 # ==== StoreTagInFastQ ====

@@ -41,6 +41,7 @@
     cell_barcodes = "cells"
     gene_barcodes = "genes"
     compression = 'gzip'
+    umi_aggregation = 'None'
 
 [output]
     prefix = "output"

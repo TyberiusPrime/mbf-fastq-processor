@@ -40,6 +40,7 @@
     umi_tag = "umi"
     cell_barcodes = "cells"
     gene_barcodes = "genes"
+    umi_aggregation = 'None'
 
 [output]
     prefix = "output"

@@ -22,19 +22,18 @@ fn encode_umi(umi: &[u8]) -> u32 {
     v
 }
 
-/// Magic bytes + version: b"FQRSCD\x00\x02"
-const BINARY_MAGIC: &[u8; 8] = b"FQRSCD\x00\x02";
-
-fn write_binary(entries: &[[u32; 3]], umi_len: u8, writer: &mut ChunkedRecordWriter) -> Result<()> {
-    writer.write_text_record(BINARY_MAGIC)?;
-    writer.write_text_record(&(entries.len() as u32).to_le_bytes())?;
-    writer.write_text_record(&[umi_len])?;
-    for &[gene, cell, umi] in entries {
-        let mut row = [0u8; 12];
-        row[0..4].copy_from_slice(&gene.to_le_bytes());
-        row[4..8].copy_from_slice(&cell.to_le_bytes());
-        row[8..12].copy_from_slice(&umi.to_le_bytes());
-        writer.write_text_record(&row)?;
+fn write_binary(
+    matrix: IndexMap<(u32, u32), u32>,
+    n_barcodes: u32,
+    n_cells: u32,
+    writer: &mut ChunkedRecordWriter,
+) -> Result<()> {
+    writer.write_text_record(b"%%MatrixMarket matrix coordinate integer general\n")?;
+    writer.write_text_record(b"%metadata_json: {\"software\": \"fastqrab\"}\n")?;
+    let total: usize = matrix.values().map(|x| *x as usize).sum();
+    writer.write_text_record(format!("{n_barcodes} {n_cells} {total}\n").as_bytes())?;
+    for ((gene, cell), count) in matrix {
+        writer.write_text_record(format!("{} {} {}\n", gene, cell, count).as_bytes())?;
     }
     Ok(())
 }
@@ -61,6 +60,13 @@ enum LookupMode {
     Barcode,
     Label,
 }
+
+#[derive(Debug, JsonSchema, Copy, Clone)]
+#[tpd]
+enum UMIAggregation {
+    None,
+    Exact,
+}
 /// Collect (gene_idx, cell_idx, umi_2bit) triples per read, then write binary
 /// data file(s) and lookup tables on finalize.
 ///
@@ -79,6 +85,9 @@ pub struct StoreSingleCellData {
 
     /// Tag carrying the raw UMI sequence (Location or String)
     umi_tag: TagLabel,
+
+    // how to aggregate UMIs into the matrix
+    umi_aggregation: UMIAggregation,
 
     /// [barcode.*] sec listing all valid cell barcodes (sequence → name)
     cell_barcodes: TagLabel,
@@ -445,16 +454,10 @@ impl Step for StoreSingleCellData {
     fn finalize(&self, _demultiplex_info: &OptDemultiplex) -> Result<Option<FinalizeReportResult>> {
         // Sort and write one binary file per demultiplex tag
         {
-            let mut entries_map = {
+            let entries_map = {
                 let mut locked = self.entries.lock().expect("lock poisoned");
                 std::mem::take(&mut *locked)
             };
-
-            for (_tag, entries) in entries_map.iter_mut() {
-                entries.par_sort_unstable(); //must also sort by umi to be reproducible in output
-            }
-
-            let umi_len = *self.max_umi_len.lock().expect("lock poisoned");
 
             let mut data_guard = self
                 .data_writer
@@ -463,9 +466,18 @@ impl Step for StoreSingleCellData {
                 .lock()
                 .expect("lock poisoned");
 
-            for (tag, entries) in entries_map.iter_mut() {
+            for (tag, mut entries) in entries_map.into_iter() {
                 if let Some(Some(writer)) = data_guard.get_mut(&tag) {
-                    write_binary(entries, umi_len, writer)?;
+                    //entries.par_sort_unstable(); //must also sort by umi to be reproducible in output
+                    entries.par_sort_by_key(|&[g, c, _]| (g, c));
+                    let matrix = aggregate_to_matrix(entries, self.umi_aggregation);
+                    write_binary(
+                        matrix,
+                        self.cell_lookup.len() as u32 + 1, //+1 for unmatched. Cast is safe, we
+                        //checked this before
+                        self.gene_seq_to_name.len() as u32 + 1,
+                        writer,
+                    )?;
                 }
             }
         }
@@ -525,5 +537,39 @@ impl Step for StoreSingleCellData {
         )?;
 
         Ok(None)
+    }
+}
+
+fn aggregate_to_matrix(
+    entries: Vec<[u32; 3]>,
+    umi_aggregation: UMIAggregation,
+) -> IndexMap<(u32, u32), u32> {
+    match umi_aggregation {
+        UMIAggregation::None => {
+            let mut matrix = IndexMap::new();
+            let mut counter = 1u32;
+            let mut last = None;
+            for entry in &entries {
+                let gene_id = entry[0];
+                let cell_id = entry[1];
+                //let umi = entry[2];
+                let key = Some((gene_id, cell_id));
+                if last != key {
+                    matrix.insert((gene_id, cell_id), counter);
+                    last = key;
+                    counter = 1;
+                } else {
+                    counter = counter.saturating_add(1);
+                }
+            }
+            if let Some(last) = last {
+                matrix.insert(last, counter);
+
+            }
+            matrix
+        }
+        UMIAggregation::Exact => {
+            todo!()
+        }
     }
 }

@@ -19,7 +19,7 @@ and an output [mtx/MatrixMarket](https://math.nist.gov/MatrixMarket/formats.html
     tag_contains_barcode = true    # (optional) see below; auto-detected if omitted
     infix = ""                     # (optional) filename infix. 
     compression = "Raw"            # (optional) Raw, Gzip, Zstd — for all output files.
-    umi_aggregation = "None"       #
+    umi_aggregation = "Exact"       # How to handle duplicate UMIs. See below
 ```
 
 ## Inputs
@@ -52,6 +52,18 @@ Real barcodes are 1-indexed in the order they appear in the `[barcodes.*]` table
 
 `umi_tag` accepts `Location` or `String`. The UMI is 2-bit encoded (A=0, C=1,
 G=2, T=3; any other → `u32::MAX`). Maximum UMI length is 16 bp.
+
+
+## UMI aggregation
+
+Depending on the `umi_aggregation` setting, different UMI->count algorithms are used.
+
+
+Possible Values:
+
+* None - Do not aggregate UMIs, report read count
+* Exact - Each UMI counts as most once.
+
 
 ## Output files
 

@@ -52,6 +52,7 @@
     out_label = "umi"
 
 [[step]]
+  umi_aggregation = 'none'
     action = "StoreSingleCellData"
     cell_tag = "cell_bc"
     gene_tag = "gene_bc"
