@@ -221,9 +221,16 @@ pub trait Step {
         Ok(None)
     }
 
+    /// finish up what you were doing
     fn finalize(&self, _demultiplex_info: &OptDemultiplex) -> Result<Option<FinalizeReportResult>> {
         Ok(None)
     }
+
+    /// called after all finalize have happpend - for progress to report
+    fn post_finalize(&self) {
+    }
+
+    /// handle one block 
     fn apply(
         &self,
         block: FastQBlocksCombined,

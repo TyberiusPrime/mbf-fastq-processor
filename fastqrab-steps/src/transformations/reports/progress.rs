@@ -18,11 +18,17 @@ pub struct Progress {
     #[schemars(skip)]
     #[tpd(skip, default)]
     pub total_count: Arc<AtomicUsize>,
+
     #[schemars(skip)]
     #[tpd(skip, default)]
     pub start_time: Option<std::time::Instant>,
+
     pub n: usize,
     pub output_infix: Option<String>,
+
+    #[schemars(skip)]
+    #[tpd(skip, default)]
+    pub finalize_timepoint: Arc<Mutex<Option<std::time::Instant>>>,
 
     #[schemars(skip)]
     #[tpd(skip, default)]
@@ -59,6 +65,7 @@ impl VerifyIn<PartialConfig> for PartialProgress {
                 "Supply an output_infix to write progress to a file instead of stdout (which is used by [output] already).".to_string(),
             );
         }
+        self.finalize_timepoint = Some(Arc::new(Mutex::new(None)));
         Ok(())
     }
 }
@@ -208,11 +215,33 @@ impl Step for Progress {
         );
         self.output(&msg);
 
-        if let Some(writer) = self.writer.lock().expect("poisoned").take() {
-            let _ = writer.finish()?;
-        }
+        self.finalize_timepoint
+            .lock()
+            .expect("poisoned")
+            .replace(std::time::Instant::now());
 
         Ok(None)
+    }
+
+    fn post_finalize(&self) {
+        let elapsed = self
+            .finalize_timepoint
+            .lock()
+            .expect("poisoned")
+            .unwrap_or_else(std::time::Instant::now)
+            .elapsed()
+            .as_secs_f64();
+        let msg = format!(
+            "Finalizing all steps took {:.2} s ({}).",
+            elapsed,
+            format_seconds_to_hhmmss(elapsed as u64)
+        );
+        self.output(&msg);
+
+        if let Some(writer) = self.writer.lock().expect("poisoned").take() {
+            let _ = writer.finish().ok(); //we choose to ignore if finishing the progress writer
+            //fails (disk full?)
+        }
     }
 }
 

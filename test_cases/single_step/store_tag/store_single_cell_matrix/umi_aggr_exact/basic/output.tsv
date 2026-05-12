@@ -2,6 +2,6 @@ ReadName	cell_bc	gene_bc	umi
 read1	AAAA	CCCC	TTTT
 read2	TTTT	GGGG	AAAA
 read3-not-counted	AAAA	CCCC	TTTT
-read4-not-counted	AAAA	CCCC	TTTA
+read4-counted	AAAA	CCCC	TTTA
 read5-counted	AAAA	CCCC	TTAA
 read6-counted	AAAA	CCCC	AAAA

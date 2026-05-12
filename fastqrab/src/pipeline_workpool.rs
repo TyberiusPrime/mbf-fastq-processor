@@ -494,6 +494,10 @@ impl WorkpoolCoordinator {
                 }
             }
         }
+
+        for stage in self.stages.iter() {
+            stage.transformation.post_finalize();
+        }
     }
 }
 
