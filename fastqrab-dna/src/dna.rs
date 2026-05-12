@@ -1354,3 +1354,18 @@ mod test {
         );
     }
 }
+
+
+/// Find out exactly what's the minimum number of bits to represent a number in binary
+#[expect(
+    clippy::cast_possible_truncation,
+    reason = "Can not be more than usize::BITS, so 32, no truncation possible"
+)]
+pub fn bits_needed_to_represent(count: usize) -> u16 {
+    if count <= 1 {
+        1u16
+    } else {
+        (usize::BITS - (count).leading_zeros()) as u16
+    }
+}
+

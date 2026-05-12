@@ -31,7 +31,8 @@
   indexmap = {workspace = true}
   memchr = {workspace = true}
   mutants = {workspace = true}
-  petgraph = {workspace = true}
+  union-find-rs = {workspace = true}
+  disjoint = {workspace = true}
   rand_chacha = {workspace = true}
   rand = {workspace = true, features = ["thread_rng"] }
   rayon = {workspace = true}

@@ -1,5 +1,6 @@
 use anyhow::{Context, Result, bail};
 use crossbeam::channel::{bounded, unbounded};
+use fastqrab_config::dna::bits_needed_to_represent;
 use fastqrab_steps::no_barcode_infix;
 use indexmap::IndexMap;
 use std::{
@@ -400,18 +401,6 @@ fn run_benchmark_interleaved_thread(
 pub struct RunStage0 {
     report_html: bool,
     report_json: bool,
-}
-
-#[expect(
-    clippy::cast_possible_truncation,
-    reason = "Can not be more thon usize::BITS, so 32, no truncation possible"
-)]
-fn bits_needed_to_represent(count: usize) -> u16 {
-    if count <= 1 {
-        1u16
-    } else {
-        (usize::BITS - (count).leading_zeros()) as u16
-    }
 }
 
 impl RunStage0 {

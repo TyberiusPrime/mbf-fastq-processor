@@ -1,4 +1,4 @@
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
 use anyhow::anyhow;
 use hamming_resonate::HammingResonator;
@@ -78,7 +78,10 @@ pub struct HammingCorrect {
     #[tpd(skip)]
     #[schemars(skip)]
     reads_in_this_step: AtomicUsize, // for verification that we really count correctly between
-                                     // HammingExactCounter and HammingCorrect in ByMajority mode
+    // HammingExactCounter and HammingCorrect in ByMajority mode
+    #[tpd(skip)]
+    #[schemars(skip)]
+    final_block_seen: AtomicBool,
 }
 
 #[tpd]
@@ -236,6 +239,7 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
         self.majority_data = Some(None); //get's overwritten in expand_transformations for ByMajority, empty default otherwise
         self.count_writer = Some(Arc::new(Mutex::new(None)));
         self.pre_match = Some(None); //ditto
+        self.final_block_seen = Some(AtomicBool::new(false));
 
         Ok(())
     }
@@ -512,6 +516,10 @@ impl Step for HammingCorrect {
         self.reads_in_this_step
             .fetch_add(input_tags.len(), Ordering::SeqCst);
 
+        if block.is_final {
+            self.final_block_seen.store(true, Ordering::SeqCst);
+        }
+
         let (barcode_counts, count_here) =
             if matches!(self.on_tie, OnTie::ByMajority | OnTie::ByEditProbability) {
                 let mj = self
@@ -745,6 +753,19 @@ impl Step for HammingCorrect {
                     writer.write_text_record(&record.as_bytes())?;
                 }
                 let _ = writer.finish()?;
+            }
+            //assert that pre_match is empty
+            if let Some(pre) = self.pre_match.as_ref()
+                && self.final_block_seen.load(Ordering::Acquire)
+            //we only check if we saw a final block,
+            //something else paniced otherwise
+            {
+                let pending = pre.pending.lock().expect("Mutex poisoned");
+                assert!(
+                    pending.is_empty(),
+                    "PreMatch pending should be empty at finalize, but has entries for blocks: {:?}",
+                    pending.keys()
+                );
             }
         }
         Ok(None)

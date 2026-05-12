@@ -574,6 +574,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "disjoint"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c37b399c91d093763e38c7a57a740e0005e30e5aff7132e791aada5eef3fed99"
+
+[[package]]
 name = "dispatch2"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -775,6 +781,7 @@ dependencies = [
  "bio",
  "bstr",
  "csv",
+ "disjoint",
  "enum_dispatch",
  "ex",
  "fasteval",
@@ -785,7 +792,6 @@ dependencies = [
  "indexmap",
  "memchr",
  "mutants 0.0.3",
- "petgraph",
  "rand 0.9.4",
  "rand_chacha 0.9.0",
  "rayon",
@@ -797,6 +803,7 @@ dependencies = [
  "serde_json",
  "toml-pretty-deser",
  "typed_floats",
+ "union-find-rs",
 ]
 
 [[package]]
@@ -2385,6 +2392,12 @@ name = "unicode-xid"
 version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ebc1c04c71510c7f702b52b7c350734c9ff1295c464a03335b00bb84fc54f853"
+
+[[package]]
+name = "union-find-rs"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8d7cf5ae6c8635588ab0aa0ddd0ba68b7586c96cd00f8d12337071219f9c885f"
 
 [[package]]
 name = "uuid"

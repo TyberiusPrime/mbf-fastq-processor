@@ -1,10 +1,12 @@
-use std::collections::{HashSet, VecDeque};
+use crate::transformations::prelude::Result;
+use crate::transformations::prelude::*; // union_find_rs::prelude also exports a Result
 
-use crate::transformations::prelude::*;
 use bstr::{BStr, BString};
+use disjoint::DisjointSet;
+use fastqrab_dna::dna::bits_needed_to_represent;
 use fastqrab_io::{CompressionFormat, FileFormat};
-use petgraph::graph::UnGraph;
 use rayon::prelude::*;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 type WriterHandle = Arc<Mutex<Option<ChunkedRecordWriter>>>;
 type DataHandles = Arc<Mutex<DemultiplexedData<Option<ChunkedRecordWriter>>>>;
@@ -20,6 +22,7 @@ fn encode_umi(umi: &[u8]) -> u32 {
                 b'T' => 3,
                 _ => return u32::MAX, // any N -> becomes TTTTT
                                       // (which if you have less than 16 bp is distinguishable downstream
+                                      // and if you don't you loose only a single umi
             };
     }
     v
@@ -399,6 +402,8 @@ impl Step for StoreSingleCellMatrix {
         let output_tags = block.output_tags.as_ref();
 
         let mut entries = self.entries.lock().expect("lock poisoned");
+        let mut expected_umi_len = *self.max_umi_len.lock().expect("lock poisoned");
+
         for (ii, ((cell_val, gene_val), umi_val)) in cell_tags
             .iter()
             .zip(gene_tags.iter())
@@ -435,13 +440,13 @@ impl Step for StoreSingleCellMatrix {
             };
 
             {
-                let mut expected = self.max_umi_len.lock().expect("lock poisoned");
-                if *expected == 0 && umi_len > 0 {
-                    *expected = umi_len;
-                } else if umi_len > 0 && *expected != umi_len {
+                if expected_umi_len == 0 && umi_len > 0 {
+                    *self.max_umi_len.lock().expect("lock poisoned") = umi_len;
+                    expected_umi_len = umi_len;
+                } else if umi_len > 0 && expected_umi_len != umi_len {
                     anyhow::bail!(
                         "UMI lengths are not uniform: expected {}bp, got {}bp",
-                        *expected,
+                        expected_umi_len,
                         umi_len
                     );
                 }
@@ -473,9 +478,13 @@ impl Step for StoreSingleCellMatrix {
 
             for (tag, mut entries) in entries_map.into_iter() {
                 if let Some(Some(writer)) = data_guard.get_mut(&tag) {
-                    //entries.par_sort_unstable(); //must also sort by umi to be reproducible in output
-                    entries.par_sort_by_key(|&[g, c, _]| (g, c));
-                    let matrix = aggregate_to_matrix(entries, self.umi_aggregation);
+                    entries.par_sort_unstable(); //must also sort by umi to be reproducible in output
+                    //entries.par_sort_by_key(|&[g, c, _]| (g, c)); it's not measurably faster.
+                    let matrix = aggregate_to_matrix(
+                        entries,
+                        self.umi_aggregation,
+                        *self.max_umi_len.lock().expect("lock poisoned") as u16,
+                    );
                     write_binary(
                         matrix,
                         self.cell_lookup.len() as u32 + 1, //+1 for unmatched. Cast is safe, we
@@ -548,11 +557,16 @@ impl Step for StoreSingleCellMatrix {
 fn aggregate_to_matrix(
     entries: Vec<[u32; 3]>,
     umi_aggregation: UMIAggregation,
+    umi_length: u16,
 ) -> IndexMap<(u32, u32), u32> {
-    match umi_aggregation {
-        UMIAggregation::None => aggregate_to_matrix_none(entries),
-        UMIAggregation::Exact => aggregate_to_matrix_exact(entries),
-        UMIAggregation::Cluster => aggregate_to_matrix_cluster(entries),
+    if entries.is_empty() {
+        return IndexMap::new();
+    } else {
+        match umi_aggregation {
+            UMIAggregation::None => aggregate_to_matrix_none(entries),
+            UMIAggregation::Exact => aggregate_to_matrix_exact(entries),
+            UMIAggregation::Cluster => aggregate_to_matrix_cluster(entries, umi_length),
+        }
     }
 }
 
@@ -598,6 +612,10 @@ fn aggregate_to_matrix_exact(entries: Vec<[u32; 3]>) -> IndexMap<(u32, u32), u32
         let gene_id = entry[0];
         let cell_id = entry[1];
         let umi = entry[2];
+        if umi == u32::MAX {
+            //invalid umi / any N
+            continue;
+        }
         let key = (gene_id, cell_id);
         match last {
             Some(last_key) if last_key == key => {
@@ -625,7 +643,6 @@ fn aggregate_to_matrix_exact(entries: Vec<[u32; 3]>) -> IndexMap<(u32, u32), u32
     if let Some(last) = last {
         matrix.insert(last, counter);
     }
-    dbg!(&matrix);
     matrix
 }
 
@@ -644,102 +661,217 @@ fn hamming_bp_16(a: u32, b: u32) -> u32 {
 
 ///Aggregate each disjoint subgraph of umis within one hamming distance from each other
 ///to
-fn aggregate_to_matrix_cluster(entries: Vec<[u32; 3]>) -> IndexMap<(u32, u32), u32> {
-    if entries.len() < 2 {
-        return [((entries[0][0], entries[0][1]), 1)].into_iter().collect();
+fn aggregate_to_matrix_cluster(
+    entries: Vec<[u32; 3]>,
+    umi_length: u16,
+) -> IndexMap<(u32, u32), u32> {
+    let mut matrix = IndexMap::new();
+
+    if entries.is_empty() {
+        return matrix;
     }
 
-    let mut matrix = IndexMap::new();
-    let mut last = None;
-    let mut seen = std::collections::HashSet::new(); //todo: profile what to use here?
-    for entry in &entries {
-        let gene_id = entry[0];
-        let cell_id = entry[1];
-        let umi = entry[2];
-        let key = (gene_id, cell_id);
-        match last {
-            Some(last_key) if last_key == key => {
-                seen.insert(umi);
+    let mut last_key = (entries[0][0], entries[0][1]);
+    let mut seen: Vec<u32> = Vec::new();
+
+    for e in &entries {
+        let key = (e[0], e[1]);
+
+        if key != last_key {
+            //seen.sort_unstable(); we assume sortedness!
+            seen.dedup();
+
+            if !seen.is_empty() {
+                //happens when only read had an N
+                matrix.insert(last_key, umi_cluster_count(&seen, umi_length));
             }
-            Some(last_key) => {
-                // different gene & cell -> push last
-                matrix.insert(last_key, umi_cluster_count(&seen));
-                last = Some(key);
-                seen.clear();
-                seen.insert(umi);
-            }
-            None => {
-                //first trip through the loop
-                last = Some(key);
-                seen.insert(umi);
-            }
+
+            seen.clear();
+            last_key = key;
+        }
+
+        if e[2] != u32::MAX {
+            seen.push(e[2]);
         }
     }
-    if let Some(last) = last {
-        matrix.insert(last, umi_cluster_count(&seen));
+
+    //seen.sort_unstable();
+    seen.dedup();
+    if !seen.is_empty() {
+        matrix.insert(last_key, umi_cluster_count(&seen, umi_length));
     }
-    dbg!(&matrix);
+
     matrix
 }
-///
-/// Returns a vector of components, each as a Vec<N> of node values.
-pub fn connected_components_values_undirected<E>(graph: &UnGraph<u32, E>) -> Vec<Vec<u32>> {
-    let mut visited = HashSet::new();
-    let mut components = Vec::new();
 
-    for start in graph.node_indices() {
-        if visited.contains(&start) {
-            continue;
+pub fn umi_cluster_count(umis: &[u32], umi_length: u16) -> u32 {
+    if umis.len() == 1 {
+        return 1;
+    }
+    debug_assert!(umis.len() >= 2);
+
+    let values = umis;
+    let n = values.len();
+
+    //these branches do the same thing
+    //but they differ in their O(n) and
+    //we hence benchmark them on premise
+    //to decide which ones to use
+    let mut uf = DisjointSet::with_len(n);
+    if n <= pairwise_threshold() {
+        pairwise_union(&values, &mut uf);
+    } else {
+        neighbor_union_hash(&values, &mut uf, umi_length);
+    }
+
+    let mut roots = FxHashSet::default();
+
+    for i in 0..n {
+        roots.insert(uf.root_of(i));
+    }
+
+    roots.len() as u32
+}
+
+#[inline]
+fn pairwise_union(values: &[u32], uf: &mut DisjointSet) {
+    for i in 0..values.len() {
+        let x = values[i];
+
+        for j in (i + 1)..values.len() {
+            let y = values[j];
+
+            // dist <= 1
+            if hamming_bp_16(x, y) <= 1 {
+                uf.join(i, j);
+            }
         }
+    }
+}
 
-        let mut component = Vec::new();
-        let mut queue = VecDeque::new();
-        queue.push_back(start);
-        visited.insert(start);
+#[inline]
+fn neighbor_union_hash(values: &[u32], uf: &mut DisjointSet, umi_length: u16) {
+    assert!(
+        umi_length <= 16,
+        "UMI length must be at most 16bp to use neighbor_union_hash"
+    );
+    let mut index = FxHashMap::default();
 
-        while let Some(node) = queue.pop_front() {
-            component.push(graph[node].clone());
-            for neighbor in graph.neighbors(node) {
-                if visited.insert(neighbor) {
-                    queue.push_back(neighbor);
+    for (i, &x) in values.iter().enumerate() {
+        index.insert(x, i);
+    }
+
+    for (i, &x) in values.iter().enumerate() {
+        // dist == 1 basepair neighbors
+        for bp in 0..umi_length {
+            let shift = bp * 2;
+            let current = (x >> shift) & 0b11;
+
+            for replacement in 0..4u32 {
+                if replacement == current {
+                    continue;
+                }
+                // Clear the 2 bits at this basepair, then set the replacement
+                let y = (x & !(0b11 << shift)) | (replacement << shift);
+
+                if let Some(&j) = index.get(&y) {
+                    uf.join(i, j);
                 }
             }
         }
-
-        components.push(component);
     }
-
-    components
 }
 
-fn umi_cluster_count(umis: &std::collections::HashSet<u32>) -> u32 {
-    use std::collections::HashMap;
-    let max_hamming = 1;
-    let mut graph = UnGraph::<u32, ()>::new_undirected(); //todo: do not store edge
-    //weights...
-    let mut nodes = HashMap::new();
-    for umi in umis.iter() {
-        let node_index = graph.add_node(*umi);
-        nodes.insert(umi, node_index);
-    }
-    let mut any_connected = false;
-    for (umi1, umi2) in umis.iter().flat_map(|umi1| {
-        umis.iter()
-            .filter(move |umi2| umi1 < *umi2)
-            .map(move |umi2| (umi1, umi2))
-    }) {
-        let dist = hamming_bp_16(*umi1, *umi2);
-        if dist <= max_hamming {
-            let node1 = nodes.get(umi1).expect("UMI should be in the graph");
-            let node2 = nodes.get(umi2).expect("UMI should be in the graph");
-            graph.add_edge(*node1, *node2, ());
-            any_connected = true;
+use std::sync::OnceLock;
+use std::time::Instant;
+
+/// It is unclear where the crossover between the O(n^2) pairwise, and O(32n) neighbor based
+/// approach is. So we benchmark on the real system and make a decision.
+static PAIRWISE_THRESHOLD: OnceLock<usize> = OnceLock::new();
+
+fn pairwise_threshold() -> usize {
+    *PAIRWISE_THRESHOLD.get_or_init(calibrate_pairwise_threshold)
+}
+
+fn calibrate_pairwise_threshold() -> usize {
+    let candidates = [
+        32usize,
+        64,
+        128,
+        256,
+        512,
+        1024,
+        1024 + 512,
+        2048,
+        2048 + 1024,
+        4096,
+    ];
+
+    for &n in &candidates {
+        // structured but non-trivial data
+        let data: Vec<u32> = (0..n as u32).map(|x| x ^ (x << 1) ^ (x >> 1)).collect();
+        let hash_data: FxHashSet<u32> = data.iter().copied().collect();
+        assert!(hash_data.len() == data.len()); // ensure no duplicates, which would break the
+        // benchmark
+
+        // ----------------------------
+        // PAIRWISE + DSU
+        // ----------------------------
+        let t_pair = {
+            let mut uf = DisjointSet::with_len(n);
+
+            let start = Instant::now();
+
+            pairwise_union(&data, &mut uf);
+
+            std::hint::black_box(uf);
+
+            start.elapsed()
+        };
+
+        // ----------------------------
+        // NEIGHBOR + DSU
+        // ----------------------------
+        let t_neighbor = {
+            let mut uf = DisjointSet::with_len(n);
+
+            let start = Instant::now();
+
+            neighbor_union_hash(&data, &mut uf, 16);
+
+            std::hint::black_box(uf);
+
+            start.elapsed()
+        };
+
+        if t_neighbor < t_pair {
+            // dbg!(format!(
+            //     "Final threshold: {n}, time for pairwise: {t_pair:?}, time for neighbor: {t_neighbor:?}"
+            // ));
+            return n;
         }
     }
-    if any_connected {
-        let connected_components = connected_components_values_undirected(&graph);
-        connected_components.len() as u32
-    } else {
-        umis.len() as u32
+    *candidates.last().expect("must have candidate")
+}
+
+#[test]
+fn test_pairwise_neighbor_aggreement() {
+    let values = [91, 93, 94]; //if you were mutating bitwise instead of bytewise, this will fail
+    let n = values.len();
+    let mut uf = DisjointSet::with_len(n);
+    neighbor_union_hash(&values, &mut uf, 16);
+    let mut roots = FxHashSet::default();
+    for i in 0..n {
+        roots.insert(uf.root_of(i));
     }
+    let l_hash = roots.len();
+    let mut uf = DisjointSet::with_len(n);
+    pairwise_union(&values, &mut uf);
+    let mut roots = FxHashSet::default();
+    for i in 0..n {
+        println!("{}, {}, {}", i, values[i], uf.root_of(i));
+        roots.insert(uf.root_of(i));
+    }
+    let l_pairwise = roots.len();
+    assert_eq!(l_hash, l_pairwise, "pairwise and neighbor approaches should give the same result");
 }
