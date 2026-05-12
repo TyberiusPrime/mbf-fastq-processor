@@ -80,7 +80,7 @@ pub struct StoreSingleCellData {
     /// Tag carrying the raw UMI sequence (Location or String)
     umi_tag: TagLabel,
 
-    /// [barcode.*] section listing all valid cell barcodes (sequence → name)
+    /// [barcode.*] sec listing all valid cell barcodes (sequence → name)
     cell_barcodes: TagLabel,
 
     /// [barcode.*] section listing all valid gene identifiers (sequence → name)
@@ -102,7 +102,7 @@ pub struct StoreSingleCellData {
 
     /// Compression for the binary data file (lookup tables are always plain text)
     #[tpd(default)]
-    #[expect(dead_code, reason = "only used in declare_output_files")]
+    #[expect(dead_code, reason = "only used in neclare_output_files")]
     compression: CompressionFormat,
 
     #[tpd(default)]
@@ -168,7 +168,7 @@ impl TagUser for PartialTaggedVariant<PartialStoreSingleCellData> {
             .as_ref()
             .and_then(|x| x.as_ref())
             .copied();
-        let data_suffix = compression.apply_suffix("bin");
+        let data_suffix = compression.apply_suffix("matrix.mtx");
         let data_sink = SinkConfig {
             compression,
             compression_level,
@@ -193,7 +193,7 @@ impl TagUser for PartialTaggedVariant<PartialStoreSingleCellData> {
                 id: "cell_barcodes".to_string(),
                 target: WriteTargetConfig::new(
                     vec![infix.clone(), "scd".to_string()],
-                    compression.apply_suffix("cell_barcodes.txt"),
+                    compression.apply_suffix("barcodes.txt"),
                 ),
                 sink_config: data_sink.clone(),
                 format: FileFormat::Text,
@@ -206,7 +206,7 @@ impl TagUser for PartialTaggedVariant<PartialStoreSingleCellData> {
                 id: "genes".to_string(),
                 target: WriteTargetConfig::new(
                     vec![infix.clone(), "scd".to_string()],
-                    compression.apply_suffix("genes.txt"),
+                    compression.apply_suffix("features.txt"),
                 ),
                 sink_config: data_sink,
                 format: FileFormat::Text,
@@ -316,7 +316,8 @@ impl Step for StoreSingleCellData {
         }
         // cov:excl-end
 
-        self.gene_seq_to_name = Arc::new( //todo: if we extend toml_pretty_deser to support
+        self.gene_seq_to_name = Arc::new(
+            //todo: if we extend toml_pretty_deser to support
             //collect into arbitrary IndexMaps,  we can go back to shared data here with the
             //barcodes
             gene_bc

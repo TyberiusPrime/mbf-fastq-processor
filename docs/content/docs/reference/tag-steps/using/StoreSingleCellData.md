@@ -4,11 +4,9 @@ weight: 55
 
 # StoreSingleCellData
 
-Collect per-read (gene, cell barcode, UMI) index triples, sort by (gene, cell),
-in memory and write a compact row-oriented binary file and two lookup tables to disk.
+Collect per-read (gene, cell barcode, UMI) index triples in memory,
+and an output [mtx/MatrixMarket](https://math.nist.gov/MatrixMarket/formats.html) formatted count matrix.
 
-Useful for later transformation into a single cell expression matrix
-after UMI deduplication.
 
 ```toml
 [[step]]
@@ -19,8 +17,9 @@ after UMI deduplication.
     cell_barcodes = "cells"        # [barcodes.cells] section (sequence → name)
     gene_barcodes = "genes"        # [barcodes.genes] section (sequence → name)
     tag_contains_barcode = true    # (optional) see below; auto-detected if omitted
-    infix = ""                     # (optional) filename infix
+    infix = ""                     # (optional) filename infix. 
     compression = "Raw"            # (optional) Raw, Gzip, Zstd — for all output files.
+    umi_aggregation = "None"       #
 ```
 
 ## Inputs
@@ -60,46 +59,19 @@ Three files are written per run:
 
 | File | Description |
 |------|-------------|
-| `{prefix}_{infix}scd.bin` | Sorted row-binary data (see format below) |
-| `{prefix}_{infix}scd.cell_barcodes.txt` | Cell name lookup (line 0 = "unmatched") |
-| `{prefix}_{infix}scd.genes.txt` | Gene name lookup (line 0 = "unmatched") |
+| `{prefix}_{infix}scd.matrix.mtx(.gz)` | matrix market file|
+| `{prefix}_{infix}scd.barcodes.txt(.gz)` | Cell name / barcode lookup (line 0 = "unmatched") |
+| `{prefix}_{infix}scd.features.txt(.gz)` | Gene name lookup (line 0 = "unmatched") |
 
-The `.bin` file format is:
-
-```
-[magic: 8 bytes "FQRSCD\x00\x02"]
-[num_rows: u32 LE]
-[umi_length: u8]
-[gene_idx: u32 LE | cell_idx: u32 LE | umi: u32 LE]  × num_rows
-```
-
-`umi_length` is the maximum UMI length seen (in bp, maximum length: 16 Longer will lead to a runtime error). 
-Rows are sorted by `(gene_idx, cell_idx)`. 
-
-Read in Python with:
-
-```python
-import numpy as np, struct
-data = open("output_scd.bin", "rb").read()
-umi_length = data[12]
-rows = np.frombuffer(data[13:], dtype=np.uint32).reshape(-1, 3)
-# rows[:, 0] = gene_idx, rows[:, 1] = cell_idx, rows[:, 2] = umi (2-bit encoded)
-```
-
-The lookup `.txt` files have one name per line; the line number is the index
-used in the binary file (line 0 is always "unmatched").
-
-
-There is a helper script in the fastqrab repository/dev/view_scd.py to inspect the data.
 
 ## Interaction with demultiplexing
 
-When a `Demultiplex` step precedes this step, a separate `.bin` file is written
+When a `Demultiplex` step precedes this step, a separate `.mtx` file is written
 for each barcode group. The lookup tables are shared (singleton) across all
 groups:
 
 ```
-{prefix}_{infix}scd_{sample_name}.bin   # one per demultiplex group
-{prefix}_{infix}scd.cell_barcodes.txt
-{prefix}_{infix}scd.genes.txt
+{prefix}_{infix}_scd_{sample_name}.mtx   # one per demultiplex group
+{prefix}_{infix}_scd.barcodes.txt
+{prefix}_{infix}_scd.features.txt
 ```
