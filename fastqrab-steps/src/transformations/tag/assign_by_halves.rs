@@ -68,7 +68,12 @@ impl VerifyIn<PartialConfig> for PartialAssignByHalves {
                     && let Some(seq_to_name) = &barcodes_section.seq_to_name
                 {
                     self.engine = Some(Arc::new(CellRangerProbeAssigner::new(
-                        seq_to_name.clone(),
+                        Arc::new( //todo: remove once toml-pretty-deser supports FxIndexMap
+                            seq_to_name
+                                .iter()
+                                .map(|(x, y)| (x.to_owned(), y.to_owned()))
+                                .collect(),
+                        ),
                         if let Some(Some(nc)) = self.name_split_character.as_ref() {
                             Some(*nc)
                         } else {
@@ -167,8 +172,8 @@ impl Step for AssignByHalves {
 
 #[derive(Debug)]
 struct CellRangerProbeAssigner {
-    seq_to_name: Arc<IndexMap<BString, String>>,
-    name_to_seq: IndexMap<String, BString>,
+    seq_to_name: Arc<FxIndexMap<BString, String>>,
+    name_to_seq: FxIndexMap<String, BString>,
     left_hand_resonator: HammingResonator,
     left_hand_seq_to_name: IndexMap<BString, String>,
     right_hand_resonator: HammingResonator,
@@ -179,7 +184,7 @@ struct CellRangerProbeAssigner {
 
 impl CellRangerProbeAssigner {
     fn new(
-        seq_to_name: Arc<IndexMap<BString, String>>,
+        seq_to_name: Arc<FxIndexMap<BString, String>>,
         name_split_char: Option<u8>,
     ) -> Result<Self, ValidationFailure> {
         let max_hamming_distance_for_better_half = 1;
@@ -210,7 +215,7 @@ impl CellRangerProbeAssigner {
         let name_to_seq = seq_to_name
             .iter()
             .map(|(k, v)| (v.clone(), k.clone()))
-            .collect::<IndexMap<String, BString>>();
+            .collect();
         // if seq_to_name.len() != name_to_seq.len() { // why actuall?
         //     return Err(ValidationFailure::new(
         //         "Duplicate probe names found in barcodes section.",

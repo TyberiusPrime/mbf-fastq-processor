@@ -112,11 +112,11 @@ pub struct StoreSingleCellData {
     // ---- runtime-only fields ----
     #[tpd(skip, default)]
     #[schemars(skip)]
-    cell_lookup: Arc<IndexMap<BString, String>>,
+    cell_lookup: Arc<FxIndexMap<BString, String>>,
 
     #[tpd(skip, default)]
     #[schemars(skip)]
-    gene_seq_to_name: Arc<IndexMap<BString, String>>,
+    gene_seq_to_name: Arc<FxIndexMap<BString, String>>,
 
     #[tpd(skip, default)]
     #[schemars(skip)]
@@ -277,7 +277,7 @@ impl TagUser for PartialTaggedVariant<PartialStoreSingleCellData> {
     }
 }
 
-fn seq_to_idx(seq: &[u8], map: &IndexMap<BString, String>) -> u32 {
+fn seq_to_idx(seq: &[u8], map: &FxIndexMap<BString, String>) -> u32 {
     map.get_index_of(BStr::new(seq))
         .map(|i| i as u32 + 1)
         .unwrap_or(0)
@@ -316,11 +316,25 @@ impl Step for StoreSingleCellData {
         }
         // cov:excl-end
 
-        self.gene_seq_to_name = gene_bc.seq_to_name.clone();
+        self.gene_seq_to_name = Arc::new( //todo: if we extend toml_pretty_deser to support
+            //collect into arbitrary IndexMaps,  we can go back to shared data here with the
+            //barcodes
+            gene_bc
+                .seq_to_name
+                .iter()
+                .map(|(x, y)| (x.to_owned(), y.to_owned()))
+                .collect(),
+        );
 
         match self.lookup_mode {
             LookupMode::Barcode => {
-                self.cell_lookup = cell_bc.seq_to_name.clone();
+                self.cell_lookup = Arc::new(
+                    cell_bc
+                        .seq_to_name
+                        .iter()
+                        .map(|(x, y)| (x.to_owned(), y.to_owned()))
+                        .collect(),
+                )
             }
             LookupMode::Label => {
                 self.cell_lookup = Arc::new(
@@ -378,13 +392,13 @@ impl Step for StoreSingleCellData {
         {
             let cell_idx = match cell_val {
                 TagValue::String(s) => seq_to_idx(s, cell_map),
-                TagValue::Location(hits) => seq_to_idx(&hits.joined_sequence(None), cell_map),
+                TagValue::Location(hits) => seq_to_idx(&hits.joined_sequence_cow(None), cell_map),
                 _ => 0,
             };
 
             let gene_idx = match gene_val {
                 TagValue::String(s) => seq_to_idx(s, gene_map),
-                TagValue::Location(hits) => seq_to_idx(&hits.joined_sequence(None), gene_map),
+                TagValue::Location(hits) => seq_to_idx(&hits.joined_sequence_cow(None), gene_map),
                 _ => 0,
             };
 
