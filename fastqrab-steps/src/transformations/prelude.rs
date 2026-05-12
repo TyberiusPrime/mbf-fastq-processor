@@ -49,5 +49,4 @@ pub use indexmap::IndexMap;
 pub use toml_pretty_deser::prelude::*;
 pub use typed_floats::tf64::NonNaN;
 
-
 pub type FxIndexMap<K, V> = IndexMap<K, V, rustc_hash::FxBuildHasher>;

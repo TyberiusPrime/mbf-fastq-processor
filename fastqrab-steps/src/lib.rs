@@ -29,5 +29,3 @@ pub fn join_nonempty<'a>(parts: impl IntoIterator<Item = &'a str>, separator: &s
 pub fn no_barcode_infix() -> &'static str {
     "nobarcode"
 }
-
-

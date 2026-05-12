@@ -441,8 +441,8 @@ report_html = false
         }
     }
 
-    // For StoreSingleCellData: create tags for cell_tag, gene_tag, umi_tag fields
-    if extracted_section.contains("StoreSingleCellData") {
+    // For StoreSingleCellMatrix: create tags for cell_tag, gene_tag, umi_tag fields
+    if extracted_section.contains("StoreSingleCellMatrix") {
         for field in &["cell_tag", "gene_tag", "umi_tag"] {
             for line in extracted_section.lines() {
                 if line.contains(field) && !line.trim_start().starts_with('#') {

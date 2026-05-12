@@ -2,7 +2,7 @@
 weight: 55
 ---
 
-# StoreSingleCellData
+# StoreSingleCellMatrix
 
 Collect per-read (gene, cell barcode, UMI) index triples in memory,
 and an output [mtx/MatrixMarket](https://math.nist.gov/MatrixMarket/formats.html) formatted count matrix.
@@ -10,7 +10,7 @@ and an output [mtx/MatrixMarket](https://math.nist.gov/MatrixMarket/formats.html
 
 ```toml
 [[step]]
-    action = "StoreSingleCellData"
+    action = "StoreSingleCellMatrix"
     cell_tag = "cell_bc"           # tag carrying the cell-barcode sequence or label
     gene_tag = "gene_bc"           # tag carrying the gene-barcode sequence
     umi_tag = "umi"                # tag carrying the raw UMI sequence

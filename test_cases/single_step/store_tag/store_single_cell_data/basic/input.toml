@@ -34,7 +34,7 @@
     out_label = "umi"
 
 [[step]]
-    action = "StoreSingleCellData"
+    action = "StoreSingleCellMatrix"
     cell_tag = "cell_bc"
     gene_tag = "gene_bc"
     umi_tag = "umi"

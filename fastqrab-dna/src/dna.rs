@@ -87,12 +87,10 @@ impl TagValue {
     pub fn to_bstr<'a>(&'a self) -> Cow<'a, BStr> {
         match &self {
             TagValue::Missing => Cow::Borrowed(BStr::new(b"")),
-            TagValue::Location(hits) => {
-                match hits.joined_sequence_cow(None) {
-                    Cow::Borrowed(inner) => Cow::Borrowed(BStr::new(inner)),
-                    Cow::Owned(inner) => Cow::Owned(inner.into()),
-                }
-            }
+            TagValue::Location(hits) => match hits.joined_sequence_cow(None) {
+                Cow::Borrowed(inner) => Cow::Borrowed(BStr::new(inner)),
+                Cow::Owned(inner) => Cow::Owned(inner.into()),
+            },
             TagValue::String(bstring) => Cow::Borrowed(BStr::new(&bstring[..])),
             TagValue::Numeric(val) => Cow::Owned(val.to_string().into()),
             TagValue::Bool(val) => {

@@ -931,7 +931,7 @@ fn benchmark_key_steps(c: &mut Criterion) {
             thread_count,
         ),
         BenchmarkConfig::new(
-            "StoreSingleCellData",
+            "StoreSingleCellMatrix",
             r#"[barcodes.cells]
     'AAAAAAAA' = 'cell_1'
     'CCCCCCCC' = 'cell_2'
@@ -968,7 +968,7 @@ fn benchmark_key_steps(c: &mut Criterion) {
     anchor = "Start"
 
 [[step]]
-    action = "StoreSingleCellData"
+    action = "StoreSingleCellMatrix"
     cell_tag = "cell_bc"
     gene_tag = "gene_bc"
     umi_tag = "umi"

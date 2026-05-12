@@ -414,13 +414,15 @@ fn run_match_phase(
             TagValue::Missing => None,
             TagValue::Location(hits) => {
                 let seq = hits.joined_sequence_cow(None);
-                Some(match_sequence(seq_to_idx, resonator, BStr::new(seq.as_ref()))?)
+                Some(match_sequence(
+                    seq_to_idx,
+                    resonator,
+                    BStr::new(seq.as_ref()),
+                )?)
             }
-            TagValue::String(bstring) => Some(match_sequence(
-                seq_to_idx,
-                resonator,
-                bstring.as_ref(),
-            )?),
+            TagValue::String(bstring) => {
+                Some(match_sequence(seq_to_idx, resonator, bstring.as_ref())?)
+            }
             TagValue::Numeric(_) | TagValue::Bool(_) => {
                 unreachable!("Validation was meant to prevent this situation. Bug?") // cov:excl-line
             }
@@ -447,7 +449,6 @@ fn run_match_phase(
 }
 
 impl HammingCorrect {
-
     fn output(&self, matched_idx: usize, input_tag: &TagValue, output_barcode: bool) -> TagValue {
         let (matched_seq, matched_name) = self
             .seq_to_name
@@ -804,10 +805,7 @@ impl Step for _HammingPreMatch {
         _input_info: &InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<(FastQBlocksCombined, bool)> {
-        let input_tags = block
-            .tags
-            .get(&self.in_label)
-            .expect("Input tag not found");
+        let input_tags = block.tags.get(&self.in_label).expect("Input tag not found");
         let results = run_match_phase(
             &self.shared.seq_to_idx,
             &self.shared.resonator,

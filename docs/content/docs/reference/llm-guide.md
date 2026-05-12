@@ -1260,13 +1260,13 @@ Save all tags to TSV file.
 
 **OUTPUT**: `{prefix}_{infix}.tsv`
 
-### StoreSingleCellData
+### StoreSingleCellMatrix
 
 Collect per-read (gene, cell barcode, UMI) index triples, sort by (gene, cell), and write a compact row-oriented binary file. `gene_tag` must carry a **barcode sequence**. `cell_tag` accepts either a barcode sequence (Location tag, or `tag_contains_barcode = true`) or a corrected label from `AssignByHalves` (String tag, auto-detected when `tag_contains_barcode` is omitted). Unrecognised sequences/labels → index 0 ("unmatched"). UMIs must be ≤16 bp and uniform in length across all reads.
 
 ```toml
 [[step]]
-    action = 'StoreSingleCellData'
+    action = 'StoreSingleCellMatrix'
     cell_tag = 'cell_bc'              # TYPE: existing tag (Location or String), REQUIRED
     gene_tag = 'gene_bc'              # TYPE: existing tag (Location or String sequence), REQUIRED
     umi_tag = 'umi'                   # TYPE: existing tag (Location or String), REQUIRED
@@ -1794,7 +1794,7 @@ Create multiple tags → EvalExpression → FilterByTag/FilterByNumericTag
 **Inspect**: `{prefix}_{infix}_{segment}.{suffix}`
 **StoreTagInFastQ**: `{prefix}_{in_label}_{segment}.{suffix}`
 **StoreTagsInTable**: `{prefix}_{infix}.tsv`
-**StoreSingleCellData**: `{prefix}_{infix}scd.bin` + `{prefix}_{infix}scd.cell_barcodes.txt` + `{prefix}_{infix}scd.genes.txt`; with demultiplex: `{prefix}_{infix}scd_{sample}.bin`
+**StoreSingleCellMatrix**: `{prefix}_{infix}scd.bin` + `{prefix}_{infix}scd.cell_barcodes.txt` + `{prefix}_{infix}scd.genes.txt`; with demultiplex: `{prefix}_{infix}scd_{sample}.bin`
 **QuantifyTag**: `{prefix}_{infix}.qr.json`
 
 ## Quality Score Encodings

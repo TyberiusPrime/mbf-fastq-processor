@@ -76,7 +76,7 @@ enum UMIAggregation {
 #[derive(JsonSchema)]
 #[tpd]
 #[derive(Debug)]
-pub struct StoreSingleCellData {
+pub struct StoreSingleCellMatrix {
     /// Tag carrying the cell-barcode sequence (Location or String)
     cell_tag: TagLabel,
 
@@ -100,7 +100,7 @@ pub struct StoreSingleCellData {
     #[tpd(default)]
     #[expect(
         dead_code,
-        reason = "only read in get_tag_usage via PartialStoreSingleCellData"
+        reason = "only read in get_tag_usage via PartialStoreSingleCellMatrix"
     )]
     tag_contains_barcode: Option<bool>,
 
@@ -152,7 +152,7 @@ pub struct StoreSingleCellData {
     lookup_mode: LookupMode,
 }
 
-impl VerifyIn<PartialConfig> for PartialStoreSingleCellData {
+impl VerifyIn<PartialConfig> for PartialStoreSingleCellMatrix {
     fn verify(
         &mut self,
         _parent: &PartialConfig,
@@ -165,7 +165,7 @@ impl VerifyIn<PartialConfig> for PartialStoreSingleCellData {
     }
 }
 
-impl TagUser for PartialTaggedVariant<PartialStoreSingleCellData> {
+impl TagUser for PartialTaggedVariant<PartialStoreSingleCellMatrix> {
     fn declare_output_files(&self) -> Vec<OutputDeclaration> {
         let Some(inner) = self.toml_value.value.as_ref() else {
             return vec![];
@@ -292,7 +292,7 @@ fn seq_to_idx(seq: &[u8], map: &FxIndexMap<BString, String>) -> u32 {
         .unwrap_or(0)
 }
 
-impl Step for StoreSingleCellData {
+impl Step for StoreSingleCellMatrix {
     fn init(
         &mut self,
         input_info: &InputInfo,
@@ -564,7 +564,6 @@ fn aggregate_to_matrix(
             }
             if let Some(last) = last {
                 matrix.insert(last, counter);
-
             }
             matrix
         }

@@ -140,7 +140,9 @@ impl Step for Progress {
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let (counter, next) = {
             let len = block.len();
-            let val = self.total_count.fetch_add(len, std::sync::atomic::Ordering::Relaxed);
+            let val = self
+                .total_count
+                .fetch_add(len, std::sync::atomic::Ordering::Relaxed);
             let next = val + len;
             (val, next)
         };

@@ -53,7 +53,7 @@
 
 [[step]]
   umi_aggregation = 'none'
-    action = "StoreSingleCellData"
+    action = "StoreSingleCellMatrix"
     cell_tag = "cell_bc"
     gene_tag = "gene_bc"
     umi_tag = "umi"

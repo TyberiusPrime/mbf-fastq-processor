@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Inspect a StoreSingleCellData .bin file.
+"""Inspect a StoreSingleCellMatrix .bin file.
 
 Usage:
     view_scd.py <file.bin> [cell_barcodes.txt] [genes.txt] [reads.fq]

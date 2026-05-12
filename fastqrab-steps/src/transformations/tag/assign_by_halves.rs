@@ -68,7 +68,8 @@ impl VerifyIn<PartialConfig> for PartialAssignByHalves {
                     && let Some(seq_to_name) = &barcodes_section.seq_to_name
                 {
                     self.engine = Some(Arc::new(CellRangerProbeAssigner::new(
-                        Arc::new( //todo: remove once toml-pretty-deser supports FxIndexMap
+                        Arc::new(
+                            //todo: remove once toml-pretty-deser supports FxIndexMap
                             seq_to_name
                                 .iter()
                                 .map(|(x, y)| (x.to_owned(), y.to_owned()))
