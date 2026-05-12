@@ -661,46 +661,90 @@ fn hamming_bp_16(a: u32, b: u32) -> u32 {
 
 ///Aggregate each disjoint subgraph of umis within one hamming distance from each other
 ///to
+// fn aggregate_to_matrix_cluster(
+//     entries: Vec<[u32; 3]>,
+//     umi_length: u16,
+// ) -> IndexMap<(u32, u32), u32> {
+//     let mut matrix = IndexMap::new();
+//
+//     if entries.is_empty() {
+//         return matrix;
+//     }
+//
+//     let mut last_key = (entries[0][0], entries[0][1]);
+//     let mut seen: Vec<u32> = Vec::new();
+//
+//     for e in &entries {
+//         let key = (e[0], e[1]);
+//
+//         if key != last_key {
+//             //seen.sort_unstable(); we assume sortedness!
+//             seen.dedup();
+//
+//             if !seen.is_empty() {
+//                 //happens when only read had an N
+//                 matrix.insert(last_key, umi_cluster_count(&seen, umi_length));
+//             }
+//
+//             seen.clear();
+//             last_key = key;
+//         }
+//
+//         if e[2] != u32::MAX {
+//             seen.push(e[2]);
+//         }
+//     }
+//
+//     //seen.sort_unstable();
+//     seen.dedup();
+//     if !seen.is_empty() {
+//         matrix.insert(last_key, umi_cluster_count(&seen, umi_length));
+//     }
+//
+//     matrix
+// }
+
 fn aggregate_to_matrix_cluster(
     entries: Vec<[u32; 3]>,
     umi_length: u16,
 ) -> IndexMap<(u32, u32), u32> {
-    let mut matrix = IndexMap::new();
-
     if entries.is_empty() {
-        return matrix;
+        return IndexMap::new();
     }
-
-    let mut last_key = (entries[0][0], entries[0][1]);
-    let mut seen: Vec<u32> = Vec::new();
-
-    for e in &entries {
-        let key = (e[0], e[1]);
-
-        if key != last_key {
-            //seen.sort_unstable(); we assume sortedness!
+    // Find split indices where (gene, cell) key changes
+    let splits: Vec<usize> = (1..entries.len())
+        .filter(|&i| entries[i][0] != entries[i - 1][0] || entries[i][1] != entries[i - 1][1])
+        .collect();
+    // Build range pairs [start, end) for each group
+    let mut starts = Vec::with_capacity(splits.len() + 1);
+    starts.push(0);
+    let mut ends = splits.clone();
+    ends.push(entries.len());
+    starts.extend(splits);
+    // Process each (gene, cell) group in parallel
+    let results: Vec<((u32, u32), u32)> = starts
+        .into_par_iter()
+        .zip(ends.into_par_iter())
+        .filter_map(|(start, end)| {
+            let key = (entries[start][0], entries[start][1]);
+            let mut seen: Vec<u32> = entries[start..end]
+                .iter()
+                .filter(|e| e[2] != u32::MAX)
+                .map(|e| e[2])
+                .collect();
             seen.dedup();
-
-            if !seen.is_empty() {
-                //happens when only read had an N
-                matrix.insert(last_key, umi_cluster_count(&seen, umi_length));
+            if seen.is_empty() {
+                None
+            } else {
+                let count = umi_cluster_count(&seen, umi_length);
+                Some((key, count))
             }
-
-            seen.clear();
-            last_key = key;
-        }
-
-        if e[2] != u32::MAX {
-            seen.push(e[2]);
-        }
+        })
+        .collect();
+    let mut matrix = IndexMap::with_capacity(results.len());
+    for (key, count) in results {
+        matrix.insert(key, count);
     }
-
-    //seen.sort_unstable();
-    seen.dedup();
-    if !seen.is_empty() {
-        matrix.insert(last_key, umi_cluster_count(&seen, umi_length));
-    }
-
     matrix
 }
 
@@ -873,5 +917,8 @@ fn test_pairwise_neighbor_aggreement() {
         roots.insert(uf.root_of(i));
     }
     let l_pairwise = roots.len();
-    assert_eq!(l_hash, l_pairwise, "pairwise and neighbor approaches should give the same result");
+    assert_eq!(
+        l_hash, l_pairwise,
+        "pairwise and neighbor approaches should give the same result"
+    );
 }
