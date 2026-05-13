@@ -36,7 +36,7 @@ fn write_binary(
 ) -> Result<()> {
     writer.write_text_record(b"%%MatrixMarket matrix coordinate integer general\n")?;
     writer.write_text_record(b"%metadata_json: {\"software\": \"fastqrab\"}\n")?;
-    let total: usize = matrix.values().map(|x| *x as usize).sum();
+    let total: usize = matrix.len();
     writer.write_text_record(format!("{n_barcodes} {n_cells} {total}\n").as_bytes())?;
     for ((gene, cell), count) in matrix {
         writer.write_text_record(format!("{} {} {}\n", gene, cell, count).as_bytes())?;
