@@ -61,9 +61,14 @@ Depending on the `umi_aggregation` setting, different UMI->count algorithms are 
 
 Possible Values:
 
-* None - Do not aggregate UMIs, report read count
-* Exact - Each UMI counts as most once.
+* None - Do not aggregate UMIs, report read count. UMIs with N are counted.
+* Exact - Each UMI counts as most once per gene & cell. UMIs with any N are not counted. 
+* Cluster - We count the 1-hamming-distance connected components of the observed UMIs per gene & cell.
+  UMIs with any N are not counted. 
 
+(Internally, any N leads to an UMI of 16T ("TTTTTTTTTTTTTTTT"), which is then 
+not counted. This means if you have 16bp UMIs, in addition to any-N, 16T is not 
+counted. If your UMI is shorter, this won't affect polyT counting).
 
 ## Output files
 
@@ -71,7 +76,8 @@ Three files are written per run:
 
 | File | Description |
 |------|-------------|
-| `{prefix}_{infix}scd.matrix.mtx(.gz)` | matrix market file|
+| `{prefix}_{infix}scd.matrix.mtx(.gz)` | matrix market file |
+| `{prefix}_{infix}scd.matrix.mtx.stats.txt(.gz)` | Statistics |
 | `{prefix}_{infix}scd.barcodes.txt(.gz)` | Cell name / barcode lookup (line 0 = "unmatched") |
 | `{prefix}_{infix}scd.features.txt(.gz)` | Gene name lookup (line 0 = "unmatched") |
 
@@ -84,6 +90,7 @@ groups:
 
 ```
 {prefix}_{infix}_scd_{sample_name}.mtx   # one per demultiplex group
+{prefix}_{infix}_scd_{sample_name}.mtx.stats.txt   # one per demultiplex group
 {prefix}_{infix}_scd.barcodes.txt
 {prefix}_{infix}_scd.features.txt
 ```

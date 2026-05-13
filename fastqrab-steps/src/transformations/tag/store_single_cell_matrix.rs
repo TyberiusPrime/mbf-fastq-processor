@@ -160,6 +160,10 @@ pub struct StoreSingleCellMatrix {
 
     #[tpd(skip, default)]
     #[schemars(skip)]
+    stats_writer: Option<DataHandles>,
+
+    #[tpd(skip, default)]
+    #[schemars(skip)]
     cell_barcodes_writer: Option<WriterHandle>,
 
     #[tpd(skip, default)]
@@ -246,6 +250,19 @@ impl TagUser for PartialTaggedVariant<PartialStoreSingleCellMatrix> {
             OutputDeclaration {
                 id: "data".to_string(),
                 target: WriteTargetConfig::new(vec![infix.clone(), "scd".to_string()], data_suffix),
+                sink_config: data_sink.clone(),
+                format: FileFormat::Text,
+                chunk_policy: ChunkPolicy::default(),
+                bam_options: None,
+                singleton: false,
+                span: span.clone(),
+            },
+            OutputDeclaration {
+                id: "stats".to_string(),
+                target: WriteTargetConfig::new(
+                    vec![infix.clone(), "scd".to_string()],
+                    compression.apply_suffix("matrix.mtx.stats.txt"),
+                ),
                 sink_config: data_sink.clone(),
                 format: FileFormat::Text,
                 chunk_policy: ChunkPolicy::default(),
@@ -396,8 +413,14 @@ impl Step for StoreSingleCellMatrix {
             entries_map.insert(tag, Vec::new());
             data_map.insert(tag, Some(writer));
         }
+        let mut stats_map = DemultiplexedData::new();
+        for (tag, writer) in output_files.take("stats") {
+            stats_map.insert(tag, Some(writer));
+        }
+
         self.entries = Arc::new(Mutex::new(entries_map));
         self.data_writer = Some(Arc::new(Mutex::new(data_map)));
+        self.stats_writer = Some(Arc::new(Mutex::new(stats_map)));
 
         self.cell_barcodes_writer = Some(take_singleton_writer(&mut output_files, "cell_barcodes"));
         self.genes_writer = Some(take_singleton_writer(&mut output_files, "genes"));
@@ -500,10 +523,17 @@ impl Step for StoreSingleCellMatrix {
                 .expect("data_writer set in init")
                 .lock()
                 .expect("lock poisoned");
+            let mut stat_guard = self
+                .stats_writer
+                .as_ref()
+                .expect("data_writer set in init")
+                .lock()
+                .expect("lock poisoned");
 
             let mut any_gene_matches = false;
             let mut any_cell_matches = false;
             for (tag, mut entries) in entries_map.into_iter() {
+                let mut stats = Vec::new();
                 if let Some(Some(writer)) = data_guard.get_mut(&tag) {
                     //entries.par_sort_by_key(|&[g, c, _]| (g, c)); it's not measurably faster.
 
@@ -516,14 +546,38 @@ impl Step for StoreSingleCellMatrix {
                     //     combos.len()
                     // );
                     entries.par_sort_unstable(); //must also sort by umi to be reproducible in output
+                    let total = entries.len();
+                    stats.push(("Input reads", total));
 
                     let matrix = aggregate_to_matrix(
                         entries,
                         self.umi_aggregation,
                         *self.max_umi_len.lock().expect("lock poisoned") as u16,
                     );
-                    any_gene_matches |= matrix.keys().any(|(gene, _)| *gene != 0);
-                    any_cell_matches |= matrix.keys().any(|(_, cell)| *cell != 0);
+
+                    let unique_genes: FxHashSet<_> =
+                        matrix.keys().filter(|(gene, _)| *gene != 0).collect();
+                    let unique_cells: FxHashSet<_> =
+                        matrix.keys().filter(|(_, cell)| *cell != 0).collect();
+
+                    any_gene_matches |= !unique_genes.is_empty();
+                    any_cell_matches |= !unique_cells.is_empty();
+                    stats.push(("Observed genes", unique_genes.len()));
+                    stats.push(("Observed cells", unique_cells.len()));
+                    let reads_in_matrix = matrix.values().map(|x| *x as usize).sum();
+                    let reads_in_matrix_matched = matrix
+                        .iter()
+                        .filter(|((gene, cell), _)| *gene != 0 && *cell != 0)
+                        .map(|(_, count)| *count as usize)
+                        .sum();
+                    stats.push(("Reads in matrix", reads_in_matrix));
+                    stats.push((
+                        "Reads in matrix with matched gene and cell",
+                        reads_in_matrix_matched,
+                    ));
+                    let reads_lost_due_to_umi_cluster = total - reads_in_matrix as usize;
+                    stats.push(("Reads lost due to UMI deduplication", reads_lost_due_to_umi_cluster));
+
                     write_binary(
                         matrix,
                         self.cell_lookup.len() as u32 + 1, //+1 for unmatched. Cast is safe, we
@@ -531,6 +585,12 @@ impl Step for StoreSingleCellMatrix {
                         self.gene_lookup.len() as u32 + 1,
                         writer,
                     )?;
+                }
+                if let Some(Some(writer)) = stat_guard.get_mut(&tag) {
+                    writer.write_text_record(b"Metric\tValue\n")?;
+                    for (metric, value) in stats {
+                        writer.write_text_record(format!("{}\t{}\n", metric, value).as_bytes())?;
+                    }
                 }
             }
             if !any_gene_matches {
