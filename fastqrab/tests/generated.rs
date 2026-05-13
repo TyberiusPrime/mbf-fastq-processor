@@ -10232,6 +10232,17 @@ fn test_cases_x_single_step_x_hamming_x_by_edit_probability_x_dump_counts() {
 
 #[test]
 
+fn test_cases_x_single_step_x_hamming_x_by_edit_probability_x_from_report() {
+    println!("Test case is in: test_cases/single_step/hamming/by_edit_probability/from_report");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/hamming/by_edit_probability/from_report"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_hamming_x_by_edit_probability_x_lost_due_to_editing() {
     println!(
         "Test case is in: test_cases/single_step/hamming/by_edit_probability/lost_due_to_editing"

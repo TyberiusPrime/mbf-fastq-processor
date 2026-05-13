@@ -11,6 +11,14 @@ use fastqrab_config::tpd_adapt_u8_from_byte_or_char;
 use fastqrab_dna::dna::init_hamming_resonator;
 
 /// Correct a tag (extracted region) to known barcodes
+///
+#[derive(Debug, JsonSchema)]
+#[tpd(no_verify)]
+pub struct CountsFromReport {
+    pub filename: String,
+    pub report_name: String,
+    pub tag_name: String,
+}
 
 #[derive(JsonSchema)]
 #[tpd]
@@ -39,8 +47,12 @@ pub struct HammingCorrect {
     #[tpd(alias = "by_majority_threshold")]
     pub on_tie_threshold: f64,
 
+    #[tpd(nested)]
+    pub on_tie_use_counts_from_report: Option<CountsFromReport>,
+
     #[tpd(default)]
-    pub on_tie_dump_counts: bool,
+    pub on_tie_dump_counts: bool, //debug option.
+    //
     #[tpd(skip)]
     #[schemars(skip)]
     count_writer: Arc<Mutex<Option<ChunkedRecordWriter>>>,
@@ -107,6 +119,23 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
         self.reads_in_this_step = Some(AtomicUsize::new(0));
         self.on_tie_min_molecules_to_start.or(1_000_000);
         self.on_tie_threshold.or(0.975);
+
+        if let Some(Some(_counts_from_report)) = self.on_tie_use_counts_from_report.as_ref() {
+            self.on_tie_min_molecules_to_start.value = Some(0);
+            if !matches!(
+                self.on_tie.as_ref(),
+                Some(OnTie::ByMajority | OnTie::ByEditProbability),
+            ) {
+                self.on_tie_use_counts_from_report.help = Some(
+                    "on_tie_use_counts_from_report only makes sense if \
+                        on_tie is ByMajority or ByEditProbability"
+                        .to_string(),
+                );
+                self.on_tie_use_counts_from_report.state = TomlValueState::ValidationFailed {
+                    message: "Wrong OnTie mode".to_string(),
+                };
+            }
+        }
 
         if let Some(out_label) = self.out_label.as_ref()
             && let Some(in_label) = self.in_label.as_ref()
@@ -502,6 +531,13 @@ impl Step for HammingCorrect {
                 .expect("tag 0 writer must exist, this is singleton:true");
             *self.count_writer.lock().expect("poisoned") = Some(writer);
         }
+        if let Some(counts_from_report) = self.on_tie_use_counts_from_report.as_ref() {
+            let mj = self
+                .majority_data
+                .as_ref()
+                .expect("ByMajority / counts_from_report means we have .majority");
+            mj.load_from_report(counts_from_report)?;
+        }
 
         Ok(None)
     }
@@ -528,18 +564,18 @@ impl Step for HammingCorrect {
                     .expect("ByMajority means we have .majority");
                 if mj.blocks_to_count > 0 {
                     let (guard, cv) = &*mj.barrier.clone();
-                    let _guard = cv
-                .wait_while(
-                    guard.lock().map_err(|err| {
-                        anyhow!("Mutex poisoned while waiting for majority data to be ready: {err}") // cov:excl-line
-                    })?, // cov:excl-line
-                    |counting_done| !*counting_done,
-                )
-                .expect("mutex inside condvar poisoned");
+                    let _guard = cv.wait_while(
+                            guard.lock().map_err(|err| {
+                                anyhow!("Mutex poisoned while waiting for majority data to be ready: {err}") // cov:excl-line
+                            })?, // cov:excl-line
+                            |counting_done| !*counting_done,
+                        )
+                        .expect("mutex inside condvar poisoned");
                 }
                 let count_here = block.block_no()
                     > mj.start_counting_in_hamming_at_this_block_no
-                        .load(Ordering::Acquire);
+                        .load(Ordering::Acquire)
+                    && self.on_tie_use_counts_from_report.is_none();
                 if count_here {
                     mj.total_reads_considered
                         .fetch_add(input_tags.len(), Ordering::SeqCst);
@@ -737,11 +773,20 @@ impl Step for HammingCorrect {
 
     fn finalize(&self, _demultiplex_info: &OptDemultiplex) -> Result<Option<FinalizeReportResult>> {
         if let Some(mj) = self.majority_data.as_ref() {
-            assert_eq!(
-                mj.total_reads_considered.load(Ordering::Acquire),
-                self.reads_in_this_step.load(Ordering::Acquire),
-                "Mismatch between OnTie::ByMajority considered reads and total reads in this step - bug in your count_here decision making"
-            );
+            if self.on_tie_use_counts_from_report.is_none() {
+                assert_eq!(
+                    mj.total_reads_considered.load(Ordering::Acquire),
+                    self.reads_in_this_step.load(Ordering::Acquire),
+                    "Mismatch between OnTie::ByMajority considered reads and total reads in this step - bug in your count_here decision making"
+                );
+            } else {
+                assert_eq!(
+                    mj.total_reads_considered.load(Ordering::Acquire),
+                    0,
+                    "In on_tie_use_counts_from_report mode, no reads should have been counted. But {} were counted",
+                    mj.total_reads_considered.load(Ordering::Acquire),
+                );
+            }
             if let Some(mut writer) = self.count_writer.lock().expect("Mutex poisoned").take() {
                 let barcode_counts = mj.seq_to_name.keys().zip(mj.barcode_counts.iter());
                 let mut records = barcode_counts

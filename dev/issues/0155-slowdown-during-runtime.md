@@ -5,6 +5,7 @@ This slows down from 2.7 mio reads to like 1.6
 during it's 327 million read progression.
 What's doing that?
 
+```toml
 
 [input]
 read1 = "..."
@@ -87,5 +88,48 @@ gene_barcodes = "probes"
 umi_aggregation = 'Cluster'
 #
 # [[step]]
+```
 
+even happens with just
+```toml
 
+[input.options]
+use_rapidgzip = true
+
+[options]
+#threads = 2
+max_blocks_in_flight = 300
+
+[output]
+report_json = true
+prefix = "tag_histogram"
+format = 'none'
+
+[barcodes.cells.from_file]
+filename = "737K-fixed-rna-profiling.txt.gz"
+
+[[step]]
+  action = 'Progress'
+
+[[step]]
+action = "ExtractRegion"
+start = 0
+length = 16
+segment = "read1"
+out_label = "cb"
+anchor = "left"
+
+[[step]]
+action = "HammingCorrect"
+max_hamming_distance = 0
+barcodes = "cells"
+in_label = "cb"
+out_label = "cb_corrected"
+on_no_match = "remove"
+on_tie = "remove"
+#
+[[step]]
+action = "Report"
+name = 'cb_corrected'
+tag_histogram = ['cb_corrected']
+```

@@ -5,7 +5,7 @@ use std::sync::{
     atomic::{AtomicUsize, Ordering},
 };
 
-use crate::transformations::prelude::*;
+use crate::transformations::{hamming_correct::CountsFromReport, prelude::*};
 
 fn build_atomic_counts(len: usize) -> Vec<AtomicUsize> {
     (0..len).map(|_| AtomicUsize::new(0)).collect()
@@ -38,6 +38,57 @@ pub struct MajorityData {
     pub blocks_to_count: usize,
     pub start_counting_in_hamming_at_this_block_no: Arc<AtomicUsize>,
     pub total_reads_considered: Arc<AtomicUsize>, // for verification purposes, not actual logic
+}
+
+impl MajorityData {
+    pub fn load_from_report(&self, cfr: &CountsFromReport) -> Result<()> {
+        //report json from cfr.filename, get the cfr.report_name, then get 'tag_histogram',then the cfr.tag_name
+        let raw = std::fs::read_to_string(&cfr.filename).map_err(|err| {
+            anyhow!(
+                "Failed to read counts from report file {}: {err}",
+                cfr.filename
+            )
+        })?;
+        let json = serde_json::from_str::<serde_json::Value>(&raw).map_err(|err| {
+            anyhow!(
+                "Failed to parse json for counts from report file {}: {err}",
+                cfr.filename
+            )
+        })?;
+        let entry = json.get(&cfr.report_name).ok_or_else(|| {
+            anyhow!(
+                "Report name {} not found in counts from report file {}",
+                cfr.report_name,
+                cfr.filename
+            )
+        })?;
+        let tag_histogram = entry.get("histogram").ok_or_else(|| {
+            anyhow!(
+                "'tag_histogram' not found in report {} in counts from report file {}",
+                cfr.report_name,
+                cfr.filename
+            )
+        })?;
+        let histogram = tag_histogram
+            .get(&cfr.tag_name)
+            .ok_or_else(|| anyhow!("Tag name {} not found in 'tag_histogram' of report {} in counts from report file {}", cfr.tag_name, cfr.report_name, cfr.filename))?;
+        //now turn histogram into a string: usize map...
+        for (barcode, count) in histogram.as_object().ok_or_else(|| anyhow!("Expected 'tag_histogram' entry for tag {} in report {} in counts from report file {} to be an object", cfr.tag_name, cfr.report_name, cfr.filename))? {
+            if !barcode.is_empty() {
+                let count = count.as_u64().ok_or_else(|| anyhow!("Expected count for barcode {} in 'tag_histogram' entry for tag {} in report {} in counts from report file {} to be a u64", barcode, cfr.tag_name, cfr.report_name, cfr.filename))?;
+                if let Some(idx) = self.seq_to_idx.get(BStr::new(barcode.as_bytes())) {
+                    self.barcode_counts[*idx].store(count as usize, Ordering::SeqCst);
+                } else {
+                    //cov:excl-start
+                    return Err(anyhow!("Barcode {} found in 'tag_histogram' entry \
+                        for tag {} in report {} in counts from report file {}, \
+                        but not found in barcodes used. Check that the barcodes section & your report matches", barcode, cfr.tag_name, cfr.report_name, cfr.filename));
+                    //cov:excl-stop
+                }
+            }
+        }
+        Ok(())
+    }
 }
 
 impl PartialHammingExactCounter {

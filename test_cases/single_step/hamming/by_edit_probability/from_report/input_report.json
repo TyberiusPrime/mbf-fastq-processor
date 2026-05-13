@@ -1,0 +1,30 @@
+{
+  "__": {
+    "version": "0.8.1",
+    "cwd": "/home/user/single_step",
+    "input_files": {
+      "interleaved": null,
+      "read1": [
+        "input_read1.fq"
+      ]
+    },
+    "repository": "https://tyberiusprime.github.io/fastqrab/"
+  },
+  "bccounts": {
+    "molecule_count": 4,
+    "histogram": {
+      "corrected": {
+        "": 3,
+        "AAAAAAAAAAAAAAAA": 1000
+      }
+    }
+  },
+  "run_info": {
+    "program_version": "0.8.1",
+    "input_toml": "[input]\n    read1 = 'input_read1.fq'\n\n[output]\n    prefix = 'output'\n    format = 'fastq'\n    compression = 'raw'\nreport_json = true\n\n# Two barcodes at hamming distance 2 from each other.\n# alpha = AAAAAAAAAAAAAAAA (all A)\n# beta  = AAAACAAAAAAGAAAA (differs at pos 4 and pos 11)\n#\n# A query of \"AAAACAAAAAAAAAAA\" sits at d=1 from BOTH barcodes (tie):\n#   alpha differs from query at pos 4\n#   beta  differs from query at pos 11\n#\n# OnTie = ByEditProbability picks the candidate whose differing\n# position has the LOWER base quality (= higher per-base error\n# probability), since that position is the most plausible sequencing\n# error.\n[[step]]\n    action = 'ExtractRegion'\n    source = \"read1\"\n    anchor = \"start\"\n    start = 0\n    length = 16\n    out_label = 'bc_raw'\n\n[[step]]\n    action = 'HammingCorrect'\n    in_label = 'bc_raw'\n    out_label = 'corrected'\n    barcodes = 'barcodes'\n    output = 'label'\n    max_hamming_distance = 0\n    on_no_match = 'remove'\n#on_tie = 'by_edit_probability'\n   on_tie = 'remove'\n    by_majority_min_molecules_to_start = 0\n    by_majority_threshold = 0.95\n\n[[step]]\n  action = 'report'\n  name = 'bccounts'\n  tag_histogram = ['corrected']\n\n[[step]]\n    action = 'StoreTagInComment'\n    in_label = 'corrected'\n\n[barcodes.barcodes]\n    AAAAAAAAAAAAAAAA = 'alpha'\n    AAAACAAAAAAGAAAA = 'beta'\n",
+    "working_directory": "/home/user/single_step"
+  },
+  "report_order": [
+    "bccounts"
+  ]
+}
