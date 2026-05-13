@@ -6,6 +6,9 @@ use disjoint::DisjointSet;
 use fastqrab_io::{CompressionFormat, FileFormat};
 use rayon::prelude::*;
 use rustc_hash::{FxHashMap, FxHashSet};
+use std::num::NonZeroUsize;
+use std::sync::OnceLock;
+use std::time::Instant;
 
 type WriterHandle = Arc<Mutex<Option<ChunkedRecordWriter>>>;
 type DataHandles = Arc<Mutex<DemultiplexedData<Option<ChunkedRecordWriter>>>>;
@@ -60,7 +63,7 @@ fn finish_writer(handle: &WriterHandle) -> Result<()> {
     Ok(())
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 enum LookupMode {
     Barcode,
     Label,
@@ -109,7 +112,16 @@ pub struct StoreSingleCellMatrix {
         dead_code,
         reason = "only read in get_tag_usage via PartialStoreSingleCellMatrix"
     )]
-    tag_contains_barcode: Option<bool>,
+    cell_tag_contains_barcode: Option<bool>,
+    ///
+    /// Whether gene_tag values are barcode sequences (true) or corrected labels (false).
+    /// Default: auto-detect — true for Location tags, false for String tags.
+    #[tpd(default)]
+    #[expect(
+        dead_code,
+        reason = "only read in get_tag_usage via PartialStoreSingleCellMatrix"
+    )]
+    gene_tag_contains_barcode: Option<bool>,
 
     /// Infix for output filenames
     #[tpd(default)]
@@ -132,7 +144,7 @@ pub struct StoreSingleCellMatrix {
 
     #[tpd(skip, default)]
     #[schemars(skip)]
-    gene_seq_to_name: Arc<FxIndexMap<BString, String>>,
+    gene_lookup: Arc<FxIndexMap<BString, String>>,
 
     #[tpd(skip, default)]
     #[schemars(skip)]
@@ -156,7 +168,11 @@ pub struct StoreSingleCellMatrix {
 
     #[tpd(skip)]
     #[schemars(skip)]
-    lookup_mode: LookupMode,
+    cell_lookup_mode: LookupMode,
+
+    #[tpd(skip)]
+    #[schemars(skip)]
+    gene_lookup_mode: LookupMode,
 }
 
 impl VerifyIn<PartialConfig> for PartialStoreSingleCellMatrix {
@@ -169,6 +185,38 @@ impl VerifyIn<PartialConfig> for PartialStoreSingleCellMatrix {
         Self: Sized + toml_pretty_deser::Visitor,
     {
         Ok(())
+    }
+}
+
+fn determine_lookup_mode(
+    upstream_label_type: Option<&TagValueType>,
+    tag_contains_barcode: &TomlValue<Option<bool>>,
+) -> Option<LookupMode> {
+    if let Some(upstream_label_type) = upstream_label_type {
+        match upstream_label_type {
+            TagValueType::Location | TagValueType::String => {
+                if let Some(Some(tag_contains_barcode)) = tag_contains_barcode.as_ref() {
+                    //user has explicitly told us what the tag contains,
+                    //barcodes or barcode-names
+                    if *tag_contains_barcode {
+                        Some(LookupMode::Barcode)
+                    } else {
+                        Some(LookupMode::Label)
+                    }
+                } else if matches!(upstream_label_type, TagValueType::Location) {
+                    Some(LookupMode::Barcode)
+                } else {
+                    Some(LookupMode::Label)
+                }
+            }
+            // cov:excl-start
+            _ => {
+                //will be complained about because of allowed tag modes
+                None
+            } // cov:excl-stop
+        }
+    } else {
+        None
     }
 }
 
@@ -240,33 +288,18 @@ impl TagUser for PartialTaggedVariant<PartialStoreSingleCellMatrix> {
         _segment_order: &[String],
     ) -> Option<TagUsageInfo<'_>> {
         let inner = self.toml_value.value.as_mut()?;
-        let upstream_label_type = tags_available
-            .get(inner.cell_tag.as_ref().expect("parent was ok"))
-            .map(|meta| &meta.tag_type);
-
-        if let Some(upstream_label_type) = upstream_label_type {
-            match upstream_label_type {
-                TagValueType::Location | TagValueType::String => {
-                    if let Some(Some(tag_contains_barcode)) = inner.tag_contains_barcode.as_ref() {
-                        //user has explicitly told us what the tag contains,
-                        //barcodes or barcode-names
-                        if *tag_contains_barcode {
-                            inner.lookup_mode = Some(LookupMode::Barcode);
-                        } else {
-                            inner.lookup_mode = Some(LookupMode::Label);
-                        }
-                    } else if matches!(upstream_label_type, TagValueType::Location) {
-                        inner.lookup_mode = Some(LookupMode::Barcode);
-                    } else {
-                        inner.lookup_mode = Some(LookupMode::Label);
-                    }
-                }
-                // cov:excl-start
-                _ => {
-                    //will be complained about because of allowed tag modes below
-                } // cov:excl-stop
-            }
-        }
+        inner.cell_lookup_mode = determine_lookup_mode(
+            tags_available
+                .get(inner.cell_tag.as_ref().expect("parent was ok"))
+                .map(|meta| &meta.tag_type),
+            &inner.cell_tag_contains_barcode,
+        );
+        inner.gene_lookup_mode = determine_lookup_mode(
+            tags_available
+                .get(inner.gene_tag.as_ref().expect("parent was ok"))
+                .map(|meta| &meta.tag_type),
+            &inner.gene_tag_contains_barcode,
+        );
 
         Some(TagUsageInfo {
             used_tags: vec![
@@ -297,6 +330,28 @@ fn seq_to_idx(seq: &[u8], map: &FxIndexMap<BString, String>) -> u32 {
     map.get_index_of(BStr::new(seq))
         .map(|i| i as u32 + 1)
         .unwrap_or(0)
+}
+
+impl StoreSingleCellMatrix {
+    fn create_lookup(
+        barcodes: &IndexMap<BString, String>,
+        mode: LookupMode,
+    ) -> Arc<FxIndexMap<BString, String>> {
+        match mode {
+            LookupMode::Barcode => Arc::new(
+                barcodes
+                    .iter()
+                    .map(|(x, y)| (x.to_owned(), y.to_owned()))
+                    .collect(),
+            ),
+            LookupMode::Label => Arc::new(
+                barcodes
+                    .iter()
+                    .map(|(_k, label)| (BString::new(label.as_bytes().to_vec()), label.clone()))
+                    .collect(),
+            ),
+        }
+    }
 }
 
 impl Step for StoreSingleCellMatrix {
@@ -331,38 +386,8 @@ impl Step for StoreSingleCellMatrix {
             );
         }
         // cov:excl-end
-
-        self.gene_seq_to_name = Arc::new(
-            //todo: if we extend toml_pretty_deser to support
-            //collect into arbitrary IndexMaps,  we can go back to shared data here with the
-            //barcodes
-            gene_bc
-                .seq_to_name
-                .iter()
-                .map(|(x, y)| (x.to_owned(), y.to_owned()))
-                .collect(),
-        );
-
-        match self.lookup_mode {
-            LookupMode::Barcode => {
-                self.cell_lookup = Arc::new(
-                    cell_bc
-                        .seq_to_name
-                        .iter()
-                        .map(|(x, y)| (x.to_owned(), y.to_owned()))
-                        .collect(),
-                )
-            }
-            LookupMode::Label => {
-                self.cell_lookup = Arc::new(
-                    cell_bc
-                        .seq_to_name
-                        .iter()
-                        .map(|(_k, label)| (BString::new(label.as_bytes().to_vec()), label.clone()))
-                        .collect(),
-                );
-            }
-        }
+        self.gene_lookup = Self::create_lookup(&gene_bc.seq_to_name, self.gene_lookup_mode);
+        self.cell_lookup = Self::create_lookup(&cell_bc.seq_to_name, self.cell_lookup_mode);
 
         let per_tag = output_files.take("data");
         let mut entries_map = DemultiplexedData::new();
@@ -397,10 +422,11 @@ impl Step for StoreSingleCellMatrix {
         let umi_tags = block.tags.get(&self.umi_tag).expect("umi_tag not in block");
 
         let cell_map = &*self.cell_lookup;
-        let gene_map = &*self.gene_seq_to_name;
+        let gene_map = &*self.gene_lookup;
         let output_tags = block.output_tags.as_ref();
 
         let mut entries = self.entries.lock().expect("lock poisoned");
+        //todo: this is accidentially single threaded...
         let mut expected_umi_len = *self.max_umi_len.lock().expect("lock poisoned");
 
         for (ii, ((cell_val, gene_val), umi_val)) in cell_tags
@@ -475,23 +501,53 @@ impl Step for StoreSingleCellMatrix {
                 .lock()
                 .expect("lock poisoned");
 
+            let mut any_gene_matches = false;
+            let mut any_cell_matches = false;
             for (tag, mut entries) in entries_map.into_iter() {
                 if let Some(Some(writer)) = data_guard.get_mut(&tag) {
-                    entries.par_sort_unstable(); //must also sort by umi to be reproducible in output
                     //entries.par_sort_by_key(|&[g, c, _]| (g, c)); it's not measurably faster.
+
+                    // how many different gene/cell combinations are there.
+                    //let combos: HashSet<_> = entries.iter().map(|e| (e[0], e[1])).collect();
+                    // dbg!(
+                    //     "Tag {}, total entries: {}, unique gene/cell combos: {}",
+                    //     tag,
+                    //     entries.len(),
+                    //     combos.len()
+                    // );
+                    entries.par_sort_unstable(); //must also sort by umi to be reproducible in output
+
                     let matrix = aggregate_to_matrix(
                         entries,
                         self.umi_aggregation,
                         *self.max_umi_len.lock().expect("lock poisoned") as u16,
                     );
+                    any_gene_matches |= matrix.keys().any(|(gene, _)| *gene != 0);
+                    any_cell_matches |= matrix.keys().any(|(_, cell)| *cell != 0);
                     write_binary(
                         matrix,
                         self.cell_lookup.len() as u32 + 1, //+1 for unmatched. Cast is safe, we
                         //checked this before
-                        self.gene_seq_to_name.len() as u32 + 1,
+                        self.gene_lookup.len() as u32 + 1,
                         writer,
                     )?;
                 }
+            }
+            if !any_gene_matches {
+                bail!(
+                    "No reads matched the gene barcode/label. \
+                    Check your barcodes and possibly set `gene_tag_contains_barcode` \
+                    to either 'barcode' or 'label' if the auto-detection has failed you.
+                    "
+                );
+            }
+            if !any_cell_matches {
+                bail!(
+                    "No reads matched the cell barcode/label. \
+                    Check your barcodes and possibly set `cell_tag_contains_barcode` \
+                    to either 'barcode' or 'label' if the auto-detection has failed you.
+                    "
+                );
             }
         }
         for (_tag, writer) in self
@@ -537,7 +593,7 @@ impl Step for StoreSingleCellMatrix {
             let mut guard = handle.lock().expect("lock poisoned");
             let writer = guard.as_mut().expect("writer not yet finished");
             writer.write_text_record(b"unmatched\n")?;
-            for name in self.gene_seq_to_name.values() {
+            for name in self.gene_lookup.values() {
                 let mut line = name.as_bytes().to_vec();
                 line.push(b'\n');
                 writer.write_text_record(&line)?;
@@ -725,6 +781,8 @@ fn aggregate_to_matrix_cluster(
         .zip(ends.into_par_iter())
         .filter_map(|(start, end)| {
             let key = (entries[start][0], entries[start][1]);
+            //todo: we don't need to check all of them for u32::MAx,
+            //just the last one.
             let mut seen: Vec<u32> = entries[start..end]
                 .iter()
                 .filter(|e| e[2] != u32::MAX)
@@ -823,10 +881,6 @@ fn neighbor_union_hash(values: &[u32], uf: &mut DisjointSet, umi_length: u16) {
         }
     }
 }
-
-use std::num::NonZeroUsize;
-use std::sync::OnceLock;
-use std::time::Instant;
 
 /// It is unclear where the crossover between the O(n^2) pairwise, and O(32n) neighbor based
 /// approach is. So we benchmark on the real system and make a decision.

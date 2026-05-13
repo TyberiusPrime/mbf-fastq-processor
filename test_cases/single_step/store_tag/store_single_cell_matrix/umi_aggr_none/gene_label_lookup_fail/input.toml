@@ -1,0 +1,70 @@
+[input]
+    read1 = 'input.fq'
+
+[barcodes.cells]
+    AAAA = "cell_A"
+    TTTT = "cell_T"
+
+[barcodes.genes]
+    CCCC = "gene_C"
+    GGGG = "gene_G"
+
+[[step]]
+    action = "ExtractRegion"
+    source = "read1"
+    anchor = "start"
+    start = 0
+    length = 4
+    out_label = "cell_bc"
+
+[[step]]
+    action = "HammingCorrect"
+    in_label = "cell_bc"
+    out_label = "cell_label"
+    barcodes = "cells"
+    output = "barcode"
+    max_hamming_distance = 0
+    on_no_match = "Remove"
+    on_tie = "fail"
+
+[[step]]
+    action = "ExtractRegion"
+    source = "read1"
+    anchor = "start"
+    start = 4
+    length = 4
+    out_label = "gene_bc"
+
+[[step]]
+    action = "ExtractRegion"
+    source = "read1"
+    anchor = "start"
+    start = 8
+    length = 4
+    out_label = "umi"
+
+
+[[step]]
+    action = "HammingCorrect"
+    in_label = "gene_bc"
+    out_label = "gene_bc_corr"
+    barcodes = "genes"
+    output = "barcode"
+    max_hamming_distance = 0
+    on_no_match = "Remove"
+    on_tie = "fail"
+
+[[step]]
+    action = "StoreSingleCellMatrix"
+    cell_tag = "cell_label"
+    gene_tag = "gene_bc_corr"
+    umi_tag = "umi"
+    cell_barcodes = "cells"
+    gene_barcodes = "genes"
+    umi_aggregation = 'none'
+    gene_tag_contains_barcode = false
+
+[output]
+    prefix = "output"
+    format = "None"
+    compression = "raw"

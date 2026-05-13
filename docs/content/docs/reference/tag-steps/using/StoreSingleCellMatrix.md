@@ -16,7 +16,8 @@ and an output [mtx/MatrixMarket](https://math.nist.gov/MatrixMarket/formats.html
     umi_tag = "umi"                # tag carrying the raw UMI sequence
     cell_barcodes = "cells"        # [barcodes.cells] section (sequence → name)
     gene_barcodes = "genes"        # [barcodes.genes] section (sequence → name)
-    tag_contains_barcode = true    # (optional) see below; auto-detected if omitted
+    cell_tag_contains_barcode = true    # (optional) see below; auto-detected if omitted
+    gene_tag_contains_barcode = true    # (optional) see below; auto-detected if omitted
     infix = ""                     # (optional) filename infix. 
     compression = "Raw"            # (optional) Raw, Gzip, Zstd — for all output files.
     umi_aggregation = "Exact"       # How to handle duplicate UMIs. See below
@@ -35,19 +36,18 @@ or
 
 Both are looked up against the corresponding `[barcodes.*]` section.
 
-### tag_contains_barcode
+### (cell|gene)_tag_contains_barcode
 
-Controls how `cell_tag` values are resolved:
+Controls how `cell_tag` or `gene_tag` values are resolved:
 
 | Value | Behaviour |
 |-------|-----------|
-| `true` | Value is a **barcode sequence**; looked up in `[barcodes.cells]` by sequence |
+| `true` | Value is a **barcode sequence**; looked up in by sequence |
 | `false` | Value is a **corrected label** (e.g. from `AssignByHalves`); looked up by name |
-| *(omitted)* | Auto-detected: `Location` tags → `true`, `String` tags → `false` |
-
-Gene barcodes are always looked up by sequence.
+| *(omitted)* | Auto-detected: `Location` input tags → `true`, `String` tags → `false` |
 
 Unrecognised sequences are assigned index 0 ("unmatched"). 
+
 Real barcodes are 1-indexed in the order they appear in the `[barcodes.*]` table.
 
 `umi_tag` accepts `Location` or `String`. The UMI is 2-bit encoded (A=0, C=1,

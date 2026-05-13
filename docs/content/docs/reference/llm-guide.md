@@ -1273,7 +1273,8 @@ Collect per-read (gene, cell barcode, UMI) index triples, sort by (gene, cell), 
     umi_aggregation = 'exact'         # TYPE: 'Exact'|'None' - which UMI to aggregate
     cell_barcodes = 'cells'           # TYPE: barcodes section name, REQUIRED
     gene_barcodes = 'genes'           # TYPE: barcodes section name, REQUIRED
-    tag_contains_barcode = true       # TYPE: bool, OPTIONAL (true=sequence, false=label; auto-detected if omitted)
+    cell_tag_contains_barcode = true       # TYPE: bool, OPTIONAL (true=sequence, false=label; auto-detected if omitted)
+    gene_tag_contains_barcode = true       # TYPE: bool, OPTIONAL (true=sequence, false=label; auto-detected if omitted)
     compression = 'Raw'               # TYPE: 'Raw'|'Gzip'|'Zstd', DEFAULT: 'Raw' (for .bin only)
 ```
 

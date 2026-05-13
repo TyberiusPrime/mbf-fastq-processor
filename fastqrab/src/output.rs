@@ -365,11 +365,10 @@ fn build_sink_config(
     SinkConfig {
         compression: output_config.compression,
         compression_level: output_config.compression_level,
-        compression_threads: 
-            Some(NonZeroUsize::new(output_config.compression_threads)
-            .expect(
-                "Config should have validated output.compression_threads > 0 \
-                    when output.compression is set")),
+        compression_threads: Some(NonZeroUsize::new(output_config.compression_threads).expect(
+            "Config should have validated output.compression_threads > 0 \
+                    when output.compression is set",
+        )),
         hash_uncompressed: output_config.output_hash_uncompressed,
         hash_compressed: output_config.output_hash_compressed,
         simulated_failure: simulated_failure.cloned(),
@@ -377,9 +376,8 @@ fn build_sink_config(
 }
 
 fn bam_thread_count(output_config: &fastqrab_steps::config::Output) -> NonZero<usize> {
-    NonZeroUsize::new(output_config.compression_threads).expect(
-        "Config should have validated output.compression_threads > 0",
-    )
+    NonZeroUsize::new(output_config.compression_threads)
+        .expect("Config should have validated output.compression_threads > 0")
 }
 
 fn open_one_set_of_output_files(

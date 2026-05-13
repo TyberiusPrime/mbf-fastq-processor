@@ -11500,6 +11500,38 @@ fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_umi_aggr_no
 
 #[test]
 
+fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_umi_aggr_none_x_cell_label_lookup()
+ {
+    println!(
+        "Test case is in: test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_none/cell_label_lookup"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_none/cell_label_lookup",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_umi_aggr_none_x_cell_label_lookup_fail()
+ {
+    println!(
+        "Test case is in: test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_none/cell_label_lookup_fail"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_none/cell_label_lookup_fail",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_umi_aggr_none_x_compressed() {
     println!(
         "Test case is in: test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_none/compressed"
@@ -11515,14 +11547,30 @@ fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_umi_aggr_no
 
 #[test]
 
-fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_umi_aggr_none_x_label_lookup()
-{
+fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_umi_aggr_none_x_gene_label_lookup()
+ {
     println!(
-        "Test case is in: test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_none/label_lookup"
+        "Test case is in: test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_none/gene_label_lookup"
     );
     run_test(
         std::path::Path::new(
-            "../test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_none/label_lookup",
+            "../test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_none/gene_label_lookup",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_umi_aggr_none_x_gene_label_lookup_fail()
+ {
+    println!(
+        "Test case is in: test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_none/gene_label_lookup_fail"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_none/gene_label_lookup_fail",
         ),
         "input.toml",
         1,

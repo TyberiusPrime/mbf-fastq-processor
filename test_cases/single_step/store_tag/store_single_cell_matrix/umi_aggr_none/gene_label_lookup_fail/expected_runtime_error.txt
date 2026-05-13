@@ -1,0 +1,1 @@
+Error finalizing report: No reads matched the gene barcode/label. Check your barcodes and possibly set `gene_tag_contains_barcode` to either 'barcode' or 'label' if the auto-detection has failed you.

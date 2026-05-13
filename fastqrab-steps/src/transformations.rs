@@ -227,10 +227,9 @@ pub trait Step {
     }
 
     /// called after all finalize have happpend - for progress to report
-    fn post_finalize(&self) {
-    }
+    fn post_finalize(&self) {}
 
-    /// handle one block 
+    /// handle one block
     fn apply(
         &self,
         block: FastQBlocksCombined,

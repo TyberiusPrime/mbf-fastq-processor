@@ -1,5 +1,5 @@
-use std::{cell::RefCell, num::NonZeroUsize};
 use std::rc::Rc;
+use std::{cell::RefCell, num::NonZeroUsize};
 
 use crate::transformations::prelude::*;
 use fastqrab_config::{default_include_read_name, default_region_separator, tpd_adapt_bstring};

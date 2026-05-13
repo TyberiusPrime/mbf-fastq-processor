@@ -917,7 +917,8 @@
 #    umi_aggregation = "Exact"      # Deduplicate counts on UMIs. Valid are: Exact, None,
 #    cell_barcodes = "cells"        # [barcodes.cells] section name
 #    gene_barcodes = "genes"        # [barcodes.genes] section name
-##   tag_contains_barcode = true    # (optional) true=sequence, false=label; auto-detected if omitted
+##   cell_tag_contains_barcode = true    # (optional) true=sequence, false=label; auto-detected if omitted
+##   gene_tag_contains_barcode = true    # (optional) true=sequence, false=label; auto-detected if omitted
 ##   infix = ""                     # (optional) filename infix
 ##   compression = "Raw"            # (optional) Raw, Gzip, Zstd — for all output files
 

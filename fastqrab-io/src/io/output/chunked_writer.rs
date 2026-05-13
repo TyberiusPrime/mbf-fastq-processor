@@ -327,7 +327,7 @@ impl TextRecordSink {
             config.compression,
             config.compression_level,
             config.compression_threads,
-        ); 
+        );
         let fail = FailForTestLayer::new(compress, config.simulated_failure.clone());
         let plain_hash = HashLayer::new(fail, config.hash_uncompressed);
         Ok(TextRecordSink { inner: plain_hash })

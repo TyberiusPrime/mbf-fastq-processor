@@ -51,7 +51,7 @@
     cell_barcodes = "cells"
     gene_barcodes = "genes"
     umi_aggregation = 'none'
-    tag_contains_barcode = false
+    cell_tag_contains_barcode = false
 
 [output]
     prefix = "output"

@@ -1355,7 +1355,6 @@ mod test {
     }
 }
 
-
 /// Find out exactly what's the minimum number of bits to represent a number in binary
 #[expect(
     clippy::cast_possible_truncation,
@@ -1368,4 +1367,3 @@ pub fn bits_needed_to_represent(count: usize) -> u16 {
         (usize::BITS - (count).leading_zeros()) as u16
     }
 }
-
