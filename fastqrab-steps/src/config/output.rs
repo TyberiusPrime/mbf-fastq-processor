@@ -111,8 +111,7 @@ pub struct Output {
     pub compression: CompressionFormat,
     #[tpd(default)]
     pub compression_level: Option<u8>,
-    #[tpd(default)]
-    pub compression_threads: Option<usize>,
+    pub compression_threads: usize,
 
     #[tpd(default)]
     pub report_html: bool,
@@ -213,6 +212,17 @@ impl VerifyIn<super::PartialConfig> for PartialOutput {
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {
+        self.compression_threads.or(1);
+        self.compression_threads.verify(|threads| {
+            if *threads == 0 {
+                Err(ValidationFailure::new(
+                    "Must not be 0.",
+                    Some("'compression_threads' must be greater than zero when specified. Increase or remove setting"),
+                ))
+            } else {
+                Ok(())
+            }
+        });
         self.ix_separator.verify(|ix_separator| {
             if ix_separator.contains('/')
                 || ix_separator.contains('\\')

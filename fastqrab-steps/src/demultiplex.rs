@@ -2,6 +2,7 @@ use anyhow::{Context, Result};
 use bstr::{BStr, BString};
 use indexmap::IndexMap;
 use std::collections::{BTreeMap, HashMap};
+use std::num::NonZeroUsize;
 use std::path::{Path, PathBuf};
 
 use crate::join_nonempty;
@@ -333,7 +334,7 @@ impl OptDemultiplex {
                 let sink_config = SinkConfig {
                     compression: compression_format,
                     compression_level,
-                    compression_threads: Some(1),
+                    compression_threads: Some(NonZeroUsize::new(1).expect("Can't fail")),
                     hash_uncompressed,
                     hash_compressed,
                     simulated_failure: None,

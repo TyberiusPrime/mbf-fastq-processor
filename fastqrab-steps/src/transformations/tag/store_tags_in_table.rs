@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::{cell::RefCell, num::NonZeroUsize};
 use std::rc::Rc;
 
 use crate::transformations::prelude::*;
@@ -82,7 +82,7 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagsInTable> {
                         .as_ref()
                         .and_then(|x| x.as_ref())
                         .copied(),
-                    compression_threads: Some(1),
+                    compression_threads: Some(NonZeroUsize::new(1).expect("Can't fail")),
                     hash_uncompressed: false,
                     hash_compressed: false,
                     simulated_failure: None,

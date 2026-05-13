@@ -1,3 +1,5 @@
+use std::num::NonZeroUsize;
+
 use super::{format_numeric_for_comment, store_tag_in_comment};
 use crate::transformations::prelude::*;
 use fastqrab_config::{
@@ -160,7 +162,7 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagInFastQ> {
                             .as_ref()
                             .and_then(|x| x.as_ref())
                             .copied(),
-                        compression_threads: Some(1),
+                        compression_threads: Some(NonZeroUsize::new(1).expect("Can't fail")),
                         hash_uncompressed: false,
                         hash_compressed: false,
                         simulated_failure: None,

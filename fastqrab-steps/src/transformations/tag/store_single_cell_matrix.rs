@@ -190,6 +190,7 @@ impl TagUser for PartialTaggedVariant<PartialStoreSingleCellMatrix> {
             compression,
             compression_level,
             compression_threads: Some(1),
+            compression_threads: Some(NonZeroUsize::new(1).expect("Can't fail")),
             hash_uncompressed: false,
             hash_compressed: false,
             simulated_failure: None,

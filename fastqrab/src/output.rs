@@ -2,7 +2,7 @@ use anyhow::{Context, Result, anyhow};
 use noodles::bam;
 use std::collections::BTreeMap;
 use std::io::{BufWriter, Write};
-use std::num::NonZero;
+use std::num::{NonZero, NonZeroUsize};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
@@ -365,7 +365,11 @@ fn build_sink_config(
     SinkConfig {
         compression: output_config.compression,
         compression_level: output_config.compression_level,
-        compression_threads: output_config.compression_threads,
+        compression_threads: 
+            Some(NonZeroUsize::new(output_config.compression_threads)
+            .expect(
+                "Config should have validated output.compression_threads > 0 \
+                    when output.compression is set")),
         hash_uncompressed: output_config.output_hash_uncompressed,
         hash_compressed: output_config.output_hash_compressed,
         simulated_failure: simulated_failure.cloned(),
@@ -373,10 +377,9 @@ fn build_sink_config(
 }
 
 fn bam_thread_count(output_config: &fastqrab_steps::config::Output) -> NonZero<usize> {
-    output_config
-        .compression_threads
-        .and_then(|t| NonZero::<usize>::try_from(t).ok())
-        .unwrap_or_else(|| NonZero::<usize>::new(1).expect("1 != 0"))
+    NonZeroUsize::new(output_config.compression_threads).expect(
+        "Config should have validated output.compression_threads > 0",
+    )
 }
 
 fn open_one_set_of_output_files(

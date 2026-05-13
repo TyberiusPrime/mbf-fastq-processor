@@ -543,7 +543,7 @@ impl PartialConfig {
                     format: TomlValue::new_ok(FileFormat::default(), 0..0),
                     compression: TomlValue::new_ok(CompressionFormat::default(), 0..0),
                     compression_level: TomlValue::new_ok(None, 0..0),
-                    compression_threads: TomlValue::new_ok(None, 0..0),
+                    compression_threads: TomlValue::new_ok(1, 0..0),
                     report_html: TomlValue::new_ok(false, 0..0),
                     report_json: TomlValue::new_ok(false, 0..0),
                     report_timing: TomlValue::new_ok(false, 0..0),
@@ -2047,7 +2047,7 @@ impl Config {
         let (thread_count, input_threads_per_segment, output_threads) = calculate_thread_counts(
             self.options.threads,
             self.input.options.threads_per_segment,
-            self.output.as_ref().and_then(|x| x.compression_threads),
+            self.output.as_ref().map(|x| x.compression_threads),
             segment_count,
             get_number_of_cores(),
             can_multicore_input,
@@ -2056,7 +2056,7 @@ impl Config {
         self.options.threads = Some(thread_count);
         self.input.options.threads_per_segment = Some(input_threads_per_segment);
         if let Some(output) = &mut self.output {
-            output.compression_threads = Some(output_threads);
+            output.compression_threads = output_threads;
         }
 
         //rapidgzip single core is slower than regular gzip
