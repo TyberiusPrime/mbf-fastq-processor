@@ -3,7 +3,6 @@ use crate::transformations::prelude::*; // union_find_rs::prelude also exports a
 
 use bstr::{BStr, BString};
 use disjoint::DisjointSet;
-use fastqrab_dna::dna::bits_needed_to_represent;
 use fastqrab_io::{CompressionFormat, FileFormat};
 use rayon::prelude::*;
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -189,7 +188,6 @@ impl TagUser for PartialTaggedVariant<PartialStoreSingleCellMatrix> {
         let data_sink = SinkConfig {
             compression,
             compression_level,
-            compression_threads: Some(1),
             compression_threads: Some(NonZeroUsize::new(1).expect("Can't fail")),
             hash_uncompressed: false,
             hash_compressed: false,
@@ -607,8 +605,7 @@ fn aggregate_to_matrix_none(entries: Vec<[u32; 3]>) -> IndexMap<(u32, u32), u32>
 fn aggregate_to_matrix_exact(entries: Vec<[u32; 3]>) -> IndexMap<(u32, u32), u32> {
     let mut matrix = IndexMap::new();
     let mut counter = 0u32;
-    let mut last = None;
-    let mut seen = std::collections::HashSet::new(); //todo: profile what to use here?
+    let mut last: Option<(u32, u32, u32)> = None;
     for entry in &entries {
         let gene_id = entry[0];
         let cell_id = entry[1];
@@ -617,32 +614,32 @@ fn aggregate_to_matrix_exact(entries: Vec<[u32; 3]>) -> IndexMap<(u32, u32), u32
             //invalid umi / any N
             continue;
         }
-        let key = (gene_id, cell_id);
+        //we again use that we're umi sorted
+        let key = (gene_id, cell_id, umi);
         match last {
             Some(last_key) if last_key == key => {
-                //same gene & cell
-                if seen.insert(umi) {
-                    counter = counter.saturating_add(1);
-                }
+                //same gene & cell & umi. don't count
+            }
+            Some(last_key) if last_key.0 == key.0 && last_key.1 == key.1 => {
+                //same cell and gene
+                counter = counter.saturating_add(1);
+                last = Some(key);
             }
             Some(last_key) => {
                 // different gene & cell -> push last
-                matrix.insert(last_key, counter);
+                matrix.insert((last_key.0, last_key.1), counter);
                 last = Some(key);
                 counter = 1;
-                seen.clear();
-                seen.insert(umi);
             }
             None => {
                 //first trip through the loop
                 last = Some(key);
                 counter = 1;
-                seen.insert(umi);
             }
         }
     }
-    if let Some(last) = last {
-        matrix.insert(last, counter);
+    if let Some(last_key) = last {
+        matrix.insert((last_key.0, last_key.1), counter);
     }
     matrix
 }
@@ -827,6 +824,7 @@ fn neighbor_union_hash(values: &[u32], uf: &mut DisjointSet, umi_length: u16) {
     }
 }
 
+use std::num::NonZeroUsize;
 use std::sync::OnceLock;
 use std::time::Instant;
 

@@ -35,7 +35,7 @@ use anyhow::{Context, Result};
 use fastqrab_config::{CompressionFormat, FileFormat};
 use sha2::Digest;
 use std::io::{self, BufWriter, Write};
-use std::num::NonZero;
+use std::num::{NonZero, NonZeroUsize};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -215,37 +215,31 @@ impl<W: Write + Send + 'static> CompressionLayer<W> {
         inner: W,
         format: CompressionFormat,
         level: Option<u8>,
-        threads: Option<usize>,
-    ) -> Result<Self> {
+        threads: Option<NonZeroUsize>,
+    ) -> Self {
         match format {
-            CompressionFormat::Uncompressed => Ok(CompressionLayer::Raw(inner)),
+            CompressionFormat::Uncompressed => CompressionLayer::Raw(inner),
             CompressionFormat::Gzip => {
                 let compression = match level {
                     Some(l) => flate2::Compression::new(u32::from(l).clamp(0, 9)),
                     None => flate2::Compression::default(),
                 };
-                if let Some(t) = threads
-                    && t > 1
-                {
+                if let Some(t) = threads {
                     let par = gzp::par::compress::ParCompressBuilder::<gzp::deflate::Gzip>::new()
-                        .num_threads(t)?
+                        .num_threads(t.into())
+                        .expect("only fails if t = 0, t never 0")
                         .compression_level(compression)
                         .from_writer(inner);
-                    Ok(CompressionLayer::GzipParallel(ParallelGzipWriter {
-                        inner: par,
-                    }))
+                    CompressionLayer::GzipParallel(ParallelGzipWriter { inner: par })
                 } else {
-                    Ok(CompressionLayer::GzipSingle(flate2::write::GzEncoder::new(
-                        inner,
-                        compression,
-                    )))
+                    CompressionLayer::GzipSingle(flate2::write::GzEncoder::new(inner, compression))
                 }
             }
             CompressionFormat::Zstd => {
                 let level = i32::from(level.unwrap_or(5)).clamp(1, 22);
                 let enc = zstd::stream::Encoder::new(inner, level)
-                    .context("Failed to create zstd encoder")?;
-                Ok(CompressionLayer::Zstd(enc))
+                    .expect("Failed to create zstd encoder - happens on invalid compression level, but we verified that");
+                CompressionLayer::Zstd(enc)
             }
         }
     }
@@ -287,7 +281,7 @@ impl<W: Write + Send + 'static> Write for CompressionLayer<W> {
 pub struct SinkConfig {
     pub compression: CompressionFormat,
     pub compression_level: Option<u8>,
-    pub compression_threads: Option<usize>,
+    pub compression_threads: Option<NonZeroUsize>,
     pub hash_uncompressed: bool,
     pub hash_compressed: bool,
     pub simulated_failure: Option<SimulatedWriteFailure>,
@@ -333,7 +327,7 @@ impl TextRecordSink {
             config.compression,
             config.compression_level,
             config.compression_threads,
-        )?;
+        ); 
         let fail = FailForTestLayer::new(compress, config.simulated_failure.clone());
         let plain_hash = HashLayer::new(fail, config.hash_uncompressed);
         Ok(TextRecordSink { inner: plain_hash })
