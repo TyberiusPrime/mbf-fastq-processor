@@ -1,5 +1,7 @@
 Metric	Value
 Input reads	6
+Matrix size	2
+Matrix matched	2
 Observed genes	2
 Observed cells	2
 Reads in matrix	3

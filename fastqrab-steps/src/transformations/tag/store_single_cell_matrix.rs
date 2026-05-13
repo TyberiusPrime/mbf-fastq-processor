@@ -30,6 +30,18 @@ fn encode_umi(umi: &[u8]) -> u32 {
     v
 }
 
+fn human_fmt_usize(n: usize) -> String {
+    let s = n.to_string();
+    let mut out = String::with_capacity(s.len() + s.len() / 3);
+    for (i, c) in s.chars().rev().enumerate() {
+        if i > 0 && i % 3 == 0 {
+            out.push('_');
+        }
+        out.push(c);
+    }
+    out.chars().rev().collect()
+}
+
 fn write_binary(
     matrix: IndexMap<(u32, u32), u32>,
     n_barcodes: u32,
@@ -448,9 +460,10 @@ impl Step for StoreSingleCellMatrix {
         let gene_map = &*self.gene_lookup;
         let output_tags = block.output_tags.as_ref();
 
-        let mut entries = self.entries.lock().expect("lock poisoned");
         //todo: this is accidentially single threaded...
         let mut expected_umi_len = *self.max_umi_len.lock().expect("lock poisoned");
+
+        let mut local_entries: DemultiplexedData<Vec<[u32; 3]>> = DemultiplexedData::new();
 
         for (ii, ((cell_val, gene_val), umi_val)) in cell_tags
             .iter()
@@ -501,9 +514,24 @@ impl Step for StoreSingleCellMatrix {
             }
 
             let output_tag = output_tags.map_or(0, |x| x[ii]);
-            if let Some(bucket) = entries.get_mut(&output_tag) {
-                bucket.push([gene_idx, cell_idx, umi_enc]);
+            match local_entries.entry(output_tag) {
+                std::collections::btree_map::Entry::Vacant(vacant_entry) => {
+                    vacant_entry.insert(vec![[gene_idx, cell_idx, umi_enc]]);
+                }
+                std::collections::btree_map::Entry::Occupied(occupied_entry) => {
+                    occupied_entry
+                        .into_mut()
+                        .push([gene_idx, cell_idx, umi_enc]);
+                }
             }
+        }
+
+        let mut entries = self.entries.lock().expect("lock poisoned");
+        for (demultiplex_tag, local) in local_entries.into_iter() {
+            entries
+                .get_mut(&demultiplex_tag)
+                .expect("Entries were created in init")
+                .extend(local);
         }
 
         Ok((block, true))
@@ -560,8 +588,15 @@ impl Step for StoreSingleCellMatrix {
                     let unique_cells: FxHashSet<_> =
                         matrix.keys().filter(|(_, cell)| *cell != 0).collect();
 
+                    let matrix_matched = matrix
+                        .keys()
+                        .filter(|(gene, cell)| *gene != 0 && *cell != 0)
+                        .count();
+
                     any_gene_matches |= !unique_genes.is_empty();
                     any_cell_matches |= !unique_cells.is_empty();
+                    stats.push(("Matrix size", matrix.len()));
+                    stats.push(("Matrix matched", matrix_matched));
                     stats.push(("Observed genes", unique_genes.len()));
                     stats.push(("Observed cells", unique_cells.len()));
                     let reads_in_matrix = matrix.values().map(|x| *x as usize).sum();
@@ -576,7 +611,10 @@ impl Step for StoreSingleCellMatrix {
                         reads_in_matrix_matched,
                     ));
                     let reads_lost_due_to_umi_cluster = total - reads_in_matrix as usize;
-                    stats.push(("Reads lost due to UMI deduplication", reads_lost_due_to_umi_cluster));
+                    stats.push((
+                        "Reads lost due to UMI deduplication",
+                        reads_lost_due_to_umi_cluster,
+                    ));
 
                     write_binary(
                         matrix,
@@ -588,8 +626,20 @@ impl Step for StoreSingleCellMatrix {
                 }
                 if let Some(Some(writer)) = stat_guard.get_mut(&tag) {
                     writer.write_text_record(b"Metric\tValue\n")?;
-                    for (metric, value) in stats {
-                        writer.write_text_record(format!("{}\t{}\n", metric, value).as_bytes())?;
+
+                    // Pre-format so we can measure the widest value.
+                    let rows: Vec<(&str, String)> = stats
+                        .iter()
+                        .map(|(metric, value)| (*metric, human_fmt_usize(*value)))
+                        .collect();
+
+                    let col_width = rows.iter().map(|(_, v)| v.len()).max().unwrap_or(0);
+
+                    for (metric, value) in &rows {
+                        writer.write_text_record(
+                            format!("{}\t{:>width$}\n", metric, value, width = col_width)
+                                .as_bytes(),
+                        )?;
                     }
                 }
             }
