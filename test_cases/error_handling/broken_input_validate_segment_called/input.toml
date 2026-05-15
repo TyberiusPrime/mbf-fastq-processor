@@ -1,0 +1,15 @@
+[input]
+  read1 = 'shu'
+  options = {
+    'banana'= true,
+}
+
+[output]
+  prefix = 'output'
+
+[[step]]
+action = 'ExtractRegex'
+source = 'tag:bc'
+out_label = 'gene'
+search = '^[^|]+'
+

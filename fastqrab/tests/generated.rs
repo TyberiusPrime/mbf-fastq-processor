@@ -531,6 +531,17 @@ fn test_cases_x_error_handling_x_bam_x_read_name_non_printable() {
 
 #[test]
 
+fn test_cases_x_error_handling_x_broken_input_validate_segment_called() {
+    println!("Test case is in: test_cases/error_handling/broken_input_validate_segment_called");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/broken_input_validate_segment_called"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_error_handling_x_declared_tag_an_int() {
     println!("Test case is in: test_cases/error_handling/declared_tag_an_int");
     run_test(

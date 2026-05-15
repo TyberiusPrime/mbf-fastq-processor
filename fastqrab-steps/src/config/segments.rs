@@ -129,57 +129,57 @@ impl ValidateSegment for TomlValue<MustAdapt<String, SegmentIndexOrAll>> {
 impl ValidateSegment for TomlValue<MustAdapt<String, SegmentOrNameIndex>> {
     #[track_caller]
     fn validate_segment(&mut self, config: &PartialConfig) {
-        let input_def = config
-            .input
-            .as_ref()
-            .expect("validate_segment called before input definition was read");
-        let segment_order = input_def.get_segment_order();
-        let span = self.span.clone();
-        if self.is_needs_further_validation()
-            && let Some(must_adapt) = self.value.as_ref()
-        {
-            match must_adapt {
-                MustAdapt::PreVerify(str_segment) => {
-                    *self = if str_segment.eq_ignore_ascii_case("all") {
-                        TomlValue::new_validation_failed(
-                            span,
-                            "'all' segments not valid in this position".to_string(),
-                            Some(offer_alternatives("", segment_order)),
-                        )
-                    } else if let Some(query) = str_segment.strip_prefix("name:") {
-                        let segment_index = segment_order.iter().position(|x| x == query);
-                        match segment_index {
-                            Some(idx) => TomlValue::new_ok(
-                                MustAdapt::PostVerify(SegmentOrNameIndex::Name(SegmentIndex(idx))),
+        if let Some(input_def) = config.input.as_ref() {
+            let segment_order = input_def.get_segment_order();
+            let span = self.span.clone();
+            if self.is_needs_further_validation()
+                && let Some(must_adapt) = self.value.as_ref()
+            {
+                match must_adapt {
+                    MustAdapt::PreVerify(str_segment) => {
+                        *self = if str_segment.eq_ignore_ascii_case("all") {
+                            TomlValue::new_validation_failed(
                                 span,
-                            ),
-                            None => TomlValue::new_validation_failed(
-                                span,
-                                "Segment not present in [input] section".to_string(),
-                                Some(offer_alternatives(str_segment, segment_order)),
-                            ),
-                        }
-                    } else {
-                        let segment_index = segment_order.iter().position(|x| x == str_segment);
-                        match segment_index {
-                            Some(idx) => TomlValue::new_ok(
-                                MustAdapt::PostVerify(SegmentOrNameIndex::Sequence(SegmentIndex(
-                                    idx,
-                                ))),
-                                span,
-                            ),
-                            None => TomlValue::new_validation_failed(
-                                span,
-                                "Segment not present in [input] section".to_string(),
-                                Some(offer_alternatives(str_segment, segment_order)),
-                            ),
+                                "'all' segments not valid in this position".to_string(),
+                                Some(offer_alternatives("", segment_order)),
+                            )
+                        } else if let Some(query) = str_segment.strip_prefix("name:") {
+                            let segment_index = segment_order.iter().position(|x| x == query);
+                            match segment_index {
+                                Some(idx) => TomlValue::new_ok(
+                                    MustAdapt::PostVerify(SegmentOrNameIndex::Name(SegmentIndex(
+                                        idx,
+                                    ))),
+                                    span,
+                                ),
+                                None => TomlValue::new_validation_failed(
+                                    span,
+                                    "Segment not present in [input] section".to_string(),
+                                    Some(offer_alternatives(str_segment, segment_order)),
+                                ),
+                            }
+                        } else {
+                            let segment_index = segment_order.iter().position(|x| x == str_segment);
+                            match segment_index {
+                                Some(idx) => TomlValue::new_ok(
+                                    MustAdapt::PostVerify(SegmentOrNameIndex::Sequence(
+                                        SegmentIndex(idx),
+                                    )),
+                                    span,
+                                ),
+                                None => TomlValue::new_validation_failed(
+                                    span,
+                                    "Segment not present in [input] section".to_string(),
+                                    Some(offer_alternatives(str_segment, segment_order)),
+                                ),
+                            }
                         }
                     }
-                }
-                MustAdapt::PostVerify(_) => {
-                    // cov:excl-start
-                    panic!("validate_segment called on an already validated segment")
-                    // cov:excl-stop
+                    MustAdapt::PostVerify(_) => {
+                        // cov:excl-start
+                        panic!("validate_segment called on an already validated segment")
+                        // cov:excl-stop
+                    }
                 }
             }
         }
