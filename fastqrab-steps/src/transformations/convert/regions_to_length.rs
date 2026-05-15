@@ -66,36 +66,35 @@ impl Step for RegionsToLength {
         _input_info: &InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let region_values = block.tags.get(&self.in_label).cloned().expect(
+        let region_values = block.tags.get(&self.in_label).expect(
                 "ConvertRegionsToLength expects region tag to be available -should have been caught in validation. Bug",
             );
 
-        let mut lengths: Vec<TagValue> = Vec::with_capacity(region_values.len());
-        for tag_value in region_values {
-            let length = match tag_value {
-                TagValue::Location(hits) => hits
-                    .0
-                    .iter()
-                    .map(|hit| {
-                        hit.location
-                            .as_ref()
-                            .map_or_else(|| hit.sequence.len(), |loc| loc.len)
+        if let TagColumn::Location(locations) = region_values {
+            let mut lengths: Vec<_> = locations
+                .iter()
+                .map(|opt_hits| {
+                    opt_hits.as_ref().map(|hits| {
+                        hits.0
+                            .iter()
+                            .map(|hit| {
+                                hit.location
+                                    .as_ref()
+                                    .map_or_else(|| hit.sequence.len(), |loc| loc.len)
+                            })
+                            .sum::<usize>() as f64
                     })
-                    .sum::<usize>(),
-                TagValue::Missing => 0,
-                // cov:excl-start
-                other => {
-                    panic!(
-                        "ConvertRegionsToLength expected '{}' to contain region tags, found {:?}. Should have been caught in validation",
-                        self.in_label, other
-                    );
-                } // cov:excl-stop
-            };
-            #[expect(clippy::cast_precision_loss, reason = "it's going to be small enough")]
-            lengths.push(TagValue::Numeric(length as f64));
-        }
+                })
+                .collect();
 
-        block.tags.insert(self.out_label.clone(), lengths);
-        Ok((block, true))
+            block
+                .tags
+                .insert(self.out_label.clone(), TagColumn::Numeric(lengths));
+            Ok((block, true))
+        } else {
+            panic!(
+                "ConvertRegionsToLength expected tag to contain location tags. Should have been caught in validation",
+            ); // cov:excl-line
+        }
     }
 }

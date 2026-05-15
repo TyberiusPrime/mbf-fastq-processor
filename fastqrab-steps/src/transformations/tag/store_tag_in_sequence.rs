@@ -90,129 +90,83 @@ impl Step for StoreTagInSequence {
         }
 
         let mut insert_infos: Vec<Option<InsertInfo>> = Vec::with_capacity(block.len());
-
-        let error_state: RefCell<Option<anyhow::Error>> = RefCell::new(None);
-
-        block.apply_mut_with_tags(
-            &self.in_value_label,
-            &self.in_position_label,
-            |reads, value_tag, position_tag| {
-                // Obtain the bytes to insert from the value tag
-                let value_bstr = value_tag.to_bstr();
-                let insert_bytes: &[u8] = value_bstr.as_ref();
-
-                if insert_bytes.is_empty() {
-                    insert_infos.push(None);
-                    return;
-                }
-
-                // Find the location that defines the insert position
-                let Some(hits) = position_tag.as_sequence() else {
-                        insert_infos.push(None);
-                        return;
-                    };
-                match self.anchor {
-                    ReplacementAnchor::Start | ReplacementAnchor::End => {
-                        // Select the anchor hit region based on anchor direction
-                        let anchor_region: Option<(SegmentIndex, usize)> = match self.anchor {
-                            ReplacementAnchor::Start => hits
-                                .0
-                                .iter()
-                                .filter_map(|h| h.location.as_ref())
-                                .min_by_key(|loc| loc.start)
-                            .map(|loc| (loc.segment_index, loc.start)),
-                            ReplacementAnchor::End => hits
-                                .0
-                                .iter()
-                                .filter_map(|h| h.location.as_ref())
-                                .max_by_key(|loc| loc.start + loc.len)
-                                .map(|loc| (loc.segment_index, loc.start + loc.len)),
-                            ReplacementAnchor::Replace => unreachable!(), // cov:excl-line
-                        };
-
-                        let Some((seg_idx, insert_pos)) = anchor_region else {
-                                // Position tag has no location info — skip
-                                insert_infos.push(None);
-                                return;
-                        };
-
-                        let read = &mut reads[seg_idx.0];
-                        let seq = read.seq();
-
-                        // cov:excl-start
-                        assert!(insert_pos <= seq.len(),
-                                "StoreTagInSequence: insert position {insert_pos} exceeds read length \
-                                {} on segment {seg_idx}. This should have been prevent upstream and is a bug.
-                                coordinates are within the read.",
-                                seq.len(),
-                            seg_idx = seg_idx.0
-                        );
-                        // cov:excl-end
-
-                        let mut new_seq = Vec::with_capacity(seq.len() + insert_bytes.len());
-                        new_seq.extend_from_slice(&seq[..insert_pos]);
-                        new_seq.extend_from_slice(insert_bytes);
-                        new_seq.extend_from_slice(&seq[insert_pos..]);
-
-                        let qual = read.qual();
-                        let mut new_qual = Vec::with_capacity(qual.len() + insert_bytes.len());
-                        new_qual.extend_from_slice(&qual[..insert_pos]);
-                        new_qual.extend_from_slice(&vec![b'~'; insert_bytes.len()]);
-                        new_qual.extend_from_slice(&qual[insert_pos..]);
-                        read.replace_seq(&new_seq, &new_qual);
-
-
-                        insert_infos.push(Some(InsertInfo {
-                            segment_idx: seg_idx,
-                            insert_pos_left: insert_pos,
-                            insert_pos_right: insert_pos,
-                            insert_len: insert_bytes.len(),
-                        }));
-                }
-                    ReplacementAnchor::Replace => {
-                        if error_state.borrow().is_some() {
-                            // Already in error state, skip further checks
-                            insert_infos.push(None);
-                            return;
-                        }
-                        if hits.len() > 1 {
-                            *error_state.borrow_mut() = Some(anyhow!("Found a multi region location, StoreTagInSequence only works with single-region location"));
-                        }
-                        if let Some(loc) = hits.0[0].location.as_ref() {
-                            let seg_idx = loc.segment_index;
-                            let left = loc.start;
-                            let right = loc.start + loc.len;
-                            let read = &mut reads[seg_idx.0];
-                            let seq = read.seq();
-                         let mut new_seq = Vec::with_capacity(seq.len() - loc.len + insert_bytes.len());
-                        new_seq.extend_from_slice(&seq[..left]);
-                        new_seq.extend_from_slice(insert_bytes);
-                        new_seq.extend_from_slice(&seq[right..]);
-
-                        let qual = read.qual();
-                        let mut new_qual = Vec::with_capacity(qual.len()  - loc.len+ insert_bytes.len());
-                        new_qual.extend_from_slice(&qual[..left]);
-                        new_qual.extend_from_slice(&vec![b'~'; insert_bytes.len()]);
-                        new_qual.extend_from_slice(&qual[right..]);
-                        read.replace_seq(&new_seq, &new_qual);
-
-
-                        insert_infos.push(Some(InsertInfo {
-                            segment_idx: seg_idx,
-                            insert_pos_left: left,
-                            insert_pos_right: right,
-                            insert_len: insert_bytes.len(),
-                        }));
-                        }
-
-                    }
-
-                }
-            },
-        );
-        if let Some(err) = error_state.borrow().as_ref() {
-            return Err(anyhow!("Error processing StoreTagInSequence: {err}"));
-        }
+        // block.apply_mut_with_two_tags(
+        //     &self.in_value_label,
+        //     &self.in_position_label,
+        //     |reads, value_tag, position_tag| {
+        //         // Obtain the bytes to insert from the value tag
+        //         let value_bstr = value_tag.to_bstr();
+        //         let insert_bytes: &[u8] = value_bstr.as_ref();
+        //
+        //         if insert_bytes.is_empty() {
+        //             insert_infos.push(None);
+        //             return;
+        //         }
+        //
+        //         // Find the location that defines the insert position
+        //         let Some(hits) = position_tag.as_sequence() else {
+        //                 insert_infos.push(None);
+        //                 return;
+        //             };
+        //
+        //         // Select the anchor hit region based on anchor direction
+        //         let anchor_region: Option<&HitRegion> = match self.anchor {
+        //             RegionAnchor::Start => hits
+        //                 .0
+        //                 .iter()
+        //                 .filter_map(|h| h.location.as_ref())
+        //                 .min_by_key(|loc| loc.start),
+        //             RegionAnchor::End => hits
+        //                 .0
+        //                 .iter()
+        //                 .filter_map(|h| h.location.as_ref())
+        //                 .max_by_key(|loc| loc.start + loc.len),
+        //         };
+        //
+        //         let Some(region) = anchor_region else {
+        //                 // Position tag has no location info — skip
+        //                 insert_infos.push(None);
+        //                 return;
+        //         };
+        //
+        //         let insert_pos = match self.anchor {
+        //             RegionAnchor::Start => region.start,
+        //             RegionAnchor::End => region.start + region.len,
+        //         };
+        //         let seg_idx = region.segment_index.get_index();
+        //
+        //         let read = &mut reads[seg_idx];
+        //         let seq = read.seq();
+        //
+        //         // cov:excl-start
+        //         assert!(insert_pos <= seq.len(),
+        //                 "StoreTagInSequence: insert position {insert_pos} exceeds read length \
+        //                 {} on segment {seg_idx}. This should have been prevent upstream and is a bug.
+        //                 coordinates are within the read.",
+        //                 seq.len(),
+        //         );
+        //         // cov:excl-end
+        //
+        //         let mut new_seq = Vec::with_capacity(seq.len() + insert_bytes.len());
+        //         new_seq.extend_from_slice(&seq[..insert_pos]);
+        //         new_seq.extend_from_slice(insert_bytes);
+        //         new_seq.extend_from_slice(&seq[insert_pos..]);
+        //
+        //         let qual = read.qual();
+        //         let mut new_qual = Vec::with_capacity(qual.len() + insert_bytes.len());
+        //         new_qual.extend_from_slice(&qual[..insert_pos]);
+        //         new_qual.extend_from_slice(&vec![b'~'; insert_bytes.len()]);
+        //         new_qual.extend_from_slice(&qual[insert_pos..]);
+        //
+        //         read.replace_seq(&new_seq, &new_qual);
+        //
+        //         insert_infos.push(Some(InsertInfo {
+        //             segment_idx: seg_idx,
+        //             insert_pos,
+        //             insert_len: insert_bytes.len(),
+        //         }));
+        //     },
+        // );
 
         // Shift all location tags whose start is >= the insertion point, and
         // invalidate any that straddle it (start before, end after).

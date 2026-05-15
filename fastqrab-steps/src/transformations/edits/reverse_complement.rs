@@ -106,22 +106,30 @@ impl Step for ReverseComplement {
             }
             ResolvedSourceAll::Tag(tag_name) => {
                 if let Some(hits) = block.tags.get_mut(tag_name) {
-                    for tag_val in hits.iter_mut() {
-                        match tag_val {
-                            TagValue::Missing => {}
-                            TagValue::Location(hits) => {
-                                for hit_region in &mut hits.0 {
-                                    for ii in 0..hit_region.sequence.len() {
-                                        hit_region.sequence[ii] =
-                                            reverse_complement_iupac(&[hit_region.sequence[ii]])[0];
+                    match hits {
+                        TagColumn::Location(items) => {
+                            for hits in items.iter_mut() {
+                                if let Some(hits) = hits.as_mut() {
+                                    for hit_region in &mut hits.0 {
+                                        for ii in 0..hit_region.sequence.len() {
+                                            hit_region.sequence[ii] =
+                                                reverse_complement_iupac(
+                                                    &[hit_region.sequence[ii]],
+                                                )[0];
+                                        }
                                     }
                                 }
                             }
-                            TagValue::String(bstring) => {
-                                *bstring = reverse_complement_iupac(bstring).into();
-                            }
-                            TagValue::Numeric(_) | TagValue::Bool(_) => unreachable!(), // cov:excl-line
                         }
+
+                        TagColumn::String(bstrings) => {
+                            for bstring in bstrings.iter_mut() {
+                                *bstring =
+                                    bstring.map(|bstring| reverse_complement_iupac(&bstring).into());
+                            }
+                        }
+
+                        TagColumn::Numeric(_) | TagColumn::Bool(_) => unreachable!(), // cov:excl-line
                     }
                 } // cov:excl-line    
             }

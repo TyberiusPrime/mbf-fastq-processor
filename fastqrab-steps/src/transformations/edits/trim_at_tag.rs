@@ -89,10 +89,10 @@ impl Step for TrimAtTag {
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let error_encountered = std::cell::RefCell::new(Option::<String>::None);
-        block.apply_mut_with_tag(
+        block.apply_mut_with_location_tag(
             &self.in_label,
-            |reads, tag_hit| {
-                if let Some(hit) = tag_hit.as_sequence() {
+            |reads, hit| {
+                if let Some(hit) = hit {
                     if hit.0.len() > 1 {
                                 *error_encountered.borrow_mut() = Some(
                                 "TrimAtTag only supports Tags that cover one single region. Could be extended to multiple hits within one target, but not to multiple hits in multiple targets.".to_string());
@@ -114,18 +114,20 @@ impl Step for TrimAtTag {
             return Err(anyhow::anyhow!("{error_msg}"));
         }
 
-        let mut cut_locations: Vec<TagValue> = {
+        let mut cut_locations: TagColumn= {
             block
                 .tags
                 .extract_if(.., |k, _v| k == &self.in_label)
                 .next()
                 .map(|(_k, v)| v)
                 .expect("in_label tag must exist in block")
+                .as_locations()
+                .expect("Expected to be location tag, check verify")
         };
         if let Some(target) = cut_locations
             .iter()
             //first not none
-            .filter_map(|tag_val| tag_val.as_sequence())
+            .filter_map(|tag_val| tag_val.as_ref())
             // that has locations
             .filter_map(|hit| hit.0.first())
             //and the target from that

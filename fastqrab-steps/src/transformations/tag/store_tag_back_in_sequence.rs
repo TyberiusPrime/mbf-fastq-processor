@@ -54,8 +54,8 @@ impl Step for StoreTagBackInSequence {
         let mut what_happend = Vec::with_capacity(block.len());
         let error_encountered = std::cell::RefCell::new(Option::<String>::None);
 
-        block.apply_mut_with_tag(&self.in_label, |reads, tag_val| {
-            if let Some(hit) = tag_val.as_sequence() {
+        block.apply_mut_with_location_tag(&self.in_label, |reads, hit| {
+            if let Some(hit) = hit {
                 let mut kept_size  = true;
                 for region in &hit.0 {
                     let location = region.location.as_ref();

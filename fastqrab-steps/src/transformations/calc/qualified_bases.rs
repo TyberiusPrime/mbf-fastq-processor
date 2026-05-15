@@ -108,11 +108,11 @@ impl Step for QualifiedBases {
                 Operator::AboveOrEqual => it.map(|x| usize::from(*x >= threshold)).sum(),
                 Operator::BelowOrEqual => it.map(|x| usize::from(*x <= threshold)).sum(),
             };
-            if relative {
+            Some(if relative {
                 count as f64 / read.len() as f64
             } else {
                 count as f64
-            }
+            })
         };
 
         extract_numeric_tags_plus_all(

@@ -261,37 +261,20 @@ impl Step for Demultiplex {
             .take()
             .unwrap_or_else(|| vec![0; block.len()]);
 
-        for (ii, tag_value) in hits.iter().enumerate() {
-            let key: BString = match tag_value {
-                TagValue::Location(hits) => hits.joined_sequence(None).into(),
-                TagValue::String(bstring) => bstring.clone(),
-                TagValue::Bool(bool_val) => {
-                    if *bool_val {
-                        b"true".into()
-                    } else {
-                        b"false".into()
-                    }
-                }
-                TagValue::Missing => {
-                    continue;
-                } // leave at 0.
-                // cov:excl-start
-                TagValue::Numeric(_) => {
-                    unreachable!();
-                } // cov:excl-stop
-            };
-            match self.lookup_mode {
-                LookupMode::Lookup => {
-                    if let Some(tag) = demultiplex_info.barcode_to_tag(&key) {
-                        output_tags[ii] |= tag;
-                        if tag > 0 {
-                            self.any_hit_observed
-                                .store(true, std::sync::atomic::Ordering::Relaxed);
+        for (ii, key) in hits.iter_stringified().enumerate() {
+            if let Some(key) = key {
+                match self.lookup_mode {
+                    LookupMode::Lookup => {
+                        if let Some(tag) = demultiplex_info.barcode_to_tag(&key) {
+                            output_tags[ii] |= tag;
+                            if tag > 0 {
+                                self.any_hit_observed
+                                    .store(true, std::sync::atomic::Ordering::Relaxed);
+                            }
                         }
                     }
-                }
-                LookupMode::NoLookup => {
-                    if let Some(tag) = demultiplex_info
+                    LookupMode::NoLookup => {
+                        if let Some(tag) = demultiplex_info
                         .name_to_tag(std::str::from_utf8(&key).expect(
                         "Tag sequence was not utf-8, barcode names must be utf-8 unicode strings",
                     )) {
@@ -301,8 +284,9 @@ impl Step for Demultiplex {
                                 .store(true, std::sync::atomic::Ordering::Relaxed);
                         }
                     } // cov:excl-line
+                    }
                 }
-            }
+            } //else =missing, leave output tag at 0, which means unmatched
         }
 
         block.output_tags = Some(output_tags);

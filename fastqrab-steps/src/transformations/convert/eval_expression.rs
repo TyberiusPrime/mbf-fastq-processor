@@ -211,7 +211,7 @@ impl Step for Box<EvalExpression> {
         let var_names = &eval.var_names;
 
         // Get all tag data for the variables we need
-        let mut tag_data: Vec<(&str, &Vec<TagValue>)> = Vec::new();
+        let mut tag_data: Vec<(&str, &TagColumn)> = Vec::new();
 
         for var_name in var_names {
             let tag = self.var_name_to_tag.get(var_name).expect("variable name should have a corresponding tag label - should have been set in get_tag_usage");
@@ -231,34 +231,25 @@ impl Step for Box<EvalExpression> {
         }
 
         // Evaluate expression for each read
-        let mut results: Vec<TagValue> = Vec::with_capacity(block.len());
+        let mut results: Vec<_> = Vec::with_capacity(block.len());
 
         for read_idx in 0..block.len() {
             let mut vars = BTreeMap::new();
 
             // Populate vars with tag values for this read
             for (var_name, tag_values) in &tag_data {
-                let tag_value = &tag_values[read_idx];
-
-                // Convert TagValue to f64
-                let numeric_value = match tag_value {
-                    TagValue::Numeric(n) => *n,
-                    TagValue::Bool(b) => {
-                        if *b {
+                let numeric_value = match tag_values {
+                    TagColumn::Location(items) => 0.0, //any location is true.
+                    TagColumn::Bool(items) => {
+                        if items[read_idx].is_some_and(|x| x) {
                             1.0
                         } else {
                             0.0
                         }
                     }
-                    TagValue::Location(_) |  //any location is true
-                    TagValue::String(_) => { //any string is true
-                        1.0
-                    }
-                    TagValue::Missing => {
-                        0.0 //any not set locatio/string is false
-                    }
+                    TagColumn::String(bstrings) => 0.0, //any string is true
+                    TagColumn::Numeric(items) => items[read_idx].unwrap_or(0.0), //missing => false
                 };
-
                 vars.insert((*var_name).to_string(), numeric_value);
             }
 
@@ -275,21 +266,26 @@ impl Step for Box<EvalExpression> {
                 ),
                 // cov:excl-stop
             };
-
-            // Convert result to TagValue based on result_type
-            let tag_value = match self.result_type {
-                ResultType::Numeric => TagValue::Numeric(result),
-                ResultType::Bool => {
-                    // Treat 0.0 as false, any other value as true
-                    TagValue::Bool(result.abs() >= f64::EPSILON)
-                }
-            };
-
-            results.push(tag_value);
+            results.push(result);
         }
 
+        let tag_column = match self.result_type {
+            ResultType::Numeric => {
+                TagColumn::Numeric(results.into_iter().map(Option::Some).collect())
+            }
+            ResultType::Bool => {
+                // Treat 0.0 as false, any other value as true
+                TagColumn::Bool(
+                    results
+                        .into_iter()
+                        .map(|result| Some(result.abs() >= f64::EPSILON))
+                        .collect(),
+                )
+            }
+        };
+
         // Store the results
-        block.tags.insert(self.out_label.clone(), results);
+        block.tags.insert(self.out_label.clone(), tag_column);
 
         Ok((block, true))
     }

@@ -195,7 +195,7 @@ impl Step for MergeReads {
         let algorithm = self.algorithm.clone();
 
         // Track which reads were merged (if label is set)
-        let merge_status = RefCell::new(
+        let merge_status: RefCell<Option<Vec<bool>>> = RefCell::new(
             self.out_label
                 .as_ref()
                 .map(|_| Vec::with_capacity(block.len())),
@@ -277,7 +277,8 @@ impl Step for MergeReads {
         // Add merge status tag if label was specified
 
         if let Some(merge_status) = merge_status.take() {
-            let tag_values: Vec<TagValue> = merge_status.into_iter().map(TagValue::Bool).collect();
+            let tag_values: TagColumn = 
+                TagColumn::Bool(merge_status.into_iter().map(Option::Some).collect());
             block.tags.insert(
                 self.out_label
                     .as_ref()

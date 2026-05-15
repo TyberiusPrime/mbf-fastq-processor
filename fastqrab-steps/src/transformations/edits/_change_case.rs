@@ -112,15 +112,31 @@ impl Step for _ChangeCase {
             }
             ResolvedSourceAll::Tag(tag_name) => {
                 if let Some(hits) = block.tags.get_mut(tag_name) {
-                    for tag_val in hits.iter_mut() {
-                        if let TagValue::Location(hit) = tag_val {
-                            for hit_region in &mut hit.0 {
-                                for ii in 0..hit_region.sequence.len() {
-                                    hit_region.sequence[ii] =
-                                        case_converter(hit_region.sequence[ii]);
+                    match hits {
+                        TagColumn::Location(opt_locations) => {
+                            for opt_loc in opt_locations.iter_mut() {
+                                if let Some(loc) = opt_loc {
+                                    for hit_region in &mut loc.0 {
+                                        for ii in 0..hit_region.sequence.len() {
+                                            hit_region.sequence[ii] =
+                                                case_converter(hit_region.sequence[ii]);
+                                        }
+                                    }
+                                };
+                            }
+                        }
+                        TagColumn::String(opt_bstrings) => {
+                            for opt_value in opt_bstrings.iter_mut() {
+                                if let Some(value) = opt_value {
+                                    for ii in 0..value.len() {
+                                        value[ii] = case_converter(value[ii]);
+                                    }
                                 }
                             }
                         }
+                        TagColumn::Numeric(_) | TagColumn::Bool(_) => panic!(
+                            "Can't convert case on non-string tags. Should have been caught in validation"
+                        ),
                     }
                 } // cov:excl-line
             }

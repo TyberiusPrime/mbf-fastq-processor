@@ -1,3 +1,4 @@
+use fastqrab_dna::dna::TagColumn;
 use toml_pretty_deser::PartialTaggedVariant;
 
 use crate::transformations::prelude::*;
@@ -61,15 +62,12 @@ impl Step for ConvertToRate {
         _input_info: &InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let source_values: Vec<f64> = block
+        let source_values: Vec<Option<f64>> = block
             .tags
             .get(&self.in_label)
             .expect("in_label not found - should have been verified at config time")
-            .iter()
-            .map(|v| {
-                v.as_numeric()
-                    .expect("in_label should be numeric - verified at config time")
-            })
+            .iter_numeric()
+            .map(|x| x.map(|y| y))
             .collect();
 
         let mut source_iter = source_values.into_iter();
@@ -87,7 +85,7 @@ impl Step for ConvertToRate {
                         .next()
                         .expect("source and segment have same read count");
                     let len = read.seq().len() as f64;
-                    if len > 0.0 { source / len } else { 0.0 }
+                    source.map(|source| if len > 0.0 { source / len } else { 0.0 })
                 },
                 &mut block,
             );
@@ -107,13 +105,17 @@ impl Step for ConvertToRate {
                     .iter()
                     .map(|r| r.seq().len())
                     .sum::<usize>() as f64;
-                values.push(TagValue::Numeric(if total_len > 0.0 {
-                    source / total_len
-                } else {
-                    0.0
+                values.push(source.map(|source| {
+                    (if total_len > 0.0 {
+                        source / total_len
+                    } else {
+                        0.0
+                    })
                 }));
             }
-            block.tags.insert(self.out_label.clone(), values);
+            block
+                .tags
+                .insert(self.out_label.clone(), TagColumn::Numeric(values));
         }
 
         Ok((block, true))

@@ -80,19 +80,19 @@ impl Step for ExpectedError {
             &self.out_label,
             |read| {
                 if error_state.borrow().is_some() {
-                    return 0.0; // cov:excl-line
+                    return None; // cov:excl-line
                 }
-                match expected_error_for_read(read, aggregate) {
+                Some(match expected_error_for_read(read, aggregate) {
                     Ok(value) => value,
                     Err(err) => {
                         *error_state.borrow_mut() = Some(err);
                         0.0
                     }
-                }
+                })
             },
             |reads| {
                 if error_state.borrow().is_some() {
-                    return 0.0; // cov:excl-line
+                    return None; // cov:excl-line
                 }
                 let mut aggregated_value = 0.0;
                 for read in reads {
@@ -103,15 +103,14 @@ impl Step for ExpectedError {
                             }
                             ExpectedErrorAggregate::Max => {
                                 aggregated_value = aggregated_value.max(value);
-                            }
-                        },
+                            }},
                         Err(err) => {
                             *error_state.borrow_mut() = Some(err);
-                            return 0.0;
+                            return None;
                         }
                     }
                 }
-                aggregated_value
+                Some(aggregated_value)
             },
             &mut block,
         );

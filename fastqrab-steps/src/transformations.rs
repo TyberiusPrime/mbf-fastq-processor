@@ -16,7 +16,7 @@ use crate::{
 };
 use fastqrab_config::{
     DeclaredTag, RemovedTags, TagLabel, UsedTag,
-    dna::TagValue,
+    dna::TagColumn,
     segments::{ResolvedSourceNoAll, SegmentIndex},
 };
 use fastqrab_io::io::output::chunked_writer::OutputDeclaration;
@@ -459,9 +459,16 @@ fn extract_from_resolved_source(
         ResolvedSourceNoAll::Tag(tag_name) => {
             // Extract from tag - we need to get the sequence from the tag
             if let Some(tag_values) = block.tags.get(tag_name) {
-                if let Some(tag_value) = tag_values.get(read_no) {
-                    match tag_value {
-                        TagValue::Location(hits) => {
+                match block
+                    .tags
+                    .get(tag_name)
+                    .expect("Validation should have verified tag presence")
+                {
+                    TagColumn::Location(locations) => {
+                        let hits = locations
+                            .get(read_no)
+                            .expect("Tag vec length must match block length");
+                        if let Some(hits) = hits {
                             // For location tags, extract from the read sequence!
                             if let Some(hit) = hits.0.first() {
                                 if let Some(loc) = &hit.location {
@@ -499,25 +506,16 @@ fn extract_from_resolved_source(
                                 unreachable!(
                                     "Something has started to produce empty hits. Fix it or decide what to do"
                                 );
-                                // cov:excl-stop
-                                // has no hits. Fall back to string value if possible
-                                // let seq = hits.joined_sequence(None);
-                                // (
-                                //     extract_from_sequence(
-                                //         &seq,
-                                //         0,
-                                //         seq.len(),
-                                //         start,
-                                //         length,
-                                //         anchor,
-                                //     )
-                                //     .map(|x| x.0),
-                                //     None,
-                                // )
                             }
+                        } else {
+                            (None, None)
                         }
-                        TagValue::String(string_val) => {
-                            // For string tags, extract from the string value
+                    }
+                    TagColumn::String(string_vals) => {
+                        let string_val = string_vals
+                            .get(read_no)
+                            .expect("Tag vec length must match block length");
+                        if let Some(string_val) = string_val {
                             (
                                 extract_from_sequence(
                                     string_val.as_ref(),
@@ -530,18 +528,14 @@ fn extract_from_resolved_source(
                                 .map(|x| x.0),
                                 None,
                             )
+                        } else {
+                            (None, None)
                         }
-                        _ => (None, None),
                     }
-                } else {
-                    // cov:excl-start
-                    unreachable!("Tags must always match block len");
-                    // cov:excl-stop
+                    _ => {
+                        unreachable!("Tag value type should have been verified before!"); //cov:excl-line
+                    }
                 }
-            } else {
-                // cov:excl-start
-                unreachable!("Tag presence should have been verified before!");
-                // cov:excl-stop
             }
         }
         ResolvedSourceNoAll::Name {

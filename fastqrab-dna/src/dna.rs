@@ -31,6 +31,101 @@ pub struct Hit {
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct Hits(pub Vec<Hit>);
 
+#[derive(Debug, Clone)]
+pub enum TagColumn {
+    Location(Vec<Option<Hits>>),
+    String(Vec<Option<BString>>),
+    Numeric(Vec<Option<f64>>), // Todo: encode missing in some unused bits.A decorum/nanbox?
+    Bool(Vec<Option<bool>>),
+}
+
+impl TagColumn {
+    pub fn resize_with(&mut self, len: usize) {
+        fn unreachable_growth<T>() -> T {
+            panic!("Read amplification not expected. Can't resize to larger")
+        }
+        match self {
+            TagColumn::Location(items) => items.resize_with(len, unreachable_growth),
+            TagColumn::String(items) => items.resize_with(len, unreachable_growth),
+            TagColumn::Numeric(items) => items.resize_with(len, unreachable_growth),
+            TagColumn::Bool(items) => items.resize_with(len, unreachable_growth),
+        }
+    }
+    pub fn len(&self) -> usize {
+        match self {
+            TagColumn::Location(items) => items.len(),
+            TagColumn::String(items) => items.len(),
+            TagColumn::Numeric(items) => items.len(),
+            TagColumn::Bool(items) => items.len(),
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    pub fn retain<F>(&mut self, mut f: F)
+    where
+        F: FnMut() -> bool,
+    {
+        match self {
+            TagColumn::Location(items) => items.retain(|_| f()),
+            TagColumn::String(items) => items.retain(|_| f()),
+            TagColumn::Numeric(items) => items.retain(|_| f()),
+            TagColumn::Bool(items) => items.retain(|_| f()),
+        }
+    }
+
+    pub fn as_locations(&self) -> Option<&Vec<Option<Hits>>> {
+        if let TagColumn::Location(items) = self {
+            Some(items)
+        } else {
+            None
+        }
+    }
+
+    pub fn iter_locations(&self) -> impl Iterator<Item = &Option<Hits>> {
+        if let TagColumn::Location(items) = self {
+            items.iter()
+        } else {
+            panic!("iter_numeric called on a non-numeric tag column");
+        }
+    }
+
+    pub fn iter_numeric(&self) -> impl Iterator<Item = &Option<f64>> {
+        if let TagColumn::Numeric(items) = self {
+            items.iter()
+        } else {
+            panic!("iter_numeric called on a non-numeric tag column");
+        }
+    }
+
+    pub fn iter_stringified<'a>(&'a self) -> Box<dyn Iterator<Item = Option<Cow<'a, BStr>>> + 'a> {
+        match self {
+            TagColumn::Numeric(_) => unreachable!("Cant stringify numeric values"),
+            TagColumn::Bool(bools) => Box::new(bools.iter().map(|x| {
+                x.map(|y| {
+                    if y {
+                        Cow::Borrowed(BStr::new(b"true"))
+                    } else {
+                        Cow::Borrowed(BStr::new(b"false"))
+                    }
+                })
+            })),
+            TagColumn::Location(locations) => Box::new(locations.iter().map(|x| {
+                x.as_ref().map(|hits| match hits.joined_sequence_cow(None) {
+                    Cow::Borrowed(inner) => Cow::Borrowed(BStr::new(inner)),
+                    Cow::Owned(inner) => Cow::Owned(inner.into()),
+                })
+            })),
+            TagColumn::String(strings) => Box::new(strings.iter().map(|x| {
+                x.as_ref()
+                    .map(|bstring| Cow::Borrowed(BStr::new(&bstring[..])))
+            })),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Default)]
 pub enum TagValue {
     #[default]

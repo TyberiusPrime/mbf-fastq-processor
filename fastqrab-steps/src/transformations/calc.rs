@@ -1,3 +1,4 @@
+use fastqrab_dna::dna::TagColumn;
 use fastqrab_io::io::{FastQBlocksCombined, WrappedFastQRead};
 
 mod base_content;
@@ -34,25 +35,25 @@ pub(crate) fn extract_numeric_tags<F>(
     mut extractor: F,
     block: &mut FastQBlocksCombined,
 ) where
-    F: FnMut(&WrappedFastQRead) -> f64,
+    F: FnMut(&WrappedFastQRead) -> Option<f64>,
 {
     let mut values = Vec::with_capacity(block.segments[segment.get_index()].len()); //7% speed up
     let f = |read: &mut WrappedFastQRead| {
-        values.push(TagValue::Numeric(extractor(read)));
+        values.push(extractor(read));
     };
 
     block.segments[segment.get_index()].apply(f);
-    block.tags.insert(label.clone(), values);
+    block.tags.insert(label.clone(), TagColumn::Numeric(values));
 }
 
 pub(crate) fn extract_numeric_tags_plus_all<F>(
     segment: SegmentIndexOrAll,
     label: &TagLabel,
     extractor_single: F,
-    mut extractor_all: impl FnMut(&Vec<WrappedFastQRead>) -> f64,
+    mut extractor_all: impl FnMut(&Vec<WrappedFastQRead>) -> Option<f64>,
     block: &mut FastQBlocksCombined,
 ) where
-    F: FnMut(&WrappedFastQRead) -> f64,
+    F: FnMut(&WrappedFastQRead) -> Option<f64>,
 {
     if let Ok(target) = segment.try_into() as Result<SegmentIndex, _> {
         // Handle single target case
@@ -63,8 +64,8 @@ pub(crate) fn extract_numeric_tags_plus_all<F>(
         let mut block_iter = block.get_pseudo_iter();
         while let Some(molecule) = block_iter.pseudo_next() {
             let value = extractor_all(&molecule.segments);
-            values.push(TagValue::Numeric(value));
+            values.push(value);
         }
-        block.tags.insert(label.clone(), values);
+        block.tags.insert(label.clone(), TagColumn::Numeric(values));
     }
 }

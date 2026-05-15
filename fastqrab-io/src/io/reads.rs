@@ -7,7 +7,7 @@ use std::ops::Range;
 
 use fastqrab_config::{TagLabel, segments::SegmentIndexOrAll};
 use fastqrab_dna::dna::{
-    Anchor, HitRegion, Hits, TagValue, find_iupac, find_iupac_with_indel, hamming,
+    Anchor, HitRegion, Hits, TagColumn, TagValue, find_iupac, find_iupac_with_indel, hamming,
     reverse_complement_iupac,
 };
 use fastqrab_dna::segments::SegmentIndex;
@@ -1270,7 +1270,7 @@ pub struct SegmentsCombined<T> {
 pub struct FastQBlocksCombined {
     pub segments: Vec<FastQBlock>,
     pub output_tags: Option<Vec<DemultiplexTag>>, // used by Demultiplex
-    pub tags: IndexMap<TagLabel, Vec<TagValue>>,
+    pub tags: IndexMap<TagLabel, TagColumn>,
     pub is_final: bool,
     block_no: usize,
     _force_private: PhantomData<u8>,
@@ -1283,7 +1283,7 @@ impl FastQBlocksCombined {
     pub fn new(
         segments: Vec<FastQBlock>,
         output_tags: Option<Vec<DemultiplexTag>>,
-        tags: IndexMap<TagLabel, Vec<TagValue>>,
+        tags: IndexMap<TagLabel, TagColumn>,
         is_final: bool,
         block_no: usize,
     ) -> Self {
@@ -1390,9 +1390,7 @@ impl FastQBlocksCombined {
         }
         for tags in self.tags.values_mut() {
             // cov:excl-start
-            tags.resize_with(len, || {
-                panic!("Read amplification not expected. Can't resize to larger")
-            });
+            tags.resize_with(len)
             // cov:excl-stop
         }
     }
@@ -1427,47 +1425,107 @@ impl FastQBlocksCombined {
         }
     }
 
-    #[expect(clippy::needless_range_loop, reason = "False positve")]
     /// # Panics
-    /// when the tag is missing
-    pub fn apply_mut_with_tag<F>(&mut self, label: &TagLabel, mut f: F)
+    /// when the tag is missing or not a Location column
+    pub fn apply_mut_with_location_tag<F>(&mut self, label: &TagLabel, mut f: F)
     where
-        F: for<'a> FnMut(&mut [WrappedFastQReadMut<'a>], &TagValue),
+        F: for<'a> FnMut(&mut [WrappedFastQReadMut<'a>], Option<&Hits>),
     {
-        let tags = self.tags.get(label).expect("Tag must be present, bug");
-
+        let TagColumn::Location(tags) = self.tags.get(label).expect("Tag must be present, bug")
+        else {
+            panic!("Tag {label:?} is not a Location column");
+        };
         for ii in 0..self.segments[0].entries.len() {
             let mut reads: Vec<WrappedFastQReadMut> = Vec::new();
             for v in &mut self.segments {
                 reads.push(WrappedFastQReadMut(&mut v.entries[ii], &mut v.block));
             }
-            f(&mut reads, &tags[ii]);
+            f(&mut reads, tags[ii].as_ref());
             reads.clear();
         }
     }
 
     /// # Panics
-    /// when the tag is missing
-    pub fn apply_mut_with_tags<F>(&mut self, label: &TagLabel, other_label: &TagLabel, mut f: F)
+    /// when the tag is missing or not a String column
+    pub fn apply_mut_with_string_tag<F>(&mut self, label: &TagLabel, mut f: F)
     where
-        F: for<'a> FnMut(&mut [WrappedFastQReadMut<'a>], &TagValue, &TagValue),
+        F: for<'a> FnMut(&mut [WrappedFastQReadMut<'a>], Option<&BString>),
     {
-        let tags = self.tags.get(label).expect("Tag must be present, bug");
-
-        let other_tags = self
-            .tags
-            .get(other_label)
-            .expect("Tag must be present, bug");
-
+        let TagColumn::String(tags) = self.tags.get(label).expect("Tag must be present, bug")
+        else {
+            panic!("Tag {label:?} is not a String column");
+        };
         for ii in 0..self.segments[0].entries.len() {
             let mut reads: Vec<WrappedFastQReadMut> = Vec::new();
             for v in &mut self.segments {
                 reads.push(WrappedFastQReadMut(&mut v.entries[ii], &mut v.block));
             }
-            f(&mut reads, &tags[ii], &other_tags[ii]);
+            f(&mut reads, tags[ii].as_ref());
             reads.clear();
         }
     }
+
+    /// # Panics
+    /// when the tag is missing or not a Numeric column
+    pub fn apply_mut_with_numeric_tag<F>(&mut self, label: &TagLabel, mut f: F)
+    where
+        F: for<'a> FnMut(&mut [WrappedFastQReadMut<'a>], Option<f64>),
+    {
+        let TagColumn::Numeric(tags) = self.tags.get(label).expect("Tag must be present, bug")
+        else {
+            panic!("Tag {label:?} is not a Numeric column");
+        };
+        for ii in 0..self.segments[0].entries.len() {
+            let mut reads: Vec<WrappedFastQReadMut> = Vec::new();
+            for v in &mut self.segments {
+                reads.push(WrappedFastQReadMut(&mut v.entries[ii], &mut v.block));
+            }
+            f(&mut reads, tags[ii]);
+            reads.clear();
+        }
+    }
+
+    /// # Panics
+    /// when the tag is missing or not a Bool column
+    pub fn apply_mut_with_bool_tag<F>(&mut self, label: &TagLabel, mut f: F)
+    where
+        F: for<'a> FnMut(&mut [WrappedFastQReadMut<'a>], Option<bool>),
+    {
+        let TagColumn::Bool(tags) = self.tags.get(label).expect("Tag must be present, bug") else {
+            panic!("Tag {label:?} is not a Bool column");
+        };
+        for ii in 0..self.segments[0].entries.len() {
+            let mut reads: Vec<WrappedFastQReadMut> = Vec::new();
+            for v in &mut self.segments {
+                reads.push(WrappedFastQReadMut(&mut v.entries[ii], &mut v.block));
+            }
+            f(&mut reads, tags[ii]);
+            reads.clear();
+        }
+    }
+
+    // /// # Panics
+    // /// when the tag is missing
+    // pub fn apply_mut_with_two_tags<F>(&mut self, label: &TagLabel, other_label: &TagLabel, mut f: F)
+    // where
+    //     F: for<'a> FnMut(&mut [WrappedFastQReadMut<'a>], &TagValue, &TagValue),
+    // {
+    //     let tags = self.tags.get(label).expect("Tag must be present, bug");
+    //
+    //     let other_tags = self
+    //         .tags
+    //         .get(other_label)
+    //         .expect("Tag must be present, bug");
+    //
+    //     for ii in 0..self.segments[0].entries.len() {
+    //         let mut reads: Vec<WrappedFastQReadMut> = Vec::new();
+    //         for v in &mut self.segments {
+    //             reads.push(WrappedFastQReadMut(&mut v.entries[ii], &mut v.block));
+    //         }
+    //         f(&mut reads, &tags[ii], &other_tags[ii]);
+    //         reads.clear();
+    //     }
+    // }
 
     /// # Panics
     /// When the segments have different read counts
@@ -1588,7 +1646,7 @@ impl FastQBlocksCombined {
         }
         for tag_entries in self.tags.values_mut() {
             let mut iter = keep.iter();
-            tag_entries.retain(|_| {
+            tag_entries.retain(|| {
                 *iter
                     .next()
                     .expect("iterator has exact number of elements matching filter")
@@ -1614,46 +1672,48 @@ impl FastQBlocksCombined {
     ) {
         let reads = &self.segments[segment.get_index()].entries;
 
-        for value in self.tags.values_mut() {
-            for (ii, tag_val) in value.iter_mut().enumerate() {
-                // Skip if condition is present and false for this read
-                if let Some(condition) = condition
-                    && !condition[ii]
-                {
-                    continue;
-                }
+        for values in self.tags.values_mut() {
+            if let TagColumn::Location(values) = values {
+                for (ii, tag_val) in values.iter_mut().enumerate() {
+                    // Skip if condition is present and false for this read
+                    if let Some(condition) = condition
+                        && !condition[ii]
+                    {
+                        continue;
+                    }
 
-                let read_length = reads[ii].seq.len();
-                if let TagValue::Location(hits) = tag_val {
-                    let mut any_none = false;
-                    for hit in &mut hits.0 {
-                        if let Some(location) = hit.location.as_mut()
-                            && location.segment_index == segment
-                        {
-                            let sequence = &hit.sequence;
-                            match f(location, ii, sequence, read_length) {
-                                NewLocation::Remove => {
-                                    hit.location = None;
-                                    any_none = true;
-                                    break;
-                                }
-                                NewLocation::Keep => {}
-                                NewLocation::New(new) => *location = new,
-                                NewLocation::NewWithSeq(new_loc, new_seq) => {
-                                    *location = new_loc;
-                                    hit.sequence = new_seq;
+                    let read_length = reads[ii].seq.len();
+                    if let Some(hits) = tag_val {
+                        let mut any_none = false;
+                        for hit in &mut hits.0 {
+                            if let Some(location) = hit.location.as_mut()
+                                && location.segment_index == segment
+                            {
+                                let sequence = &hit.sequence;
+                                match f(location, ii, sequence, read_length) {
+                                    NewLocation::Remove => {
+                                        hit.location = None;
+                                        any_none = true;
+                                        break;
+                                    }
+                                    NewLocation::Keep => {}
+                                    NewLocation::New(new) => *location = new,
+                                    NewLocation::NewWithSeq(new_loc, new_seq) => {
+                                        *location = new_loc;
+                                        hit.sequence = new_seq;
+                                    }
                                 }
                             }
                         }
-                    }
-                    // if any are no longer present, remove all location spans
-                    if any_none {
-                        for hit in &mut hits.0 {
-                            hit.location = None;
+                        // if any are no longer present, remove all location spans
+                        if any_none {
+                            for hit in &mut hits.0 {
+                                hit.location = None;
+                            }
                         }
+                    } else {
+                        // no hits, so no location to change
                     }
-                } else {
-                    // no hits, so no location to change
                 }
             }
         }
@@ -1680,40 +1740,42 @@ impl FastQBlocksCombined {
     ) {
         //possibly we might need this to pass in all 4 reads.
         //but for now, it's only being used by r1/r2 swap.
-        for value in self.tags.values_mut() {
-            for (ii, tag_val) in value.iter_mut().enumerate() {
-                if let TagValue::Location(hits) = tag_val {
-                    let mut any_none = false;
-                    for hit in &mut hits.0 {
-                        if let Some(location) = hit.location.as_mut() {
-                            match f(location, ii) {
-                                NewLocation::Remove => {
-                                    hit.location = None;
-                                    any_none = true;
-                                    break;
+        for values in self.tags.values_mut() {
+            if let TagColumn::Location(values) = values {
+                for (ii, tag_val) in values.iter_mut().enumerate() {
+                    if let Some(hits) = tag_val {
+                        let mut any_none = false;
+                        for hit in &mut hits.0 {
+                            if let Some(location) = hit.location.as_mut() {
+                                match f(location, ii) {
+                                    NewLocation::Remove => {
+                                        hit.location = None;
+                                        any_none = true;
+                                        break;
+                                    }
+                                    NewLocation::Keep => {}
+                                    NewLocation::New(new) => *location = new,
+                                    // cov:excl-start
+                                    NewLocation::NewWithSeq(_new_loc, _new_seq) => {
+                                        unreachable!(
+                                            "Shouldn't return a new seq when you haven't seen the old.\
+                                            you need to change the callback fucntion to also see the seq!"
+                                        )
+                                        // *location = new_loc;
+                                        // hit.sequence = new_seq;
+                                    } // cov:excl-stop
                                 }
-                                NewLocation::Keep => {}
-                                NewLocation::New(new) => *location = new,
-                                // cov:excl-start
-                                NewLocation::NewWithSeq(_new_loc, _new_seq) => {
-                                    unreachable!(
-                                        "Shouldn't return a new seq when you haven't seen the old.\
-                                        you need to change the callback fucntion to also see the seq!"
-                                    )
-                                    // *location = new_loc;
-                                    // hit.sequence = new_seq;
-                                } // cov:excl-stop
                             }
                         }
-                    }
-                    // if any are no longer present, remove all location spans
-                    if any_none {
-                        for hit in &mut hits.0 {
-                            hit.location = None;
+                        // if any are no longer present, remove all location spans
+                        if any_none {
+                            for hit in &mut hits.0 {
+                                hit.location = None;
+                            }
                         }
+                    } else {
+                        // no hits, so no location to change
                     }
-                } else {
-                    // no hits, so no location to change
                 }
             }
         }

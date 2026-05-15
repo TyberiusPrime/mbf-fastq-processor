@@ -8,8 +8,18 @@
     search = 'CTN'
     max_mismatches = 0
 [[step]]
+  action = 'ExtractRegex'
+  query = '.+'
+  source = 'name:read1'
+  out_label = 'name_tag'
+
+[[step]]
     action = 'Lowercase'
     source = 'tag:test'
+
+[[step]]
+    action = 'Lowercase'
+    source = 'tag:name_tag'
 
 [[step]]
     action = 'StoreTagInComment'

@@ -144,7 +144,7 @@ impl Step for Kmers {
             )]
             |read| {
                 let count = count_kmers_in_database(read.seq(), k, kmer_db);
-                count as f64
+                Some(count as f64)
             },
             #[expect(
                 clippy::cast_precision_loss,
@@ -155,7 +155,7 @@ impl Step for Kmers {
                     .iter()
                     .map(|read| count_kmers_in_database(read.seq(), k, kmer_db))
                     .sum();
-                total_count as f64
+                Some(total_count as f64)
             },
             &mut block,
         );

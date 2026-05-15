@@ -39,8 +39,8 @@ impl Step for ReplaceTagWithLetter {
         _input_info: &InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        block.apply_mut_with_tag(&self.in_label, |reads, tag_val| {
-            if let Some(hit) = tag_val.as_sequence() {
+        block.apply_mut_with_location_tag(&self.in_label, |reads, hit| {
+            if let Some(hit) = hit {
                 for region in &hit.0 {
                     if let Some(location) = &region.location {
                         let read = &mut reads[location.segment_index.get_index()];
