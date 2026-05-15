@@ -290,6 +290,7 @@
             (pkgs.python3.withPackages (
               ps: with ps; [
                 scipy
+                anndata
                 pysam
                 pandas
                 toml

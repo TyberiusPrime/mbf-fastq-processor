@@ -42,7 +42,7 @@ fn human_fmt_usize(n: usize) -> String {
     out.chars().rev().collect()
 }
 
-fn write_binary(
+fn write_matrix(
     matrix: IndexMap<(u32, u32), u32>,
     n_barcodes: u32,
     n_cells: u32,
@@ -53,7 +53,7 @@ fn write_binary(
     let total: usize = matrix.len();
     writer.write_text_record(format!("{n_barcodes} {n_cells} {total}\n").as_bytes())?;
     for ((gene, cell), count) in matrix {
-        writer.write_text_record(format!("{} {} {}\n", gene, cell, count).as_bytes())?;
+        writer.write_text_record(format!("{} {} {}\n", gene + 1, cell + 1, count).as_bytes())?;
     }
     Ok(())
 }
@@ -616,7 +616,7 @@ impl Step for StoreSingleCellMatrix {
                         reads_lost_due_to_umi_cluster,
                     ));
 
-                    write_binary(
+                    write_matrix(
                         matrix,
                         self.cell_lookup.len() as u32 + 1, //+1 for unmatched. Cast is safe, we
                         //checked this before
