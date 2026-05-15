@@ -5,6 +5,7 @@ mod head;
 mod reservoir_sample;
 mod sample;
 mod skip;
+mod tag_matches;
 
 // Re-export all public structs
 pub use by_numeric_tag::{ByNumericTag, PartialByNumericTag};
@@ -14,3 +15,4 @@ pub use head::{Head, PartialHead};
 pub use reservoir_sample::{PartialReservoirSample, ReservoirSample};
 pub use sample::{PartialSample, Sample};
 pub use skip::{PartialSkip, Skip};
+pub use tag_matches::{PartialTagMatches, TagMatches};

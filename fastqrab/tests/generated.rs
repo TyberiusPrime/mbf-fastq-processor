@@ -11675,6 +11675,17 @@ fn test_cases_x_single_step_x_store_tag_x_store_tags_in_table_no_tags_defined() 
 
 #[test]
 
+fn test_cases_x_single_step_x_tag_matches_x_basic() {
+    println!("Test case is in: test_cases/single_step/tag_matches/basic");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/tag_matches/basic"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_transform_x_max_len() {
     println!("Test case is in: test_cases/single_step/transform/max_len");
     run_test(

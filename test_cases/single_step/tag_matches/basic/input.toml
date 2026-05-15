@@ -1,0 +1,69 @@
+[input]
+  read1 = 'input_read1.fq'
+  read2 = 'input_read2.fq'
+
+
+[output]
+  prefix = 'output'
+  format = 'None'
+  
+[[step]]
+  action  = 'TagMatches'
+  out_label = 'trname1'
+  source = 'name:read1'
+  accepted = ['alpha1', 'beta1', 'nosuch']
+
+[[step]]
+  action  = 'TagMatches'
+  out_label = 'trname2'
+  source = 'name:read2'
+  accepted = ['alpha2', 'beta2', 'gamma2']
+
+[[step]]
+  action  = 'TagMatches'
+  out_label = 'trread1'
+  source = 'read1'
+  accepted = ['AAAA', 'TTTT']
+
+[[step]]
+  action  = 'TagMatches'
+  out_label = 'trread2'
+  source = 'read2'
+  accepted = ['CCCC', 'GGGg', 'tttt']
+
+
+[[step]]
+  action = 'ExtractRegion'
+  start = 0
+  len = 2
+  anchor ='left'
+  source ='read1'
+  out_label = 'region1'
+
+
+[[step]]
+  action = 'ExtractRegex'
+  query = '^.'
+  source ='name:read1'
+  out_label = 'regex1'
+
+[[step]]
+  action  = 'TagMatches'
+  out_label = 'tmregion'
+  source = 'tag:region1'
+  accepted = ['AA', 'TT']
+
+[[step]]
+  action  = 'TagMatches'
+  out_label = 'tmregex'
+  source = 'tag:regex1'
+  accepted = ['a', 'b']
+
+[[step]]
+  action = 'StoreTagsInTable'
+
+
+
+
+
+

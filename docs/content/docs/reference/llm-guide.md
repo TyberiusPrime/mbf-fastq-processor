@@ -893,6 +893,19 @@ Mark reads whose sequences/names/tags appear in another file.
     other_readname_end_char = '/' # TYPE: char, OPTIONAL
 ```
 
+### Matches
+
+ Mark if a tag matches one these values 
+
+```
+[[step]]
+  action  = 'Matches'
+  out_label = 'of_interest'   # Type: string, required
+  source = 'name:read1' # TYPE: segment name, 'All', 'tag:mytag', or 'name:segment', REQUIRED
+  accepted = ['alpha1', 'beta1', 'nosuch'] # Type [string], list of accepted values
+```
+
+
 ## Filtering Steps
 
 Remove or keep reads based on criteria. All filters have `keep_or_remove` parameter:

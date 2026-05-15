@@ -1,0 +1,5 @@
+ReadName	regex1	region1	tmregex	tmregion	trname1	trname2	trread1	trread2
+alpha1	a	AA	1	1	1	1	1	0
+beta1	b	CC	1	0	1	1	0	1
+gamma1	g	GG	0	0	0	1	0	0
+delta1	d	TT	0	1	0	0	1	1

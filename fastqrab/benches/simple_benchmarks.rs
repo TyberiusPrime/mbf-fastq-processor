@@ -439,6 +439,20 @@ fn benchmark_key_steps(c: &mut Criterion) {
             thread_count,
         ),
         BenchmarkConfig::new(
+            "Matches",
+            r#"[[step]]
+    action = "Matches"
+    source = "read1"
+    accepted = 'AGTC'
+    out_label = "hit"
+
+
+[[step]]
+    action = "ForgetAllTags""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
             "ExtractIUPAC",
             r#"[[step]]
     action = "ExtractIUPAC"

@@ -279,6 +279,8 @@ pub enum Transformation {
     TrimAtTag(edits::TrimAtTag),
     MergeReads(edits::MergeReads),
     //
+    #[tpd(alias = "TagMatches")]
+    Matches(filters::TagMatches),
     FilterByTag(filters::ByTag),
     FilterByNumericTag(filters::ByNumericTag),
     //

@@ -400,14 +400,14 @@ impl Step for StoreSingleCellMatrix {
             .expect("gene_barcodes section missing from InputInfo");
 
         // cov:excl-start
-        if cell_bc.seq_to_name.len() >= u32::MAX as usize {
+        if cell_bc.seq_to_name.len() >= (u32::MAX - 1) as usize {
             anyhow::bail!(
                 "Too many cell barcodes: {} (max {})",
                 cell_bc.seq_to_name.len(),
                 u32::MAX as usize - 1
             );
         }
-        if gene_bc.seq_to_name.len() >= u32::MAX as usize {
+        if gene_bc.seq_to_name.len() >= (u32::MAX - 1) as usize {
             anyhow::bail!(
                 "Too many gene barcodes: {} (max {})",
                 gene_bc.seq_to_name.len(),
@@ -583,10 +583,15 @@ impl Step for StoreSingleCellMatrix {
                         *self.max_umi_len.lock().expect("lock poisoned") as u16,
                     );
 
-                    let unique_genes: FxHashSet<_> =
-                        matrix.keys().filter(|(gene, _)| *gene != 0).collect();
-                    let unique_cells: FxHashSet<_> =
-                        matrix.keys().filter(|(_, cell)| *cell != 0).collect();
+                    let unique_genes: FxHashSet<_> = matrix
+                        .keys()
+                        .filter_map(|(gene, _)| if *gene != 0 { Some(gene) } else { None })
+                        .collect();
+
+                    let unique_cells: FxHashSet<_> = matrix
+                        .keys()
+                        .filter_map(|(_, cell)| if *cell != 0 { Some(cell) } else { None })
+                        .collect();
 
                     let matrix_matched = matrix
                         .keys()
@@ -618,9 +623,10 @@ impl Step for StoreSingleCellMatrix {
 
                     write_matrix(
                         matrix,
-                        self.cell_lookup.len() as u32 + 1, //+1 for unmatched. Cast is safe, we
+                        //+1 for unmatched. Cast is safe, we
                         //checked this before
                         self.gene_lookup.len() as u32 + 1,
+                        self.cell_lookup.len() as u32 + 1,
                         writer,
                     )?;
                 }
