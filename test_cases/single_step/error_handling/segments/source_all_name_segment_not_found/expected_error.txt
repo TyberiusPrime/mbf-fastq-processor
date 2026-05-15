@@ -10,7 +10,7 @@ Error 1/1
 7 │     source = 'name:read3'
   ┆              ──────┬─────
   ┆                    │
-  ┆                    ╰────── Segment not found
+  ┆                    ╰────── Segment not present in [input] section
 ──╯
 Hint: Available segments: [read1, read2]
       See https://doc_url.example/version-stripped-from-test/docs/redirects/Uppercase

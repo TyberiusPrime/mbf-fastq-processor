@@ -1,0 +1,42 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[output]
+    prefix = 'output'
+    format = 'none'
+    compression = 'raw'
+
+[[step]]
+    action = 'ExtractRegion'
+    source = "read1"
+    anchor = "start"
+    start = 0
+    length = 50
+    out_label = 'query_seq'
+
+[[step]]
+    action = 'HammingCorrect'
+    output = 'label'
+    on_tie = 'fail'
+    on_no_match = 'remove'
+    in_label = 'query_seq'
+    out_label = 'ref_name'
+    barcodes = 'ref_barcodes'
+    max_hamming_distance = 0
+
+[[step]]
+  action = 'ExtractRegex'
+  out_label = 'gene'
+  source = 'tag:ref_name'
+  query = "_(.+)"
+  replacement = "$1"
+
+[barcodes.ref_barcodes]
+    from_file = {
+	    filename = 'input_reference.fa',
+	    read_comment_character = ' '
+  }
+  expand_iupac = false
+
+[[step]]
+    action = 'StoreTagsInTable'

@@ -29,7 +29,7 @@ pub struct Regex {
 
     #[tpd(adapt_in_verify(String), alias = "segment")]
     #[schemars(with = "String")]
-    source: SegmentOrNameIndex,
+    source: ResolvedSourceNoAll,
 }
 
 impl VerifyIn<PartialConfig> for PartialRegex {
@@ -102,20 +102,33 @@ impl TagUser for PartialTaggedVariant<PartialRegex> {
                     }));
                 }
             }
+            let declared_tag = inner.out_label.to_declared_tag({
+                if let Some(MustAdapt::PostVerify(source)) = inner.source.as_ref() {
+                    match source {
+                        ResolvedSourceNoAll::Segment(_segment_index) => TagValueType::Location,
+                        ResolvedSourceNoAll::Tag(_tag_label) => TagValueType::String,
+                        ResolvedSourceNoAll::Name { .. } => TagValueType::String,
+                    }
+                } else {
+                    TagValueType::Location
+                }
+            });
+            if let Some(MustAdapt::PostVerify(ResolvedSourceNoAll::Tag(tag_name))) =
+                inner.source.as_ref()
+            {
+                used_tags.push(Some(UsedTag {
+                    name: tag_name.clone(),
+                    accepted_tag_types: &[TagValueType::String, TagValueType::Location],
+                    toml_source: Rc::new(RefCell::new((
+                        &mut inner.source.state,
+                        &mut inner.source.help,
+                    ))),
+                    further_help: None,
+                }));
+            }
 
             Some(TagUsageInfo {
-                declared_tag: inner.out_label.to_declared_tag(
-                    if inner
-                        .source
-                        .as_ref()
-                        .and_then(|x| x.as_ref_post())
-                        .is_some_and(SegmentOrNameIndex::is_name)
-                    {
-                        TagValueType::String
-                    } else {
-                        TagValueType::Location
-                    },
-                ),
+                declared_tag,
                 used_tags,
                 ..Default::default()
             })
@@ -132,71 +145,108 @@ impl Step for Regex {
         _input_info: &InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let segment_or_name = self.source;
-        let segment_index = segment_or_name.get_segment_index();
+        fn apply_regexp(
+            search: &regex::bytes::Regex,
+            replacement: &BString,
+            haystack: &[u8],
+            read_no: usize,
+            block_tags: &IndexMap<TagLabel, Vec<TagValue>>,
+        ) -> Option<Vec<u8>> {
+            let re_hit = search.captures(haystack);
+            if let Some(hit) = re_hit {
+                let mut out = Vec::new();
+                //let g = hit.get(0).expect("Regex should always match");
+                hit.expand(&replacement, &mut out);
+                for (tag_name, tags) in block_tags {
+                    // only those we listed in use_tags.
+                    let query = format!("[[{tag_name}]]");
+                    let value = tags[read_no].to_bstr();
+                    out = out.replace(query, value.as_bytes());
+                }
+                Some(out)
+            } else {
+                None
+            }
+        }
+        let source = &self.source;
 
-        if segment_or_name.is_name() {
-            extract_string_tags_using_tags(
-                &mut block,
-                segment_index,
-                &self.out_label,
-                |read, read_no, block_tags| {
-                    // Choose source based on whether it's name or sequence
-                    let source = read.name();
+        match source {
+            ResolvedSourceNoAll::Tag(tag_name) => {
+                extract_string_tags_using_tags(
+                    &mut block,
+                    SegmentIndex::first(),
+                    &self.out_label,
+                    |_read, read_no, block_tags| {
+                        // Choose source based on whether it's name or sequence
+                        let haystack =
+                            block_tags.get(tag_name).expect("Tag not present?!")[read_no].to_bstr();
+                        apply_regexp(
+                            &self.search,
+                            &self.replacement,
+                            &haystack,
+                            read_no,
+                            block_tags,
+                        )
+                        .map(|x| x.into())
+                    },
+                );
+            }
+            ResolvedSourceNoAll::Name { segment_index, .. } => {
+                extract_string_tags_using_tags(
+                    &mut block,
+                    *segment_index,
+                    &self.out_label,
+                    |read, read_no, block_tags| {
+                        // Choose source based on whether it's name or sequence
+                        let haystack = read.name();
+                        apply_regexp(
+                            &self.search,
+                            &self.replacement,
+                            haystack,
+                            read_no,
+                            block_tags,
+                        )
+                        .map(|x| x.into())
+                    },
+                );
+            }
+            ResolvedSourceNoAll::Segment(segment_index) => {
+                extract_region_tags_using_tags(
+                    &mut block,
+                    *segment_index,
+                    &self.out_label,
+                    |read, read_no, block_tags| {
+                        // Choose source based on whether it's name or sequence
+                        let haystack = read.seq();
 
-                    let re_hit = self.search.captures(source);
-                    if let Some(hit) = re_hit {
-                        let mut replacement = Vec::new();
-                        //let g = hit.get(0).expect("Regex should always match");
-                        hit.expand(&self.replacement, &mut replacement);
-                        for (tag_name, tags) in block_tags {
-                            // only those we listed in use_tags.
-                            let query = format!("[[{tag_name}]]");
-                            let value = tags[read_no].to_bstr();
-                            replacement = replacement.replace(query, value.as_bytes());
-                        }
-                        Some(replacement.into())
-                    } else {
-                        None
-                    }
-                },
-            );
-        } else {
-            extract_region_tags_using_tags(
-                &mut block,
-                segment_index,
-                &self.out_label,
-                |read, read_no, block_tags| {
-                    // Choose source based on whether it's name or sequence
-                    let source = read.seq();
-
-                    let re_hit = self.search.captures(source);
-                    if let Some(hit) = re_hit {
-                        let mut replacement = Vec::new();
-                        let g = hit.get(0).expect("Regex should always match");
-                        //dbg!(&self.replacement);
-                        hit.expand(&self.replacement, &mut replacement);
-                        //dbg!(bstr::BStr::new(&replacement));
-                        for (tag_name, tags) in block_tags {
-                            // only those we listed in use_tags.
-                            let query = format!("[[{tag_name}]]");
-                            let value = tags[read_no].to_bstr();
-                            // dbg!(&query, &tags[read_no], &value);
-                            //  dbg!(bstr::BStr::new(&replacement));
-                            replacement = replacement.replace(query, value.as_bytes());
+                        let re_hit = self.search.captures(haystack);
+                        if let Some(hit) = re_hit {
+                            let mut replacement = Vec::new();
+                            let g = hit.get(0).expect("Regex should always match");
+                            //dbg!(&self.replacement);
+                            hit.expand(&self.replacement, &mut replacement);
                             //dbg!(bstr::BStr::new(&replacement));
+                            for (tag_name, tags) in block_tags {
+                                // only those we listed in use_tags.
+                                let query = format!("[[{tag_name}]]");
+                                let value = tags[read_no].to_bstr();
+                                // dbg!(&query, &tags[read_no], &value);
+                                //  dbg!(bstr::BStr::new(&replacement));
+                                replacement = replacement.replace(query, value.as_bytes());
+                                //dbg!(bstr::BStr::new(&replacement));
+                            }
+                            Some(Hits::new(
+                                g.start(),
+                                g.end() - g.start(),
+                                *segment_index,
+                                replacement.into(),
+                            ))
+                        } else {
+                            None
                         }
-                        Some(Hits::new(
-                            g.start(),
-                            g.end() - g.start(),
-                            segment_index,
-                            replacement.into(),
-                        ))
-                    } else {
-                        None
-                    }
-                },
-            );
+                    },
+                );
+            }
         }
         Ok((block, true))
     }

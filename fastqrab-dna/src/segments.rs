@@ -10,4 +10,8 @@ impl SegmentIndex {
     pub fn get_index(&self) -> usize {
         self.0
     }
+
+    pub fn first() -> SegmentIndex {
+        SegmentIndex(0)
+    }
 }

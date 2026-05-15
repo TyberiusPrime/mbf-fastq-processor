@@ -11,7 +11,11 @@ pub use fastqrab_config::{
     dna::{Hit, HitRegion, Hits, TagValue},
     offer_alternatives,
     segments::{
-        ResolvedSourceAll, ResolvedSourceNoAll, SegmentIndex, SegmentIndexOrAll, SegmentOrNameIndex,
+        ResolvedSourceAll,
+        ResolvedSourceNoAll,
+        SegmentIndex,
+        SegmentIndexOrAll,
+        //SegmentOrNameIndex,
     },
 };
 

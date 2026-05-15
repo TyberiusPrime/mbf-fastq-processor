@@ -428,7 +428,7 @@ Extract using regular expression.
     action = 'ExtractRegex'
     search = '^CT(..)CT'           # TYPE: regex string, REQUIRED
     replacement = '$1'             # TYPE: string, REQUIRED, use $1, $2 for groups
-    source = 'read1'               # TYPE: segment name or 'name:<segment>', REQUIRED
+    source = 'read1'               # TYPE: segment name or 'name:<segment>' or 'tag:<tag_label>' REQUIRED
     out_label = 'extracted'        # TYPE: string, REQUIRED
 ```
 

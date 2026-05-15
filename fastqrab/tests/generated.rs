@@ -8160,6 +8160,17 @@ fn test_cases_x_single_step_x_extraction_x_extract_regex_x_extract_regex_no_repl
 
 #[test]
 
+fn test_cases_x_single_step_x_extraction_x_extract_regex_x_from_tag() {
+    println!("Test case is in: test_cases/single_step/extraction/extract_regex/from_tag");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/extraction/extract_regex/from_tag"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_extraction_x_extract_regex_x_regex_len_table() {
     println!("Test case is in: test_cases/single_step/extraction/extract_regex/regex_len_table");
     run_test(

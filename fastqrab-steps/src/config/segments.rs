@@ -251,7 +251,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceNoAll>> {
                                 })
                             } else {
                                 Err(ValidationFailure::new(
-                                    "Segment not found".to_string(),
+                                    "Segment not present in [input] section".to_string(),
                                     Some(format!(
                                         "Available segments: [{}]",
                                         segment_order.join(", ")
@@ -266,7 +266,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceNoAll>> {
                             Ok(ResolvedSourceNoAll::Segment(SegmentIndex(segment_index)))
                         } else {
                             Err(ValidationFailure::new(
-                                "Segment not found".to_string(),
+                                "Segment not present in [input] section".to_string(),
                                 Some(format!(
                                     "Available segments: [{}]",
                                     segment_order.join(", ")
@@ -368,7 +368,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceAll>> {
                                 })
                             } else {
                                 Err(ValidationFailure::new(
-                                    "Segment not found".to_string(),
+                                    "Segment not present in [input] section".to_string(),
                                     Some(format!(
                                         "Available segments: [{}]",
                                         segment_order.join(", ")
@@ -387,7 +387,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceAll>> {
                             )))
                         } else {
                             Err(ValidationFailure::new(
-                                "Segment not found".to_string(),
+                                "Segment not present in [input] section".to_string(),
                                 Some(format!(
                                     "Available segments: [{}]",
                                     segment_order.join(", ")

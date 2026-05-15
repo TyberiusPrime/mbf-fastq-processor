@@ -139,7 +139,9 @@
 #    out_label = "mytag"
 #    search = '^CT(..)CT'
 #    replacement = "$1"  # optional standard regex replacement syntax
-#    source = "read1" # An input segment (to read from sequence), or name:<segment> to read from a read name.
+#    source = "read1" # An input segment (to read from sequence), 
+##                    # or name:<segment> to read from a read name.
+##                    # or tag:<tag_label> to read from a tag
 
 ## The replacement supports replacing other tag's values into your string. Use `[[tag]]` to achieve that.
 
