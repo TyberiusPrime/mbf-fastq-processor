@@ -19,3 +19,5 @@ or tag region).
 
 By Default no offset is applied, so you get the minimum ascii value. 
 To convert e.g. from Illumina PHRED bytes set `offset = -33`.
+
+Empty regions get a minimum value of `offset` (default 0).

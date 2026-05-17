@@ -66,17 +66,13 @@ impl Step for WorstQuality {
                 extract_numeric_tags_plus_all(
                     *seg_or_all,
                     &self.out_label,
-                    |read| min_quality(read),
+                    |read| min_quality(read, self.offset) as f64,
                     |reads| {
                         reads
                             .iter()
-                            .flat_map(|r| {
-                                r.qual()
-                                    .iter()
-                                    .map(|x| Into::<i16>::into(*x) + self.offset as i16)
-                            })
+                            .map(|r| min_quality(r, self.offset))
                             .min()
-                            .unwrap_or(0) as f64
+                            .unwrap_or(33) as f64
                     },
                     &mut block,
                 );
@@ -100,11 +96,11 @@ impl Step for WorstQuality {
                                 .iter()
                                 .map(|x| Into::<i16>::into(*x) + self.offset as i16)
                                 .min()
-                                .unwrap_or(0)
+                                .unwrap_or(33 + self.offset as i16)
                                 as f64,
                             _ => 0.0,
                         },
-                        TagValue::Missing => 0.0,
+                        TagValue::Missing => 33.0,
                         _ => unreachable!(), // cov:excl-line
                     };
                     values.push(TagValue::Numeric(q));
@@ -119,6 +115,10 @@ impl Step for WorstQuality {
     }
 }
 
-fn min_quality(read: &WrappedFastQRead) -> f64 {
-    read.qual().iter().copied().min().unwrap_or(0) as f64
+fn min_quality(read: &WrappedFastQRead, offset: i8) -> i16 {
+    read.qual()
+        .iter()
+        .map(|x| Into::<i16>::into(*x) + offset as i16)
+        .min()
+        .unwrap_or(33)
 }

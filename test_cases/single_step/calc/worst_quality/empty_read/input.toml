@@ -1,0 +1,18 @@
+[input]
+    read1 = 'input_read1.fq'
+[[step]]
+  action ='Truncate'
+  n = 0
+
+[[step]]
+    action = 'CalcWorstQuality'
+    out_label = 'worst_q'
+    source = 'read1'
+    offset = 0
+
+[[step]]
+    action = 'StoreTagInComment'
+    in_label = 'worst_q'
+
+[output]
+    prefix = 'output'

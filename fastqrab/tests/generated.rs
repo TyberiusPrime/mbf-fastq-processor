@@ -2739,10 +2739,32 @@ fn test_cases_x_single_step_x_calc_x_kmer_x_phix() {
 
 #[test]
 
+fn test_cases_x_single_step_x_calc_x_worst_quality_x_all() {
+    println!("Test case is in: test_cases/single_step/calc/worst_quality/all");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/calc/worst_quality/all"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_calc_x_worst_quality_x_basic() {
     println!("Test case is in: test_cases/single_step/calc/worst_quality/basic");
     run_test(
         std::path::Path::new("../test_cases/single_step/calc/worst_quality/basic"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_calc_x_worst_quality_x_empty_read() {
+    println!("Test case is in: test_cases/single_step/calc/worst_quality/empty_read");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/calc/worst_quality/empty_read"),
         "input.toml",
         1,
     );

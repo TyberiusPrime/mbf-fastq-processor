@@ -1,1 +1,22 @@
-Incompatible tag type
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+ 9 │ [[step]]
+10 │     action = 'CalcWorstQuality'
+   ┆              ─────────┬────────
+   ┆                       │
+   ┆                       ╰───────── In this step
+   ┆
+11 │     out_label = 'worst_q'
+12 │     source = 'tag:read_len'
+   ┆              ───────┬──────
+   ┆                     │
+   ┆                     ╰─────── Incompatible tag type
+───╯
+Hint: This transform requires tag 'read_len' to be one of the following types: ['String', 'Location'],
+      but it is actually of type 'Numeric (0..)'.
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/CalcWorstQuality
+      Or run: `fastqrab template CalcWorstQuality` for more information.
+
+
