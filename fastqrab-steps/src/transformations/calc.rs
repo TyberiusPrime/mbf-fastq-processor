@@ -10,6 +10,7 @@ mod n_content;
 mod qualified_bases;
 
 mod gc_content;
+mod worst_quality;
 
 pub use base_content::{BaseContent, PartialBaseContent};
 pub use complexity::{Complexity, PartialComplexity};
@@ -25,6 +26,7 @@ pub use kmers::{Kmers, PartialKmers};
 pub use length::{Length, PartialLength};
 pub use n_content::{NContent, PartialNContent};
 pub use qualified_bases::{PartialQualifiedBases, QualifiedBases};
+pub use worst_quality::{PartialWorstQuality, WorstQuality};
 
 pub(crate) fn extract_numeric_tags<F>(
     segment: SegmentIndex,

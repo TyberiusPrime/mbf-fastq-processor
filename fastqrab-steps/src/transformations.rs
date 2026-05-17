@@ -319,6 +319,7 @@ pub enum Transformation {
     CalcComplexity(calc::Complexity),
     CalcQualifiedBases(calc::QualifiedBases),
     CalcExpectedError(calc::ExpectedError),
+    CalcWorstQuality(calc::WorstQuality),
     CalcKmers(calc::Kmers),
     ConvertToRate(calc::ConvertToRate),
     //

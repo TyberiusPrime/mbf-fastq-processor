@@ -288,6 +288,18 @@ fn benchmark_key_steps(c: &mut Criterion) {
             thread_count,
         ),
         BenchmarkConfig::new(
+            "CalcWorstQuality",
+            r#"[[step]]
+    action = "CalcWorstQuality"
+    out_label = "worst_q"
+    segment = "read1"
+
+[[step]]
+    action = "ForgetAllTags""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
             "CalcKmers",
             &format!(
                 r#"[[step]]

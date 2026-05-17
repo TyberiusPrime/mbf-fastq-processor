@@ -26,15 +26,8 @@ impl VerifyIn<PartialConfig> for PartialReverseComplement {
         Self: Sized + toml_pretty_deser::Visitor,
     {
         self.target.validate_segment(parent);
-        if matches!(
-            self.target.as_ref(),
-            Some(MustAdapt::PostVerify(ResolvedSourceAll::Name { .. }))
-        ) {
-            self.target.state =
-                TomlValueState::new_validation_failed("Must not be 'name:' definition");
-            self.target.help =
-                Some("ReverseComplement does not support name-based targeting".to_string());
-        }
+        self.target
+            .deny_name("ReverseComplement does not support name-based targeting");
         Ok(())
     }
 }

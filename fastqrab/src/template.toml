@@ -334,6 +334,14 @@
 #    aggregate = "sum" # or "max"
 #    segment = "read1" # Any of your input segments, or 'All'
 
+# ==== CalcWorstQuality ====
+## Minimum quality score across a segment or a tagged region.
+# [[step]]
+#    action = "CalcWorstQuality"
+#    out_label = "worst_q"
+#    source = "read1"  # Any segment, 'All', or 'tag:<location_tag>'
+#    offset = -33 # optional, defaults to 0, if you want to convert from encoded to unencoded PHRED.
+
 ## == Boolean tags ==
 
 # ==== TagDuplicates ====

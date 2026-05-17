@@ -2739,6 +2739,39 @@ fn test_cases_x_single_step_x_calc_x_kmer_x_phix() {
 
 #[test]
 
+fn test_cases_x_single_step_x_calc_x_worst_quality_x_basic() {
+    println!("Test case is in: test_cases/single_step/calc/worst_quality/basic");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/calc/worst_quality/basic"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_calc_x_worst_quality_x_location_tag() {
+    println!("Test case is in: test_cases/single_step/calc/worst_quality/location_tag");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/calc/worst_quality/location_tag"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_calc_x_worst_quality_x_wrong_tag_kind() {
+    println!("Test case is in: test_cases/single_step/calc/worst_quality/wrong_tag_kind");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/calc/worst_quality/wrong_tag_kind"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_compression_x_zstd_input() {
     println!("Test case is in: test_cases/single_step/compression/zstd_input");
     run_test(

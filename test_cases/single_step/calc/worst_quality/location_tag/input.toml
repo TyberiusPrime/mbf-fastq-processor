@@ -1,0 +1,37 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'ExtractRegion'
+    source = 'read1'
+    start = 4
+    len = 4
+    anchor = 'Start'
+    out_label = 'region_end'
+
+[[step]]
+    action = 'ExtractRegion'
+    source = 'read1'
+    start = 0
+    len = 4
+    anchor = 'Start'
+    out_label = 'region_start'
+
+[[step]]
+    action = 'CalcWorstQuality'
+    out_label = 'worst_q_start'
+    source = 'tag:region_start'
+    offset = -33
+
+[[step]]
+    action = 'CalcWorstQuality'
+    out_label = 'worst_q_end'
+    source = 'tag:region_end'
+    offset = -33
+
+[[step]]
+    action = 'StoreTagInComment'
+  in_label = ['worst_q_start', 'worst_q_end']
+
+[output]
+    prefix = 'output'

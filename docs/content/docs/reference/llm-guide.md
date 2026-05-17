@@ -679,6 +679,18 @@ Aggregate per-base error probabilities.
     out_label = 'expected_error'   # TYPE: string, REQUIRED
 ```
 
+### CalcWorstQuality
+
+Minimum PHRED quality score across a segment or a tagged region.
+
+```toml
+[[step]]
+    action = 'CalcWorstQuality'
+    source = 'read1'              # TYPE: segment name or 'All' or 'tag:<location_tag>', REQUIRED
+    out_label = 'worst_q'          # TYPE: string, REQUIRED
+    offset = -33                  # Type int, optional, converts from bytes into desired space. -33 for Illumina/Sanger PHRED
+```
+
 ### CalcComplexity
 
 Calculate sequence complexity (transition ratio).

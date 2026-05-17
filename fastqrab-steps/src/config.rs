@@ -37,7 +37,7 @@ pub use input::{Input, PartialInput, StructuredInput};
 pub use barcodes::{Barcodes, BarcodesFromFile, PartialBarcodes};
 pub use options::{Options, PartialOptions};
 pub use output::{Output, PartialOutput, validate_compression_level_u8};
-pub use segments::ValidateSegment;
+pub use segments::{DenyName, ValidateSegment};
 pub use tag_labels::ValidateTagLabel;
 
 #[derive(Debug)]

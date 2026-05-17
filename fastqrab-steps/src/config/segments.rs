@@ -12,6 +12,23 @@ pub trait ValidateSegment {
     fn validate_segment(&mut self, config: &PartialConfig);
 }
 
+pub trait DenyName {
+    fn deny_name(&mut self, help: &str);
+}
+
+impl DenyName for TomlValue<MustAdapt<String, ResolvedSourceAll>> {
+    fn deny_name(&mut self, help: &str) {
+        if matches!(
+            self.value.as_ref(),
+            Some(MustAdapt::PostVerify(ResolvedSourceAll::Name { .. }))
+        ) {
+            self.state =
+                TomlValueState::new_validation_failed("Must not be 'name:' definition".to_string());
+            self.help = Some(help.to_string());
+        }
+    }
+}
+
 impl ValidateSegment for TomlValue<MustAdapt<String, SegmentIndex>> {
     #[track_caller]
     fn validate_segment(&mut self, config: &PartialConfig) {

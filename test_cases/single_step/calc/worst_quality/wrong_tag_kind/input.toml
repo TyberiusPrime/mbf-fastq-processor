@@ -1,0 +1,15 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'CalcLength'
+    out_label = 'read_len'
+    segment = 'read1'
+
+[[step]]
+    action = 'CalcWorstQuality'
+    out_label = 'worst_q'
+    source = 'tag:read_len'
+
+[output]
+    prefix = 'output'

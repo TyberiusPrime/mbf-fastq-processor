@@ -3,7 +3,9 @@ pub(crate) use super::{
     PartialTransformation, Step, TagUsageInfo, TagUser, edits::get_bool_vec_from_tag,
     reproducible_cuckoofilter,
 };
-pub(crate) use crate::config::{PartialConfig, TagMetadata, ValidateSegment, ValidateTagLabel};
+pub(crate) use crate::config::{
+    DenyName, PartialConfig, TagMetadata, ValidateSegment, ValidateTagLabel,
+};
 
 pub use fastqrab_config::{
     ConditionalTagLabel, FileFormat, RemovedTags, TagLabel, TagValueType, ToDeclaredTag, ToUsedTag,
