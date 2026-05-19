@@ -2,77 +2,62 @@ use crate::transformations::prelude::Result;
 use crate::transformations::prelude::*; // union_find_rs::prelude also exports a Result
 
 use bstr::{BStr, BString};
-use disjoint::DisjointSet;
 use fastqrab_io::{CompressionFormat, FileFormat};
 use rayon::prelude::*;
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashSet;
 use std::num::NonZeroUsize;
-use std::sync::OnceLock;
-use std::time::Instant;
 
 type WriterHandle = Arc<Mutex<Option<ChunkedRecordWriter>>>;
 type DataHandles = Arc<Mutex<DemultiplexedData<Option<ChunkedRecordWriter>>>>;
 
-fn encode_umi(umi: &[u8]) -> u32 {
-    let mut v = 0u32;
-    for &b in umi.iter().take(16) {
-        v = (v << 2)
-            | match b.to_ascii_uppercase() {
-                b'A' => 0,
-                b'C' => 1,
-                b'G' => 2,
-                b'T' => 3,
-                _ => return u32::MAX, // any N -> becomes TTTTT
-                                      // (which if you have less than 16 bp is distinguishable downstream
-                                      // and if you don't you loose only a single umi
-            };
+mod cluster;
+mod helpers;
+
+use cluster::aggregate_to_matrix_cluster;
+use helpers::{encode_umi, finish_writer, human_fmt_usize, take_singleton_writer, write_matrix};
+//
+//we need to keep these straight.
+
+#[derive(Debug, Clone, Hash, Eq, PartialEq, PartialOrd, Ord, Copy)]
+struct CellIdx(u32);
+
+#[derive(Debug, Clone, Hash, Eq, PartialEq, PartialOrd, Ord, Copy)]
+struct GeneIdx(u32);
+
+#[derive(Debug, Clone, Hash, Eq, PartialEq, PartialOrd, Ord, Copy)]
+struct Umi(u32);
+
+impl Umi {
+    fn new_n() -> Self {
+        Self(u32::MAX)
     }
-    v
+
+    fn new_unmatched() -> Self {
+        return Self(0);
+    }
+
+    fn is_n(&self) -> bool {
+        self.0 == u32::MAX
+    }
 }
 
-fn human_fmt_usize(n: usize) -> String {
-    let s = n.to_string();
-    let mut out = String::with_capacity(s.len() + s.len() / 3);
-    for (i, c) in s.chars().rev().enumerate() {
-        if i > 0 && i % 3 == 0 {
-            out.push('_');
-        }
-        out.push(c);
+impl GeneIdx {
+    fn is_unmatched(&self) -> bool {
+        self.0 == 0
     }
-    out.chars().rev().collect()
 }
 
-fn write_matrix(
-    matrix: IndexMap<(u32, u32), u32>,
-    n_barcodes: u32,
-    n_cells: u32,
-    writer: &mut ChunkedRecordWriter,
-) -> Result<()> {
-    writer.write_text_record(b"%%MatrixMarket matrix coordinate integer general\n")?;
-    writer.write_text_record(b"%metadata_json: {\"software\": \"fastqrab\"}\n")?;
-    let total: usize = matrix.len();
-    writer.write_text_record(format!("{n_barcodes} {n_cells} {total}\n").as_bytes())?;
-    for ((gene, cell), count) in matrix {
-        writer.write_text_record(format!("{} {} {}\n", gene + 1, cell + 1, count).as_bytes())?;
+impl CellIdx {
+    fn is_unmatched(&self) -> bool {
+        self.0 == 0
     }
-    Ok(())
 }
 
-fn take_singleton_writer(output_files: &mut StepOutputFiles, id: &str) -> WriterHandle {
-    let writers = output_files.take(id);
-    let writer = writers
-        .into_iter()
-        .next()
-        .map(|(_tag, w)| w)
-        .expect("singleton writer must exist");
-    Arc::new(Mutex::new(Some(writer)))
-}
-
-fn finish_writer(handle: &WriterHandle) -> Result<()> {
-    if let Some(writer) = handle.lock().expect("lock poisoned").take() {
-        let _summary = writer.finish()?;
-    }
-    Ok(())
+#[derive(Debug)]
+struct ObservedEvent {
+    cell: CellIdx,
+    gene: GeneIdx,
+    umi: Umi,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -88,6 +73,7 @@ enum UMIAggregation {
     Exact,
     #[tpd(alias = "1MM")]
     Cluster,
+    CellRanger,
 }
 /// Collect (gene_idx, cell_idx, umi_2bit) triples per read, then write binary
 /// data file(s) and lookup tables on finalize.
@@ -160,7 +146,7 @@ pub struct StoreSingleCellMatrix {
 
     #[tpd(skip, default)]
     #[schemars(skip)]
-    entries: Arc<Mutex<DemultiplexedData<Vec<[u32; 3]>>>>,
+    entries: Arc<Mutex<DemultiplexedData<Vec<ObservedEvent>>>>,
 
     #[tpd(skip, default)]
     #[schemars(skip)]
@@ -463,7 +449,7 @@ impl Step for StoreSingleCellMatrix {
         //todo: this is accidentially single threaded...
         let mut expected_umi_len = *self.max_umi_len.lock().expect("lock poisoned");
 
-        let mut local_entries: DemultiplexedData<Vec<[u32; 3]>> = DemultiplexedData::new();
+        let mut local_entries: DemultiplexedData<Vec<ObservedEvent>> = DemultiplexedData::new();
 
         for (ii, ((cell_val, gene_val), umi_val)) in cell_tags
             .iter()
@@ -471,17 +457,17 @@ impl Step for StoreSingleCellMatrix {
             .zip(umi_tags.iter())
             .enumerate()
         {
-            let cell_idx = match cell_val {
+            let cell_idx = CellIdx(match cell_val {
                 TagValue::String(s) => seq_to_idx(s, cell_map),
                 TagValue::Location(hits) => seq_to_idx(&hits.joined_sequence_cow(None), cell_map),
                 _ => 0,
-            };
+            });
 
-            let gene_idx = match gene_val {
+            let gene_idx = GeneIdx(match gene_val {
                 TagValue::String(s) => seq_to_idx(s, gene_map),
                 TagValue::Location(hits) => seq_to_idx(&hits.joined_sequence_cow(None), gene_map),
                 _ => 0,
-            };
+            });
 
             let (umi_enc, umi_len) = match umi_val {
                 TagValue::String(s) => {
@@ -497,7 +483,7 @@ impl Step for StoreSingleCellMatrix {
                     }
                     (encode_umi(&seq), seq.len() as u8)
                 }
-                _ => (0, 0),
+                _ => (Umi::new_unmatched(), 0),
             };
 
             {
@@ -516,12 +502,18 @@ impl Step for StoreSingleCellMatrix {
             let output_tag = output_tags.map_or(0, |x| x[ii]);
             match local_entries.entry(output_tag) {
                 std::collections::btree_map::Entry::Vacant(vacant_entry) => {
-                    vacant_entry.insert(vec![[gene_idx, cell_idx, umi_enc]]);
+                    vacant_entry.insert(vec![ObservedEvent {
+                        cell: cell_idx,
+                        gene: gene_idx,
+                        umi: umi_enc,
+                    }]);
                 }
                 std::collections::btree_map::Entry::Occupied(occupied_entry) => {
-                    occupied_entry
-                        .into_mut()
-                        .push([gene_idx, cell_idx, umi_enc]);
+                    occupied_entry.into_mut().push(ObservedEvent {
+                        cell: cell_idx,
+                        gene: gene_idx,
+                        umi: umi_enc,
+                    });
                 }
             }
         }
@@ -573,7 +565,8 @@ impl Step for StoreSingleCellMatrix {
                     //     entries.len(),
                     //     combos.len()
                     // );
-                    entries.par_sort_unstable(); //must also sort by umi to be reproducible in output
+                    //entries is a vec of [cell_idx, gene_idx, umi_enc]
+                    entries.par_sort_unstable_by_key(|read| (read.cell, read.gene, read.umi)); //must also sort by umi to be reproducible in output
                     let total = entries.len();
                     stats.push(("Input reads", total));
 
@@ -585,17 +578,29 @@ impl Step for StoreSingleCellMatrix {
 
                     let unique_genes: FxHashSet<_> = matrix
                         .keys()
-                        .filter_map(|(gene, _)| if *gene != 0 { Some(gene) } else { None })
+                        .filter_map(|(gene, _)| {
+                            if !gene.is_unmatched() {
+                                Some(gene)
+                            } else {
+                                None
+                            }
+                        })
                         .collect();
 
                     let unique_cells: FxHashSet<_> = matrix
                         .keys()
-                        .filter_map(|(_, cell)| if *cell != 0 { Some(cell) } else { None })
+                        .filter_map(|(_, cell)| {
+                            if !cell.is_unmatched() {
+                                Some(cell)
+                            } else {
+                                None
+                            }
+                        })
                         .collect();
 
                     let matrix_matched = matrix
                         .keys()
-                        .filter(|(gene, cell)| *gene != 0 && *cell != 0)
+                        .filter(|(gene, cell)| !gene.is_unmatched() && !cell.is_unmatched())
                         .count();
 
                     any_gene_matches |= !unique_genes.is_empty();
@@ -607,7 +612,7 @@ impl Step for StoreSingleCellMatrix {
                     let reads_in_matrix = matrix.values().map(|x| *x as usize).sum();
                     let reads_in_matrix_matched = matrix
                         .iter()
-                        .filter(|((gene, cell), _)| *gene != 0 && *cell != 0)
+                        .filter(|((gene, cell), _)| !gene.is_unmatched() && !cell.is_unmatched())
                         .map(|(_, count)| *count as usize)
                         .sum();
                     stats.push(("Reads in matrix", reads_in_matrix));
@@ -726,10 +731,10 @@ impl Step for StoreSingleCellMatrix {
 }
 
 fn aggregate_to_matrix(
-    entries: Vec<[u32; 3]>,
+    entries: Vec<ObservedEvent>,
     umi_aggregation: UMIAggregation,
     umi_length: u16,
-) -> IndexMap<(u32, u32), u32> {
+) -> IndexMap<(GeneIdx, CellIdx), u32> {
     if entries.is_empty() {
         return IndexMap::new();
     } else {
@@ -737,19 +742,18 @@ fn aggregate_to_matrix(
             UMIAggregation::None => aggregate_to_matrix_none(entries),
             UMIAggregation::Exact => aggregate_to_matrix_exact(entries),
             UMIAggregation::Cluster => aggregate_to_matrix_cluster(entries, umi_length),
+            UMIAggregation::CellRanger => aggregate_to_matrix_cellranger(entries, umi_length),
         }
     }
 }
 
-fn aggregate_to_matrix_none(entries: Vec<[u32; 3]>) -> IndexMap<(u32, u32), u32> {
+fn aggregate_to_matrix_none(entries: Vec<ObservedEvent>) -> IndexMap<(GeneIdx, CellIdx), u32> {
     let mut matrix = IndexMap::new();
     let mut counter = 0u32; //doesn't matter though, overwritten in first loop.
     let mut last = None;
     for entry in &entries {
-        let gene_id = entry[0];
-        let cell_id = entry[1];
         //let umi = entry[2];
-        let key = (gene_id, cell_id);
+        let key = (entry.gene, entry.cell);
         match last {
             Some(last_key) if last_key == key => {
                 //same gene & cell
@@ -774,20 +778,18 @@ fn aggregate_to_matrix_none(entries: Vec<[u32; 3]>) -> IndexMap<(u32, u32), u32>
     matrix
 }
 
-fn aggregate_to_matrix_exact(entries: Vec<[u32; 3]>) -> IndexMap<(u32, u32), u32> {
+fn aggregate_to_matrix_exact(entries: Vec<ObservedEvent>) -> IndexMap<(GeneIdx, CellIdx), u32> {
     let mut matrix = IndexMap::new();
     let mut counter = 0u32;
-    let mut last: Option<(u32, u32, u32)> = None;
+    let mut last: Option<(GeneIdx, CellIdx, Umi)> = None;
     for entry in &entries {
-        let gene_id = entry[0];
-        let cell_id = entry[1];
-        let umi = entry[2];
-        if umi == u32::MAX {
+        let umi = entry.umi;
+        if umi.is_n() {
             //invalid umi / any N
             continue;
         }
         //we again use that we're umi sorted
-        let key = (gene_id, cell_id, umi);
+        let key = (entry.gene, entry.cell, umi);
         match last {
             Some(last_key) if last_key == key => {
                 //same gene & cell & umi. don't count
@@ -816,278 +818,26 @@ fn aggregate_to_matrix_exact(entries: Vec<[u32; 3]>) -> IndexMap<(u32, u32), u32
     matrix
 }
 
-#[inline]
-fn hamming_bp_16(a: u32, b: u32) -> u32 {
-    // XOR marks differing bits within each 2-bit base.
-    let x = a ^ b;
-
-    // Collapse each 2-bit lane to 1 bit:
-    // 00 -> 0
-    // 01,10,11 -> 1
-    let y = (x | (x >> 1)) & 0x5555_5555;
-
-    y.count_ones()
-}
-
-///Aggregate each disjoint subgraph of umis within one hamming distance from each other
-///to
-// fn aggregate_to_matrix_cluster(
-//     entries: Vec<[u32; 3]>,
-//     umi_length: u16,
-// ) -> IndexMap<(u32, u32), u32> {
-//     let mut matrix = IndexMap::new();
+// fn write_entries_to_debug_file(entries: &Vec<ObservedEvent>) {
+//     use std::io::Write;
+//     let file = ex::fs::File::create("debug_entries.dat").expect("Failed to create debug file");
+//     let mut buffer = std::io::BufWriter::new(file);
+//     let data = entries;
+//     let len = data.len() as u64;
+//     buffer.write_all(&len.to_le_bytes()).unwrap();
 //
-//     if entries.is_empty() {
-//         return matrix;
+//     for triple in data {
+//         buffer.write_all(&triple.gene.0.to_le_bytes()).unwrap();
+//         buffer.write_all(&triple.cell.0.to_le_bytes()).unwrap();
+//         buffer.write_all(&triple.umi.0.to_le_bytes()).unwrap();
 //     }
-//
-//     let mut last_key = (entries[0][0], entries[0][1]);
-//     let mut seen: Vec<u32> = Vec::new();
-//
-//     for e in &entries {
-//         let key = (e[0], e[1]);
-//
-//         if key != last_key {
-//             //seen.sort_unstable(); we assume sortedness!
-//             seen.dedup();
-//
-//             if !seen.is_empty() {
-//                 //happens when only read had an N
-//                 matrix.insert(last_key, umi_cluster_count(&seen, umi_length));
-//             }
-//
-//             seen.clear();
-//             last_key = key;
-//         }
-//
-//         if e[2] != u32::MAX {
-//             seen.push(e[2]);
-//         }
-//     }
-//
-//     //seen.sort_unstable();
-//     seen.dedup();
-//     if !seen.is_empty() {
-//         matrix.insert(last_key, umi_cluster_count(&seen, umi_length));
-//     }
-//
-//     matrix
+//     buffer.flush().unwrap();
+//     panic!("Done dumping entries.dat");
 // }
 
-fn aggregate_to_matrix_cluster(
-    entries: Vec<[u32; 3]>,
-    umi_length: u16,
-) -> IndexMap<(u32, u32), u32> {
-    if entries.is_empty() {
-        return IndexMap::new();
-    }
-    // Find split indices where (gene, cell) key changes
-    let splits: Vec<usize> = (1..entries.len())
-        .filter(|&i| entries[i][0] != entries[i - 1][0] || entries[i][1] != entries[i - 1][1])
-        .collect();
-    // Build range pairs [start, end) for each group
-    let mut starts = Vec::with_capacity(splits.len() + 1);
-    starts.push(0);
-    let mut ends = splits.clone();
-    ends.push(entries.len());
-    starts.extend(splits);
-    // Process each (gene, cell) group in parallel
-    let results: Vec<((u32, u32), u32)> = starts
-        .into_par_iter()
-        .zip(ends.into_par_iter())
-        .filter_map(|(start, end)| {
-            let key = (entries[start][0], entries[start][1]);
-            //todo: we don't need to check all of them for u32::MAx,
-            //just the last one.
-            let mut seen: Vec<u32> = entries[start..end]
-                .iter()
-                .filter(|e| e[2] != u32::MAX)
-                .map(|e| e[2])
-                .collect();
-            seen.dedup();
-            if seen.is_empty() {
-                None
-            } else {
-                let count = umi_cluster_count(&seen, umi_length);
-                Some((key, count))
-            }
-        })
-        .collect();
-    let mut matrix = IndexMap::with_capacity(results.len());
-    for (key, count) in results {
-        matrix.insert(key, count);
-    }
-    matrix
-}
-
-pub fn umi_cluster_count(umis: &[u32], umi_length: u16) -> u32 {
-    if umis.len() == 1 {
-        return 1;
-    }
-    debug_assert!(umis.len() >= 2);
-
-    let values = umis;
-    let n = values.len();
-
-    //these branches do the same thing
-    //but they differ in their O(n) and
-    //we hence benchmark them on premise
-    //to decide which ones to use
-    let mut uf = DisjointSet::with_len(n);
-    if n <= pairwise_threshold() {
-        pairwise_union(&values, &mut uf);
-    } else {
-        neighbor_union_hash(&values, &mut uf, umi_length);
-    }
-
-    let mut roots = FxHashSet::default();
-
-    for i in 0..n {
-        roots.insert(uf.root_of(i));
-    }
-
-    roots.len() as u32
-}
-
-#[inline]
-fn pairwise_union(values: &[u32], uf: &mut DisjointSet) {
-    for i in 0..values.len() {
-        let x = values[i];
-
-        for j in (i + 1)..values.len() {
-            let y = values[j];
-
-            // dist <= 1
-            if hamming_bp_16(x, y) <= 1 {
-                uf.join(i, j);
-            }
-        }
-    }
-}
-
-#[inline]
-fn neighbor_union_hash(values: &[u32], uf: &mut DisjointSet, umi_length: u16) {
-    assert!(
-        umi_length <= 16,
-        "UMI length must be at most 16bp to use neighbor_union_hash"
-    );
-    let mut index = FxHashMap::default();
-
-    for (i, &x) in values.iter().enumerate() {
-        index.insert(x, i);
-    }
-
-    for (i, &x) in values.iter().enumerate() {
-        // dist == 1 basepair neighbors
-        for bp in 0..umi_length {
-            let shift = bp * 2;
-            let current = (x >> shift) & 0b11;
-
-            for replacement in 0..4u32 {
-                if replacement == current {
-                    continue;
-                }
-                // Clear the 2 bits at this basepair, then set the replacement
-                let y = (x & !(0b11 << shift)) | (replacement << shift);
-
-                if let Some(&j) = index.get(&y) {
-                    uf.join(i, j);
-                }
-            }
-        }
-    }
-}
-
-/// It is unclear where the crossover between the O(n^2) pairwise, and O(32n) neighbor based
-/// approach is. So we benchmark on the real system and make a decision.
-static PAIRWISE_THRESHOLD: OnceLock<usize> = OnceLock::new();
-
-fn pairwise_threshold() -> usize {
-    *PAIRWISE_THRESHOLD.get_or_init(calibrate_pairwise_threshold)
-}
-
-fn calibrate_pairwise_threshold() -> usize {
-    let candidates = [
-        32usize,
-        64,
-        128,
-        256,
-        512,
-        1024,
-        1024 + 512,
-        2048,
-        2048 + 1024,
-        4096,
-    ];
-
-    for &n in &candidates {
-        // structured but non-trivial data
-        let data: Vec<u32> = (0..n as u32).map(|x| x ^ (x << 1) ^ (x >> 1)).collect();
-        let hash_data: FxHashSet<u32> = data.iter().copied().collect();
-        assert!(hash_data.len() == data.len()); // ensure no duplicates, which would break the
-        // benchmark
-
-        // ----------------------------
-        // PAIRWISE + DSU
-        // ----------------------------
-        let t_pair = {
-            let mut uf = DisjointSet::with_len(n);
-
-            let start = Instant::now();
-
-            pairwise_union(&data, &mut uf);
-
-            std::hint::black_box(uf);
-
-            start.elapsed()
-        };
-
-        // ----------------------------
-        // NEIGHBOR + DSU
-        // ----------------------------
-        let t_neighbor = {
-            let mut uf = DisjointSet::with_len(n);
-
-            let start = Instant::now();
-
-            neighbor_union_hash(&data, &mut uf, 16);
-
-            std::hint::black_box(uf);
-
-            start.elapsed()
-        };
-
-        if t_neighbor < t_pair {
-            // dbg!(format!(
-            //     "Final threshold: {n}, time for pairwise: {t_pair:?}, time for neighbor: {t_neighbor:?}"
-            // ));
-            return n;
-        }
-    }
-    *candidates.last().expect("must have candidate")
-}
-
-#[test]
-fn test_pairwise_neighbor_aggreement() {
-    let values = [91, 93, 94]; //if you were mutating bitwise instead of bytewise, this will fail
-    let n = values.len();
-    let mut uf = DisjointSet::with_len(n);
-    neighbor_union_hash(&values, &mut uf, 16);
-    let mut roots = FxHashSet::default();
-    for i in 0..n {
-        roots.insert(uf.root_of(i));
-    }
-    let l_hash = roots.len();
-    let mut uf = DisjointSet::with_len(n);
-    pairwise_union(&values, &mut uf);
-    let mut roots = FxHashSet::default();
-    for i in 0..n {
-        println!("{}, {}, {}", i, values[i], uf.root_of(i));
-        roots.insert(uf.root_of(i));
-    }
-    let l_pairwise = roots.len();
-    assert_eq!(
-        l_hash, l_pairwise,
-        "pairwise and neighbor approaches should give the same result"
-    );
+fn aggregate_to_matrix_cellranger(
+    _entries: Vec<ObservedEvent>,
+    _umi_length: u16,
+) -> IndexMap<(GeneIdx, CellIdx), u32> {
+    todo!();
 }
