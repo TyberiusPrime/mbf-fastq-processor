@@ -1370,7 +1370,6 @@ Assign to references via a cell ranger inspired probe matching algorithm.
      in_label = "mytag" # a sequence region
      out_label = "assigned_tag"
      barcodes = "mybarcodelist" # the [barcodes] section to use as references
-     name_split_character = "_" # optional, consider references equivalent when tie breaking if they match up to this 
 
  [barcodes.mybarcodelist]
      "AAAA" = "label_ignored" # only read when demultiplexing 

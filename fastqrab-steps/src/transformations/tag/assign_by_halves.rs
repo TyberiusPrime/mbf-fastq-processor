@@ -1,5 +1,4 @@
 use bstr::{BString, ByteSlice};
-use fastqrab_config::tpd_adapt_u8_from_byte_or_char;
 use fastqrab_dna::dna::init_hamming_resonator;
 use hamming_resonate::HammingResonator;
 
@@ -26,11 +25,6 @@ pub struct AssignByHalves {
     ///
     /// Reference to barcodes section
     pub barcodes: TagLabel,
-
-    /// names are considered identical if they match up to the first `name_split_character`
-    /// for must-have-hamming-distance considerations
-    #[tpd(with = "tpd_adapt_u8_from_byte_or_char", alias = "name_split_char")]
-    pub name_split_character: Option<u8>,
 
     // ── built during init ───────────────────────────────────────────────────
     #[tpd(skip)]
@@ -67,20 +61,13 @@ impl VerifyIn<PartialConfig> for PartialAssignByHalves {
                 if let Some(barcodes_section) = barcodes_section.as_ref()
                     && let Some(seq_to_name) = &barcodes_section.seq_to_name
                 {
-                    self.engine = Some(Arc::new(CellRangerProbeAssigner::new(
-                        Arc::new(
-                            //todo: remove once toml-pretty-deser supports FxIndexMap
-                            seq_to_name
-                                .iter()
-                                .map(|(x, y)| (x.to_owned(), y.to_owned()))
-                                .collect(),
-                        ),
-                        if let Some(Some(nc)) = self.name_split_character.as_ref() {
-                            Some(*nc)
-                        } else {
-                            None
-                        },
-                    )?)); // cov:excl-line
+                    self.engine = Some(Arc::new(CellRangerProbeAssigner::new(Arc::new(
+                        //todo: remove once toml-pretty-deser supports FxIndexMap
+                        seq_to_name
+                            .iter()
+                            .map(|(x, y)| (x.to_owned(), y.to_owned()))
+                            .collect(),
+                    ))?)); // cov:excl-line
                 } // cov:excl-line
             // otherwise the barcode section wasn't ok and we'll never
             // be turned into a concrete AssignToReference.
@@ -180,14 +167,43 @@ struct CellRangerProbeAssigner {
     right_hand_resonator: HammingResonator,
     right_hand_seq_to_name: IndexMap<BString, String>,
     rescue_min_score: i32,
-    name_split_char: Option<u8>,
+}
+
+/// Decide whether a rescue attempt should proceed given the hits found on the
+/// other half .
+///
+/// - Any exact hit  is a real match - rescue only if it agrees with `candidate`.
+/// - exactly one 1-mismatch hit - same: only proceed if it agrees.
+/// - No exact hits + zero or ≥2 1-mismatch hits - ambiguous/no-match → rescue OK.
+fn attempt_rescue(
+    partner_hits: &[(&BStr, u32)],
+    candidate: &str,
+    half_seq_to_name: &IndexMap<BString, String>,
+) -> bool {
+    let exact: Vec<_> = partner_hits.iter().filter(|(_, d)| *d == 0).collect();
+    if !exact.is_empty() {
+        // Exact hit(s) exist — rescue only if every one agrees with our candidate.
+        return exact.iter().all(|(seq, _)| {
+            half_seq_to_name
+                .get(*seq)
+                .expect("Internal inconsistency between resonator and map")
+                == candidate
+        });
+    }
+    let one_mm: Vec<_> = partner_hits.iter().filter(|(_, d)| *d > 0).collect();
+    if one_mm.len() == 1 {
+        // Unique 1-mismatch hit — rescue only if it agrees.
+        return half_seq_to_name
+            .get(one_mm[0].0)
+            .expect("Internal inconsistency between resonator and map")
+            == candidate;
+    }
+    // No hits, or >= 2 ambiguous 1-mismatch hits — treat as no-match → rescue OK.
+    true
 }
 
 impl CellRangerProbeAssigner {
-    fn new(
-        seq_to_name: Arc<FxIndexMap<BString, String>>,
-        name_split_char: Option<u8>,
-    ) -> Result<Self, ValidationFailure> {
+    fn new(seq_to_name: Arc<FxIndexMap<BString, String>>) -> Result<Self, ValidationFailure> {
         let max_hamming_distance_for_better_half = 1;
         let left_hand_resonator = init_hamming_resonator(
             &(seq_to_name
@@ -217,12 +233,6 @@ impl CellRangerProbeAssigner {
             .iter()
             .map(|(k, v)| (v.clone(), k.clone()))
             .collect();
-        // if seq_to_name.len() != name_to_seq.len() { // why actuall?
-        //     return Err(ValidationFailure::new(
-        //         "Duplicate probe names found in barcodes section.",
-        //         Some("For this assignment method, all barcodes must have unique names"),
-        //     ));
-        // }
         Ok(Self {
             seq_to_name,
             name_to_seq,
@@ -231,7 +241,6 @@ impl CellRangerProbeAssigner {
             right_hand_resonator,
             right_hand_seq_to_name,
             rescue_min_score: 30,
-            name_split_char,
         })
     }
 
@@ -250,26 +259,13 @@ impl CellRangerProbeAssigner {
             //If they do, look up the correct other half.
             //Calculate the hamming from that, and a score,
             //and if the score of both together is >= rescue_min_score
-            //accept it.
+            //accept it provided there are no conflicting reports from the other half.
             //
             //Scoring is matches - mismatches == len() - 2 * mismatches
             let left_hand = query[..query.len() / 2].into();
             let right_hand = query[query.len() / 2..].into();
-            let mut left_hand_matches = self.left_hand_resonator.query(left_hand)?;
-            let mut right_hand_matches = self.right_hand_resonator.query(right_hand)?;
-
-            if left_hand_matches.len() > 1 {
-                left_hand_matches = self.combine_name_identical_tied_matches(
-                    &left_hand_matches,
-                    &self.left_hand_seq_to_name,
-                );
-            }
-            if right_hand_matches.len() > 1 {
-                right_hand_matches = self.combine_name_identical_tied_matches(
-                    &right_hand_matches,
-                    &self.right_hand_seq_to_name,
-                );
-            }
+            let left_hand_matches = self.left_hand_resonator.query(left_hand)?;
+            let right_hand_matches = self.right_hand_resonator.query(right_hand)?;
 
             if left_hand_matches.len() == 1 {
                 //attempt rescue
@@ -291,15 +287,11 @@ impl CellRangerProbeAssigner {
                 let score_right =
                     ((query.len() - query.len() / 2) as i32) - (2 * right_hand_distance as i32);
                 if score_right > 0 && (score_left + score_right >= self.rescue_min_score) {
-                    //if !self.right_hand_seq_to_name.contains_key(right_hand) {
-                    if right_hand_matches.is_empty()
-                        || right_hand_matches.iter().all(|(rhs, _)| {
-                            self.right_hand_seq_to_name
-                                .get(rhs.as_bstr())
-                                .expect("Internal inconsistency between resonator and map")
-                                == left_hand_name
-                        })
-                    {
+                    if attempt_rescue(
+                        &right_hand_matches,
+                        left_hand_name,
+                        &self.right_hand_seq_to_name,
+                    ) {
                         return Ok(Some(left_hand_name.as_str()));
                     }
                 }
@@ -330,14 +322,12 @@ impl CellRangerProbeAssigner {
                 if score_left > 0 && (score_left + score_right >= self.rescue_min_score) {
                     //if !self.left_hand_seq_to_name.contains_key(left_hand) {
                     //
-                    if left_hand_matches.is_empty()
-                        || left_hand_matches.iter().all(|(lhs, _)| {
-                            self.left_hand_seq_to_name
-                                .get(lhs.as_bstr())
-                                .expect("Internal inconsistency between resonator and map")
-                                == right_hand_name
-                        })
-                    {
+
+                    if attempt_rescue(
+                        &left_hand_matches,
+                        right_hand_name,
+                        &self.left_hand_seq_to_name,
+                    ) {
                         return Ok(Some(right_hand_name.as_str()));
                     }
                 }
@@ -346,45 +336,6 @@ impl CellRangerProbeAssigner {
             }
             Ok(None)
         }
-    }
-
-    fn combine_name_identical_tied_matches<'b>(
-        &'b self,
-        hits: &Vec<(&'b BStr, u32)>,
-        half_seq_to_name: &IndexMap<BString, String>,
-    ) -> Vec<(&'b BStr, u32)> {
-        fn split_name(name: &str, name_split_char: Option<u8>) -> &str {
-            match name_split_char {
-                None => name,
-                Some(split_char) => name
-                    .split_once(split_char as char)
-                    .map_or(name, |(first_part, _)| first_part),
-            }
-        }
-
-        debug_assert!(!hits.is_empty(), "can not be called without hits");
-        let all_distances_equal = hits.iter().all(|(_, dist)| *dist == hits[0].1);
-        if all_distances_equal {
-            let first_name = split_name(
-                half_seq_to_name
-                    .get(hits[0].0)
-                    .expect("Internal inconsistency between resonator and map"),
-                self.name_split_char,
-            );
-            let all_names_equal = hits.iter().all(|(seq, _)| {
-                let name = split_name(
-                    half_seq_to_name
-                        .get(seq.as_bstr())
-                        .expect("Internal inconsistency between resonator and map"),
-                    self.name_split_char,
-                );
-                name == first_name
-            });
-            if all_names_equal {
-                return vec![hits[0]];
-            }
-        }
-        vec![]
     }
 }
 
@@ -412,7 +363,7 @@ mod test {
             .into_iter()
             .collect(),
         );
-        let engine = CellRangerProbeAssigner::new(seq_to_name, None).unwrap();
+        let engine = CellRangerProbeAssigner::new(seq_to_name).unwrap();
         //perfect queries
         assert_eq!(
             engine
@@ -540,7 +491,7 @@ mod test {
             .into_iter()
             .collect(),
         );
-        let engine = CellRangerProbeAssigner::new(seq_to_name, None).unwrap();
+        let engine = CellRangerProbeAssigner::new(seq_to_name).unwrap();
         assert_eq!(
             engine
                 .query("AAAAAAAAAAAAAAAAAAAACCCCCCCCCCTTTTTTTTTTTTTTTTTTTT".into())
@@ -566,7 +517,7 @@ mod test {
             .into_iter()
             .collect(),
         );
-        let engine = CellRangerProbeAssigner::new(seq_to_name, None).unwrap();
+        let engine = CellRangerProbeAssigner::new(seq_to_name).unwrap();
         assert_eq!(
             engine
                 .query("GGAATGTAGCTGGCTCCGGCTATGTTCCAGGGAGGTCTCGCAGGTAAACT".into())

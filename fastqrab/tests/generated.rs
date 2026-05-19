@@ -2507,21 +2507,6 @@ fn test_cases_x_single_step_x_assign_by_halves_x_broken_barcodes() {
 
 #[test]
 
-fn test_cases_x_single_step_x_assign_by_halves_x_combine_name_identical_tied_matches() {
-    println!(
-        "Test case is in: test_cases/single_step/assign_by_halves/combine_name_identical_tied_matches"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/assign_by_halves/combine_name_identical_tied_matches",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
 fn test_cases_x_single_step_x_assign_by_halves_x_empty_barcodes_defined() {
     println!("Test case is in: test_cases/single_step/assign_by_halves/empty_barcodes_defined");
     run_test(

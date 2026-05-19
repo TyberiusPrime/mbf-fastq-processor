@@ -10,7 +10,6 @@ correct mismatching sequences.
     in_label = "mytag" # a sequence region
     out_label = "assigned_tag"
     barcodes = "mybarcodelist" # the [barcodes] section to use as references
-    name_split_character = "_" # optional, consider references equivalent when tie breaking if they match up to this 
 
 [barcodes.mybarcodelist]
     "AAAA" = "label_ignored" # only read when demultiplexing 
@@ -25,14 +24,18 @@ Perfectly matching sequences are assigned trivially.
 
 For the others a cell ranger probe set assignment inspired algorithm is used.
 
-The halves of the barcode are lookup up separately with a maximum hamming distance of 1,
-yielding candidate matches.
+The halves of the barcode are lookup up separately with a maximum hamming
+distance of 1, yielding candidate matches.
 
-If there is exactly one match, the other half is compared to the candidates, calculating a mismatch score
-`matches - mismatches` (= `len - 2 * mismatches`) for just the half, and the complete sequence.
-If the half-side score is above 0, and the total score is >= 30, the assignment is made.
+If there is exactly one match, the other half is compared to the candidates,
+calculating a mismatch score `matches - mismatches` (= `len - 2 * mismatches`)
+for just the half, and the complete sequence. If the half-side score is above
+0, and the total score is >= 30, the assignment is considered.
 
-If not, the process is repeated starting from the 2nd half of the read.
+Only if the other half doesn't disagree at hamming distance of 1, 
+an assignment is made.
+
+If no assignment was made, the process is repeated with the halves reversed.
 
 
 
