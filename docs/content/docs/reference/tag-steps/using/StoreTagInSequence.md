@@ -11,7 +11,7 @@ Insert a tag's string value into a read sequence at the position defined by anot
     action = "StoreTagInSequence"
     in_value_label    = "mytag"    # location or string tag to insert
     in_position_label = "mytag2"   # location tag defining where to insert
-    anchor = "Start"               # "Start"/"left" or "End"/"right"
+    anchor = "Start"               # "Start"/"left" or "End"/"right" or 'replace'
 ```
 
 ## Parameters
@@ -20,7 +20,7 @@ Insert a tag's string value into a read sequence at the position defined by anot
 |---|---|---|---|
 | `in_value_label` | location or string tag | yes | Tag whose sequence is inserted into the read |
 | `in_position_label` | location tag | yes | Tag that defines the insertion position |
-| `anchor` | `"Start"` / `"left"` / `"End"` / `"right"` | yes | Whether to insert before the leftmost position (`Start`) or after the rightmost end (`End`) of the position tag |
+| `anchor` | `"Start"` / `"left"` / `"End"` / `"right"` / `"Replace"` | yes | Whether to insert before the leftmost position (`Start`), after the rightmost end (`End`) of the position tag, or replace the tag from start..end (single location tags only)|
 
 ## How it works
 
@@ -28,7 +28,8 @@ Insert a tag's string value into a read sequence at the position defined by anot
 read. The insertion point is derived from the anchor:
 
 - **`Start` / `left`** — insert *before* the leftmost `start` coordinate across all regions.
-- **`End` / `right`** — insert *after* the rightmost `start + len` coordinate across all regions.
+- **`End` / `right`** — insert *after* the rightmost `start + len` coordinate across all regions. - 
+- ** `Replace` — replace the position's tag sequence.
 
 The bytes inserted come from `in_value_label`:
 
@@ -37,12 +38,15 @@ The bytes inserted come from `in_value_label`:
 
 Quality scores for the inserted bases are set to `~` (Phred+33 = Q93, maximum Sanger quality).
 
+For replace, the tag must be a single consecutive location.
+Otherwise, a runtime failure will be issued. 
+
 ## Location tag adjustment
 
 After insertion, all location tags on the same segment are updated:
 
-- Locations **after** the insertion point are shifted forward by the number of inserted bases.
-- Locations that **straddle** the insertion point (start before, end after) have their
+- Locations **after** the insertion are shifted forward by the number of inserted bases.
+- Locations that **straddle** the insertion (start before, end after) have their
   coordinate information removed (sequence data is preserved).
 - Locations **before** the insertion point are unchanged.
 

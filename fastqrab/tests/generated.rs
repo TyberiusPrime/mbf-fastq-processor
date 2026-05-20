@@ -1543,6 +1543,28 @@ fn test_cases_x_integration_x_misc_x_head_with_index() {
 
 #[test]
 
+fn test_cases_x_integration_x_regex_and_replace_in_seq_x_basic() {
+    println!("Test case is in: test_cases/integration/regex_and_replace_in_seq/basic");
+    run_test(
+        std::path::Path::new("../test_cases/integration/regex_and_replace_in_seq/basic"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_integration_x_regex_and_replace_in_seq_x_multi_location() {
+    println!("Test case is in: test_cases/integration/regex_and_replace_in_seq/multi_location");
+    run_test(
+        std::path::Path::new("../test_cases/integration/regex_and_replace_in_seq/multi_location"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_integration_x_tag_histogram_and_demultiplex() {
     println!("Test case is in: test_cases/integration/tag_histogram_and_demultiplex");
     run_test(

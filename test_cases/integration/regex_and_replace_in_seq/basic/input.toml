@@ -1,0 +1,24 @@
+[input]
+  read1 = 'input_read1.fq'
+
+[[step]]
+  action= 'ExtractRegex'
+  query = 'A{0,3}(TCGA)'
+  replacement = '$1'
+  out_label = 'barcode'
+  source = 'read1'
+
+[[step]]
+  action = 'StoreTagInComment'  
+  in_label = 'barcode'
+
+[[step]]
+  action = 'StoreTagInSequence'
+  in_value_label = 'barcode'
+  in_position_label = 'barcode'
+  anchor = 'replace'
+
+
+
+[output]
+  prefix = 'output'

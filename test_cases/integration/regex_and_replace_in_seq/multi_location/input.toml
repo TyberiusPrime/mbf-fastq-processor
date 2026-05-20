@@ -1,0 +1,25 @@
+[input]
+  read1 = 'input_read1.fq'
+
+[[step]]
+  action= 'ExtractRegions'
+  out_label = 'barcode'
+  regions = [
+    {start=0,len=2, segment='read1', anchor='left'},
+    {start=4,len=2, segment='read1', anchor='left'}
+]
+
+[[step]]
+  action = 'StoreTagInComment'  
+  in_label = 'barcode'
+
+[[step]]
+  action = 'StoreTagInSequence'
+  in_value_label = 'barcode'
+  in_position_label = 'barcode'
+  anchor = 'replace'
+
+
+
+[output]
+  prefix = 'output'

@@ -1,0 +1,1 @@
+Error in stage 2: Error processing StoreTagInSequence: Found a multi region location, StoreTagInSequence only works with single-region location
