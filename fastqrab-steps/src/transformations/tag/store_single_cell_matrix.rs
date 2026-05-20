@@ -10,9 +10,11 @@ use std::num::NonZeroUsize;
 type WriterHandle = Arc<Mutex<Option<ChunkedRecordWriter>>>;
 type DataHandles = Arc<Mutex<DemultiplexedData<Option<ChunkedRecordWriter>>>>;
 
+mod cellranger_like;
 mod cluster;
 mod helpers;
 
+use cellranger_like::aggregate_to_matrix_cellranger_like;
 use cluster::aggregate_to_matrix_cluster;
 use helpers::{encode_umi, finish_writer, human_fmt_usize, take_singleton_writer, write_matrix};
 //
@@ -38,6 +40,22 @@ impl Umi {
 
     fn is_n(&self) -> bool {
         self.0 == u32::MAX
+    }
+
+    fn is_homopolymer(&self, umi_length: u16) -> bool {
+        assert!(umi_length <= 16, "Max umi length exceeded");
+        let x = self.0;
+        let bits = umi_length as u32 * 2;
+        //make sure we have no bits set above umi_length, so we detect if the umis are longer than
+        //the length at least...
+        if umi_length < 16 && x & (u32::MAX << bits) != 0 && !self.is_n() {
+            panic!("Umi.his_homopolymer: bits set above umi_length");
+        }
+        let shift = 32 - bits;
+        x == 0 // all A
+            || x == 0b01010101010101010101010101010101 >> shift // all C 01
+            || x == 0b10101010101010101010101010101010 >> shift // all G 10
+            || x == 0b11111111111111111111111111111111 >> shift // all T 11
     }
 }
 
@@ -73,7 +91,8 @@ enum UMIAggregation {
     Exact,
     #[tpd(alias = "1MM")]
     Cluster,
-    CellRanger,
+    #[tpd(alias = "cellranger")]
+    CellRangerLike,
 }
 /// Collect (gene_idx, cell_idx, umi_2bit) triples per read, then write binary
 /// data file(s) and lookup tables on finalize.
@@ -577,8 +596,8 @@ impl Step for StoreSingleCellMatrix {
                     );
 
                     let unique_genes: FxHashSet<_> = matrix
-                        .keys()
-                        .filter_map(|(gene, _)| {
+                        .iter()
+                        .filter_map(|(gene, _, _count)| {
                             if !gene.is_unmatched() {
                                 Some(gene)
                             } else {
@@ -588,8 +607,8 @@ impl Step for StoreSingleCellMatrix {
                         .collect();
 
                     let unique_cells: FxHashSet<_> = matrix
-                        .keys()
-                        .filter_map(|(_, cell)| {
+                        .iter()
+                        .filter_map(|(_, cell, _count)| {
                             if !cell.is_unmatched() {
                                 Some(cell)
                             } else {
@@ -599,8 +618,8 @@ impl Step for StoreSingleCellMatrix {
                         .collect();
 
                     let matrix_matched = matrix
-                        .keys()
-                        .filter(|(gene, cell)| !gene.is_unmatched() && !cell.is_unmatched())
+                        .iter()
+                        .filter(|(gene, cell, _count)| !gene.is_unmatched() && !cell.is_unmatched())
                         .count();
 
                     any_gene_matches |= !unique_genes.is_empty();
@@ -609,11 +628,14 @@ impl Step for StoreSingleCellMatrix {
                     stats.push(("Matrix matched", matrix_matched));
                     stats.push(("Observed genes", unique_genes.len()));
                     stats.push(("Observed cells", unique_cells.len()));
-                    let reads_in_matrix = matrix.values().map(|x| *x as usize).sum();
+                    let reads_in_matrix = matrix
+                        .iter()
+                        .map(|(_gene, _cell, count)| *count as usize)
+                        .sum();
                     let reads_in_matrix_matched = matrix
                         .iter()
-                        .filter(|((gene, cell), _)| !gene.is_unmatched() && !cell.is_unmatched())
-                        .map(|(_, count)| *count as usize)
+                        .filter(|(gene, cell, _count)| !gene.is_unmatched() && !cell.is_unmatched())
+                        .map(|(_gene, _cell_, count)| *count as usize)
                         .sum();
                     stats.push(("Reads in matrix", reads_in_matrix));
                     stats.push((
@@ -734,23 +756,25 @@ fn aggregate_to_matrix(
     entries: Vec<ObservedEvent>,
     umi_aggregation: UMIAggregation,
     umi_length: u16,
-) -> IndexMap<(GeneIdx, CellIdx), u32> {
+) -> Vec<(GeneIdx, CellIdx, u32)> {
     if entries.is_empty() {
-        return IndexMap::new();
+        return Vec::new();
     } else {
         match umi_aggregation {
             UMIAggregation::None => aggregate_to_matrix_none(entries),
             UMIAggregation::Exact => aggregate_to_matrix_exact(entries),
             UMIAggregation::Cluster => aggregate_to_matrix_cluster(entries, umi_length),
-            UMIAggregation::CellRanger => aggregate_to_matrix_cellranger(entries, umi_length),
+            UMIAggregation::CellRangerLike => {
+                aggregate_to_matrix_cellranger_like(entries, umi_length)
+            }
         }
     }
 }
 
-fn aggregate_to_matrix_none(entries: Vec<ObservedEvent>) -> IndexMap<(GeneIdx, CellIdx), u32> {
-    let mut matrix = IndexMap::new();
+fn aggregate_to_matrix_none(entries: Vec<ObservedEvent>) -> Vec<(GeneIdx, CellIdx, u32)> {
+    let mut matrix = Vec::new();
     let mut counter = 0u32; //doesn't matter though, overwritten in first loop.
-    let mut last = None;
+    let mut last: Option<(GeneIdx, CellIdx)> = None;
     for entry in &entries {
         //let umi = entry[2];
         let key = (entry.gene, entry.cell);
@@ -761,7 +785,7 @@ fn aggregate_to_matrix_none(entries: Vec<ObservedEvent>) -> IndexMap<(GeneIdx, C
             }
             Some(last_key) => {
                 // different gene & cell -> push last
-                matrix.insert(last_key, counter);
+                matrix.push((last_key.0, last_key.1, counter));
                 last = Some(key);
                 counter = 1;
             }
@@ -773,13 +797,13 @@ fn aggregate_to_matrix_none(entries: Vec<ObservedEvent>) -> IndexMap<(GeneIdx, C
         }
     }
     if let Some(last) = last {
-        matrix.insert(last, counter);
+        matrix.push((last.0, last.1, counter));
     }
     matrix
 }
 
-fn aggregate_to_matrix_exact(entries: Vec<ObservedEvent>) -> IndexMap<(GeneIdx, CellIdx), u32> {
-    let mut matrix = IndexMap::new();
+fn aggregate_to_matrix_exact(entries: Vec<ObservedEvent>) -> Vec<(GeneIdx, CellIdx, u32)> {
+    let mut matrix = Vec::new();
     let mut counter = 0u32;
     let mut last: Option<(GeneIdx, CellIdx, Umi)> = None;
     for entry in &entries {
@@ -801,7 +825,7 @@ fn aggregate_to_matrix_exact(entries: Vec<ObservedEvent>) -> IndexMap<(GeneIdx, 
             }
             Some(last_key) => {
                 // different gene & cell -> push last
-                matrix.insert((last_key.0, last_key.1), counter);
+                matrix.push((last_key.0, last_key.1, counter));
                 last = Some(key);
                 counter = 1;
             }
@@ -813,7 +837,7 @@ fn aggregate_to_matrix_exact(entries: Vec<ObservedEvent>) -> IndexMap<(GeneIdx, 
         }
     }
     if let Some(last_key) = last {
-        matrix.insert((last_key.0, last_key.1), counter);
+        matrix.push((last_key.0, last_key.1, counter));
     }
     matrix
 }
@@ -834,10 +858,3 @@ fn aggregate_to_matrix_exact(entries: Vec<ObservedEvent>) -> IndexMap<(GeneIdx, 
 //     buffer.flush().unwrap();
 //     panic!("Done dumping entries.dat");
 // }
-
-fn aggregate_to_matrix_cellranger(
-    _entries: Vec<ObservedEvent>,
-    _umi_length: u16,
-) -> IndexMap<(GeneIdx, CellIdx), u32> {
-    todo!();
-}

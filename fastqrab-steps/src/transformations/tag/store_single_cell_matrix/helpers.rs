@@ -1,6 +1,5 @@
 use anyhow::Result;
 use fastqrab_io::io::output::chunked_writer::ChunkedRecordWriter;
-use indexmap::IndexMap;
 use std::sync::{Arc, Mutex};
 
 use super::{CellIdx, GeneIdx, Umi};
@@ -38,7 +37,7 @@ pub fn human_fmt_usize(n: usize) -> String {
 }
 
 pub fn write_matrix(
-    matrix: IndexMap<(GeneIdx, CellIdx), u32>,
+    matrix: Vec<(GeneIdx, CellIdx, u32)>,
     n_genes: u32,
     n_cells: u32,
     writer: &mut ChunkedRecordWriter,
@@ -47,7 +46,7 @@ pub fn write_matrix(
     writer.write_text_record(b"%metadata_json: {\"software\": \"fastqrab\"}\n")?;
     let total: usize = matrix.len();
     writer.write_text_record(format!("{n_genes} {n_cells} {total}\n").as_bytes())?;
-    for ((gene, cell), count) in matrix {
+    for (gene, cell, count) in matrix {
         if cell.0 > n_cells {
             panic!("n_cells and actual cells mismatch");
         }

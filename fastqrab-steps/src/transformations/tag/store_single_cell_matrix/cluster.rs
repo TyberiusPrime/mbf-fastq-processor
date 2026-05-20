@@ -2,16 +2,15 @@ use std::{sync::OnceLock, time::Instant};
 
 use super::{CellIdx, GeneIdx, Umi, helpers::hamming_bp_16};
 use disjoint::DisjointSet;
-use indexmap::IndexMap;
 use rayon::prelude::*;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 pub fn aggregate_to_matrix_cluster(
     entries: Vec<super::ObservedEvent>,
     umi_length: u16,
-) -> IndexMap<(GeneIdx, CellIdx), u32> {
+) -> Vec<(GeneIdx, CellIdx, u32)> {
     if entries.is_empty() {
-        return IndexMap::new();
+        return Vec::new();
     }
     // Find split indices where (cell, gene) key changes
     // TODO: use chunk_by!
@@ -27,7 +26,7 @@ pub fn aggregate_to_matrix_cluster(
     ends.push(entries.len());
     starts.extend(splits);
     // Process each (gene, cell) group in parallel
-    let results: Vec<((GeneIdx, CellIdx), u32)> = starts
+    let results: Vec<(GeneIdx, CellIdx, u32)> = starts
         .into_par_iter()
         .zip(ends.into_par_iter())
         .filter_map(|(start, end)| {
@@ -46,15 +45,10 @@ pub fn aggregate_to_matrix_cluster(
                 None
             } else {
                 let count = umi_cluster_count(&seen, umi_length);
-                Some((key, count))
+                Some((key.0, key.1, count))
             }
-        })
-        .collect();
-    let mut matrix = IndexMap::with_capacity(results.len());
-    for (key, count) in results {
-        matrix.insert(key, count);
-    }
-    matrix
+        }).collect();
+    results
 }
 
 pub fn umi_cluster_count(umis: &[Umi], umi_length: u16) -> u32 {
