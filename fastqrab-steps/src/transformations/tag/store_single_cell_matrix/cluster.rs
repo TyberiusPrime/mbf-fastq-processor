@@ -47,7 +47,8 @@ pub fn aggregate_to_matrix_cluster(
                 let count = umi_cluster_count(&seen, umi_length);
                 Some((key.0, key.1, count))
             }
-        }).collect();
+        })
+        .collect();
     results
 }
 

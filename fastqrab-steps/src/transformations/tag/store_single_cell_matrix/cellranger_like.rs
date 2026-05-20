@@ -1,5 +1,5 @@
-use rustc_hash::FxHashSet;
 use rayon::prelude::*;
+use rustc_hash::FxHashSet;
 
 use super::{CellIdx, GeneIdx, ObservedEvent, Umi};
 use crate::transformations::prelude::*; // union_find_rs::prelude also exports a Result
