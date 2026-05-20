@@ -1,0 +1,85 @@
+[input]
+    read1 = 'input_read1.fq'
+
+# tag_before: entirely before the replaced region [0,3)
+[[step]]
+    action = 'ExtractRegion'
+    segment = 'read1'
+    start = 0
+    length = 3
+    out_label = 'tag_before'
+    anchor = 'Start'
+
+# tag_straddle: starts before and ends inside the replaced region [2,6)
+# straddles the replacement → location is removed, sequence data kept
+[[step]]
+    action = 'ExtractRegion'
+    segment = 'read1'
+    start = 2
+    length = 4
+    out_label = 'tag_straddle'
+    anchor = 'Start'
+
+# val_tag: the 2-base value to insert — shorter than the 3-base replaced region
+[[step]]
+    action = 'ExtractRegion'
+    segment = 'read1'
+    start = 0
+    length = 2
+    out_label = 'val_tag'
+    anchor = 'Start'
+
+# pos_tag: the 3-base region to replace [3,6)
+[[step]]
+    action = 'ExtractRegion'
+    segment = 'read1'
+    start = 3
+    length = 3
+    out_label = 'pos_tag'
+    anchor = 'Start'
+
+# tag_after: entirely after the replaced region [9,12)
+# net shift after replace: insert_len(2) - replaced_len(3) = -1 → new start = 8
+[[step]]
+    action = 'ExtractRegion'
+    segment = 'read1'
+    start = 9
+    length = 3
+    out_label = 'tag_after'
+    anchor = 'Start'
+
+[[step]]
+    action = 'StoreTagsInTable'
+    infix = 'before'
+    in_labels = [
+        'tag_before',   'location_tag_before',
+        'tag_straddle', 'location_tag_straddle',
+        'val_tag',      'location_val_tag',
+        'pos_tag',      'location_pos_tag',
+        'tag_after',    'location_tag_after',
+    ]
+
+# Replace val_tag (3 bases) with pos_tag (2 bases) — net shrink of 1
+[[step]]
+    action = 'StoreTagInSequence'
+    in_value_label = 'val_tag'
+    in_position_label = 'pos_tag'
+    anchor = 'Replace'
+
+# Locations after:
+#   tag_before / val_tag: unchanged (entirely before the replaced region)
+#   tag_straddle / pos_tag: location removed (straddle the replaced region)
+#   tag_after: shifted from 9 to 8 (net shift = insert_len - replaced_len = 2 - 3 = -1)
+[[step]]
+    action = 'StoreTagsInTable'
+    infix = 'after'
+    in_labels = [
+        'tag_before',   'location_tag_before',
+        'tag_straddle', 'location_tag_straddle',
+        'val_tag',      'location_val_tag',
+        'pos_tag',      'location_pos_tag',
+        'tag_after',    'location_tag_after',
+    ]
+
+[output]
+    prefix = 'output'

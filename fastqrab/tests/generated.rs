@@ -9032,6 +9032,37 @@ fn test_cases_x_single_step_x_extraction_x_store_tag_in_sequence_x_end_anchor() 
 
 #[test]
 
+fn test_cases_x_single_step_x_extraction_x_store_tag_in_sequence_x_replacement_basic() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/store_tag_in_sequence/replacement_basic"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/store_tag_in_sequence/replacement_basic",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_extraction_x_store_tag_in_sequence_x_replacement_with_location_shift()
+{
+    println!(
+        "Test case is in: test_cases/single_step/extraction/store_tag_in_sequence/replacement_with_location_shift"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/store_tag_in_sequence/replacement_with_location_shift",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_extraction_x_store_tag_in_sequence_x_with_unrelated_tags() {
     println!(
         "Test case is in: test_cases/single_step/extraction/store_tag_in_sequence/with_unrelated_tags"

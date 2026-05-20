@@ -225,9 +225,12 @@ impl Step for StoreTagInSequence {
                     match &insert_infos[read_pos] {
                         Some(info) if info.segment_idx.0 == seg_idx => {
                             if location.start >= info.insert_pos_right {
-                                // Entirely after the insertion → shift forward
+                                // Entirely after the insertion → shift by net delta
+                                // (insert_len minus the number of bytes removed, which is
+                                // zero for Start/End anchors and replaced_len for Replace)
                                 NewLocation::New(HitRegion {
-                                    start: location.start + info.insert_len,
+                                    start: location.start + info.insert_len
+                                        - (info.insert_pos_right - info.insert_pos_left),
                                     len: location.len,
                                     segment_index: location.segment_index,
                                 })

@@ -1,0 +1,3 @@
+ReadName	tag_before	location_tag_before	tag_straddle	location_tag_straddle	val_tag	location_val_tag	pos_tag	location_pos_tag	tag_after	location_tag_after
+Read1	AAA	read1:0-3	ABBB	read1:2-6	AA	read1:0-2	BBB	read1:3-6	DDD	read1:9-12
+Read2	EEE	read1:0-3	EFFF	read1:2-6	EE	read1:0-2	FFF	read1:3-6	HHH	read1:9-12
