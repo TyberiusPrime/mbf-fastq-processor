@@ -1,0 +1,24 @@
+@Read1-no|iupac_match=tcaac barced
+CTCCTGCACAtcaacTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNNNNNN
++
+CCCCDCCCCCCCCCC?A???###############################
+@Read2|iupac_match=tcaac - first barcode
+GGtcaacTCAATGTCCAAGGNCAGTTTNNNNNNNNNNNNNNNNNNNNNNNN
++
+CCBCBCCCCCBCCDC?CAC=#@@A@##########################
+@Read3|iupac_match=ggcga - 2nd barcode
+GTGCggcgaTGCTTGTGGCTNTCCTTTNNNNNNNNNNNNNNNNNNNNNNNN
++
+CCCCCCCCCCCCCCC=@@B@#C>C?##########################
+@Read4|iupac_match=ggcga - 2nd barcode,then 3rd
+ggcgaTTCAATCTCATCCTGANGAGCATNNNNNNNNNNNNNNNNNNNNNNN
++
+CCCCC@CCCBCCCCCCC@?C#AAAA##########################
+@Read5|iupac_match=ttcaa - 3rd barcode then 2nd
+ttcaaGGCGAACTCTTTGGATANTTCCCTNNNNNNNNNNNNNNNNNNNNNN
++
+BCCCCCCCCCCCCCCCCCCC#ABBB##########################
+@Read6|iupac_match=ggcga 2nd, 1st, 3rd
+ggcgaTCAACTTCAACTTCCNATGGAGNNNNNNNNNNNNNNNNNNNNNNNN
++
+CCCCCCCCCCCCCCCCCCCC#CCCA##########################

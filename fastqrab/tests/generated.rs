@@ -7749,6 +7749,19 @@ fn test_cases_x_single_step_x_extraction_x_extract_iupac_x_multiple() {
 
 #[test]
 
+fn test_cases_x_single_step_x_extraction_x_extract_iupac_x_multiple_left_most() {
+    println!("Test case is in: test_cases/single_step/extraction/extract_iupac/multiple_left_most");
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/extract_iupac/multiple_left_most",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_extraction_x_extract_iupac_x_multiple_patterns_x_multiple_patterns_different_positions()
  {
     println!(
@@ -7788,6 +7801,21 @@ fn test_cases_x_single_step_x_extraction_x_extract_iupac_x_multiple_patterns_x_o
     run_test(
         std::path::Path::new(
             "../test_cases/single_step/extraction/extract_iupac/multiple_patterns/overlapping_patterns",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_extraction_x_extract_iupac_x_multiple_right_most() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/extract_iupac/multiple_right_most"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/extract_iupac/multiple_right_most",
         ),
         "input.toml",
         1,

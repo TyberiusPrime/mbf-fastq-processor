@@ -2,6 +2,14 @@ use super::extract_region_tags;
 use crate::transformations::prelude::*;
 use fastqrab_config::{StringOrVecString, dna::Anchor, tpd_adapt_iupac_bstring};
 
+#[derive(Clone, JsonSchema, Debug, Default)]
+#[tpd]
+enum TieBreak {
+    #[default]
+    Earliest,
+    LeftMost,
+    RightMost,
+}
 /// Extract a IUPAC described sequence from the read. E.g. an adapter.
 /// Can be at the start (anchor = Left, the end (anchor = Right),
 /// or anywhere (anchor = Anywhere) within the read.
@@ -25,6 +33,8 @@ pub struct IUPAC {
     anchor: Anchor,
     out_label: TagLabel,
     max_mismatches: u8,
+    #[tpd(default)]
+    on_tie: TieBreak,
 }
 
 impl VerifyIn<PartialConfig> for PartialIUPAC {
@@ -67,14 +77,48 @@ impl Step for IUPAC {
     ) -> Result<(FastQBlocksCombined, bool)> {
         extract_region_tags(&mut block, self.segment, &self.out_label, |read| {
             // Try each query pattern and return the first match
-            for query in &self.search {
-                if let Some(hit) =
-                    read.find_iupac(query, self.anchor, self.max_mismatches, self.segment)
-                {
-                    return Some(hit);
+            match (&self.on_tie, &self.anchor) {
+                (TieBreak::Earliest, _) | (_, Anchor::Left | Anchor::Right) => {
+                    for query in &self.search {
+                        if let Some(hit) =
+                            read.find_iupac(query, self.anchor, self.max_mismatches, self.segment)
+                        {
+                            return Some(hit);
+                        }
+                    }
+                    return None;
+                }
+                (TieBreak::LeftMost, Anchor::Anywhere) => {
+                    return self
+                        .search
+                        .iter()
+                        .filter_map(|query| {
+                            read.find_iupac(query, self.anchor, self.max_mismatches, self.segment)
+                        })
+                        .min_by_key(|hit| {
+                            hit.0[0]
+                                .location
+                                .as_ref()
+                                .map(|x| x.start)
+                                .expect("Found iiupac should have had location set")
+                        });
+                }
+                (TieBreak::RightMost, Anchor::Anywhere) => {
+                    return self
+                        .search
+                        .iter()
+                        .filter_map(|query| {
+                            read.find_iupac(query, self.anchor, self.max_mismatches, self.segment)
+                        })
+                        .max_by_key(|hit| {
+                            hit.0[0]
+                                .location
+                                .as_ref()
+                                .map(|x| x.start)
+                                .expect("Found iiupac should have had location set")
+                        });
                 }
             }
-            None
         });
 
         Ok((block, true))
