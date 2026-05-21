@@ -1,0 +1,40 @@
+Error Details ==
+Error 1/2
+   ╭─config.toml
+   ┆
+19 │ [[step]]
+20 │     action = 'FillMissing'
+   ┆              ──────┬──────
+   ┆                    │
+   ┆                    ╰─────── In this step
+21 │     in_label_primary = 'a_content'
+   ┆                        ─────┬─────
+   ┆                             │
+   ┆                             ╰────── Incompatible tag type
+───╯
+Hint: This transform requires tag 'a_content' to be one of the following types: ['Location', 'String'],
+      but it is actually of type 'Numeric (0..=1)'.
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/FillMissing
+      Or run: `fastqrab template FillMissing` for more information.
+
+Error 2/2
+   ╭─config.toml
+   ┆
+19 │ [[step]]
+20 │     action = 'FillMissing'
+   ┆              ──────┬──────
+   ┆                    │
+   ┆                    ╰─────── In this step
+   ┆
+21 │     in_label_primary = 'a_content'
+22 │     in_label_secondary = 'read_len'
+   ┆                          ─────┬────
+   ┆                               │
+   ┆                               ╰───── Incompatible tag type
+───╯
+Hint: This transform requires tag 'read_len' to be one of the following types: ['Location', 'String'],
+      but it is actually of type 'Numeric (0..)'.
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/FillMissing
+      Or run: `fastqrab template FillMissing` for more information.
+
+

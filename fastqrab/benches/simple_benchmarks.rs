@@ -373,6 +373,35 @@ fn benchmark_key_steps(c: &mut Criterion) {
             thread_count,
         ),
         BenchmarkConfig::new(
+            "FillMissing",
+            r#"[[step]]
+    action = "ExtractRegion"
+    segment = "read1"
+    start = 0
+    length = 3
+    out_label = "tag1"
+    anchor = "Start"
+
+[[step]]
+    action = "ExtractRegion"
+    segment = "read1"
+    start = 3
+    length = 3
+    out_label = "tag2"
+    anchor = "Start"
+
+[[step]]
+    action = "FillMissing"
+    in_label_primary = "tag1"
+    in_label_secondary = "tag2"
+    out_label = "result"
+
+[[step]]
+    action = "ForgetAllTags""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
             "ConvertQuality",
             r#"[[step]]
     action = "ConvertQuality"

@@ -6,6 +6,7 @@ use toml_pretty_deser::{TomlValue, TomlValueState};
 // Individual transformation modules
 pub mod assign_by_halves;
 pub mod concat_tags;
+pub mod fill_missing;
 pub mod forget_all_tags;
 pub mod forget_tag;
 pub mod quantify_tag;
@@ -21,6 +22,7 @@ pub mod store_tags_in_table;
 pub use assign_by_halves::{AssignByHalves, PartialAssignByHalves};
 pub use concat_tags::{ConcatTags, PartialConcatTags};
 use fastqrab_io::io::bam_read_count_from_index;
+pub use fill_missing::{FillMissing, PartialFillMissing};
 pub use forget_all_tags::{ForgetAllTags, PartialForgetAllTags};
 pub use forget_tag::{ForgetTag, PartialForgetTag};
 pub use quantify_tag::{PartialQuantifyTag, QuantifyTag};

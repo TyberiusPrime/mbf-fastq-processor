@@ -427,6 +427,15 @@
 # [[step]]
 #    action = "ForgetAllTags"
 
+# ==== FillMissing ====
+## Use the primary tag if it is not missing, otherwise use the secondary tag.
+## Both tags must be Location or String; a Location+String mixture outputs String.
+# [[step]]
+#    action = "FillMissing"
+#    in_label_primary = "mytag"    # (alias: primary, first) tag used when not missing
+#    in_label_secondary = "mytag2" # (alias: secondary, second) tag used as fallback
+#    out_label = "result"          # output tag name
+
 # ==== ForgetTag ====
 ## forget about a tag
 ## usefull if you want to store tags in a table,

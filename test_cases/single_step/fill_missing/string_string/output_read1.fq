@@ -1,0 +1,12 @@
+@read_alpha|result=alpha
+ACGTACGT
++
+IIIIIIII
+@read_beta|result=beta
+CGCGCGCG
++
+IIIIIIII
+@read_neither|result=
+TTTTTTTT
++
+IIIIIIII

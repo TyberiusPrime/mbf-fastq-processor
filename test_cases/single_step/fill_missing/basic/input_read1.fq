@@ -1,0 +1,12 @@
+@read1_has_primary
+AAAACGTACGTTTT
++
+IIIIIIIIIIIIII
+@read2_has_fallback
+CGCGCGTACGTTTT
++
+IIIIIIIIIIIIII
+@read3_both_missing
+CGCGCGTACGCGCG
++
+IIIIIIIIIIIIII

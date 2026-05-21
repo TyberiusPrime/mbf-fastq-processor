@@ -1,0 +1,30 @@
+[input]
+    read1 = 'input_read1.fq'
+
+# Extract string tag from read name: 'alpha' present only in read_alpha
+[[step]]
+    action = 'ExtractRegex'
+    search = 'alpha'
+    out_label = 'primary'
+    source = 'name:read1'
+
+# Extract string tag from read name: 'beta' present only in read_beta
+[[step]]
+    action = 'ExtractRegex'
+    search = 'beta'
+    out_label = 'secondary'
+    source = 'name:read1'
+
+# FillMissing: use primary string if present, else secondary string
+[[step]]
+    action = 'FillMissing'
+    in_label_primary = 'primary'
+    in_label_secondary = 'secondary'
+    out_label = 'result'
+
+[[step]]
+    action = 'StoreTagInComment'
+    in_label = 'result'
+
+[output]
+    prefix = 'output'

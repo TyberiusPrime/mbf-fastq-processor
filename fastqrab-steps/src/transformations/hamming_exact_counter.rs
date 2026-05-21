@@ -203,10 +203,12 @@ impl Step for HammingExactCounter {
                 // we need to somehow delay for the other concurrent blocks to have been counted.
                 // which means that blocks_counted == our block number, since the final block
                 // always has the highest block_no().
+                //cov:excl-start
                 while self.majority_data.blocks_counted.load(Ordering::SeqCst) < block.block_no() {
                     // yeah it's a busy wait. Shouldn't last long though.
-                    std::thread::yield_now(); //cov:excl-line
+                    std::thread::yield_now();
                 }
+                //cov:excl-stop
                 counted = block.block_no(); // or reload blocks_counted, but this is cheaper
             }
             if block.is_final || counted == self.majority_data.blocks_to_count {

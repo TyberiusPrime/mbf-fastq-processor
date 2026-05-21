@@ -1601,6 +1601,25 @@ Concatenate multiple tags into a single tag.
 
 For input sequence `AAAACGTACGTTTT`, combined_barcode displays as `AAAA_TTTT`.
 
+### FillMissing
+
+Return the first tag if it is not missing, otherwise return the second tag.
+
+**USE WHEN**: Providing a fallback value when a tag might be absent for some reads
+
+```toml
+[[step]]
+    action = "FillMissing"
+    in_label_primary = "mytag"    # TYPE: existing tag, REQUIRED (aliases: primary, first)
+    in_label_secondary = "mytag2" # TYPE: existing tag, REQUIRED (aliases: secondary, second)
+    out_label = "result"          # TYPE: string, REQUIRED
+```
+
+**Tag Type Behavior**:
+- **Both Location**: output is Location (coordinates preserved)
+- **Both String**: output is String
+- **Location + String mixture**: output is String (Location values converted to their sequence)
+
 ### ForgetTag
 
 Remove a tag from memory.

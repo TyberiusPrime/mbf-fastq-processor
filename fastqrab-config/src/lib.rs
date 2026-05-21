@@ -172,6 +172,22 @@ pub enum TagValueType {
     Numeric((Option<NonNaN>, Option<NonNaN>)),
     Bool,
 }
+impl TagValueType {
+    pub fn any() -> &'static [Self] {
+        &[
+            TagValueType::Location,
+            TagValueType::String,
+            TagValueType::Bool,
+            TagValueType::Numeric((None, None)),
+        ]
+    }
+}
+
+impl PartialEq for TagValueType {
+    fn eq(&self, other: &Self) -> bool {
+        core::mem::discriminant(self) == core::mem::discriminant(other)
+    }
+}
 
 #[derive(Debug)]
 pub struct UsedTag<'a> {

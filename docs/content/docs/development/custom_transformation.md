@@ -650,3 +650,9 @@ You'll also need to add a microbenchmark to
 `fastqrab/benches/simple_benchmarks.rs`.
 
 Congratulations, you just wrote your first transformation for fastqrab!
+
+
+## Further notes
+
+When taking a segment, name or tag, have a look at `ResolvedSourceAll`/`ResolvedSourceNoAll`
+

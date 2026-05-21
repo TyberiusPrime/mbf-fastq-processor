@@ -9453,6 +9453,50 @@ fn test_cases_x_single_step_x_fileformats_x_stdout_x_fastq() {
 
 #[test]
 
+fn test_cases_x_single_step_x_fill_missing_x_basic() {
+    println!("Test case is in: test_cases/single_step/fill_missing/basic");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/fill_missing/basic"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_fill_missing_x_mixed_location_string() {
+    println!("Test case is in: test_cases/single_step/fill_missing/mixed_location_string");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/fill_missing/mixed_location_string"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_fill_missing_x_number_number() {
+    println!("Test case is in: test_cases/single_step/fill_missing/number_number");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/fill_missing/number_number"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_fill_missing_x_string_string() {
+    println!("Test case is in: test_cases/single_step/fill_missing/string_string");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/fill_missing/string_string"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_filter_x_len_threshold_too_low() {
     println!("Test case is in: test_cases/single_step/filter/len_threshold_too_low");
     run_test(

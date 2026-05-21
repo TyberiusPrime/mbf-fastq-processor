@@ -1,0 +1,8 @@
+@read1_has_location|result=AAAA
+AAAACGTACGCGCG
++
+IIIIIIIIIIIIII
+@read2_uses_string_fallback|result=read2
+CGCGCGTACGCGCG
++
+IIIIIIIIIIIIII
