@@ -50,31 +50,32 @@ impl TagUser for PartialTaggedVariant<PartialTagMatches> {
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> Option<TagUsageInfo<'_>> {
-        if let Some(inner) = self.toml_value.value.as_mut() {
-            let mut used_tags = Vec::new();
-            if let Some(MustAdapt::PostVerify(ResolvedSourceNoAll::Tag(tag_name))) =
-                inner.source.as_ref()
-            {
-                used_tags.push(Some(UsedTag {
-                    name: tag_name.clone(),
-                    accepted_tag_types: &[TagValueType::String, TagValueType::Location],
-                    toml_source: Rc::new(RefCell::new((
-                        &mut inner.source.state,
-                        &mut inner.source.help,
-                    ))),
-                    further_help: None,
-                }));
-            }
-
-            Some(TagUsageInfo {
-                declared_tag: inner.out_label.to_declared_tag(TagValueType::Bool),
-                used_tags,
-                must_see_all_tags: true, // for filtering them down
-                ..Default::default()
-            })
-        } else {
-            None // cov:excl-line
+        let inner = self
+            .toml_value
+            .value
+            .as_mut()
+            .expect("get_tag_usage called on failed verify");
+        let mut used_tags = Vec::new();
+        if let Some(MustAdapt::PostVerify(ResolvedSourceNoAll::Tag(tag_name))) =
+            inner.source.as_ref()
+        {
+            used_tags.push(Some(UsedTag {
+                name: tag_name.clone(),
+                accepted_tag_types: &[TagValueType::String, TagValueType::Location],
+                toml_source: Rc::new(RefCell::new((
+                    &mut inner.source.state,
+                    &mut inner.source.help,
+                ))),
+                further_help: None,
+            }));
         }
+
+        Some(TagUsageInfo {
+            declared_tag: inner.out_label.to_declared_tag(TagValueType::Bool),
+            used_tags,
+            must_see_all_tags: true, // for filtering them down
+            ..Default::default()
+        })
     }
 }
 

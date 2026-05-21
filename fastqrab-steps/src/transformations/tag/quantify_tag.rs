@@ -58,21 +58,22 @@ impl TagUser for PartialTaggedVariant<PartialQuantifyTag> {
     }
 
     fn declare_output_files(&self) -> Vec<OutputDeclaration> {
-        if let Some(inner) = self.toml_value.value.as_ref() {
-            if let Some(infix) = inner.infix.as_ref() {
-                return vec![OutputDeclaration {
-                    id: "qr".to_string(),
-                    target: WriteTargetConfig::new(vec![infix.clone()], "qr.json".to_string()),
-                    sink_config: SinkConfig::default(),
-                    format: fastqrab_io::FileFormat::Text,
-                    chunk_policy: ChunkPolicy::default(),
-                    bam_options: None,
-                    singleton: false,
-                    span: inner.infix.span(),
-                }];
-            }
-        }
-        vec![]
+        let inner = self
+            .toml_value
+            .value
+            .as_ref()
+            .expect("declared_output_files called on failed verification");
+        let infix = inner.infix.as_ref().expect("Verification had passed");
+        return vec![OutputDeclaration {
+            id: "qr".to_string(),
+            target: WriteTargetConfig::new(vec![infix.clone()], "qr.json".to_string()),
+            sink_config: SinkConfig::default(),
+            format: fastqrab_io::FileFormat::Text,
+            chunk_policy: ChunkPolicy::default(),
+            bam_options: None,
+            singleton: false,
+            span: inner.infix.span(),
+        }];
     }
 }
 
@@ -161,23 +162,24 @@ impl Step for QuantifyTag {
             .lock()
             .expect("Lock poisoned");
         for (tag, writer_opt) in handles.iter_mut() {
-            if let Some(mut writer) = writer_opt.take() {
-                let mut str_collector: Vec<(String, usize)> = collector
-                    .get(&tag)
-                    .expect("value must exist in histogram_values")
-                    .iter()
-                    .map(|(k, v)| (String::from_utf8_lossy(k).to_string(), *v))
-                    .collect();
-                str_collector.sort_by(|a, b| {
-                    b.1.cmp(&a.1)
-                        .then_with(|| a.0.to_lowercase().cmp(&b.0.to_lowercase()))
-                });
-                let str_collector: indexmap::IndexMap<String, usize> =
-                    str_collector.into_iter().collect();
-                let json = serde_json::to_string_pretty(&str_collector)?;
-                writer.write_text_record(json.as_bytes())?;
-                let _ = writer.finish()?;
-            }
+            let mut writer = writer_opt
+                .take()
+                .expect("Writer should have been set in init");
+            let mut str_collector: Vec<(String, usize)> = collector
+                .get(&tag)
+                .expect("value must exist in histogram_values")
+                .iter()
+                .map(|(k, v)| (String::from_utf8_lossy(k).to_string(), *v))
+                .collect();
+            str_collector.sort_by(|a, b| {
+                b.1.cmp(&a.1)
+                    .then_with(|| a.0.to_lowercase().cmp(&b.0.to_lowercase()))
+            });
+            let str_collector: indexmap::IndexMap<String, usize> =
+                str_collector.into_iter().collect();
+            let json = serde_json::to_string_pretty(&str_collector)?;
+            writer.write_text_record(json.as_bytes())?;
+            let _ = writer.finish()?;
         }
         Ok(None)
     }

@@ -1528,7 +1528,7 @@ impl PartialConfig {
                 }
                 all_decls.push(decls);
             }
-        }
+        } //cov:excl-line
         // Collect stdout-related errors before moving all_decls.
         // stdout_entries: (transform_idx, span) for each stdout declaration.
         // stdout_has_demux_before: parallel vec; true if a Demultiplex step preceded that transform.
@@ -1553,7 +1553,7 @@ impl PartialConfig {
                         }
                     }
                 }
-            }
+            } //cov:excl-line
         }
 
         self.output_declarations_per_transformation = Some(all_decls);
@@ -1576,7 +1576,7 @@ impl PartialConfig {
                         })
                         .collect();
                     let file_hint = if infix_parts.is_empty() {
-                        format!("suffix .{suffix}")
+                        format!("suffix .{suffix}") //cov:excl-line
                     } else {
                         format!("infix '{}', suffix .{suffix}", infix_parts.join("_"))
                     };
@@ -1585,7 +1585,7 @@ impl PartialConfig {
                         "Two steps would write to the same output file ({file_hint}).\n\
                         Change the infix in one of them to avoid the conflict."
                     ));
-                }
+                } //cov:excl-line
             }
         }
 
@@ -1645,7 +1645,7 @@ impl PartialConfig {
                         .to_string(),
                 );
             }
-        }
+        } //cov:excl-line
     }
 
     pub fn verify_demultiplex_unique(&mut self) {

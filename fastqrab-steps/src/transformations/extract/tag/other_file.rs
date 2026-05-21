@@ -197,7 +197,7 @@ impl Step for OtherFile {
         };
         // read them all.
         if let Some(pg) = self.progress_output.as_mut() {
-            pg.output(&format!("Reading all reads from {}", self.filename));
+            pg.output(&format!("Reading all reads from {}", self.filename))?;
         }
         let count: Cell<usize> = Cell::new(0);
 
@@ -250,7 +250,7 @@ impl Step for OtherFile {
                 "Finished reading all ({}) read sequences from {}",
                 count.get(),
                 self.filename
-            ));
+            ))?;
         }
 
         self.filter = Some(Arc::new(filter));

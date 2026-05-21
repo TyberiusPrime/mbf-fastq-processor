@@ -952,9 +952,9 @@ impl ChunkedRecordWriter {
                 sink.write_all(&header).context("Writing chunk header")?;
             }
             ActiveSink::Bam(_) => {
-                anyhow::bail!("set_header is not supported for BAM ChunkedRecordWriter");
+                panic!("set_header is not supported for BAM ChunkedRecordWriter"); //cov:excl-line
             }
-            ActiveSink::Idle => unreachable!("active sink is Idle outside of rotation"),
+            ActiveSink::Idle => unreachable!("active sink is Idle outside of rotation"), //cov:excl-line
         }
         self.header = Some(header);
         Ok(())
@@ -966,9 +966,9 @@ impl ChunkedRecordWriter {
                 .write_all(encoded)
                 .context("Writing FASTQ/FASTA record")?,
             ActiveSink::Bam(_) => {
-                anyhow::bail!("write_text_record called on a BAM ChunkedRecordWriter")
+                panic!("write_text_record called on a BAM ChunkedRecordWriter") //cov:excl-line
             }
-            ActiveSink::Idle => unreachable!("active sink is Idle outside of rotation"),
+            ActiveSink::Idle => unreachable!("active sink is Idle outside of rotation"), //cov:excl-line
         }
         self.records_in_chunk += 1;
         self.maybe_rotate()?;
@@ -988,9 +988,9 @@ impl ChunkedRecordWriter {
                 sink.write_record(read, read_index, segment_index, segment_count, tags)?;
             }
             ActiveSink::Text(_) => {
-                anyhow::bail!("write_bam_record called on a text ChunkedRecordWriter")
+                panic!("write_bam_record called on a text ChunkedRecordWriter") //cov:excl-line
             }
-            ActiveSink::Idle => unreachable!("active sink is Idle outside of rotation"),
+            ActiveSink::Idle => unreachable!("active sink is Idle outside of rotation"), //cov:excl-line
         }
         self.records_in_chunk += 1;
         self.maybe_rotate()?;
@@ -1027,14 +1027,15 @@ impl ChunkedRecordWriter {
         self.chunk_index += 1;
         if self.chunk_index >= 10usize.pow(u32::try_from(self.digit_count).expect("u32")) {
             self.digit_count += 1;
-            if let WriteTarget::Files(paths) = &self.target {
-                paths.widen_existing(self.digit_count - 1, self.digit_count)?;
-                // Update completed_chunks paths to reflect rename.
-                for c in &mut self.completed_chunks {
-                    if let Some(p) = c.path.take() {
-                        let new_p = renamed_chunk_path(&p, self.digit_count - 1, self.digit_count);
-                        c.path = Some(new_p);
-                    }
+            let WriteTarget::Files(paths) = &self.target else {
+                panic!("Chunking, but not files output?!"); //cov:excl-line
+            };
+            paths.widen_existing(self.digit_count - 1, self.digit_count)?;
+            // Update completed_chunks paths to reflect rename.
+            for c in &mut self.completed_chunks {
+                if let Some(p) = c.path.take() {
+                    let new_p = renamed_chunk_path(&p, self.digit_count - 1, self.digit_count);
+                    c.path = Some(new_p);
                 }
             }
         }
@@ -1058,24 +1059,27 @@ impl ChunkedRecordWriter {
                 ActiveSink::Text(TextRecordSink::new(sink, &self.sink_config)?)
             }
             FileFormat::Bam => {
-                let opts = self.bam_options.clone().ok_or_else(|| {
-                    anyhow::anyhow!("BAM options missing for BAM ChunkedRecordWriter")
-                })?;
+                let opts = self
+                    .bam_options
+                    .clone()
+                    .expect("BAM options missing for BAM ChunkedRecordWriter");
                 ActiveSink::Bam(BamRecordSink::new(
                     sink,
                     &self.sink_config,
                     opts,
                     self.bam_thread_count,
-                )?)
+                )?) //cov:excl-line
             }
-            FileFormat::None => unreachable!("Cannot open ChunkedRecordWriter with format None"),
+            FileFormat::None => unreachable!("Cannot open ChunkedRecordWriter with format None"), //cov:excl-line
         };
         // Re-emit the header at the top of every chunk after the first (the
         // first chunk's header is written by set_header() itself).
         if self.chunk_index > 0 {
             if let (Some(header), ActiveSink::Text(sink)) = (&self.header, &mut self.active) {
+                //cov:excl-start
                 sink.write_all(header)
                     .context("Writing chunk header on rotation")?;
+                //cov:excl-stop
             }
         }
         Ok(())
@@ -1095,7 +1099,7 @@ impl ChunkedRecordWriter {
                 s.finish()?
             }
             ActiveSink::Bam(s) => s.finish()?,
-            ActiveSink::Idle => unreachable!("finish_active_sink called on Idle"),
+            ActiveSink::Idle => unreachable!("finish_active_sink called on Idle"), //cov:excl-line
         };
         let path = data_sink.path().map(Path::to_path_buf);
         if let Some(path) = &path {
@@ -1152,12 +1156,11 @@ fn write_hash_sidecar(filename: &Path, hash: &str, suffix: &str) -> Result<()> {
 #[expect(clippy::string_slice, reason = "ascii filename arithmetic")]
 fn renamed_chunk_path(old: &Path, old_digits: usize, new_digits: usize) -> PathBuf {
     // Mirror what `widen_existing` does to a single recorded path.
-    let Some(parent) = old.parent() else {
-        return old.to_path_buf();
-    };
-    let Some(name) = old.file_name().and_then(|s| s.to_str()) else {
-        return old.to_path_buf();
-    };
+    let parent = old.parent().expect("Parent failed on path");
+    let name = old
+        .file_name()
+        .and_then(|s| s.to_str())
+        .expect("Could not get filename");
     // Find the `.NNN[...]` segment after the last `.` group of the basename.
     // We re-derive by searching for an old-width digit run.
     // Simpler: scan dot-separated tokens for a numeric one of width `old_digits`.

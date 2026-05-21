@@ -204,8 +204,8 @@ impl Step for HammingExactCounter {
                 // which means that blocks_counted == our block number, since the final block
                 // always has the highest block_no().
                 while self.majority_data.blocks_counted.load(Ordering::SeqCst) < block.block_no() {
-                    //yeah it's a busy wait. Shouldn't last long though.
-                    std::thread::yield_now();
+                    // yeah it's a busy wait. Shouldn't last long though.
+                    std::thread::yield_now(); //cov:excl-line
                 }
                 counted = block.block_no(); // or reload blocks_counted, but this is cheaper
             }

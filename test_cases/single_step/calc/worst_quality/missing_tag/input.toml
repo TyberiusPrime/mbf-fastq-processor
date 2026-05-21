@@ -1,0 +1,21 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'ExtractRegex'
+    source = 'read1'
+    out_label = 'region'
+    query = '^AC'
+
+[[step]]
+    action = 'CalcWorstQuality'
+    out_label = 'worst_q'
+    source = 'tag:region'
+    offset = -33
+
+[[step]]
+  action = 'StoreTagInComment'
+  in_label = ['worst_q']
+
+[output]
+    prefix = 'output'

@@ -26,3 +26,6 @@ Set `include_read_name = false` to omit the `ReadName` index column from the out
 
 ### Interaction with demultiplexing
 When demultiplexing is used, separate TSV files are created for each barcode: `{prefix}_{infix}_{barcode}.tsv`.
+
+### Interaction with output.chunk_size
+No chunking is performed on the generated tables.

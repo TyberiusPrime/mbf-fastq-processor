@@ -211,7 +211,7 @@ impl CellRangerProbeAssigner {
                 .map(|(k, v)| (k[..k.len() / 2].into(), v.clone()))
                 .collect::<IndexMap<BString, String>>()),
             max_hamming_distance_for_better_half,
-        )?; // cov:excl-line
+        )?; // cov:excl-line don't expect it to fail, unequal lengths would have been caught earlier
         let left_hand_seq_to_name = seq_to_name
             .iter()
             .map(|(k, v)| (k[..k.len() / 2].into(), v.clone()))
@@ -223,7 +223,7 @@ impl CellRangerProbeAssigner {
                 .map(|(k, v)| (k[k.len() / 2..].into(), v.clone()))
                 .collect::<IndexMap<BString, String>>()),
             max_hamming_distance_for_better_half,
-        )?;
+        )?; // cov:excl-line don't expect it to fail, unequal lengths would have been caught earlier
         let right_hand_seq_to_name = seq_to_name
             .iter()
             .map(|(k, v)| (k[k.len() / 2..].into(), v.clone()))

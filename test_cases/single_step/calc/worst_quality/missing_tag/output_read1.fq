@@ -1,0 +1,8 @@
+@read1|worst_q=2
+ACGTACGT
++
+#$%.1234
+@read2|worst_q=0
+TCGTACGT
++
+#$%.1234

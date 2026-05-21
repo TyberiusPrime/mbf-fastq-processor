@@ -68,33 +68,35 @@ impl VerifyIn<PartialConfig> for PartialStoreTagsInTable {
 
 impl TagUser for PartialTaggedVariant<PartialStoreTagsInTable> {
     fn declare_output_files(&self) -> Vec<OutputDeclaration> {
-        if let Some(inner) = self.toml_value.value.as_ref() {
-            let infix = inner.infix.as_ref().cloned().unwrap_or_default();
-            let compression = inner.compression.as_ref().copied().unwrap_or_default();
-            let suffix = compression.apply_suffix("tsv");
-            return vec![OutputDeclaration {
-                id: "tsv".to_string(),
-                target: WriteTargetConfig::new(vec![infix], suffix),
-                sink_config: SinkConfig {
-                    compression,
-                    compression_level: inner
-                        .compression_level
-                        .as_ref()
-                        .and_then(|x| x.as_ref())
-                        .copied(),
-                    compression_threads: Some(NonZeroUsize::new(1).expect("Can't fail")),
-                    hash_uncompressed: false,
-                    hash_compressed: false,
-                    simulated_failure: None,
-                },
-                format: fastqrab_io::FileFormat::Text,
-                chunk_policy: ChunkPolicy::default(),
-                bam_options: None,
-                singleton: false,
-                span: inner.infix.span(),
-            }];
-        }
-        vec![]
+        let inner = self
+            .toml_value
+            .value
+            .as_ref()
+            .expect("declare_output_files called without successsful verification");
+        let infix = inner.infix.as_ref().cloned().unwrap_or_default();
+        let compression = inner.compression.as_ref().copied().unwrap_or_default();
+        let suffix = compression.apply_suffix("tsv");
+        return vec![OutputDeclaration {
+            id: "tsv".to_string(),
+            target: WriteTargetConfig::new(vec![infix], suffix),
+            sink_config: SinkConfig {
+                compression,
+                compression_level: inner
+                    .compression_level
+                    .as_ref()
+                    .and_then(|x| x.as_ref())
+                    .copied(),
+                compression_threads: Some(NonZeroUsize::new(1).expect("Can't fail")),
+                hash_uncompressed: false,
+                hash_compressed: false,
+                simulated_failure: None,
+            },
+            format: fastqrab_io::FileFormat::Text,
+            chunk_policy: ChunkPolicy::default(),
+            bam_options: None,
+            singleton: false,
+            span: inner.infix.span(),
+        }];
     }
 
     fn get_tag_usage(
@@ -288,9 +290,7 @@ impl Step for StoreTagsInTable {
             .expect("lock poisoned")
             .iter_mut()
         {
-            if let Some(writer) = writer.take() {
-                let _ = writer.finish()?;
-            }
+            let _ = writer.take().expect("Should have had writer?!").finish()?;
         }
         Ok(None)
     }

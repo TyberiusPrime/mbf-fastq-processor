@@ -1,0 +1,11 @@
+[input]
+    read1 = ["input_read1.fq"]
+
+
+[[step]]
+  action = 'StoreTagsInTable'
+  in_labels = 'len_read1'
+
+[output]
+    prefix = 'output'
+	chunk_size=3

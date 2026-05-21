@@ -52,20 +52,18 @@ impl VerifyIn<PartialConfig> for PartialProgress {
 }
 
 impl Progress {
-    pub fn output(&self, msg: &str) {
+    pub fn output(&self, msg: &str) -> Result<()> {
         let mut guard = self
             .writer
             .lock()
             .expect("writer lock must not be poisoned");
-        if let Some(writer) = guard.as_mut() {
-            let mut bytes = msg.as_bytes().to_vec();
-            bytes.push(b'\n');
-            writer
-                .write_text_record(&bytes)
-                .expect("failed to write to progress file"); //todo: proper error handling
-        } else {
-            println!("{msg}");
-        }
+        let writer = guard.as_mut().expect("Writer set in init");
+        let mut bytes = msg.as_bytes().to_vec();
+        bytes.push(b'\n');
+        writer
+            .write_text_record(&bytes)
+            .context("failed to write to progress file")?;
+        Ok(())
     }
 }
 
@@ -113,7 +111,7 @@ impl Step for Progress {
             input_info.threading_configuration.n_input_per_segment,
             input_info.threading_configuration.n_processing,
             input_info.threading_configuration.n_output,
-        ));
+        ))?;
         Ok(None)
     }
 
@@ -167,11 +165,11 @@ impl Step for Progress {
                         .as_secs()
                 )
             };
-            self.output(&msg);
+            self.output(&msg)?;
         }
         //not quite deterministic since it might come before or after other blocks-in-flight
         if block.is_final {
-            self.output("Final block passed Progress stage.");
+            self.output("Final block passed Progress stage.")?;
         }
         Ok((block, true))
     }
@@ -196,7 +194,7 @@ impl Step for Progress {
             thousands_format(count as f64, 0),
             thousands_format(count as f64 / elapsed, 2),
         );
-        self.output(&msg);
+        self.output(&msg)?;
 
         self.finalize_timepoint
             .lock()
@@ -219,7 +217,7 @@ impl Step for Progress {
             elapsed,
             format_seconds_to_hhmmss(elapsed as u64)
         );
-        self.output(&msg);
+        self.output(&msg).ok(); //swallow error. If it fails here, we ignore that
 
         if let Some(writer) = self.writer.lock().expect("poisoned").take() {
             let _ = writer.finish().ok(); //we choose to ignore if finishing the progress writer

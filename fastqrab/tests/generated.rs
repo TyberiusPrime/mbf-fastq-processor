@@ -2177,6 +2177,17 @@ fn test_cases_x_output_x_chunked_x_fastq_gzip() {
 
 #[test]
 
+fn test_cases_x_output_x_chunked_x_table() {
+    println!("Test case is in: test_cases/output/chunked/table");
+    run_test(
+        std::path::Path::new("../test_cases/output/chunked/table"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_output_x_custom_ix_separator() {
     println!("Test case is in: test_cases/output/custom_ix_separator");
     run_test(
@@ -2820,6 +2831,17 @@ fn test_cases_x_single_step_x_calc_x_worst_quality_x_location_tag() {
     println!("Test case is in: test_cases/single_step/calc/worst_quality/location_tag");
     run_test(
         std::path::Path::new("../test_cases/single_step/calc/worst_quality/location_tag"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_calc_x_worst_quality_x_missing_tag() {
+    println!("Test case is in: test_cases/single_step/calc/worst_quality/missing_tag");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/calc/worst_quality/missing_tag"),
         "input.toml",
         1,
     );

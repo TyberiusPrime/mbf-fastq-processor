@@ -151,11 +151,11 @@ impl OutputStreamConfig {
     fn new_stdout(format: FileFormat, sink_config: SinkConfig) -> Self {
         match format {
             FileFormat::Fastq | FileFormat::Fasta => {}
-            FileFormat::Bam => unreachable!(
+            FileFormat::Bam => unreachable!( //cov:excl-line
                 "BAM output is not supported on stdout. Should have been caught in validation. Bug."
             ),
             FileFormat::Text | FileFormat::None => {
-                unreachable!("Cannot emit 'text' or 'none' format to stdout via this path")
+                unreachable!("Cannot emit 'text' or 'none' format to stdout via this path") //cov:excl-line
             }
         }
         Self {
@@ -434,7 +434,7 @@ fn open_one_set_of_output_files(
                         bam_write_options.clone(),
                         bam_threads,
                         allow_overwrite,
-                    )?)
+                    )?) //cov:excl-line
                 } else {
                     None
                 };

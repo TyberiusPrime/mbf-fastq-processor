@@ -145,37 +145,43 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagInFastQ> {
     }
 
     fn declare_output_files(&self) -> Vec<OutputDeclaration> {
-        if let Some(inner) = self.toml_value.value.as_ref() {
-            if let Some(in_label) = inner.in_label.as_ref().and_then(|v| v.as_ref_post()) {
-                let format = inner.format.as_ref().copied().unwrap_or_default();
-                let compression = inner.compression.as_ref().copied().unwrap_or_default();
-                return vec![OutputDeclaration {
-                    id: "tag_fastq".to_string(),
-                    target: WriteTargetConfig::new(
-                        vec![format!("tag.{in_label}")],
-                        format.get_suffix(compression, None),
-                    ),
-                    sink_config: SinkConfig {
-                        compression,
-                        compression_level: inner
-                            .compression_level
-                            .as_ref()
-                            .and_then(|x| x.as_ref())
-                            .copied(),
-                        compression_threads: Some(NonZeroUsize::new(1).expect("Can't fail")),
-                        hash_uncompressed: false,
-                        hash_compressed: false,
-                        simulated_failure: None,
-                    },
-                    format,
-                    chunk_policy: ChunkPolicy::default(),
-                    bam_options: None,
-                    singleton: false,
-                    span: inner.in_label.span(),
-                }];
-            }
-        }
-        vec![]
+        let inner = self
+            .toml_value
+            .value
+            .as_ref()
+            .expect("declare_output_files called without successsful verification");
+        let in_label = inner
+            .in_label
+            .as_ref()
+            .and_then(|v| v.as_ref_post())
+            .expect("declare_output_files called without successsful verification");
+
+        let format = inner.format.as_ref().copied().unwrap_or_default();
+        let compression = inner.compression.as_ref().copied().unwrap_or_default();
+        return vec![OutputDeclaration {
+            id: "tag_fastq".to_string(),
+            target: WriteTargetConfig::new(
+                vec![format!("tag.{in_label}")],
+                format.get_suffix(compression, None),
+            ),
+            sink_config: SinkConfig {
+                compression,
+                compression_level: inner
+                    .compression_level
+                    .as_ref()
+                    .and_then(|x| x.as_ref())
+                    .copied(),
+                compression_threads: Some(NonZeroUsize::new(1).expect("Can't fail")),
+                hash_uncompressed: false,
+                hash_compressed: false,
+                simulated_failure: None,
+            },
+            format,
+            chunk_policy: ChunkPolicy::default(),
+            bam_options: None,
+            singleton: false,
+            span: inner.in_label.span(),
+        }];
     }
 }
 
@@ -341,9 +347,7 @@ impl Step for StoreTagInFastQ {
             .expect("lock poisoned")
             .iter_mut()
         {
-            if let Some(writer) = writer.take() {
-                let _ = writer.finish()?;
-            }
+            let _ = writer.take().expect("Should have had writer?!").finish()?;
         }
         Ok(None)
     }

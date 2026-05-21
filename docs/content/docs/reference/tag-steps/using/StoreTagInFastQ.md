@@ -39,3 +39,6 @@ space.
 ### Interaction with demultiplex
 
 When demultiplexing is used, separate FASTQ files are created for each barcode: `{prefix}_{barcode}.tag.{label}.fq`
+
+### Interaction with output.chunk_size
+No chunking is performed on the generated FASTQS.
