@@ -150,7 +150,7 @@ impl Step for Regex {
             replacement: &BString,
             haystack: &[u8],
             read_no: usize,
-            block_tags: &IndexMap<TagLabel, Vec<TagValue>>,
+            block_tags: &IndexMap<TagLabel, TagColumn>,
         ) -> Option<Vec<u8>> {
             let re_hit = search.captures(haystack);
             if let Some(hit) = re_hit {
@@ -160,7 +160,7 @@ impl Step for Regex {
                 for (tag_name, tags) in block_tags {
                     // only those we listed in use_tags.
                     let query = format!("[[{tag_name}]]");
-                    let value = tags[read_no].to_bstr();
+                    let value = tags.to_bstr(read_no);
                     out = out.replace(query, value.as_bytes());
                 }
                 Some(out)
@@ -178,8 +178,10 @@ impl Step for Regex {
                     &self.out_label,
                     |_read, read_no, block_tags| {
                         // Choose source based on whether it's name or sequence
-                        let haystack =
-                            block_tags.get(tag_name).expect("Tag not present?!")[read_no].to_bstr();
+                        let haystack = block_tags
+                            .get(tag_name)
+                            .expect("Tag not present?!")
+                            .to_bstr(read_no);
                         apply_regexp(
                             &self.search,
                             &self.replacement,
@@ -229,7 +231,7 @@ impl Step for Regex {
                             for (tag_name, tags) in block_tags {
                                 // only those we listed in use_tags.
                                 let query = format!("[[{tag_name}]]");
-                                let value = tags[read_no].to_bstr();
+                                let value = tags.to_bstr(read_no);
                                 // dbg!(&query, &tags[read_no], &value);
                                 //  dbg!(bstr::BStr::new(&replacement));
                                 replacement = replacement.replace(query, value.as_bytes());

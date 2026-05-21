@@ -241,14 +241,14 @@ impl Step for Box<EvalExpression> {
                 let numeric_value = match tag_values {
                     TagColumn::Location(items) => 0.0, //any location is true.
                     TagColumn::Bool(items) => {
-                        if items[read_idx].is_some_and(|x| x) {
+                        if items[read_idx] {
                             1.0
                         } else {
                             0.0
                         }
                     }
                     TagColumn::String(bstrings) => 0.0, //any string is true
-                    TagColumn::Numeric(items) => items[read_idx].unwrap_or(0.0), //missing => false
+                    TagColumn::Numeric(items) => items[read_idx], //missing => false
                 };
                 vars.insert((*var_name).to_string(), numeric_value);
             }
@@ -271,14 +271,14 @@ impl Step for Box<EvalExpression> {
 
         let tag_column = match self.result_type {
             ResultType::Numeric => {
-                TagColumn::Numeric(results.into_iter().map(Option::Some).collect())
+                TagColumn::Numeric(results.into_iter().collect())
             }
             ResultType::Bool => {
                 // Treat 0.0 as false, any other value as true
                 TagColumn::Bool(
                     results
                         .into_iter()
-                        .map(|result| Some(result.abs() >= f64::EPSILON))
+                        .map(|result| result.abs() >= f64::EPSILON)
                         .collect(),
                 )
             }

@@ -7,7 +7,7 @@ use fastqrab_io::io::FastQBlock;
 struct ReservoirBuffer {
     segments: Vec<FastQBlock>,
     count: usize,
-    tags: IndexMap<TagLabel, Vec<TagValue>>,
+    tags: IndexMap<TagLabel, TagColumn>,
 }
 
 /// Fairly sample reads (expensive!)
@@ -113,10 +113,16 @@ impl Step for ReservoirSample {
                     buf.segments[segment_no].append_read(&segment.get(pos));
                 }
                 for (label, values) in &block.tags {
-                    buf.tags
+                    match &mut buf
+                        .tags
                         .entry(label.clone())
-                        .or_default()
-                        .push(values[pos].clone());
+                        .or_insert_with(|| values.new_empty())
+                    {
+                        TagColumn::Location(items) => items.push(values.get_location(pos).clone()),
+                        TagColumn::String(items) => items.push(values.get_string(pos).clone()),
+                        TagColumn::Numeric(items) => items.push(values.get_numeric(pos)),
+                        TagColumn::Bool(items) => items.push(values.get_bool(pos)),
+                    }
                 }
             } else {
                 //algorithm R
@@ -127,7 +133,16 @@ impl Step for ReservoirSample {
                     }
                     for (label, values) in &block.tags {
                         if let Some(tag_buf) = buf.tags.get_mut(label) {
-                            tag_buf[j - 1] = values[pos].clone();
+                            match tag_buf {
+                                TagColumn::Location(items) => {
+                                    items[j - 1] = values.get_location(pos).clone()
+                                }
+                                TagColumn::String(items) => {
+                                    items[j - 1] = values.get_string(pos).clone()
+                                }
+                                TagColumn::Numeric(items) => items[j - 1] = values.get_numeric(pos),
+                                TagColumn::Bool(items) => items[j - 1] = values.get_bool(pos),
+                            }
                         }
                     }
                 }
@@ -154,8 +169,8 @@ impl Step for ReservoirSample {
                     output
                         .tags
                         .entry(label.clone())
-                        .or_default()
-                        .extend(values.iter().cloned());
+                        .or_insert_with(|| values.new_empty())
+                        .extend(values);
                 }
             }
             Ok((output, true))
@@ -164,8 +179,8 @@ impl Step for ReservoirSample {
             // so downstream steps (e.g. StoreTagsInTable) can discover tag labels
             // before the final block arrives.
             let mut empty = block.empty();
-            for label in block.tags.keys() {
-                empty.tags.insert(label.clone(), Vec::new());
+            for (label, column) in block.tags {
+                empty.tags.insert(label.clone(), column.new_empty());
             }
             Ok((empty, true))
         }

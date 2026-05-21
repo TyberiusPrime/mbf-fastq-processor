@@ -103,17 +103,11 @@ impl Step for ByNumericTag {
             .expect("Numeric tag not found");
 
         let keep: Vec<bool> = tag_values
-            .iter()
-            .map(|tag_val| {
-                if let Some(value) = tag_val.as_numeric() {
-                    let passes_min = self.min_value.is_none_or(|min| value >= min);
-                    let passes_max = self.max_value.is_none_or(|max| value < max);
-                    passes_min && passes_max
-                } else {
-                    // cov:excl-start
-                    unreachable!("Tag values should have been verified to be numeric during configuration verification")
-                    // cov:excl-stop
-                }
+            .iter_numeric()
+            .map(|value| {
+                let passes_min = self.min_value.is_none_or(|min| *value >= min);
+                let passes_max = self.max_value.is_none_or(|max| *value < max);
+                passes_min && passes_max
             })
             .map(|passes| {
                 if self.keep_or_remove == KeepOrRemove::Remove {

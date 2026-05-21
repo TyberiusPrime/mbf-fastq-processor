@@ -284,17 +284,17 @@ impl Step for OtherFile {
                     &mut block,
                     &self.out_label,
                     tag,
-                    |tag_value, _ignored_demultiplex_tag| {
+                    |query, _ignored_demultiplex_tag| {
                         let filter = self
                             .filter
                             .as_ref()
                             .expect("filter must be set during initialization");
-                        let query = tag_value.to_bstr();
-                        if query.is_empty() {
-                            false
-                        } else {
-                            // might be missing!
+                        if let Some(query) = query
+                            && !query.is_empty()
+                        {
                             filter.contains(&FragmentEntry(&[&query]))
+                        } else {
+                            false
                         }
                     },
                 );

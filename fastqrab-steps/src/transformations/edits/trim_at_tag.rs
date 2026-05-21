@@ -114,16 +114,14 @@ impl Step for TrimAtTag {
             return Err(anyhow::anyhow!("{error_msg}"));
         }
 
-        let mut cut_locations: TagColumn= {
-            block
-                .tags
-                .extract_if(.., |k, _v| k == &self.in_label)
-                .next()
-                .map(|(_k, v)| v)
-                .expect("in_label tag must exist in block")
-                .as_locations()
-                .expect("Expected to be location tag, check verify")
-        };
+        let mut cut_locations = (block
+            .tags
+            .extract_if(.., |k, _v| k == &self.in_label) //We're putting them back at the bottom
+            .next()
+            .map(|(_k, v)| v)
+            .expect("in_label tag must exist in block")
+            .into_locations()
+            .expect("Expected to be location tag, check verify"));
         if let Some(target) = cut_locations
             .iter()
             //first not none
@@ -145,7 +143,7 @@ impl Step for TrimAtTag {
                         *target,
                         |location: &HitRegion, pos: usize, _seq, _read_len: usize| -> NewLocation {
                             let cls = &cut_locations[pos];
-                            if let Some(hits) = cls.as_sequence()
+                            if let Some(hits) = cls
                                 && !hits.0.is_empty()
                                 && let Some(trim_location) = &hits.0[0].location
                             {
@@ -178,7 +176,7 @@ impl Step for TrimAtTag {
             if self.keep_tag {
                 //guess they're 0..len now.
                 for cls in &mut cut_locations {
-                    if let Some(hits) = cls.as_sequence_mut() {
+                    if let Some(hits) = cls {
                         for hit in &mut hits.0 {
                             if let Some(location) = &mut hit.location {
                                 location.start = 0;
@@ -188,7 +186,7 @@ impl Step for TrimAtTag {
                 }
             } else {
                 for cls in &mut cut_locations {
-                    if let Some(hits) = cls.as_sequence_mut() {
+                    if let Some(hits) = cls {
                         for hit in &mut hits.0 {
                             hit.location = None;
                         }
@@ -199,7 +197,7 @@ impl Step for TrimAtTag {
             //do nothing, they're still good
         } else {
             for cls in &mut cut_locations {
-                if let Some(hits) = cls.as_sequence_mut() {
+                if let Some(hits) = cls {
                     for hit in &mut hits.0 {
                         hit.location = None;
                     }
@@ -207,6 +205,7 @@ impl Step for TrimAtTag {
             }
         }
 
+        let cut_locations = TagColumn::Location(cut_locations);
         block.tags.insert(self.in_label.clone(), cut_locations);
 
         Ok((block, true))

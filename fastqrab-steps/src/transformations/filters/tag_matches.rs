@@ -100,15 +100,18 @@ impl Step for TagMatches {
                     .get(tag_label)
                     .expect("Tag not set? Should have been caught earlier in validation.");
                 tag_values
-                    .iter()
-                    .map(|tag_value| accepted_set.contains(tag_value.to_bstr().as_ref()))
+                    .iter_stringified()
+                    .map(|opt_tag_value| {
+                        opt_tag_value
+                            .map(|tag_value| accepted_set.contains(tag_value.as_ref()))
+                            .unwrap_or(false)
+                    })
                     .collect()
             }
         };
-        block.tags.insert(
-            self.out_label.clone(),
-            found.into_iter().map(|x| TagValue::Bool(x)).collect(),
-        );
+        block
+            .tags
+            .insert(self.out_label.clone(), TagColumn::Bool(found));
 
         Ok((block, true))
     }

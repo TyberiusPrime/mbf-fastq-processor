@@ -278,7 +278,7 @@ impl Step for MergeReads {
 
         if let Some(merge_status) = merge_status.take() {
             let tag_values: TagColumn = 
-                TagColumn::Bool(merge_status.into_iter().map(Option::Some).collect());
+                TagColumn::Bool(merge_status.into_iter().collect());
             block.tags.insert(
                 self.out_label
                     .as_ref()

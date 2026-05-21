@@ -208,9 +208,9 @@ impl Step for BaseContent {
                     &bases_to_ignore_single,
                 );
                 if relative {
-                    Some(Self::percentage(counted, considered))
+                    Self::percentage(counted, considered)
                 } else {
-                    Some(counted as f64)
+                    counted as f64
                 }
             },
             move |reads| {
@@ -228,9 +228,9 @@ impl Step for BaseContent {
                 }
 
                 if relative {
-                    Some(Self::percentage(total_counted, total_considered))
+                    Self::percentage(total_counted, total_considered)
                 } else {
-                    Some(total_counted as f64)
+                    total_counted as f64
                 }
             },
             &mut block,

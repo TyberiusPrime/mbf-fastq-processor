@@ -1,6 +1,7 @@
-use std::cell::RefCell;
+use std::{borrow::Cow, cell::RefCell};
 
-use bstr::BString;
+use bstr::{BStr, BString};
+use fastqrab_dna::dna::TagColumn;
 use indexmap::IndexMap;
 
 use super::prelude::DemultiplexTag;
@@ -45,14 +46,11 @@ pub(crate) fn extract_region_tags(
     let mut out = Vec::new();
 
     let f2 = |read: &mut WrappedFastQRead| {
-        out.push(match f(read) {
-            Some(hits) => TagValue::Location(hits),
-            None => TagValue::Missing,
-        });
+        out.push(f(read));
     };
     block.segments[segment.get_index()].apply(f2);
 
-    block.tags.insert(label.clone(), out);
+    block.tags.insert(label.clone(), TagColumn::Location(out));
 }
 
 // pub(crate) fn extract_string_tags(
@@ -78,42 +76,39 @@ pub(crate) fn extract_region_tags_using_tags(
     block: &mut FastQBlocksCombined,
     segment: SegmentIndex,
     label: &TagLabel,
-    f: impl Fn(&mut WrappedFastQRead, usize, &IndexMap<TagLabel, Vec<TagValue>>) -> Option<Hits>,
+    f: impl Fn(&mut WrappedFastQRead, usize, &IndexMap<TagLabel, TagColumn>) -> Option<Hits>,
 ) {
     let mut out = Vec::new();
 
     let mut read_no = RefCell::new(0usize);
     let f2 = |read: &mut WrappedFastQRead| {
-        out.push(match f(read, *read_no.borrow(), &mut block.tags) {
-            Some(hits) => TagValue::Location(hits),
-            None => TagValue::Missing,
-        });
+        out.push(f(read, *read_no.borrow(), &mut block.tags));
         *read_no.get_mut() += 1;
     };
     block.segments[segment.get_index()].apply(f2);
 
-    block.tags.insert(label.clone(), out);
+    block.tags.insert(label.clone(), TagColumn::Location(out));
 }
 
 pub(crate) fn extract_string_tags_using_tags(
     block: &mut FastQBlocksCombined,
     segment: SegmentIndex,
     label: &TagLabel,
-    f: impl Fn(&mut WrappedFastQRead, usize, &IndexMap<TagLabel, Vec<TagValue>>) -> Option<BString>,
+    f: impl Fn(&mut WrappedFastQRead, usize, &IndexMap<TagLabel, TagColumn>) -> Option<BString>,
 ) {
     let mut out = Vec::new();
     let mut read_no = RefCell::new(0usize);
 
     let f2 = |read: &mut WrappedFastQRead| {
         out.push(match f(read, *read_no.borrow(), &mut block.tags) {
-            Some(hits) => TagValue::String(hits),
-            None => TagValue::Missing,
+            Some(str) => Some(str),
+            None => None,
         });
         *read_no.get_mut() += 1;
     };
     block.segments[segment.get_index()].apply(f2);
 
-    block.tags.insert(label.clone(), out);
+    block.tags.insert(label.clone(), TagColumn::String(out));
 }
 
 pub(crate) fn extract_bool_tags<F>(
@@ -126,11 +121,11 @@ pub(crate) fn extract_bool_tags<F>(
 {
     let mut values = Vec::new();
     let f = |read: &mut WrappedFastQRead, output_tag| {
-        values.push(TagValue::Bool(extractor(read, output_tag)));
+        values.push(extractor(read, output_tag));
     };
     block.segments[segment.get_index()].apply_with_demultiplex_tag(f, block.output_tags.as_ref());
 
-    block.tags.insert(label.clone(), values);
+    block.tags.insert(label.clone(), TagColumn::Bool(values));
 }
 
 pub(crate) fn extract_bool_tags_plus_all<F, G>(
@@ -160,9 +155,9 @@ pub(crate) fn extract_bool_tags_plus_all<F, G>(
                 .unwrap_or_default();
             pos += 1;
             let value = extractor_all(&molecule.segments, output_tag);
-            values.push(TagValue::Bool(value));
+            values.push(value);
         }
-        block.tags.insert(label.clone(), values);
+        block.tags.insert(label.clone(), TagColumn::Bool(values));
     }
 }
 
@@ -172,7 +167,7 @@ pub(crate) fn extract_bool_tags_from_tag<F>(
     input_label: &TagLabel,
     mut extractor: F,
 ) where
-    F: FnMut(&TagValue, DemultiplexTag) -> bool,
+    F: FnMut(Option<Cow<BStr>>, DemultiplexTag) -> bool,
 {
     let input_tags = block
         .tags
@@ -180,14 +175,14 @@ pub(crate) fn extract_bool_tags_from_tag<F>(
         .expect("Input tag missing, validation bug");
 
     let mut values = Vec::new();
-    for (pos, tag_value) in input_tags.iter().enumerate() {
+    for (pos, tag_value) in input_tags.iter_stringified().enumerate() {
         let output_tag = block
             .output_tags
             .as_ref()
             .map(|x| x[pos])
             .unwrap_or_default();
-        values.push(TagValue::Bool(extractor(tag_value, output_tag)));
+        values.push(extractor(tag_value, output_tag));
     }
 
-    block.tags.insert(out_label.clone(), values);
+    block.tags.insert(out_label.clone(), TagColumn::Bool(values));
 }

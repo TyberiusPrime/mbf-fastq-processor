@@ -44,9 +44,8 @@ pub(crate) fn get_bool_vec_from_tag(
         .tags
         .get(&cond_tag.tag)
         .expect("Tag not found - should have been caught in validation")
-        .iter()
-        .map(|tv| {
-            let val = tv.truthy_val();
+        .iter_truthy()
+        .map(|val| {
             if cond_tag.invert { !val } else { val }
         })
         .collect()

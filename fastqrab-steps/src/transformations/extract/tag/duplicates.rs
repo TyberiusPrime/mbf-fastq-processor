@@ -143,12 +143,12 @@ impl Step for Duplicates {
                     &mut block,
                     &self.out_label,
                     tag_name,
-                    |tag_value, demultiplex_tag| {
-                        if let Some(value) = Self::tag_value_to_bytes(tag_value) {
+                    |query, demultiplex_tag| {
+                        if let Some(query) = query {
                             filters
                                 .get_mut(&demultiplex_tag)
                                 .expect("demultiplex_tag must exist in filters")
-                                .containsert(&FragmentEntry(&[value.as_slice()]))
+                                .containsert(&FragmentEntry(&[&query]))
                         } else {
                             false
                         }

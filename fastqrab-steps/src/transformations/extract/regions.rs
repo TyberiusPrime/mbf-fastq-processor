@@ -183,46 +183,56 @@ impl Step for Regions {
         _input_info: &InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let mut out = Vec::with_capacity(block.segments[0].len());
-        for ii in 0..block.len() {
-            let extracted = extract_regions(ii, &block, &self.regions);
-            if extracted.iter().any(Option::is_none) {
-                //if any region could not be extracted, we store Missing
-                out.push(TagValue::Missing);
-                continue;
-            }
-            //all segments -> Location.
-            if matches!(self.output_tag_type, TagValueType::Location) {
-                let mut h: Vec<Hit> = Vec::new();
-                for (seq, opt_coords) in extracted.into_iter().flatten() {
-                    // eats Nones.
-                    if let Some(coords) = opt_coords {
-                        h.push(Hit {
-                            location: Some(HitRegion {
-                                segment_index: coords.segment_index,
-                                start: coords.start,
-                                len: coords.length,
-                            }),
-                            sequence: seq,
-                        });
-                    } else if !seq.is_empty() {
-                        //mutants false positive
-                        // cov:excl-start
-                        unreachable!();
-                        // cov:excl-stop
-                    } // cov:excl-line
+        if matches!(self.output_tag_type, TagValueType::Location) {
+            let mut out = Vec::with_capacity(block.segments[0].len());
+            for ii in 0..block.len() {
+                let extracted = extract_regions(ii, &block, &self.regions);
+                if extracted.iter().any(Option::is_none) {
+                    //if any region could not be extracted, we store Missing
+                    out.push(None);
+                    continue;
                 }
-                out.push(TagValue::Location(Hits::new_multiple(h)));
-            } else {
+                //all segments -> Location.
+                if matches!(self.output_tag_type, TagValueType::Location) {
+                    let mut h: Vec<Hit> = Vec::new();
+                    for (seq, opt_coords) in extracted.into_iter().flatten() {
+                        // eats Nones.
+                        if let Some(coords) = opt_coords {
+                            h.push(Hit {
+                                location: Some(HitRegion {
+                                    segment_index: coords.segment_index,
+                                    start: coords.start,
+                                    len: coords.length,
+                                }),
+                                sequence: seq,
+                            });
+                        } else if !seq.is_empty() {
+                            //mutants false positive
+                            // cov:excl-start
+                            unreachable!();
+                            // cov:excl-stop
+                        } // cov:excl-line
+                    }
+                    out.push(Some(Hits::new_multiple(h)));
+                }
+            }
+            block
+                .tags
+                .insert(self.out_label.clone(), TagColumn::Location(out));
+        } else {
+            let mut out = Vec::with_capacity(block.segments[0].len());
+            for ii in 0..block.len() {
                 let mut h = BString::default();
+                let extracted = extract_regions(ii, &block, &self.regions);
                 for (seq, _segment_index) in extracted.into_iter().flatten() {
                     h.push_str(&seq);
                 }
-                out.push(TagValue::String(h));
+                out.push(Some(h));
             }
+            block
+                .tags
+                .insert(self.out_label.clone(), TagColumn::String(out));
         }
-
-        block.tags.insert(self.out_label.clone(), out);
 
         Ok((block, true))
     }

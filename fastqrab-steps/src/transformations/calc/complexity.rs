@@ -68,14 +68,14 @@ impl Step for Complexity {
                 let mut transitions = 0;
                 let seq = read.seq();
                 if seq.len() <= 1 {
-                    return Some(0.0);
+                    return 0.0;
                 }
                 for ii in 0..seq.len() - 1 {
                     if seq[ii] != seq[ii + 1] {
                         transitions += 1;
                     }
                 }
-                Some(f64::from(transitions) / (seq.len() - 1) as f64)
+                f64::from(transitions) / (seq.len() - 1) as f64
             },
             |reads| {
                 let mut total_transitions = 0usize;
@@ -94,9 +94,9 @@ impl Step for Complexity {
                     }
                 }
                 if total_positions == 0 {
-                    Some(0.0)
+                    0.0
                 } else {
-                    Some(total_transitions as f64 / total_positions as f64)
+                    total_transitions as f64 / total_positions as f64
                 }
             },
             &mut block,

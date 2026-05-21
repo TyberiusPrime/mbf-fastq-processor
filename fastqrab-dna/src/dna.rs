@@ -6,7 +6,7 @@ use bio::alignment::{
 use bstr::{BStr, BString, ByteSlice};
 use hamming_resonate::HammingResonator;
 use indexmap::IndexMap;
-use schemars::JsonSchema;
+use schemars::{JsonSchema, transform::ReplacePrefixItems};
 use std::borrow::Cow;
 use toml_pretty_deser::prelude::*;
 
@@ -35,11 +35,20 @@ pub struct Hits(pub Vec<Hit>);
 pub enum TagColumn {
     Location(Vec<Option<Hits>>),
     String(Vec<Option<BString>>),
-    Numeric(Vec<Option<f64>>), // Todo: encode missing in some unused bits.A decorum/nanbox?
-    Bool(Vec<Option<bool>>),
+    Numeric(Vec<f64>), // Todo: encode missing in some unused bits.A decorum/nanbox?
+    Bool(Vec<bool>),
 }
 
 impl TagColumn {
+    pub fn new_empty(&self) -> TagColumn {
+        match self {
+            TagColumn::Location(_) => TagColumn::Location(Vec::new()),
+            TagColumn::String(_) => TagColumn::String(Vec::new()),
+            TagColumn::Numeric(_) => TagColumn::Numeric(Vec::new()),
+            TagColumn::Bool(_) => TagColumn::Bool(Vec::new()),
+        }
+    }
+
     pub fn resize_with(&mut self, len: usize) {
         fn unreachable_growth<T>() -> T {
             panic!("Read amplification not expected. Can't resize to larger")
@@ -76,6 +85,14 @@ impl TagColumn {
         }
     }
 
+    pub fn into_locations(self) -> Option<Vec<Option<Hits>>> {
+        if let TagColumn::Location(items) = self {
+            Some(items)
+        } else {
+            None
+        }
+    }
+
     pub fn as_locations(&self) -> Option<&Vec<Option<Hits>>> {
         if let TagColumn::Location(items) = self {
             Some(items)
@@ -92,7 +109,7 @@ impl TagColumn {
         }
     }
 
-    pub fn iter_numeric(&self) -> impl Iterator<Item = &Option<f64>> {
+    pub fn iter_numeric(&self) -> impl Iterator<Item = &f64> {
         if let TagColumn::Numeric(items) = self {
             items.iter()
         } else {
@@ -104,13 +121,11 @@ impl TagColumn {
         match self {
             TagColumn::Numeric(_) => unreachable!("Cant stringify numeric values"),
             TagColumn::Bool(bools) => Box::new(bools.iter().map(|x| {
-                x.map(|y| {
-                    if y {
-                        Cow::Borrowed(BStr::new(b"true"))
-                    } else {
-                        Cow::Borrowed(BStr::new(b"false"))
-                    }
-                })
+                if *x {
+                    Some(Cow::Borrowed(BStr::new(b"true")))
+                } else {
+                    Some(Cow::Borrowed(BStr::new(b"false")))
+                }
             })),
             TagColumn::Location(locations) => Box::new(locations.iter().map(|x| {
                 x.as_ref().map(|hits| match hits.joined_sequence_cow(None) {
@@ -122,6 +137,100 @@ impl TagColumn {
                 x.as_ref()
                     .map(|bstring| Cow::Borrowed(BStr::new(&bstring[..])))
             })),
+        }
+    }
+
+    pub fn iter_truthy(&self) -> Box<dyn Iterator<Item = bool> + '_> {
+        match self {
+            TagColumn::Numeric(_) => unreachable!("Cant get truthy of numeric values."), //cov:excl-line
+            TagColumn::Bool(bools) => Box::new(bools.iter().copied()),
+            TagColumn::Location(locations) => Box::new(locations.iter().map(|x| x.is_some())),
+            TagColumn::String(strings) => Box::new(strings.iter().map(|x| x.is_some())),
+        }
+    }
+
+    pub fn get_location(&self, index: usize) -> &Option<Hits> {
+        if let TagColumn::Location(items) = self {
+            &items[index]
+        } else {
+            panic!("get_location called on a non-location tag column");
+        }
+    }
+
+    pub fn get_string(&self, index: usize) -> &Option<BString> {
+        if let TagColumn::String(items) = self {
+            &items[index]
+        } else {
+            panic!("get_string called on a non-string tag column");
+        }
+    }
+    pub fn get_numeric(&self, index: usize) -> f64 {
+        if let TagColumn::Numeric(items) = self {
+            items[index]
+        } else {
+            panic!("get_numeric called on a non-numeric tag column");
+        }
+    }
+    pub fn get_bool(&self, index: usize) -> bool {
+        if let TagColumn::Bool(items) = self {
+            items[index]
+        } else {
+            panic!("get_bool called on a non-bool tag column");
+        }
+    }
+
+    #[must_use]
+    #[expect(clippy::elidable_lifetime_names, reason = "Conflicting lints")]
+    pub fn to_bstr<'a>(&'a self, index: usize) -> Cow<'a, BStr> {
+        match &self {
+            TagColumn::Location(items) => items[index]
+                .as_ref()
+                .map(|hits| match hits.joined_sequence_cow(None) {
+                    Cow::Borrowed(inner) => Cow::Borrowed(BStr::new(inner)),
+                    Cow::Owned(inner) => Cow::Owned(inner.into()),
+                })
+                .unwrap_or_else(|| Cow::Borrowed(BStr::new(b""))),
+            TagColumn::String(items) => match &items[index] {
+                Some(bstring) => Cow::Borrowed(BStr::new(&bstring[..])),
+                None => Cow::Borrowed(BStr::new(b"")),
+            },
+            TagColumn::Numeric(items) => Cow::Owned(items[index].to_string().into()),
+            TagColumn::Bool(items) => Cow::Borrowed(if items[index] {
+                BStr::new(b"1")
+            } else {
+                BStr::new(b"0")
+            }),
+        }
+    }
+
+    pub fn extend(&mut self, other: &TagColumn) {
+        match self {
+            TagColumn::Location(items) => items.extend(other.iter_locations().cloned()),
+            TagColumn::String(items) => items.extend(
+                other
+                    .iter_stringified()
+                    .map(|x| x.map(|cow| cow.into_owned())),
+            ),
+            TagColumn::Numeric(items) => items.extend(other.iter_numeric().cloned()),
+            TagColumn::Bool(items) => items.extend(other.iter_truthy()),
+        }
+    }
+    
+    /// half of drain, removes, but you don't get the values out.
+    pub fn drain(&mut self, range: std::ops::Range<usize>) {
+        match self {
+            TagColumn::Location(items) => {
+                items.drain(range);
+            }
+            TagColumn::String(items) => {
+                items.drain(range);
+            }
+            TagColumn::Numeric(items) => {
+                items.drain(range);
+            }
+            TagColumn::Bool(items) => {
+                items.drain(range);
+            }
         }
     }
 }

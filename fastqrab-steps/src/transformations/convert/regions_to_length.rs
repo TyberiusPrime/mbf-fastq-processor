@@ -74,16 +74,18 @@ impl Step for RegionsToLength {
             let mut lengths: Vec<_> = locations
                 .iter()
                 .map(|opt_hits| {
-                    opt_hits.as_ref().map(|hits| {
-                        hits.0
-                            .iter()
-                            .map(|hit| {
-                                hit.location
-                                    .as_ref()
-                                    .map_or_else(|| hit.sequence.len(), |loc| loc.len)
-                            })
-                            .sum::<usize>() as f64
-                    })
+                    opt_hits
+                        .map(|hits| {
+                            hits.0
+                                .iter()
+                                .map(|hit| {
+                                    hit.location
+                                        .as_ref()
+                                        .map_or_else(|| hit.sequence.len(), |loc| loc.len)
+                                })
+                                .sum::<usize>() as f64
+                        })
+                        .unwrap_or(0.0)
                 })
                 .collect();
 

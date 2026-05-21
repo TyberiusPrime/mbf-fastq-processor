@@ -1,6 +1,7 @@
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
 use anyhow::anyhow;
+use fastqrab_io::io::output;
 use hamming_resonate::HammingResonator;
 use indexmap::IndexMap;
 use rustc_hash::FxHashMap;
@@ -453,44 +454,60 @@ fn match_sequence(
 fn run_match_phase(
     seq_to_idx: &FxHashMap<BString, usize>,
     resonator: &HammingResonator,
-    input_tags: &[TagValue],
+    input_tags: &TagColumn,
     needs_qualities: bool,
     block: Option<&FastQBlocksCombined>,
 ) -> Result<Vec<MatchSlot>> {
     let mut results: Vec<MatchSlot> = Vec::with_capacity(input_tags.len());
-    for input_tag in input_tags {
-        let result = match input_tag {
-            TagValue::Missing => None,
-            TagValue::Location(hits) => {
-                let seq = hits.joined_sequence_cow(None);
-                Some(match_sequence(
-                    seq_to_idx,
-                    resonator,
-                    BStr::new(seq.as_ref()),
-                )?) //cov:excl-line
+    match input_tags {
+        TagColumn::Location(items) => {
+            for item in items {
+                let result = match item {
+                    Some(hits) => Some(match_sequence(
+                        seq_to_idx,
+                        resonator,
+                        BStr::new(hits.joined_sequence_cow(None).as_ref()),
+                    )?),
+                    None => None,
+                };
+                results.push(MatchSlot {
+                    result,
+                    quality: None,
+                });
             }
-            TagValue::String(bstring) => {
-                Some(match_sequence(seq_to_idx, resonator, bstring.as_ref())?)
+        }
+        TagColumn::String(items) => {
+            for item in items {
+                let result = match item {
+                    Some(bstring) => Some(match_sequence(seq_to_idx, resonator, bstring.as_ref())?),
+                    None => None,
+                };
+                results.push(MatchSlot {
+                    result,
+                    quality: None,
+                });
             }
-            TagValue::Numeric(_) | TagValue::Bool(_) => {
-                unreachable!("Validation was meant to prevent this situation. Bug?") // cov:excl-line
-            }
-        };
-        results.push(MatchSlot {
-            result,
-            quality: None,
-        });
+        }
+        TagColumn::Numeric(_) | TagColumn::Bool(_) => {
+            unreachable!("Validation was meant to prevent this situation. Bug?")
+        } // cov:excl-line
     }
     if needs_qualities && let Some(block) = block {
         let mut read_iter = block.get_pseudo_iter();
-        for (input_tag, slot) in input_tags.iter().zip(results.iter_mut()) {
-            let read = read_iter
-                .pseudo_next()
-                .context("Read & tag count mismatch!?")?;
-            if let (TagValue::Location(hits), Some(MatchResultOwned::Tie(_))) =
-                (input_tag, &slot.result)
-            {
-                slot.quality = read.hit_to_qualities(hits);
+        match input_tags {
+            TagColumn::Location(items) => {
+                for (input_tag, slot) in input_tags.iter_locations().zip(results.iter_mut()) {
+                    let read = read_iter
+                        .pseudo_next()
+                        .context("Read & tag count mismatch!?")?;
+                    if let (Some(hits), Some(MatchResultOwned::Tie(_))) = (input_tag, &slot.result)
+                    {
+                        slot.quality = read.hit_to_qualities(hits);
+                    }
+                }
+            }
+            _ => {
+                unreachable!("Validation was meant to prevent this situation. Bug?")
             }
         }
     }
@@ -624,17 +641,18 @@ impl Step for HammingCorrect {
         };
 
         // Phase 2: count updates + output construction (counts-hot).
-        let mut output_hits = Vec::with_capacity(input_tags.len());
-        for (input_tag, slot) in input_tags.iter().zip(results.into_iter()) {
-            let MatchSlot { result, quality } = slot;
-            output_hits.push(match result {
-                None => TagValue::Missing,
+        let mut output_hits: Vec<Option<Hits>> = Vec::with_capacity(input_tags.len());
+        match input_tags {
+            TagColumn::Location(items) => {
+                for (input_tag, slot) in items.iter().zip(results.into_iter()) {
+                    let MatchSlot { result, quality } = slot;
+                    output_hits.push(match result {
+                None => None,
                 Some(hit) => {
-                    let was_location = matches!(input_tag, TagValue::Location(_));
                     match hit {
                         MatchResultOwned::NoMatch => match self.on_no_match {
-                            OnNoMatch::Remove => TagValue::Missing,
-                            OnNoMatch::Empty => Self::output_empty(was_location, output_barcode),
+                            OnNoMatch::Remove => None,
+                            OnNoMatch::Empty => Some(vec![]),
                             OnNoMatch::Keep => input_tag.clone(),
                         },
                         MatchResultOwned::OneMatch { idx, was_exact } => {
@@ -776,9 +794,17 @@ impl Step for HammingCorrect {
                     }
                 }
             });
+                }
+                block
+                    .tags
+                    .insert(self.out_label.clone(), TagColumn::Location(output_hits));
+            }
+            TagColumn::String(bstrings) => todo!(),
+            TagColumn::Numeric(_) | TagColumn::Bool(_) => {
+                unreachable!("Validation was meant to prevent this situation. Bug?")
+            } // cov:excl-line
         }
         // Add the corrected tags to the output
-        block.tags.insert(self.out_label.clone(), output_hits);
 
         Ok((block, true))
     }

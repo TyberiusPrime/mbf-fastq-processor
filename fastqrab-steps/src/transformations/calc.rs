@@ -35,7 +35,7 @@ pub(crate) fn extract_numeric_tags<F>(
     mut extractor: F,
     block: &mut FastQBlocksCombined,
 ) where
-    F: FnMut(&WrappedFastQRead) -> Option<f64>,
+    F: FnMut(&WrappedFastQRead) -> f64,
 {
     let mut values = Vec::with_capacity(block.segments[segment.get_index()].len()); //7% speed up
     let f = |read: &mut WrappedFastQRead| {
@@ -50,10 +50,10 @@ pub(crate) fn extract_numeric_tags_plus_all<F>(
     segment: SegmentIndexOrAll,
     label: &TagLabel,
     extractor_single: F,
-    mut extractor_all: impl FnMut(&Vec<WrappedFastQRead>) -> Option<f64>,
+    mut extractor_all: impl FnMut(&Vec<WrappedFastQRead>) -> f64,
     block: &mut FastQBlocksCombined,
 ) where
-    F: FnMut(&WrappedFastQRead) -> Option<f64>,
+    F: FnMut(&WrappedFastQRead) -> f64,
 {
     if let Ok(target) = segment.try_into() as Result<SegmentIndex, _> {
         // Handle single target case

@@ -62,12 +62,12 @@ impl Step for ConvertToRate {
         _input_info: &InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let source_values: Vec<Option<f64>> = block
+        let source_values: Vec<f64> = block
             .tags
             .get(&self.in_label)
             .expect("in_label not found - should have been verified at config time")
             .iter_numeric()
-            .map(|x| x.map(|y| y))
+            .copied()
             .collect();
 
         let mut source_iter = source_values.into_iter();
@@ -85,7 +85,7 @@ impl Step for ConvertToRate {
                         .next()
                         .expect("source and segment have same read count");
                     let len = read.seq().len() as f64;
-                    source.map(|source| if len > 0.0 { source / len } else { 0.0 })
+                    if len > 0.0 { source / len } else { 0.0 }
                 },
                 &mut block,
             );
@@ -105,13 +105,11 @@ impl Step for ConvertToRate {
                     .iter()
                     .map(|r| r.seq().len())
                     .sum::<usize>() as f64;
-                values.push(source.map(|source| {
-                    (if total_len > 0.0 {
-                        source / total_len
-                    } else {
-                        0.0
-                    })
-                }));
+                values.push(if total_len > 0.0 {
+                    source / total_len
+                } else {
+                    0.0
+                });
             }
             block
                 .tags

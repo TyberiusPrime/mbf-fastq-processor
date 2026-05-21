@@ -43,8 +43,7 @@ impl Step for ByTag {
             .tags
             .get(&self.in_label)
             .expect("Tag not set? Should have been caught earlier in validation.")
-            .iter()
-            .map(TagValue::truthy_val)
+            .iter_truthy()
             .collect();
         if self.keep_or_remove == super::super::KeepOrRemove::Remove {
             for x in &mut keep {

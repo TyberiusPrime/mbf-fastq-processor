@@ -1469,7 +1469,7 @@ impl FastQBlocksCombined {
     /// when the tag is missing or not a Numeric column
     pub fn apply_mut_with_numeric_tag<F>(&mut self, label: &TagLabel, mut f: F)
     where
-        F: for<'a> FnMut(&mut [WrappedFastQReadMut<'a>], Option<f64>),
+        F: for<'a> FnMut(&mut [WrappedFastQReadMut<'a>], f64),
     {
         let TagColumn::Numeric(tags) = self.tags.get(label).expect("Tag must be present, bug")
         else {
@@ -1489,7 +1489,7 @@ impl FastQBlocksCombined {
     /// when the tag is missing or not a Bool column
     pub fn apply_mut_with_bool_tag<F>(&mut self, label: &TagLabel, mut f: F)
     where
-        F: for<'a> FnMut(&mut [WrappedFastQReadMut<'a>], Option<bool>),
+        F: for<'a> FnMut(&mut [WrappedFastQReadMut<'a>], bool),
     {
         let TagColumn::Bool(tags) = self.tags.get(label).expect("Tag must be present, bug") else {
             panic!("Tag {label:?} is not a Bool column");
