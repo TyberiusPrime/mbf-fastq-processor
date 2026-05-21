@@ -1,15 +1,13 @@
-use std::collections::BTreeMap;
-
 use crate::{no_barcode_infix, transformations::prelude::*};
 
 /// Histogram data structure that can handle both String and Numeric tags
 #[derive(Debug, Clone)]
 pub enum HistogramData {
     /// String values mapped to their counts
-    String(BTreeMap<String, usize>),
+    String(FxIndexMap<String, usize>),
     /// Numeric values bucketed into bins (value -> count)
-    Integer(BTreeMap<i64, usize>),
-    ZeroToOne(BTreeMap<NonNaN, usize>),
+    Integer(FxIndexMap<i64, usize>),
+    ZeroToOne(FxIndexMap<NonNaN, usize>),
     /// Boolean values (false count, true count)
     Bool(usize, usize),
 }
@@ -87,11 +85,32 @@ impl HistogramData {
 impl From<HistogramData> for serde_json::Value {
     fn from(value: HistogramData) -> Self {
         match value {
-            HistogramData::String(map) => map.iter().map(|(k, v)| (k.clone(), *v)).collect(),
+            HistogramData::String(map) => {
+                let mut keys: Vec<_> = map.keys().collect();
+                keys.sort();
+                keys.iter()
+                    .map(|k| (k.to_string(), *map.get(*k).expect("Keys came from map")))
+                    .collect()
+            }
             //json only does string keys
-            HistogramData::Integer(map) => map.iter().map(|(k, v)| (k.to_string(), *v)).collect(),
+            HistogramData::Integer(map) => {
+                let mut keys: Vec<_> = map.keys().collect();
+                keys.sort();
+                keys.iter()
+                    .map(|k| (k.to_string(), *map.get(*k).expect("Keys came from map")))
+                    .collect()
+            }
             HistogramData::ZeroToOne(map) => {
-                map.iter().map(|(k, v)| (format!("{k:.2}"), *v)).collect()
+                let mut keys: Vec<_> = map.keys().collect();
+                keys.sort();
+                keys.iter()
+                    .map(|k| {
+                        (
+                            format!("{k:.2}"),
+                            *map.get(*k).expect("Keys came from map"),
+                        )
+                    })
+                    .collect()
             }
 
             HistogramData::Bool(false_count, true_count) => {
@@ -166,7 +185,7 @@ impl Step for Box<_ReportTagHistogram> {
     // (only once by pipeline, or in self.data.lock()),
     // but better for structure if the pipeline knows about it
     fn needs_serial(&self) -> bool {
-        true
+        true //todo: this is really slowing us *down*
     }
 
     fn init(
@@ -181,15 +200,15 @@ impl Step for Box<_ReportTagHistogram> {
                 valid_tag,
                 match self.tag_type {
                     TagValueType::Location | TagValueType::String => {
-                        HistogramData::String(BTreeMap::new())
+                        HistogramData::String(FxIndexMap::default())
                     }
                     TagValueType::Numeric((lower, upper)) => {
                         if lower == Some(NonNaN::new(0.0).expect("Can't fail"))
                             && upper == Some(NonNaN::new(1.0).expect("can't fail"))
                         {
-                            HistogramData::ZeroToOne(BTreeMap::new())
+                            HistogramData::ZeroToOne(FxIndexMap::default())
                         } else {
-                            HistogramData::Integer(BTreeMap::new())
+                            HistogramData::Integer(FxIndexMap::default())
                         }
                     }
                     TagValueType::Bool => HistogramData::Bool(0, 0),
