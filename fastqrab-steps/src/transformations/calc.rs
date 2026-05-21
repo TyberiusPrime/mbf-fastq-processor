@@ -19,7 +19,6 @@ pub use convert_to_rate::{ConvertToRate, PartialConvertToRate};
 pub use expected_error::{ExpectedError, PartialExpectedError};
 use fastqrab_config::{
     TagLabel,
-    dna::TagValue,
     segments::{SegmentIndex, SegmentIndexOrAll},
 };
 pub use gc_content::{GCContent, PartialGCContent};

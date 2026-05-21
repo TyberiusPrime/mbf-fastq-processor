@@ -13,7 +13,8 @@ use crate::{
     demultiplex::OptDemultiplex,
     transformations::{self, Step},
 };
-use fastqrab_config::{TagLabel, dna::TagValue};
+use bstr::BString;
+use fastqrab_config::{TagLabel, dna::TagColumn};
 use fastqrab_io::io;
 
 pub struct WorkItem {
@@ -571,53 +572,59 @@ fn process_work_item(
                     clippy::cast_precision_loss,
                     reason = "Unlikely to exceed f64 precise regions"
                 )]
-                let read_lengths: Vec<TagValue> = read_lengths
+                let read_lengths: Vec<f64> = read_lengths
                     .into_iter()
-                    .map(|x| TagValue::Numeric(x as f64))
+                    .map(|x| x as f64)
                     .collect();
-                work_item.block.tags.insert(tag.clone(), read_lengths);
+                work_item.block.tags.insert(tag.clone(), TagColumn::Numeric(read_lengths));
             }
             TagLabel::Normal(_) => {}
             TagLabel::TagLength(tag_name, _) => {
                 #[expect(clippy::cast_precision_loss, reason="Unlikely to exceed f64 precise regions")]
-                let tag_lengths: Vec<TagValue> = work_item
+                let tag_lengths: Vec<f64> = match work_item
                     .block
                     .tags
                     .get(&TagLabel::Normal(tag_name.clone()))
                     .expect("Tag not present. Should have been caught in validation. Bug")
-                    .iter()
-                    .map(|tagvalue| {
-                        match tagvalue {
-                            TagValue::Missing => 0,
-                            TagValue::Location(hits) => hits.0.iter().map(|hit| hit.sequence.len()).sum(),
-                            TagValue::String(bstring) => bstring.len(),
-                            TagValue::Numeric(_) => unreachable!("len of a numeric tag not defined. Should have been caught in validation"), // cov:excl-line
-                            TagValue::Bool(_) => unreachable!("len of a bool tag not defined. Should have been caught in validation"), // cov:excl-line
-                        }
-                    })
-                    .map(|number| TagValue::Numeric(number as f64))
-                    .collect();
-                work_item.block.tags.insert(tag.clone(), tag_lengths);
+                {
+                    TagColumn::Location(items) => items
+                        .iter()
+                        .map(|opt_hits| match opt_hits {
+                            None => 0usize,
+                            Some(hits) => hits.0.iter().map(|hit| hit.sequence.len()).sum(),
+                        })
+                        .map(|n| n as f64)
+                        .collect(),
+                    TagColumn::String(items) => items
+                        .iter()
+                        .map(|opt_str| opt_str.as_ref().map_or(0, |s| s.len()))
+                        .map(|n| n as f64)
+                        .collect(),
+                    TagColumn::Numeric(_) => unreachable!("len of a numeric tag not defined. Should have been caught in validation"), // cov:excl-line
+                    TagColumn::Bool(_) => unreachable!("len of a bool tag not defined. Should have been caught in validation"), // cov:excl-line
+                };
+                work_item.block.tags.insert(tag.clone(), TagColumn::Numeric(tag_lengths));
             }
             TagLabel::TagLocation {
                 source,
                 definition: _,
             } => {
-                let tag_locations: Vec<TagValue> = work_item
+                let tag_locations: Vec<Option<BString>> = match work_item
                     .block
                     .tags
                     .get(&TagLabel::Normal(source.clone()))
                     .expect("Tag not present. Should have been caught in validation. Bug")
-                    .iter()
-                    .map(|tagvalue| match tagvalue {
-                        TagValue::Missing => TagValue::String("".into()),
-                        TagValue::Location(hits) => {
-                            TagValue::String(hits.location(&input_info.segment_order))
-                        }
-                        _ => unreachable!("Should have been caught in validation"), // cov:excl-line
-                    })
-                    .collect();
-                work_item.block.tags.insert(tag.clone(), tag_locations);
+                {
+                    TagColumn::Location(items) => items
+                        .iter()
+                        .map(|opt_hits| match opt_hits {
+                            None => None,
+                            Some(hits) => Some(hits.location(&input_info.segment_order)),
+                        })
+                        .collect(),
+                    _ => unreachable!("Should have been caught in validation"), // cov:excl-line
+                };
+                work_item.block.tags.insert(tag.clone(), TagColumn::String(tag_locations));
             }
             TagLabel::ReadNo => {
                 let start = work_item.block.segments[0].first_read_sequential_number;
@@ -627,9 +634,9 @@ fn process_work_item(
                     clippy::cast_precision_loss,
                     reason = "Unlikely to exceed f64 precise regions"
                 )]
-                let read_nos: Vec<TagValue> =
-                    (start..end).map(|x| TagValue::Numeric(x as f64)).collect();
-                work_item.block.tags.insert(tag.clone(), read_nos);
+                let read_nos: Vec<f64> =
+                    (start..end).map(|x| x as f64).collect();
+                work_item.block.tags.insert(tag.clone(), TagColumn::Numeric(read_nos));
             }
         }
     }
@@ -681,7 +688,7 @@ fn process_work_item(
             let all_tag_lengths_equal = result_block
                 .tags
                 .values()
-                .map(std::vec::Vec::len)
+                .map(TagColumn::len)
                 .all_equal();
             // cov:excl-start
             if !all_tag_lengths_equal {
@@ -703,7 +710,7 @@ fn process_work_item(
             //     stage.transformation, result_block.tags
             // );
             // cov:excl-stop
-            if let Some(tag_len) = result_block.tags.values().next().map(std::vec::Vec::len) {
+            if let Some(tag_len) = result_block.tags.values().next().map(TagColumn::len) {
                 //cov:excl-start
                 assert!(
                     result_block.len() == tag_len,

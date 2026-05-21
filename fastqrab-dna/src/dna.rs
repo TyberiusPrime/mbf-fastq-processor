@@ -6,7 +6,7 @@ use bio::alignment::{
 use bstr::{BStr, BString, ByteSlice};
 use hamming_resonate::HammingResonator;
 use indexmap::IndexMap;
-use schemars::{JsonSchema, transform::ReplacePrefixItems};
+use schemars::JsonSchema;
 use std::borrow::Cow;
 use toml_pretty_deser::prelude::*;
 

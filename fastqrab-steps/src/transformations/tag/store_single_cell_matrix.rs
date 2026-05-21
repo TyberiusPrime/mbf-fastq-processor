@@ -472,38 +472,54 @@ impl Step for StoreSingleCellMatrix {
 
         let mut local_entries: DemultiplexedData<Vec<ObservedEvent>> = DemultiplexedData::new();
 
-        for (ii, ((cell_val, gene_val), umi_val)) in cell_tags
-            .iter()
-            .zip(gene_tags.iter())
-            .zip(umi_tags.iter())
-            .enumerate()
-        {
-            let cell_idx = CellIdx(match cell_val {
-                TagValue::String(s) => seq_to_idx(s, cell_map),
-                TagValue::Location(hits) => seq_to_idx(&hits.joined_sequence_cow(None), cell_map),
+        for ii in 0..cell_tags.len() {
+            let cell_idx = match cell_tags {
+                TagColumn::String(items) => match &items[ii] {
+                    Some(s) => seq_to_idx(s, cell_map),
+                    None => 0,
+                },
+                TagColumn::Location(items) => match &items[ii] {
+                    Some(hits) => seq_to_idx(&hits.joined_sequence_cow(None), cell_map),
+                    None => 0,
+                },
                 _ => 0,
-            });
+            };
 
-            let gene_idx = GeneIdx(match gene_val {
-                TagValue::String(s) => seq_to_idx(s, gene_map),
-                TagValue::Location(hits) => seq_to_idx(&hits.joined_sequence_cow(None), gene_map),
+            let gene_idx = match gene_tags {
+                TagColumn::String(items) => match &items[ii] {
+                    Some(s) => seq_to_idx(s, gene_map),
+                    None => 0,
+                },
+                TagColumn::Location(items) => match &items[ii] {
+                    Some(hits) => seq_to_idx(&hits.joined_sequence_cow(None), gene_map),
+                    None => 0,
+                },
                 _ => 0,
-            });
+            };
 
-            let (umi_enc, umi_len) = match umi_val {
-                TagValue::String(s) => {
-                    if s.len() > 16 {
-                        anyhow::bail!("UMI is {}bp, maximum supported length is 16bp", s.len());
+            let (umi_enc, umi_len) = match umi_tags {
+                TagColumn::String(items) => match &items[ii] {
+                    Some(s) => {
+                        if s.len() > 16 {
+                            anyhow::bail!("UMI is {}bp, maximum supported length is 16bp", s.len());
+                        }
+                        (encode_umi(s), s.len() as u8)
                     }
-                    (encode_umi(s), s.len() as u8)
-                }
-                TagValue::Location(hits) => {
-                    let seq = hits.joined_sequence(None);
-                    if seq.len() > 16 {
-                        anyhow::bail!("UMI is {}bp, maximum supported length is 16bp", seq.len());
+                    None => (0, 0),
+                },
+                TagColumn::Location(items) => match &items[ii] {
+                    Some(hits) => {
+                        let seq = hits.joined_sequence(None);
+                        if seq.len() > 16 {
+                            anyhow::bail!(
+                                "UMI is {}bp, maximum supported length is 16bp",
+                                seq.len()
+                            );
+                        }
+                        (encode_umi(&seq), seq.len() as u8)
                     }
-                    (encode_umi(&seq), seq.len() as u8)
-                }
+                    None => (0, 0),
+                },
                 _ => (Umi::new_unmatched(), 0),
             };
 

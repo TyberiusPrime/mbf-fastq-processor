@@ -124,8 +124,8 @@ impl Step for QuantifyTag {
             .get(&self.in_label)
             .expect("Tag not found. Should have been caught in validation");
         if let Some(demultiplex_tags) = &block.output_tags {
-            for (tag_val, demultiplex_tag) in hits.iter().zip(demultiplex_tags) {
-                if let Some(hit) = tag_val.as_sequence()
+            for (opt_hit, demultiplex_tag) in hits.iter_locations().zip(demultiplex_tags) {
+                if let Some(hit) = opt_hit
                     && let Some(inner) = collector.get_mut(demultiplex_tag)
                 {
                     *inner
@@ -134,8 +134,8 @@ impl Step for QuantifyTag {
                 }
             }
         } else {
-            for tag_val in hits {
-                if let Some(hit) = tag_val.as_sequence()
+            for opt_hit in hits.iter_locations() {
+                if let Some(hit) = opt_hit
                     && let Some(inner) = collector.get_mut(&0)
                 {
                     *inner

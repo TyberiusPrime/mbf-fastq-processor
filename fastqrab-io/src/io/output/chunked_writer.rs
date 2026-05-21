@@ -489,7 +489,7 @@ where
     use crate::io::reads::WrappedFastQReadCommon;
     use anyhow::bail;
     use bstr::{BStr, BString};
-    use fastqrab_dna::dna::TagValue;
+    use fastqrab_dna::dna::TagColumn;
     use noodles::sam::alignment::{
         RecordBuf,
         io::Write as SamAlignmentWrite,
@@ -539,25 +539,26 @@ where
 
     #[expect(clippy::cast_possible_truncation, reason = "BAM is f32")]
     for (bam_tag_bytes, fastqrab_tag_name) in &options.tag_to_bam_tags {
-        let tag_values = tags
+        let tag_col = tags
             .get(fastqrab_tag_name.as_str())
-            .expect("Tag was missing? Config failure");
-        let tag_value = &tag_values[read_index];
-
-        let value_opt: Option<Value> = match tag_value {
-            TagValue::String(s) => Some(Value::String(s.clone())),
-            TagValue::Location(hits) => {
-                let joined = hits
-                    .0
-                    .iter()
-                    .map(|h| h.sequence.as_ref())
-                    .collect::<Vec<_>>()
-                    .join(b",".as_ref());
-                Some(Value::String(BString::from(joined)))
-            }
-            TagValue::Numeric(n) => Some(Value::Float(*n as f32)),
-            TagValue::Bool(b) => Some(Value::UInt8(u8::from(*b))),
-            TagValue::Missing => None,
+            .expect("Tag was missing, config validation failure");
+        let value_opt: Option<Value> = match tag_col {
+            TagColumn::Location(items) => items.get(read_index).and_then(|opt_hits| {
+                opt_hits.as_ref().map(|hits| {
+                    let joined = hits
+                        .0
+                        .iter()
+                        .map(|h| h.sequence.as_ref())
+                        .collect::<Vec<_>>()
+                        .join(b",".as_ref());
+                    Value::String(BString::from(joined))
+                })
+            }),
+            TagColumn::String(items) => items
+                .get(read_index)
+                .and_then(|opt_s| opt_s.as_ref().map(|s| Value::String(s.clone()))),
+            TagColumn::Numeric(items) => items.get(read_index).map(|&n| Value::Float(n as f32)),
+            TagColumn::Bool(items) => items.get(read_index).map(|&b| Value::UInt8(u8::from(b))),
         };
         if let Some(value) = value_opt {
             data_fields.push((Tag::from(*bam_tag_bytes), value));
@@ -568,10 +569,9 @@ where
 
     let mut reference_sequence_id: Option<usize> = None;
     if let Some(ref_tag_name) = &options.tag_to_reference
-        && let Some(tag_values) = tags.get(ref_tag_name.as_str())
-        && let Some(tag_value) = tag_values.get(read_index)
+        && let Some(tag_col) = tags.get(ref_tag_name.as_str())
     {
-        let ref_name = tag_value.to_bstr();
+        let ref_name = tag_col.to_bstr(read_index);
         let key: &[u8] = &ref_name;
         if !key.is_empty() {
             if let Some(idx) = header.reference_sequences().get_index_of(key) {

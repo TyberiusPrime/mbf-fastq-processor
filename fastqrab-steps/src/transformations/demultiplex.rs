@@ -1,7 +1,6 @@
 use indexmap::IndexMap;
 
 use crate::transformations::prelude::*;
-use fastqrab_dna::dna::TagValue;
 
 ///Create multiple output files based on a tag
 

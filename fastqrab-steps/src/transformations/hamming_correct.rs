@@ -1,7 +1,7 @@
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
 use anyhow::anyhow;
-use fastqrab_io::io::output;
+
 use hamming_resonate::HammingResonator;
 use indexmap::IndexMap;
 use rustc_hash::FxHashMap;
@@ -515,38 +515,41 @@ fn run_match_phase(
 }
 
 impl HammingCorrect {
-    fn output(&self, matched_idx: usize, input_tag: &TagValue, output_barcode: bool) -> TagValue {
+    fn output_location(
+        &self,
+        matched_idx: usize,
+        input_hit: &Option<Hits>,
+        output_barcode: bool,
+    ) -> Option<Hits> {
         let (matched_seq, matched_name) = self
             .seq_to_name
             .get_index(matched_idx)
             .expect("seq_to_name index out of range");
-        if let TagValue::Location(hit_sequences) = input_tag
-            && output_barcode
-        {
+        if output_barcode {
             let new_hit = Hit {
                 sequence: matched_seq.clone(),
-                location: if hit_sequences.0.len() == 1 {
+                location: if let Some(hit_sequences) = input_hit
+                    && hit_sequences.0.len() == 1
+                {
                     hit_sequences.0[0].location.clone()
                 } else {
                     None
                 },
             };
-            TagValue::Location(Hits::new_multiple(vec![new_hit]))
+            Some(Hits::new_multiple(vec![new_hit]))
         } else {
-            TagValue::String(if output_barcode {
-                matched_seq.clone()
-            } else {
-                matched_name.as_bytes().into()
-            })
+            // When output is Label (not barcode), we can't store a string inside Option<Hits>
+            // The output column type must change — for now produce a single-hit with the name bytes
+            let new_hit = Hit {
+                sequence: matched_name.as_bytes().into(),
+                location: None,
+            };
+            Some(Hits::new_multiple(vec![new_hit]))
         }
     }
 
-    fn output_empty(was_location: bool, output_barcode: bool) -> TagValue {
-        if was_location && output_barcode {
-            TagValue::Location(Hits(vec![]))
-        } else {
-            TagValue::String("".into())
-        }
+    fn output_empty_location() -> Option<Hits> {
+        Some(Hits(vec![]))
     }
 }
 
@@ -652,24 +655,24 @@ impl Step for HammingCorrect {
                     match hit {
                         MatchResultOwned::NoMatch => match self.on_no_match {
                             OnNoMatch::Remove => None,
-                            OnNoMatch::Empty => Some(vec![]),
+                            OnNoMatch::Empty => Self::output_empty_location(),
                             OnNoMatch::Keep => input_tag.clone(),
                         },
                         MatchResultOwned::OneMatch { idx, was_exact } => {
                             if was_exact && let Some(counts) = barcode_counts && count_here {
                                 counts[idx].fetch_add(1, Ordering::Relaxed);
                             }
-                            self.output(idx, input_tag, output_barcode)
+                            self.output_location(idx, input_tag, output_barcode)
                         }
                         MatchResultOwned::Tie(items) => {
                             match self.on_tie {
-                                OnTie::Remove => TagValue::Missing,
+                                OnTie::Remove => None,
                                 OnTie::Empty => {
-                                    Self::output_empty(was_location, output_barcode)
+                                    Self::output_empty_location()
                                 }
                                 OnTie::Keep => input_tag.clone(),
                                 OnTie::First => {
-                                    self.output(items[0], input_tag, output_barcode)
+                                    self.output_location(items[0], input_tag, output_barcode)
                                 }
                                 OnTie::FirstStrict => {
                                     let split = self.name_split_character;
@@ -691,17 +694,16 @@ impl Step for HammingCorrect {
                                     let all_the_same =
                                         items.iter().all(|&i| canonical_name(i) == first);
                                     if all_the_same {
-                                        self.output(items[0], input_tag, output_barcode)
+                                        self.output_location(items[0], input_tag, output_barcode)
                                     } else {
-                                        TagValue::Missing
+                                        None
                                     }
                                 }
                                 OnTie::Fail => {
-                                    let query_seq = match input_tag {
-                                        TagValue::Location(hit) => hit.joined_sequence(None),
-                                        TagValue::String(seq) => seq.to_vec(),
-                                        _ => unreachable!() // cov:excl-line
-                                    };
+                                    let query_seq = input_tag
+                                        .as_ref()
+                                        .map(|hit| hit.joined_sequence(None))
+                                        .unwrap_or_default();
                                     let display: Vec<_> = items
                                         .iter()
                                         .map(|&i| {
@@ -741,9 +743,9 @@ impl Step for HammingCorrect {
                                     let best = best.expect("Items can't have been empty");
                                     #[expect(clippy::cast_precision_loss, reason="If lengths reach f64 imprecison region, precision loss would be acceptable")]
                                     if best.1 as f64 / total as f64 >= self.on_tie_threshold {
-                                        self.output(best.0, input_tag, output_barcode)
+                                        self.output_location(best.0, input_tag, output_barcode)
                                     } else {
-                                        TagValue::Missing
+                                        None
                                     }
                                 }
                                 OnTie::ByEditProbability => {
@@ -763,12 +765,10 @@ impl Step for HammingCorrect {
                                         .map(|(seq, _idx, c)| (*seq, *c))
                                         .collect();
                                     let (observed_sequence, observed_qualities) =
-                                            if let TagValue::Location(hit) = input_tag {
+                                            if let Some(hit) = input_tag {
                                                 (hit.joined_sequence(None), quality)
-                                            } else if let TagValue::String(_seq) = input_tag { // cov:excl-line
-                                                unreachable!("Validation should have prevented ByEditProbability on String tags") // cov:excl-line
                                             } else {
-                                                unreachable!() // cov:excl-line
+                                                unreachable!("ByEditProbability called on missing tag") // cov:excl-line
                                             };
                                     let observed_qualities = observed_qualities.with_context(||format!("Hamming correction with ByEditProbability impossible.\n\
                                             The location tag {in_label} has lost it's location data (due to editing), can't retrieve qualities.\n\
@@ -784,9 +784,9 @@ impl Step for HammingCorrect {
                                             .find(|(s, _, _)| *s == best_seq)
                                             .map(|(_, i, _)| *i)
                                             .expect("best_seq came from candidates");
-                                        self.output(best_idx, input_tag, output_barcode)
+                                        self.output_location(best_idx, input_tag, output_barcode)
                                     } else {
-                                        TagValue::Missing
+                                        None
                                     }
                                 }
                             }

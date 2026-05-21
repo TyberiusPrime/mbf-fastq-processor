@@ -7,13 +7,13 @@ use std::ops::Range;
 
 use fastqrab_config::{TagLabel, segments::SegmentIndexOrAll};
 use fastqrab_dna::dna::{
-    Anchor, HitRegion, Hits, TagColumn, TagValue, find_iupac, find_iupac_with_indel, hamming,
+    Anchor, HitRegion, Hits, TagColumn, find_iupac, find_iupac_with_indel, hamming,
     reverse_complement_iupac,
 };
 use fastqrab_dna::segments::SegmentIndex;
 
 pub type DemultiplexTag = u64;
-pub type Tags = IndexMap<TagLabel, Vec<TagValue>>;
+pub type Tags = IndexMap<TagLabel, TagColumn>;
 /// Read in memory representation.
 /// We either have references in the large block we read from the fastq file,
 /// or owned sections. We therefore need to pass in the block as an 'arena' when

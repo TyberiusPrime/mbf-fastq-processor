@@ -166,10 +166,9 @@ impl Step for ConcatTags {
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let num_reads = block.segments[0].entries.len();
-        let mut output_tags = Vec::with_capacity(num_reads);
 
-        // Collect tag vectors for all input labels
-        let tag_vectors: Vec<&Vec<TagValue>> = self
+        // Collect tag columns for all input labels
+        let tag_columns: Vec<&TagColumn> = self
             .in_labels
             .iter()
             .map(|label| {
@@ -180,140 +179,74 @@ impl Step for ConcatTags {
             })
             .collect::<Result<Vec<_>, _>>()?;
 
-        // Process each read
-        for read_idx in 0..num_reads {
-            // Collect tag values for this read
+        // Determine if all columns are Location type
+        let all_location = tag_columns
+            .iter()
+            .all(|col| matches!(col, TagColumn::Location(_)));
 
-            let mut any_missing = false;
-            let mut has_location = false;
-            let mut has_string = false;
-
-            let tag_values = tag_vectors.iter().map(|vec| &vec[read_idx]);
-
-            for tv in tag_values {
-                match tv {
-                    TagValue::Missing => {
-                        any_missing = true;
-                    }
-                    TagValue::Location(_) => {
-                        has_location = true;
-                    }
-                    TagValue::String(_) => {
-                        has_string = true;
-                    }
-                    // cov:excl-start
-                    TagValue::Numeric(_) | TagValue::Bool(_) => {
-                        bail!(
-                            "ConcatTags does not support Numeric or Bool tags. Found in one of: {:?}",
-                            self.in_labels
-                        );
-                    } // cov:excl-stop
-                }
-            }
-            // Handle missing tags according to on_missing setting
-            if any_missing {
-                match self.on_missing {
-                    OnMissing::SetMissing => {
-                        // If any tag is missing, set output to missing
-                        output_tags.push(TagValue::Missing);
-                        continue;
-                    }
-                    OnMissing::MergePresent => {
-                        // continue to merge present tags - if none, the lower code will handle it
+        if all_location {
+            // Output is Location
+            let mut output_tags: Vec<Option<Hits>> = Vec::with_capacity(num_reads);
+            for read_idx in 0..num_reads {
+                let mut any_missing = false;
+                let mut combined_hits: Vec<Hit> = Vec::new();
+                for col in &tag_columns {
+                    let item = col.get_location(read_idx);
+                    match item {
+                        None => any_missing = true,
+                        Some(hits) => combined_hits.extend(hits.0.iter().cloned()),
                     }
                 }
-            }
-            // Case 1: All tags are Location (or some are Missing)
-            // Concatenate regions and sequences
-            if has_location && !has_string {
-                let mut combined_hits: Vec<Hit> = Vec::with_capacity(tag_vectors.len());
-
-                let tag_values = tag_vectors.iter().map(|vec| &vec[read_idx]);
-                for tag_value in tag_values {
-                    match tag_value {
-                        TagValue::Location(hits) => {
-                            combined_hits.extend(hits.0.iter().cloned());
-                        }
-                        TagValue::Missing => {
-                            // Skip missing tags
-                        }
-                        // cov:excl-start
-                        _ => unreachable!("Should only have Location or Missing"),
-                        // cov:excl-stop
-                    }
-                }
-
-                assert!(!combined_hits.is_empty()); // handled in case 4 // cov:excl-line
-                output_tags.push(TagValue::Location(Hits::new_multiple(combined_hits)));
-            }
-            // Case 2: All tags are String (or some are Missing)
-            // Concatenate strings with separator
-            else if has_string && !has_location {
-                let mut parts: Vec<&[u8]> = Vec::with_capacity(tag_vectors.len());
-
-                let tag_values = tag_vectors.iter().map(|vec| &vec[read_idx]);
-                for tag_value in tag_values {
-                    match tag_value {
-                        TagValue::String(s) => {
-                            parts.push(s.as_ref());
-                        }
-                        TagValue::Missing => {
-                            // Skip missing tags
-                        }
-                        // cov:excl-start
-                        _ => unreachable!("Should only have String or Missing"),
-                        // cov:excl-stop
-                    }
-                }
-
-                assert!(!parts.is_empty()); // handled in case 4 // cov:excl-line
-                let result = if let Some(sep) = &self.separator {
-                    parts.join(sep.as_bytes())
+                if any_missing && self.on_missing == OnMissing::SetMissing {
+                    output_tags.push(None);
+                } else if combined_hits.is_empty() {
+                    output_tags.push(None);
                 } else {
-                    parts.concat()
-                };
-                output_tags.push(TagValue::String(result.into()));
+                    output_tags.push(Some(Hits::new_multiple(combined_hits)));
+                }
             }
-            // Case 3: Mixed Location and String
-            // Convert all to strings and concatenate
-            else if has_string && has_location {
-                let mut parts: Vec<Vec<u8>> = Vec::with_capacity(tag_vectors.len());
-
-                let tag_values = tag_vectors.iter().map(|vec| &vec[read_idx]);
-                for tag_value in tag_values {
-                    match tag_value {
-                        TagValue::Location(hits) => {
-                            // Convert location to sequence string
-                            parts.push(hits.joined_sequence(None));
-                        }
-                        TagValue::String(s) => {
-                            parts.push(s.to_vec());
-                        }
+            block.tags.insert(self.out_label.clone(), TagColumn::Location(output_tags));
+        } else {
+            // Output is String (convert Location to sequence bytes)
+            let mut output_tags: Vec<Option<BString>> = Vec::with_capacity(num_reads);
+            for read_idx in 0..num_reads {
+                let mut any_missing = false;
+                let mut parts: Vec<Vec<u8>> = Vec::new();
+                for col in &tag_columns {
+                    match col {
+                        TagColumn::Location(items) => match &items[read_idx] {
+                            None => any_missing = true,
+                            Some(hits) => parts.push(hits.joined_sequence(None)),
+                        },
+                        TagColumn::String(items) => match &items[read_idx] {
+                            None => any_missing = true,
+                            Some(s) => parts.push(s.to_vec()),
+                        },
                         // cov:excl-start
-                        _ => unreachable!(
-                            "Should only have Location, String (missing can't be here either)"
-                        ),
-                        // cov:excl-stop
+                        TagColumn::Numeric(_) | TagColumn::Bool(_) => {
+                            bail!(
+                                "ConcatTags does not support Numeric or Bool tags. Found in one of: {:?}",
+                                self.in_labels
+                            );
+                        } // cov:excl-stop
                     }
                 }
-
-                assert!(!parts.is_empty()); // handled in case 4
-                let parts_refs: Vec<&[u8]> = parts.iter().map(Vec::as_slice).collect();
-                let result = if let Some(sep) = &self.separator {
-                    parts_refs.join(sep.as_bytes())
+                if any_missing && self.on_missing == OnMissing::SetMissing {
+                    output_tags.push(None);
+                } else if parts.is_empty() {
+                    output_tags.push(None);
                 } else {
-                    parts_refs.concat()
-                };
-                output_tags.push(TagValue::String(result.into()));
-            } else {
-                //neither -> empty
-
-                output_tags.push(TagValue::Missing);
+                    let parts_refs: Vec<&[u8]> = parts.iter().map(Vec::as_slice).collect();
+                    let result = if let Some(sep) = &self.separator {
+                        parts_refs.join(sep.as_bytes())
+                    } else {
+                        parts_refs.concat()
+                    };
+                    output_tags.push(Some(result.into()));
+                }
             }
+            block.tags.insert(self.out_label.clone(), TagColumn::String(output_tags));
         }
-
-        // Insert the concatenated tags into the block
-        block.tags.insert(self.out_label.clone(), output_tags);
 
         Ok((block, true))
     }

@@ -90,20 +90,28 @@ impl Step for ValidateAllReadsSameLength {
                 }
             }
             ResolvedSourceAll::Tag(name) => {
-                for value in block
+                let col = block
                     .tags
                     .get(name)
-                    .expect("Tag not set?! should have been caught earlier. bug")
-                {
-                    let length_here = match value {
-                        TagValue::Missing => continue,
-                        TagValue::Location(hits) => hits.covered_len(),
-                        TagValue::String(bstring) => bstring.len(),
-                        // cov:excl-start
-                        _ => unreachable!(),
-                        // cov:excl-stop
-                    };
-                    self.check(length_here)?;
+                    .expect("Tag not set?! should have been caught earlier. bug");
+                match col {
+                    TagColumn::Location(items) => {
+                        for opt_hits in items {
+                            if let Some(hits) = opt_hits {
+                                self.check(hits.covered_len())?;
+                            }
+                        }
+                    }
+                    TagColumn::String(items) => {
+                        for opt_str in items {
+                            if let Some(bstring) = opt_str {
+                                self.check(bstring.len())?;
+                            }
+                        }
+                    }
+                    // cov:excl-start
+                    _ => unreachable!(),
+                    // cov:excl-stop
                 }
             }
             ResolvedSourceAll::Name {

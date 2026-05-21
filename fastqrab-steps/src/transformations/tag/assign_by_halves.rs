@@ -131,29 +131,35 @@ impl Step for AssignByHalves {
         let engine = &self.engine;
         let input_tags = block.tags.get(&self.in_label).expect("Input tag not found");
 
-        let mut output_tags: Vec<TagValue> = Vec::with_capacity(input_tags.len());
+        let mut output_strings: Vec<Option<BString>> = Vec::with_capacity(input_tags.len());
 
-        for input_tag in input_tags {
-            let hit = match input_tag {
-                TagValue::String(s) => engine
-                    .query(s.as_ref())
-                    .map_err(|e| anyhow::anyhow!("AssignToProbe query failed: {e}"))?,
-                TagValue::Location(hits) => engine
-                    .query(BStr::new(&hits.joined_sequence(None)))
-                    .map_err(|e| anyhow::anyhow!("AssignToProbe query failed: {e}"))?,
-                TagValue::Missing => None,
-                TagValue::Bool(_) | TagValue::Numeric(_) => unreachable!(), // cov:excl-line
-            };
-
-            let tag_value = match hit {
-                Some(reference_id) => TagValue::String(reference_id.as_bytes().into()),
-                None => TagValue::Missing,
-            };
-
-            output_tags.push(tag_value);
+        match input_tags {
+            TagColumn::Location(items) => {
+                for item in items {
+                    let hit = match item {
+                        None => None,
+                        Some(hits) => engine
+                            .query(BStr::new(&hits.joined_sequence(None)))
+                            .map_err(|e| anyhow::anyhow!("AssignToProbe query failed: {e}"))?,
+                    };
+                    output_strings.push(hit.map(|name| name.as_bytes().into()));
+                }
+            }
+            TagColumn::String(items) => {
+                for item in items {
+                    let hit = match item {
+                        None => None,
+                        Some(s) => engine
+                            .query(s.as_ref())
+                            .map_err(|e| anyhow::anyhow!("AssignToProbe query failed: {e}"))?,
+                    };
+                    output_strings.push(hit.map(|name| name.as_bytes().into()));
+                }
+            }
+            TagColumn::Bool(_) | TagColumn::Numeric(_) => unreachable!(), // cov:excl-line
         }
 
-        block.tags.insert(self.out_label.clone(), output_tags);
+        block.tags.insert(self.out_label.clone(), TagColumn::String(output_strings));
         Ok((block, true))
     }
 }

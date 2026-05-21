@@ -1,5 +1,20 @@
 use crate::{no_barcode_infix, transformations::prelude::*};
 
+fn tag_column_to_tag_value(col: &TagColumn, idx: usize) -> TagValue {
+    match col {
+        TagColumn::Location(items) => match &items[idx] {
+            None => TagValue::Missing,
+            Some(hits) => TagValue::Location(hits.clone()),
+        },
+        TagColumn::String(items) => match &items[idx] {
+            None => TagValue::Missing,
+            Some(s) => TagValue::String(s.clone()),
+        },
+        TagColumn::Numeric(items) => TagValue::Numeric(items[idx]),
+        TagColumn::Bool(items) => TagValue::Bool(items[idx]),
+    }
+}
+
 /// Histogram data structure that can handle both String and Numeric tags
 #[derive(Debug, Clone)]
 pub enum HistogramData {
@@ -239,8 +254,9 @@ impl Step for Box<_ReportTagHistogram> {
                     let histogram = data
                         .get_mut(&0)
                         .expect("no multiplex data found, but expected");
-                    for tag_value in tag_values {
-                        histogram.add_value(tag_value);
+                    for read_idx in 0..tag_values.len() {
+                        let tv = tag_column_to_tag_value(tag_values, read_idx);
+                        histogram.add_value(&tv);
                     }
                 }
                 OptDemultiplex::Yes(_) => {
@@ -248,8 +264,8 @@ impl Step for Box<_ReportTagHistogram> {
                     if let Some(output_tags) = &block.output_tags {
                         for (read_idx, &demux_tag) in output_tags.iter().enumerate() {
                             if let Some(histogram) = data.get_mut(&demux_tag) {
-                                let tag_value = &tag_values[read_idx];
-                                histogram.add_value(tag_value);
+                                let tv = tag_column_to_tag_value(tag_values, read_idx);
+                                histogram.add_value(&tv);
                             }
                         }
                     } // cov:excl-line

@@ -170,26 +170,40 @@ impl Step for HammingExactCounter {
             // block no is 1 based.
             let input_tags = block.tags.get(&self.in_label).expect("Input tag not found");
             let counts = &*self.majority_data.barcode_counts;
-            for input_tag in input_tags {
-                let idx = match input_tag {
-                    TagValue::Missing => continue,
-                    TagValue::Numeric(_) | TagValue::Bool(_) => unreachable!(), //cov:excl-line
-                    TagValue::Location(hits) => {
-                        let seq = hits.joined_sequence_cow(None);
-                        self.majority_data
-                            .seq_to_idx
-                            .get(BStr::new(seq.as_ref()))
-                            .copied()
+            match input_tags {
+                TagColumn::Location(items) => {
+                    for item in items {
+                        let idx = match item {
+                            None => continue,
+                            Some(hits) => {
+                                let seq = hits.joined_sequence_cow(None);
+                                self.majority_data
+                                    .seq_to_idx
+                                    .get(BStr::new(seq.as_ref()))
+                                    .copied()
+                            }
+                        };
+                        if let Some(idx) = idx {
+                            counts[idx].fetch_add(1, Ordering::Relaxed);
+                        }
                     }
-                    TagValue::String(bstring) => self
-                        .majority_data
-                        .seq_to_idx
-                        .get(BStr::new(bstring.as_slice()))
-                        .copied(),
-                };
-                if let Some(idx) = idx {
-                    counts[idx].fetch_add(1, Ordering::Relaxed);
                 }
+                TagColumn::String(items) => {
+                    for item in items {
+                        let idx = match item {
+                            None => continue,
+                            Some(bstring) => self
+                                .majority_data
+                                .seq_to_idx
+                                .get(BStr::new(bstring.as_slice()))
+                                .copied(),
+                        };
+                        if let Some(idx) = idx {
+                            counts[idx].fetch_add(1, Ordering::Relaxed);
+                        }
+                    }
+                }
+                TagColumn::Numeric(_) | TagColumn::Bool(_) => unreachable!(), //cov:excl-line
             }
             self.majority_data
                 .total_reads_considered

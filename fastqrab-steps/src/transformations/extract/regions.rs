@@ -4,7 +4,7 @@ use toml_pretty_deser::Visitor;
 
 use super::super::{PartialRegionDefinition, RegionDefinition, extract_regions};
 use crate::transformations::prelude::*;
-use fastqrab_dna::dna::{Hits, TagValue};
+use fastqrab_dna::dna::Hits;
 
 /// Extract regions by coordinates
 /// that is by (segment|source, 0-based start, length)

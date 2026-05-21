@@ -217,16 +217,17 @@ impl Step for StoreTagInFastQ {
     ) -> Result<(FastQBlocksCombined, bool)> {
         let mut error_encountered = None;
 
-        'outer: for (ii, tag) in &mut block
+        let in_tag_col = block
             .tags
             .get(&self.in_label)
-            .expect("in_label tag must exist in block")
-            .iter()
-            .enumerate()
-        {
+            .expect("in_label tag must exist in block");
+        let n_reads = in_tag_col.len();
+        'outer: for ii in 0..n_reads {
             //presence & tag = location checked before hand.
-            if let Some(tag) = tag.as_sequence() {
-                let seq = tag.0.iter().fold(Vec::new(), |mut acc, hit| {
+            if let Some(opt_hits) = in_tag_col.as_locations()
+                && let Some(hits) = &opt_hits[ii]
+            {
+                let seq = hits.0.iter().fold(Vec::new(), |mut acc, hit| {
                     if !acc.is_empty() {
                         acc.extend_from_slice(&self.region_separator);
                     }
@@ -235,7 +236,7 @@ impl Step for StoreTagInFastQ {
                 });
                 if !seq.is_empty() {
                     let qual = vec![b'~'; seq.len()]; // Dummy quality scores
-                    let segment_block = &block.segments[tag.0[0]
+                    let segment_block = &block.segments[hits.0[0]
                         .location
                         .as_ref()
                         .expect("location must be set for tag")
@@ -257,46 +258,46 @@ impl Step for StoreTagInFastQ {
                         let mut name = wrapped.name().to_vec();
                         if let Some(comment_tags) = self.comment_tags.as_ref() {
                             for tag in comment_tags {
-                                if let Some(tag_value) = block
+                                let tag_col = block
                                     .tags
                                     .get(tag)
-                                    .expect("tag must exist in block")
-                                    .get(ii)
-                                {
-                                    let tag_bytes: Vec<u8> = match tag_value {
-                                        TagValue::Location(hits) => {
-                                            hits.joined_sequence(Some(&self.region_separator))
-                                        }
-                                        TagValue::String(value) => value.to_vec(),
-                                        TagValue::Numeric(n) => {
-                                            format_numeric_for_comment(*n).into_bytes()
-                                        }
-                                        TagValue::Bool(n) => {
-                                            if *n {
-                                                "1".into()
-                                            } else {
-                                                "0".into()
-                                            }
-                                        }
-                                        TagValue::Missing => Vec::new(),
-                                    };
-                                    let new_name = store_tag_in_comment(
-                                        &name,
-                                        tag.as_ref().as_bytes(),
-                                        &tag_bytes,
-                                        self.comment_separator,
-                                        self.comment_insert_char,
-                                    );
-                                    match new_name {
-                                        Err(err) => {
-                                            error_encountered = Some(format!("{err}"));
-                                            break 'outer;
-                                        }
-                                        Ok(new_name) => {
-                                            name = new_name;
+                                    .expect("tag must exist in block");
+                                let tag_bytes: Vec<u8> = match tag_col {
+                                    TagColumn::Location(items) => match &items[ii] {
+                                        Some(hits) => hits.joined_sequence(Some(&self.region_separator)),
+                                        None => Vec::new(),
+                                    },
+                                    TagColumn::String(items) => match &items[ii] {
+                                        Some(value) => value.to_vec(),
+                                        None => Vec::new(),
+                                    },
+                                    TagColumn::Numeric(items) => {
+                                        format_numeric_for_comment(items[ii]).into_bytes()
+                                    }
+                                    TagColumn::Bool(items) => {
+                                        if items[ii] {
+                                            "1".into()
+                                        } else {
+                                            "0".into()
                                         }
                                     }
-                                } // cov:excl-line
+                                };
+                                let new_name = store_tag_in_comment(
+                                    &name,
+                                    tag.as_ref().as_bytes(),
+                                    &tag_bytes,
+                                    self.comment_separator,
+                                    self.comment_insert_char,
+                                );
+                                match new_name {
+                                    Err(err) => {
+                                        error_encountered = Some(format!("{err}"));
+                                        break 'outer;
+                                    }
+                                    Ok(new_name) => {
+                                        name = new_name;
+                                    }
+                                }
                             }
                         }
 

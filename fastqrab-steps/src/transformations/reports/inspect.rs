@@ -242,7 +242,7 @@ impl Step for Inspect {
                 out.push(b' ');
                 out.extend_from_slice(str_key.as_bytes());
                 out.push(b'=');
-                out.extend_from_slice(&values[read_idx].to_bstr());
+                out.extend_from_slice(&values.to_bstr(read_idx));
             }
             out
         };

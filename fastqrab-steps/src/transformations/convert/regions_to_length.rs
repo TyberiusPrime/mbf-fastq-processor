@@ -1,5 +1,4 @@
 use crate::transformations::prelude::*;
-use fastqrab_dna::dna::TagValue;
 
 /// Convert region tag to a length tag
 
@@ -75,6 +74,7 @@ impl Step for RegionsToLength {
                 .iter()
                 .map(|opt_hits| {
                     opt_hits
+                        .as_ref()
                         .map(|hits| {
                             hits.0
                                 .iter()

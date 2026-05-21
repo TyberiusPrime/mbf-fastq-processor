@@ -2,7 +2,7 @@ use std::borrow::Cow;
 use std::cell::RefCell;
 
 use crate::transformations::prelude::*;
-use fastqrab_dna::dna::{TagValue, reverse_complement};
+use fastqrab_dna::dna::reverse_complement;
 use fastqrab_io::io::WrappedFastQReadMut;
 
 /// Algorithm to use for scoring overlaps and resolving mismatches

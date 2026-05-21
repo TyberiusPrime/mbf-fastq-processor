@@ -1,5 +1,4 @@
 use crate::transformations::prelude::*;
-use fastqrab_dna::dna::TagValue;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[tpd]

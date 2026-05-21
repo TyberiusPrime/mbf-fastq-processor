@@ -171,22 +171,25 @@ impl Step for StoreTagInComment {
                 let mut read = block.segments[segment_idx].get_mut(read_idx);
                 let mut new_name: Result<Vec<u8>> = Ok(read.name().to_vec());
                 for tag_label in tag_list {
-                    let tag_val =
-                        &block.tags.get(tag_label).expect("Tags were checked before")[read_idx];
-                    let tag_value: Vec<u8> = match tag_val {
-                        TagValue::Location(hits) => {
-                            hits.joined_sequence(Some(&self.region_separator))
-                        }
-                        TagValue::String(value) => value.to_vec(),
-                        TagValue::Numeric(n) => format_numeric_for_comment(*n).into_bytes(),
-                        TagValue::Bool(n) => {
-                            if *n {
+                    let tag_col =
+                        block.tags.get(tag_label).expect("Tags were checked before");
+                    let tag_value: Vec<u8> = match tag_col {
+                        TagColumn::Location(items) => match &items[read_idx] {
+                            Some(hits) => hits.joined_sequence(Some(&self.region_separator)),
+                            None => Vec::new(),
+                        },
+                        TagColumn::String(items) => match &items[read_idx] {
+                            Some(value) => value.to_vec(),
+                            None => Vec::new(),
+                        },
+                        TagColumn::Numeric(items) => format_numeric_for_comment(items[read_idx]).into_bytes(),
+                        TagColumn::Bool(items) => {
+                            if items[read_idx] {
                                 "1".into()
                             } else {
                                 "0".into()
                             }
                         }
-                        TagValue::Missing => Vec::new(),
                     };
                     let tag_name: &str = tag_label.as_ref();
                     new_name = store_tag_in_comment(

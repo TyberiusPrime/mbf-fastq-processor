@@ -124,8 +124,9 @@ impl Step for ReverseComplement {
 
                         TagColumn::String(bstrings) => {
                             for bstring in bstrings.iter_mut() {
-                                *bstring =
-                                    bstring.map(|bstring| reverse_complement_iupac(&bstring).into());
+                                if let Some(s) = bstring.as_mut() {
+                                    *s = reverse_complement_iupac(s).into();
+                                }
                             }
                         }
 

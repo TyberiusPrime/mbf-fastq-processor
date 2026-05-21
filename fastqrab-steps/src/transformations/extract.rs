@@ -7,7 +7,7 @@ use indexmap::IndexMap;
 use super::prelude::DemultiplexTag;
 use fastqrab_config::{
     TagLabel,
-    dna::{Hits, TagValue},
+    dna::Hits,
     segments::{SegmentIndex, SegmentIndexOrAll},
 };
 use fastqrab_io::io::{FastQBlocksCombined, WrappedFastQRead};

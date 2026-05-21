@@ -254,23 +254,25 @@ impl Step for StoreTagsInTable {
                     );
                 }
                 for tag in &self.final_in_labels {
-                    record.push(
-                        match &(block.tags.get(tag).expect("tag must exist in block.tags")[ii]) {
-                            TagValue::Location(v) => {
-                                v.joined_sequence(Some(&self.region_separator))
-                            }
-                            TagValue::String(value) => value.to_vec(),
-                            TagValue::Numeric(n) => n.to_string().into_bytes(),
-                            TagValue::Bool(n) => {
-                                if *n {
-                                    "1".into()
-                                } else {
-                                    "0".into()
-                                }
-                            }
-                            TagValue::Missing => Vec::new(),
+                    let col = block.tags.get(tag).expect("tag must exist in block.tags");
+                    record.push(match col {
+                        TagColumn::Location(items) => match &items[ii] {
+                            Some(v) => v.joined_sequence(Some(&self.region_separator)),
+                            None => Vec::new(),
                         },
-                    );
+                        TagColumn::String(items) => match &items[ii] {
+                            Some(value) => value.to_vec(),
+                            None => Vec::new(),
+                        },
+                        TagColumn::Numeric(items) => items[ii].to_string().into_bytes(),
+                        TagColumn::Bool(items) => {
+                            if items[ii] {
+                                "1".into()
+                            } else {
+                                "0".into()
+                            }
+                        }
+                    });
                 }
                 ii += 1;
                 let row = format_tsv_row(&record);

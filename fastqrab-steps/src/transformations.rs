@@ -458,7 +458,7 @@ fn extract_from_resolved_source(
         }
         ResolvedSourceNoAll::Tag(tag_name) => {
             // Extract from tag - we need to get the sequence from the tag
-            if let Some(tag_values) = block.tags.get(tag_name) {
+            if let Some(_tag_values) = block.tags.get(tag_name) {
                 match block
                     .tags
                     .get(tag_name)
@@ -536,6 +536,8 @@ fn extract_from_resolved_source(
                         unreachable!("Tag value type should have been verified before!"); //cov:excl-line
                     }
                 }
+            } else {
+                (None, None)
             }
         }
         ResolvedSourceNoAll::Name {
