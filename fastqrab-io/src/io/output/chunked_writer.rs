@@ -172,7 +172,7 @@ impl<W: Write> Write for FailForTestLayer<W> {
     fn flush(&mut self) -> io::Result<()> {
         match self {
             FailForTestLayer::PassThrough(w) => w.flush(),
-            FailForTestLayer::Active(w) => w.flush(),
+            FailForTestLayer::Active(w) => w.flush(), //cov:excl-line we're not calling flush after a failure
         }
     }
 }
@@ -758,8 +758,8 @@ impl ChunkPaths {
         let max_value = 10usize.pow(u32::try_from(old_digits).expect("digit count fits u32"));
         let mut existing: Vec<PathBuf> = Vec::new();
         for entry in ex::fs::read_dir(&self.directory).with_context(|| {
+            //cov:excl-start
             format!(
-                //cov:excl-start
                 "Could not read output directory for renaming files: {}",
                 self.directory.display()
             )
@@ -769,8 +769,8 @@ impl ChunkPaths {
             existing.push(
                 entry
                     .with_context(|| {
+                        // cov:excl-start
                         format!(
-                            // cov:excl-start
                             "Could not read output directory entry for renaming files: {}",
                             self.directory.display()
                         )
@@ -806,8 +806,8 @@ impl ChunkPaths {
                         suffix
                     ));
                     ex::fs::rename(path, &new_name).with_context(|| {
+                        //cov:excl-start
                         format!(
-                            //cov:excl-start
                             "Could not rename output chunk file from {} to {}",
                             path.display(),
                             new_name.display()
@@ -888,34 +888,40 @@ impl ChunkedRecordWriter {
     ) -> Result<Self> {
         match (&target, format, chunk_policy.records_per_chunk) {
             (WriteTarget::Stdout, FileFormat::Bam, _) => {
-                anyhow::bail!("BAM output to stdout is not supported");
+                unreachable!("Prevented by config"); //cov:excl-line
             }
             (WriteTarget::Stdout, _, Some(_)) => {
-                anyhow::bail!("Chunked output is not supported when writing to stdout");
+                unreachable!("Prevented by config"); //cov:excl-line
             }
             (WriteTarget::Stdout, FileFormat::None, _) => {
-                anyhow::bail!("Cannot write 'none' format");
+                unreachable!("Prevented by config"); //cov:excl-line
             }
             _ => {}
         }
         let digit_count = usize::from(chunk_policy.records_per_chunk.is_some());
 
         if let WriteTarget::Files(paths) = &target {
-            let first_path = paths.nth(0, digit_count);
-            let metadata = ensure_output_destination_available(&first_path, allow_overwrite)?;
             #[cfg(unix)]
             {
-                use std::os::unix::fs::FileTypeExt;
-                let is_fifo = metadata.as_ref().is_some_and(|m| m.file_type().is_fifo());
-                if is_fifo && chunk_policy.records_per_chunk.is_some() {
-                    anyhow::bail!(
-                        "Chunked output is not supported when writing to named pipes: {}",
-                        first_path.display()
-                    );
+                if chunk_policy.records_per_chunk.is_some() {
+                    let check_paths = &[
+                        // 0 digit so we actually use the user provided file, not the .0
+                        paths.nth(0, 0),
+                        paths.nth(0, digit_count),
+                    ];
+                    for path in check_paths {
+                        let metadata = ensure_output_destination_available(&path, allow_overwrite)?;
+                        use std::os::unix::fs::FileTypeExt;
+                        let is_fifo = metadata.as_ref().is_some_and(|m| m.file_type().is_fifo());
+                        if is_fifo && chunk_policy.records_per_chunk.is_some() {
+                            anyhow::bail!(
+                                "Chunked output is not supported when writing to named pipes: {}",
+                                path.display()
+                            );
+                        }
+                    }
                 }
             }
-            #[cfg(not(unix))]
-            let _ = metadata;
         }
 
         let mut me = Self {

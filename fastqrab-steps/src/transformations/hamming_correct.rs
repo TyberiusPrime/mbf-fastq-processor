@@ -22,7 +22,6 @@ pub struct CountsFromReport {
 
 #[derive(JsonSchema)]
 #[tpd]
-#[derive(Debug)]
 pub struct HammingCorrect {
     /// Input tag to correct
     pub in_label: TagLabel,
@@ -96,6 +95,15 @@ pub struct HammingCorrect {
     final_block_seen: AtomicBool,
 }
 
+#[expect(clippy::missing_fields_in_debug)]
+impl std::fmt::Debug for HammingCorrect {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("HammingCorrect")
+            .field("out_label", &self.out_label)
+            .finish()
+    }
+}
+
 #[tpd]
 #[derive(Debug, JsonSchema, Default)]
 pub enum HammingOutput {
@@ -131,9 +139,17 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
                         on_tie is ByMajority or ByEditProbability"
                         .to_string(),
                 );
-                self.on_tie_use_counts_from_report.state = TomlValueState::ValidationFailed {
-                    message: "Wrong OnTie mode".to_string(),
-                };
+                let spans = vec![
+                    (
+                        self.on_tie_use_counts_from_report.span(),
+                        "Wrong on_tie mode".to_string(),
+                    ),
+                    (
+                        self.on_tie.span(),
+                        "Incompatible with on_tie_use_counts_from_report".to_string(),
+                    ),
+                ];
+                self.on_tie_use_counts_from_report.state = TomlValueState::Custom { spans };
             }
         }
 
@@ -451,7 +467,7 @@ fn run_match_phase(
                     seq_to_idx,
                     resonator,
                     BStr::new(seq.as_ref()),
-                )?)
+                )?) //cov:excl-line
             }
             TagValue::String(bstring) => {
                 Some(match_sequence(seq_to_idx, resonator, bstring.as_ref())?)
@@ -604,7 +620,7 @@ impl Step for HammingCorrect {
                 input_tags,
                 needs_qualities,
                 Some(&block),
-            )?
+            )? //cov:excl-line
         };
 
         // Phase 2: count updates + output construction (counts-hot).
@@ -780,11 +796,11 @@ impl Step for HammingCorrect {
                     "Mismatch between OnTie::ByMajority considered reads and total reads in this step - bug in your count_here decision making"
                 );
             } else {
+                let total = mj.total_reads_considered.load(Ordering::Acquire);
                 assert_eq!(
-                    mj.total_reads_considered.load(Ordering::Acquire),
-                    0,
+                    total, 0,
                     "In on_tie_use_counts_from_report mode, no reads should have been counted. But {} were counted",
-                    mj.total_reads_considered.load(Ordering::Acquire),
+                    total,
                 );
             }
             if let Some(mut writer) = self.count_writer.lock().expect("Mutex poisoned").take() {
@@ -809,7 +825,7 @@ impl Step for HammingCorrect {
                 assert!(
                     pending.is_empty(),
                     "PreMatch pending should be empty at finalize, but has entries for blocks: {:?}",
-                    pending.keys()
+                    pending.keys() //cov:excl-line
                 );
             }
         }
@@ -878,7 +894,7 @@ impl Step for _HammingPreMatch {
             input_tags,
             self.shared.needs_qualities,
             Some(&block),
-        )?;
+        )?; //cov:excl-line
         let block_no = block.block_no();
         self.shared
             .pending

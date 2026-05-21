@@ -1,15 +1,8 @@
-use anyhow::{Context, Result};
 use bstr::{BStr, BString};
 use indexmap::IndexMap;
 use std::collections::{BTreeMap, HashMap};
-use std::num::NonZeroUsize;
-use std::path::{Path, PathBuf};
 
-use crate::join_nonempty;
-use fastqrab_io::CompressionFormat;
-use fastqrab_io::io::output::chunked_writer::{
-    ChunkedRecordWriter, DataSink, SinkConfig, TextRecordSink,
-};
+use fastqrab_io::io::output::chunked_writer::{ChunkedRecordWriter, TextRecordSink};
 
 pub type Tag = u64;
 
@@ -22,12 +15,6 @@ pub type DemultiplexTagToName = BTreeMap<Tag, Option<String>>;
 
 #[derive(Default, Clone)]
 pub struct DemultiplexedOutputFiles(pub DemultiplexedData<Option<Box<TextRecordSink>>>);
-
-impl DemultiplexedOutputFiles {
-    pub fn take(&mut self) -> DemultiplexedData<Option<Box<TextRecordSink>>> {
-        self.0.replace(DemultiplexedData::new())
-    }
-}
 
 // cov:excl-start
 impl std::fmt::Debug for DemultiplexedOutputFiles {
@@ -64,13 +51,6 @@ impl StepOutputFiles {
     /// Insert writers for a declared output id.
     pub fn insert(&mut self, id: String, data: DemultiplexedData<ChunkedRecordWriter>) {
         self.0.insert(id, data);
-    }
-
-    /// Iterate over all (id, writers) pairs, consuming self.
-    pub fn into_iter(
-        self,
-    ) -> impl Iterator<Item = (String, DemultiplexedData<ChunkedRecordWriter>)> {
-        self.0.into_iter()
     }
 }
 
@@ -270,82 +250,6 @@ impl OptDemultiplex {
             Self::No => vec![0],
             Self::Yes(info) => info.tag_to_name.keys().copied().collect(),
         }
-    }
-
-    #[expect(clippy::too_many_arguments, reason = "We need them")]
-    pub fn open_output_streams(
-        &self,
-        output_directory: &Path,
-        filename_prefix: &str,
-        filename_suffix: &str,
-        filename_extension: &str,
-        ix_separator: &str,
-        compression_format: CompressionFormat,
-        compression_level: Option<u8>,
-        hash_compressed: bool,
-        hash_uncompressed: bool,
-        allow_overwrite: bool,
-    ) -> Result<DemultiplexedOutputFiles> {
-        let filenames_in_order: DemultiplexedData<Option<PathBuf>> = match self {
-            Self::No => {
-                let basename = join_nonempty(vec![filename_prefix, filename_suffix], ix_separator);
-                let with_suffix = format!("{basename}.{filename_extension}");
-                [(
-                    0,
-                    Some(compression_format.apply_suffix(&with_suffix).into()),
-                )]
-                .into_iter()
-                .collect()
-            }
-            Self::Yes(info) => {
-                let mut filenames = DemultiplexedData::new();
-                /* if !info.include_no_barcode {
-                    filenames.push(None)
-                }
-                for _ in 0..info.len_outputs() {
-                    filenames.push(None)
-                } */
-                for (tag, name) in &info.tag_to_name {
-                    filenames.insert(
-                        *tag,
-                        name.as_ref().map(|name| {
-                            let basename = join_nonempty(
-                                vec![filename_prefix, filename_suffix, name],
-                                ix_separator,
-                            );
-                            let with_suffix = format!("{basename}.{filename_extension}");
-                            let filename = compression_format.apply_suffix(&with_suffix);
-                            filename.into()
-                        }),
-                    );
-                }
-                filenames
-            }
-        };
-        let mut streams = DemultiplexedData::new();
-
-        for (tag, opt_filename) in filenames_in_order {
-            if let Some(filename) = opt_filename {
-                let filename = output_directory.join(filename);
-                fastqrab_io::ensure_output_destination_available(&filename, allow_overwrite)?;
-                let sink = DataSink::create_file(&filename).with_context(|| {
-                    format!("Could not open output file: {}", filename.display()) // cov:excl-line
-                })?; // cov:excl-line
-                let sink_config = SinkConfig {
-                    compression: compression_format,
-                    compression_level,
-                    compression_threads: Some(NonZeroUsize::new(1).expect("Can't fail")),
-                    hash_uncompressed,
-                    hash_compressed,
-                    simulated_failure: None,
-                };
-                let buffered_writer = TextRecordSink::new(sink, &sink_config)?;
-                streams.insert(tag, Some(Box::new(buffered_writer)));
-            } else {
-                streams.insert(tag, None);
-            }
-        }
-        Ok(DemultiplexedOutputFiles(streams))
     }
 }
 

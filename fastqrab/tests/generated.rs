@@ -1521,6 +1521,21 @@ fn test_cases_x_integration_x_io_x_cut_end_named_pipes_x_input_pipe() {
 
 #[test]
 
+fn test_cases_x_integration_x_io_x_cut_end_named_pipes_x_named_output_pipe_and_chunked_fails() {
+    println!(
+        "Test case is in: test_cases/integration/io/cut_end_named_pipes/named_output_pipe_and_chunked_fails"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/integration/io/cut_end_named_pipes/named_output_pipe_and_chunked_fails",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_integration_x_io_x_mixed_input_files() {
     println!("Test case is in: test_cases/integration/io/mixed_input_files");
     run_test(
@@ -2206,6 +2221,17 @@ fn test_cases_x_output_x_error_handling_x_colon_in_ix_sep() {
 
 #[test]
 
+fn test_cases_x_output_x_error_handling_x_compression_threads_0() {
+    println!("Test case is in: test_cases/output/error_handling/compression_threads_0");
+    run_test(
+        std::path::Path::new("../test_cases/output/error_handling/compression_threads_0"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_output_x_error_handling_x_ix_sep_empty() {
     println!("Test case is in: test_cases/output/error_handling/ix_sep_empty");
     run_test(
@@ -2772,6 +2798,17 @@ fn test_cases_x_single_step_x_calc_x_worst_quality_x_empty_read() {
     println!("Test case is in: test_cases/single_step/calc/worst_quality/empty_read");
     run_test(
         std::path::Path::new("../test_cases/single_step/calc/worst_quality/empty_read"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_calc_x_worst_quality_x_empty_tag() {
+    println!("Test case is in: test_cases/single_step/calc/worst_quality/empty_tag");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/calc/worst_quality/empty_tag"),
         "input.toml",
         1,
     );
@@ -7758,6 +7795,21 @@ fn test_cases_x_single_step_x_extraction_x_extract_iupac_x_anchor_variations() {
 
 #[test]
 
+fn test_cases_x_single_step_x_extraction_x_extract_iupac_x_anywhere_and_max_anchor_dist() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/extract_iupac/anywhere_and_max_anchor_dist"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/extract_iupac/anywhere_and_max_anchor_dist",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_extraction_x_extract_iupac_x_error_suffix_using_iupac_non_iupac() {
     println!(
         "Test case is in: test_cases/single_step/extraction/extract_iupac/error_suffix_using_iupac_non_iupac"
@@ -10390,6 +10442,84 @@ fn test_cases_x_single_step_x_hamming_x_by_edit_probability_x_from_report() {
 
 #[test]
 
+fn test_cases_x_single_step_x_hamming_x_by_edit_probability_x_from_report_but_wrong_method() {
+    println!(
+        "Test case is in: test_cases/single_step/hamming/by_edit_probability/from_report_but_wrong_method"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/hamming/by_edit_probability/from_report_but_wrong_method",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_hamming_x_by_edit_probability_x_from_report_cantread_file_x_missing_histogram()
+ {
+    println!(
+        "Test case is in: test_cases/single_step/hamming/by_edit_probability/from_report_cantread_file/missing_histogram"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/hamming/by_edit_probability/from_report_cantread_file/missing_histogram",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_hamming_x_by_edit_probability_x_from_report_cantread_file_x_missing_report_name()
+ {
+    println!(
+        "Test case is in: test_cases/single_step/hamming/by_edit_probability/from_report_cantread_file/missing_report_name"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/hamming/by_edit_probability/from_report_cantread_file/missing_report_name",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_hamming_x_by_edit_probability_x_from_report_cantread_file_x_nofile() {
+    println!(
+        "Test case is in: test_cases/single_step/hamming/by_edit_probability/from_report_cantread_file/nofile"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/hamming/by_edit_probability/from_report_cantread_file/nofile",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_hamming_x_by_edit_probability_x_from_report_cantread_file_x_notjson()
+{
+    println!(
+        "Test case is in: test_cases/single_step/hamming/by_edit_probability/from_report_cantread_file/notjson"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/hamming/by_edit_probability/from_report_cantread_file/notjson",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_hamming_x_by_edit_probability_x_lost_due_to_editing() {
     println!(
         "Test case is in: test_cases/single_step/hamming/by_edit_probability/lost_due_to_editing"
@@ -10969,6 +11099,17 @@ fn test_cases_x_single_step_x_inspect_x_compression_zstd_level() {
     println!("Test case is in: test_cases/single_step/inspect/compression_zstd_level");
     run_test(
         std::path::Path::new("../test_cases/single_step/inspect/compression_zstd_level"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_inspect_x_inspect_x_inspect_broken_config() {
+    println!("Test case is in: test_cases/single_step/inspect/inspect/inspect_broken_config");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/inspect/inspect/inspect_broken_config"),
         "input.toml",
         1,
     );
@@ -11793,6 +11934,17 @@ fn test_cases_x_single_step_x_store_tag_x_store_tags_in_table_no_tags_defined() 
         std::path::Path::new(
             "../test_cases/single_step/store_tag/store_tags_in_table_no_tags_defined",
         ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_tag_matches_x_bad_tags() {
+    println!("Test case is in: test_cases/single_step/tag_matches/bad_tags");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/tag_matches/bad_tags"),
         "input.toml",
         1,
     );

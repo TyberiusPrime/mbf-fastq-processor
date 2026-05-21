@@ -1,0 +1,24 @@
+[input]
+  read1 = 'input_read1.fq'
+  read2 = 'input_read2.fq'
+
+
+[output]
+  prefix = 'output'
+  format = 'None'
+  
+[[step]]
+  action  = 'TagMatches'
+  out_label = 'trname1'
+  source = 'name:read1'
+  accepted = ['alpha1', 'beta1', 'nosuch', 34]
+
+
+[[step]]
+  action = 'StoreTagsInTable'
+
+
+
+
+
+

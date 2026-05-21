@@ -1,0 +1,43 @@
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+29 │ [[step]]
+30 │       action = 'HammingCorrect'
+   ┆                ────────┬───────
+   ┆                        │
+   ┆                        ╰──────── In this step
+   ┆
+31 │     in_label = 'bc_raw'
+32 │     out_label = 'corrected'
+33 │     barcodes = 'barcodes'
+34 │     output = 'label'
+35 │     max_hamming_distance = 1
+36 │     on_no_match = 'remove'
+37 │       on_tie = 'remove'
+   ┆                ────┬───
+   ┆                    │
+   ┆                    ╰──── Incompatible with on_tie_use_counts_from_report
+38 │       on_tie_use_counts_from_report = {
+   ┆                                       ▲
+   ┆ ╭─────────────────────────────────────╯
+39 │ │       # note that the counts in that file are manipulated,
+   ┆ │
+40 │ │       # so we see an acutal difference to the 'basic' mode with inline counting.
+   ┆ │
+41 │ │       filename= 'input_report.json',
+   ┆ │
+42 │ │       report_name = 'bccounts',
+   ┆ │
+43 │ │       tag_name = 'corrected',
+   ┆ │
+44 │ │     }
+   ┆ │     ▲
+   ┆ │     │
+   ┆ ╰─────┴─ Wrong on_tie mode
+───╯
+Hint: on_tie_use_counts_from_report only makes sense if on_tie is ByMajority or ByEditProbability
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/HammingCorrect
+      Or run: `fastqrab template HammingCorrect` for more information.
+
+

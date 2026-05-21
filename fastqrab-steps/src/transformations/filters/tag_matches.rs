@@ -39,8 +39,6 @@ impl VerifyIn<PartialConfig> for PartialTagMatches {
                     .map(|s| BString::new(s.as_bytes().to_vec()))
                     .collect(),
             );
-        } else {
-            self.accepted_set = Some(FxHashSet::default());
         }
         Ok(())
     }

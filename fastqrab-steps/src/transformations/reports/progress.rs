@@ -24,7 +24,7 @@ pub struct Progress {
     pub start_time: Option<std::time::Instant>,
 
     pub n: usize,
-    pub output_infix: Option<String>,
+    pub output_infix: String,
 
     #[schemars(skip)]
     #[tpd(skip, default)]
@@ -38,33 +38,14 @@ pub struct Progress {
 impl VerifyIn<PartialConfig> for PartialProgress {
     fn verify(
         &mut self,
-        parent: &PartialConfig,
+        _parent: &PartialConfig,
         _options: &VerifyOptions,
     ) -> std::result::Result<(), ValidationFailure>
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {
         self.n.or_with(default_progress_n);
-        let stdout = parent
-            .output
-            .as_ref()
-            .and_then(|x| x.as_ref())
-            .and_then(|o| o.stdout.as_ref())
-            .copied()
-            .unwrap_or(false);
-        let has_output_infix = self
-            .output_infix
-            .as_ref()
-            .and_then(|x| x.as_ref())
-            .is_some();
-        if stdout && !has_output_infix {
-            self.output_infix.state = TomlValueState::ValidationFailed {
-                message: "Missing output_infix".to_string(),
-            };
-            self.output_infix.help = Some(
-                "Supply an output_infix to write progress to a file instead of stdout (which is used by [output] already).".to_string(),
-            );
-        }
+        self.output_infix.or_with(|| "--stdout--".to_string());
         self.finalize_timepoint = Some(Arc::new(Mutex::new(None)));
         Ok(())
     }
@@ -90,21 +71,25 @@ impl Progress {
 
 impl TagUser for PartialTaggedVariant<PartialProgress> {
     fn declare_output_files(&self) -> Vec<OutputDeclaration> {
-        if let Some(inner) = self.toml_value.value.as_ref() {
-            if let Some(infix) = inner.output_infix.as_ref().and_then(|x| x.as_ref()) {
-                return vec![OutputDeclaration {
-                    id: "progress".to_string(),
-                    target: WriteTargetConfig::new(vec![infix.clone()], "progress".to_string()),
-                    sink_config: SinkConfig::default(),
-                    format: fastqrab_io::FileFormat::Text,
-                    chunk_policy: ChunkPolicy::default(),
-                    bam_options: None,
-                    singleton: true,
-                    span: inner.output_infix.span(),
-                }];
-            }
-        }
-        vec![]
+        let inner = self
+            .toml_value
+            .value
+            .as_ref()
+            .expect("can't call declare_output_files when validation failed");
+        let infix = inner
+            .output_infix
+            .as_ref()
+            .expect("output_infix must be set in config");
+        vec![OutputDeclaration {
+            id: "progress".to_string(),
+            target: WriteTargetConfig::new(vec![infix.clone()], "progress".to_string()),
+            sink_config: SinkConfig::default(),
+            format: fastqrab_io::FileFormat::Text,
+            chunk_policy: ChunkPolicy::default(),
+            bam_options: None,
+            singleton: true,
+            span: inner.output_infix.span(),
+        }]
     }
 }
 
@@ -115,14 +100,12 @@ impl Step for Progress {
         mut output_files: StepOutputFiles,
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<DemultiplexBarcodes>> {
-        if self.output_infix.is_some() {
-            // Get the single (tag-0) writer for this non-demultiplexed output
-            let mut per_tag = output_files.take("progress");
-            let writer = per_tag
-                .remove(&0)
-                .expect("tag 0 writer must exist for progress output");
-            *self.writer.lock().expect("poisoned") = Some(writer);
-        }
+        // Get the single (tag-0) writer for this non-demultiplexed output
+        let mut per_tag = output_files.take("progress");
+        let writer = per_tag
+            .remove(&0)
+            .expect("tag 0 writer must exist for progress output");
+        *self.writer.lock().expect("poisoned") = Some(writer);
         self.start_time = Some(std::time::Instant::now());
         // report thread configuration
         self.output(&format!(

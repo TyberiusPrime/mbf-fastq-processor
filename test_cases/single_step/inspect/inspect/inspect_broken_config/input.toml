@@ -1,0 +1,30 @@
+[input]
+    read1 = 'input_read1.fq.zst'
+    read2 = 'input_read2.fq.zst'
+
+[[step]]
+    action = 'Skip'
+    n = 10
+
+[[step]]
+  action ='ExtractIUPAC'
+  anchor = 'anywhere'
+  query = 'ATG'
+  segment='read1'
+  max_mismatches = 1
+  out_label='a_tag'
+
+[[step]]
+  action ='CalcLength'
+  out_label='read1len'
+   segment='read1'
+
+[[step]]
+    action ='Inspect'
+    infix = 'tcepsni'
+    n = 'notanumber'
+    segment = 'read1'
+
+[output]
+    prefix = 'output'
+    format = 'None'

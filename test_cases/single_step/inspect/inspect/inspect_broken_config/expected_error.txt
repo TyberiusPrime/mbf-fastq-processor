@@ -1,0 +1,21 @@
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+22 │ [[step]]
+23 │     action ='Inspect'
+   ┆             ────┬────
+   ┆                 │
+   ┆                 ╰───── In this step
+   ┆
+24 │     infix = 'tcepsni'
+25 │     n = 'notanumber'
+   ┆         ──────┬─────
+   ┆               │
+   ┆               ╰────── Wrong type: expected usize, found string.
+───╯
+Hint: This value has the wrong type.
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/Inspect
+      Or run: `fastqrab template Inspect` for more information.
+
+

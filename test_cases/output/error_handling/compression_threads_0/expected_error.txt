@@ -1,0 +1,14 @@
+Error Details ==
+Error 1/1
+  ╭─config.toml
+  ┆
+7 │ [output]
+8 │     prefix = 'output'
+9 │   compression_threads = 0
+  ┆                         ┬
+  ┆                         │
+  ┆                         ╰─ Must not be 0.
+──╯
+Hint: 'compression_threads' must be greater than zero when specified. Increase or remove setting
+
+

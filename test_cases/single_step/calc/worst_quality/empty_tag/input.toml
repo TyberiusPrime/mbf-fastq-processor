@@ -1,0 +1,32 @@
+[input]
+    read1 = 'input_read1.fq'
+[[step]]
+  action = 'ExtractRegion'
+  start = 0
+  len  = 3
+  segment = 'read1'
+  anchor ='left'
+  out_label='reg1'
+
+[[step]]
+    action = 'CalcWorstQuality'
+    out_label = 'worst_q_before'
+    source = 'tag:reg1'
+    offset = 0
+
+[[step]]
+  action ='Truncate'
+  n = 0
+
+[[step]]
+    action = 'CalcWorstQuality'
+    out_label = 'worst_q'
+    source = 'tag:reg1'
+    offset = 0
+
+[[step]]
+    action = 'StoreTagInComment'
+    in_label = ['worst_q', 'worst_q_before']
+
+[output]
+    prefix = 'output'

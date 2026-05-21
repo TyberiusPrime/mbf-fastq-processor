@@ -121,9 +121,11 @@ impl std::fmt::Debug for Inspect {
 
 impl TagUser for PartialTaggedVariant<PartialInspect> {
     fn declare_output_files(&self) -> Vec<OutputDeclaration> {
-        let Some(inner) = self.toml_value.value.as_ref() else {
-            return vec![];
-        };
+        let inner = self
+            .toml_value
+            .value
+            .as_ref()
+            .expect("can't call declare_output_files when validation failed");
         let infix = inner.infix.as_ref().cloned().unwrap_or_default();
         let segment_name = inner
             .resolved_segment_name

@@ -77,9 +77,11 @@ impl<T: Write> Write for FailForTestWriter<T> {
     }
 
     #[mutants::skip]
+    //cov:excl-start -- don't call this when a failure happens.
     fn flush(&mut self) -> io::Result<()> {
         self.inner.flush()
     }
+    //cov:excl-end
 }
 
 #[cfg(test)]

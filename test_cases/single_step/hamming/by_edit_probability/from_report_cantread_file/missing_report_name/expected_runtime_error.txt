@@ -1,0 +1,5 @@
+Error Details ==
+Error in transform initalization. Index 3: HammingCorrect(HammingCorrect { out_label: Normal("corrected") })
+
+Caused by:
+    Report name bccounts not found in counts from report file input_report.json

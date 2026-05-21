@@ -89,6 +89,7 @@ impl Step for WorstQuality {
                 let mut tag_iter = tag_values.into_iter();
 
                 while let Some(molecule) = iter.pseudo_next() {
+                    let missing_value = 33.0;
                     let tag_val = tag_iter.next().expect("tag and read count should match");
                     let q = match &tag_val {
                         TagValue::Location(hits) => match molecule.hit_to_qualities(hits) {
@@ -98,9 +99,9 @@ impl Step for WorstQuality {
                                 .min()
                                 .unwrap_or(33 + self.offset as i16)
                                 as f64,
-                            _ => 0.0,
+                            _ => missing_value,
                         },
-                        TagValue::Missing => 33.0,
+                        TagValue::Missing => missing_value,
                         _ => unreachable!(), // cov:excl-line
                     };
                     values.push(TagValue::Numeric(q));

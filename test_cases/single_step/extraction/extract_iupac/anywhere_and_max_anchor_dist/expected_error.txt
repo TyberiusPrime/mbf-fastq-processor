@@ -1,0 +1,38 @@
+Error Details ==
+Error 1/2
+  ╭─config.toml
+  ┆
+5 │ [[step]]
+6 │     action = 'ExtractIUPAC'
+  ┆              ───────┬──────
+  ┆                     │
+  ┆                     ╰─────── In this step
+  ┆
+7 │     out_label = 'L0'
+8 │     anchor = 'anywhere'
+  ┆              ─────┬────
+  ┆                   │
+  ┆                   ╰───── Incomptable with max_anchor_distance set
+9 │     max_anchor_distance = 5
+  ┆                           ┬
+  ┆                           │
+  ┆                           ╰─ Incomptable with anchor = anywhere
+──╯
+Hint: Either choose a different anchor, or remove max_anchor_distance, depending on your eneeds
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/ExtractIUPAC
+      Or run: `fastqrab template ExtractIUPAC` for more information.
+      Make sure to either use, or forget (using ForgetTag) all your tags.
+
+Error 2/2
+  ╭─config.toml
+  ┆
+5 │ [[step]]
+6 │     action = 'ExtractIUPAC'
+7 │     out_label = 'L0'
+  ┆                 ──┬─
+  ┆                   │
+  ┆                   ╰── Unused tag
+──╯
+Hint: Make sure to either use, or forget (using ForgetTag) all your tags.
+
+

@@ -1530,9 +1530,10 @@ impl PartialConfig {
             }
         }
         // Collect stdout-related errors before moving all_decls.
-        // stdout_entries: (transform_idx, span) for each non-singleton stdout declaration.
+        // stdout_entries: (transform_idx, span) for each stdout declaration.
         // stdout_has_demux_before: parallel vec; true if a Demultiplex step preceded that transform.
         let mut stdout_entries: Vec<(usize, std::ops::Range<usize>)> = Vec::new();
+
         let mut stdout_has_demux_before: Vec<bool> = Vec::new();
         {
             let mut seen_demux = false;
@@ -1546,7 +1547,7 @@ impl PartialConfig {
                         seen_demux = true;
                     }
                     for decl in all_decls.get(idx).into_iter().flatten() {
-                        if matches!(decl.target, WriteTargetConfig::Stdout) && !decl.singleton {
+                        if matches!(decl.target, WriteTargetConfig::Stdout) {
                             stdout_entries.push((idx, decl.span.clone()));
                             stdout_has_demux_before.push(has_demux_before);
                         }
@@ -1621,6 +1622,26 @@ impl PartialConfig {
                 transforms[stdout_entries[0].0].state = TomlValueState::Custom { spans };
                 transforms[stdout_entries[0].0].help = Some(
                     "Multiple steps write to stdout. Only one step may write to stdout at a time."
+                        .to_string(),
+                );
+            }
+
+            //fourth step: report conflicts with stdout output from output
+            if let Some(Some(output_config)) = self.output.as_mut()
+                && output_config.stdout.as_ref().is_some_and(|x| *x)
+                && !stdout_entries.is_empty()
+            {
+                let mut spans = vec![(
+                    output_config.stdout.span(),
+                    "Stdout output conflict.".to_string(),
+                )];
+                for (_transform_idx, span) in stdout_entries {
+                    spans.push((span.clone(), "This step also writes to stdout.".to_string()));
+                }
+                output_config.stdout.state = TomlValueState::Custom { spans };
+                output_config.stdout.help = Some(
+                    "Stdout output from [output] conflicts with step(s) writing to stdout.\n\
+                    Either change the [output] to write to files (or not at all), or change the step(s) to write to a file instead."
                         .to_string(),
                 );
             }

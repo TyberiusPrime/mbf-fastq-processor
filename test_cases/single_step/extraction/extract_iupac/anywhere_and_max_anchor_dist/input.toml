@@ -1,0 +1,14 @@
+[input]
+    read1 = 'input_read1.fq'
+
+# Left anchor: pattern TTGG must start within max_anchor_distance of position 0
+[[step]]
+    action = 'ExtractIUPAC'
+    out_label = 'L0'
+    anchor = 'anywhere'
+    max_anchor_distance = 5
+    search = 'TTGG'
+    max_mismatches = 0
+
+[output]
+    prefix = 'output'

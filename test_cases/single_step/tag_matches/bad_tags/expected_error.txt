@@ -1,0 +1,22 @@
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+10 │ [[step]]
+11 │   action  = 'TagMatches'
+   ┆             ──────┬─────
+   ┆                   │
+   ┆                   ╰────── In this step
+   ┆
+12 │   out_label = 'trname1'
+13 │   source = 'name:read1'
+14 │   accepted = ['alpha1', 'beta1', 'nosuch', 34]
+   ┆                                            ─┬
+   ┆                                             │
+   ┆                                             ╰── Wrong type: expected string, found integer.
+───╯
+Hint: This value has the wrong type.
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/Matches
+      Or run: `fastqrab template Matches` for more information.
+
+

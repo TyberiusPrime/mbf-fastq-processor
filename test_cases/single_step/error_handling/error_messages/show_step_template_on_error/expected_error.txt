@@ -1,17 +1,22 @@
 Error Details ==
 Error 1/1
-  ╭─config.toml
-  ┆
-4 │ [[step]]
-5 │     action = 'Progress'
-  ┆              ─────┬────
-  ┆                   │
-  ┆                   ╰───── In this step
-6 │     n = 10000
-  ┆              ┬
-  ┆              │
-  ┆              ╰─ Missing output_infix
-──╯
-Hint: Supply an output_infix to write progress to a file instead of stdout (which is used by [output] already).
-      See https://doc_url.example/version-stripped-from-test/docs/redirects/Progress
+   ╭─config.toml
+   ┆
+ 4 │ [[step]]
+ 5 │     action = 'Progress'
+ 6 │     n = 10000
+   ┆              ┬
+   ┆              │
+   ┆              ╰─ This step also writes to stdout.
+   ┆
+ 8 │ [output]
+ 9 │     prefix = 'output'
+10 │     stdout = true
+   ┆             ──┬─
+   ┆               │
+   ┆               ╰── Stdout output conflict.
+───╯
+Hint: Stdout output from [output] conflicts with step(s) writing to stdout.
+      Either change the [output] to write to files (or not at all), or change the step(s) to write to a file instead.
+
 

@@ -1,0 +1,5 @@
+Error Details ==
+Error in transform initalization. Index 3: HammingCorrect(HammingCorrect { out_label: Normal("corrected") })
+
+Caused by:
+    Failed to read counts from report file input_report.json: No such file or directory (os error 2)
