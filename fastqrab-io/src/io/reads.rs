@@ -217,7 +217,7 @@ impl FastQElement {
                 let self_copy = self_data.to_vec();
 
                 // Try to reuse self's block space for other's data
-                if self_data.len() <= other_data.len() {
+                if other_data.len() <= self_data.len() {
                     self_data[..other_data.len()].copy_from_slice(other_data);
                     pos_self.end = pos_self.start + other_data.len();
                 } else {
@@ -2524,6 +2524,52 @@ mod test {
 
         // Verify they're still Local
         assert!(matches!(elem1, FastQElement::Local(_)));
+        assert!(matches!(elem2, FastQElement::Local(_)));
+    }
+
+    #[test]
+    fn test_fastq_element_swap_both_local_self_larger() {
+        // self has 8 bytes of slot, other has 4 — both fit in each other's slot
+        let mut block1 = b"AAAAAAAA....".to_vec();
+        let mut block2 = b"CCCC........".to_vec();
+
+        let mut elem1 = FastQElement::Local(Position { start: 0, end: 8 });
+        let mut elem2 = FastQElement::Local(Position { start: 0, end: 4 });
+
+        assert_eq!(elem1.get(&block1), b"AAAAAAAA");
+        assert_eq!(elem2.get(&block2), b"CCCC");
+
+        elem1.swap_with(&mut elem2, &mut block1, &mut block2);
+
+        assert_eq!(elem1.get(&block1), b"CCCC");
+        assert_eq!(elem2.get(&block2), b"AAAAAAAA");
+
+        // other (4 bytes) fits in self (8) — self stays Local.
+        // self (8 bytes) does NOT fit in other (4) — other becomes Owned.
+        assert!(matches!(elem1, FastQElement::Local(_)));
+        assert!(matches!(elem2, FastQElement::Owned(_)));
+    }
+
+    #[test]
+    fn test_fastq_element_swap_both_local_other_larger() {
+        // Mirror of the previous: self has 4 bytes, other has 8.
+        let mut block1 = b"AAAA........".to_vec();
+        let mut block2 = b"CCCCCCCC....".to_vec();
+
+        let mut elem1 = FastQElement::Local(Position { start: 0, end: 4 });
+        let mut elem2 = FastQElement::Local(Position { start: 0, end: 8 });
+
+        assert_eq!(elem1.get(&block1), b"AAAA");
+        assert_eq!(elem2.get(&block2), b"CCCCCCCC");
+
+        elem1.swap_with(&mut elem2, &mut block1, &mut block2);
+
+        assert_eq!(elem1.get(&block1), b"CCCCCCCC");
+        assert_eq!(elem2.get(&block2), b"AAAA");
+
+        // other (8 bytes) does NOT fit in self (4) — self becomes Owned.
+        // self (4 bytes) fits in other (8) — other stays Local.
+        assert!(matches!(elem1, FastQElement::Owned(_)));
         assert!(matches!(elem2, FastQElement::Local(_)));
     }
 

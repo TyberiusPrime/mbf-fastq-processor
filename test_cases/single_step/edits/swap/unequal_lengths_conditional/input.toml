@@ -1,0 +1,17 @@
+[input]
+  read1='input_read1.fq'
+  read2='input_read2.fq'
+
+[[step]]
+    action = 'EvalExpression'
+    out_label = 'should_swap'
+    expression = 'len_read1 > 6'
+    result_type = 'bool'
+
+[[step]]
+  action = 'swap'
+  if_tag = 'should_swap'
+
+[output]
+  prefix = 'output'
+

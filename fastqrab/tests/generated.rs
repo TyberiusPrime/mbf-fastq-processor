@@ -3819,10 +3819,10 @@ fn test_cases_x_single_step_x_edits_x_reverse_complement_x_with_missing() {
 
 #[test]
 
-fn test_cases_x_single_step_x_edits_x_swap_x_swap_auto_detect_two_segments() {
-    println!("Test case is in: test_cases/single_step/edits/swap/swap_auto_detect_two_segments");
+fn test_cases_x_single_step_x_edits_x_swap_x_auto_detect_two_segments() {
+    println!("Test case is in: test_cases/single_step/edits/swap/auto_detect_two_segments");
     run_test(
-        std::path::Path::new("../test_cases/single_step/edits/swap/swap_auto_detect_two_segments"),
+        std::path::Path::new("../test_cases/single_step/edits/swap/auto_detect_two_segments"),
         "input.toml",
         1,
     );
@@ -3830,10 +3830,10 @@ fn test_cases_x_single_step_x_edits_x_swap_x_swap_auto_detect_two_segments() {
 
 #[test]
 
-fn test_cases_x_single_step_x_edits_x_swap_x_swap_conditional() {
-    println!("Test case is in: test_cases/single_step/edits/swap/swap_conditional");
+fn test_cases_x_single_step_x_edits_x_swap_x_conditional() {
+    println!("Test case is in: test_cases/single_step/edits/swap/conditional");
     run_test(
-        std::path::Path::new("../test_cases/single_step/edits/swap/swap_conditional"),
+        std::path::Path::new("../test_cases/single_step/edits/swap/conditional"),
         "input.toml",
         1,
     );
@@ -3841,10 +3841,10 @@ fn test_cases_x_single_step_x_edits_x_swap_x_swap_conditional() {
 
 #[test]
 
-fn test_cases_x_single_step_x_edits_x_swap_x_swap_conditional_extended() {
-    println!("Test case is in: test_cases/single_step/edits/swap/swap_conditional_extended");
+fn test_cases_x_single_step_x_edits_x_swap_x_conditional_extended() {
+    println!("Test case is in: test_cases/single_step/edits/swap/conditional_extended");
     run_test(
-        std::path::Path::new("../test_cases/single_step/edits/swap/swap_conditional_extended"),
+        std::path::Path::new("../test_cases/single_step/edits/swap/conditional_extended"),
         "input.toml",
         1,
     );
@@ -3852,10 +3852,10 @@ fn test_cases_x_single_step_x_edits_x_swap_x_swap_conditional_extended() {
 
 #[test]
 
-fn test_cases_x_single_step_x_edits_x_swap_x_swap_conditional_majority() {
-    println!("Test case is in: test_cases/single_step/edits/swap/swap_conditional_majority");
+fn test_cases_x_single_step_x_edits_x_swap_x_conditional_majority() {
+    println!("Test case is in: test_cases/single_step/edits/swap/conditional_majority");
     run_test(
-        std::path::Path::new("../test_cases/single_step/edits/swap/swap_conditional_majority"),
+        std::path::Path::new("../test_cases/single_step/edits/swap/conditional_majority"),
         "input.toml",
         1,
     );
@@ -3863,10 +3863,10 @@ fn test_cases_x_single_step_x_edits_x_swap_x_swap_conditional_majority() {
 
 #[test]
 
-fn test_cases_x_single_step_x_edits_x_swap_x_swap_conditional_minority() {
-    println!("Test case is in: test_cases/single_step/edits/swap/swap_conditional_minority");
+fn test_cases_x_single_step_x_edits_x_swap_x_conditional_minority() {
+    println!("Test case is in: test_cases/single_step/edits/swap/conditional_minority");
     run_test(
-        std::path::Path::new("../test_cases/single_step/edits/swap/swap_conditional_minority"),
+        std::path::Path::new("../test_cases/single_step/edits/swap/conditional_minority"),
         "input.toml",
         1,
     );
@@ -3874,10 +3874,10 @@ fn test_cases_x_single_step_x_edits_x_swap_x_swap_conditional_minority() {
 
 #[test]
 
-fn test_cases_x_single_step_x_edits_x_swap_x_swap_conditional_with_regions() {
-    println!("Test case is in: test_cases/single_step/edits/swap/swap_conditional_with_regions");
+fn test_cases_x_single_step_x_edits_x_swap_x_conditional_with_regions() {
+    println!("Test case is in: test_cases/single_step/edits/swap/conditional_with_regions");
     run_test(
-        std::path::Path::new("../test_cases/single_step/edits/swap/swap_conditional_with_regions"),
+        std::path::Path::new("../test_cases/single_step/edits/swap/conditional_with_regions"),
         "input.toml",
         1,
     );
@@ -3885,10 +3885,32 @@ fn test_cases_x_single_step_x_edits_x_swap_x_swap_conditional_with_regions() {
 
 #[test]
 
-fn test_cases_x_single_step_x_edits_x_swap_x_swap_four_segments() {
-    println!("Test case is in: test_cases/single_step/edits/swap/swap_four_segments");
+fn test_cases_x_single_step_x_edits_x_swap_x_four_segments() {
+    println!("Test case is in: test_cases/single_step/edits/swap/four_segments");
     run_test(
-        std::path::Path::new("../test_cases/single_step/edits/swap/swap_four_segments"),
+        std::path::Path::new("../test_cases/single_step/edits/swap/four_segments"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_edits_x_swap_x_unequal_lengths() {
+    println!("Test case is in: test_cases/single_step/edits/swap/unequal_lengths");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/edits/swap/unequal_lengths"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_edits_x_swap_x_unequal_lengths_conditional() {
+    println!("Test case is in: test_cases/single_step/edits/swap/unequal_lengths_conditional");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/edits/swap/unequal_lengths_conditional"),
         "input.toml",
         1,
     );

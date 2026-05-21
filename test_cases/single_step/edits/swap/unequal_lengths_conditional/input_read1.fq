@@ -1,0 +1,24 @@
+@read1-r1-longer-swap /1
+AGTCACC
++
+iiiiiii
+@read2-r2-longer-swap /1
+AGT
++
+iii
+@read1-r1-longer-no_swap /1
+ATCC
++
+iiii
+@read2-r2-longer-no_swap /1
+AT
++
+ii
+@read1-r1-longer-swap /1
+AGTCACC
++
+iiiiiii
+@read2-r2-longer-swap /1
+AGTAAAA
++
+iiiiiii
