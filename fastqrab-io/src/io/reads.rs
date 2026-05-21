@@ -196,6 +196,7 @@ impl FastQElement {
     fn reverse_complement(&mut self, local_buffer: &mut [u8]) {
         let m = self.get_mut(local_buffer);
         let reversed = reverse_complement_iupac(m);
+        assert!(reversed.len() == m.len());
         m.copy_from_slice(&reversed[..m.len()]);
     }
 
@@ -1339,6 +1340,12 @@ impl FastQBlocksCombined {
 
     #[must_use]
     pub fn get_pseudo_iter_including_tag(&self) -> FastQBlocksCombinedIteratorIncludingTag<'_> {
+        if let Some(output_tags) = &self.output_tags {
+            debug_assert!(
+                output_tags.len() == self.segments[0].entries.len(),
+                "Output tags must have the same length as segments"
+            );
+        }
         FastQBlocksCombinedIteratorIncludingTag {
             pos: 0,
             inner: self,
