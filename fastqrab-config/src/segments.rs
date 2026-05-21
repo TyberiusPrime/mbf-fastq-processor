@@ -29,17 +29,17 @@ pub enum SegmentOrNameIndex {
 }
 
 impl SegmentOrNameIndex {
-    #[must_use]
-    pub fn get_segment_index(&self) -> SegmentIndex {
-        match self {
-            SegmentOrNameIndex::Sequence(idx) | SegmentOrNameIndex::Name(idx) => *idx,
-        }
-    }
-
-    #[must_use]
-    pub fn is_name(&self) -> bool {
-        matches!(self, SegmentOrNameIndex::Name(_))
-    }
+    // #[must_use]
+    // pub fn get_segment_index(&self) -> SegmentIndex {
+    //     match self {
+    //         SegmentOrNameIndex::Sequence(idx) | SegmentOrNameIndex::Name(idx) => *idx,
+    //     }
+    // }
+    //
+    // #[must_use]
+    // pub fn is_name(&self) -> bool {
+    //     matches!(self, SegmentOrNameIndex::Name(_))
+    // }
 }
 
 #[derive(Debug, Clone)]

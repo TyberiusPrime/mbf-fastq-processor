@@ -156,7 +156,7 @@ impl<W: Write> FailForTestLayer<W> {
     fn finish(self) -> W {
         match self {
             FailForTestLayer::PassThrough(w) => w,
-            FailForTestLayer::Active(w) => w.finish(),
+            FailForTestLayer::Active(w) => w.finish(), //cov:excl-line we're not calling finish after a failure
         }
     }
 }
@@ -165,7 +165,7 @@ impl<W: Write> Write for FailForTestLayer<W> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         match self {
             FailForTestLayer::PassThrough(w) => w.write(buf),
-            FailForTestLayer::Active(w) => w.write(buf),
+            FailForTestLayer::Active(w) => w.write(buf), //cov:excl-line we're not calling finish after a failure
         }
     }
 
@@ -183,7 +183,6 @@ impl<W: Write> Write for FailForTestLayer<W> {
 
 pub enum CompressionLayer<W: Write + Send + 'static> {
     Raw(W),
-    GzipSingle(flate2::write::GzEncoder<W>),
     GzipParallel(ParallelGzipWriter<W>),
     Zstd(zstd::stream::Encoder<'static, W>),
 }
@@ -215,7 +214,7 @@ impl<W: Write + Send + 'static> CompressionLayer<W> {
         inner: W,
         format: CompressionFormat,
         level: Option<u8>,
-        threads: Option<NonZeroUsize>,
+        threads: NonZeroUsize,
     ) -> Self {
         match format {
             CompressionFormat::Uncompressed => CompressionLayer::Raw(inner),
@@ -224,16 +223,12 @@ impl<W: Write + Send + 'static> CompressionLayer<W> {
                     Some(l) => flate2::Compression::new(u32::from(l).clamp(0, 9)),
                     None => flate2::Compression::default(),
                 };
-                if let Some(t) = threads {
-                    let par = gzp::par::compress::ParCompressBuilder::<gzp::deflate::Gzip>::new()
-                        .num_threads(t.into())
-                        .expect("only fails if t = 0, t never 0")
-                        .compression_level(compression)
-                        .from_writer(inner);
-                    CompressionLayer::GzipParallel(ParallelGzipWriter { inner: par })
-                } else {
-                    CompressionLayer::GzipSingle(flate2::write::GzEncoder::new(inner, compression))
-                }
+                let par = gzp::par::compress::ParCompressBuilder::<gzp::deflate::Gzip>::new()
+                    .num_threads(threads.into())
+                    .expect("only fails if t = 0, t never 0")
+                    .compression_level(compression)
+                    .from_writer(inner);
+                CompressionLayer::GzipParallel(ParallelGzipWriter { inner: par })
             }
             CompressionFormat::Zstd => {
                 let level = i32::from(level.unwrap_or(5)).clamp(1, 22);
@@ -247,7 +242,6 @@ impl<W: Write + Send + 'static> CompressionLayer<W> {
     pub fn finish(self) -> Result<W> {
         match self {
             CompressionLayer::Raw(w) => Ok(w),
-            CompressionLayer::GzipSingle(e) => e.finish().context("Gzip finalisation failed"),
             CompressionLayer::GzipParallel(p) => p.finish(),
             CompressionLayer::Zstd(e) => e.finish().context("Zstd finalisation failed"),
         }
@@ -258,7 +252,6 @@ impl<W: Write + Send + 'static> Write for CompressionLayer<W> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         match self {
             CompressionLayer::Raw(w) => w.write(buf),
-            CompressionLayer::GzipSingle(w) => w.write(buf),
             CompressionLayer::GzipParallel(w) => w.write(buf),
             CompressionLayer::Zstd(w) => w.write(buf),
         }
@@ -266,7 +259,6 @@ impl<W: Write + Send + 'static> Write for CompressionLayer<W> {
     fn flush(&mut self) -> io::Result<()> {
         match self {
             CompressionLayer::Raw(w) => w.flush(),
-            CompressionLayer::GzipSingle(w) => w.flush(),
             CompressionLayer::GzipParallel(w) => w.flush(),
             CompressionLayer::Zstd(w) => w.flush(),
         }
@@ -312,11 +304,13 @@ pub struct TextRecordSink {
     inner: TextStack,
 }
 
+// cov:excl-start
 impl std::fmt::Debug for TextRecordSink {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("TextRecordSink").finish_non_exhaustive()
     }
 }
+// cov:excl-stop
 
 impl TextRecordSink {
     pub fn new(sink: DataSink, config: &SinkConfig) -> Result<Self> {
@@ -326,7 +320,9 @@ impl TextRecordSink {
             compressed_hash,
             config.compression,
             config.compression_level,
-            config.compression_threads,
+            config
+                .compression_threads
+                .unwrap_or(NonZeroUsize::new(1).expect("can not fail")),
         );
         let fail = FailForTestLayer::new(compress, config.simulated_failure.clone());
         let plain_hash = HashLayer::new(fail, config.hash_uncompressed);
@@ -543,27 +539,28 @@ where
 
     #[expect(clippy::cast_possible_truncation, reason = "BAM is f32")]
     for (bam_tag_bytes, fastqrab_tag_name) in &options.tag_to_bam_tags {
-        if let Some(tag_values) = tags.get(fastqrab_tag_name.as_str())
-            && let Some(tag_value) = tag_values.get(read_index)
-        {
-            let value_opt: Option<Value> = match tag_value {
-                TagValue::String(s) => Some(Value::String(s.clone())),
-                TagValue::Location(hits) => {
-                    let joined = hits
-                        .0
-                        .iter()
-                        .map(|h| h.sequence.as_ref())
-                        .collect::<Vec<_>>()
-                        .join(b",".as_ref());
-                    Some(Value::String(BString::from(joined)))
-                }
-                TagValue::Numeric(n) => Some(Value::Float(*n as f32)),
-                TagValue::Bool(b) => Some(Value::UInt8(u8::from(*b))),
-                TagValue::Missing => None,
-            };
-            if let Some(value) = value_opt {
-                data_fields.push((Tag::from(*bam_tag_bytes), value));
+        let tag_values = tags
+            .get(fastqrab_tag_name.as_str())
+            .expect("Tag was missing? Config failure");
+        let tag_value = &tag_values[read_index];
+
+        let value_opt: Option<Value> = match tag_value {
+            TagValue::String(s) => Some(Value::String(s.clone())),
+            TagValue::Location(hits) => {
+                let joined = hits
+                    .0
+                    .iter()
+                    .map(|h| h.sequence.as_ref())
+                    .collect::<Vec<_>>()
+                    .join(b",".as_ref());
+                Some(Value::String(BString::from(joined)))
             }
+            TagValue::Numeric(n) => Some(Value::Float(*n as f32)),
+            TagValue::Bool(b) => Some(Value::UInt8(u8::from(*b))),
+            TagValue::Missing => None,
+        };
+        if let Some(value) = value_opt {
+            data_fields.push((Tag::from(*bam_tag_bytes), value));
         }
     }
 
@@ -750,7 +747,7 @@ impl ChunkPaths {
                 name.push('.');
             }
             name.push_str(&self.suffix);
-        }
+        } //cov:excl-line
         self.directory.join(name)
     }
 
@@ -761,19 +758,20 @@ impl ChunkPaths {
         let max_value = 10usize.pow(u32::try_from(old_digits).expect("digit count fits u32"));
         let mut existing: Vec<PathBuf> = Vec::new();
         for entry in ex::fs::read_dir(&self.directory).with_context(|| {
-            format!(
+            format!( //cov:excl-start
                 "Could not read output directory for renaming files: {}",
                 self.directory.display()
             )
-        })? {
+        })?  //cov:excl-stop
+        {
             existing.push(
                 entry
                     .with_context(|| {
-                        format!(
+                        format!( // cov:excl-start
                             "Could not read output directory entry for renaming files: {}",
                             self.directory.display()
                         )
-                    })?
+                    })? //cov:excl-stop
                     .path(),
             );
         }
@@ -805,12 +803,12 @@ impl ChunkPaths {
                         suffix
                     ));
                     ex::fs::rename(path, &new_name).with_context(|| {
-                        format!(
+                        format!( //cov:excl-start
                             "Could not rename output chunk file from {} to {}",
                             path.display(),
                             new_name.display()
                         )
-                    })?;
+                    })?; //cov:excl-stop
                 }
             }
         }

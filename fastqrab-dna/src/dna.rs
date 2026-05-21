@@ -168,10 +168,10 @@ impl Hits {
         self.0.len()
     }
 
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
+    // #[must_use]
+    // pub fn is_empty(&self) -> bool {
+    //     self.0.is_empty()
+    // }
 
     #[must_use]
     pub fn location(&self, segment_order: &[String]) -> BString {
