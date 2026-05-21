@@ -1,6 +1,3 @@
-use anyhow::anyhow;
-use std::cell::RefCell;
-
 use crate::transformations::prelude::*;
 
 #[derive(Clone, JsonSchema)]
@@ -92,7 +89,8 @@ impl Step for StoreTagInSequence {
         let mut insert_infos: Vec<Option<InsertInfo>> = Vec::with_capacity(block.len());
         // Pass 1: compute (seg_idx, insert_pos, insert_bytes) per read from the tag columns.
         // Scoped so the immutable borrows of block.tags drop before we mutate block.segments.
-        let per_read: Vec<Option<(usize, usize, Vec<u8>)>> = {
+        // per_read: (seg_idx, pos_left, pos_right, insert_bytes)
+        let per_read: Vec<Option<(usize, usize, usize, Vec<u8>)>> = {
             let value_col = block
                 .tags
                 .get(&self.in_value_label)
@@ -108,24 +106,40 @@ impl Step for StoreTagInSequence {
             let n = position_items.len();
             let mut out = Vec::with_capacity(n);
             for ii in 0..n {
-                let Some((insert_pos, seg_idx)) =
-                    position_items[ii]
-                        .as_ref()
-                        .and_then(|hits| match self.anchor {
-                            RegionAnchor::Start => hits
-                                .0
-                                .iter()
-                                .filter_map(|h| h.location.as_ref())
-                                .min_by_key(|loc| loc.start)
-                                .map(|loc| (loc.start, loc.segment_index.get_index())),
-                            RegionAnchor::End => hits
-                                .0
-                                .iter()
-                                .filter_map(|h| h.location.as_ref())
-                                .max_by_key(|loc| loc.start + loc.len)
-                                .map(|loc| (loc.start + loc.len, loc.segment_index.get_index())),
-                        })
-                else {
+                let position = match &position_items[ii] {
+                    None => {
+                        out.push(None);
+                        continue;
+                    }
+                    Some(hits) => match self.anchor {
+                        ReplacementAnchor::Start => hits
+                            .0
+                            .iter()
+                            .filter_map(|h| h.location.as_ref())
+                            .min_by_key(|loc| loc.start)
+                            .map(|loc| (loc.start, loc.start, loc.segment_index.get_index())),
+                        ReplacementAnchor::End => hits
+                            .0
+                            .iter()
+                            .filter_map(|h| h.location.as_ref())
+                            .max_by_key(|loc| loc.start + loc.len)
+                            .map(|loc| {
+                                let end = loc.start + loc.len;
+                                (end, end, loc.segment_index.get_index())
+                            }),
+                        ReplacementAnchor::Replace => {
+                            let locs: Vec<_> =
+                                hits.0.iter().filter_map(|h| h.location.as_ref()).collect();
+                            if locs.len() > 1 {
+                                anyhow::bail!("Error processing StoreTagInSequence: Found a multi region location, StoreTagInSequence only works with single-region location");
+                            }
+                            locs.first().map(|loc| {
+                                (loc.start, loc.start + loc.len, loc.segment_index.get_index())
+                            })
+                        }
+                    },
+                };
+                let Some((pos_left, pos_right, seg_idx)) = position else {
                     out.push(None);
                     continue;
                 };
@@ -149,7 +163,7 @@ impl Step for StoreTagInSequence {
                 if insert_bytes.is_empty() {
                     out.push(None);
                 } else {
-                    out.push(Some((seg_idx, insert_pos, insert_bytes)));
+                    out.push(Some((seg_idx, pos_left, pos_right, insert_bytes)));
                 }
             }
             out
@@ -157,32 +171,33 @@ impl Step for StoreTagInSequence {
 
         // Pass 2: apply sequence insertions.
         for (ii, slot) in per_read.iter().enumerate() {
-            if let Some((seg_idx, insert_pos, insert_bytes)) = slot {
-                let (seg_idx, insert_pos) = (*seg_idx, *insert_pos);
+            if let Some((seg_idx, pos_left, pos_right, insert_bytes)) = slot {
+                let (seg_idx, pos_left, pos_right) = (*seg_idx, *pos_left, *pos_right);
                 block.segments[seg_idx].mutate_read_at(ii, |read| {
                     let seq = read.seq().to_vec();
                     // cov:excl-start
                     assert!(
-                        insert_pos <= seq.len(),
-                        "StoreTagInSequence: insert position {insert_pos} exceeds read length \
+                        pos_right <= seq.len(),
+                        "StoreTagInSequence: insert position {pos_right} exceeds read length \
                         {} on segment {seg_idx}. This should have been prevented upstream and is a bug.",
                         seq.len(),
                     );
                     // cov:excl-end
                     let mut new_seq = Vec::with_capacity(seq.len() + insert_bytes.len());
-                    new_seq.extend_from_slice(&seq[..insert_pos]);
+                    new_seq.extend_from_slice(&seq[..pos_left]);
                     new_seq.extend_from_slice(insert_bytes);
-                    new_seq.extend_from_slice(&seq[insert_pos..]);
+                    new_seq.extend_from_slice(&seq[pos_right..]);
                     let qual = read.qual().to_vec();
                     let mut new_qual = Vec::with_capacity(qual.len() + insert_bytes.len());
-                    new_qual.extend_from_slice(&qual[..insert_pos]);
+                    new_qual.extend_from_slice(&qual[..pos_left]);
                     new_qual.extend_from_slice(&vec![b'~'; insert_bytes.len()]);
-                    new_qual.extend_from_slice(&qual[insert_pos..]);
+                    new_qual.extend_from_slice(&qual[pos_right..]);
                     read.replace_seq(&new_seq, &new_qual);
                 });
                 insert_infos.push(Some(InsertInfo {
-                    segment_idx: seg_idx,
-                    insert_pos,
+                    segment_idx: SegmentIndex(seg_idx),
+                    insert_pos_left: pos_left,
+                    insert_pos_right: pos_right,
                     insert_len: insert_bytes.len(),
                 }));
             } else {

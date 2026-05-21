@@ -494,20 +494,12 @@ fn run_match_phase(
     }
     if needs_qualities && let Some(block) = block {
         let mut read_iter = block.get_pseudo_iter();
-        match input_tags {
-            TagColumn::Location(items) => {
-                for (input_tag, slot) in input_tags.iter_locations().zip(results.iter_mut()) {
-                    let read = read_iter
-                        .pseudo_next()
-                        .context("Read & tag count mismatch!?")?;
-                    if let (Some(hits), Some(MatchResultOwned::Tie(_))) = (input_tag, &slot.result)
-                    {
-                        slot.quality = read.hit_to_qualities(hits);
-                    }
-                }
-            }
-            _ => {
-                unreachable!("Validation was meant to prevent this situation. Bug?")
+        for (input_tag, slot) in input_tags.iter_locations().zip(results.iter_mut()) {
+            let read = read_iter
+                .pseudo_next()
+                .context("Read & tag count mismatch!?")?;
+            if let (Some(hits), Some(MatchResultOwned::Tie(_))) = (input_tag, &slot.result) {
+                slot.quality = read.hit_to_qualities(hits);
             }
         }
     }
@@ -552,11 +544,7 @@ impl HammingCorrect {
         Some(Hits(vec![]))
     }
 
-    fn output_string(
-        &self,
-        matched_idx: usize,
-        output_barcode: bool,
-    ) -> Option<BString> {
+    fn output_string(&self, matched_idx: usize, output_barcode: bool) -> Option<BString> {
         let (matched_seq, matched_name) = self
             .seq_to_name
             .get_index(matched_idx)

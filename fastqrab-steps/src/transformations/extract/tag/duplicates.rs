@@ -194,16 +194,3 @@ impl Step for Duplicates {
     }
 }
 
-impl Duplicates {
-    fn tag_value_to_bytes(value: &TagValue) -> Option<Vec<u8>> {
-        match value {
-            TagValue::Location(hits) => Some(hits.joined_sequence(Some(&[0xff]))),
-            TagValue::String(value) => Some(value.to_vec()),
-            TagValue::Missing => None,
-            // cov:excl-start
-            _ => {
-                unreachable!("Value was {:?}", value)
-            } // cov:excl-stop
-        }
-    }
-}

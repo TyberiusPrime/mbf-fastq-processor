@@ -98,34 +98,43 @@ impl Step for FillMissing {
             anyhow::anyhow!("Tag '{}' not found in block", self.in_label_secondary)
         })?;
 
-        // Detect if we need Location→String conversion (mixed-type pair).
-        let force_string = primary_vec.iter().any(|v| matches!(v, TagValue::String(_)))
-            || secondary_vec
-                .iter()
-                .any(|v| matches!(v, TagValue::String(_)));
+        let output_col = match (primary_vec, secondary_vec) {
+            (TagColumn::Location(prim), TagColumn::Location(sec)) => TagColumn::Location(
+                (0..num_reads)
+                    .map(|i| if prim[i].is_some() { prim[i].clone() } else { sec[i].clone() })
+                    .collect(),
+            ),
+            (TagColumn::String(prim), TagColumn::String(sec)) => TagColumn::String(
+                (0..num_reads)
+                    .map(|i| if prim[i].is_some() { prim[i].clone() } else { sec[i].clone() })
+                    .collect(),
+            ),
+            (TagColumn::Location(prim), TagColumn::String(sec)) => TagColumn::String(
+                (0..num_reads)
+                    .map(|i| {
+                        if let Some(hits) = &prim[i] {
+                            Some(hits.joined_sequence(None).into())
+                        } else {
+                            sec[i].clone()
+                        }
+                    })
+                    .collect(),
+            ),
+            (TagColumn::String(prim), TagColumn::Location(sec)) => TagColumn::String(
+                (0..num_reads)
+                    .map(|i| {
+                        if let Some(s) = &prim[i] {
+                            Some(s.clone())
+                        } else {
+                            sec[i].as_ref().map(|hits| hits.joined_sequence(None).into())
+                        }
+                    })
+                    .collect(),
+            ),
+            _ => anyhow::bail!("FillMissing: unsupported tag type combination"),
+        };
 
-        let mut output_tags = Vec::with_capacity(num_reads);
-
-        for i in 0..num_reads {
-            let chosen = if !matches!(primary_vec[i], TagValue::Missing) {
-                &primary_vec[i]
-            } else {
-                &secondary_vec[i]
-            };
-
-            let output = if force_string {
-                match chosen {
-                    TagValue::Location(hits) => TagValue::String(hits.joined_sequence(None).into()),
-                    other => other.clone(),
-                }
-            } else {
-                chosen.clone()
-            };
-
-            output_tags.push(output);
-        }
-
-        block.tags.insert(self.out_label.clone(), output_tags);
+        block.tags.insert(self.out_label.clone(), output_col);
 
         Ok((block, true))
     }

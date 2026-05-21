@@ -1,20 +1,5 @@
 use crate::{no_barcode_infix, transformations::prelude::*};
 
-fn tag_column_to_tag_value(col: &TagColumn, idx: usize) -> TagValue {
-    match col {
-        TagColumn::Location(items) => match &items[idx] {
-            None => TagValue::Missing,
-            Some(hits) => TagValue::Location(hits.clone()),
-        },
-        TagColumn::String(items) => match &items[idx] {
-            None => TagValue::Missing,
-            Some(s) => TagValue::String(s.clone()),
-        },
-        TagColumn::Numeric(items) => TagValue::Numeric(items[idx]),
-        TagColumn::Bool(items) => TagValue::Bool(items[idx]),
-    }
-}
-
 /// Histogram data structure that can handle both String and Numeric tags
 #[derive(Debug, Clone)]
 pub enum HistogramData {
@@ -32,65 +17,56 @@ impl HistogramData {
         clippy::cast_possible_truncation,
         reason = "precision loss for huge values is ok"
     )]
-    pub fn add_value(&mut self, tag_value: &TagValue) {
-        match tag_value {
-            TagValue::Missing => {
-                if let HistogramData::String(hash_map) = self {
-                    *hash_map.entry(String::new()).or_insert(0) += 1;
-                }
-            }
-            TagValue::String(s) => {
+    pub fn add_from_column(&mut self, col: &TagColumn, idx: usize) {
+        match col {
+            TagColumn::Location(items) => {
                 if let HistogramData::String(map) = self {
-                    *map.entry(s.to_string()).or_insert(0) += 1;
+                    let s = match &items[idx] {
+                        None => String::new(),
+                        Some(hits) => {
+                            String::from_utf8_lossy(&hits.joined_sequence(Some(b"_"))).into_owned()
+                        }
+                    };
+                    *map.entry(s).or_insert(0) += 1;
                 } else {
-                    // cov:excl-start
-                    unreachable!();
-                    // cov:excl-stop
+                    unreachable!() // cov:excl-line
                 }
             }
-            TagValue::Numeric(n) => {
-                // Round to nearest integer for bucketing
+            TagColumn::String(items) => {
+                if let HistogramData::String(map) = self {
+                    let s = match &items[idx] {
+                        None => String::new(),
+                        Some(s) => s.to_string(),
+                    };
+                    *map.entry(s).or_insert(0) += 1;
+                } else {
+                    unreachable!() // cov:excl-line
+                }
+            }
+            TagColumn::Numeric(items) => {
+                let n = items[idx];
                 match self {
                     HistogramData::Integer(map) => {
-                        let bucket = n.round() as i64;
-                        *map.entry(bucket).or_insert(0) += 1;
+                        *map.entry(n.round() as i64).or_insert(0) += 1;
                     }
                     HistogramData::ZeroToOne(map) => {
-                        let bucket = (n * 100.).round() / 100.0;
-                        let bucket: NonNaN = bucket
+                        let bucket: NonNaN = ((n * 100.).round() / 100.0)
                             .try_into()
                             .expect("NaN value for histogram - not supported");
                         *map.entry(bucket).or_insert(0) += 1;
                     }
-                    _ => {
-                        // cov:excl-start
-                        unreachable!();
-                        // cov:excl-stop
-                    }
+                    _ => unreachable!(), // cov:excl-line
                 }
             }
-            TagValue::Bool(b) => {
+            TagColumn::Bool(items) => {
                 if let HistogramData::Bool(false_count, true_count) = self {
-                    if *b {
+                    if items[idx] {
                         *true_count += 1;
                     } else {
                         *false_count += 1;
                     }
                 } else {
-                    // cov:excl-start
-                    unreachable!();
-                    // cov:excl-stop
-                }
-            }
-            TagValue::Location(hits) => {
-                let s = hits.joined_sequence(Some(b"_"));
-                let s = String::from_utf8_lossy(&s).to_string();
-                if let HistogramData::String(map) = self {
-                    *map.entry(s).or_insert(0) += 1;
-                } else {
-                    // cov:excl-start
-                    unreachable!();
-                    // cov:excl-stop
+                    unreachable!() // cov:excl-line
                 }
             }
         }
@@ -255,8 +231,7 @@ impl Step for Box<_ReportTagHistogram> {
                         .get_mut(&0)
                         .expect("no multiplex data found, but expected");
                     for read_idx in 0..tag_values.len() {
-                        let tv = tag_column_to_tag_value(tag_values, read_idx);
-                        histogram.add_value(&tv);
+                        histogram.add_from_column(tag_values, read_idx);
                     }
                 }
                 OptDemultiplex::Yes(_) => {
@@ -264,8 +239,7 @@ impl Step for Box<_ReportTagHistogram> {
                     if let Some(output_tags) = &block.output_tags {
                         for (read_idx, &demux_tag) in output_tags.iter().enumerate() {
                             if let Some(histogram) = data.get_mut(&demux_tag) {
-                                let tv = tag_column_to_tag_value(tag_values, read_idx);
-                                histogram.add_value(&tv);
+                                histogram.add_from_column(tag_values, read_idx);
                             }
                         }
                     } // cov:excl-line

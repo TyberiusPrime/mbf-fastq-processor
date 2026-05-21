@@ -84,15 +84,18 @@ impl Step for WorstQuality {
                     .expect("source tag not found — should have been caught in validation")
                     .clone();
 
-                let mut values = Vec::with_capacity(tag_values.len());
+                let location_items = match &tag_values {
+                    TagColumn::Location(items) => items,
+                    _ => anyhow::bail!("WorstQuality source tag must be a Location column"),
+                };
+                let missing_value = 33.0 + self.offset as f64;
+                let mut values = Vec::with_capacity(location_items.len());
                 let mut iter = block.get_pseudo_iter();
-                let mut tag_iter = tag_values.into_iter();
 
-                while let Some(molecule) = iter.pseudo_next() {
-                    let missing_value = 33.0 + self.offset as f64;
-                    let tag_val = tag_iter.next().expect("tag and read count should match");
-                    let q = match &tag_val {
-                        TagValue::Location(hits) => match molecule.hit_to_qualities(hits) {
+                for opt_hits in location_items {
+                    let molecule = iter.pseudo_next().expect("tag and read count should match");
+                    let q = match opt_hits {
+                        Some(hits) => match molecule.hit_to_qualities(hits) {
                             Some(qual_bytes) if !qual_bytes.is_empty() => qual_bytes
                                 .iter()
                                 .map(|x| Into::<i16>::into(*x) + self.offset as i16)
@@ -101,13 +104,12 @@ impl Step for WorstQuality {
                                 as f64,
                             _ => missing_value,
                         },
-                        TagValue::Missing => missing_value,
-                        _ => unreachable!(), // cov:excl-line
+                        None => missing_value,
                     };
-                    values.push(TagValue::Numeric(q));
+                    values.push(q);
                 }
 
-                block.tags.insert(self.out_label.clone(), values);
+                block.tags.insert(self.out_label.clone(), TagColumn::Numeric(values));
             }
             ResolvedSourceAll::Name { .. } => unreachable!(), // cov:excl-line
         }

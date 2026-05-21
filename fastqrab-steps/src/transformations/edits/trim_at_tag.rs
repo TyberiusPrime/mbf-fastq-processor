@@ -114,14 +114,14 @@ impl Step for TrimAtTag {
             return Err(anyhow::anyhow!("{error_msg}"));
         }
 
-        let mut cut_locations = (block
+        let mut cut_locations = block
             .tags
             .extract_if(.., |k, _v| k == &self.in_label) //We're putting them back at the bottom
             .next()
             .map(|(_k, v)| v)
             .expect("in_label tag must exist in block")
             .into_locations()
-            .expect("Expected to be location tag, check verify"));
+            .expect("Expected to be location tag, check verify");
         if let Some(target) = cut_locations
             .iter()
             //first not none

@@ -505,7 +505,7 @@ impl Step for StoreSingleCellMatrix {
                         }
                         (encode_umi(s), s.len() as u8)
                     }
-                    None => (0, 0),
+                    None => (Umi::new_unmatched(), 0u8),
                 },
                 TagColumn::Location(items) => match &items[ii] {
                     Some(hits) => {
@@ -518,7 +518,7 @@ impl Step for StoreSingleCellMatrix {
                         }
                         (encode_umi(&seq), seq.len() as u8)
                     }
-                    None => (0, 0),
+                    None => (Umi::new_unmatched(), 0u8),
                 },
                 _ => (Umi::new_unmatched(), 0),
             };
@@ -540,15 +540,15 @@ impl Step for StoreSingleCellMatrix {
             match local_entries.entry(output_tag) {
                 std::collections::btree_map::Entry::Vacant(vacant_entry) => {
                     vacant_entry.insert(vec![ObservedEvent {
-                        cell: cell_idx,
-                        gene: gene_idx,
+                        cell: CellIdx(cell_idx),
+                        gene: GeneIdx(gene_idx),
                         umi: umi_enc,
                     }]);
                 }
                 std::collections::btree_map::Entry::Occupied(occupied_entry) => {
                     occupied_entry.into_mut().push(ObservedEvent {
-                        cell: cell_idx,
-                        gene: gene_idx,
+                        cell: CellIdx(cell_idx),
+                        gene: GeneIdx(gene_idx),
                         umi: umi_enc,
                     });
                 }

@@ -70,7 +70,7 @@ impl Step for RegionsToLength {
             );
 
         if let TagColumn::Location(locations) = region_values {
-            let mut lengths: Vec<_> = locations
+            let lengths: Vec<_> = locations
                 .iter()
                 .map(|opt_hits| {
                     opt_hits
