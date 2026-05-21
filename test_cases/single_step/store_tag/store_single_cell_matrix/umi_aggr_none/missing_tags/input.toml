@@ -1,0 +1,52 @@
+[input]
+    read1 = 'input.fq'
+
+[barcodes.cells]
+    AAAA = "cell_A"
+    TTTT = "cell_T"
+
+[barcodes.genes]
+    CCCC = "gene_C"
+    GGGG = "gene_G"
+
+[[step]]
+    action = "ExtractRegion"
+    source = "read1"
+    anchor = "start"
+    start = 0
+    length = 4
+    out_label = "cell_bc"
+
+[[step]]
+    action = "ExtractRegion"
+    source = "read1"
+    anchor = "start"
+    start = 4
+    length = 4
+    out_label = "gene_bc"
+
+[[step]]
+    action = "ExtractRegion"
+    source = "read1"
+    anchor = "start"
+    start = 8
+    length = 4
+    out_label = "umi"
+
+[[step]]
+    action = "StoreSingleCellMatrix"
+    cell_tag = "cell_bc_missing"
+    gene_tag = "gene_bc_missing"
+    umi_tag = "umi_missing"
+    cell_barcodes = "cells"
+    gene_barcodes = "genes"
+    umi_aggregation = 'None'
+
+
+[[step]]
+  action = "ForgetAllTags"
+
+[output]
+    prefix = "output"
+    format = "None"
+    compression = "raw"

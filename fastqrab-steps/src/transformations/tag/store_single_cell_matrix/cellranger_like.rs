@@ -139,27 +139,25 @@ fn find_umis_with_conflicting_genes(
     umigene_count_vec.sort();
     //chunk by umi...
     for gene_counts in umigene_count_vec.chunk_by(|x, y| x.0 == y.0) {
-        if let Some((max_count, max_is_tied)) =
-            gene_counts
-                .iter()
-                .copied()
-                .fold(None, |acc, (_umi, _gene, count)| match acc {
-                    None => Some((count, false)),
-                    Some((m, tied)) => {
-                        if count > m {
-                            Some((count, false))
-                        } else if count == m {
-                            Some((count, true))
-                        } else {
-                            Some((m, tied))
-                        }
+        let (max_count, max_is_tied) = gene_counts
+            .iter()
+            .copied()
+            .fold(None, |acc, (_umi, _gene, count)| match acc {
+                None => Some((count, false)),
+                Some((m, tied)) => {
+                    if count > m {
+                        Some((count, false))
+                    } else if count == m {
+                        Some((count, true))
+                    } else {
+                        Some((m, tied))
                     }
-                })
-        {
-            for (umi, gene, count) in gene_counts {
-                if max_is_tied || *count < max_count {
-                    low_support_umigenes.insert((*gene, *umi));
                 }
+            })
+            .expect("ALways at least one");
+        for (umi, gene, count) in gene_counts {
+            if max_is_tied || *count < max_count {
+                low_support_umigenes.insert((*gene, *umi));
             }
         }
     }

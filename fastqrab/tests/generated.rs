@@ -11776,6 +11776,101 @@ fn test_cases_x_single_step_x_store_tag_x_in_table_output_stdout_twice() {
 
 #[test]
 
+fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_umi_aggr_cellranger_x_basic() {
+    println!(
+        "Test case is in: test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_cellranger/basic"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_cellranger/basic",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_umi_aggr_cellranger_x_with_conflict_loser_first()
+ {
+    println!(
+        "Test case is in: test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_cellranger/with_conflict_loser_first"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_cellranger/with_conflict_loser_first",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_umi_aggr_cellranger_x_with_conflict_winner()
+ {
+    println!(
+        "Test case is in: test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_cellranger/with_conflict_winner"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_cellranger/with_conflict_winner",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_umi_aggr_cellranger_x_with_conflicts()
+ {
+    println!(
+        "Test case is in: test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_cellranger/with_conflicts"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_cellranger/with_conflicts",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_umi_aggr_cellranger_x_with_n_and_unmatched()
+ {
+    println!(
+        "Test case is in: test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_cellranger/with_n_and_unmatched"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_cellranger/with_n_and_unmatched",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_umi_aggr_cellranger_x_zero_reads()
+ {
+    println!(
+        "Test case is in: test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_cellranger/zero_reads"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_cellranger/zero_reads",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_umi_aggr_cluster_x_basic() {
     println!(
         "Test case is in: test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_cluster/basic"
@@ -11791,6 +11886,38 @@ fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_umi_aggr_cl
 
 #[test]
 
+fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_umi_aggr_cluster_x_with_n_umi()
+{
+    println!(
+        "Test case is in: test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_cluster/with_n_umi"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_cluster/with_n_umi",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_umi_aggr_cluster_x_zero_reads()
+{
+    println!(
+        "Test case is in: test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_cluster/zero_reads"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_cluster/zero_reads",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_umi_aggr_exact_x_basic() {
     println!(
         "Test case is in: test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_exact/basic"
@@ -11798,6 +11925,36 @@ fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_umi_aggr_ex
     run_test(
         std::path::Path::new(
             "../test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_exact/basic",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_umi_aggr_exact_x_with_n_umi() {
+    println!(
+        "Test case is in: test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_exact/with_n_umi"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_exact/with_n_umi",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_umi_aggr_exact_x_zero_reads() {
+    println!(
+        "Test case is in: test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_exact/zero_reads"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_exact/zero_reads",
         ),
         "input.toml",
         1,
@@ -11900,6 +12057,52 @@ fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_umi_aggr_no
 
 #[test]
 
+fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_umi_aggr_none_x_missing_tags()
+{
+    println!(
+        "Test case is in: test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_none/missing_tags"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_none/missing_tags",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_umi_aggr_none_x_missing_umi() {
+    println!(
+        "Test case is in: test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_none/missing_umi"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_none/missing_umi",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_umi_aggr_none_x_string_tags() {
+    println!(
+        "Test case is in: test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_none/string_tags"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_none/string_tags",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_umi_aggr_none_x_umi_nonuniform()
  {
     println!(
@@ -11940,6 +12143,37 @@ fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_umi_aggr_no
     run_test(
         std::path::Path::new(
             "../test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_none/with_demultiplex",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_umi_aggr_none_x_with_unmatched()
+ {
+    println!(
+        "Test case is in: test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_none/with_unmatched"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_none/with_unmatched",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_umi_aggr_none_x_zero_reads() {
+    println!(
+        "Test case is in: test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_none/zero_reads"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_none/zero_reads",
         ),
         "input.toml",
         1,

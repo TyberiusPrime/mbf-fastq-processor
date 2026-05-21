@@ -48,10 +48,10 @@ pub fn write_matrix(
     writer.write_text_record(format!("{n_genes} {n_cells} {total}\n").as_bytes())?;
     for (gene, cell, count) in matrix {
         if cell.0 > n_cells {
-            panic!("n_cells and actual cells mismatch");
+            panic!("n_cells and actual cells mismatch"); //cov:excl-line
         }
         if gene.0 > n_genes {
-            panic!("n_genes and actual genes mismatch");
+            panic!("n_genes and actual genes mismatch"); //cov:excl-line
         }
         writer
             .write_text_record(format!("{} {} {}\n", gene.0 + 1, cell.0 + 1, count).as_bytes())?;
@@ -70,10 +70,31 @@ pub fn take_singleton_writer(output_files: &mut StepOutputFiles, id: &str) -> Wr
 }
 
 pub fn finish_writer(handle: &WriterHandle) -> Result<()> {
-    if let Some(writer) = handle.lock().expect("lock poisoned").take() {
-        let _summary = writer.finish()?;
-    }
+    let _summary = handle
+        .lock()
+        .expect("lock poisoned")
+        .take()
+        .expect("SHould have had writer at this point")
+        .finish()?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_human_fmt_usize() {
+        assert_eq!(human_fmt_usize(0), "0");
+        assert_eq!(human_fmt_usize(1), "1");
+        assert_eq!(human_fmt_usize(999), "999");
+        assert_eq!(human_fmt_usize(1_000), "1_000");
+        assert_eq!(human_fmt_usize(1_234), "1_234");
+        assert_eq!(human_fmt_usize(999_999), "999_999");
+        assert_eq!(human_fmt_usize(1_000_000), "1_000_000");
+        assert_eq!(human_fmt_usize(1_234_567), "1_234_567");
+        assert_eq!(human_fmt_usize(1_234_567_890), "1_234_567_890");
+    }
 }
 
 #[inline]

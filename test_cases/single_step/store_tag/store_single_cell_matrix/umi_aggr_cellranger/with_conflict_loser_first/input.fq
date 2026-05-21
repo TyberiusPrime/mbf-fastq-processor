@@ -1,0 +1,16 @@
+@read1_geneC_acgt
+AAAACCCCACGT
++
+IIIIIIIIIIII
+@read2_geneC_acgt_dup
+AAAACCCCACGT
++
+IIIIIIIIIIII
+@read3_geneG_acgt_loses_conflict
+AAAAGGGGACGT
++
+IIIIIIIIIIII
+@read4_geneG_ttcc_unambiguous
+AAAAGGGGTTCC
++
+IIIIIIIIIIII

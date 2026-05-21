@@ -1,0 +1,12 @@
+@read1_geneC_shared_umi
+AAAACCCCACGT
++
+IIIIIIIIIIII
+@read2_geneG_same_umi_tied
+AAAAGGGGACGT
++
+IIIIIIIIIIII
+@read3_geneC_unambiguous_umi
+AAAACCCCTTCC
++
+IIIIIIIIIIII

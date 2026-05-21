@@ -197,7 +197,8 @@ impl WorkpoolCoordinator {
                         match msg {
                             Ok(work_result) => {
                                 if self.process_completed_work(work_result).is_err() {
-                                    break; // Coordinator decided to terminate because of an error.
+                                    // Coordinator decided to terminate because of an error.
+                                    break;  //cov:excl-line timing dependent
                                 }
                             }
                             Err(_) => {

@@ -1,0 +1,58 @@
+Error Details ==
+Error 1/3
+   ╭─config.toml
+   ┆
+36 │ [[step]]
+37 │     action = "StoreSingleCellMatrix"
+   ┆              ───────────┬───────────
+   ┆                         │
+   ┆                         ╰──────────── In this step
+38 │     cell_tag = "cell_bc_missing"
+   ┆                ────────┬────────
+   ┆                        │
+   ┆                        ╰───────── No such tag: 'cell_bc_missing'
+───╯
+Hint: Did you mean: 'cell_bc', 'gene_bc', or 'umi'?
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/StoreSingleCellMatrix
+      Or run: `fastqrab template StoreSingleCellMatrix` for more information.
+
+Error 2/3
+   ╭─config.toml
+   ┆
+36 │ [[step]]
+37 │     action = "StoreSingleCellMatrix"
+   ┆              ───────────┬───────────
+   ┆                         │
+   ┆                         ╰──────────── In this step
+   ┆
+38 │     cell_tag = "cell_bc_missing"
+39 │     gene_tag = "gene_bc_missing"
+   ┆                ────────┬────────
+   ┆                        │
+   ┆                        ╰───────── No such tag: 'gene_bc_missing'
+───╯
+Hint: Did you mean: 'gene_bc', 'cell_bc', or 'umi'?
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/StoreSingleCellMatrix
+      Or run: `fastqrab template StoreSingleCellMatrix` for more information.
+
+Error 3/3
+   ╭─config.toml
+   ┆
+36 │ [[step]]
+37 │     action = "StoreSingleCellMatrix"
+   ┆              ───────────┬───────────
+   ┆                         │
+   ┆                         ╰──────────── In this step
+   ┆
+38 │     cell_tag = "cell_bc_missing"
+39 │     gene_tag = "gene_bc_missing"
+40 │     umi_tag = "umi_missing"
+   ┆               ──────┬──────
+   ┆                     │
+   ┆                     ╰─────── No such tag: 'umi_missing'
+───╯
+Hint: Did you mean: 'umi', 'cell_bc', or 'gene_bc'?
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/StoreSingleCellMatrix
+      Or run: `fastqrab template StoreSingleCellMatrix` for more information.
+
+

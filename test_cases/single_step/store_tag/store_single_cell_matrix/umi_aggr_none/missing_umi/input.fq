@@ -1,0 +1,12 @@
+@read1_umi_matches
+AAAACCCCTTTT
++
+IIIIIIIIIIII
+@read2_umi_missing_no_regex_match
+AAAACCCCAAAA
++
+IIIIIIIIIIII
+@read3_umi_matches
+TTTTGGGGTTCC
++
+IIIIIIIIIIII

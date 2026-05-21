@@ -1,0 +1,16 @@
+@read1_normal
+AAAACCCCACGT
++
+IIIIIIIIIIII
+@read2_n_in_umi
+AAAACCCCNACG
++
+IIIIIIIIIIII
+@read3_unmatched_cell
+CCCCCCCCACGT
++
+IIIIIIIIIIII
+@read4_unmatched_gene
+AAAATTTTACGT
++
+IIIIIIIIIIII

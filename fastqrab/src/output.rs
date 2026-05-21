@@ -151,9 +151,11 @@ impl OutputStreamConfig {
     fn new_stdout(format: FileFormat, sink_config: SinkConfig) -> Self {
         match format {
             FileFormat::Fastq | FileFormat::Fasta => {}
-            FileFormat::Bam => unreachable!( //cov:excl-line
+            //cov:excl-start
+            FileFormat::Bam => unreachable!(
                 "BAM output is not supported on stdout. Should have been caught in validation. Bug."
             ),
+            //cov:excl-stop
             FileFormat::Text | FileFormat::None => {
                 unreachable!("Cannot emit 'text' or 'none' format to stdout via this path") //cov:excl-line
             }

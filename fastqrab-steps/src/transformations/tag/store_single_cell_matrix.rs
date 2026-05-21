@@ -49,7 +49,7 @@ impl Umi {
         //make sure we have no bits set above umi_length, so we detect if the umis are longer than
         //the length at least...
         if umi_length < 16 && x & (u32::MAX << bits) != 0 && !self.is_n() {
-            panic!("Umi.his_homopolymer: bits set above umi_length");
+            panic!("Umi.his_homopolymer: bits set above umi_length"); // cov:excl-line
         }
         let shift = 32 - bits;
         x == 0 // all A
@@ -243,9 +243,11 @@ fn determine_lookup_mode(
 
 impl TagUser for PartialTaggedVariant<PartialStoreSingleCellMatrix> {
     fn declare_output_files(&self) -> Vec<OutputDeclaration> {
-        let Some(inner) = self.toml_value.value.as_ref() else {
-            return vec![];
-        };
+        let inner = self
+            .toml_value
+            .value
+            .as_ref()
+            .expect("Decalre output files called on invalid config");
         let infix = inner.infix.as_ref().cloned().unwrap_or_default();
         let compression = inner.compression.as_ref().copied().unwrap_or_default();
         let compression_level = inner

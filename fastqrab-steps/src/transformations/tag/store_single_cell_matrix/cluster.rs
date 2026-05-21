@@ -9,9 +9,7 @@ pub fn aggregate_to_matrix_cluster(
     entries: Vec<super::ObservedEvent>,
     umi_length: u16,
 ) -> Vec<(GeneIdx, CellIdx, u32)> {
-    if entries.is_empty() {
-        return Vec::new();
-    }
+    debug_assert!(!entries.is_empty(), "Checked in caller");
     // Find split indices where (cell, gene) key changes
     // TODO: use chunk_by!
     let splits: Vec<usize> = (1..entries.len())
@@ -69,7 +67,10 @@ pub fn umi_cluster_count(umis: &[Umi], umi_length: u16) -> u32 {
     if n <= pairwise_threshold() {
         pairwise_union(&values, &mut uf);
     } else {
+        //cov:excl-start
         neighbor_union_hash(values, &mut uf, umi_length);
+        // but we verify accurance in  test_pairwise_neighbor_aggreement
+        // cov:excl-end
     }
 
     let mut roots = FxHashSet::default();
@@ -200,7 +201,8 @@ fn calibrate_pairwise_threshold() -> usize {
             return n;
         }
     }
-    *candidates.last().expect("must have candidate")
+    *candidates.last().expect("must have candidate") //cov:excl-line might or might not get here
+    // depending on runtime.
 }
 
 #[test]
