@@ -31,6 +31,7 @@ pub struct IUPAC {
     segment: SegmentIndex,
 
     anchor: Anchor,
+    max_anchor_distance: usize,
     out_label: TagLabel,
     max_mismatches: u8,
     #[tpd(default)]
@@ -47,6 +48,23 @@ impl VerifyIn<PartialConfig> for PartialIUPAC {
         Self: Sized + toml_pretty_deser::Visitor,
     {
         self.segment.validate_segment(parent);
+        if let Some(Anchor::Anywhere) = self.anchor.as_ref()
+            && self.max_anchor_distance.as_ref().is_some()
+        {
+            let spans = vec![
+                (
+                    self.max_anchor_distance.span.clone(),
+                    "Incomptable with anchor = anywhere".to_string(),
+                ),
+                (
+                    self.anchor.span.clone(),
+                    "Incomptable with max_anchor_distance set".to_string(),
+                ),
+            ];
+            self.max_anchor_distance.state = TomlValueState::Custom { spans };
+            self.max_anchor_distance.help = Some("Either choose a different anchor, or remove max_anchor_distance, depending on your eneeds".to_string());
+        }
+        self.max_anchor_distance.or(0);
         Ok(())
     }
 }
@@ -77,45 +95,61 @@ impl Step for IUPAC {
     ) -> Result<(FastQBlocksCombined, bool)> {
         extract_region_tags(&mut block, self.segment, &self.out_label, |read| {
             // Try each query pattern and return the first match
-            match (&self.on_tie, &self.anchor) {
-                (TieBreak::Earliest, _) | (_, Anchor::Left | Anchor::Right) => {
+            match &self.on_tie {
+                TieBreak::Earliest => {
                     for query in &self.search {
-                        if let Some(hit) =
-                            read.find_iupac(query, self.anchor, self.max_mismatches, self.segment)
-                        {
+                        if let Some(hit) = read.find_iupac(
+                            query,
+                            self.anchor,
+                            self.max_mismatches,
+                            self.segment,
+                            self.max_anchor_distance,
+                        ) {
                             return Some(hit);
                         }
                     }
                     return None;
                 }
-                (TieBreak::LeftMost, Anchor::Anywhere) => {
+                TieBreak::LeftMost => {
                     return self
                         .search
                         .iter()
                         .filter_map(|query| {
-                            read.find_iupac(query, self.anchor, self.max_mismatches, self.segment)
+                            read.find_iupac(
+                                query,
+                                self.anchor,
+                                self.max_mismatches,
+                                self.segment,
+                                self.max_anchor_distance,
+                            )
                         })
                         .min_by_key(|hit| {
                             hit.0[0]
                                 .location
                                 .as_ref()
                                 .map(|x| x.start)
-                                .expect("Found iiupac should have had location set")
+                                .expect("Found iupac should have had location set")
                         });
                 }
-                (TieBreak::RightMost, Anchor::Anywhere) => {
+                TieBreak::RightMost => {
                     return self
                         .search
                         .iter()
                         .filter_map(|query| {
-                            read.find_iupac(query, self.anchor, self.max_mismatches, self.segment)
+                            read.find_iupac(
+                                query,
+                                self.anchor,
+                                self.max_mismatches,
+                                self.segment,
+                                self.max_anchor_distance,
+                            )
                         })
                         .max_by_key(|hit| {
                             hit.0[0]
                                 .location
                                 .as_ref()
                                 .map(|x| x.start)
-                                .expect("Found iiupac should have had location set")
+                                .expect("Found iupac should have had location set")
                         });
                 }
             }

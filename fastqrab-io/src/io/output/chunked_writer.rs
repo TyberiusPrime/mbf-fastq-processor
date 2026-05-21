@@ -758,16 +758,19 @@ impl ChunkPaths {
         let max_value = 10usize.pow(u32::try_from(old_digits).expect("digit count fits u32"));
         let mut existing: Vec<PathBuf> = Vec::new();
         for entry in ex::fs::read_dir(&self.directory).with_context(|| {
-            format!( //cov:excl-start
+            format!(
+                //cov:excl-start
                 "Could not read output directory for renaming files: {}",
                 self.directory.display()
             )
-        })?  //cov:excl-stop
+        })?
+        //cov:excl-stop
         {
             existing.push(
                 entry
                     .with_context(|| {
-                        format!( // cov:excl-start
+                        format!(
+                            // cov:excl-start
                             "Could not read output directory entry for renaming files: {}",
                             self.directory.display()
                         )
@@ -803,7 +806,8 @@ impl ChunkPaths {
                         suffix
                     ));
                     ex::fs::rename(path, &new_name).with_context(|| {
-                        format!( //cov:excl-start
+                        format!(
+                            //cov:excl-start
                             "Could not rename output chunk file from {} to {}",
                             path.display(),
                             new_name.display()

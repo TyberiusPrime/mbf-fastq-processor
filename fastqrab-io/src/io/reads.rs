@@ -921,9 +921,17 @@ pub trait WrappedFastQReadCommon {
         anchor: Anchor,
         max_mismatches: u8,
         target: SegmentIndex,
+        max_anchor_distance: usize,
     ) -> Option<Hits> {
         let seq = self.seq();
-        find_iupac(seq, query, anchor, max_mismatches, target)
+        find_iupac(
+            seq,
+            query,
+            anchor,
+            max_mismatches,
+            target,
+            max_anchor_distance,
+        )
     }
 
     #[must_use]

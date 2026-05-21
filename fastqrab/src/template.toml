@@ -104,7 +104,10 @@
 #    max_mismatches = 1 # how many mismatches are allowed.
 #    anchor = 'Anywhere' # Left | Right | Anywhere - Where to search.
                          # Left only matches at the start of the read, etc.
+##    max_anchor_distance = 0 # Optional, Default = 0. Allow hit in the first/last n bp if anchor != Anywhere. 
+                              # Must not be set if anchor = Aynwhere
 #    segment = "read1" # Any of your input segments
+#    on_tie = 'Earliest' # Earliest (default) |LeftMost|RightMost 
 
 # ==== ExtractIUPACWithIndel ====
 # # Extract an IUPAC string while allowing small insertions/deletions.

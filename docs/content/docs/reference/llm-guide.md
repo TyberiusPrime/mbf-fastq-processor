@@ -375,6 +375,8 @@ Find IUPAC pattern with mismatches (substitutions only, no indels).
     search = 'CTNNGG'              # TYPE: IUPAC string, REQUIRED
     max_mismatches = 1             # TYPE: usize, REQUIRED
     anchor = 'Anywhere'            # TYPE: 'Left'|'Right'|'Anywhere', REQUIRED
+    # max_anchor_distance = 0        # Type: usize, OPTIONAL, Default = 0. Allow hit in the first/last n bp if anchor != Anywhere. Must not be set if anchor = anywhere.
+    on_tie = 'Earliest'            # TYPE: String, one of Earliest|LeftMost|RightMost, OPTIONAL, default = Earliest
     out_label = 'motif'            # TYPE: string, REQUIRED
 ```
 

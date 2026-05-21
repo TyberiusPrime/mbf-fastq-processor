@@ -217,6 +217,7 @@ pub fn find_iupac(
     anchor: Anchor,
     max_mismatches: u8,
     segment: SegmentIndex,
+    max_anchor_distance: usize,
 ) -> Option<Hits> {
     if reference.len() < pattern.len() {
         return None;
@@ -224,41 +225,53 @@ pub fn find_iupac(
     // Pure Rust implementation with optimizations for IUPAC pattern matching.
     // N in the PATTERN is treated as a wildcard, N in the REFERENCE is an uncertain base.
     match anchor {
-        Anchor::Left => {
-            let hd = iupac_hamming_distance(pattern, &reference[..pattern.len()]);
-            if hd <= max_mismatches as usize {
-                return Some(Hits::new(
-                    0,
-                    pattern.len(),
-                    segment,
-                    reference[..pattern.len()].into(),
-                ));
-            }
-        }
+        Anchor::Left => iupac_find_best(
+            pattern,
+            &reference[..pattern.len() + max_anchor_distance],
+            max_mismatches as usize,
+            Direction::Forward,
+        )
+        .map(|start| {
+            Hits::new(
+                start,
+                pattern.len(),
+                segment,
+                reference[start..start + pattern.len()].into(),
+            )
+        }),
         Anchor::Right => {
-            let start = reference.len() - pattern.len();
-            let hd = iupac_hamming_distance(pattern, &reference[start..]);
-            if hd <= max_mismatches as usize {
-                return Some(Hits::new(
-                    start,
-                    pattern.len(),
-                    segment,
-                    reference[start..].into(),
-                ));
-            }
-        }
-        Anchor::Anywhere => {
-            return iupac_find_best(pattern, reference, max_mismatches as usize).map(|start| {
+            let offset = reference.len() - pattern.len() - max_anchor_distance;
+            iupac_find_best(
+                pattern,
+                &reference[offset..],
+                max_mismatches as usize,
+                Direction::Reverse,
+            )
+            .map(|start| {
                 Hits::new(
-                    start,
+                    start + offset,
                     pattern.len(),
                     segment,
-                    reference[start..start + pattern.len()].into(),
+                    reference[offset + start..offset + start + pattern.len()].into(),
                 )
-            });
+            })
         }
+
+        Anchor::Anywhere => iupac_find_best(
+            pattern,
+            reference,
+            max_mismatches as usize,
+            Direction::Forward,
+        )
+        .map(|start| {
+            Hits::new(
+                start,
+                pattern.len(),
+                segment,
+                reference[start..start + pattern.len()].into(),
+            )
+        }),
     }
-    None
 }
 
 #[inline]
@@ -360,17 +373,32 @@ pub fn find_iupac_with_indel(
     ))
 }
 
+pub enum Direction {
+    Forward,
+    Reverse,
+}
+
 /// Find the best hit for this IUPAC string, on parity, earlier hits preferred.
 /// Optimized pure Rust implementation with early exit on perfect matches.
 /// Returns the start position of the best match, or None if no match within `max_mismatches`.
 #[inline]
 #[must_use]
-pub fn iupac_find_best(pattern: &[u8], reference: &[u8], max_mismatches: usize) -> Option<usize> {
+pub fn iupac_find_best(
+    pattern: &[u8],
+    reference: &[u8],
+    max_mismatches: usize,
+    direction: Direction,
+) -> Option<usize> {
     let query_len = pattern.len();
     let mut best_pos = None;
     let mut best_so_far = max_mismatches + 1;
 
-    for start in 0..=reference.len() - query_len {
+    let iter: Box<dyn Iterator<Item = usize>> = match direction {
+        Direction::Forward => Box::new(0..=reference.len() - query_len),
+        Direction::Reverse => Box::new((0..=reference.len() - query_len).rev()),
+    };
+
+    for start in iter {
         // Use optimized distance check with early exit
         let hd = iupac_hamming_distance_with_limit(
             pattern,
@@ -564,7 +592,8 @@ pub fn iupac_hamming_distance(iupac_reference: &[u8], atcg_query: &[u8]) -> usiz
     assert_eq!(
         iupac_reference.len(),
         atcg_query.len(),
-        "Reference and query must have same length"
+        "Hamming distance problem: Reference and query must have same length.\n\
+        Reference='{iupac_reference:?}' query='{atcg_query:?}'"
     );
     iupac_hamming_distance_with_limit(iupac_reference, atcg_query, usize::MAX)
 }
@@ -907,15 +936,29 @@ mod test {
     #[test]
     fn test_find_iupac() {
         assert_eq!(
-            super::find_iupac(b"AGTTC", b"AGT", super::Anchor::Left, 0, SegmentIndex(0)),
+            super::find_iupac(b"AGTTC", b"AGT", super::Anchor::Left, 0, SegmentIndex(0), 0),
             Some(super::Hits::new(0, 3, SegmentIndex(0), b"AGT".into()))
         );
         assert_eq!(
-            super::find_iupac(b"AGTTC", b"TTC", super::Anchor::Right, 0, SegmentIndex(1)),
+            super::find_iupac(
+                b"AGTTC",
+                b"TTC",
+                super::Anchor::Right,
+                0,
+                SegmentIndex(1),
+                0
+            ),
             Some(super::Hits::new(2, 3, SegmentIndex(1), "TTC".into()))
         );
         assert_eq!(
-            super::find_iupac(b"AGTTC", b"GT", super::Anchor::Anywhere, 0, SegmentIndex(2)),
+            super::find_iupac(
+                b"AGTTC",
+                b"GT",
+                super::Anchor::Anywhere,
+                0,
+                SegmentIndex(2),
+                0
+            ),
             Some(super::Hits::new(1, 2, SegmentIndex(2), b"GT".into()))
         );
         assert_eq!(
@@ -924,7 +967,8 @@ mod test {
                 b"AGT",
                 super::Anchor::Anywhere,
                 0,
-                SegmentIndex(2)
+                SegmentIndex(2),
+                0
             ),
             Some(super::Hits::new(0, 3, SegmentIndex(2), b"AGT".into()))
         );
@@ -934,24 +978,39 @@ mod test {
                 b"TTC",
                 super::Anchor::Anywhere,
                 0,
-                SegmentIndex(2)
+                SegmentIndex(2),
+                0
             ),
             Some(super::Hits::new(2, 3, SegmentIndex(2), b"TTC".into(),))
         );
         assert_eq!(
-            super::find_iupac(b"AGTTC", b"GT", super::Anchor::Left, 0, SegmentIndex(1)),
+            super::find_iupac(b"AGTTC", b"GT", super::Anchor::Left, 0, SegmentIndex(1), 0),
             None
         );
         assert_eq!(
-            super::find_iupac(b"AGTTC", b"GT", super::Anchor::Right, 0, SegmentIndex(1)),
+            super::find_iupac(b"AGTTC", b"GT", super::Anchor::Right, 0, SegmentIndex(1), 0),
             None
         );
         assert_eq!(
-            super::find_iupac(b"AGTTC", b"GG", super::Anchor::Anywhere, 0, SegmentIndex(1)),
+            super::find_iupac(
+                b"AGTTC",
+                b"GG",
+                super::Anchor::Anywhere,
+                0,
+                SegmentIndex(1),
+                0
+            ),
             None,
         );
         assert_eq!(
-            super::find_iupac(b"AGTTC", b"T", super::Anchor::Anywhere, 0, SegmentIndex(1)),
+            super::find_iupac(
+                b"AGTTC",
+                b"T",
+                super::Anchor::Anywhere,
+                0,
+                SegmentIndex(1),
+                0
+            ),
             Some(super::Hits::new(
                 //first hit reported.
                 2,
@@ -961,11 +1020,18 @@ mod test {
             ))
         );
         assert_eq!(
-            super::find_iupac(b"AGTTC", b"AA", super::Anchor::Left, 1, SegmentIndex(1)),
+            super::find_iupac(b"AGTTC", b"AA", super::Anchor::Left, 1, SegmentIndex(1), 0),
             Some(super::Hits::new(0, 2, SegmentIndex(1), b"AG".into(),))
         );
         assert_eq!(
-            super::find_iupac(b"AGTTC", b"AGTTN", super::Anchor::Left, 0, SegmentIndex(1)),
+            super::find_iupac(
+                b"AGTTC",
+                b"AGTTN",
+                super::Anchor::Left,
+                0,
+                SegmentIndex(1),
+                0
+            ),
             Some(super::Hits::new(0, 5, SegmentIndex(1), b"AGTTC".into(),))
         );
     }
