@@ -960,6 +960,13 @@ impl ChunkedRecordWriter {
         Ok(())
     }
 
+    pub fn flush(&mut self) -> Result<()> {
+        match &mut self.active {
+            ActiveSink::Text(sink) => Ok(sink.flush()?),
+            ActiveSink::Bam(_) | ActiveSink::Idle => Ok(()),
+        }
+    }
+
     pub fn write_text_record(&mut self, encoded: &[u8]) -> Result<()> {
         match &mut self.active {
             ActiveSink::Text(sink) => sink
