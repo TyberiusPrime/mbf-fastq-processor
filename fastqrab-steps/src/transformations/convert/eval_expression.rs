@@ -238,7 +238,7 @@ impl Step for Box<EvalExpression> {
             // Populate vars with tag values for this read
             for (var_name, tag_values) in &tag_data {
                 let numeric_value = match tag_values {
-                    TagColumn::Location(_) => 0.0, //any location is true.
+                    TagColumn::Location(items) => if items[read_idx].is_some() { 1.0 } else { 0.0 },
                     TagColumn::Bool(items) => {
                         if items[read_idx] {
                             1.0
@@ -246,8 +246,8 @@ impl Step for Box<EvalExpression> {
                             0.0
                         }
                     }
-                    TagColumn::String(_) => 0.0, //any string is true
-                    TagColumn::Numeric(items) => items[read_idx], //missing => false
+                    TagColumn::String(items) => if items[read_idx].is_some() { 1.0 } else { 0.0 },
+                    TagColumn::Numeric(items) => items[read_idx],
                 };
                 vars.insert((*var_name).to_string(), numeric_value);
             }

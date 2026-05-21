@@ -550,6 +550,11 @@ impl FastQBlock {
         }
     }
 
+    pub fn mutate_read_at(&mut self, idx: usize, f: impl FnOnce(&mut WrappedFastQReadMut<'_>)) {
+        let mut wrapped = WrappedFastQReadMut(&mut self.entries[idx], &mut self.block);
+        f(&mut wrapped);
+    }
+
     /// # Panics
     /// when conditions & tag column have different lengths
     pub fn apply_mut_conditional(
