@@ -1,4 +1,3 @@
-use allocation_counter::measure;
 use anyhow::{Context, Result, bail};
 use clap::{Arg, ArgAction, Command, ValueHint, value_parser};
 use clap_complete::{Generator, Shell, generate};
@@ -7,6 +6,10 @@ use std::{
     io,
     path::{Path, PathBuf},
 };
+
+use mimalloc::MiMalloc;
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
 
 #[expect(clippy::too_many_lines, reason = "cli is complex")]
 fn build_cli() -> Command {
@@ -336,7 +339,10 @@ fn main() -> Result<()> {
         Some(("process", sub_matches)) => {
             let toml_path = handle_toml_arg(sub_matches.get_one::<String>("config"));
             let allow_overwrites = sub_matches.get_flag("allow-overwrite");
-            run_with_optional_measure(|| process_from_toml_file(&toml_path, allow_overwrites));
+            process_from_toml_file(&toml_path, allow_overwrites);
+            if std::env::var("RUST_MEASURE_ALLOC").as_deref() == Ok("1") {
+                print_peak_rss_kb();
+            }
         }
         Some(("template", sub_matches)) => {
             let section = sub_matches.get_one::<String>("section");
@@ -555,25 +561,17 @@ fn find_single_valid_toml() -> Result<PathBuf> {
     }
 }
 
-fn run_with_optional_measure<F>(f: F)
-where
-    F: FnOnce(),
-{
-    if std::env::var("RUST_MEASURE_ALLOC")
-        .map(|v| v == "1")
-        .unwrap_or(false)
-    {
-        let info = measure(f);
-        eprintln!(
-            "alloc: count_total={} count_max={} count_current={} bytes_total={} bytes_max={} bytes_current={}",
-            info.count_total,
-            info.count_max,
-            info.count_current,
-            info.bytes_total,
-            info.bytes_max,
-            info.bytes_current
-        );
-    } else {
-        f();
+fn print_peak_rss_kb() {
+    let Ok(status) = std::fs::read_to_string("/proc/self/status") else {
+        return;
+    };
+    for line in status.lines() {
+        let Some(rest) = line.strip_prefix("VmHWM:") else {
+            continue;
+        };
+        if let Some(kb) = rest.split_whitespace().next().and_then(|s| s.parse::<u64>().ok()) {
+            eprintln!("peak_rss_kb={kb}");
+        }
+        return;
     }
 }

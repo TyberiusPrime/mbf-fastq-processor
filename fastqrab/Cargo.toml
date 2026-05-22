@@ -26,7 +26,6 @@ workspace = true
 
 
 [dependencies]
-	allocation-counter = {workspace = true}
 	anyhow = {workspace = true}
 	bstr = {workspace = true}
 	clap_complete = {workspace = true}
@@ -42,6 +41,7 @@ workspace = true
     fastqrab-io = {workspace = true}
     fastqrab-steps = {workspace = true}
     fastqrab-config = {workspace = true}
+    mimalloc = {workspace = true}
 	mutants = {workspace = true}
 	niffler = {workspace = true}
 	noodles = {workspace = true}

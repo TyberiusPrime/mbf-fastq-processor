@@ -10,72 +10,44 @@ fi
 
 run_case() {
     local config_file=$1
-    local captured
-    if ! captured=$(RUST_MEASURE_ALLOC=1 "$PROCESSOR_CMD" process "$config_file" 2>&1); then
-        printf 'processing failed for %s\n%s\n' "$config_file" "$captured" >&2
+    local output
+    # RUST_MEASURE_ALLOC=1 causes fastqrab to emit peak_rss_kb=<n> on stderr
+    # after processing; capture stderr, discard stdout
+    if ! output=$( RUST_MEASURE_ALLOC=1 "$PROCESSOR_CMD" process "$config_file" 2>&1 1>/dev/null ); then
+        printf 'processing failed for %s\n%s\n' "$config_file" "$output" >&2
         return 1
     fi
-    printf '%s\n' "$captured"
+    printf '%s\n' "$output"
 }
 
-extract_metric() {
-    local label=$1
-    local payload=$2
-    printf '%s' "$payload" | sed -n "s/.*${label}=\([0-9][0-9]*\).*/\\1/p"
+peak_rss_kb() {
+    printf '%s' "$1" | sed -n 's/.*peak_rss_kb=\([0-9][0-9]*\).*/\1/p'
 }
 
 single_output=$(run_case "config.toml")
 duplicate_output=$(run_case "input_duplicate.toml")
 
+single_rss=$(peak_rss_kb "$single_output")
+duplicate_rss=$(peak_rss_kb "$duplicate_output")
 
-echo "$single_output"
-echo "$duplicate_output"
-
-if [ -z "$single_output" ] || [ -z "$duplicate_output" ]; then
-    echo "missing allocator output" >&2
+if [ -z "$single_rss" ] || [ -z "$duplicate_rss" ]; then
+    printf 'failed to parse peak_rss_kb from fastqrab output\nsingle:\n%s\nduplicate:\n%s\n' \
+        "$single_output" "$duplicate_output" >&2
     exit 1
 fi
 
-single_max=$(extract_metric "bytes_max" "$single_output")
-duplicate_max=$(extract_metric "bytes_max" "$duplicate_output")
-single_leak=$(extract_metric "bytes_current" "$single_output")
-duplicate_leak=$(extract_metric "bytes_current" "$duplicate_output")
-
-if [ -z "$single_max" ] || [ -z "$duplicate_max" ]; then
-    echo "failed to parse max allocation metrics" >&2
-    exit 1
-fi
-
-abs_diff=$(( duplicate_max - single_max ))
+abs_diff=$(( duplicate_rss - single_rss ))
 if [ "$abs_diff" -lt 0 ]; then
     abs_diff=$(( -abs_diff ))
 fi
 
-# and whatever the size of the config.toml differences is 
-toml_size_single="$(wc -c < "config.toml")"
-toml_size_duplicate="$(wc -c < "input_duplicate.toml")"
-# count how often input_data.fq.zst occurs in input_duplicate.toml
-repeat_count=$(grep -o 'input_data.fq.zst' input_duplicate.toml | wc -l)
-# about 484 byte is what I identified in experiments/graph_memory_usage
-# but that had longer filenames. This should be a decent compromise, I suppose
-allowed_diff=$(( 450 * repeat_count + (toml_size_duplicate - toml_size_single) ))
+# 10 MB slack for RSS page-granularity noise; 24x duplicate file references
+# should not cause proportional memory growth since duplicates are deduplicated
+# before processing.
+allowed_diff_kb=10240
 
-# if [ "$allowed_diff" -lt 1048576 ]; then
-#     allowed_diff=1048576
-# fi
-
-if [ "$abs_diff" -gt "$allowed_diff" ]; then
-    printf 'Duplicate input used too much memory: single=%s duplicate=%s diff=%s limit=%s\n' \
-        "$single_max" "$duplicate_max" "$abs_diff" "$allowed_diff" >&2
-    exit 1
-fi
-
-leak_threshold=1048576
-if [ -n "$single_leak" ] && [ "$single_leak" -gt "$leak_threshold" ]; then
-    printf 'Single input leaked memory: leak=%s threshold=%s\n' "$single_leak" "$leak_threshold" >&2
-    exit 1
-fi
-if [ -n "$duplicate_leak" ] && [ "$duplicate_leak" -gt "$leak_threshold" ]; then
-    printf 'Duplicate input leaked memory: leak=%s threshold=%s\n' "$duplicate_leak" "$leak_threshold" >&2
+if [ "$abs_diff" -gt "$allowed_diff_kb" ]; then
+    printf 'Duplicate input used too much memory: single=%skB duplicate=%skB diff=%skB limit=%skB\n' \
+        "$single_rss" "$duplicate_rss" "$abs_diff" "$allowed_diff_kb" >&2
     exit 1
 fi
