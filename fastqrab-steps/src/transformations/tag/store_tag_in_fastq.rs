@@ -241,7 +241,7 @@ impl Step for StoreTagInFastQ {
                         .as_ref()
                         .expect("location must be set for tag")
                         .segment_index
-                        .0];
+                        .as_index()];
                     let wrapped = segment_block.get(ii);
 
                     // Determine which output stream to use based on demultiplexing
@@ -258,13 +258,12 @@ impl Step for StoreTagInFastQ {
                         let mut name = wrapped.name().to_vec();
                         if let Some(comment_tags) = self.comment_tags.as_ref() {
                             for tag in comment_tags {
-                                let tag_col = block
-                                    .tags
-                                    .get(tag)
-                                    .expect("tag must exist in block");
+                                let tag_col = block.tags.get(tag).expect("tag must exist in block");
                                 let tag_bytes: Vec<u8> = match tag_col {
                                     TagColumn::Location(items) => match &items[ii] {
-                                        Some(hits) => hits.joined_sequence(Some(&self.region_separator)),
+                                        Some(hits) => {
+                                            hits.joined_sequence(Some(&self.region_separator))
+                                        }
                                         None => Vec::new(),
                                     },
                                     TagColumn::String(items) => match &items[ii] {

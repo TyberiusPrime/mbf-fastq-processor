@@ -100,7 +100,7 @@ impl Step for TrimAtTag {
                     }
                     let region = &hit.0[0];
                     let location = region.location.as_ref().expect("TrimTag only works on regions with location data. Might have been lost by subsequent transformations?");
-                    let read = &mut reads[location.segment_index.get_index()];
+                    let read = &mut reads[location.segment_index.as_index()];
                     match (self.direction, self.keep_tag) {
                         (Direction::Start, true) => read.cut_start(location.start),
                         (Direction::Start, false) => read.cut_start(location.start + location.len),

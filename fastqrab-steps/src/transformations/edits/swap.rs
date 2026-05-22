@@ -129,7 +129,7 @@ impl Step for Swap {
 
         // If no condition, do unconditional swap
         if self.if_tag.is_none() {
-            block.segments.swap(index_a, index_b);
+            block.segments.swap(index_a as usize, index_b as usize);
 
             block.filter_tag_locations_all_targets(
                 |location: &HitRegion, _pos: usize| -> NewLocation {
@@ -163,7 +163,7 @@ impl Step for Swap {
         // then swap back the minority
         let (swap_these, did_block_swap) = if swap_count > total_count / 2 {
             // Swap the entire blocks and entries
-            block.segments.swap(index_a, index_b);
+            block.segments.swap(index_a as usize, index_b as usize);
             // Now we need to swap back the reads that should NOT have been swapped
             (tag_values.iter().map(|&x| !x).collect::<Vec<bool>>(), true)
         } else {
@@ -179,13 +179,13 @@ impl Step for Swap {
                 actual_swap_count += 1;
                 // Get mutable references to both blocks for swapping
                 let (block_a, block_b) = {
-                    let (left, right) = block.segments.split_at_mut(index_b);
-                    (&mut left[index_a], &mut right[0])
+                    let (left, right) = block.segments.split_at_mut(index_b as usize);
+                    (&mut left[index_a as usize], &mut right[0])
                 };
 
                 // Swap the FastQRead entries between the two segments for this read
-                block_a.entries[read_idx].swap_with(
-                    &mut block_b.entries[read_idx],
+                block_a.entries[read_idx as usize].swap_with(
+                    &mut block_b.entries[read_idx as usize],
                     &mut block_a.block,
                     &mut block_b.block,
                 );

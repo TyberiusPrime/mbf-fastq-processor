@@ -1,4 +1,5 @@
 use fastqrab_config::{TagLabel, segments::SegmentIndexOrAll, validate_tag_name};
+use fastqrab_dna::segments::SegmentIndex;
 use indexmap::IndexMap;
 use toml_pretty_deser::{
     MustAdapt, TomlValue, TomlValueState, ValidationFailure, suggest_alternatives,
@@ -36,7 +37,7 @@ impl ValidateTagLabel for TomlValue<MustAdapt<String, TagLabel>> {
                             segment_order.iter().position(|x| x == segment_name)
                         {
                             Ok(TagLabel::Length(
-                                SegmentIndexOrAll::Indexed(position),
+                                SegmentIndexOrAll::Indexed(SegmentIndex::new(position)),
                                 value.clone(),
                             ))
                         } else if tags_available.keys().any(|tag_label| match tag_label {

@@ -203,10 +203,10 @@ impl Step for MergeReads {
 
         // Process each read pair using apply_mut
         block.apply_mut(|reads: &mut [WrappedFastQReadMut]| {
-            let read1_seq = reads[seg1_idx].seq();
-            let read1_qual = reads[seg1_idx].qual();
-            let read2_seq = reads[seg2_idx].seq();
-            let read2_qual = reads[seg2_idx].qual();
+            let read1_seq = reads[seg1_idx as usize].seq();
+            let read1_qual = reads[seg1_idx as usize].qual();
+            let read2_seq = reads[seg2_idx as usize].seq();
+            let read2_qual = reads[seg2_idx as usize].qual();
 
             // Optionally reverse complement read2
             let (read2_seq_processed, read2_qual_processed): (Cow<[u8]>, Cow<[u8]>) =
@@ -237,9 +237,9 @@ impl Step for MergeReads {
                     merged_qual,
                 } => {
                     // Update segment1 with merged sequence
-                    reads[seg1_idx].replace_seq(&merged_seq, &merged_qual);
+                    reads[seg1_idx as usize].replace_seq(&merged_seq, &merged_qual);
                     // Clear segment2
-                    reads[seg2_idx].clear();
+                    reads[seg2_idx as usize].clear();
                     true
                 }
                 MergeResult::NoOverlap => {
@@ -259,9 +259,9 @@ impl Step for MergeReads {
                         concatenated_qual.extend_from_slice(&read2_qual_processed);
 
                         // Update segment1 with concatenated sequence
-                        reads[seg1_idx].replace_seq(&concatenated_seq, &concatenated_qual);
+                        reads[seg1_idx as usize].replace_seq(&concatenated_seq, &concatenated_qual);
                         // Clear segment2
-                        reads[seg2_idx].clear();
+                        reads[seg2_idx as usize].clear();
                     }
                     // Otherwise keep reads as they are (NoOverlapStrategy::AsIs)
                     false
@@ -277,8 +277,7 @@ impl Step for MergeReads {
         // Add merge status tag if label was specified
 
         if let Some(merge_status) = merge_status.take() {
-            let tag_values: TagColumn = 
-                TagColumn::Bool(merge_status.into_iter().collect());
+            let tag_values: TagColumn = TagColumn::Bool(merge_status.into_iter().collect());
             block.tags.insert(
                 self.out_label
                     .as_ref()

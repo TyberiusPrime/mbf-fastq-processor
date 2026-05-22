@@ -79,9 +79,10 @@ impl VerifyIn<PartialConfig> for PartialInspect {
             let n = self.n.as_ref().map_or(0, |x| *x);
             let target_name = match segment {
                 SegmentIndexOrAll::All => "interleaved".to_string(),
-                SegmentIndexOrAll::Indexed(idx) => {
-                    segment_order.get(*idx).cloned().unwrap_or_default()
-                }
+                SegmentIndexOrAll::Indexed(idx) => segment_order
+                    .get(idx.as_index())
+                    .cloned()
+                    .unwrap_or_default(),
             };
             self.resolved_segment_name = Some(target_name);
             self.collector = Some(Arc::new(Mutex::new(match segment {
@@ -267,7 +268,7 @@ impl Step for Inspect {
                     }
                 }
                 SegmentIndexOrAll::Indexed(idx) => {
-                    let segment_read = &read.segments[idx];
+                    let segment_read = &read.segments[idx.as_index()];
                     collector[0].push((
                         name_read(segment_read, read_idx),
                         segment_read.seq().to_vec(),

@@ -8,7 +8,7 @@ pub use fastqrab_dna::segments::SegmentIndex;
 #[derive(Debug, Clone, Eq, PartialEq, Copy, JsonSchema, Hash)]
 pub enum SegmentIndexOrAll {
     All,
-    Indexed(usize),
+    Indexed(SegmentIndex),
 }
 
 impl TryInto<SegmentIndex> for SegmentIndexOrAll {
@@ -16,7 +16,7 @@ impl TryInto<SegmentIndex> for SegmentIndexOrAll {
 
     fn try_into(self) -> std::prelude::v1::Result<SegmentIndex, Self::Error> {
         match self {
-            SegmentIndexOrAll::Indexed(idx) => Ok(SegmentIndex(idx)),
+            SegmentIndexOrAll::Indexed(idx) => Ok(idx),
             SegmentIndexOrAll::All => Err(()),
         }
     }
@@ -105,7 +105,7 @@ impl ResolvedSourceAll {
     pub fn get_name(&self, segment_order: &[String]) -> String {
         match self {
             ResolvedSourceAll::Segment(SegmentIndexOrAll::Indexed(idx)) => {
-                segment_order.get(*idx).cloned().unwrap_or_else(|| {
+                segment_order.get(idx.as_index()).cloned().unwrap_or_else(|| {
                     // cov:excl-start
                     panic!(
                         "Segment index {idx} out of bounds for segment order: [{segment_order:?}]"
@@ -122,7 +122,7 @@ impl ResolvedSourceAll {
                 "name:{}",
                 match segment_index_or_all {
                     SegmentIndexOrAll::Indexed(idx) => {
-                        segment_order.get(*idx).cloned().unwrap_or_else(|| {
+                        segment_order.get(idx.as_index()).cloned().unwrap_or_else(|| {
                         // cov:excl-start
                         panic!("Segment index {idx} out of bounds for segment order: [{segment_order:?}]")
                         // cov:excl-stop

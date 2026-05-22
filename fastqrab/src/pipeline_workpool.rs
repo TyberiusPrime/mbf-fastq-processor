@@ -561,7 +561,7 @@ fn process_work_item(
                         }
                         fastqrab_steps::config::SegmentIndexOrAll::Indexed(index) => {
                             let mut read_lengths = Vec::new();
-                            for entry in &work_item.block.segments[*index].entries {
+                            for entry in &work_item.block.segments[index.as_index()].entries {
                                 read_lengths.push(entry.seq.len());
                             }
                             read_lengths
@@ -572,15 +572,18 @@ fn process_work_item(
                     clippy::cast_precision_loss,
                     reason = "Unlikely to exceed f64 precise regions"
                 )]
-                let read_lengths: Vec<f64> = read_lengths
-                    .into_iter()
-                    .map(|x| x as f64)
-                    .collect();
-                work_item.block.tags.insert(tag.clone(), TagColumn::Numeric(read_lengths));
+                let read_lengths: Vec<f64> = read_lengths.into_iter().map(|x| x as f64).collect();
+                work_item
+                    .block
+                    .tags
+                    .insert(tag.clone(), TagColumn::Numeric(read_lengths));
             }
             TagLabel::Normal(_) => {}
             TagLabel::TagLength(tag_name, _) => {
-                #[expect(clippy::cast_precision_loss, reason="Unlikely to exceed f64 precise regions")]
+                #[expect(
+                    clippy::cast_precision_loss,
+                    reason = "Unlikely to exceed f64 precise regions"
+                )]
                 let tag_lengths: Vec<f64> = match work_item
                     .block
                     .tags
@@ -600,10 +603,17 @@ fn process_work_item(
                         .map(|opt_str| opt_str.as_ref().map_or(0, |s| s.len()))
                         .map(|n| n as f64)
                         .collect(),
-                    TagColumn::Numeric(_) => unreachable!("len of a numeric tag not defined. Should have been caught in validation"), // cov:excl-line
-                    TagColumn::Bool(_) => unreachable!("len of a bool tag not defined. Should have been caught in validation"), // cov:excl-line
+                    TagColumn::Numeric(_) => unreachable!(
+                        "len of a numeric tag not defined. Should have been caught in validation"
+                    ), // cov:excl-line
+                    TagColumn::Bool(_) => unreachable!(
+                        "len of a bool tag not defined. Should have been caught in validation"
+                    ), // cov:excl-line
                 };
-                work_item.block.tags.insert(tag.clone(), TagColumn::Numeric(tag_lengths));
+                work_item
+                    .block
+                    .tags
+                    .insert(tag.clone(), TagColumn::Numeric(tag_lengths));
             }
             TagLabel::TagLocation {
                 source,
@@ -624,7 +634,10 @@ fn process_work_item(
                         .collect(),
                     _ => unreachable!("Should have been caught in validation"), // cov:excl-line
                 };
-                work_item.block.tags.insert(tag.clone(), TagColumn::String(tag_locations));
+                work_item
+                    .block
+                    .tags
+                    .insert(tag.clone(), TagColumn::String(tag_locations));
             }
             TagLabel::ReadNo => {
                 let start = work_item.block.segments[0].first_read_sequential_number;
@@ -634,9 +647,11 @@ fn process_work_item(
                     clippy::cast_precision_loss,
                     reason = "Unlikely to exceed f64 precise regions"
                 )]
-                let read_nos: Vec<f64> =
-                    (start..end).map(|x| x as f64).collect();
-                work_item.block.tags.insert(tag.clone(), TagColumn::Numeric(read_nos));
+                let read_nos: Vec<f64> = (start..end).map(|x| x as f64).collect();
+                work_item
+                    .block
+                    .tags
+                    .insert(tag.clone(), TagColumn::Numeric(read_nos));
             }
         }
     }
@@ -685,11 +700,7 @@ fn process_work_item(
                 }
             }
             //make sure all tags have the same length
-            let all_tag_lengths_equal = result_block
-                .tags
-                .values()
-                .map(TagColumn::len)
-                .all_equal();
+            let all_tag_lengths_equal = result_block.tags.values().map(TagColumn::len).all_equal();
             // cov:excl-start
             if !all_tag_lengths_equal {
                 let tags_and_lengths: String = result_block

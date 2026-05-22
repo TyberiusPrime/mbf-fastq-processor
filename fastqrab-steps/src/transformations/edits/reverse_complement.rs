@@ -91,17 +91,15 @@ impl Step for ReverseComplement {
                     SegmentIndexOrAll::All => {
                         for idx in 0..block.segments.len() {
                             block.filter_tag_locations(
-                                SegmentIndex(idx),
+                                SegmentIndex(u16::try_from(idx).expect("Segments limited to 65k")),
                                 ftl,
                                 condition.as_deref(),
                             );
                         }
                     }
-                    SegmentIndexOrAll::Indexed(segment) => block.filter_tag_locations(
-                        SegmentIndex(*segment),
-                        ftl,
-                        condition.as_deref(),
-                    ),
+                    SegmentIndexOrAll::Indexed(segment) => {
+                        block.filter_tag_locations(*segment, ftl, condition.as_deref())
+                    }
                 }
             }
             ResolvedSourceAll::Tag(tag_name) => {

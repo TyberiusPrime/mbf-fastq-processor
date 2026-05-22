@@ -238,7 +238,13 @@ impl Step for Box<EvalExpression> {
             // Populate vars with tag values for this read
             for (var_name, tag_values) in &tag_data {
                 let numeric_value = match tag_values {
-                    TagColumn::Location(items) => if items[read_idx].is_some() { 1.0 } else { 0.0 },
+                    TagColumn::Location(items) => {
+                        if items[read_idx].is_some() {
+                            1.0
+                        } else {
+                            0.0
+                        }
+                    }
                     TagColumn::Bool(items) => {
                         if items[read_idx] {
                             1.0
@@ -246,7 +252,13 @@ impl Step for Box<EvalExpression> {
                             0.0
                         }
                     }
-                    TagColumn::String(items) => if items[read_idx].is_some() { 1.0 } else { 0.0 },
+                    TagColumn::String(items) => {
+                        if items[read_idx].is_some() {
+                            1.0
+                        } else {
+                            0.0
+                        }
+                    }
                     TagColumn::Numeric(items) => items[read_idx],
                 };
                 vars.insert((*var_name).to_string(), numeric_value);
@@ -269,9 +281,7 @@ impl Step for Box<EvalExpression> {
         }
 
         let tag_column = match self.result_type {
-            ResultType::Numeric => {
-                TagColumn::Numeric(results.into_iter().collect())
-            }
+            ResultType::Numeric => TagColumn::Numeric(results.into_iter().collect()),
             ResultType::Bool => {
                 // Treat 0.0 as false, any other value as true
                 TagColumn::Bool(

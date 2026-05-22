@@ -43,7 +43,7 @@ impl Step for ReplaceTagWithLetter {
             if let Some(hit) = hit {
                 for region in &hit.0 {
                     if let Some(location) = &region.location {
-                        let read = &mut reads[location.segment_index.get_index()];
+                        let read = &mut reads[location.segment_index.as_index()];
 
                         // Replace the sequence bases in the specified region with the replacement letter
                         let seq = read.seq_mut();

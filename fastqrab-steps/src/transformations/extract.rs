@@ -48,7 +48,7 @@ pub(crate) fn extract_region_tags(
     let f2 = |read: &mut WrappedFastQRead| {
         out.push(f(read));
     };
-    block.segments[segment.get_index()].apply(f2);
+    block.segments[segment.as_index()].apply(f2);
 
     block.tags.insert(label.clone(), TagColumn::Location(out));
 }
@@ -67,7 +67,7 @@ pub(crate) fn extract_region_tags(
 //             None => TagValue::Missing,
 //         });
 //     };
-//     block.segments[segment.get_index()].apply(f2);
+//     block.segments[segment.as_index()].apply(f2);
 //
 //     block.tags.insert(label.clone(), out);
 // }
@@ -85,7 +85,7 @@ pub(crate) fn extract_region_tags_using_tags(
         out.push(f(read, *read_no.borrow(), &mut block.tags));
         *read_no.get_mut() += 1;
     };
-    block.segments[segment.get_index()].apply(f2);
+    block.segments[segment.as_index()].apply(f2);
 
     block.tags.insert(label.clone(), TagColumn::Location(out));
 }
@@ -106,7 +106,7 @@ pub(crate) fn extract_string_tags_using_tags(
         });
         *read_no.get_mut() += 1;
     };
-    block.segments[segment.get_index()].apply(f2);
+    block.segments[segment.as_index()].apply(f2);
 
     block.tags.insert(label.clone(), TagColumn::String(out));
 }
@@ -123,7 +123,7 @@ pub(crate) fn extract_bool_tags<F>(
     let f = |read: &mut WrappedFastQRead, output_tag| {
         values.push(extractor(read, output_tag));
     };
-    block.segments[segment.get_index()].apply_with_demultiplex_tag(f, block.output_tags.as_ref());
+    block.segments[segment.as_index()].apply_with_demultiplex_tag(f, block.output_tags.as_ref());
 
     block.tags.insert(label.clone(), TagColumn::Bool(values));
 }
@@ -184,5 +184,7 @@ pub(crate) fn extract_bool_tags_from_tag<F>(
         values.push(extractor(tag_value, output_tag));
     }
 
-    block.tags.insert(out_label.clone(), TagColumn::Bool(values));
+    block
+        .tags
+        .insert(out_label.clone(), TagColumn::Bool(values));
 }

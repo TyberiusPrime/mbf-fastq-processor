@@ -80,7 +80,7 @@ impl Step for Box<_ReportCountOligos> {
         let mut blocks = Vec::new();
         match &self.segment {
             SegmentIndexOrAll::Indexed(idx) => {
-                blocks.push(&block.segments[*idx]);
+                blocks.push(&block.segments[idx.as_index()]);
             }
             SegmentIndexOrAll::All => {
                 for segment in &block.segments {

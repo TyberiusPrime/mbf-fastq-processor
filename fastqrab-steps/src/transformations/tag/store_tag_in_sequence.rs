@@ -90,7 +90,7 @@ impl Step for StoreTagInSequence {
         // Pass 1: compute (seg_idx, insert_pos, insert_bytes) per read from the tag columns.
         // Scoped so the immutable borrows of block.tags drop before we mutate block.segments.
         // per_read: (seg_idx, pos_left, pos_right, insert_bytes)
-        let per_read: Vec<Option<(usize, usize, usize, Vec<u8>)>> = {
+        let per_read: Vec<Option<(SegmentIndex, usize, usize, Vec<u8>)>> = {
             let value_col = block
                 .tags
                 .get(&self.in_value_label)
@@ -117,7 +117,7 @@ impl Step for StoreTagInSequence {
                             .iter()
                             .filter_map(|h| h.location.as_ref())
                             .min_by_key(|loc| loc.start)
-                            .map(|loc| (loc.start, loc.start, loc.segment_index.get_index())),
+                            .map(|loc| (loc.start, loc.start, loc.segment_index)),
                         ReplacementAnchor::End => hits
                             .0
                             .iter()
@@ -125,17 +125,18 @@ impl Step for StoreTagInSequence {
                             .max_by_key(|loc| loc.start + loc.len)
                             .map(|loc| {
                                 let end = loc.start + loc.len;
-                                (end, end, loc.segment_index.get_index())
+                                (end, end, loc.segment_index)
                             }),
                         ReplacementAnchor::Replace => {
                             let locs: Vec<_> =
                                 hits.0.iter().filter_map(|h| h.location.as_ref()).collect();
                             if locs.len() > 1 {
-                                anyhow::bail!("Error processing StoreTagInSequence: Found a multi region location, StoreTagInSequence only works with single-region location");
+                                anyhow::bail!(
+                                    "Error processing StoreTagInSequence: Found a multi region location, StoreTagInSequence only works with single-region location"
+                                );
                             }
-                            locs.first().map(|loc| {
-                                (loc.start, loc.start + loc.len, loc.segment_index.get_index())
-                            })
+                            locs.first()
+                                .map(|loc| (loc.start, loc.start + loc.len, loc.segment_index))
                         }
                     },
                 };
@@ -173,13 +174,13 @@ impl Step for StoreTagInSequence {
         for (ii, slot) in per_read.iter().enumerate() {
             if let Some((seg_idx, pos_left, pos_right, insert_bytes)) = slot {
                 let (seg_idx, pos_left, pos_right) = (*seg_idx, *pos_left, *pos_right);
-                block.segments[seg_idx].mutate_read_at(ii, |read| {
+                block.segments[seg_idx.as_index()].mutate_read_at(ii, |read| {
                     let seq = read.seq().to_vec();
                     // cov:excl-start
                     assert!(
                         pos_right <= seq.len(),
                         "StoreTagInSequence: insert position {pos_right} exceeds read length \
-                        {} on segment {seg_idx}. This should have been prevented upstream and is a bug.",
+                        {}. This should have been prevented upstream and is a bug.",
                         seq.len(),
                     );
                     // cov:excl-end
@@ -195,7 +196,7 @@ impl Step for StoreTagInSequence {
                     read.replace_seq(&new_seq, &new_qual);
                 });
                 insert_infos.push(Some(InsertInfo {
-                    segment_idx: SegmentIndex(seg_idx),
+                    segment_idx: seg_idx,
                     insert_pos_left: pos_left,
                     insert_pos_right: pos_right,
                     insert_len: insert_bytes.len(),
@@ -209,12 +210,12 @@ impl Step for StoreTagInSequence {
         // invalidate any that straddle it (start before, end after).
         let num_segments = block.segments.len();
         for seg_idx in 0..num_segments {
-            let segment_index = SegmentIndex(seg_idx);
+            let segment_index = SegmentIndex::new(seg_idx);
             block.filter_tag_locations(
                 segment_index,
                 |location: &HitRegion, read_pos: usize, _seq: &BString, _read_len: usize| {
                     match &insert_infos[read_pos] {
-                        Some(info) if info.segment_idx.0 == seg_idx => {
+                        Some(info) if info.segment_idx.as_index() == seg_idx => {
                             if location.start >= info.insert_pos_right {
                                 // Entirely after the insertion → shift by net delta
                                 // (insert_len minus the number of bytes removed, which is

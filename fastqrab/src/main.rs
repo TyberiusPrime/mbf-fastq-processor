@@ -569,7 +569,11 @@ fn print_peak_rss_kb() {
         let Some(rest) = line.strip_prefix("VmHWM:") else {
             continue;
         };
-        if let Some(kb) = rest.split_whitespace().next().and_then(|s| s.parse::<u64>().ok()) {
+        if let Some(kb) = rest
+            .split_whitespace()
+            .next()
+            .and_then(|s| s.parse::<u64>().ok())
+        {
             eprintln!("peak_rss_kb={kb}");
         }
         return;

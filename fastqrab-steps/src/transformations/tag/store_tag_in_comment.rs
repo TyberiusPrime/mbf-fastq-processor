@@ -171,8 +171,7 @@ impl Step for StoreTagInComment {
                 let mut read = block.segments[segment_idx].get_mut(read_idx);
                 let mut new_name: Result<Vec<u8>> = Ok(read.name().to_vec());
                 for tag_label in tag_list {
-                    let tag_col =
-                        block.tags.get(tag_label).expect("Tags were checked before");
+                    let tag_col = block.tags.get(tag_label).expect("Tags were checked before");
                     let tag_value: Vec<u8> = match tag_col {
                         TagColumn::Location(items) => match &items[read_idx] {
                             Some(hits) => hits.joined_sequence(Some(&self.region_separator)),
@@ -182,7 +181,9 @@ impl Step for StoreTagInComment {
                             Some(value) => value.to_vec(),
                             None => Vec::new(),
                         },
-                        TagColumn::Numeric(items) => format_numeric_for_comment(items[read_idx]).into_bytes(),
+                        TagColumn::Numeric(items) => {
+                            format_numeric_for_comment(items[read_idx]).into_bytes()
+                        }
                         TagColumn::Bool(items) => {
                             if items[read_idx] {
                                 "1".into()

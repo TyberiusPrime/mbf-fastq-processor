@@ -101,12 +101,24 @@ impl Step for FillMissing {
         let output_col = match (primary_vec, secondary_vec) {
             (TagColumn::Location(prim), TagColumn::Location(sec)) => TagColumn::Location(
                 (0..num_reads)
-                    .map(|i| if prim[i].is_some() { prim[i].clone() } else { sec[i].clone() })
+                    .map(|i| {
+                        if prim[i].is_some() {
+                            prim[i].clone()
+                        } else {
+                            sec[i].clone()
+                        }
+                    })
                     .collect(),
             ),
             (TagColumn::String(prim), TagColumn::String(sec)) => TagColumn::String(
                 (0..num_reads)
-                    .map(|i| if prim[i].is_some() { prim[i].clone() } else { sec[i].clone() })
+                    .map(|i| {
+                        if prim[i].is_some() {
+                            prim[i].clone()
+                        } else {
+                            sec[i].clone()
+                        }
+                    })
                     .collect(),
             ),
             (TagColumn::Location(prim), TagColumn::String(sec)) => TagColumn::String(
@@ -126,7 +138,9 @@ impl Step for FillMissing {
                         if let Some(s) = &prim[i] {
                             Some(s.clone())
                         } else {
-                            sec[i].as_ref().map(|hits| hits.joined_sequence(None).into())
+                            sec[i]
+                                .as_ref()
+                                .map(|hits| hits.joined_sequence(None).into())
                         }
                     })
                     .collect(),

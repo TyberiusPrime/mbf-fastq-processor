@@ -215,7 +215,7 @@ impl TagColumn {
             TagColumn::Bool(items) => items.extend(other.iter_truthy()),
         }
     }
-    
+
     /// half of drain, removes, but you don't get the values out.
     pub fn drain(&mut self, range: std::ops::Range<usize>) {
         match self {
@@ -317,7 +317,7 @@ impl Hits {
                 seq.extend_from_slice(
                     format!(
                         "{}:{}-{}",
-                        segment_order[location.segment_index.get_index()],
+                        segment_order[location.segment_index.as_index()],
                         location.start,
                         location.start + location.len
                     )

@@ -1315,7 +1315,7 @@ impl FastQBlocksCombined {
     pub fn iter_segment_indices(&self, idx: SegmentIndexOrAll) -> Vec<usize> {
         match idx {
             SegmentIndexOrAll::All => (0..self.segments.len()).collect(),
-            SegmentIndexOrAll::Indexed(idx) => vec![idx],
+            SegmentIndexOrAll::Indexed(idx) => vec![idx.as_index()],
         }
     }
 
@@ -1571,7 +1571,7 @@ impl FastQBlocksCombined {
         condition: Option<&[bool]>,
     ) {
         if let Some(condition) = condition {
-            for (idx, read) in self.segments[segment.get_index()]
+            for (idx, read) in self.segments[segment.as_index()]
                 .entries
                 .iter_mut()
                 .enumerate()
@@ -1581,7 +1581,7 @@ impl FastQBlocksCombined {
                 }
             }
         } else {
-            for read in &mut self.segments[segment.get_index()].entries {
+            for read in &mut self.segments[segment.as_index()].entries {
                 f(read);
             }
         }
@@ -1598,9 +1598,9 @@ impl FastQBlocksCombined {
         condition: Option<&[bool]>,
     ) {
         if let Some(condition) = condition {
-            self.segments[segment.get_index()].apply_mut_conditional(f, condition);
+            self.segments[segment.as_index()].apply_mut_conditional(f, condition);
         } else {
-            self.segments[segment.get_index()].apply_mut(f);
+            self.segments[segment.as_index()].apply_mut(f);
         }
     }
 
@@ -1675,7 +1675,7 @@ impl FastQBlocksCombined {
         f: impl Fn(&HitRegion, usize, &BString, usize) -> NewLocation,
         condition: Option<&[bool]>,
     ) {
-        let reads = &self.segments[segment.get_index()].entries;
+        let reads = &self.segments[segment.as_index()].entries;
 
         for values in self.tags.values_mut() {
             if let TagColumn::Location(values) = values {
@@ -1802,7 +1802,7 @@ impl CombinedFastQBlock<'_> {
         let mut res = BString::new(Vec::new());
         for hit in &hits.0 {
             let location = hit.location.as_ref()?;
-            let seqment_quality = self.segments[location.segment_index.0].qual();
+            let seqment_quality = self.segments[location.segment_index.as_index()].qual();
             res.push_str(&seqment_quality[location.start..location.start + location.len]);
         }
         Some(res)

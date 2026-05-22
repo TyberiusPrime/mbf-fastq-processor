@@ -88,12 +88,11 @@ impl Step for TagMatches {
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let accepted_set = &self.accepted_set;
         let found: Vec<bool> = match &self.source {
-            ResolvedSourceNoAll::Segment(segment_index) => {
-                block.segments[segment_index.0].apply(|read| accepted_set.contains(read.seq()))
-            }
-            ResolvedSourceNoAll::Name { segment_index, .. } => {
-                block.segments[segment_index.0].apply(|read| accepted_set.contains(read.name()))
-            }
+            ResolvedSourceNoAll::Segment(segment_index) => block.segments[segment_index.as_index()]
+                .apply(|read| accepted_set.contains(read.seq())),
+            ResolvedSourceNoAll::Name { segment_index, .. } => block.segments
+                [segment_index.as_index()]
+            .apply(|read| accepted_set.contains(read.name())),
             ResolvedSourceNoAll::Tag(tag_label) => {
                 let tag_values = block
                     .tags

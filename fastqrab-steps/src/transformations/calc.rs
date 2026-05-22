@@ -36,12 +36,12 @@ pub(crate) fn extract_numeric_tags<F>(
 ) where
     F: FnMut(&WrappedFastQRead) -> f64,
 {
-    let mut values = Vec::with_capacity(block.segments[segment.get_index()].len()); //7% speed up
+    let mut values = Vec::with_capacity(block.segments[segment.as_index()].len()); //7% speed up
     let f = |read: &mut WrappedFastQRead| {
         values.push(extractor(read));
     };
 
-    block.segments[segment.get_index()].apply(f);
+    block.segments[segment.as_index()].apply(f);
     block.tags.insert(label.clone(), TagColumn::Numeric(values));
 }
 

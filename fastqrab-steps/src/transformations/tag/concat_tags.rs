@@ -205,7 +205,9 @@ impl Step for ConcatTags {
                     output_tags.push(Some(Hits::new_multiple(combined_hits)));
                 }
             }
-            block.tags.insert(self.out_label.clone(), TagColumn::Location(output_tags));
+            block
+                .tags
+                .insert(self.out_label.clone(), TagColumn::Location(output_tags));
         } else {
             // Output is String (convert Location to sequence bytes)
             let mut output_tags: Vec<Option<BString>> = Vec::with_capacity(num_reads);
@@ -245,7 +247,9 @@ impl Step for ConcatTags {
                     output_tags.push(Some(result.into()));
                 }
             }
-            block.tags.insert(self.out_label.clone(), TagColumn::String(output_tags));
+            block
+                .tags
+                .insert(self.out_label.clone(), TagColumn::String(output_tags));
         }
 
         Ok((block, true))

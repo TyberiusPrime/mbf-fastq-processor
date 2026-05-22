@@ -45,7 +45,10 @@ impl ValidateSegment for TomlValue<MustAdapt<String, SegmentIndex>> {
                                 Some(offer_alternatives("", segment_order)),
                             )
                         } else {
-                            let segment_index = segment_order.iter().position(|x| x == str_segment);
+                            let segment_index = segment_order
+                                .iter()
+                                .position(|x| x == str_segment)
+                                .and_then(|idx| u16::try_from(idx).ok());
                             match segment_index {
                                 Some(idx) => TomlValue::new_ok(
                                     MustAdapt::PostVerify(SegmentIndex(idx)),
@@ -101,10 +104,15 @@ impl ValidateSegment for TomlValue<MustAdapt<String, SegmentIndexOrAll>> {
                                 self.span.clone(),
                             );
                         } else {
-                            let segment_index = segment_order.iter().position(|x| x == str_segment);
+                            let segment_index = segment_order
+                                .iter()
+                                .position(|x| x == str_segment)
+                                .and_then(|idx| u16::try_from(idx).ok());
                             *self = match segment_index {
                                 Some(idx) => TomlValue::new_ok(
-                                    MustAdapt::PostVerify(SegmentIndexOrAll::Indexed(idx)),
+                                    MustAdapt::PostVerify(SegmentIndexOrAll::Indexed(
+                                        SegmentIndex(idx),
+                                    )),
                                     span,
                                 ),
                                 None => TomlValue::new_validation_failed(
@@ -124,7 +132,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, SegmentIndexOrAll>> {
             } else if self.is_missing() {
                 if segment_order.len() == 1 {
                     *self = TomlValue::new_ok(
-                        MustAdapt::PostVerify(SegmentIndexOrAll::Indexed(0)),
+                        MustAdapt::PostVerify(SegmentIndexOrAll::Indexed(SegmentIndex::first())),
                         self.span.clone(),
                     );
                 } else {
@@ -256,6 +264,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceNoAll>> {
                                 .get_segment_order()
                                 .iter()
                                 .position(|x| x == trimmed)
+                                .and_then(|x| u16::try_from(x).ok())
                             {
                                 Ok(ResolvedSourceNoAll::Name {
                                     segment_index: SegmentIndex(segment_index),
@@ -277,6 +286,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceNoAll>> {
                             .get_segment_order()
                             .iter()
                             .position(|x| x == source)
+                            .and_then(|x| u16::try_from(x).ok())
                         {
                             Ok(ResolvedSourceNoAll::Segment(SegmentIndex(segment_index)))
                         } else {
@@ -347,7 +357,9 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceAll>> {
                             if trimmed.is_empty() {
                                 if segment_order.len() == 1 {
                                     Ok(ResolvedSourceAll::Name {
-                                        segment_index_or_all: SegmentIndexOrAll::Indexed(0),
+                                        segment_index_or_all: SegmentIndexOrAll::Indexed(
+                                            SegmentIndex::first(),
+                                        ),
                                         split_character: *input_options
                                             .read_comment_character
                                             .as_ref()
@@ -375,7 +387,9 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceAll>> {
                                 .position(|x| x == trimmed)
                             {
                                 Ok(ResolvedSourceAll::Name {
-                                    segment_index_or_all: SegmentIndexOrAll::Indexed(segment_index),
+                                    segment_index_or_all: SegmentIndexOrAll::Indexed(
+                                        SegmentIndex::new(segment_index),
+                                    ),
                                     split_character: *input_options
                                         .read_comment_character
                                         .as_ref()
@@ -398,7 +412,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceAll>> {
                             .position(|x| x == source)
                         {
                             Ok(ResolvedSourceAll::Segment(SegmentIndexOrAll::Indexed(
-                                segment_index,
+                                SegmentIndex::new(segment_index),
                             )))
                         } else {
                             Err(ValidationFailure::new(

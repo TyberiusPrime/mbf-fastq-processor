@@ -159,7 +159,9 @@ impl Step for AssignByHalves {
             TagColumn::Bool(_) | TagColumn::Numeric(_) => unreachable!(), // cov:excl-line
         }
 
-        block.tags.insert(self.out_label.clone(), TagColumn::String(output_strings));
+        block
+            .tags
+            .insert(self.out_label.clone(), TagColumn::String(output_strings));
         Ok((block, true))
     }
 }

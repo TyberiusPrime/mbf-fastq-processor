@@ -109,7 +109,9 @@ impl Step for WorstQuality {
                     values.push(q);
                 }
 
-                block.tags.insert(self.out_label.clone(), TagColumn::Numeric(values));
+                block
+                    .tags
+                    .insert(self.out_label.clone(), TagColumn::Numeric(values));
             }
             ResolvedSourceAll::Name { .. } => unreachable!(), // cov:excl-line
         }
