@@ -173,10 +173,10 @@ impl Step for StoreTagInComment {
                 for tag_label in tag_list {
                     let tag_col = block.tags.get(tag_label).expect("Tags were checked before");
                     let tag_value: Vec<u8> = match tag_col {
-                        TagColumn::Location(items) => match &items[read_idx] {
-                            Some(hits) => hits.joined_sequence(Some(&self.region_separator)),
-                            None => Vec::new(),
-                        },
+                        TagColumn::Location(col) => {
+                            let hits = col.get(read_idx);
+                            if hits.is_empty() { Vec::new() } else { col.joined_sequence(hits, Some(&self.region_separator)) }
+                        }
                         TagColumn::String(items) => match &items[read_idx] {
                             Some(value) => value.to_vec(),
                             None => Vec::new(),

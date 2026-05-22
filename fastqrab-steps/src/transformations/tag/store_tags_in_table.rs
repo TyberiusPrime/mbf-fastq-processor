@@ -256,10 +256,10 @@ impl Step for StoreTagsInTable {
                 for tag in &self.final_in_labels {
                     let col = block.tags.get(tag).expect("tag must exist in block.tags");
                     record.push(match col {
-                        TagColumn::Location(items) => match &items[ii] {
-                            Some(v) => v.joined_sequence(Some(&self.region_separator)),
-                            None => Vec::new(),
-                        },
+                        TagColumn::Location(col) => {
+                            let h = col.get(ii);
+                            if h.is_empty() { Vec::new() } else { col.joined_sequence(h, Some(&self.region_separator)) }
+                        }
                         TagColumn::String(items) => match &items[ii] {
                             Some(value) => value.to_vec(),
                             None => Vec::new(),

@@ -186,28 +186,37 @@ impl Step for ConcatTags {
 
         if all_location {
             // Output is Location
-            let mut output_tags: Vec<Option<Hits>> = Vec::with_capacity(num_reads);
+            use fastqrab_config::dna::LocationColumn;
+            let mut output_col = LocationColumn::new();
             for read_idx in 0..num_reads {
                 let mut any_missing = false;
-                let mut combined_hits: Vec<Hit> = Vec::new();
+                // Collect all (location, seq) pairs from each column for this read
+                let mut entries: Vec<(Option<fastqrab_config::dna::HitRegionView>, Vec<u8>)> = Vec::new();
                 for col in &tag_columns {
-                    let item = col.get_location(read_idx);
-                    match item {
-                        None => any_missing = true,
-                        Some(hits) => combined_hits.extend(hits.0.iter().cloned()),
+                    if let TagColumn::Location(loc_col) = col {
+                        let slot_hits = loc_col.get(read_idx);
+                        if slot_hits.is_empty() {
+                            any_missing = true;
+                        } else {
+                            for &h in slot_hits.iter() {
+                                let loc = loc_col.hit_location(h);
+                                let seq = loc_col.hit_bytes(h).to_vec();
+                                entries.push((loc, seq));
+                            }
+                        }
                     }
                 }
-                if any_missing && self.on_missing == OnMissing::SetMissing {
-                    output_tags.push(None);
-                } else if combined_hits.is_empty() {
-                    output_tags.push(None);
+                if (any_missing && self.on_missing == OnMissing::SetMissing) || entries.is_empty() {
+                    output_col.push_none();
                 } else {
-                    output_tags.push(Some(Hits::new_multiple(combined_hits)));
+                    let refs: Vec<(Option<fastqrab_config::dna::HitRegionView>, &[u8])> =
+                        entries.iter().map(|(loc, seq)| (loc.clone(), seq.as_slice())).collect();
+                    output_col.push_many(&refs);
                 }
             }
             block
                 .tags
-                .insert(self.out_label.clone(), TagColumn::Location(output_tags));
+                .insert(self.out_label.clone(), TagColumn::Location(output_col));
         } else {
             // Output is String (convert Location to sequence bytes)
             let mut output_tags: Vec<Option<BString>> = Vec::with_capacity(num_reads);
@@ -216,10 +225,14 @@ impl Step for ConcatTags {
                 let mut parts: Vec<Vec<u8>> = Vec::new();
                 for col in &tag_columns {
                     match col {
-                        TagColumn::Location(items) => match &items[read_idx] {
-                            None => any_missing = true,
-                            Some(hits) => parts.push(hits.joined_sequence(None)),
-                        },
+                        TagColumn::Location(loc_col) => {
+                            let slot_hits = loc_col.get(read_idx);
+                            if slot_hits.is_empty() {
+                                any_missing = true;
+                            } else {
+                                parts.push(loc_col.joined_sequence(slot_hits, None));
+                            }
+                        }
                         TagColumn::String(items) => match &items[read_idx] {
                             None => any_missing = true,
                             Some(s) => parts.push(s.to_vec()),

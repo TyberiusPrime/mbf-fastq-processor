@@ -543,17 +543,19 @@ where
             .get(fastqrab_tag_name.as_str())
             .expect("Tag was missing, config validation failure");
         let value_opt: Option<Value> = match tag_col {
-            TagColumn::Location(items) => items.get(read_index).and_then(|opt_hits| {
-                opt_hits.as_ref().map(|hits| {
+            TagColumn::Location(col) => {
+                let hits = col.get(read_index);
+                if hits.is_empty() {
+                    None
+                } else {
                     let joined = hits
-                        .0
                         .iter()
-                        .map(|h| h.sequence.as_ref())
+                        .map(|&h| col.hit_bytes(h))
                         .collect::<Vec<_>>()
                         .join(b",".as_ref());
-                    Value::String(BString::from(joined))
-                })
-            }),
+                    Some(Value::String(BString::from(joined)))
+                }
+            }
             TagColumn::String(items) => items
                 .get(read_index)
                 .and_then(|opt_s| opt_s.as_ref().map(|s| Value::String(s.clone()))),

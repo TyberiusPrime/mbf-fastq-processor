@@ -590,11 +590,14 @@ fn process_work_item(
                     .get(&TagLabel::Normal(tag_name.clone()))
                     .expect("Tag not present. Should have been caught in validation. Bug")
                 {
-                    TagColumn::Location(items) => items
+                    TagColumn::Location(col) => col
                         .iter()
-                        .map(|opt_hits| match opt_hits {
-                            None => 0usize,
-                            Some(hits) => hits.0.iter().map(|hit| hit.sequence.len()).sum(),
+                        .map(|hits| {
+                            if hits.is_empty() {
+                                0usize
+                            } else {
+                                hits.iter().map(|&h| h.seq_len as usize).sum()
+                            }
                         })
                         .map(|n| n as f64)
                         .collect(),
@@ -625,11 +628,14 @@ fn process_work_item(
                     .get(&TagLabel::Normal(source.clone()))
                     .expect("Tag not present. Should have been caught in validation. Bug")
                 {
-                    TagColumn::Location(items) => items
+                    TagColumn::Location(col) => col
                         .iter()
-                        .map(|opt_hits| match opt_hits {
-                            None => None,
-                            Some(hits) => Some(hits.location(&input_info.segment_order)),
+                        .map(|hits| {
+                            if hits.is_empty() {
+                                None
+                            } else {
+                                Some(col.location_str(hits, &input_info.segment_order))
+                            }
                         })
                         .collect(),
                     _ => unreachable!("Should have been caught in validation"), // cov:excl-line

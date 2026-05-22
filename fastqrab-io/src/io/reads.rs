@@ -7,8 +7,8 @@ use std::ops::Range;
 
 use fastqrab_config::{TagLabel, segments::SegmentIndexOrAll};
 use fastqrab_dna::dna::{
-    Anchor, HitRegion, Hits, TagColumn, find_iupac, find_iupac_with_indel, hamming,
-    reverse_complement_iupac,
+    Anchor, HAS_LOC, HitDraft, HitRegion, HitRegionView, Hits, LocationColumn, TagColumn,
+    find_iupac, find_iupac_with_indel, hamming, reverse_complement_iupac,
 };
 use fastqrab_dna::segments::SegmentIndex;
 
@@ -927,7 +927,7 @@ pub trait WrappedFastQReadCommon {
         max_mismatches: u8,
         target: SegmentIndex,
         max_anchor_distance: usize,
-    ) -> Option<Hits> {
+    ) -> Option<HitDraft> {
         let seq = self.seq();
         find_iupac(
             seq,
@@ -948,7 +948,7 @@ pub trait WrappedFastQReadCommon {
         max_indel_bases: usize,
         max_total_edits: Option<usize>,
         target: SegmentIndex,
-    ) -> Option<Hits> {
+    ) -> Option<HitDraft> {
         let seq = self.seq();
         find_iupac_with_indel(
             seq,
@@ -1434,18 +1434,25 @@ impl FastQBlocksCombined {
     /// when the tag is missing or not a Location column
     pub fn apply_mut_with_location_tag<F>(&mut self, label: &TagLabel, mut f: F)
     where
-        F: for<'a> FnMut(&mut [WrappedFastQReadMut<'a>], Option<&Hits>),
+        F: for<'a> FnMut(&mut [WrappedFastQReadMut<'a>], Option<&Hits>, &LocationColumn),
     {
-        let TagColumn::Location(tags) = self.tags.get(label).expect("Tag must be present, bug")
+        let TagColumn::Location(col) = self.tags.get(label).expect("Tag must be present, bug")
         else {
             panic!("Tag {label:?} is not a Location column");
         };
+        // Safety: col borrows self.tags (immut); reads borrow self.segments (mut).
+        // These are different fields of self.
+        let col_ptr: *const LocationColumn = col;
         for ii in 0..self.segments[0].entries.len() {
             let mut reads: Vec<WrappedFastQReadMut> = Vec::new();
             for v in &mut self.segments {
                 reads.push(WrappedFastQReadMut(&mut v.entries[ii], &mut v.block));
             }
-            f(&mut reads, tags[ii].as_ref());
+            // SAFETY: col_ptr points into self.tags which is not mutated here.
+            let col_ref: &LocationColumn = unsafe { &*col_ptr };
+            let hits = col_ref.get(ii);
+            let opt_hits = if hits.is_empty() { None } else { Some(hits) };
+            f(&mut reads, opt_hits, col_ref);
             reads.clear();
         }
     }
@@ -1672,52 +1679,72 @@ impl FastQBlocksCombined {
     pub fn filter_tag_locations(
         &mut self,
         segment: SegmentIndex,
-        f: impl Fn(&HitRegion, usize, &BString, usize) -> NewLocation,
+        f: impl Fn(HitRegionView, usize, &[u8], usize) -> NewLocation,
         condition: Option<&[bool]>,
     ) {
         let reads = &self.segments[segment.as_index()].entries;
 
         for values in self.tags.values_mut() {
-            if let TagColumn::Location(values) = values {
-                for (ii, tag_val) in values.iter_mut().enumerate() {
-                    // Skip if condition is present and false for this read
+            if let TagColumn::Location(col) = values {
+                for ii in 0..col.hits.len() {
                     if let Some(condition) = condition
                         && !condition[ii]
                     {
                         continue;
                     }
-
                     let read_length = reads[ii].seq.len();
-                    if let Some(hits) = tag_val {
-                        let mut any_none = false;
-                        for hit in &mut hits.0 {
-                            if let Some(location) = hit.location.as_mut()
-                                && location.segment_index == segment
-                            {
-                                let sequence = &hit.sequence;
-                                match f(location, ii, sequence, read_length) {
-                                    NewLocation::Remove => {
-                                        hit.location = None;
-                                        any_none = true;
-                                        break;
-                                    }
-                                    NewLocation::Keep => {}
-                                    NewLocation::New(new) => *location = new,
-                                    NewLocation::NewWithSeq(new_loc, new_seq) => {
-                                        *location = new_loc;
-                                        hit.sequence = new_seq;
-                                    }
+                    let slot_len = col.hits[ii].len();
+                    if slot_len == 0 {
+                        continue;
+                    }
+                    let mut any_removed = false;
+                    for jj in 0..slot_len {
+                        let hit = col.hits[ii][jj]; // Hit is Copy
+                        if (hit.flags & HAS_LOC) == 0 || hit.segment_index != segment.0 {
+                            continue;
+                        }
+                        let view = HitRegionView {
+                            start: hit.loc_start as usize,
+                            len: hit.loc_len as usize,
+                            segment_index: SegmentIndex(hit.segment_index),
+                        };
+                        let result = {
+                            let seq =
+                                &col.slab[hit.seq_start as usize..(hit.seq_start + hit.seq_len as u32) as usize];
+                            f(view, ii, seq, read_length)
+                        };
+                        match result {
+                            NewLocation::Remove => {
+                                col.hits[ii][jj].flags &= !HAS_LOC;
+                                any_removed = true;
+                            }
+                            NewLocation::Keep => {}
+                            NewLocation::New(new_view) => {
+                                col.hits[ii][jj].loc_start = new_view.start as u32;
+                                col.hits[ii][jj].loc_len = new_view.len as u16;
+                                col.hits[ii][jj].segment_index = new_view.segment_index.0;
+                            }
+                            NewLocation::NewWithSeq(new_view, new_bytes) => {
+                                let new_start = col.slab.len() as u32;
+                                col.slab.extend_from_slice(&new_bytes);
+                                col.hits[ii][jj].loc_start = new_view.start as u32;
+                                col.hits[ii][jj].loc_len = new_view.len as u16;
+                                col.hits[ii][jj].segment_index = new_view.segment_index.0;
+                                col.hits[ii][jj].seq_start = new_start;
+                                #[expect(
+                                    clippy::cast_possible_truncation,
+                                    reason = "seq len validated at push time"
+                                )]
+                                {
+                                    col.hits[ii][jj].seq_len = new_bytes.len() as u16;
                                 }
                             }
                         }
-                        // if any are no longer present, remove all location spans
-                        if any_none {
-                            for hit in &mut hits.0 {
-                                hit.location = None;
-                            }
+                    }
+                    if any_removed {
+                        for hit in col.hits[ii].iter_mut() {
+                            hit.flags &= !HAS_LOC;
                         }
-                    } else {
-                        // no hits, so no location to change
                     }
                 }
             }
@@ -1727,8 +1754,7 @@ impl FastQBlocksCombined {
     pub fn filter_tag_locations_beyond_read_length(&mut self, segment: SegmentIndex) {
         self.filter_tag_locations(
             segment,
-            |location: &HitRegion, _pos, _seq, read_len: usize| -> NewLocation {
-                //we are already cut to size.
+            |location: HitRegionView, _pos, _seq, read_len: usize| -> NewLocation {
                 if location.start + location.len > read_len {
                     NewLocation::Remove
                 } else {
@@ -1741,45 +1767,50 @@ impl FastQBlocksCombined {
 
     pub fn filter_tag_locations_all_targets(
         &mut self,
-        mut f: impl FnMut(&HitRegion, usize) -> NewLocation,
+        mut f: impl FnMut(HitRegionView, usize) -> NewLocation,
     ) {
-        //possibly we might need this to pass in all 4 reads.
-        //but for now, it's only being used by r1/r2 swap.
         for values in self.tags.values_mut() {
-            if let TagColumn::Location(values) = values {
-                for (ii, tag_val) in values.iter_mut().enumerate() {
-                    if let Some(hits) = tag_val {
-                        let mut any_none = false;
-                        for hit in &mut hits.0 {
-                            if let Some(location) = hit.location.as_mut() {
-                                match f(location, ii) {
-                                    NewLocation::Remove => {
-                                        hit.location = None;
-                                        any_none = true;
-                                        break;
-                                    }
-                                    NewLocation::Keep => {}
-                                    NewLocation::New(new) => *location = new,
-                                    // cov:excl-start
-                                    NewLocation::NewWithSeq(_new_loc, _new_seq) => {
-                                        unreachable!(
-                                            "Shouldn't return a new seq when you haven't seen the old.\
-                                            you need to change the callback fucntion to also see the seq!"
-                                        )
-                                        // *location = new_loc;
-                                        // hit.sequence = new_seq;
-                                    } // cov:excl-stop
-                                }
-                            }
+            if let TagColumn::Location(col) = values {
+                for ii in 0..col.hits.len() {
+                    let slot_len = col.hits[ii].len();
+                    if slot_len == 0 {
+                        continue;
+                    }
+                    let mut any_removed = false;
+                    for jj in 0..slot_len {
+                        let hit = col.hits[ii][jj]; // Copy
+                        if (hit.flags & HAS_LOC) == 0 {
+                            continue;
                         }
-                        // if any are no longer present, remove all location spans
-                        if any_none {
-                            for hit in &mut hits.0 {
-                                hit.location = None;
+                        let view = HitRegionView {
+                            start: hit.loc_start as usize,
+                            len: hit.loc_len as usize,
+                            segment_index: SegmentIndex(hit.segment_index),
+                        };
+                        match f(view, ii) {
+                            NewLocation::Remove => {
+                                col.hits[ii][jj].flags &= !HAS_LOC;
+                                any_removed = true;
+                                break;
                             }
+                            NewLocation::Keep => {}
+                            NewLocation::New(new_view) => {
+                                col.hits[ii][jj].loc_start = new_view.start as u32;
+                                col.hits[ii][jj].loc_len = new_view.len as u16;
+                                col.hits[ii][jj].segment_index = new_view.segment_index.0;
+                            }
+                            // cov:excl-start
+                            NewLocation::NewWithSeq(_new_loc, _new_seq) => {
+                                unreachable!(
+                                    "Shouldn't return a new seq when you haven't seen the old."
+                                )
+                            } // cov:excl-stop
                         }
-                    } else {
-                        // no hits, so no location to change
+                    }
+                    if any_removed {
+                        for hit in col.hits[ii].iter_mut() {
+                            hit.flags &= !HAS_LOC;
+                        }
                     }
                 }
             }
@@ -1800,10 +1831,14 @@ impl CombinedFastQBlock<'_> {
     #[must_use]
     pub fn hit_to_qualities(&self, hits: &Hits) -> Option<BString> {
         let mut res = BString::new(Vec::new());
-        for hit in &hits.0 {
-            let location = hit.location.as_ref()?;
-            let seqment_quality = self.segments[location.segment_index.as_index()].qual();
-            res.push_str(&seqment_quality[location.start..location.start + location.len]);
+        for &hit in hits.iter() {
+            if (hit.flags & HAS_LOC) == 0 {
+                return None;
+            }
+            let segment_quality = self.segments[hit.segment_index as usize].qual();
+            let start = hit.loc_start as usize;
+            let end = (hit.loc_start + hit.loc_len as u32) as usize;
+            res.push_str(&segment_quality[start..end]);
         }
         Some(res)
     }

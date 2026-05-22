@@ -1,6 +1,6 @@
 use super::extract_region_tags;
 use crate::transformations::prelude::*;
-use fastqrab_config::{dna::Hits, tpd_adapt_extract_base_or_dot};
+use fastqrab_config::tpd_adapt_extract_base_or_dot;
 
 /// Find the longest polyX
 ///
@@ -347,12 +347,14 @@ impl Step for LongestPolyX {
                 max_consecutive_mismatches,
             )
             .map(|(start, len)| {
-                Hits::new(
-                    start,
-                    len,
-                    segment_index,
-                    seq[start..start + len].to_vec().into(),
-                )
+                HitDraft {
+                    location: Some(HitRegionView {
+                        start,
+                        len,
+                        segment_index,
+                    }),
+                    sequence: seq[start..start + len].to_vec(),
+                }
             })
         });
         Ok((block, true))

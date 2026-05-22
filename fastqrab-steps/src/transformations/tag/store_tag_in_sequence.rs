@@ -106,30 +106,30 @@ impl Step for StoreTagInSequence {
             let n = position_items.len();
             let mut out = Vec::with_capacity(n);
             for ii in 0..n {
-                let position = match &position_items[ii] {
-                    None => {
-                        out.push(None);
-                        continue;
-                    }
-                    Some(hits) => match self.anchor {
-                        ReplacementAnchor::Start => hits
-                            .0
+                let pos_hits = position_items.get(ii);
+                let position = if pos_hits.is_empty() {
+                    out.push(None);
+                    continue;
+                } else {
+                    match self.anchor {
+                        ReplacementAnchor::Start => pos_hits
                             .iter()
-                            .filter_map(|h| h.location.as_ref())
+                            .filter_map(|&h| position_items.hit_location(h))
                             .min_by_key(|loc| loc.start)
                             .map(|loc| (loc.start, loc.start, loc.segment_index)),
-                        ReplacementAnchor::End => hits
-                            .0
+                        ReplacementAnchor::End => pos_hits
                             .iter()
-                            .filter_map(|h| h.location.as_ref())
+                            .filter_map(|&h| position_items.hit_location(h))
                             .max_by_key(|loc| loc.start + loc.len)
                             .map(|loc| {
                                 let end = loc.start + loc.len;
                                 (end, end, loc.segment_index)
                             }),
                         ReplacementAnchor::Replace => {
-                            let locs: Vec<_> =
-                                hits.0.iter().filter_map(|h| h.location.as_ref()).collect();
+                            let locs: Vec<_> = pos_hits
+                                .iter()
+                                .filter_map(|&h| position_items.hit_location(h))
+                                .collect();
                             if locs.len() > 1 {
                                 anyhow::bail!(
                                     "Error processing StoreTagInSequence: Found a multi region location, StoreTagInSequence only works with single-region location"
@@ -138,20 +138,21 @@ impl Step for StoreTagInSequence {
                             locs.first()
                                 .map(|loc| (loc.start, loc.start + loc.len, loc.segment_index))
                         }
-                    },
+                    }
                 };
                 let Some((pos_left, pos_right, seg_idx)) = position else {
                     out.push(None);
                     continue;
                 };
                 let insert_bytes: Vec<u8> = match value_col {
-                    TagColumn::Location(items) => match &items[ii] {
-                        Some(hits) => hits.joined_sequence(None),
-                        None => {
+                    TagColumn::Location(col) => {
+                        let h = col.get(ii);
+                        if h.is_empty() {
                             out.push(None);
                             continue;
                         }
-                    },
+                        col.joined_sequence(h, None)
+                    }
                     TagColumn::String(items) => match &items[ii] {
                         Some(s) => s.to_vec(),
                         None => {
@@ -213,7 +214,7 @@ impl Step for StoreTagInSequence {
             let segment_index = SegmentIndex::new(seg_idx);
             block.filter_tag_locations(
                 segment_index,
-                |location: &HitRegion, read_pos: usize, _seq: &BString, _read_len: usize| {
+                |location: HitRegion, read_pos: usize, _seq: &[u8], _read_len: usize| {
                     match &insert_infos[read_pos] {
                         Some(info) if info.segment_idx.as_index() == seg_idx => {
                             if location.start >= info.insert_pos_right {

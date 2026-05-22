@@ -99,17 +99,19 @@ impl Step for FillMissing {
         })?;
 
         let output_col = match (primary_vec, secondary_vec) {
-            (TagColumn::Location(prim), TagColumn::Location(sec)) => TagColumn::Location(
-                (0..num_reads)
-                    .map(|i| {
-                        if prim[i].is_some() {
-                            prim[i].clone()
-                        } else {
-                            sec[i].clone()
-                        }
-                    })
-                    .collect(),
-            ),
+            (TagColumn::Location(prim), TagColumn::Location(sec)) => {
+                use fastqrab_config::dna::LocationColumn;
+                let mut out = LocationColumn::new();
+                for i in 0..num_reads {
+                    let prim_hits = prim.get(i);
+                    if !prim_hits.is_empty() {
+                        out.push_from(prim, i);
+                    } else {
+                        out.push_from(sec, i);
+                    }
+                }
+                TagColumn::Location(out)
+            }
             (TagColumn::String(prim), TagColumn::String(sec)) => TagColumn::String(
                 (0..num_reads)
                     .map(|i| {
@@ -124,8 +126,9 @@ impl Step for FillMissing {
             (TagColumn::Location(prim), TagColumn::String(sec)) => TagColumn::String(
                 (0..num_reads)
                     .map(|i| {
-                        if let Some(hits) = &prim[i] {
-                            Some(hits.joined_sequence(None).into())
+                        let hits = prim.get(i);
+                        if !hits.is_empty() {
+                            Some(prim.joined_sequence(hits, None).into())
                         } else {
                             sec[i].clone()
                         }
@@ -138,9 +141,12 @@ impl Step for FillMissing {
                         if let Some(s) = &prim[i] {
                             Some(s.clone())
                         } else {
-                            sec[i]
-                                .as_ref()
-                                .map(|hits| hits.joined_sequence(None).into())
+                            let hits = sec.get(i);
+                            if hits.is_empty() {
+                                None
+                            } else {
+                                Some(sec.joined_sequence(hits, None).into())
+                            }
                         }
                     })
                     .collect(),

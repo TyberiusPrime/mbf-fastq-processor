@@ -124,8 +124,7 @@ impl Step for IUPAC {
                             )
                         })
                         .min_by_key(|hit| {
-                            hit.0[0]
-                                .location
+                            hit.location
                                 .as_ref()
                                 .map(|x| x.start)
                                 .expect("Found iupac should have had location set")
@@ -145,8 +144,7 @@ impl Step for IUPAC {
                             )
                         })
                         .max_by_key(|hit| {
-                            hit.0[0]
-                                .location
+                            hit.location
                                 .as_ref()
                                 .map(|x| x.start)
                                 .expect("Found iupac should have had location set")

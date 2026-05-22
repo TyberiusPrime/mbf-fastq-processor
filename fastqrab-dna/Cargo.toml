@@ -21,6 +21,7 @@ exclude.workspace = true
     indexmap = {workspace = true}
 	schemars = {workspace = true}
 	toml-pretty-deser = {workspace = true}
+	smallvec = {workspace = true}
 	triple_accel = {workspace = true}
 
 [lints]

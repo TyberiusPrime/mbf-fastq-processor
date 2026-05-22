@@ -132,7 +132,7 @@ impl Step for Swap {
             block.segments.swap(index_a as usize, index_b as usize);
 
             block.filter_tag_locations_all_targets(
-                |location: &HitRegion, _pos: usize| -> NewLocation {
+                |location: HitRegion, _pos: usize| -> NewLocation {
                     NewLocation::New(HitRegion {
                         start: location.start,
                         len: location.len,
@@ -195,7 +195,7 @@ impl Step for Swap {
         //one. Makes mutation testing happy.
 
         // Update tag locations for all reads where swap occurred
-        block.filter_tag_locations_all_targets(|location: &HitRegion, pos: usize| -> NewLocation {
+        block.filter_tag_locations_all_targets(|location: HitRegion, pos: usize| -> NewLocation {
             // Check if this read position was swapped
             // If we did a block swap, the logic is inverted
             let was_swapped = if did_block_swap {

@@ -1,6 +1,6 @@
 use super::extract_region_tags;
 use crate::transformations::prelude::*;
-use fastqrab_config::{dna::Hits, tpd_adapt_u8_from_byte_or_char};
+use fastqrab_config::tpd_adapt_u8_from_byte_or_char;
 
 /// Turn low quality end's of reads into a tag
 #[derive(Clone, JsonSchema)]
@@ -66,12 +66,14 @@ impl Step for LowQualityEnd {
                 }
             }
             if cut_pos < qual.len() {
-                Some(Hits::new(
-                    cut_pos,
-                    qual.len() - cut_pos,
-                    self.segment,
-                    read.seq()[cut_pos..].to_vec().into(),
-                ))
+                Some(HitDraft {
+                    location: Some(HitRegionView {
+                        start: cut_pos,
+                        len: qual.len() - cut_pos,
+                        segment_index: self.segment,
+                    }),
+                    sequence: read.seq()[cut_pos..].to_vec(),
+                })
             } else {
                 None
             }

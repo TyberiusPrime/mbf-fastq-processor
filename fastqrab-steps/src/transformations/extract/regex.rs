@@ -5,7 +5,7 @@ use super::extract_region_tags_using_tags;
 use super::extract_string_tags_using_tags;
 use crate::transformations::prelude::*;
 use bstr::ByteSlice;
-use fastqrab_config::{dna::Hits, tpd_adapt_bstring, tpd_adapt_regex};
+use fastqrab_config::{tpd_adapt_bstring, tpd_adapt_regex};
 
 fn regex_replace_with_self() -> BString {
     BString::from("$0")
@@ -237,12 +237,14 @@ impl Step for Regex {
                                 replacement = replacement.replace(query, value.as_bytes());
                                 //dbg!(bstr::BStr::new(&replacement));
                             }
-                            Some(Hits::new(
-                                g.start(),
-                                g.end() - g.start(),
-                                *segment_index,
-                                replacement.into(),
-                            ))
+                            Some(HitDraft {
+                                location: Some(HitRegionView {
+                                    start: g.start(),
+                                    len: g.end() - g.start(),
+                                    segment_index: *segment_index,
+                                }),
+                                sequence: replacement,
+                            })
                         } else {
                             None
                         }

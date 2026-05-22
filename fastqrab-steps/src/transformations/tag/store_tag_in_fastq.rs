@@ -224,21 +224,15 @@ impl Step for StoreTagInFastQ {
         let n_reads = in_tag_col.len();
         'outer: for ii in 0..n_reads {
             //presence & tag = location checked before hand.
-            if let Some(opt_hits) = in_tag_col.as_locations()
-                && let Some(hits) = &opt_hits[ii]
-            {
-                let seq = hits.0.iter().fold(Vec::new(), |mut acc, hit| {
-                    if !acc.is_empty() {
-                        acc.extend_from_slice(&self.region_separator);
-                    }
-                    acc.extend_from_slice(&hit.sequence);
-                    acc
-                });
+            if let Some(col) = in_tag_col.as_locations() {
+                let slot_hits = col.get(ii);
+                if !slot_hits.is_empty() {
+                let seq = col.joined_sequence(slot_hits, Some(&self.region_separator));
                 if !seq.is_empty() {
                     let qual = vec![b'~'; seq.len()]; // Dummy quality scores
-                    let segment_block = &block.segments[hits.0[0]
-                        .location
-                        .as_ref()
+                    let first_hit = slot_hits[0];
+                    let segment_block = &block.segments[col
+                        .hit_location(first_hit)
                         .expect("location must be set for tag")
                         .segment_index
                         .as_index()];
@@ -260,12 +254,10 @@ impl Step for StoreTagInFastQ {
                             for tag in comment_tags {
                                 let tag_col = block.tags.get(tag).expect("tag must exist in block");
                                 let tag_bytes: Vec<u8> = match tag_col {
-                                    TagColumn::Location(items) => match &items[ii] {
-                                        Some(hits) => {
-                                            hits.joined_sequence(Some(&self.region_separator))
-                                        }
-                                        None => Vec::new(),
-                                    },
+                                    TagColumn::Location(loc_col) => {
+                                        let h = loc_col.get(ii);
+                                        if h.is_empty() { Vec::new() } else { loc_col.joined_sequence(h, Some(&self.region_separator)) }
+                                    }
                                     TagColumn::String(items) => match &items[ii] {
                                         Some(value) => value.to_vec(),
                                         None => Vec::new(),
@@ -326,7 +318,8 @@ impl Step for StoreTagInFastQ {
                         writer.write_text_record(&buf)?;
                     }
                 } // cov:excl-line
-            }
+                } // !slot_hits.is_empty()
+            } // as_locations
         }
         if let Some(error_msg) = error_encountered {
             return Err(anyhow::anyhow!("{error_msg}"));

@@ -92,10 +92,12 @@ impl Step for WorstQuality {
                 let mut values = Vec::with_capacity(location_items.len());
                 let mut iter = block.get_pseudo_iter();
 
-                for opt_hits in location_items {
+                for hits in location_items.iter() {
                     let molecule = iter.pseudo_next().expect("tag and read count should match");
-                    let q = match opt_hits {
-                        Some(hits) => match molecule.hit_to_qualities(hits) {
+                    let q = if hits.is_empty() {
+                        missing_value
+                    } else {
+                        match molecule.hit_to_qualities(hits) {
                             Some(qual_bytes) if !qual_bytes.is_empty() => qual_bytes
                                 .iter()
                                 .map(|x| Into::<i16>::into(*x) + self.offset as i16)
@@ -103,8 +105,7 @@ impl Step for WorstQuality {
                                 .unwrap_or(33 + self.offset as i16)
                                 as f64,
                             _ => missing_value,
-                        },
-                        None => missing_value,
+                        }
                     };
                     values.push(q);
                 }

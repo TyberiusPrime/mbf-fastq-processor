@@ -123,24 +123,26 @@ impl Step for QuantifyTag {
             .tags
             .get(&self.in_label)
             .expect("Tag not found. Should have been caught in validation");
-        if let Some(demultiplex_tags) = &block.output_tags {
-            for (opt_hit, demultiplex_tag) in hits.iter_locations().zip(demultiplex_tags) {
-                if let Some(hit) = opt_hit
-                    && let Some(inner) = collector.get_mut(demultiplex_tag)
-                {
-                    *inner
-                        .entry(hit.joined_sequence(Some(&self.region_separator)))
-                        .or_insert(0) += 1;
+        if let Some(col) = hits.as_locations() {
+            if let Some(demultiplex_tags) = &block.output_tags {
+                for (slot_hits, demultiplex_tag) in col.iter().zip(demultiplex_tags) {
+                    if !slot_hits.is_empty()
+                        && let Some(inner) = collector.get_mut(demultiplex_tag)
+                    {
+                        *inner
+                            .entry(col.joined_sequence(slot_hits, Some(&self.region_separator)))
+                            .or_insert(0) += 1;
+                    }
                 }
-            }
-        } else {
-            for opt_hit in hits.iter_locations() {
-                if let Some(hit) = opt_hit
-                    && let Some(inner) = collector.get_mut(&0)
-                {
-                    *inner
-                        .entry(hit.joined_sequence(Some(&self.region_separator)))
-                        .or_insert(0) += 1;
+            } else {
+                for slot_hits in col.iter() {
+                    if !slot_hits.is_empty()
+                        && let Some(inner) = collector.get_mut(&0)
+                    {
+                        *inner
+                            .entry(col.joined_sequence(slot_hits, Some(&self.region_separator)))
+                            .or_insert(0) += 1;
+                    }
                 }
             }
         }

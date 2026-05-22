@@ -4,7 +4,6 @@ use toml_pretty_deser::Visitor;
 
 use super::super::{PartialRegionDefinition, RegionDefinition, extract_regions};
 use crate::transformations::prelude::*;
-use fastqrab_dna::dna::Hits;
 
 /// Extract regions by coordinates
 /// that is by (segment|source, 0-based start, length)
@@ -184,41 +183,45 @@ impl Step for Regions {
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         if matches!(self.output_tag_type, TagValueType::Location) {
-            let mut out = Vec::with_capacity(block.segments[0].len());
+            let mut col = LocationColumn::new();
             for ii in 0..block.len() {
                 let extracted = extract_regions(ii, &block, &self.regions);
                 if extracted.iter().any(Option::is_none) {
                     //if any region could not be extracted, we store Missing
-                    out.push(None);
+                    col.push_none();
                     continue;
                 }
                 //all segments -> Location.
-                if matches!(self.output_tag_type, TagValueType::Location) {
-                    let mut h: Vec<Hit> = Vec::new();
-                    for (seq, opt_coords) in extracted.into_iter().flatten() {
-                        // eats Nones.
-                        if let Some(coords) = opt_coords {
-                            h.push(Hit {
-                                location: Some(HitRegion {
-                                    segment_index: coords.segment_index,
-                                    start: coords.start,
-                                    len: coords.length,
-                                }),
-                                sequence: seq,
-                            });
-                        } else if !seq.is_empty() {
-                            //mutants false positive
-                            // cov:excl-start
-                            unreachable!();
-                            // cov:excl-stop
-                        } // cov:excl-line
-                    }
-                    out.push(Some(Hits::new_multiple(h)));
+                let mut entries: Vec<(Option<HitRegionView>, Vec<u8>)> = Vec::new();
+                for (seq, opt_coords) in extracted.into_iter().flatten() {
+                    // eats Nones.
+                    if let Some(coords) = opt_coords {
+                        entries.push((
+                            Some(HitRegionView {
+                                segment_index: coords.segment_index,
+                                start: coords.start,
+                                len: coords.length,
+                            }),
+                            seq.to_vec(),
+                        ));
+                    } else if !seq.is_empty() {
+                        //mutants false positive
+                        // cov:excl-start
+                        unreachable!();
+                        // cov:excl-stop
+                    } // cov:excl-line
+                }
+                if entries.is_empty() {
+                    col.push_none();
+                } else {
+                    let refs: Vec<(Option<HitRegionView>, &[u8])> =
+                        entries.iter().map(|(loc, seq)| (loc.clone(), seq.as_slice())).collect::<Vec<_>>();
+                    col.push_many(&refs);
                 }
             }
             block
                 .tags
-                .insert(self.out_label.clone(), TagColumn::Location(out));
+                .insert(self.out_label.clone(), TagColumn::Location(col));
         } else {
             let mut out = Vec::with_capacity(block.segments[0].len());
             for ii in 0..block.len() {

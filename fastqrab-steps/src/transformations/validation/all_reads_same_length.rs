@@ -95,10 +95,10 @@ impl Step for ValidateAllReadsSameLength {
                     .get(name)
                     .expect("Tag not set?! should have been caught earlier. bug");
                 match col {
-                    TagColumn::Location(items) => {
-                        for opt_hits in items {
-                            if let Some(hits) = opt_hits {
-                                self.check(hits.covered_len())?;
+                    TagColumn::Location(col) => {
+                        for hits in col.iter() {
+                            if !hits.is_empty() {
+                                self.check(col.covered_len(hits))?;
                             }
                         }
                     }

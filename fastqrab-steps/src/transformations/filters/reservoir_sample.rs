@@ -118,7 +118,7 @@ impl Step for ReservoirSample {
                         .entry(label.clone())
                         .or_insert_with(|| values.new_empty())
                     {
-                        TagColumn::Location(items) => items.push(values.get_location(pos).clone()),
+                        TagColumn::Location(items) => items.push_from(values.as_locations().expect("matched Location"), pos),
                         TagColumn::String(items) => items.push(values.get_string(pos).clone()),
                         TagColumn::Numeric(items) => items.push(values.get_numeric(pos)),
                         TagColumn::Bool(items) => items.push(values.get_bool(pos)),
@@ -135,7 +135,7 @@ impl Step for ReservoirSample {
                         if let Some(tag_buf) = buf.tags.get_mut(label) {
                             match tag_buf {
                                 TagColumn::Location(items) => {
-                                    items[j - 1] = values.get_location(pos).clone()
+                                    items.set_slot_from(values.as_locations().expect("matched Location"), j - 1, pos)
                                 }
                                 TagColumn::String(items) => {
                                     items[j - 1] = values.get_string(pos).clone()

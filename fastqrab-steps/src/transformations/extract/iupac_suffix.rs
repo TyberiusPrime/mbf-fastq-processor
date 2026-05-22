@@ -117,12 +117,14 @@ impl Step for IUPACSuffix {
                 self.min_length,
             )
             .map(|suffix_len| {
-                Hits::new(
-                    seq.len() - suffix_len,
-                    suffix_len,
-                    self.segment,
-                    seq[seq.len() - suffix_len..].to_vec().into(),
-                )
+                HitDraft {
+                    location: Some(HitRegionView {
+                        start: seq.len() - suffix_len,
+                        len: suffix_len,
+                        segment_index: self.segment,
+                    }),
+                    sequence: seq[seq.len() - suffix_len..].to_vec(),
+                }
             })
         });
         Ok((block, true))

@@ -112,16 +112,16 @@ impl Step for _ChangeCase {
             ResolvedSourceAll::Tag(tag_name) => {
                 if let Some(hits) = block.tags.get_mut(tag_name) {
                     match hits {
-                        TagColumn::Location(opt_locations) => {
-                            for opt_loc in opt_locations.iter_mut() {
-                                if let Some(loc) = opt_loc {
-                                    for hit_region in &mut loc.0 {
-                                        for ii in 0..hit_region.sequence.len() {
-                                            hit_region.sequence[ii] =
-                                                case_converter(hit_region.sequence[ii]);
-                                        }
+                        TagColumn::Location(col) => {
+                            for slot_idx in 0..col.hits.len() {
+                                let nhits = col.hits[slot_idx].len();
+                                for hit_idx in 0..nhits {
+                                    let hit = col.hits[slot_idx][hit_idx];
+                                    let bytes = col.hit_bytes_mut(hit);
+                                    for b in bytes.iter_mut() {
+                                        *b = case_converter(*b);
                                     }
-                                };
+                                }
                             }
                         }
                         TagColumn::String(opt_bstrings) => {

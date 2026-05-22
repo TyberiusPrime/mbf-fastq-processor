@@ -21,24 +21,8 @@ Per single-hit slot: `Option<Hits>` 24 B (niche-opt) + `Vec<Hit>` heap 24+ B + `
 
 ### `SegmentIndex` shrinks to `u8`
 
-```rust
-// fastqrab-dna/src/segments.rs
-pub struct SegmentIndex(pub u8);
-pub const MAX_SEGMENTS: usize = u8::MAX as usize;   // 255
+(already done)
 
-impl SegmentIndex {
-    pub fn get_index(&self) -> usize { self.0 as usize }
-    pub fn first() -> SegmentIndex { SegmentIndex(0) }
-}
-
-impl TryFrom<usize> for SegmentIndex {
-    type Error = anyhow::Error;
-    fn try_from(v: usize) -> Result<Self> {
-        if v >= MAX_SEGMENTS { bail!("segment index {v} exceeds MAX_SEGMENTS={MAX_SEGMENTS}"); }
-        Ok(SegmentIndex(v as u8))
-    }
-}
-```
 
 ### New `Hit` (16 B, `Copy`)
 
@@ -139,7 +123,7 @@ pub enum TagColumn {
 ```
 
 Reimplement every method on `TagColumn` (current `dna.rs:42-236`) as thin delegates:
-- `new_empty`, `resize_with`, `len`, `is_empty`, `retain`, `drain`, `extend` → delegate.
+- `new_empty`, `resize_with`, `len`, `is_empty`, `retain`, `drain`, `extend` → delegate (only if already present!).
 - `into_locations` → `Option<LocationColumn>` (was `Vec<Option<Hits>>`). Callers update.
 - `as_locations` → `Option<&LocationColumn>`.
 - `iter_locations` → returns `&LocationColumn` (callers can both iterate `.iter()` and resolve bytes).
@@ -153,15 +137,10 @@ Each step ships green before moving on.
 
 ### Step 1 — `SegmentIndex` → `u8`
 
-1. Update `fastqrab-dna/src/segments.rs` per "Target design".
-2. Add `TryFrom<usize>`; keep `get_index() -> usize` signature.
-3. `fastqrab-steps/src/config/segments.rs` lines 51, 71, 107, 127, 241, 261, 281, 350, 366, 378, 400: replace `SegmentIndex(idx)` with `SegmentIndex::try_from(idx)?` and surface a TOML validation error.
-4. Non-config `SegmentIndex(n)` sites (already-validated indices): cast `n as u8` with `debug_assert!(n < MAX_SEGMENTS)`. Locations to search: `fastqrab-steps/src/transformations/**`, `fastqrab-dna/src/dna.rs` (test module).
-5. `cargo check --workspace`; fix compile errors; `cargo test`.
+Solved.
 
 ### Step 2 — New types in `fastqrab-dna`
 
-1. Add `smallvec = "1"` to `fastqrab-dna/Cargo.toml`.
 2. In `fastqrab-dna/src/dna.rs`:
    - Delete old `HitRegion`, `Hit`, `Hits`.
    - Add new `Hit`, `HAS_LOC`, `HitRegionView`, `type Hits = SmallVec<[Hit; 1]>`.

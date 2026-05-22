@@ -466,47 +466,38 @@ fn extract_from_resolved_source(
                     .expect("Validation should have verified tag presence")
                 {
                     TagColumn::Location(locations) => {
-                        let hits = locations
-                            .get(read_no)
-                            .expect("Tag vec length must match block length");
-                        if let Some(hits) = hits {
-                            // For location tags, extract from the read sequence!
-                            if let Some(hit) = hits.0.first() {
-                                if let Some(loc) = &hit.location {
-                                    let segment_block =
-                                        &block.segments[loc.segment_index.as_index()];
-                                    let seq = segment_block.entries[read_no]
-                                        .seq
-                                        .get(&segment_block.block);
-                                    if let Some((seq, start, length)) = extract_from_sequence(
-                                        seq,
-                                        loc.start,
-                                        loc.start + loc.len,
-                                        start,
-                                        length,
-                                        anchor,
-                                    ) {
-                                        let segment_index =
-                                            hit.location.as_ref().map(|loc| loc.segment_index);
-                                        (
-                                            Some(seq),
-                                            segment_index.map(|segment_index| Coords {
-                                                segment_index,
-                                                start,
-                                                length,
-                                            }),
-                                        )
-                                    } else {
-                                        (None, None)
-                                    }
+                        let hits = locations.get(read_no);
+                        if !hits.is_empty() {
+                            let hit = hits[0];
+                            let loc_opt = locations.hit_location(hit);
+                            if let Some(loc) = loc_opt {
+                                let segment_block =
+                                    &block.segments[loc.segment_index.as_index()];
+                                let seq = segment_block.entries[read_no]
+                                    .seq
+                                    .get(&segment_block.block);
+                                if let Some((seq, start, length)) = extract_from_sequence(
+                                    seq,
+                                    loc.start,
+                                    loc.start + loc.len,
+                                    start,
+                                    length,
+                                    anchor,
+                                ) {
+                                    let segment_index = Some(loc.segment_index);
+                                    (
+                                        Some(seq),
+                                        segment_index.map(|segment_index| Coords {
+                                            segment_index,
+                                            start,
+                                            length,
+                                        }),
+                                    )
                                 } else {
                                     (None, None)
                                 }
                             } else {
-                                // cov:excl-start
-                                unreachable!(
-                                    "Something has started to produce empty hits. Fix it or decide what to do"
-                                );
+                                (None, None)
                             }
                         } else {
                             (None, None)

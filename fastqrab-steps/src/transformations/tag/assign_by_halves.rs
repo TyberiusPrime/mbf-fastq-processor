@@ -134,13 +134,14 @@ impl Step for AssignByHalves {
         let mut output_strings: Vec<Option<BString>> = Vec::with_capacity(input_tags.len());
 
         match input_tags {
-            TagColumn::Location(items) => {
-                for item in items {
-                    let hit = match item {
-                        None => None,
-                        Some(hits) => engine
-                            .query(BStr::new(&hits.joined_sequence(None)))
-                            .map_err(|e| anyhow::anyhow!("AssignToProbe query failed: {e}"))?,
+            TagColumn::Location(col) => {
+                for slot_hits in col.iter() {
+                    let hit = if slot_hits.is_empty() {
+                        None
+                    } else {
+                        engine
+                            .query(BStr::new(&col.joined_sequence(slot_hits, None)))
+                            .map_err(|e| anyhow::anyhow!("AssignToProbe query failed: {e}"))?
                     };
                     output_strings.push(hit.map(|name| name.as_bytes().into()));
                 }

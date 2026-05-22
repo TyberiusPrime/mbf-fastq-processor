@@ -77,7 +77,7 @@ impl Step for CutStart {
 
         block.filter_tag_locations(
             self.segment,
-            |location: &HitRegion, _pos, _seq, _read_len: usize| -> NewLocation {
+            |location: HitRegion, _pos, _seq, _read_len: usize| -> NewLocation {
                 if location.start < self.n {
                     NewLocation::Remove
                 } else {

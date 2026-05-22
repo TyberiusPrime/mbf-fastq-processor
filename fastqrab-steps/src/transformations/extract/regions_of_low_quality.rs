@@ -1,9 +1,5 @@
-use super::extract_region_tags;
 use crate::transformations::prelude::*;
-use fastqrab_config::{
-    dna::{Hit, HitRegion, Hits},
-    tpd_adapt_u8_from_byte_or_char,
-};
+use fastqrab_config::tpd_adapt_u8_from_byte_or_char;
 
 /// Extract regions of low quality (configurable)
 #[derive(Clone, JsonSchema)]
@@ -69,57 +65,54 @@ impl Step for RegionsOfLowQuality {
         _input_info: &InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        extract_region_tags(&mut block, self.segment, &self.out_label, |read| {
+        let mut col = LocationColumn::new();
+        let segment = self.segment;
+        let min_quality = self.min_quality;
+        let min_length = self.min_length;
+        let f = |read: &mut fastqrab_io::io::WrappedFastQRead| {
             let quality_scores = read.qual();
-            let mut regions = Vec::new();
+            let mut entries: Vec<(Option<HitRegionView>, Vec<u8>)> = Vec::new();
             let mut in_low_quality_region = false;
             let mut region_start = 0;
 
             for (pos, &qual) in quality_scores.iter().enumerate() {
-                let is_low_quality = qual < self.min_quality;
+                let is_low_quality = qual < min_quality;
 
                 if is_low_quality && !in_low_quality_region {
-                    // Start of a new low quality region
                     in_low_quality_region = true;
                     region_start = pos;
                 } else if !is_low_quality && in_low_quality_region {
-                    // End of low quality region
                     in_low_quality_region = false;
                     let region_len = pos - region_start;
-                    if region_len >= self.min_length {
-                        regions.push(Hit {
-                            location: Some(HitRegion {
-                                segment_index: self.segment,
-                                start: region_start,
-                                len: region_len,
-                            }),
-                            sequence: read.seq()[region_start..pos].into(),
-                        });
+                    if region_len >= min_length {
+                        entries.push((
+                            Some(HitRegionView { segment_index: segment, start: region_start, len: region_len }),
+                            read.seq()[region_start..pos].to_vec(),
+                        ));
                     }
                 }
             }
 
-            // Handle case where sequence ends with low quality region
             if in_low_quality_region {
                 let region_len = quality_scores.len() - region_start;
-                if region_len >= self.min_length {
-                    regions.push(Hit {
-                        location: Some(HitRegion {
-                            segment_index: self.segment,
-                            start: region_start,
-                            len: region_len,
-                        }),
-                        sequence: read.seq()[region_start..].into(),
-                    });
+                if region_len >= min_length {
+                    entries.push((
+                        Some(HitRegionView { segment_index: segment, start: region_start, len: region_len }),
+                        read.seq()[region_start..].to_vec(),
+                    ));
                 }
             }
 
-            if regions.is_empty() {
-                None
+            if entries.is_empty() {
+                col.push_none();
             } else {
-                Some(Hits::new_multiple(regions))
+                let refs: Vec<(Option<HitRegionView>, &[u8])> =
+                    entries.iter().map(|(loc, seq)| (loc.clone(), seq.as_slice())).collect();
+                col.push_many(&refs);
             }
-        });
+        };
+        block.segments[self.segment.as_index()].apply(f);
+        block.tags.insert(self.out_label.clone(), TagColumn::Location(col));
 
         Ok((block, true))
     }

@@ -91,15 +91,15 @@ impl Step for TrimAtTag {
         let error_encountered = std::cell::RefCell::new(Option::<String>::None);
         block.apply_mut_with_location_tag(
             &self.in_label,
-            |reads, hit| {
+            |reads, hit, col| {
                 if let Some(hit) = hit {
-                    if hit.0.len() > 1 {
+                    if hit.len() > 1 {
                                 *error_encountered.borrow_mut() = Some(
                                 "TrimAtTag only supports Tags that cover one single region. Could be extended to multiple hits within one target, but not to multiple hits in multiple targets.".to_string());
                         return;
                     }
-                    let region = &hit.0[0];
-                    let location = region.location.as_ref().expect("TrimTag only works on regions with location data. Might have been lost by subsequent transformations?");
+                    let region = hit[0];
+                    let location = col.hit_location(region).expect("TrimTag only works on regions with location data. Might have been lost by subsequent transformations?");
                     let read = &mut reads[location.segment_index.as_index()];
                     match (self.direction, self.keep_tag) {
                         (Direction::Start, true) => read.cut_start(location.start),
@@ -124,43 +124,43 @@ impl Step for TrimAtTag {
             .expect("Expected to be location tag, check verify");
         if let Some(target) = cut_locations
             .iter()
-            //first not none
-            .filter_map(|tag_val| tag_val.as_ref())
-            // that has locations
-            .filter_map(|hit| hit.0.first())
-            //and the target from that
-            .filter_map(|hit| hit.location.as_ref())
-            .map(|location| &location.segment_index)
+            //first not none with locations
+            .filter_map(|hits| {
+                if hits.is_empty() { None } else { hits.first().copied() }
+            })
+            //and the target from the first hit
+            .filter_map(|hit| cut_locations.hit_location(hit))
+            .map(|location| location.segment_index)
             .next()
         //otherwise, we didn't have a single hit, no need to filter anything...
         {
             match (self.direction, self.keep_tag) {
                 (Direction::End, _) => {
-                    block.filter_tag_locations_beyond_read_length(*target);
+                    block.filter_tag_locations_beyond_read_length(target);
                 }
                 (Direction::Start, keep_tag) => {
                     block.filter_tag_locations(
-                        *target,
-                        |location: &HitRegion, pos: usize, _seq, _read_len: usize| -> NewLocation {
-                            let cls = &cut_locations[pos];
-                            if let Some(hits) = cls
-                                && !hits.0.is_empty()
-                                && let Some(trim_location) = &hits.0[0].location
-                            {
-                                let cut_point = if keep_tag {
-                                    trim_location.start
-                                } else {
-                                    trim_location.start + trim_location.len
-                                };
-                                //todo: this could use some more test cases
-                                if location.start < cut_point {
-                                    return NewLocation::Remove;
-                                } else {
-                                    return NewLocation::New(HitRegion {
-                                        start: location.start - cut_point,
-                                        len: location.len,
-                                        segment_index: location.segment_index,
-                                    });
+                        target,
+                        |location: HitRegion, pos: usize, _seq, _read_len: usize| -> NewLocation {
+                            let cls = cut_locations.get(pos);
+                            if !cls.is_empty() {
+                                let first_hit = cls[0];
+                                if let Some(trim_location) = cut_locations.hit_location(first_hit) {
+                                    let cut_point = if keep_tag {
+                                        trim_location.start
+                                    } else {
+                                        trim_location.start + trim_location.len
+                                    };
+                                    //todo: this could use some more test cases
+                                    if location.start < cut_point {
+                                        return NewLocation::Remove;
+                                    } else {
+                                        return NewLocation::New(HitRegion {
+                                            start: location.start - cut_point,
+                                            len: location.len,
+                                            segment_index: location.segment_index,
+                                        });
+                                    }
                                 }
                             }
 
@@ -175,32 +175,32 @@ impl Step for TrimAtTag {
         if self.direction == Direction::Start {
             if self.keep_tag {
                 //guess they're 0..len now.
-                for cls in &mut cut_locations {
-                    if let Some(hits) = cls {
-                        for hit in &mut hits.0 {
-                            if let Some(location) = &mut hit.location {
-                                location.start = 0;
-                            }
-                        }
+                for slot_idx in 0..cut_locations.hits.len() {
+                    let nhits = cut_locations.hits[slot_idx].len();
+                    for hit_idx in 0..nhits {
+                        let h = cut_locations.hits[slot_idx][hit_idx];
+                        cut_locations.set_hit_location(slot_idx, hit_idx, Some(HitRegion {
+                            start: 0,
+                            len: h.loc_len as usize,
+                            segment_index: SegmentIndex(h.segment_index),
+                        }));
                     }
                 }
             } else {
-                for cls in &mut cut_locations {
-                    if let Some(hits) = cls {
-                        for hit in &mut hits.0 {
-                            hit.location = None;
-                        }
+                for slot_idx in 0..cut_locations.hits.len() {
+                    let nhits = cut_locations.hits[slot_idx].len();
+                    for hit_idx in 0..nhits {
+                        cut_locations.set_hit_location(slot_idx, hit_idx, None);
                     }
                 }
             }
         } else if self.keep_tag {
             //do nothing, they're still good
         } else {
-            for cls in &mut cut_locations {
-                if let Some(hits) = cls {
-                    for hit in &mut hits.0 {
-                        hit.location = None;
-                    }
+            for slot_idx in 0..cut_locations.hits.len() {
+                let nhits = cut_locations.hits[slot_idx].len();
+                for hit_idx in 0..nhits {
+                    cut_locations.set_hit_location(slot_idx, hit_idx, None);
                 }
             }
         }

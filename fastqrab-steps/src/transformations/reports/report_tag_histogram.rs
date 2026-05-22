@@ -52,13 +52,13 @@ impl HistogramData {
     )]
     pub fn add_from_column(&mut self, col: &TagColumn, idx: usize) {
         match col {
-            TagColumn::Location(items) => {
+            TagColumn::Location(col) => {
                 if let HistogramData::String(map) = self {
-                    let s = match &items[idx] {
-                        None => String::new(),
-                        Some(hits) => {
-                            String::from_utf8_lossy(&hits.joined_sequence(Some(b"_"))).into_owned()
-                        }
+                    let hits = col.get(idx);
+                    let s = if hits.is_empty() {
+                        String::new()
+                    } else {
+                        String::from_utf8_lossy(&col.joined_sequence(hits, Some(b"_"))).into_owned()
                     };
                     *map.entry(s).or_insert(0) += 1;
                 } else {

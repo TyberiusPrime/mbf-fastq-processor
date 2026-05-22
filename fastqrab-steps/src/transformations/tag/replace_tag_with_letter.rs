@@ -39,10 +39,10 @@ impl Step for ReplaceTagWithLetter {
         _input_info: &InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        block.apply_mut_with_location_tag(&self.in_label, |reads, hit| {
+        block.apply_mut_with_location_tag(&self.in_label, |reads, hit, col| {
             if let Some(hit) = hit {
-                for region in &hit.0 {
-                    if let Some(location) = &region.location {
+                for &region in hit.iter() {
+                    if let Some(location) = col.hit_location(region) {
                         let read = &mut reads[location.segment_index.as_index()];
 
                         // Replace the sequence bases in the specified region with the replacement letter

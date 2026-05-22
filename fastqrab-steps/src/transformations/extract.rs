@@ -7,7 +7,7 @@ use indexmap::IndexMap;
 use super::prelude::DemultiplexTag;
 use fastqrab_config::{
     TagLabel,
-    dna::Hits,
+    dna::{HitDraft, LocationColumn},
     segments::{SegmentIndex, SegmentIndexOrAll},
 };
 use fastqrab_io::io::{FastQBlocksCombined, WrappedFastQRead};
@@ -41,16 +41,17 @@ pub(crate) fn extract_region_tags(
     block: &mut FastQBlocksCombined,
     segment: SegmentIndex,
     label: &TagLabel,
-    f: impl Fn(&mut WrappedFastQRead) -> Option<Hits>,
+    f: impl Fn(&mut WrappedFastQRead) -> Option<HitDraft>,
 ) {
-    let mut out = Vec::new();
+    let mut col = LocationColumn::new();
 
-    let f2 = |read: &mut WrappedFastQRead| {
-        out.push(f(read));
+    let f2 = |read: &mut WrappedFastQRead| match f(read) {
+        Some(draft) => col.push_single(draft.location, &draft.sequence),
+        None => col.push_none(),
     };
     block.segments[segment.as_index()].apply(f2);
 
-    block.tags.insert(label.clone(), TagColumn::Location(out));
+    block.tags.insert(label.clone(), TagColumn::Location(col));
 }
 
 // pub(crate) fn extract_string_tags(
@@ -76,18 +77,21 @@ pub(crate) fn extract_region_tags_using_tags(
     block: &mut FastQBlocksCombined,
     segment: SegmentIndex,
     label: &TagLabel,
-    f: impl Fn(&mut WrappedFastQRead, usize, &IndexMap<TagLabel, TagColumn>) -> Option<Hits>,
+    f: impl Fn(&mut WrappedFastQRead, usize, &IndexMap<TagLabel, TagColumn>) -> Option<HitDraft>,
 ) {
-    let mut out = Vec::new();
+    let mut col = LocationColumn::new();
 
     let mut read_no = RefCell::new(0usize);
     let f2 = |read: &mut WrappedFastQRead| {
-        out.push(f(read, *read_no.borrow(), &mut block.tags));
+        match f(read, *read_no.borrow(), &mut block.tags) {
+            Some(draft) => col.push_single(draft.location, &draft.sequence),
+            None => col.push_none(),
+        }
         *read_no.get_mut() += 1;
     };
     block.segments[segment.as_index()].apply(f2);
 
-    block.tags.insert(label.clone(), TagColumn::Location(out));
+    block.tags.insert(label.clone(), TagColumn::Location(col));
 }
 
 pub(crate) fn extract_string_tags_using_tags(

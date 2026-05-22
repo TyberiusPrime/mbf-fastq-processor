@@ -7,42 +7,463 @@ use bstr::{BStr, BString, ByteSlice};
 use hamming_resonate::HammingResonator;
 use indexmap::IndexMap;
 use schemars::JsonSchema;
+use smallvec::SmallVec;
 use std::borrow::Cow;
+use std::collections::HashMap;
 use toml_pretty_deser::prelude::*;
 
 use crate::segments::SegmentIndex;
 
 pub use triple_accel::hamming;
 
-#[derive(PartialEq, Eq, Debug, Clone)]
-pub struct HitRegion {
+// ── Compact hit flag ──────────────────────────────────────────────────────────
+
+pub const HAS_LOC: u8 = 0b0000_0001;
+
+// ── New Hit (16 B, Copy) ──────────────────────────────────────────────────────
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct Hit {
+    pub seq_start: u32,
+    pub loc_start: u32,
+    pub seq_len: u16,
+    pub loc_len: u16,
+    pub segment_index: u8,
+    pub flags: u8,
+    _pad: [u8; 2],
+}
+
+/// A growable list of hits for one read slot; empty ≡ no hit.
+pub type Hits = SmallVec<[Hit; 1]>;
+
+// ── View / draft types ────────────────────────────────────────────────────────
+
+/// The read-position data attached to a hit (resolved from a LocationColumn).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct HitRegionView {
     pub start: usize,
     pub len: usize,
     pub segment_index: SegmentIndex,
 }
 
-/// a hit within a sequence.
-#[derive(PartialEq, Eq, Debug, Clone)]
-pub struct Hit {
-    pub location: Option<HitRegion>,
-    pub sequence: BString,
+impl HitRegionView {
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
+    }
 }
 
-#[derive(PartialEq, Eq, Debug, Clone)]
-pub struct Hits(pub Vec<Hit>);
+/// Backward-compatibility alias used everywhere that previously said `HitRegion`.
+pub type HitRegion = HitRegionView;
+
+/// Intermediate result from `find_iupac` / `find_iupac_with_indel`; caller
+/// feeds this into `LocationColumn::push_single`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct HitDraft {
+    pub location: Option<HitRegionView>,
+    pub sequence: Vec<u8>,
+}
+
+// ── LocationColumn ────────────────────────────────────────────────────────────
+
+/// Flat-slab storage for a column of hit data.
+///
+/// `hits[i]` is an empty `SmallVec` when slot `i` has no hit (≡ old `None`).
+/// All sequence bytes live in `slab`; `Hit::seq_start / seq_len` index into it.
+#[derive(Clone, Debug)]
+pub struct LocationColumn {
+    pub slab: Vec<u8>,
+    pub hits: Vec<Hits>,
+}
+
+impl Default for LocationColumn {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl LocationColumn {
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            slab: Vec::new(),
+            hits: Vec::new(),
+        }
+    }
+
+    #[must_use]
+    pub fn with_capacity(slots: usize, slab_bytes: usize) -> Self {
+        Self {
+            slab: Vec::with_capacity(slab_bytes),
+            hits: Vec::with_capacity(slots),
+        }
+    }
+
+    // ── builders ──────────────────────────────────────────────────────────────
+
+    pub fn push_none(&mut self) {
+        self.hits.push(SmallVec::new());
+    }
+
+    pub fn push_single(&mut self, loc: Option<HitRegionView>, seq: &[u8]) {
+        debug_assert!(
+            seq.len() <= u16::MAX as usize,
+            "sequence too long for u16 seq_len"
+        );
+        let seq_start = self.slab.len() as u32;
+        let seq_len = seq.len() as u16;
+        self.slab.extend_from_slice(seq);
+
+        let hit = if let Some(loc) = loc {
+            debug_assert!(
+                loc.start <= u32::MAX as usize,
+                "loc.start too large for u32"
+            );
+            debug_assert!(loc.len <= u16::MAX as usize, "loc.len too large for u16");
+            Hit {
+                seq_start,
+                seq_len,
+                loc_start: loc.start as u32,
+                loc_len: loc.len as u16,
+                segment_index: loc.segment_index.0,
+                flags: HAS_LOC,
+                _pad: [0; 2],
+            }
+        } else {
+            Hit {
+                seq_start,
+                seq_len,
+                loc_start: 0,
+                loc_len: 0,
+                segment_index: 0,
+                flags: 0,
+                _pad: [0; 2],
+            }
+        };
+        let mut sv: Hits = SmallVec::new();
+        sv.push(hit);
+        self.hits.push(sv);
+    }
+
+    pub fn push_many(&mut self, entries: &[(Option<HitRegionView>, &[u8])]) {
+        let mut sv: Hits = SmallVec::new();
+        for (loc, seq) in entries {
+            debug_assert!(seq.len() <= u16::MAX as usize, "sequence too long");
+            let seq_start = self.slab.len() as u32;
+            let seq_len = seq.len() as u16;
+            self.slab.extend_from_slice(seq);
+
+            let hit = if let Some(loc) = loc {
+                Hit {
+                    seq_start,
+                    seq_len,
+                    loc_start: loc.start as u32,
+                    loc_len: loc.len as u16,
+                    segment_index: loc.segment_index.0,
+                    flags: HAS_LOC,
+                    _pad: [0; 2],
+                }
+            } else {
+                Hit {
+                    seq_start,
+                    seq_len,
+                    loc_start: 0,
+                    loc_len: 0,
+                    segment_index: 0,
+                    flags: 0,
+                    _pad: [0; 2],
+                }
+            };
+            sv.push(hit);
+        }
+        self.hits.push(sv);
+    }
+
+    /// Replace slot; new bytes appended to slab (old bytes go dead until compact).
+    pub fn set_slot(&mut self, idx: usize, entries: &[(Option<HitRegionView>, &[u8])]) {
+        let mut sv: Hits = SmallVec::new();
+        for (loc, seq) in entries {
+            let seq_start = self.slab.len() as u32;
+            let seq_len = seq.len() as u16;
+            self.slab.extend_from_slice(seq);
+            let hit = if let Some(loc) = loc {
+                Hit {
+                    seq_start,
+                    seq_len,
+                    loc_start: loc.start as u32,
+                    loc_len: loc.len as u16,
+                    segment_index: loc.segment_index.0,
+                    flags: HAS_LOC,
+                    _pad: [0; 2],
+                }
+            } else {
+                Hit {
+                    seq_start,
+                    seq_len,
+                    loc_start: 0,
+                    loc_len: 0,
+                    segment_index: 0,
+                    flags: 0,
+                    _pad: [0; 2],
+                }
+            };
+            sv.push(hit);
+        }
+        self.hits[idx] = sv;
+    }
+
+    pub fn clear_slot(&mut self, idx: usize) {
+        self.hits[idx] = SmallVec::new();
+    }
+
+    /// Copy a slot from `src` (translating `seq_start` into our slab).
+    pub fn push_from(&mut self, src: &LocationColumn, slot_idx: usize) {
+        let src_hits = src.get(slot_idx);
+        if src_hits.is_empty() {
+            self.push_none();
+            return;
+        }
+        let mut sv: Hits = SmallVec::new();
+        for &hit in src_hits.iter() {
+            let new_seq_start = self.slab.len() as u32;
+            self.slab.extend_from_slice(src.hit_bytes(hit));
+            sv.push(Hit {
+                seq_start: new_seq_start,
+                ..hit
+            });
+        }
+        self.hits.push(sv);
+    }
+
+    /// Replace `dst_idx` slot with a copy from `src` slot `src_idx`.
+    pub fn set_slot_from(&mut self, src: &LocationColumn, dst_idx: usize, src_idx: usize) {
+        let src_hits = src.get(src_idx);
+        if src_hits.is_empty() {
+            self.hits[dst_idx] = SmallVec::new();
+            return;
+        }
+        let mut sv: Hits = SmallVec::new();
+        for &hit in src_hits.iter() {
+            let new_seq_start = self.slab.len() as u32;
+            self.slab.extend_from_slice(src.hit_bytes(hit));
+            sv.push(Hit {
+                seq_start: new_seq_start,
+                ..hit
+            });
+        }
+        self.hits[dst_idx] = sv;
+    }
+
+    // ── accessors ─────────────────────────────────────────────────────────────
+
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.hits.len()
+    }
+
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.hits.is_empty()
+    }
+
+    #[must_use]
+    pub fn get(&self, idx: usize) -> &Hits {
+        &self.hits[idx]
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = &Hits> {
+        self.hits.iter()
+    }
+
+    /// Sequence bytes for `h` from the slab.
+    #[must_use]
+    pub fn hit_bytes(&self, h: Hit) -> &[u8] {
+        &self.slab[h.seq_start as usize..(h.seq_start + h.seq_len as u32) as usize]
+    }
+
+    /// Mutable sequence bytes for `h` — **length-preserving only**.
+    pub fn hit_bytes_mut(&mut self, h: Hit) -> &mut [u8] {
+        let start = h.seq_start as usize;
+        let end = (h.seq_start + h.seq_len as u32) as usize;
+        &mut self.slab[start..end]
+    }
+
+    /// Location metadata for `h`, or `None` if `HAS_LOC` is not set.
+    #[must_use]
+    pub fn hit_location(&self, h: Hit) -> Option<HitRegionView> {
+        if (h.flags & HAS_LOC) != 0 {
+            Some(HitRegionView {
+                start: h.loc_start as usize,
+                len: h.loc_len as usize,
+                segment_index: SegmentIndex(h.segment_index),
+            })
+        } else {
+            None
+        }
+    }
+
+    /// Overwrite the location metadata for a specific hit within a slot.
+    pub fn set_hit_location(
+        &mut self,
+        slot: usize,
+        hit_idx: usize,
+        loc: Option<HitRegionView>,
+    ) {
+        let hit = &mut self.hits[slot][hit_idx];
+        match loc {
+            None => hit.flags &= !HAS_LOC,
+            Some(v) => {
+                hit.loc_start = v.start as u32;
+                hit.loc_len = v.len as u16;
+                hit.segment_index = v.segment_index.0;
+                hit.flags |= HAS_LOC;
+            }
+        }
+    }
+
+    // ── bulk ops ──────────────────────────────────────────────────────────────
+
+    /// Grow to `len` slots (with empty Hits). Panics if `len < self.len()`.
+    pub fn resize_with_empty(&mut self, len: usize) {
+        self.hits.resize_with(len, SmallVec::new);
+    }
+
+    pub fn retain<F: FnMut(usize) -> bool>(&mut self, mut f: F) {
+        let mut idx = 0;
+        self.hits.retain(|_| {
+            let keep = f(idx);
+            idx += 1;
+            keep
+        });
+    }
+
+    pub fn drain(&mut self, range: std::ops::Range<usize>) {
+        self.hits.drain(range);
+    }
+
+    /// Append all slots from `other`, translating `seq_start` by `self.slab.len()`.
+    pub fn extend_from(&mut self, other: &LocationColumn) {
+        let offset = self.slab.len() as u32;
+        self.slab.extend_from_slice(&other.slab);
+        for slot in &other.hits {
+            let mut new_slot = slot.clone();
+            for hit in new_slot.iter_mut() {
+                hit.seq_start += offset;
+            }
+            self.hits.push(new_slot);
+        }
+    }
+
+    // ── views / joins ─────────────────────────────────────────────────────────
+
+    #[must_use]
+    pub fn joined_sequence(&self, hits: &Hits, sep: Option<&[u8]>) -> Vec<u8> {
+        let mut res = Vec::new();
+        let mut first = true;
+        for &hit in hits.iter() {
+            if !first {
+                if let Some(sep) = sep {
+                    res.extend_from_slice(sep);
+                }
+            }
+            first = false;
+            res.extend_from_slice(self.hit_bytes(hit));
+        }
+        res
+    }
+
+    /// Borrows when there is exactly one hit (no allocation); allocates otherwise.
+    #[must_use]
+    pub fn joined_sequence_cow<'a>(&'a self, hits: &Hits, sep: Option<&[u8]>) -> Cow<'a, [u8]> {
+        if hits.len() == 1 {
+            Cow::Borrowed(self.hit_bytes(hits[0]))
+        } else {
+            Cow::Owned(self.joined_sequence(hits, sep))
+        }
+    }
+
+    #[must_use]
+    pub fn covered_len(&self, hits: &Hits) -> usize {
+        hits.iter()
+            .filter_map(|&h| self.hit_location(h))
+            .map(|loc| loc.len)
+            .sum()
+    }
+
+    #[must_use]
+    pub fn location_str(&self, hits: &Hits, segment_order: &[String]) -> BString {
+        let mut seq = BString::new(Vec::new());
+        let mut first = true;
+        for &hit in hits.iter() {
+            if let Some(loc) = self.hit_location(hit) {
+                if !first {
+                    seq.push(b',');
+                }
+                first = false;
+                seq.extend_from_slice(
+                    format!(
+                        "{}:{}-{}",
+                        segment_order[loc.segment_index.as_index()],
+                        loc.start,
+                        loc.start + loc.len,
+                    )
+                    .as_bytes(),
+                );
+            }
+        }
+        seq
+    }
+
+    // ── compaction ────────────────────────────────────────────────────────────
+
+    /// Drop unreferenced slab bytes; rewrite all `seq_start` offsets.
+    pub fn compact_slab(&mut self) {
+        // Collect referenced ranges (may have duplicates after set_slot).
+        let mut old_to_new: HashMap<u32, u32> = HashMap::new();
+        let mut new_slab: Vec<u8> = Vec::with_capacity(self.slab.len());
+
+        for slot in &self.hits {
+            for &hit in slot.iter() {
+                if hit.seq_len == 0 {
+                    continue;
+                }
+                let old_start = hit.seq_start;
+                if old_to_new.contains_key(&old_start) {
+                    continue;
+                }
+                let new_start = new_slab.len() as u32;
+                let end = (old_start + hit.seq_len as u32) as usize;
+                new_slab.extend_from_slice(&self.slab[old_start as usize..end]);
+                old_to_new.insert(old_start, new_start);
+            }
+        }
+
+        self.slab = new_slab;
+        for slot in self.hits.iter_mut() {
+            for hit in slot.iter_mut() {
+                if hit.seq_len > 0 {
+                    hit.seq_start = old_to_new[&hit.seq_start];
+                }
+            }
+        }
+    }
+}
+
+// ── TagColumn ─────────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone)]
 pub enum TagColumn {
-    Location(Vec<Option<Hits>>),
+    Location(LocationColumn),
     String(Vec<Option<BString>>),
-    Numeric(Vec<f64>), // Todo: encode missing in some unused bits.A decorum/nanbox?
+    Numeric(Vec<f64>),
     Bool(Vec<bool>),
 }
 
 impl TagColumn {
     pub fn new_empty(&self) -> TagColumn {
         match self {
-            TagColumn::Location(_) => TagColumn::Location(Vec::new()),
+            TagColumn::Location(_) => TagColumn::Location(LocationColumn::new()),
             TagColumn::String(_) => TagColumn::String(Vec::new()),
             TagColumn::Numeric(_) => TagColumn::Numeric(Vec::new()),
             TagColumn::Bool(_) => TagColumn::Bool(Vec::new()),
@@ -54,15 +475,16 @@ impl TagColumn {
             panic!("Read amplification not expected. Can't resize to larger")
         }
         match self {
-            TagColumn::Location(items) => items.resize_with(len, unreachable_growth),
+            TagColumn::Location(col) => col.resize_with_empty(len),
             TagColumn::String(items) => items.resize_with(len, unreachable_growth),
             TagColumn::Numeric(items) => items.resize_with(len, unreachable_growth),
             TagColumn::Bool(items) => items.resize_with(len, unreachable_growth),
         }
     }
+
     pub fn len(&self) -> usize {
         match self {
-            TagColumn::Location(items) => items.len(),
+            TagColumn::Location(col) => col.len(),
             TagColumn::String(items) => items.len(),
             TagColumn::Numeric(items) => items.len(),
             TagColumn::Bool(items) => items.len(),
@@ -78,34 +500,43 @@ impl TagColumn {
         F: FnMut() -> bool,
     {
         match self {
-            TagColumn::Location(items) => items.retain(|_| f()),
+            TagColumn::Location(col) => col.retain(|_| f()),
             TagColumn::String(items) => items.retain(|_| f()),
             TagColumn::Numeric(items) => items.retain(|_| f()),
             TagColumn::Bool(items) => items.retain(|_| f()),
         }
     }
 
-    pub fn into_locations(self) -> Option<Vec<Option<Hits>>> {
-        if let TagColumn::Location(items) = self {
-            Some(items)
+    pub fn into_locations(self) -> Option<LocationColumn> {
+        if let TagColumn::Location(col) = self {
+            Some(col)
         } else {
             None
         }
     }
 
-    pub fn as_locations(&self) -> Option<&Vec<Option<Hits>>> {
-        if let TagColumn::Location(items) = self {
-            Some(items)
+    pub fn as_locations(&self) -> Option<&LocationColumn> {
+        if let TagColumn::Location(col) = self {
+            Some(col)
         } else {
             None
         }
     }
 
-    pub fn iter_locations(&self) -> impl Iterator<Item = &Option<Hits>> {
-        if let TagColumn::Location(items) = self {
-            items.iter()
+    pub fn as_locations_mut(&mut self) -> Option<&mut LocationColumn> {
+        if let TagColumn::Location(col) = self {
+            Some(col)
         } else {
-            panic!("iter_numeric called on a non-numeric tag column");
+            None
+        }
+    }
+
+    /// Returns `&LocationColumn`; callers can iterate `.iter()` and resolve bytes.
+    pub fn iter_locations(&self) -> &LocationColumn {
+        if let TagColumn::Location(col) = self {
+            col
+        } else {
+            panic!("iter_locations called on a non-location tag column");
         }
     }
 
@@ -127,11 +558,15 @@ impl TagColumn {
                     Some(Cow::Borrowed(BStr::new(b"false")))
                 }
             })),
-            TagColumn::Location(locations) => Box::new(locations.iter().map(|x| {
-                x.as_ref().map(|hits| match hits.joined_sequence_cow(None) {
-                    Cow::Borrowed(inner) => Cow::Borrowed(BStr::new(inner)),
-                    Cow::Owned(inner) => Cow::Owned(inner.into()),
-                })
+            TagColumn::Location(col) => Box::new(col.iter().map(|hits| {
+                if hits.is_empty() {
+                    None
+                } else {
+                    Some(match col.joined_sequence_cow(hits, None) {
+                        Cow::Borrowed(b) => Cow::Borrowed(BStr::new(b)),
+                        Cow::Owned(v) => Cow::Owned(v.into()),
+                    })
+                }
             })),
             TagColumn::String(strings) => Box::new(strings.iter().map(|x| {
                 x.as_ref()
@@ -144,14 +579,14 @@ impl TagColumn {
         match self {
             TagColumn::Numeric(_) => unreachable!("Cant get truthy of numeric values."), //cov:excl-line
             TagColumn::Bool(bools) => Box::new(bools.iter().copied()),
-            TagColumn::Location(locations) => Box::new(locations.iter().map(|x| x.is_some())),
+            TagColumn::Location(col) => Box::new(col.iter().map(|hits| !hits.is_empty())),
             TagColumn::String(strings) => Box::new(strings.iter().map(|x| x.is_some())),
         }
     }
 
-    pub fn get_location(&self, index: usize) -> &Option<Hits> {
-        if let TagColumn::Location(items) = self {
-            &items[index]
+    pub fn get_location(&self, index: usize) -> &Hits {
+        if let TagColumn::Location(col) = self {
+            col.get(index)
         } else {
             panic!("get_location called on a non-location tag column");
         }
@@ -164,6 +599,7 @@ impl TagColumn {
             panic!("get_string called on a non-string tag column");
         }
     }
+
     pub fn get_numeric(&self, index: usize) -> f64 {
         if let TagColumn::Numeric(items) = self {
             items[index]
@@ -171,6 +607,7 @@ impl TagColumn {
             panic!("get_numeric called on a non-numeric tag column");
         }
     }
+
     pub fn get_bool(&self, index: usize) -> bool {
         if let TagColumn::Bool(items) = self {
             items[index]
@@ -183,13 +620,17 @@ impl TagColumn {
     #[expect(clippy::elidable_lifetime_names, reason = "Conflicting lints")]
     pub fn to_bstr<'a>(&'a self, index: usize) -> Cow<'a, BStr> {
         match &self {
-            TagColumn::Location(items) => items[index]
-                .as_ref()
-                .map(|hits| match hits.joined_sequence_cow(None) {
-                    Cow::Borrowed(inner) => Cow::Borrowed(BStr::new(inner)),
-                    Cow::Owned(inner) => Cow::Owned(inner.into()),
-                })
-                .unwrap_or_else(|| Cow::Borrowed(BStr::new(b""))),
+            TagColumn::Location(col) => {
+                let hits = col.get(index);
+                if hits.is_empty() {
+                    Cow::Borrowed(BStr::new(b""))
+                } else {
+                    match col.joined_sequence_cow(hits, None) {
+                        Cow::Borrowed(b) => Cow::Borrowed(BStr::new(b)),
+                        Cow::Owned(v) => Cow::Owned(v.into()),
+                    }
+                }
+            }
             TagColumn::String(items) => match &items[index] {
                 Some(bstring) => Cow::Borrowed(BStr::new(&bstring[..])),
                 None => Cow::Borrowed(BStr::new(b"")),
@@ -205,23 +646,27 @@ impl TagColumn {
 
     pub fn extend(&mut self, other: &TagColumn) {
         match self {
-            TagColumn::Location(items) => items.extend(other.iter_locations().cloned()),
+            TagColumn::Location(col) => {
+                if let TagColumn::Location(other_col) = other {
+                    col.extend_from(other_col);
+                } else {
+                    panic!("Cannot extend Location column from non-Location column");
+                }
+            }
             TagColumn::String(items) => items.extend(
                 other
                     .iter_stringified()
                     .map(|x| x.map(|cow| cow.into_owned())),
             ),
-            TagColumn::Numeric(items) => items.extend(other.iter_numeric().cloned()),
+            TagColumn::Numeric(items) => items.extend(other.iter_numeric().copied()),
             TagColumn::Bool(items) => items.extend(other.iter_truthy()),
         }
     }
 
-    /// half of drain, removes, but you don't get the values out.
+    /// Removes elements without returning them.
     pub fn drain(&mut self, range: std::ops::Range<usize>) {
         match self {
-            TagColumn::Location(items) => {
-                items.drain(range);
-            }
+            TagColumn::Location(col) => col.drain(range),
             TagColumn::String(items) => {
                 items.drain(range);
             }
@@ -235,99 +680,7 @@ impl TagColumn {
     }
 }
 
-impl HitRegion {
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.len == 0
-    }
-}
-impl Hits {
-    #[must_use]
-    pub fn new(start: usize, len: usize, segment_index: SegmentIndex, sequence: BString) -> Self {
-        Hits(vec![Hit {
-            location: Some(HitRegion {
-                start,
-                len,
-                segment_index,
-            }),
-            sequence,
-        }])
-    }
-
-    #[must_use]
-    pub fn new_multiple(regions: Vec<Hit>) -> Self {
-        Hits(regions)
-    }
-
-    #[must_use]
-    pub fn joined_sequence(&self, separator: Option<&[u8]>) -> Vec<u8> {
-        let mut res = Vec::new();
-        let mut first = true;
-        for region in &self.0 {
-            if !first && let Some(separator) = separator {
-                res.extend(separator.iter().copied());
-            }
-            first = false;
-            res.extend_from_slice(&region.sequence);
-        }
-        res
-    }
-
-    /// Like `joined_sequence`, but borrows when there is a single hit (no allocation).
-    #[must_use]
-    pub fn joined_sequence_cow(&self, separator: Option<&[u8]>) -> Cow<'_, [u8]> {
-        if self.0.len() == 1 {
-            Cow::Borrowed(self.0[0].sequence.as_slice())
-        } else {
-            Cow::Owned(self.joined_sequence(separator))
-        }
-    }
-
-    #[must_use]
-    pub fn covered_len(&self) -> usize {
-        let mut total = 0;
-        for hit in &self.0 {
-            if let Some(loc) = &hit.location {
-                total += loc.len;
-            }
-        }
-        total
-    }
-
-    #[must_use]
-    pub fn len(&self) -> usize {
-        self.0.len()
-    }
-
-    // #[must_use]
-    // pub fn is_empty(&self) -> bool {
-    //     self.0.is_empty()
-    // }
-
-    #[must_use]
-    pub fn location(&self, segment_order: &[String]) -> BString {
-        let mut seq = BString::new("".into());
-        let mut first = true;
-        for hit in &self.0 {
-            if let Some(location) = hit.location.as_ref() {
-                if !first {
-                    seq.push(b',');
-                }
-                first = false;
-                seq.extend_from_slice(
-                    format!(
-                        "{}:{}-{}",
-                        segment_order[location.segment_index.as_index()],
-                        location.start,
-                        location.start + location.len
-                    )
-                    .as_bytes(),
-                );
-            }
-        }
-        seq
-    }
-}
+// ── Search anchor ─────────────────────────────────────────────────────────────
 
 /// Where to search
 #[derive(Copy, Clone, Debug, JsonSchema)]
@@ -341,6 +694,8 @@ pub enum Anchor {
     Anywhere,
 }
 
+// ── IUPAC finding (returns HitDraft; callers push into LocationColumn) ────────
+
 #[must_use]
 pub fn find_iupac(
     reference: &[u8],
@@ -349,12 +704,18 @@ pub fn find_iupac(
     max_mismatches: u8,
     segment: SegmentIndex,
     max_anchor_distance: usize,
-) -> Option<Hits> {
+) -> Option<HitDraft> {
     if reference.len() < pattern.len() {
         return None;
     }
-    // Pure Rust implementation with optimizations for IUPAC pattern matching.
-    // N in the PATTERN is treated as a wildcard, N in the REFERENCE is an uncertain base.
+    let make_draft = |start: usize| HitDraft {
+        location: Some(HitRegionView {
+            start,
+            len: pattern.len(),
+            segment_index: segment,
+        }),
+        sequence: reference[start..start + pattern.len()].to_vec(),
+    };
     match anchor {
         Anchor::Left => iupac_find_best(
             pattern,
@@ -362,14 +723,7 @@ pub fn find_iupac(
             max_mismatches as usize,
             Direction::Forward,
         )
-        .map(|start| {
-            Hits::new(
-                start,
-                pattern.len(),
-                segment,
-                reference[start..start + pattern.len()].into(),
-            )
-        }),
+        .map(make_draft),
         Anchor::Right => {
             let offset = reference.len() - pattern.len() - max_anchor_distance;
             iupac_find_best(
@@ -378,30 +732,22 @@ pub fn find_iupac(
                 max_mismatches as usize,
                 Direction::Reverse,
             )
-            .map(|start| {
-                Hits::new(
-                    start + offset,
-                    pattern.len(),
-                    segment,
-                    reference[offset + start..offset + start + pattern.len()].into(),
-                )
+            .map(|start| HitDraft {
+                location: Some(HitRegionView {
+                    start: start + offset,
+                    len: pattern.len(),
+                    segment_index: segment,
+                }),
+                sequence: reference[offset + start..offset + start + pattern.len()].to_vec(),
             })
         }
-
         Anchor::Anywhere => iupac_find_best(
             pattern,
             reference,
             max_mismatches as usize,
             Direction::Forward,
         )
-        .map(|start| {
-            Hits::new(
-                start,
-                pattern.len(),
-                segment,
-                reference[start..start + pattern.len()].into(),
-            )
-        }),
+        .map(make_draft),
     }
 }
 
@@ -424,14 +770,13 @@ pub fn find_iupac_with_indel(
     max_indel_bases: usize,
     max_total_edits: Option<usize>,
     segment: SegmentIndex,
-) -> Option<Hits> {
+) -> Option<HitDraft> {
     if query.is_empty() || reference.is_empty() {
         return None;
     }
 
     let total_limit = max_total_edits.unwrap_or(max_mismatches + max_indel_bases);
 
-    // Fast length checks to avoid unnecessary alignments.
     if reference.len() + max_indel_bases < query.len() {
         return None; // cov:excl-line
     }
@@ -453,7 +798,6 @@ pub fn find_iupac_with_indel(
         return None; // cov:excl-line
     }
 
-    //defensive code.
     assert!(
         (matches!(anchor, Anchor::Left) && alignment.ystart == 0)
             || (matches!(anchor, Anchor::Right) && alignment.yend == reference.len())
@@ -496,12 +840,14 @@ pub fn find_iupac_with_indel(
         "Alignment produced invalid coordinates (end > reference length)"
     );
 
-    Some(Hits::new(
-        start,
-        end - start,
-        segment,
-        reference[start..end].into(),
-    ))
+    Some(HitDraft {
+        location: Some(HitRegionView {
+            start,
+            len: end - start,
+            segment_index: segment,
+        }),
+        sequence: reference[start..end].to_vec(),
+    })
 }
 
 pub enum Direction {
@@ -530,7 +876,6 @@ pub fn iupac_find_best(
     };
 
     for start in iter {
-        // Use optimized distance check with early exit
         let hd = iupac_hamming_distance_with_limit(
             pattern,
             &reference[start..start + query_len],
@@ -538,7 +883,6 @@ pub fn iupac_find_best(
         );
 
         if hd == 0 {
-            // Perfect match - return immediately
             return Some(start);
         } else if hd < best_so_far {
             best_so_far = hd;
@@ -546,7 +890,6 @@ pub fn iupac_find_best(
         }
     }
 
-    // Only return if we found a match within tolerance
     if best_so_far <= max_mismatches {
         best_pos
     } else {
@@ -554,19 +897,7 @@ pub fn iupac_find_best(
     }
 }
 
-// ///
-// /// check if any of the extend iupac characters occurs.
-// /// upper case only
-// pub fn contains_iupac_ambigous(input: &[u8]) -> bool {
-//     input.iter().any(|&char| {
-//         matches!(
-//             char,
-//             b'R' | b'Y' | b'S' | b'W' | b'K' | b'M' | b'B' | b'V' | b'D' | b'H' | b'N'
-//         )
-//     })
-// }
-
-//check the complet string is valid dna + iupac, upper case only
+//check the complete string is valid dna + iupac, upper case only
 #[must_use]
 pub fn first_non_iupac(input: &[u8]) -> Option<u8> {
     input.iter().map(u8::to_ascii_uppercase).find(|char| {
@@ -616,9 +947,9 @@ pub fn all_iupac_or_underscore(input: &[u8]) -> bool {
     })
 }
 
-/// Reverse complement a DNA sequence
-/// Handles standard bases (ATCGN) in upper and lowercase
-/// non DNA characters are passed through unchanged
+/// Reverse complement a DNA sequence.
+/// Handles standard bases (ATCGN) in upper and lowercase;
+/// non-DNA characters are passed through unchanged.
 #[must_use]
 pub fn reverse_complement(seq: &[u8]) -> Vec<u8> {
     seq.iter()
@@ -628,21 +959,17 @@ pub fn reverse_complement(seq: &[u8]) -> Vec<u8> {
             b'T' => b'A',
             b'C' => b'G',
             b'G' => b'C',
-            //b'N' => b'N', //passthrough
-            // Handle lowercase as well
             b'a' => b't',
             b't' => b'a',
             b'c' => b'g',
             b'g' => b'c',
-            //b'n' => b'n', //passthrough
-            _ => base, // Pass through other characters
+            _ => base,
         })
         .collect()
 }
+
 ///
 /// Reverse complement a DNA sequence considering IUPAC ambiguity codes.
-/// Handles standard bases (ATCGN) in upper and lowercase
-/// non DNA characters are passed through unchanged
 ///
 /// # Panics
 /// On newline (our parsers never have newlines)
@@ -663,8 +990,6 @@ pub fn reverse_complement_iupac(input: &[u8]) -> Vec<u8> {
 
             b'R' => b'Y',
             b'Y' => b'R',
-            //b'S' => b'S',
-            //b'W' => b'W',
             b'K' => b'M',
             b'M' => b'K',
             b'B' => b'V',
@@ -674,17 +999,13 @@ pub fn reverse_complement_iupac(input: &[u8]) -> Vec<u8> {
 
             b'r' => b'y',
             b'y' => b'r',
-            //b's' => b's',
-            //b'w' => b'w',
             b'k' => b'm',
             b'm' => b'k',
             b'b' => b'v',
             b'v' => b'b',
             b'd' => b'h',
             b'h' => b'd',
-            b'\n' => panic!("New line in DNA sequence"), // prevented by parser upstream
-            // since that's not valid fastq,
-            // and our parsers explicily never produce anything with a newline
+            b'\n' => panic!("New line in DNA sequence"),
             _ => *char,
         });
     }
@@ -713,7 +1034,6 @@ pub fn hamming_distance(a: &[u8], b: &[u8]) -> usize {
 }
 
 /// Calculate IUPAC-aware Hamming distance between a pattern and a sequence.
-/// N in the pattern matches any base. N in the sequence is treated as uncertain (mismatch).
 ///
 /// # Panics
 /// on unequal lengths
@@ -730,7 +1050,6 @@ pub fn iupac_hamming_distance(iupac_reference: &[u8], atcg_query: &[u8]) -> usiz
 }
 
 /// Optimized IUPAC Hamming distance with early exit when distance exceeds limit.
-/// Returns the distance, or a value >= limit if the limit is exceeded.
 #[inline]
 fn iupac_hamming_distance_with_limit(
     iupac_pattern: &[u8],
@@ -740,12 +1059,10 @@ fn iupac_hamming_distance_with_limit(
     let mut dist = 0;
 
     for (a, b) in iupac_pattern.iter().zip(atcg_query.iter()) {
-        // Quick check for exact match (most common case in clean data)
         if a == b {
             continue;
         }
 
-        // Check IUPAC compatibility
         let is_match = matches!(
             (a, b),
             (b'A', b'a')
@@ -773,7 +1090,6 @@ fn iupac_hamming_distance_with_limit(
         );
         if !is_match {
             dist += 1;
-            // Early exit if we've exceeded the limit
             if dist >= limit {
                 return dist;
             }
@@ -786,12 +1102,9 @@ fn iupac_hamming_distance_with_limit(
 /// Check if two IUPAC barcode patterns can accept the same sequence
 #[must_use]
 pub fn iupac_overlapping(pattern1: &[u8], pattern2: &[u8]) -> bool {
-    // Different lengths cannot overlap
     if pattern1.len() != pattern2.len() {
         return false;
     }
-
-    // Check each position - patterns overlap if all positions are compatible
     for (c1, c2) in pattern1.iter().zip(pattern2.iter()) {
         if !positions_compatible(*c1, *c2) {
             return false;
@@ -800,7 +1113,6 @@ pub fn iupac_overlapping(pattern1: &[u8], pattern2: &[u8]) -> bool {
     true
 }
 
-/// Check if two IUPAC positions have overlapping base sets
 fn positions_compatible(c1: u8, c2: u8) -> bool {
     let set1 = iupac_to_bases(c1);
     for base2 in iupac_to_bases(c2) {
@@ -811,11 +1123,8 @@ fn positions_compatible(c1: u8, c2: u8) -> bool {
     false
 }
 
-/// Convert an IUPAC character to its set of possible bases
-///
 /// # panics
-/// on non-iupac bases. it's up to the upstream validation
-/// to prevent that from happening.
+/// on non-iupac bases
 fn iupac_to_bases(c: u8) -> &'static [u8] {
     match c.to_ascii_uppercase() {
         b'A' => b"A",
@@ -833,7 +1142,7 @@ fn iupac_to_bases(c: u8) -> &'static [u8] {
         b'H' => b"ACT",
         b'V' => b"ACG",
         b'N' => b"ACGT",
-        b'_' => b"", // treat _ as ignored // cov:excl-line
+        b'_' => b"", // cov:excl-line
         _ => panic!("non iupac string passed to iupac_to_bases"),
     }
 }
@@ -855,15 +1164,11 @@ impl IupacExpander {
         Self { positions, indices }
     }
 
-    // pub fn count_sequences(&self) -> usize {
-    //     self.positions.iter().map(|p| p.len()).product()
-    // }
-
     fn advance(&mut self) -> bool {
         let indices = self
             .indices
             .as_mut()
-            .expect("Inner advance called after iterator was exhausted. next() should not do that");
+            .expect("Inner advance called after iterator was exhausted");
         for i in (0..indices.len()).rev() {
             indices[i] += 1;
             if indices[i] < self.positions[i].len() {
@@ -907,7 +1212,6 @@ pub fn init_hamming_resonator(
 
     let resonator = HammingResonator::new(seqs, max_dist.into())
         //cov:excl-start
-        //we ensure in validation taht the barcodes are all of the same length
         .map_err(|e| {
             ValidationFailure::new(
                 "Failed to initialize".to_string(),
@@ -917,6 +1221,21 @@ pub fn init_hamming_resonator(
     //cov:excl-stop
     Ok(resonator)
 }
+
+/// Find out exactly what's the minimum number of bits to represent a number in binary
+#[expect(
+    clippy::cast_possible_truncation,
+    reason = "Can not be more than usize::BITS, so 32, no truncation possible"
+)]
+pub fn bits_needed_to_represent(count: usize) -> u16 {
+    if count <= 1 {
+        1u16
+    } else {
+        (usize::BITS - (count).leading_zeros()) as u16
+    }
+}
+
+// ── Tests ─────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
 mod test {
@@ -937,6 +1256,7 @@ mod test {
         check(b"DHBVNKMWSRYAAGCT", b"AGCTURYSWKMNBVDH");
         check(b"dhbvnkmwsryaagct", b"agcturyswkmnbvdh");
     }
+
     #[test]
     #[should_panic(expected = "New line in DNA sequence")]
     fn test_rev_complement_panics_on_newline() {
@@ -968,22 +1288,13 @@ mod test {
 
     #[test]
     fn test_reverse_complement() {
-        // Test basic ATCG
         assert_eq!(super::reverse_complement(b"ATCG"), b"CGAT");
         assert_eq!(super::reverse_complement(b"AAAA"), b"TTTT");
         assert_eq!(super::reverse_complement(b"CGCG"), b"CGCG");
-
-        // Test with N
         assert_eq!(super::reverse_complement(b"ATCGN"), b"NCGAT");
-
-        // Test lowercase
         assert_eq!(super::reverse_complement(b"atcg"), b"cgat");
         assert_eq!(super::reverse_complement(b"AtCg"), b"cGaT");
-
-        // Test empty
         assert_eq!(super::reverse_complement(b""), b"");
-
-        //test lowercase
         assert_eq!(super::reverse_complement(b"atcg"), b"cgat");
         assert_eq!(super::reverse_complement(b"aaaa"), b"tttt");
         assert_eq!(super::reverse_complement(b"cgcg"), b"cgcg");
@@ -999,10 +1310,8 @@ mod test {
         assert_eq!(super::iupac_hamming_distance(b"NGCC", b"AGCT"), 1);
         assert_eq!(super::iupac_hamming_distance(b"NGCC", b"cGCT"), 1);
 
-        assert_eq!(super::iupac_hamming_distance(b"AGKC", b"agKc"), 0); //we don't enforce no iupac
-        //in query
-        assert_eq!(super::iupac_hamming_distance(b"AGKC", b"agkc"), 1); //we don't enforce, but we
-        //don't handle different upper/lowercase either.
+        assert_eq!(super::iupac_hamming_distance(b"AGKC", b"agKc"), 0);
+        assert_eq!(super::iupac_hamming_distance(b"AGKC", b"agkc"), 1);
         let should = vec![
             (b'R', (0, 1, 0, 1)),
             (b'Y', (1, 0, 1, 0)),
@@ -1040,7 +1349,6 @@ mod test {
                 actg.3,
                 "wrong result {str_letter} vs T"
             );
-
             assert_eq!(
                 super::iupac_hamming_distance(&[*letter], b"a"),
                 actg.0,
@@ -1064,11 +1372,42 @@ mod test {
         }
     }
 
+    // Helper: build a single-hit LocationColumn and return (col, hit).
+    fn one_hit(
+        start: u32,
+        len: u16,
+        seg: u8,
+        seq: &[u8],
+    ) -> (super::LocationColumn, super::Hit) {
+        let mut col = super::LocationColumn::new();
+        col.push_single(
+            Some(super::HitRegionView {
+                start: start as usize,
+                len: len as usize,
+                segment_index: SegmentIndex(seg),
+            }),
+            seq,
+        );
+        let hit = col.get(0)[0];
+        (col, hit)
+    }
+
+    fn draft_for(start: usize, len: usize, seg: u8, seq: &[u8]) -> super::HitDraft {
+        super::HitDraft {
+            location: Some(super::HitRegionView {
+                start,
+                len,
+                segment_index: SegmentIndex(seg),
+            }),
+            sequence: seq.to_vec(),
+        }
+    }
+
     #[test]
     fn test_find_iupac() {
         assert_eq!(
             super::find_iupac(b"AGTTC", b"AGT", super::Anchor::Left, 0, SegmentIndex(0), 0),
-            Some(super::Hits::new(0, 3, SegmentIndex(0), b"AGT".into()))
+            Some(draft_for(0, 3, 0, b"AGT"))
         );
         assert_eq!(
             super::find_iupac(
@@ -1079,7 +1418,7 @@ mod test {
                 SegmentIndex(1),
                 0
             ),
-            Some(super::Hits::new(2, 3, SegmentIndex(1), "TTC".into()))
+            Some(draft_for(2, 3, 1, b"TTC"))
         );
         assert_eq!(
             super::find_iupac(
@@ -1090,7 +1429,7 @@ mod test {
                 SegmentIndex(2),
                 0
             ),
-            Some(super::Hits::new(1, 2, SegmentIndex(2), b"GT".into()))
+            Some(draft_for(1, 2, 2, b"GT"))
         );
         assert_eq!(
             super::find_iupac(
@@ -1101,7 +1440,7 @@ mod test {
                 SegmentIndex(2),
                 0
             ),
-            Some(super::Hits::new(0, 3, SegmentIndex(2), b"AGT".into()))
+            Some(draft_for(0, 3, 2, b"AGT"))
         );
         assert_eq!(
             super::find_iupac(
@@ -1112,7 +1451,7 @@ mod test {
                 SegmentIndex(2),
                 0
             ),
-            Some(super::Hits::new(2, 3, SegmentIndex(2), b"TTC".into(),))
+            Some(draft_for(2, 3, 2, b"TTC"))
         );
         assert_eq!(
             super::find_iupac(b"AGTTC", b"GT", super::Anchor::Left, 0, SegmentIndex(1), 0),
@@ -1142,17 +1481,11 @@ mod test {
                 SegmentIndex(1),
                 0
             ),
-            Some(super::Hits::new(
-                //first hit reported.
-                2,
-                1,
-                SegmentIndex(1),
-                b"T".into()
-            ))
+            Some(draft_for(2, 1, 1, b"T"))
         );
         assert_eq!(
             super::find_iupac(b"AGTTC", b"AA", super::Anchor::Left, 1, SegmentIndex(1), 0),
-            Some(super::Hits::new(0, 2, SegmentIndex(1), b"AG".into(),))
+            Some(draft_for(0, 2, 1, b"AG"))
         );
         assert_eq!(
             super::find_iupac(
@@ -1163,14 +1496,13 @@ mod test {
                 SegmentIndex(1),
                 0
             ),
-            Some(super::Hits::new(0, 5, SegmentIndex(1), b"AGTTC".into(),))
+            Some(draft_for(0, 5, 1, b"AGTTC"))
         );
     }
 
     #[test]
     #[expect(clippy::too_many_lines, reason = "it's a test")]
     fn test_find_iupac_with_indel() {
-        // Perfect match behaves like the mismatch-only variant.
         assert_eq!(
             super::find_iupac_with_indel(
                 b"AGTTC",
@@ -1181,10 +1513,9 @@ mod test {
                 None,
                 SegmentIndex(0),
             ),
-            Some(super::Hits::new(0, 3, SegmentIndex(0), b"AGT".into()))
+            Some(draft_for(0, 3, 0, b"AGT"))
         );
 
-        // Allow a single substitution.
         assert_eq!(
             super::find_iupac_with_indel(
                 b"AGTTC",
@@ -1195,10 +1526,9 @@ mod test {
                 None,
                 SegmentIndex(2),
             ),
-            Some(super::Hits::new(0, 3, SegmentIndex(2), b"AGT".into()))
+            Some(draft_for(0, 3, 2, b"AGT"))
         );
 
-        // Allow an insertion in the reference (extra base in the read).
         assert_eq!(
             super::find_iupac_with_indel(
                 b"AGGTC",
@@ -1209,10 +1539,9 @@ mod test {
                 None,
                 SegmentIndex(3),
             ),
-            Some(super::Hits::new(0, 5, SegmentIndex(3), b"AGGTC".into()))
+            Some(draft_for(0, 5, 3, b"AGGTC"))
         );
 
-        // Allow a deletion in the reference (missing base in the read).
         assert_eq!(
             super::find_iupac_with_indel(
                 b"AGTC",
@@ -1223,10 +1552,9 @@ mod test {
                 None,
                 SegmentIndex(4),
             ),
-            Some(super::Hits::new(0, 4, SegmentIndex(4), b"AGTC".into()))
+            Some(draft_for(0, 4, 4, b"AGTC"))
         );
 
-        // Enforce anchoring at the left edge.
         assert_eq!(
             super::find_iupac_with_indel(
                 b"CCAGTTC",
@@ -1240,7 +1568,6 @@ mod test {
             None
         );
 
-        //right edge
         assert_eq!(
             super::find_iupac_with_indel(
                 b"CCAGTTC",
@@ -1264,9 +1591,9 @@ mod test {
                 None,
                 SegmentIndex(5),
             ),
-            Some(super::Hits::new(4, 3, SegmentIndex(5), b"TTC".into()))
+            Some(draft_for(4, 3, 5, b"TTC"))
         );
-        // Reject when mismatches exceed the dedicated limit.
+
         assert_eq!(
             super::find_iupac_with_indel(
                 b"AGGTC",
@@ -1280,7 +1607,6 @@ mod test {
             None
         );
 
-        // Respect the total edit budget when provided.
         assert_eq!(
             super::find_iupac_with_indel(
                 b"AGGTC",
@@ -1294,8 +1620,6 @@ mod test {
             None
         );
 
-        //too many inserts
-        //
         assert_eq!(
             super::find_iupac_with_indel(
                 b"AGNNNNNNNNTC",
@@ -1308,7 +1632,7 @@ mod test {
             ),
             None
         );
-        //empty input
+
         assert_eq!(
             super::find_iupac_with_indel(
                 b"",
@@ -1338,22 +1662,68 @@ mod test {
     use super::*;
 
     #[test]
+    fn test_location_column_basic() {
+        let (col, hit) = one_hit(5, 3, 0, b"AGT");
+        assert_eq!(col.hit_bytes(hit), b"AGT");
+        let loc = col.hit_location(hit).expect("should have location");
+        assert_eq!(loc.start, 5);
+        assert_eq!(loc.len, 3);
+        assert_eq!(loc.segment_index, SegmentIndex(0));
+    }
+
+    #[test]
+    fn test_location_column_push_none() {
+        let mut col = LocationColumn::new();
+        col.push_none();
+        assert_eq!(col.len(), 1);
+        assert!(col.get(0).is_empty());
+    }
+
+    #[test]
+    fn test_location_column_no_loc() {
+        let mut col = LocationColumn::new();
+        col.push_single(None, b"ACGT");
+        let hit = col.get(0)[0];
+        assert_eq!(col.hit_bytes(hit), b"ACGT");
+        assert!(col.hit_location(hit).is_none());
+    }
+
+    #[test]
+    fn test_location_column_slab_independence() {
+        // Confirm two push_single calls copy into independent slab regions.
+        let mut col = LocationColumn::new();
+        col.push_single(None, b"AAAA");
+        col.push_single(None, b"CCCC");
+        let h0 = col.get(0)[0];
+        let h1 = col.get(1)[0];
+        col.hit_bytes_mut(h0)[0] = b'T';
+        assert_eq!(col.hit_bytes(h0), b"TAAA");
+        assert_eq!(col.hit_bytes(h1), b"CCCC");
+    }
+
+    #[test]
+    fn test_location_column_extend_from() {
+        let mut a = LocationColumn::new();
+        a.push_single(Some(HitRegionView { start: 0, len: 2, segment_index: SegmentIndex(0) }), b"AG");
+
+        let mut b = LocationColumn::new();
+        b.push_single(Some(HitRegionView { start: 3, len: 2, segment_index: SegmentIndex(0) }), b"TC");
+
+        a.extend_from(&b);
+        assert_eq!(a.len(), 2);
+        assert_eq!(a.hit_bytes(a.get(1)[0]), b"TC");
+    }
+
+    #[test]
     fn test_positions_compatible() {
-        // Same base should be compatible
         assert!(positions_compatible(b'A', b'A'));
         assert!(positions_compatible(b'T', b'T'));
-
-        // Different bases should not be compatible
         assert!(!positions_compatible(b'A', b'T'));
         assert!(!positions_compatible(b'C', b'G'));
-
-        // IUPAC codes should be compatible with their bases
         assert!(positions_compatible(b'R', b'A'));
         assert!(positions_compatible(b'R', b'G'));
         assert!(!positions_compatible(b'R', b'C'));
         assert!(!positions_compatible(b'R', b'T'));
-
-        // N should be compatible with everything
         assert!(positions_compatible(b'N', b'A'));
         assert!(positions_compatible(b'N', b'T'));
         assert!(positions_compatible(b'N', b'C'));
@@ -1362,99 +1732,64 @@ mod test {
 
     #[test]
     fn test_iupac_overlapping() {
-        // Different lengths should not overlap
         assert!(!iupac_overlapping(b"AT", b"ATC"));
-
-        // Same sequence should overlap
         assert!(iupac_overlapping(b"ATCG", b"ATCG"));
-
-        // Different sequences should not overlap
         assert!(!iupac_overlapping(b"ATCG", b"GGCC"));
-
-        // IUPAC overlaps
         assert!(iupac_overlapping(b"NNNN", b"ATCG"));
         assert!(iupac_overlapping(b"ATCG", b"NNNN"));
-        assert!(iupac_overlapping(b"ATVG", b"ATCG")); // A-T-[A/C/G]-G vs A-T-C-G
+        assert!(iupac_overlapping(b"ATVG", b"ATCG"));
         assert!(iupac_overlapping(b"ATCG", b"ATCN"));
         assert!(iupac_overlapping(b"N", b"A"));
         assert!(iupac_overlapping(b"N", b"G"));
         assert!(iupac_overlapping(b"N", b"C"));
         assert!(iupac_overlapping(b"N", b"T"));
         assert!(iupac_overlapping(b"R", b"A"));
-
-        assert!(iupac_overlapping(b"R", b"A"));
         assert!(iupac_overlapping(b"R", b"G"));
         assert!(!iupac_overlapping(b"R", b"C"));
         assert!(!iupac_overlapping(b"R", b"T"));
-
         assert!(iupac_overlapping(b"Y", b"C"));
         assert!(iupac_overlapping(b"Y", b"T"));
         assert!(!iupac_overlapping(b"Y", b"A"));
         assert!(!iupac_overlapping(b"Y", b"G"));
-
         assert!(iupac_overlapping(b"S", b"G"));
         assert!(iupac_overlapping(b"S", b"C"));
         assert!(!iupac_overlapping(b"S", b"A"));
         assert!(!iupac_overlapping(b"S", b"T"));
-
         assert!(iupac_overlapping(b"W", b"A"));
         assert!(iupac_overlapping(b"W", b"T"));
         assert!(!iupac_overlapping(b"W", b"G"));
         assert!(!iupac_overlapping(b"W", b"C"));
-
         assert!(iupac_overlapping(b"K", b"G"));
         assert!(iupac_overlapping(b"K", b"T"));
         assert!(!iupac_overlapping(b"K", b"A"));
         assert!(!iupac_overlapping(b"K", b"C"));
-
         assert!(iupac_overlapping(b"M", b"A"));
         assert!(iupac_overlapping(b"M", b"C"));
         assert!(!iupac_overlapping(b"M", b"G"));
         assert!(!iupac_overlapping(b"M", b"T"));
-
         assert!(iupac_overlapping(b"B", b"C"));
         assert!(iupac_overlapping(b"B", b"G"));
         assert!(iupac_overlapping(b"B", b"T"));
         assert!(!iupac_overlapping(b"B", b"A"));
-
         assert!(iupac_overlapping(b"D", b"A"));
         assert!(iupac_overlapping(b"D", b"G"));
         assert!(iupac_overlapping(b"D", b"T"));
         assert!(!iupac_overlapping(b"D", b"C"));
-
         assert!(iupac_overlapping(b"H", b"A"));
         assert!(iupac_overlapping(b"H", b"C"));
         assert!(iupac_overlapping(b"H", b"T"));
         assert!(!iupac_overlapping(b"H", b"G"));
-
         assert!(iupac_overlapping(b"V", b"A"));
         assert!(iupac_overlapping(b"V", b"C"));
         assert!(iupac_overlapping(b"V", b"G"));
         assert!(!iupac_overlapping(b"V", b"T"));
-
         assert!(iupac_overlapping(b"U", b"T"));
         assert!(iupac_overlapping(b"U", b"U"));
         assert!(!iupac_overlapping(b"U", b"C"));
         assert!(!iupac_overlapping(b"U", b"G"));
         assert!(!iupac_overlapping(b"U", b"A"));
-
-        // Non-overlapping IUPAC
-        assert!(!iupac_overlapping(b"RYRY", b"ATCG")); // R=A/G, Y=C/T vs A-T-C-G
+        assert!(!iupac_overlapping(b"RYRY", b"ATCG"));
     }
-
-    // #[test]
-    // fn test_contains_iupac() {
-    //     assert_eq!(contains_iupac_ambigous(b"A"), false);
-    //     assert_eq!(contains_iupac_ambigous(b"C"), false);
-    //     assert_eq!(contains_iupac_ambigous(b"G"), false);
-    //     assert_eq!(contains_iupac_ambigous(b"T"), false);
-    //     assert_eq!(contains_iupac_ambigous(b"TN"), true);
-    //     assert_eq!(contains_iupac_ambigous(b"NT"), true);
-    //     assert_eq!(contains_iupac_ambigous(b"RT"), true);
-    //     assert_eq!(contains_iupac_ambigous(b"xx"), false);
-    //     assert_eq!(contains_iupac_ambigous(b"X"), false);
-    //     assert_eq!(contains_iupac_ambigous(b"Y"), true);
-    // }
 
     #[test]
     fn test_all_iupac() {
@@ -1479,21 +1814,6 @@ mod test {
             IupacExpander::new(b"A".into()).collect::<Vec<BString>>(),
             vec![BString::from(b"A")]
         );
-        assert_eq!(
-            IupacExpander::new(b"G".into()).collect::<Vec<BString>>(),
-            vec![BString::from(b"G")]
-        );
-
-        assert_eq!(
-            IupacExpander::new(b"C".into()).collect::<Vec<BString>>(),
-            vec![BString::from(b"C")]
-        );
-
-        assert_eq!(
-            IupacExpander::new(b"T".into()).collect::<Vec<BString>>(),
-            vec![BString::from(b"T")]
-        );
-
         assert_eq!(
             IupacExpander::new(b"N".into()).collect::<Vec<BString>>(),
             vec![
@@ -1529,48 +1849,25 @@ mod test {
                 BString::from(b"CAGTGA"),
                 BString::from(b"GAGTAA"),
                 BString::from(b"GAGTGA"),
-                // BString::from(b"TAGTAA"),
-                // BString::from(b"TAGTGA"),
             ]
         );
         assert_eq!(
             IupacExpander::new(b"SAGTRA".into()).collect::<Vec<BString>>(),
             vec![
-                // BString::from(b"AAGTAA"),
-                // BString::from(b"AAGTGA"),
                 BString::from(b"CAGTAA"),
                 BString::from(b"CAGTGA"),
                 BString::from(b"GAGTAA"),
                 BString::from(b"GAGTGA"),
-                // BString::from(b"TAGTAA"),
-                // BString::from(b"TAGTGA"),
             ]
         );
         assert_eq!(
             IupacExpander::new(b"_S_AGT__RA".into()).collect::<Vec<BString>>(),
             vec![
-                // BString::from(b"AAGTAA"),
-                // BString::from(b"AAGTGA"),
                 BString::from(b"CAGTAA"),
                 BString::from(b"CAGTGA"),
                 BString::from(b"GAGTAA"),
                 BString::from(b"GAGTGA"),
-                // BString::from(b"TAGTAA"),
-                // BString::from(b"TAGTGA"),
             ]
         );
-    }
-}
-
-/// Find out exactly what's the minimum number of bits to represent a number in binary
-#[expect(
-    clippy::cast_possible_truncation,
-    reason = "Can not be more than usize::BITS, so 32, no truncation possible"
-)]
-pub fn bits_needed_to_represent(count: usize) -> u16 {
-    if count <= 1 {
-        1u16
-    } else {
-        (usize::BITS - (count).leading_zeros()) as u16
     }
 }

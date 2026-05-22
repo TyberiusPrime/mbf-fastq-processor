@@ -73,7 +73,7 @@ impl Step for ReverseComplement {
                     condition.as_deref(),
                 );
                 let ftl =
-                    |location: &HitRegion, _pos, seq: &BString, read_len: usize| -> NewLocation {
+                    |location: HitRegion, _pos, seq: &[u8], read_len: usize| -> NewLocation {
                         let new_start = read_len
                             .checked_sub(location.start + location.len)
                             .expect("Start position underflow");
@@ -105,16 +105,14 @@ impl Step for ReverseComplement {
             ResolvedSourceAll::Tag(tag_name) => {
                 if let Some(hits) = block.tags.get_mut(tag_name) {
                     match hits {
-                        TagColumn::Location(items) => {
-                            for hits in items.iter_mut() {
-                                if let Some(hits) = hits.as_mut() {
-                                    for hit_region in &mut hits.0 {
-                                        for ii in 0..hit_region.sequence.len() {
-                                            hit_region.sequence[ii] =
-                                                reverse_complement_iupac(
-                                                    &[hit_region.sequence[ii]],
-                                                )[0];
-                                        }
+                        TagColumn::Location(col) => {
+                            for slot_idx in 0..col.hits.len() {
+                                let nhits = col.hits[slot_idx].len();
+                                for hit_idx in 0..nhits {
+                                    let hit = col.hits[slot_idx][hit_idx];
+                                    let bytes = col.hit_bytes_mut(hit);
+                                    for b in bytes.iter_mut() {
+                                        *b = reverse_complement_iupac(&[*b])[0];
                                     }
                                 }
                             }

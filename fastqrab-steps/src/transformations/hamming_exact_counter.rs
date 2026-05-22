@@ -171,17 +171,16 @@ impl Step for HammingExactCounter {
             let input_tags = block.tags.get(&self.in_label).expect("Input tag not found");
             let counts = &*self.majority_data.barcode_counts;
             match input_tags {
-                TagColumn::Location(items) => {
-                    for item in items {
-                        let idx = match item {
-                            None => continue,
-                            Some(hits) => {
-                                let seq = hits.joined_sequence_cow(None);
-                                self.majority_data
-                                    .seq_to_idx
-                                    .get(BStr::new(seq.as_ref()))
-                                    .copied()
-                            }
+                TagColumn::Location(col) => {
+                    for hits in col.iter() {
+                        let idx = if hits.is_empty() {
+                            continue;
+                        } else {
+                            let seq = col.joined_sequence_cow(hits, None);
+                            self.majority_data
+                                .seq_to_idx
+                                .get(BStr::new(seq.as_ref()))
+                                .copied()
                         };
                         if let Some(idx) = idx {
                             counts[idx].fetch_add(1, Ordering::Relaxed);

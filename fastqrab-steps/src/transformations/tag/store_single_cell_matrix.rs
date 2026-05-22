@@ -478,10 +478,10 @@ impl Step for StoreSingleCellMatrix {
                     Some(s) => seq_to_idx(s, cell_map),
                     None => 0,
                 },
-                TagColumn::Location(items) => match &items[ii] {
-                    Some(hits) => seq_to_idx(&hits.joined_sequence_cow(None), cell_map),
-                    None => 0,
-                },
+                TagColumn::Location(col) => {
+                    let h = col.get(ii);
+                    if h.is_empty() { 0 } else { seq_to_idx(&col.joined_sequence_cow(h, None), cell_map) }
+                }
                 _ => 0,
             };
 
@@ -490,10 +490,10 @@ impl Step for StoreSingleCellMatrix {
                     Some(s) => seq_to_idx(s, gene_map),
                     None => 0,
                 },
-                TagColumn::Location(items) => match &items[ii] {
-                    Some(hits) => seq_to_idx(&hits.joined_sequence_cow(None), gene_map),
-                    None => 0,
-                },
+                TagColumn::Location(col) => {
+                    let h = col.get(ii);
+                    if h.is_empty() { 0 } else { seq_to_idx(&col.joined_sequence_cow(h, None), gene_map) }
+                }
                 _ => 0,
             };
 
@@ -507,9 +507,12 @@ impl Step for StoreSingleCellMatrix {
                     }
                     None => (Umi::new_unmatched(), 0u8),
                 },
-                TagColumn::Location(items) => match &items[ii] {
-                    Some(hits) => {
-                        let seq = hits.joined_sequence(None);
+                TagColumn::Location(col) => {
+                    let h = col.get(ii);
+                    if h.is_empty() {
+                        (Umi::new_unmatched(), 0u8)
+                    } else {
+                        let seq = col.joined_sequence(h, None);
                         if seq.len() > 16 {
                             anyhow::bail!(
                                 "UMI is {}bp, maximum supported length is 16bp",
@@ -518,8 +521,7 @@ impl Step for StoreSingleCellMatrix {
                         }
                         (encode_umi(&seq), seq.len() as u8)
                     }
-                    None => (Umi::new_unmatched(), 0u8),
-                },
+                }
                 _ => (Umi::new_unmatched(), 0),
             };
 
