@@ -1308,6 +1308,17 @@ fn test_cases_x_input_validation_x_not_fastq_nor_fasta_nor_bam() {
 
 #[test]
 
+fn test_cases_x_input_validation_x_too_many_segments() {
+    println!("Test case is in: test_cases/input_validation/too_many_segments");
+    run_test(
+        std::path::Path::new("../test_cases/input_validation/too_many_segments"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_input_validation_x_unsupported_compression() {
     println!("Test case is in: test_cases/input_validation/unsupported_compression");
     run_test(
@@ -2864,6 +2875,50 @@ fn test_cases_x_single_step_x_compare_string_tags_x_basic() {
     println!("Test case is in: test_cases/single_step/compare_string_tags/basic");
     run_test(
         std::path::Path::new("../test_cases/single_step/compare_string_tags/basic"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_compare_string_tags_x_location() {
+    println!("Test case is in: test_cases/single_step/compare_string_tags/location");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/compare_string_tags/location"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_compare_string_tags_x_missing() {
+    println!("Test case is in: test_cases/single_step/compare_string_tags/missing");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/compare_string_tags/missing"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_compare_string_tags_x_mixed_1() {
+    println!("Test case is in: test_cases/single_step/compare_string_tags/mixed_1");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/compare_string_tags/mixed_1"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_compare_string_tags_x_mixed_2() {
+    println!("Test case is in: test_cases/single_step/compare_string_tags/mixed_2");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/compare_string_tags/mixed_2"),
         "input.toml",
         1,
     );

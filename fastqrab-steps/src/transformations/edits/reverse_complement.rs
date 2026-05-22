@@ -91,7 +91,7 @@ impl Step for ReverseComplement {
                     SegmentIndexOrAll::All => {
                         for idx in 0..block.segments.len() {
                             block.filter_tag_locations(
-                                SegmentIndex(u16::try_from(idx).expect("Segments limited to 65k")),
+                                SegmentIndex::new(idx),
                                 ftl,
                                 condition.as_deref(),
                             );

@@ -1,0 +1,13 @@
+Error Details ==
+Error 1/1
+  ╭─config.toml
+1 │ [input]
+  ┆ ───┬───
+  ┆    │
+  ┆    ╰──── Too many segments defined
+──╯
+Hint: The maximum number of segments is 256.
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/input-section
+      Or run: `fastqrab template input-section` for more information.
+
+

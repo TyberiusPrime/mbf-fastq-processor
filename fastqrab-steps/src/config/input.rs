@@ -375,6 +375,14 @@ impl VerifyIn<super::PartialConfig> for PartialInput {
             }
         });
 
+        if let Some(segments) = self.segments.as_ref() {
+            if segments.keys.len() > 256 {
+                return Err(ValidationFailure::new(
+                    "Too many segments defined",
+                    Some("The maximum number of segments is 256."),
+                ));
+            }
+        }
         self.verify_same_number_of_input_segments();
 
         if let Err(()) = self.build_structured()
