@@ -18,6 +18,13 @@ which you can then pass to .[FilterByTag]({{< relref "docs/reference/filter-step
 
 You can use any tags previously defined on the molecule as variables in the expression.
 
+Location/String tags get converted into bools (false=0, true=1) based on whether
+they are present (=not missing). 
+
+That means you can for example chain this after 
+[HammingCorrect]({{< relref "docs/reference/tag-steps/using/HammingCorrect.md" >}})
+with `on_no_match` = 'remove'.
+
 Additional, there's a series of virtual tags available:
 
 * `len_<segment-name>` - the length of the specified segment (e.g. `len_read1`).
@@ -28,9 +35,15 @@ Additional, there's a series of virtual tags available:
 
 ## Language
 
-Besides the regular arithmetic operators (+, -, *, /, %, ^)
-this supports log(base, val), e(), pi(), int(), ceil(), floor(), round(), abs(), sign(), min(a,b,...), max(a,b,...)
-sin(radians), cos(radians), tan(radians), sinh(radians), cosh(radians), tanh(radians), 
-Use any defined tag by name. Location/string tags are converted to booleans by their presence.
+Besides the regular arithmetic operators (+, -, *, /, %, ^) this supports
+log(base, val), e(), pi(), int(), ceil(), floor(), round(), abs(), sign(),
+min(a,b,...), max(a,b,...) sin(radians), cos(radians), tan(radians),
+sinh(radians), cosh(radians), tanh(radians), 
+
+Use any defined tag by name.
+
+Location/string tags are converted to booleans by their presence.
 
 You can also use `len_<segment>` or `len_<tagname>` to access the length of tags and segments.
+
+There is no not operator, but you can use `== 0` for 'is false' and `!= 0` for 'is true'.
