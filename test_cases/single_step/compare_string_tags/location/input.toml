@@ -1,0 +1,29 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'ExtractRegex'
+    source = 'read1'
+    search = '^(.{4}).{4}$'
+    replacement = '$1'
+    out_label = 'tag_a'
+
+[[step]]
+    action = 'ExtractRegex'
+    source = 'read1'
+    search = '^.{4}(.{4})$'
+    replacement = '$1'
+    out_label = 'tag_b'
+
+[[step]]
+    action = 'CompareStringTags'
+    in_label_a = 'tag_a'
+    in_label_b = 'tag_b'
+    out_label = 'cmp'
+
+[[step]]
+    action = 'StoreTagInComment'
+    in_label = 'cmp'
+
+[output]
+    prefix = 'output'

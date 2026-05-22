@@ -1,0 +1,2 @@
+CompareStringTags requires identical length tags.
+Read 'AAAABBBB': 'tag_a' has length 4 but 'tag_b' has length 3

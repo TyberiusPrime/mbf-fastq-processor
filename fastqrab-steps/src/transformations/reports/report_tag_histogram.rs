@@ -120,12 +120,7 @@ impl From<HistogramData> for serde_json::Value {
                 let mut keys: Vec<_> = map.keys().collect();
                 keys.sort();
                 keys.iter()
-                    .map(|k| {
-                        (
-                            format!("{k:.2}"),
-                            *map.get(*k).expect("Keys came from map"),
-                        )
-                    })
+                    .map(|k| (format!("{k:.2}"), *map.get(*k).expect("Keys came from map")))
                     .collect()
             }
 

@@ -432,6 +432,31 @@ fn benchmark_key_steps(c: &mut Criterion) {
             thread_count,
         ),
         BenchmarkConfig::new(
+            "CompareStringTags",
+            r#"[[step]]
+    action = "ExtractRegex"
+    source = "name:read1"
+    search = ".{5}"
+    out_label = "name_a"
+
+[[step]]
+    action = "ExtractRegex"
+    source = "name:read1"
+    search = ".{5}"
+    out_label = "name_b"
+
+[[step]]
+    action = "CompareStringTags"
+    in_label_a = "name_a"
+    in_label_b = "name_b"
+    out_label = "cmp"
+
+[[step]]
+    action = "ForgetAllTags""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
             "Demultiplex",
             r#"[barcodes.sample_barcodes]
     'AAAAAAAA' = 'sample_1'
