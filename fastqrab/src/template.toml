@@ -329,6 +329,15 @@
 #    out_label = "region_length"
 #    in_label = "mytag" # region tag produced by ExtractRegion(s) or similar
 
+# ==== CompareStringTags ====
+## Compare two string-valued tags lexicographically (-1, 0, or 1).
+## Raises a runtime error if the two strings have different lengths for any read.
+# [[step]]
+#    action = "CompareStringTags"
+#    in_label_a = "tag_a"   # first string tag
+#    in_label_b = "tag_b"   # second string tag (must be same length as tag_a per read)
+#    out_label = "cmp"      # -1 if tag_a < tag_b, 0 if equal, 1 if tag_a > tag_b
+
 # ==== CalcExpectedError ====
 ## Aggregate per-base error probabilities (PHRED+33) for each read.
 # [[step]]

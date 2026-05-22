@@ -2860,6 +2860,28 @@ fn test_cases_x_single_step_x_calc_x_worst_quality_x_wrong_tag_kind() {
 
 #[test]
 
+fn test_cases_x_single_step_x_compare_string_tags_x_basic() {
+    println!("Test case is in: test_cases/single_step/compare_string_tags/basic");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/compare_string_tags/basic"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_compare_string_tags_x_unequal_len() {
+    println!("Test case is in: test_cases/single_step/compare_string_tags/unequal_len");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/compare_string_tags/unequal_len"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_compression_x_zstd_input() {
     println!("Test case is in: test_cases/single_step/compression/zstd_input");
     run_test(

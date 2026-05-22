@@ -736,6 +736,43 @@ Convert region tag to numeric length.
     out_label = 'region_length'    # TYPE: string, REQUIRED
 ```
 
+### CompareStringTags
+
+Compare two string-valued tags lexicographically. Returns -1, 0, or 1 (like Rust's `PartialOrd`).
+
+**USE WHEN**: Comparing barcodes, read names, or any two equal-length string tags
+
+```toml
+[[step]]
+    action = 'CompareStringTags'
+    in_label_a = 'tag_a'           # TYPE: string tag, REQUIRED
+    in_label_b = 'tag_b'           # TYPE: string tag (same length as tag_a), REQUIRED
+    out_label = 'cmp'              # TYPE: string, REQUIRED; output is -1.0, 0.0, or 1.0
+```
+
+**Output values**:
+- `-1`: `tag_a < tag_b` (lexicographically)
+- `0`: `tag_a == tag_b`
+- `1`: `tag_a > tag_b`
+- `Missing`: if either input tag is Missing
+
+**Constraint**: Both string tags must have the same byte length for every read. A runtime error is raised otherwise.
+
+**Combine with EvalExpression** to produce a boolean equality/ordering tag:
+```toml
+[[step]]
+    action = 'CompareStringTags'
+    in_label_a = 'seq_a'
+    in_label_b = 'seq_b'
+    out_label = 'cmp'
+
+[[step]]
+    action = 'EvalExpression'
+    expression = 'cmp == 0'        # true when seq_a == seq_b
+    result_type = 'bool'
+    out_label = 'seqs_equal'
+```
+
 ### EvalExpression
 
 Calculate arithmetic expression combining tags.
@@ -862,6 +899,11 @@ Calculate arithmetic expression combining tags.
 ## Boolean Tag Steps
 
 Mark reads with boolean tags.
+
+> **Tip**: To compare two string tags and get a boolean equality result, use
+> [CompareStringTags](#comparestringtags) (produces -1/0/1) followed by
+> [EvalExpression](#evalexpression) (`expression = 'cmp == 0'`).
+
 
 ### TagDuplicates
 
