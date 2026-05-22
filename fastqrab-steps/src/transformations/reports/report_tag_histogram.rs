@@ -1,4 +1,12 @@
 use crate::{no_barcode_infix, transformations::prelude::*};
+use std::{cell::RefCell, collections::HashMap, thread::ThreadId};
+
+thread_local! {
+    // Keyed by step address so multiple histogram steps don't share accumulators.
+    // The inner Mutex is per-thread, so it is never contended.
+    static LOCAL: RefCell<HashMap<usize, Arc<Mutex<DemultiplexedData<HistogramData>>>>>
+        = RefCell::new(HashMap::new());
+}
 
 /// Histogram data structure that can handle both String and Numeric tags
 #[derive(Debug, Clone)]
@@ -143,7 +151,7 @@ pub struct _ReportTagHistogram {
     #[tpd(skip)]
     pub tag_type: TagValueType,
     #[tpd(skip)]
-    pub data: Arc<Mutex<DemultiplexedData<HistogramData>>>,
+    pub data: Arc<Mutex<HashMap<ThreadId, Arc<Mutex<DemultiplexedData<HistogramData>>>>>>,
 }
 
 impl Partial_ReportTagHistogram {
@@ -152,7 +160,7 @@ impl Partial_ReportTagHistogram {
             report_no: TomlValue::new_ok_unplaced(report_no),
             tag_name,
             tag_type: None,
-            data: Some(Default::default()),
+            data: Some(Arc::new(Mutex::new(HashMap::new()))),
         }
     }
 }
@@ -187,6 +195,47 @@ impl TagUser for PartialTaggedVariant<Box<Partial_ReportTagHistogram>> {
     }
 }
 
+impl _ReportTagHistogram {
+    fn new_histogram(&self) -> HistogramData {
+        match self.tag_type {
+            TagValueType::Location | TagValueType::String => {
+                HistogramData::String(FxIndexMap::default())
+            }
+            TagValueType::Numeric((lower, upper)) => {
+                if lower == Some(NonNaN::new(0.0).expect("Can't fail"))
+                    && upper == Some(NonNaN::new(1.0).expect("can't fail"))
+                {
+                    HistogramData::ZeroToOne(FxIndexMap::default())
+                } else {
+                    HistogramData::Integer(FxIndexMap::default())
+                }
+            }
+            TagValueType::Bool => HistogramData::Bool(0, 0),
+        }
+    }
+
+    // Returns this thread's accumulator Arc, registering it with the shared
+    // registry on first call. The returned Arc is never held by any other
+    // thread, so locking it is always uncontended.
+    fn get_or_create_local(&self) -> Arc<Mutex<DemultiplexedData<HistogramData>>> {
+        let step_addr = self as *const _ReportTagHistogram as usize;
+        LOCAL.with(|local| {
+            let mut cache = local.borrow_mut();
+            if let Some(arc) = cache.get(&step_addr) {
+                return arc.clone();
+            }
+            let new_arc: Arc<Mutex<DemultiplexedData<HistogramData>>> =
+                Arc::new(Mutex::new(DemultiplexedData::default()));
+            self.data
+                .lock()
+                .expect("Lock poisoned")
+                .insert(std::thread::current().id(), new_arc.clone());
+            cache.insert(step_addr, new_arc.clone());
+            new_arc
+        })
+    }
+}
+
 impl Step for Box<_ReportTagHistogram> {
     fn transmits_premature_termination(&self) -> bool {
         false
@@ -200,35 +249,8 @@ impl Step for Box<_ReportTagHistogram> {
         &mut self,
         _input_info: &InputInfo,
         _output_files: StepOutputFiles,
-        demultiplex_info: &OptDemultiplex,
+        _demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<DemultiplexBarcodes>> {
-        let mut data = self.data.lock().expect("Lock poisoned");
-        for valid_tag in demultiplex_info.iter_tags() {
-            data.insert(
-                valid_tag,
-                match self.tag_type {
-                    TagValueType::Location | TagValueType::String => {
-                        HistogramData::String(FxIndexMap::default())
-                    }
-                    TagValueType::Numeric((lower, upper)) => {
-                        if lower == Some(NonNaN::new(0.0).expect("Can't fail"))
-                            && upper == Some(NonNaN::new(1.0).expect("can't fail"))
-                        {
-                            HistogramData::ZeroToOne(FxIndexMap::default())
-                        } else {
-                            HistogramData::Integer(FxIndexMap::default())
-                        }
-                    }
-                    TagValueType::Bool => HistogramData::Bool(0, 0),
-                    // _ => {
-                    //     return Err(anyhow::anyhow!(
-                    //         "ReportTagHistogram does not support tag type {:?}",
-                    //         self.tag_type
-                    //     ));
-                    // }
-                },
-            );
-        }
         Ok(None)
     }
 
@@ -239,28 +261,15 @@ impl Step for Box<_ReportTagHistogram> {
         demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         if let Some(tag_values) = block.tags.get(&self.tag_name) {
-            // Build a local histogram per block without holding the lock
-            let mut local: std::collections::BTreeMap<DemultiplexTag, HistogramData> =
-                std::collections::BTreeMap::new();
-            let new_hist = || match self.tag_type {
-                TagValueType::Location | TagValueType::String => {
-                    HistogramData::String(FxIndexMap::default())
-                }
-                TagValueType::Numeric((lower, upper)) => {
-                    if lower == Some(NonNaN::new(0.0).expect("Can't fail"))
-                        && upper == Some(NonNaN::new(1.0).expect("can't fail"))
-                    {
-                        HistogramData::ZeroToOne(FxIndexMap::default())
-                    } else {
-                        HistogramData::Integer(FxIndexMap::default())
-                    }
-                }
-                TagValueType::Bool => HistogramData::Bool(0, 0),
-            };
+            // Each thread accumulates into its own DemultiplexedData.
+            // get_or_create_local only locks the shared registry on first call;
+            // after that the inner lock is always uncontended.
+            let local_arc = self.get_or_create_local();
+            let mut local = local_arc.lock().expect("Lock poisoned");
 
             match demultiplex_info {
                 OptDemultiplex::No => {
-                    let histogram = local.entry(0).or_insert_with(new_hist);
+                    let histogram = local.entry(0).or_insert_with(|| self.new_histogram());
                     for read_idx in 0..tag_values.len() {
                         histogram.add_from_column(tag_values, read_idx);
                     }
@@ -268,18 +277,12 @@ impl Step for Box<_ReportTagHistogram> {
                 OptDemultiplex::Yes(_) => {
                     if let Some(output_tags) = &block.output_tags {
                         for (read_idx, &demux_tag) in output_tags.iter().enumerate() {
-                            let histogram = local.entry(demux_tag).or_insert_with(new_hist);
-                            histogram.add_from_column(tag_values, read_idx);
+                            local
+                                .entry(demux_tag)
+                                .or_insert_with(|| self.new_histogram())
+                                .add_from_column(tag_values, read_idx);
                         }
                     } // cov:excl-line
-                }
-            }
-
-            // Merge local results into the shared map under a short lock
-            let mut data = self.data.lock().expect("Lock poisoned");
-            for (tag, local_hist) in local {
-                if let Some(hist) = data.get_mut(&tag) {
-                    hist.merge(local_hist);
                 }
             }
         } // cov:excl-line
@@ -287,16 +290,30 @@ impl Step for Box<_ReportTagHistogram> {
     }
 
     fn finalize(&self, demultiplex_info: &OptDemultiplex) -> Result<Option<FinalizeReportResult>> {
-        let data = self.data.lock().expect("Lock poisoned");
+        // Collect and merge all per-thread accumulators. Called after all
+        // apply() calls complete, so no thread is writing concurrently.
+        let thread_map = self.data.lock().expect("Lock poisoned");
+        let mut merged: DemultiplexedData<HistogramData> = DemultiplexedData::default();
+        for thread_data in thread_map.values() {
+            let taken: DemultiplexedData<HistogramData> =
+                std::mem::take(&mut *thread_data.lock().expect("Lock poisoned"));
+            for (tag, hist) in taken {
+                merged
+                    .entry(tag)
+                    .or_insert_with(|| self.new_histogram())
+                    .merge(hist);
+            }
+        }
+        drop(thread_map);
+
         let mut contents = serde_json::Map::new();
         let histogram_key = self.tag_name.clone();
 
         match demultiplex_info {
             OptDemultiplex::No => {
-                let histogram = data.get(&0).expect("no multiplex data found, but expected");
+                let histogram = merged.remove(&0).unwrap_or_else(|| self.new_histogram());
                 let mut histogram_contents = serde_json::Map::new();
-                histogram_contents
-                    .insert(histogram_key.as_ref().to_string(), histogram.clone().into());
+                histogram_contents.insert(histogram_key.as_ref().to_string(), histogram.into());
                 contents.insert(
                     "histogram".to_string(),
                     serde_json::Value::Object(histogram_contents),
@@ -310,11 +327,9 @@ impl Step for Box<_ReportTagHistogram> {
                 // HTML template can find it via addSectionTable().
                 for (tag, name) in &demultiplex_info.tag_to_name {
                     let barcode_key = name.as_ref().map_or(no_barcode_infix(), |x| x.as_str());
-                    let histogram = data
-                        .get(tag)
-                        .expect("no multiplex data found, but expected");
+                    let histogram = merged.remove(tag).unwrap_or_else(|| self.new_histogram());
                     let mut inner = serde_json::Map::new();
-                    inner.insert(histogram_key.as_ref().to_string(), histogram.clone().into());
+                    inner.insert(histogram_key.as_ref().to_string(), histogram.into());
                     let mut barcode_contents = serde_json::Map::new();
                     barcode_contents
                         .insert("histogram".to_string(), serde_json::Value::Object(inner));
