@@ -13,6 +13,31 @@ pub enum HistogramData {
 }
 
 impl HistogramData {
+    pub fn merge(&mut self, other: Self) {
+        match (self, other) {
+            (Self::String(a), Self::String(b)) => {
+                for (k, v) in b {
+                    *a.entry(k).or_insert(0) += v;
+                }
+            }
+            (Self::Integer(a), Self::Integer(b)) => {
+                for (k, v) in b {
+                    *a.entry(k).or_insert(0) += v;
+                }
+            }
+            (Self::ZeroToOne(a), Self::ZeroToOne(b)) => {
+                for (k, v) in b {
+                    *a.entry(k).or_insert(0) += v;
+                }
+            }
+            (Self::Bool(a_false, a_true), Self::Bool(b_false, b_true)) => {
+                *a_false += b_false;
+                *a_true += b_true;
+            }
+            _ => unreachable!(), // cov:excl-line
+        }
+    }
+
     #[expect(
         clippy::cast_possible_truncation,
         reason = "precision loss for huge values is ok"
@@ -172,11 +197,8 @@ impl Step for Box<_ReportTagHistogram> {
         false
     }
 
-    #[mutants::skip] // makes on difference to the outcome where we block 
-    // (only once by pipeline, or in self.data.lock()),
-    // but better for structure if the pipeline knows about it
     fn needs_serial(&self) -> bool {
-        true //todo: this is really slowing us *down*
+        false
     }
 
     fn init(
@@ -221,28 +243,48 @@ impl Step for Box<_ReportTagHistogram> {
         _input_info: &InputInfo,
         demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let mut data = self.data.lock().expect("Lock poisoned");
-        // Get the tag values for this tag name if they exist
         if let Some(tag_values) = block.tags.get(&self.tag_name) {
+            // Build a local histogram per block without holding the lock
+            let mut local: std::collections::BTreeMap<DemultiplexTag, HistogramData> =
+                std::collections::BTreeMap::new();
+            let new_hist = || match self.tag_type {
+                TagValueType::Location | TagValueType::String => {
+                    HistogramData::String(FxIndexMap::default())
+                }
+                TagValueType::Numeric((lower, upper)) => {
+                    if lower == Some(NonNaN::new(0.0).expect("Can't fail"))
+                        && upper == Some(NonNaN::new(1.0).expect("can't fail"))
+                    {
+                        HistogramData::ZeroToOne(FxIndexMap::default())
+                    } else {
+                        HistogramData::Integer(FxIndexMap::default())
+                    }
+                }
+                TagValueType::Bool => HistogramData::Bool(0, 0),
+            };
+
             match demultiplex_info {
                 OptDemultiplex::No => {
-                    // Without demultiplexing - process all reads
-                    let histogram = data
-                        .get_mut(&0)
-                        .expect("no multiplex data found, but expected");
+                    let histogram = local.entry(0).or_insert_with(new_hist);
                     for read_idx in 0..tag_values.len() {
                         histogram.add_from_column(tag_values, read_idx);
                     }
                 }
                 OptDemultiplex::Yes(_) => {
-                    // With demultiplexing - process reads by their demultiplex tag
                     if let Some(output_tags) = &block.output_tags {
                         for (read_idx, &demux_tag) in output_tags.iter().enumerate() {
-                            if let Some(histogram) = data.get_mut(&demux_tag) {
-                                histogram.add_from_column(tag_values, read_idx);
-                            }
+                            let histogram = local.entry(demux_tag).or_insert_with(new_hist);
+                            histogram.add_from_column(tag_values, read_idx);
                         }
                     } // cov:excl-line
+                }
+            }
+
+            // Merge local results into the shared map under a short lock
+            let mut data = self.data.lock().expect("Lock poisoned");
+            for (tag, local_hist) in local {
+                if let Some(hist) = data.get_mut(&tag) {
+                    hist.merge(local_hist);
                 }
             }
         } // cov:excl-line
