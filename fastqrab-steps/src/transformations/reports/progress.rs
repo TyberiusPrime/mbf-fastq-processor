@@ -63,6 +63,7 @@ impl Progress {
         writer
             .write_text_record(&bytes)
             .context("failed to write to progress file")?;
+        writer.flush().context("failed to flush progress file")?;
         Ok(())
     }
 }
