@@ -1,5 +1,5 @@
 [workspace]
-	members = ["fastqrab", "fastqrab-dna", "fastqrab-config", "fastqrab-io", "fastqrab-steps"]
+	members = ["fastqrab", "fastqrab-dna", "fastqrab-config", "fastqrab-io", "fastqrab-steps", "fastqrab-stringpod"]
 	exclude = ["dev/fuzz/fastq_parser"]
     resolver = "2"
 
@@ -84,6 +84,7 @@
     fastqrab-dna = {path="fastqrab-dna"}
     fastqrab-io = {path="fastqrab-io"}
     fastqrab-steps = {path="fastqrab-steps"}
+    fastqrab-stringpod = {path="fastqrab-stringpod"}
 
 
 

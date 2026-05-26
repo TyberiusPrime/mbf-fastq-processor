@@ -809,6 +809,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "fastqrab-stringpod"
+version = "0.8.1"
+dependencies = [
+ "bstr",
+]
+
+[[package]]
 name = "fastrand"
 version = "2.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
