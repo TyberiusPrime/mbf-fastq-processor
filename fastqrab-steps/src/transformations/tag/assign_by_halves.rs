@@ -259,6 +259,21 @@ impl CellRangerProbeAssigner {
         reason = "can't have loss at reasonable lengths"
     )]
     fn query(&self, query: &BStr) -> Result<Option<&str>> {
+        fn lookup_half<'a>(
+            half_query: &'a BStr,
+            half_probes: &'a IndexMap<BString, String>,
+            resonator: &'a HammingResonator,
+        ) -> Option<(&'a BStr, u32)> {
+            if let Some(hit) = half_probes.get(half_query) {
+                Some((half_query, 0))
+            } else {
+                let hits = resonator
+                    .query(half_query)
+                    .expect("Resonator sequence len mismatch");
+                if hits.len() == 1 { Some(hits[0]) } else { None }
+            }
+        }
+
         if let Some(name) = self.seq_to_name.get(query) {
             Ok(Some(name))
         } else {
@@ -273,75 +288,81 @@ impl CellRangerProbeAssigner {
             //Scoring is matches - mismatches == len() - 2 * mismatches
             let left_hand = query[..query.len() / 2].into();
             let right_hand = query[query.len() / 2..].into();
-            let left_hand_matches = self.left_hand_resonator.query(left_hand)?;
-            let right_hand_matches = self.right_hand_resonator.query(right_hand)?;
+            let left_hand_matches = lookup_half(
+                left_hand,
+                &self.left_hand_seq_to_name,
+                &self.left_hand_resonator,
+            );
+            let right_hand_matches = lookup_half(
+                right_hand,
+                &self.right_hand_seq_to_name,
+                &self.right_hand_resonator,
+            );
 
-            if left_hand_matches.len() == 1 {
-                //attempt rescue
-                let (left_hand_seq, left_hand_distance) = &left_hand_matches[0];
-                let left_hand_name = self
-                    .left_hand_seq_to_name
-                    .get(left_hand_seq.as_bstr())
-                    .expect("Internal inconsistency between resonator and map");
-                let expected_right_hand_side = self
-                    .name_to_seq
-                    .get(left_hand_name)
-                    .expect("Unexpected mismatch between maps?");
-                let right_hand_distance = hamming_resonate::hamming_distance(
-                    &expected_right_hand_side[expected_right_hand_side.len() / 2..],
-                    &query[query.len() / 2..],
-                );
+            match (left_hand_matches, right_hand_matches) {
+                (None, None) => {
+                    //no matches on either side. Can't rescue.
+                }
+                (Some(left_hand_matches), Some(right_hand_matches)) => {
+                    let left_hand_probe_id = self
+                        .left_hand_seq_to_name
+                        .get(left_hand_matches.0)
+                        .expect("Internal inconsistency between resonator and map");
+                    let right_hand_probe_id = self
+                        .right_hand_seq_to_name
+                        .get(right_hand_matches.0)
+                        .expect("Internal inconsistency between resonator and map");
+                    if left_hand_probe_id == right_hand_probe_id {
+                        //both halves agree on the same candidate,
+                        //Score must be good enough  alreayd
+                        return Ok(Some(left_hand_probe_id.as_str()));
+                    }
+                }
+                (Some(left_hand_matches), None) => {
+                    let (left_hand_seq, left_hand_distance): (&BStr, u32) = left_hand_matches;
 
-                let score_left = ((query.len() / 2) as i32) - (2 * *left_hand_distance as i32);
-                let score_right =
-                    ((query.len() - query.len() / 2) as i32) - (2 * right_hand_distance as i32);
-                if score_right > 0 && (score_left + score_right >= self.rescue_min_score) {
-                    if attempt_rescue(
-                        &right_hand_matches,
-                        left_hand_name,
-                        &self.right_hand_seq_to_name,
-                    ) {
+                    let left_hand_name = self
+                        .left_hand_seq_to_name
+                        .get(left_hand_seq.as_bstr())
+                        .expect("Internal inconsistency between resonator and map");
+                    let expected_right_hand_side = self
+                        .name_to_seq
+                        .get(left_hand_name)
+                        .expect("Unexpected mismatch between maps?");
+                    let right_hand_distance = hamming_resonate::hamming_distance(
+                        &expected_right_hand_side[expected_right_hand_side.len() / 2..],
+                        &query[query.len() / 2..],
+                    );
+
+                    let score_left = ((query.len() / 2) as i32) - (2 * left_hand_distance as i32);
+                    let score_right =
+                        ((query.len() - query.len() / 2) as i32) - (2 * right_hand_distance as i32);
+                    if score_right > 0 && (score_left + score_right >= self.rescue_min_score) {
                         return Ok(Some(left_hand_name.as_str()));
                     }
                 }
-            } else {
-                //too many. Or none.
-            }
+                (None, Some(right_hand_matches)) => {
+                    let (right_hand_seq, right_hand_distance): (&BStr, u32) = right_hand_matches;
+                    let right_hand_name = self
+                        .right_hand_seq_to_name
+                        .get(right_hand_seq.as_bstr())
+                        .expect("Internal inconsistency between resonator and map");
+                    let expected_left_hand_side = self
+                        .name_to_seq
+                        .get(right_hand_name)
+                        .expect("Unexpected mismatch between maps?");
+                    let left_hand_distance = hamming_resonate::hamming_distance(
+                        &expected_left_hand_side[..expected_left_hand_side.len() / 2],
+                        &query[..query.len() / 2],
+                    );
 
-            //left hand didn't work. Mirror approach the other way
-            if right_hand_matches.len() == 1 {
-                //attempt rescue
-                let (right_hand_seq, right_hand_distance) = &right_hand_matches[0];
-                let right_hand_name = self
-                    .right_hand_seq_to_name
-                    .get(right_hand_seq.as_bstr())
-                    .expect("Internal inconsistency between resonator and map");
-                let expected_left_hand_side = self
-                    .name_to_seq
-                    .get(right_hand_name)
-                    .expect("Unexpected mismatch between maps?");
-                let left_hand_distance = hamming_resonate::hamming_distance(
-                    &expected_left_hand_side[..expected_left_hand_side.len() / 2],
-                    &query[..query.len() / 2],
-                );
-
-                let score_left = ((query.len() / 2) as i32) - (2 * left_hand_distance as i32);
-                let score_right =
-                    ((query.len() - query.len() / 2) as i32) - (2 * *right_hand_distance as i32);
-                if score_left > 0 && (score_left + score_right >= self.rescue_min_score) {
-                    //if !self.left_hand_seq_to_name.contains_key(left_hand) {
-                    //
-
-                    if attempt_rescue(
-                        &left_hand_matches,
-                        right_hand_name,
-                        &self.left_hand_seq_to_name,
-                    ) {
+                    let score_left = ((query.len() / 2) as i32) - (2 * left_hand_distance as i32);
+                    let score_right =
+                        ((query.len() - query.len() / 2) as i32) - (2 * right_hand_distance as i32);
+                    if score_left > 0 && (score_left + score_right >= self.rescue_min_score) {
                         return Ok(Some(right_hand_name.as_str()));
                     }
                 }
-            } else {
-                //too many. can't correct. Or no hits.
             }
             Ok(None)
         }
@@ -532,6 +553,41 @@ mod test {
                 .query("GGAATGTAGCTGGCTCCGGCTATGTTCCAGGGAGGTCTCGCAGGTAAACT".into())
                 .unwrap(),
             None
+        );
+    }
+    #[test]
+    fn test_assigner_from_the_field() {
+        let seq_to_name = Arc::new(
+            [
+                (
+                    "TTCCCTTTCTTGCCTGAGCTCTACTTCCTCGCGGAATCTTCTGTTGTCAC".into(),
+                    "probe1".to_string(),
+                ),
+                (
+                    "TCCAGTTCTTGGCCGAGCTCTTGTTCCTCACGGAATTTTCTGTCACGTTC".into(),
+                    "probe2".to_string(),
+                ),
+                (
+                    "TCCAGTTCTTGGTCGAGCTCTTGTTCCTCACGGACTTTTCTGTCACGTTC".into(),
+                    "probe3".to_string(),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        );
+        let engine = CellRangerProbeAssigner::new(seq_to_name).unwrap();
+        assert_eq!(
+            engine
+                .query("TCCAGTTCTGGGTCGAGCTCTGGTTCCTCACGGAATTTTCTGTCACGTTC".into())
+                .unwrap(),
+            Some("probe2")
+        );
+
+        assert_eq!(
+            engine
+                .query("TCCAGTTCTTGGTCGAGCTCTTGTTCCTCACGGATTTTTCTGTCACGTTC".into())
+                .unwrap(),
+            Some("probe3")
         );
     }
 }
