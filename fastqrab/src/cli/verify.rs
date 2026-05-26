@@ -79,6 +79,17 @@ pub fn verify_outputs(
     let (output_prefix, uses_stdout) = extract_output_config(&raw_config)?;
 
     let current_exe = std::env::current_exe().context("Failed to get current executable path")?;
+    let needs_alloc_measurement = toml_dir.join("measure_alloc").exists();
+    if needs_alloc_measurement
+        && current_exe.file_name().and_then(|n| n.to_str()) != Some("fastqrab_alloc_accounting")
+    {
+        bail!(
+            "measure_alloc file found in {} but current executable is not the allocation-measuring variant. \
+            To perform allocation measurement tests,\
+            use the fastqrab_alloc_accounting binary.",
+            toml_dir.display()
+        );
+    }
     let stdin_config = toml_dir.join("stdin_config").exists();
     let stdin_file = if stdin_config {
         Some(temp_toml_path.clone())

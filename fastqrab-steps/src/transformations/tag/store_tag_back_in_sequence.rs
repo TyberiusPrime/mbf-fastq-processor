@@ -121,19 +121,17 @@ impl Step for StoreTagBackInSequence {
             return Err(anyhow::anyhow!("{error_msg}"));
         }
 
-        block.filter_tag_locations_all_targets(
-            |_location: HitRegion, pos: usize| -> NewLocation {
-                match &what_happend[pos] {
-                    true => NewLocation::Keep,
-                    false => {
-                        //now the fun part. TODO
-                        //Also todo: test cases
-                        //for now, I'll just filter them
-                        NewLocation::Remove
-                    }
+        block.filter_tag_locations_all_targets(|_location: HitRegion, pos: usize| -> NewLocation {
+            match &what_happend[pos] {
+                true => NewLocation::Keep,
+                false => {
+                    //now the fun part. TODO
+                    //Also todo: test cases
+                    //for now, I'll just filter them
+                    NewLocation::Remove
                 }
-            },
-        );
+            }
+        });
 
         Ok((block, true))
     }

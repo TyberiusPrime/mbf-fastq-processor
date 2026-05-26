@@ -304,12 +304,7 @@ impl LocationColumn {
     }
 
     /// Overwrite the location metadata for a specific hit within a slot.
-    pub fn set_hit_location(
-        &mut self,
-        slot: usize,
-        hit_idx: usize,
-        loc: Option<HitRegionView>,
-    ) {
+    pub fn set_hit_location(&mut self, slot: usize, hit_idx: usize, loc: Option<HitRegionView>) {
         let hit = &mut self.hits[slot][hit_idx];
         match loc {
             None => hit.flags &= !HAS_LOC,
@@ -1373,12 +1368,7 @@ mod test {
     }
 
     // Helper: build a single-hit LocationColumn and return (col, hit).
-    fn one_hit(
-        start: u32,
-        len: u16,
-        seg: u8,
-        seq: &[u8],
-    ) -> (super::LocationColumn, super::Hit) {
+    fn one_hit(start: u32, len: u16, seg: u8, seq: &[u8]) -> (super::LocationColumn, super::Hit) {
         let mut col = super::LocationColumn::new();
         col.push_single(
             Some(super::HitRegionView {
@@ -1704,10 +1694,24 @@ mod test {
     #[test]
     fn test_location_column_extend_from() {
         let mut a = LocationColumn::new();
-        a.push_single(Some(HitRegionView { start: 0, len: 2, segment_index: SegmentIndex(0) }), b"AG");
+        a.push_single(
+            Some(HitRegionView {
+                start: 0,
+                len: 2,
+                segment_index: SegmentIndex(0),
+            }),
+            b"AG",
+        );
 
         let mut b = LocationColumn::new();
-        b.push_single(Some(HitRegionView { start: 3, len: 2, segment_index: SegmentIndex(0) }), b"TC");
+        b.push_single(
+            Some(HitRegionView {
+                start: 3,
+                len: 2,
+                segment_index: SegmentIndex(0),
+            }),
+            b"TC",
+        );
 
         a.extend_from(&b);
         assert_eq!(a.len(), 2);

@@ -2,14 +2,7 @@ use anyhow::{Context, Result, bail};
 use clap::{Arg, ArgAction, Command, ValueHint, value_parser};
 use clap_complete::{Generator, Shell, generate};
 use human_panic::{Metadata, setup_panic};
-use std::{
-    io,
-    path::{Path, PathBuf},
-};
-
-use mimalloc::MiMalloc;
-#[global_allocator]
-static GLOBAL: MiMalloc = MiMalloc;
+use std::path::{Path, PathBuf};
 
 #[expect(clippy::too_many_lines, reason = "cli is complex")]
 fn build_cli() -> Command {
@@ -220,14 +213,14 @@ fn print_completions<G: Generator>(generator: G, cmd: &mut Command) {
         generator,
         cmd,
         cmd.get_name().to_string(),
-        &mut io::stdout(),
+        &mut std::io::stdout(),
     );
 }
 
 fn print_template(step: Option<&String>) {
     print!(
         "{}",
-        fastqrab::documentation::get_template(step.map(String::as_str))
+        crate::documentation::get_template(step.map(String::as_str))
             .unwrap_or(std::borrow::Cow::Borrowed("No such documentation found"))
     );
 }
@@ -247,7 +240,7 @@ fn print_cookbook(cookbook_number: Option<&String>) {
         None => {
             // List all cookbooks
             println!("Available cookbooks:\n");
-            let cookbooks = fastqrab::cookbooks::list_cookbooks();
+            let cookbooks = crate::cookbooks::list_cookbooks();
             for (number, name) in cookbooks {
                 println!("  {number}. {name}");
             }
@@ -258,8 +251,8 @@ fn print_cookbook(cookbook_number: Option<&String>) {
             let cookbook = num_str
                 .parse::<usize>()
                 .ok()
-                .and_then(|num| fastqrab::cookbooks::get_cookbook(num))
-                .or_else(|| fastqrab::cookbooks::get_cookbook_by_name(num_str));
+                .and_then(|num| crate::cookbooks::get_cookbook(num))
+                .or_else(|| crate::cookbooks::get_cookbook_by_name(num_str));
             if let Some(cookbook) = cookbook {
                 println!("{}", comment(cookbook.readme));
                 println!("\n## Configuration (input.toml)\n");
@@ -290,7 +283,7 @@ fn handle_toml_arg(config_file: Option<&String>) -> PathBuf {
     }
 }
 
-fn main() -> Result<()> {
+pub fn entry_point() -> Result<()> {
     // Support environment-based completion generation (modern approach)
     // Usage: COMPLETE=bash fastqrab
     if let Ok(shell_str) = std::env::var("COMPLETE")
@@ -355,7 +348,7 @@ fn main() -> Result<()> {
             std::process::exit(0);
         }
         Some(("list-steps", _)) => {
-            print!("{}", fastqrab::list_steps::format_steps_list());
+            print!("{}", crate::list_steps::format_steps_list());
             std::process::exit(0);
         }
         Some(("version", _)) => {
@@ -415,7 +408,7 @@ fn print_version_and_exit() {
 
 fn process_from_toml_file(toml_file: &Path, allow_overwrites: bool) {
     let current_dir = std::env::current_dir().expect("failed to get current directory");
-    if let Err(e) = fastqrab::run(toml_file, &current_dir, allow_overwrites) {
+    if let Err(e) = crate::run(toml_file, &current_dir, allow_overwrites) {
         eprintln!("Unfortunately, an error was detected and led to an early exit.\n");
         // let docs = docs_matching_error_message(&e);
         // if !docs.is_empty() {
@@ -434,7 +427,7 @@ fn process_from_toml_file(toml_file: &Path, allow_overwrites: bool) {
 }
 
 fn validate_config_file(toml_path: &Path) {
-    match fastqrab::validate_config(toml_path) {
+    match crate::validate_config(toml_path) {
         Ok(warnings) => {
             if warnings.is_empty() {
                 println!("✓ Configuration is valid");
@@ -470,7 +463,7 @@ fn validate_config_file(toml_path: &Path) {
 
 #[expect(clippy::needless_pass_by_value, reason = "it's only a test")]
 fn verify_config_file(toml_file: &Path, output_dir: Option<PathBuf>, unsafe_prep: bool) {
-    match fastqrab::verify_outputs(toml_file, output_dir.as_deref(), unsafe_prep) {
+    match crate::verify_outputs(toml_file, output_dir.as_deref(), unsafe_prep) {
         Ok(()) => {
             println!("✓ Verification passed: outputs match expected outputs");
             std::process::exit(0);
@@ -491,7 +484,7 @@ fn run_interactive_mode(
     poll_interval: Option<u64>,
     max_runs: Option<u64>,
 ) {
-    if let Err(e) = fastqrab::interactive::run_interactive(
+    if let Err(e) = crate::interactive::run_interactive(
         toml_path,
         head,
         sample,

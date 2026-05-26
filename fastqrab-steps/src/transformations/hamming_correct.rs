@@ -652,7 +652,9 @@ impl Step for HammingCorrect {
         match input_tags {
             TagColumn::Location(in_col) => {
                 let mut out_col = LocationColumn::new();
-                for (src_idx, (input_hits, slot)) in in_col.iter().zip(results.into_iter()).enumerate() {
+                for (src_idx, (input_hits, slot)) in
+                    in_col.iter().zip(results.into_iter()).enumerate()
+                {
                     let MatchSlot { result, quality } = slot;
                     match result {
                         None => out_col.push_none(),
@@ -664,10 +666,19 @@ impl Step for HammingCorrect {
                                     OnNoMatch::Keep => out_col.push_from(in_col, src_idx),
                                 },
                                 MatchResultOwned::OneMatch { idx, was_exact } => {
-                                    if was_exact && let Some(counts) = barcode_counts && count_here {
+                                    if was_exact
+                                        && let Some(counts) = barcode_counts
+                                        && count_here
+                                    {
                                         counts[idx].fetch_add(1, Ordering::Relaxed);
                                     }
-                                    self.push_output_location(&mut out_col, idx, in_col, input_hits, output_barcode);
+                                    self.push_output_location(
+                                        &mut out_col,
+                                        idx,
+                                        in_col,
+                                        input_hits,
+                                        output_barcode,
+                                    );
                                 }
                                 MatchResultOwned::Tie(items) => {
                                     match self.on_tie {
@@ -675,7 +686,13 @@ impl Step for HammingCorrect {
                                         OnTie::Empty => Self::push_empty_location(&mut out_col),
                                         OnTie::Keep => out_col.push_from(in_col, src_idx),
                                         OnTie::First => {
-                                            self.push_output_location(&mut out_col, items[0], in_col, input_hits, output_barcode);
+                                            self.push_output_location(
+                                                &mut out_col,
+                                                items[0],
+                                                in_col,
+                                                input_hits,
+                                                output_barcode,
+                                            );
                                         }
                                         OnTie::FirstStrict => {
                                             let split = self.name_split_character;
@@ -697,7 +714,13 @@ impl Step for HammingCorrect {
                                             let all_the_same =
                                                 items.iter().all(|&i| canonical_name(i) == first);
                                             if all_the_same {
-                                                self.push_output_location(&mut out_col, items[0], in_col, input_hits, output_barcode);
+                                                self.push_output_location(
+                                                    &mut out_col,
+                                                    items[0],
+                                                    in_col,
+                                                    input_hits,
+                                                    output_barcode,
+                                                );
                                             } else {
                                                 out_col.push_none();
                                             }
@@ -719,32 +742,50 @@ impl Step for HammingCorrect {
                                                 })
                                                 .collect();
                                             bail!(
-                                            "HammingCorrect on in_label={} \n\
+                                                "HammingCorrect on in_label={} \n\
                                              Uncorrectable sequence '{}', \n\
                                              matches multiple sequences within hamming distance: {:?}.\n\
                                              Set `on_tie` to one of Keep, Remove, Empty, First, or FirstStrict to resolve ties.\n\
                                              If using FirstStrict, consider setting `name_split_character`?",
-                                            self.in_label,
-                                            BStr::new(&query_seq),
-                                            display
-                                        );
+                                                self.in_label,
+                                                BStr::new(&query_seq),
+                                                display
+                                            );
                                         }
                                         OnTie::ByMajority => {
-                                            let counts = barcode_counts.expect("Barcode_counts must be set in OnTie::ByMajority");
+                                            let counts = barcode_counts.expect(
+                                                "Barcode_counts must be set in OnTie::ByMajority",
+                                            );
                                             let mut best: Option<(usize, usize)> = None;
                                             let mut total = 0;
                                             for &idx in &items {
                                                 let count = counts[idx].load(Ordering::Relaxed) + 1;
                                                 best = Some(match best {
-                                                    Some(ibest) => if ibest.1 < count { (idx, count) } else { ibest },
+                                                    Some(ibest) => {
+                                                        if ibest.1 < count {
+                                                            (idx, count)
+                                                        } else {
+                                                            ibest
+                                                        }
+                                                    }
                                                     None => (idx, count),
                                                 });
                                                 total += count;
                                             }
                                             let best = best.expect("Items can't have been empty");
-                                            #[expect(clippy::cast_precision_loss, reason="If lengths reach f64 imprecison region, precision loss would be acceptable")]
-                                            if best.1 as f64 / total as f64 >= self.on_tie_threshold {
-                                                self.push_output_location(&mut out_col, best.0, in_col, input_hits, output_barcode);
+                                            #[expect(
+                                                clippy::cast_precision_loss,
+                                                reason = "If lengths reach f64 imprecison region, precision loss would be acceptable"
+                                            )]
+                                            if best.1 as f64 / total as f64 >= self.on_tie_threshold
+                                            {
+                                                self.push_output_location(
+                                                    &mut out_col,
+                                                    best.0,
+                                                    in_col,
+                                                    input_hits,
+                                                    output_barcode,
+                                                );
                                             } else {
                                                 out_col.push_none();
                                             }
@@ -758,34 +799,52 @@ impl Step for HammingCorrect {
                                                         .seq_to_name
                                                         .get_index(i)
                                                         .expect("seq_to_name index out of range");
-                                                    (BStr::new(k.as_slice()), i, counts[i].load(Ordering::Relaxed))
+                                                    (
+                                                        BStr::new(k.as_slice()),
+                                                        i,
+                                                        counts[i].load(Ordering::Relaxed),
+                                                    )
                                                 })
                                                 .collect();
-                                            let candidates_for_likelihood: Vec<(&BStr, usize)> = candidates
-                                                .iter()
-                                                .map(|(seq, _idx, c)| (*seq, *c))
-                                                .collect();
+                                            let candidates_for_likelihood: Vec<(&BStr, usize)> =
+                                                candidates
+                                                    .iter()
+                                                    .map(|(seq, _idx, c)| (*seq, *c))
+                                                    .collect();
                                             let (observed_sequence, observed_qualities) =
                                                 if !input_hits.is_empty() {
-                                                    (in_col.joined_sequence(input_hits, None), quality)
+                                                    (
+                                                        in_col.joined_sequence(input_hits, None),
+                                                        quality,
+                                                    )
                                                 } else {
-                                                    unreachable!("ByEditProbability called on missing tag") // cov:excl-line
+                                                    unreachable!(
+                                                        "ByEditProbability called on missing tag"
+                                                    ) // cov:excl-line
                                                 };
                                             let observed_qualities = observed_qualities.with_context(||format!("Hamming correction with ByEditProbability impossible.\n\
                                                     The location tag {in_label} has lost it's location data (due to editing), can't retrieve qualities.\n\
                                                     Maybe you can reorder your steps?", in_label=self.in_label))?;
-                                            if let Some(best_seq) = correct_barcode_via_base_editing_likelihood(
-                                                self.on_tie_threshold,
-                                                BStr::new(&observed_sequence),
-                                                &observed_qualities,
-                                                &candidates_for_likelihood,
-                                            ) {
+                                            if let Some(best_seq) =
+                                                correct_barcode_via_base_editing_likelihood(
+                                                    self.on_tie_threshold,
+                                                    BStr::new(&observed_sequence),
+                                                    &observed_qualities,
+                                                    &candidates_for_likelihood,
+                                                )
+                                            {
                                                 let best_idx = candidates
                                                     .iter()
                                                     .find(|(s, _, _)| *s == best_seq)
                                                     .map(|(_, i, _)| *i)
                                                     .expect("best_seq came from candidates");
-                                                self.push_output_location(&mut out_col, best_idx, in_col, input_hits, output_barcode);
+                                                self.push_output_location(
+                                                    &mut out_col,
+                                                    best_idx,
+                                                    in_col,
+                                                    input_hits,
+                                                    output_barcode,
+                                                );
                                             } else {
                                                 out_col.push_none();
                                             }

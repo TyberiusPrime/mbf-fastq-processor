@@ -126,7 +126,11 @@ impl Step for TrimAtTag {
             .iter()
             //first not none with locations
             .filter_map(|hits| {
-                if hits.is_empty() { None } else { hits.first().copied() }
+                if hits.is_empty() {
+                    None
+                } else {
+                    hits.first().copied()
+                }
             })
             //and the target from the first hit
             .filter_map(|hit| cut_locations.hit_location(hit))
@@ -179,11 +183,15 @@ impl Step for TrimAtTag {
                     let nhits = cut_locations.hits[slot_idx].len();
                     for hit_idx in 0..nhits {
                         let h = cut_locations.hits[slot_idx][hit_idx];
-                        cut_locations.set_hit_location(slot_idx, hit_idx, Some(HitRegion {
-                            start: 0,
-                            len: h.loc_len as usize,
-                            segment_index: SegmentIndex(h.segment_index),
-                        }));
+                        cut_locations.set_hit_location(
+                            slot_idx,
+                            hit_idx,
+                            Some(HitRegion {
+                                start: 0,
+                                len: h.loc_len as usize,
+                                segment_index: SegmentIndex(h.segment_index),
+                            }),
+                        );
                     }
                 }
             } else {

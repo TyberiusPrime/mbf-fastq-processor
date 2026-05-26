@@ -122,6 +122,9 @@
           CARGO_PROFILE_RELEASE_debug = "0";
           COMMIT_HASH = self.rev or (pkgs.lib.removeSuffix "-dirty" self.dirtyRev or "unknown-not-in-git");
           NIX_RAPIDGZIP = "${pkgs.rapidgzip}/bin/rapidgzip";
+          postInstall =''
+              rm $out/bin/fastqrab_alloc_accounting
+            '';
 
         };
         packages.fastqrab_other_linux =
@@ -144,6 +147,7 @@
               # make it compatible with other linuxes. It's statically linked anyway
               postInstall = ''
                 patchelf $out/bin/fastqrab --set-interpreter "/lib64/ld-linux-x86-64.so.2"
+                rm $out/bin/fastqrab_alloc_accounting
               '';
             };
         packages.fastqrab-docker =

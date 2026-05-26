@@ -227,97 +227,105 @@ impl Step for StoreTagInFastQ {
             if let Some(col) = in_tag_col.as_locations() {
                 let slot_hits = col.get(ii);
                 if !slot_hits.is_empty() {
-                let seq = col.joined_sequence(slot_hits, Some(&self.region_separator));
-                if !seq.is_empty() {
-                    let qual = vec![b'~'; seq.len()]; // Dummy quality scores
-                    let first_hit = slot_hits[0];
-                    let segment_block = &block.segments[col
-                        .hit_location(first_hit)
-                        .expect("location must be set for tag")
-                        .segment_index
-                        .as_index()];
-                    let wrapped = segment_block.get(ii);
+                    let seq = col.joined_sequence(slot_hits, Some(&self.region_separator));
+                    if !seq.is_empty() {
+                        let qual = vec![b'~'; seq.len()]; // Dummy quality scores
+                        let first_hit = slot_hits[0];
+                        let segment_block = &block.segments[col
+                            .hit_location(first_hit)
+                            .expect("location must be set for tag")
+                            .segment_index
+                            .as_index()];
+                        let wrapped = segment_block.get(ii);
 
-                    // Determine which output stream to use based on demultiplexing
-                    let output_idx = block.output_tags.as_ref().map_or(0, |x| x[ii]);
+                        // Determine which output stream to use based on demultiplexing
+                        let output_idx = block.output_tags.as_ref().map_or(0, |x| x[ii]);
 
-                    let mut output_handles = self
-                        .output_handles
-                        .as_ref()
-                        .expect("Should have been set in init")
-                        .lock()
-                        .expect("lock poisoned");
-                    if let Some(Some(writer)) = output_handles.get_mut(&output_idx) {
-                        //if we have demultiplex & no-unmatched-output, this happens
-                        let mut name = wrapped.name().to_vec();
-                        if let Some(comment_tags) = self.comment_tags.as_ref() {
-                            for tag in comment_tags {
-                                let tag_col = block.tags.get(tag).expect("tag must exist in block");
-                                let tag_bytes: Vec<u8> = match tag_col {
-                                    TagColumn::Location(loc_col) => {
-                                        let h = loc_col.get(ii);
-                                        if h.is_empty() { Vec::new() } else { loc_col.joined_sequence(h, Some(&self.region_separator)) }
-                                    }
-                                    TagColumn::String(items) => match &items[ii] {
-                                        Some(value) => value.to_vec(),
-                                        None => Vec::new(),
-                                    },
-                                    TagColumn::Numeric(items) => {
-                                        format_numeric_for_comment(items[ii]).into_bytes()
-                                    }
-                                    TagColumn::Bool(items) => {
-                                        if items[ii] {
-                                            "1".into()
-                                        } else {
-                                            "0".into()
+                        let mut output_handles = self
+                            .output_handles
+                            .as_ref()
+                            .expect("Should have been set in init")
+                            .lock()
+                            .expect("lock poisoned");
+                        if let Some(Some(writer)) = output_handles.get_mut(&output_idx) {
+                            //if we have demultiplex & no-unmatched-output, this happens
+                            let mut name = wrapped.name().to_vec();
+                            if let Some(comment_tags) = self.comment_tags.as_ref() {
+                                for tag in comment_tags {
+                                    let tag_col =
+                                        block.tags.get(tag).expect("tag must exist in block");
+                                    let tag_bytes: Vec<u8> = match tag_col {
+                                        TagColumn::Location(loc_col) => {
+                                            let h = loc_col.get(ii);
+                                            if h.is_empty() {
+                                                Vec::new()
+                                            } else {
+                                                loc_col.joined_sequence(
+                                                    h,
+                                                    Some(&self.region_separator),
+                                                )
+                                            }
                                         }
-                                    }
-                                };
-                                let new_name = store_tag_in_comment(
-                                    &name,
-                                    tag.as_ref().as_bytes(),
-                                    &tag_bytes,
-                                    self.comment_separator,
-                                    self.comment_insert_char,
-                                );
-                                match new_name {
-                                    Err(err) => {
-                                        error_encountered = Some(format!("{err}"));
-                                        break 'outer;
-                                    }
-                                    Ok(new_name) => {
-                                        name = new_name;
+                                        TagColumn::String(items) => match &items[ii] {
+                                            Some(value) => value.to_vec(),
+                                            None => Vec::new(),
+                                        },
+                                        TagColumn::Numeric(items) => {
+                                            format_numeric_for_comment(items[ii]).into_bytes()
+                                        }
+                                        TagColumn::Bool(items) => {
+                                            if items[ii] {
+                                                "1".into()
+                                            } else {
+                                                "0".into()
+                                            }
+                                        }
+                                    };
+                                    let new_name = store_tag_in_comment(
+                                        &name,
+                                        tag.as_ref().as_bytes(),
+                                        &tag_bytes,
+                                        self.comment_separator,
+                                        self.comment_insert_char,
+                                    );
+                                    match new_name {
+                                        Err(err) => {
+                                            error_encountered = Some(format!("{err}"));
+                                            break 'outer;
+                                        }
+                                        Ok(new_name) => {
+                                            name = new_name;
+                                        }
                                     }
                                 }
                             }
-                        }
 
-                        let mut buf = Vec::new();
-                        match self.format {
-                            FileFormat::Fastq | FileFormat::None | FileFormat::Text => {
-                                buf.push(b'@');
-                                buf.extend_from_slice(&name);
-                                buf.push(b'\n');
-                                buf.extend_from_slice(&seq);
-                                buf.extend_from_slice(b"\n+\n");
-                                buf.extend_from_slice(&qual);
-                                buf.push(b'\n');
+                            let mut buf = Vec::new();
+                            match self.format {
+                                FileFormat::Fastq | FileFormat::None | FileFormat::Text => {
+                                    buf.push(b'@');
+                                    buf.extend_from_slice(&name);
+                                    buf.push(b'\n');
+                                    buf.extend_from_slice(&seq);
+                                    buf.extend_from_slice(b"\n+\n");
+                                    buf.extend_from_slice(&qual);
+                                    buf.push(b'\n');
+                                }
+                                FileFormat::Fasta => {
+                                    buf.push(b'>');
+                                    buf.extend_from_slice(&name);
+                                    buf.push(b'\n');
+                                    buf.extend_from_slice(&seq);
+                                    buf.push(b'\n');
+                                }
+                                // cov:excl-start
+                                FileFormat::Bam => {
+                                    unreachable!("Unsupported format encountered after validation")
+                                } // cov:excl-stop
                             }
-                            FileFormat::Fasta => {
-                                buf.push(b'>');
-                                buf.extend_from_slice(&name);
-                                buf.push(b'\n');
-                                buf.extend_from_slice(&seq);
-                                buf.push(b'\n');
-                            }
-                            // cov:excl-start
-                            FileFormat::Bam => {
-                                unreachable!("Unsupported format encountered after validation")
-                            } // cov:excl-stop
+                            writer.write_text_record(&buf)?;
                         }
-                        writer.write_text_record(&buf)?;
-                    }
-                } // cov:excl-line
+                    } // cov:excl-line
                 } // !slot_hits.is_empty()
             } // as_locations
         }

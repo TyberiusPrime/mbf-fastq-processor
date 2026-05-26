@@ -175,7 +175,11 @@ impl Step for StoreTagInComment {
                     let tag_value: Vec<u8> = match tag_col {
                         TagColumn::Location(col) => {
                             let hits = col.get(read_idx);
-                            if hits.is_empty() { Vec::new() } else { col.joined_sequence(hits, Some(&self.region_separator)) }
+                            if hits.is_empty() {
+                                Vec::new()
+                            } else {
+                                col.joined_sequence(hits, Some(&self.region_separator))
+                            }
                         }
                         TagColumn::String(items) => match &items[read_idx] {
                             Some(value) => value.to_vec(),

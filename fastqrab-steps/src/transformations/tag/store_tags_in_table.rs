@@ -258,7 +258,11 @@ impl Step for StoreTagsInTable {
                     record.push(match col {
                         TagColumn::Location(col) => {
                             let h = col.get(ii);
-                            if h.is_empty() { Vec::new() } else { col.joined_sequence(h, Some(&self.region_separator)) }
+                            if h.is_empty() {
+                                Vec::new()
+                            } else {
+                                col.joined_sequence(h, Some(&self.region_separator))
+                            }
                         }
                         TagColumn::String(items) => match &items[ii] {
                             Some(value) => value.to_vec(),

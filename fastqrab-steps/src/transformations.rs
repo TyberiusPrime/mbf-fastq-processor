@@ -471,11 +471,9 @@ fn extract_from_resolved_source(
                             let hit = hits[0];
                             let loc_opt = locations.hit_location(hit);
                             if let Some(loc) = loc_opt {
-                                let segment_block =
-                                    &block.segments[loc.segment_index.as_index()];
-                                let seq = segment_block.entries[read_no]
-                                    .seq
-                                    .get(&segment_block.block);
+                                let segment_block = &block.segments[loc.segment_index.as_index()];
+                                let seq =
+                                    segment_block.entries[read_no].seq.get(&segment_block.block);
                                 if let Some((seq, start, length)) = extract_from_sequence(
                                     seq,
                                     loc.start,

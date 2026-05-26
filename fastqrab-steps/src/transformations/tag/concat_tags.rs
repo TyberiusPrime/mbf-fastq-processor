@@ -191,7 +191,8 @@ impl Step for ConcatTags {
             for read_idx in 0..num_reads {
                 let mut any_missing = false;
                 // Collect all (location, seq) pairs from each column for this read
-                let mut entries: Vec<(Option<fastqrab_config::dna::HitRegionView>, Vec<u8>)> = Vec::new();
+                let mut entries: Vec<(Option<fastqrab_config::dna::HitRegionView>, Vec<u8>)> =
+                    Vec::new();
                 for col in &tag_columns {
                     if let TagColumn::Location(loc_col) = col {
                         let slot_hits = loc_col.get(read_idx);
@@ -209,8 +210,10 @@ impl Step for ConcatTags {
                 if (any_missing && self.on_missing == OnMissing::SetMissing) || entries.is_empty() {
                     output_col.push_none();
                 } else {
-                    let refs: Vec<(Option<fastqrab_config::dna::HitRegionView>, &[u8])> =
-                        entries.iter().map(|(loc, seq)| (loc.clone(), seq.as_slice())).collect();
+                    let refs: Vec<(Option<fastqrab_config::dna::HitRegionView>, &[u8])> = entries
+                        .iter()
+                        .map(|(loc, seq)| (loc.clone(), seq.as_slice()))
+                        .collect();
                     output_col.push_many(&refs);
                 }
             }

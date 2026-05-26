@@ -214,8 +214,10 @@ impl Step for Regions {
                 if entries.is_empty() {
                     col.push_none();
                 } else {
-                    let refs: Vec<(Option<HitRegionView>, &[u8])> =
-                        entries.iter().map(|(loc, seq)| (loc.clone(), seq.as_slice())).collect::<Vec<_>>();
+                    let refs: Vec<(Option<HitRegionView>, &[u8])> = entries
+                        .iter()
+                        .map(|(loc, seq)| (loc.clone(), seq.as_slice()))
+                        .collect::<Vec<_>>();
                     col.push_many(&refs);
                 }
             }

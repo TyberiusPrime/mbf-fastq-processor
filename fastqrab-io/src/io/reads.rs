@@ -1709,8 +1709,8 @@ impl FastQBlocksCombined {
                             segment_index: SegmentIndex(hit.segment_index),
                         };
                         let result = {
-                            let seq =
-                                &col.slab[hit.seq_start as usize..(hit.seq_start + hit.seq_len as u32) as usize];
+                            let seq = &col.slab[hit.seq_start as usize
+                                ..(hit.seq_start + hit.seq_len as u32) as usize];
                             f(view, ii, seq, read_length)
                         };
                         match result {

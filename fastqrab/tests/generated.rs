@@ -7,6 +7,17 @@ use test_runner::run_test;
 
 #[test]
 
+fn test_cases_x_alloc_x_duplicate_input_allocation() {
+    println!("Test case is in: test_cases/alloc/duplicate_input_allocation");
+    run_test(
+        std::path::Path::new("../test_cases/alloc/duplicate_input_allocation"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_demultiplex_x_bool() {
     println!("Test case is in: test_cases/demultiplex/bool");
     run_test(
@@ -11411,17 +11422,6 @@ fn test_cases_x_single_step_x_output_x_output_neither_r1_nor_r2_but_index() {
     println!("Test case is in: test_cases/single_step/output/output_neither_r1_nor_r2_but_index");
     run_test(
         std::path::Path::new("../test_cases/single_step/output/output_neither_r1_nor_r2_but_index"),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_performance_x_duplicate_input_allocation() {
-    println!("Test case is in: test_cases/single_step/performance/duplicate_input_allocation");
-    run_test(
-        std::path::Path::new("../test_cases/single_step/performance/duplicate_input_allocation"),
         "input.toml",
         1,
     );

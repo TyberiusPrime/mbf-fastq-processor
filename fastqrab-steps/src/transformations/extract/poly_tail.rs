@@ -95,15 +95,13 @@ impl Step for PolyTail {
                 );
 
                 //dbg!(last_pos);
-                last_pos.map(|last_pos| {
-                    HitDraft {
-                        location: Some(HitRegionView {
-                            start: last_pos,
-                            len: seq.len() - last_pos,
-                            segment_index: self.segment,
-                        }),
-                        sequence: seq[last_pos..].to_vec(),
-                    }
+                last_pos.map(|last_pos| HitDraft {
+                    location: Some(HitRegionView {
+                        start: last_pos,
+                        len: seq.len() - last_pos,
+                        segment_index: self.segment,
+                    }),
+                    sequence: seq[last_pos..].to_vec(),
                 })
             }
         });

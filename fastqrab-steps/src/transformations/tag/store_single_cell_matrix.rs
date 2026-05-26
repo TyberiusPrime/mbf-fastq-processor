@@ -480,7 +480,11 @@ impl Step for StoreSingleCellMatrix {
                 },
                 TagColumn::Location(col) => {
                     let h = col.get(ii);
-                    if h.is_empty() { 0 } else { seq_to_idx(&col.joined_sequence_cow(h, None), cell_map) }
+                    if h.is_empty() {
+                        0
+                    } else {
+                        seq_to_idx(&col.joined_sequence_cow(h, None), cell_map)
+                    }
                 }
                 _ => 0,
             };
@@ -492,7 +496,11 @@ impl Step for StoreSingleCellMatrix {
                 },
                 TagColumn::Location(col) => {
                     let h = col.get(ii);
-                    if h.is_empty() { 0 } else { seq_to_idx(&col.joined_sequence_cow(h, None), gene_map) }
+                    if h.is_empty() {
+                        0
+                    } else {
+                        seq_to_idx(&col.joined_sequence_cow(h, None), gene_map)
+                    }
                 }
                 _ => 0,
             };

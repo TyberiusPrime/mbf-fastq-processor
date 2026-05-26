@@ -86,7 +86,11 @@ impl Step for RegionsOfLowQuality {
                     let region_len = pos - region_start;
                     if region_len >= min_length {
                         entries.push((
-                            Some(HitRegionView { segment_index: segment, start: region_start, len: region_len }),
+                            Some(HitRegionView {
+                                segment_index: segment,
+                                start: region_start,
+                                len: region_len,
+                            }),
                             read.seq()[region_start..pos].to_vec(),
                         ));
                     }
@@ -97,7 +101,11 @@ impl Step for RegionsOfLowQuality {
                 let region_len = quality_scores.len() - region_start;
                 if region_len >= min_length {
                     entries.push((
-                        Some(HitRegionView { segment_index: segment, start: region_start, len: region_len }),
+                        Some(HitRegionView {
+                            segment_index: segment,
+                            start: region_start,
+                            len: region_len,
+                        }),
                         read.seq()[region_start..].to_vec(),
                     ));
                 }
@@ -106,13 +114,17 @@ impl Step for RegionsOfLowQuality {
             if entries.is_empty() {
                 col.push_none();
             } else {
-                let refs: Vec<(Option<HitRegionView>, &[u8])> =
-                    entries.iter().map(|(loc, seq)| (loc.clone(), seq.as_slice())).collect();
+                let refs: Vec<(Option<HitRegionView>, &[u8])> = entries
+                    .iter()
+                    .map(|(loc, seq)| (loc.clone(), seq.as_slice()))
+                    .collect();
                 col.push_many(&refs);
             }
         };
         block.segments[self.segment.as_index()].apply(f);
-        block.tags.insert(self.out_label.clone(), TagColumn::Location(col));
+        block
+            .tags
+            .insert(self.out_label.clone(), TagColumn::Location(col));
 
         Ok((block, true))
     }
