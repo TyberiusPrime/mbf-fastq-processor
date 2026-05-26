@@ -178,39 +178,6 @@ struct CellRangerProbeAssigner {
     rescue_min_score: i32,
 }
 
-/// Decide whether a rescue attempt should proceed given the hits found on the
-/// other half .
-///
-/// - Any exact hit  is a real match - rescue only if it agrees with `candidate`.
-/// - exactly one 1-mismatch hit - same: only proceed if it agrees.
-/// - No exact hits + zero or ≥2 1-mismatch hits - ambiguous/no-match → rescue OK.
-fn attempt_rescue(
-    partner_hits: &[(&BStr, u32)],
-    candidate: &str,
-    half_seq_to_name: &IndexMap<BString, String>,
-) -> bool {
-    let exact: Vec<_> = partner_hits.iter().filter(|(_, d)| *d == 0).collect();
-    if !exact.is_empty() {
-        // Exact hit(s) exist — rescue only if every one agrees with our candidate.
-        return exact.iter().all(|(seq, _)| {
-            half_seq_to_name
-                .get(*seq)
-                .expect("Internal inconsistency between resonator and map")
-                == candidate
-        });
-    }
-    let one_mm: Vec<_> = partner_hits.iter().filter(|(_, d)| *d > 0).collect();
-    if one_mm.len() == 1 {
-        // Unique 1-mismatch hit — rescue only if it agrees.
-        return half_seq_to_name
-            .get(one_mm[0].0)
-            .expect("Internal inconsistency between resonator and map")
-            == candidate;
-    }
-    // No hits, or >= 2 ambiguous 1-mismatch hits — treat as no-match → rescue OK.
-    true
-}
-
 impl CellRangerProbeAssigner {
     fn new(seq_to_name: Arc<FxIndexMap<BString, String>>) -> Result<Self, ValidationFailure> {
         let max_hamming_distance_for_better_half = 1;
@@ -264,7 +231,7 @@ impl CellRangerProbeAssigner {
             half_probes: &'a IndexMap<BString, String>,
             resonator: &'a HammingResonator,
         ) -> Option<(&'a BStr, u32)> {
-            if let Some(hit) = half_probes.get(half_query) {
+            if let Some(_) = half_probes.get(half_query) {
                 Some((half_query, 0))
             } else {
                 let hits = resonator
