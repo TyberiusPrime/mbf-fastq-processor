@@ -23,6 +23,15 @@ pub fn run_test(path: &std::path::Path, toml_name: &str, test_no_in_directory: u
         );
         return;
     }
+    if env::var_os("GITHUB_ACTIONS").is_some_and(|v| v == "true")
+        && path.join("skip_github").exists()
+    {
+        println!(
+            "Skipping {} on GitHub Actions (skip_github marker present)",
+            path.display()
+        );
+        return;
+    }
 
     // Always use verify command - it handles both panic and non-panic tests
     let measure_alloc = path.join("measure_alloc").exists();
