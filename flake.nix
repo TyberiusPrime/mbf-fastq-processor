@@ -30,6 +30,19 @@
           ];
         };
 
+        # Minimal toolchain for Windows cross-check (no extras needed).
+        rust-windows = pkgs.rust-bin.stable."1.93.1".minimal.override {
+          targets = [ "x86_64-pc-windows-gnu" ];
+        };
+
+        # MinGW cross-compiler from nixpkgs.
+        mingw = pkgs.pkgsCross.mingwW64.stdenv.cc;
+
+        naersk-lib-windows = naersk.lib."${system}".override {
+          cargo = rust-windows;
+          rustc = rust-windows;
+        };
+
         # Override the version used in naersk
         naersk-lib = naersk.lib."${system}".override {
           cargo = rust;
@@ -188,6 +201,22 @@
           ];
           buildInputs = with pkgs; [ openssl ];
         };
+        # Cross-compile check for Windows (x86_64-pc-windows-gnu / MinGW).
+        # Catches cfg(windows) / type / API issues without needing a real Windows runner.
+        # Usage: nix build .#check-windows
+        # Cross-compile check for Windows (x86_64-pc-windows-gnu / MinGW).
+        # Catches cfg(windows) / type / API issues without needing a real Windows runner.
+        # Usage: nix build .#check-windows
+        packages.check-windows = naersk-lib-windows.buildPackage {
+          src = ./.;
+          mode = "check";
+          name = "fastqrab-windows-check";
+          CARGO_BUILD_TARGET = "x86_64-pc-windows-gnu";
+          CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER =
+            "${mingw}/bin/x86_64-w64-mingw32-gcc";
+          nativeBuildInputs = [ mingw pkgs.pkg-config ];
+        };
+
         packages.test = naersk-lib.buildPackage {
           # not using naersk test mode, it eats the binaries, we need that binary
           pname = "fastqrab";

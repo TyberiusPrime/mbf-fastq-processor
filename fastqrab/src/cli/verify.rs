@@ -319,28 +319,30 @@ fn run_prep_if_needed(
 ) -> Result<()> {
     if unsafe_prep {
         if prep_script.exists() {
-            #[cfg(not(target_os = "windows"))]
-            let mut prep_command = {
-                let mut command = std::process::Command::new("bash");
-                command
-                    .arg(prep_script.canonicalize().context("canonicalize prep.sh")?)
-                    .current_dir(temp_path);
-                command
-            };
-
             #[cfg(target_os = "windows")]
             let mut prep_command = {
                 bail!("prep.sh execution on Windows is not currently supported");
             };
 
-            let prep_output = prep_command.output().context("Failed to execute prep.sh")?;
-            if !prep_output.status.success() {
-                bail!(
-                    "prep.sh failed with exit code: {:?}\nstdout: {}\nstderr: {}",
-                    prep_output.status.code(),
-                    String::from_utf8_lossy(&prep_output.stdout),
-                    String::from_utf8_lossy(&prep_output.stderr)
-                );
+            #[cfg(not(target_os = "windows"))]
+            {
+                let mut prep_command = {
+                    let mut command = std::process::Command::new("bash");
+                    command
+                        .arg(prep_script.canonicalize().context("canonicalize prep.sh")?)
+                        .current_dir(temp_path);
+                    command
+                };
+
+                let prep_output = prep_command.output().context("Failed to execute prep.sh")?;
+                if !prep_output.status.success() {
+                    bail!(
+                        "prep.sh failed with exit code: {:?}\nstdout: {}\nstderr: {}",
+                        prep_output.status.code(),
+                        String::from_utf8_lossy(&prep_output.stdout),
+                        String::from_utf8_lossy(&prep_output.stderr)
+                    );
+                }
             }
         }
     } else if prep_script.exists() {
@@ -486,28 +488,30 @@ fn verify_processor_success(
     let mut mismatches = Vec::new();
 
     if post_script.exists() && unsafe_prep {
-        #[cfg(not(target_os = "windows"))]
-        let mut post_command = {
-            let mut command = std::process::Command::new("bash");
-            command
-                .arg(post_script.canonicalize().context("canonicalize post.sh")?)
-                .current_dir(temp_path);
-            command
-        };
-
         #[cfg(target_os = "windows")]
-        let mut post_command = {
+        {
             bail!("post.sh execution on Windows is not currently supported");
         };
 
-        let post_output = post_command.output().context("Failed to execute post.sh")?;
-        if !post_output.status.success() {
-            mismatches.push(format!(
-                "post.sh failed with exit code: {:?}\nstdout: {}\nstderr: {}",
-                post_output.status.code(),
-                String::from_utf8_lossy(&post_output.stdout),
-                String::from_utf8_lossy(&post_output.stderr)
-            ));
+        #[cfg(not(target_os = "windows"))]
+        {
+            let mut post_command = {
+                let mut command = std::process::Command::new("bash");
+                command
+                    .arg(post_script.canonicalize().context("canonicalize post.sh")?)
+                    .current_dir(temp_path);
+                command
+            };
+
+            let post_output = post_command.output().context("Failed to execute post.sh")?;
+            if !post_output.status.success() {
+                mismatches.push(format!(
+                    "post.sh failed with exit code: {:?}\nstdout: {}\nstderr: {}",
+                    post_output.status.code(),
+                    String::from_utf8_lossy(&post_output.stdout),
+                    String::from_utf8_lossy(&post_output.stderr)
+                ));
+            }
         }
     }
 
@@ -643,6 +647,7 @@ fn run_processor_and_verify(
     Ok(())
 }
 
+#[cfg(unix)]
 fn cleanup_output_dir(output_dir: Option<&Path>) -> Result<()> {
     use std::os::unix::fs::PermissionsExt;
     if let Some(output_dir) = output_dir
@@ -658,6 +663,23 @@ fn cleanup_output_dir(output_dir: Option<&Path>) -> Result<()> {
                 let _ = ex::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755));
             } // cov:excl-line
         }
+        ex::fs::remove_dir_all(output_dir).with_context(|| {
+            // cov:excl-start
+            format!(
+                "Failed to remove existing output directory: {}",
+                output_dir.display()
+            )
+        })?;
+        // cov:excl-stop
+    }
+
+    Ok(())
+}
+#[cfg(windows)]
+fn cleanup_output_dir(output_dir: Option<&Path>) -> Result<()> {
+    if let Some(output_dir) = output_dir
+        && output_dir.exists()
+    {
         ex::fs::remove_dir_all(output_dir).with_context(|| {
             // cov:excl-start
             format!(
