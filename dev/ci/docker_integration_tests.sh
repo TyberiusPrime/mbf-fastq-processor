@@ -148,7 +148,7 @@ echo ""
 echo "Slowest 10 tests:"
 echo "$TIMING_LOG" | sort -rn | head -10 | while read -r secs name; do
     printf "  %3ds  %s\n" "$secs" "$name"
-done
+done || true  # sort exits non-zero on SIGPIPE when head closes the pipe early
 
 if [[ ${#FAILURES[@]} -gt 0 ]]; then
     echo ""
