@@ -80,10 +80,10 @@
 
     which = "7"
 
-    fastqrab-config= {path="fastqrab-config"}
-    fastqrab-dna = {path="fastqrab-dna"}
-    fastqrab-io = {path="fastqrab-io"}
-    fastqrab-steps = {path="fastqrab-steps"}
+    fastqrab-config  = { path = "fastqrab-config",  version = "0.9.0" }
+    fastqrab-dna     = { path = "fastqrab-dna",     version = "0.9.0" }
+    fastqrab-io      = { path = "fastqrab-io",      version = "0.9.0" }
+    fastqrab-steps   = { path = "fastqrab-steps",   version = "0.9.0" }
 
 
 

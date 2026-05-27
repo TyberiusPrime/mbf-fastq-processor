@@ -66,6 +66,10 @@ set -euo pipefail
 while IFS= read -r -d "" f; do
     dir="$(dirname "$f")"
     case "$(basename "$dir")" in actual*) continue ;; esac
+    # Skip tests that require the allocation-counting binary variant
+    if [ -f "$dir/measure_alloc" ]; then
+        continue
+    fi
     # When a test directory has test.sh, only run input.toml (not input2.toml etc.)
     if [ -f "$dir/test.sh" ] && [ "$(basename "$f")" != "input.toml" ]; then
         continue
@@ -76,12 +80,24 @@ while IFS= read -r -d "" f; do
     fi
     t=$SECONDS
     rel_dir="$(dirname "$rel")"
-    if fastqrab verify "$f" --output-dir "/test_cases_work/$rel_dir/actual_docker" \
-            --unsafe-call-prep-sh >/tmp/t_out 2>/tmp/t_err; then
-        printf "PASS %d %s\n" "$((SECONDS - t))" "$rel"
+    exit_code=0
+    fastqrab verify "$f" --output-dir "/test_cases_work/$rel_dir/actual_docker" \
+            --unsafe-call-prep-sh >/tmp/t_out 2>/tmp/t_err || exit_code=$?
+    if [ -f "$dir/should_panic" ]; then
+        # Test is expected to fail; pass iff the command exited non-zero
+        if [ $exit_code -ne 0 ]; then
+            printf "PASS %d %s\n" "$((SECONDS - t))" "$rel"
+        else
+            printf "FAIL %d %s\n" "$((SECONDS - t))" "$rel"
+            printf "ERR  expected non-zero exit but command succeeded\n"
+        fi
     else
-        printf "FAIL %d %s\n" "$((SECONDS - t))" "$rel"
-        sed "s/^/ERR /" /tmp/t_err
+        if [ $exit_code -eq 0 ]; then
+            printf "PASS %d %s\n" "$((SECONDS - t))" "$rel"
+        else
+            printf "FAIL %d %s\n" "$((SECONDS - t))" "$rel"
+            sed "s/^/ERR /" /tmp/t_err
+        fi
     fi
 done < <(find /test_cases -name "input*.toml" -print0 | sort -z)
 '
