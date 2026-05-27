@@ -31,8 +31,10 @@ Correct a tag to one of a predefined set of 'barcodes' using closest hamming dis
 ## Output 
 
 `HammingCorrect` can either output a corrected barcode,
-or the corrected barcodes' label. Use the `output` setting for this. It defaults
-to 'barcode'
+or the corrected barcodes' label. 
+Use the `output` setting for this. It defaults to 'barcode'
+
+Either way, the result is a string tag, the locations are 'lost' along the way.
 
 ## Non matching barcode handling
  
