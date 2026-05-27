@@ -75,6 +75,7 @@ fn all_test_cases_are_generated() {
 }
 
 #[test]
+#[cfg(target_os = "linux")]
 fn verify_all_shell_scripts_pass_shellcheck() {
     let shellcheck = std::process::Command::new("shellcheck")
         .arg("--version")
