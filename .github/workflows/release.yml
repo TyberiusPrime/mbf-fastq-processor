@@ -29,7 +29,7 @@ jobs:
       - name: Verify tag matches version
         run: |
           # Extract version from Cargo.toml
-          BINARY_REPORTED_VERSION=v$(grep '^version' Cargo.toml | head -n1 | cut -d '"' -f2)
+          BINARY_REPORTED_VERSION=v$(grep '^\s*version' Cargo.toml | head -n1 | cut -d '"' -f2)
           echo "Found version: $BINARY_REPORTED_VERSION"
           # Check if the pushed tag matches the version
           if [ "${GITHUB_REF}" != "refs/tags/$BINARY_REPORTED_VERSION" ]; then
