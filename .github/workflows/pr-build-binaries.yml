@@ -48,11 +48,11 @@ jobs:
         uses: dtolnay/rust-toolchain@0b1efabc08b657293548b77fb76cc02d26091c7e
 
       - name: Setup Cache
-        uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
+        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
 
       - name: Setup WSL
         if: matrix.runner == 'windows-latest'
-        uses: Vampire/setup-wsl@78d83c457803a02f599fa9794be3646964edd72c # v1.3.6
+        uses: Vampire/setup-wsl@d1da7f2c0322a5ee4f24975344f67fc0f5baf364 # v7.0.0.
         with:
           distribution: Ubuntu-22.04
 
