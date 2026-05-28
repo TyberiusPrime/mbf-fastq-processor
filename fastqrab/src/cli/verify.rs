@@ -1218,6 +1218,11 @@ fn create_symlink(source: &Path, target: &Path) -> Result<()> {
         };
         if !symlink_worked {
             // Symlinks not available (Wine / no SeCreateSymbolicLinkPrivilege); copy instead.
+            // If the source doesn't exist (dangling symlink on Linux), skip — matches the
+            // Linux behaviour where a dangling symlink is created and fastqrab reports the error.
+            if !source.exists() {
+                return Ok(());
+            }
             if source.is_dir() {
                 copy_dir_all(source, target).with_context(|| {
                     format!(
@@ -1227,7 +1232,9 @@ fn create_symlink(source: &Path, target: &Path) -> Result<()> {
                     )
                 })?;
             } else {
-                std::fs::copy(source, target).with_context(|| {
+                // Wine's CopyFileExW opens the source with FILE_FLAG_OPEN_REPARSE_POINT,
+                // which fails for Linux symlinks. Use File::open (no such flag) + io::copy.
+                copy_file_following_symlinks(source, target).with_context(|| {
                     format!(
                         "Failed to copy file from {} to {}",
                         source.display(),
@@ -1249,9 +1256,20 @@ fn copy_dir_all(src: &Path, dst: &Path) -> Result<()> {
         if ty.is_dir() {
             copy_dir_all(&entry.path(), &dst.join(entry.file_name()))?;
         } else {
-            std::fs::copy(entry.path(), dst.join(entry.file_name()))?;
+            copy_file_following_symlinks(&entry.path(), &dst.join(entry.file_name()))?;
         }
     }
+    Ok(())
+}
+
+#[cfg(windows)]
+fn copy_file_following_symlinks(source: &Path, target: &Path) -> Result<()> {
+    // fs::copy uses CopyFileExW which opens the source with FILE_FLAG_OPEN_REPARSE_POINT
+    // and cannot follow Linux symlinks on Wine. File::open does not use that flag.
+    use std::io;
+    let mut src = std::fs::File::open(source)?;
+    let mut dst = std::fs::File::create(target)?;
+    io::copy(&mut src, &mut dst)?;
     Ok(())
 }
 
