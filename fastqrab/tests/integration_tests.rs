@@ -3329,6 +3329,7 @@ prefix = 'output'
     // Write a prep.sh that always fails
     let prep_sh = temp_path.join("prep.sh");
     fs::write(&prep_sh, "#!/usr/bin/env bash\nexit 42\n").unwrap();
+    #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
         fs::set_permissions(&prep_sh, fs::Permissions::from_mode(0o755)).unwrap();
@@ -3375,8 +3376,11 @@ prefix = 'output'
 }
 
 fn make_executable(path: &std::path::Path) {
-    use std::os::unix::fs::PermissionsExt;
-    fs::set_permissions(path, fs::Permissions::from_mode(0o755)).unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(path, fs::Permissions::from_mode(0o755)).unwrap();
+    }
 }
 
 #[test]
