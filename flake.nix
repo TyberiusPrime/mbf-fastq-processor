@@ -277,6 +277,37 @@
         apps.fastqrab = utils.lib.mkApp { drv = packages.fastqrab; };
         defaultApp = apps.fastqrab;
 
+        # Cross-compile + Wine shell for local Windows test simulation.
+        # Builds with x86_64-pc-windows-gnu (MinGW) and runs tests under Wine.
+        # Usage: nix develop .#windows-test --command \
+        #   cargo test --target x86_64-pc-windows-gnu --release 2>&1 | tee /tmp/win-test.txt
+        devShells.windows-test =
+          let
+            pthreads = pkgs.pkgsCross.mingwW64.windows.pthreads;
+            # GCC 14 in nixpkgs defaults to MCF threading; libgcc_eh.a references
+            # _MCF_* symbols that live here.
+            mcfgthreads = pkgs.pkgsCross.mingwW64.windows.mcfgthreads;
+          in
+          pkgs.mkShell {
+            nativeBuildInputs = [
+              rust-windows
+              mingw
+              pkgs.wine64
+              pkgs.pkg-config
+            ];
+            CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER = "${mingw}/bin/x86_64-w64-mingw32-gcc";
+            # libgcc_eh.a references _MCF_* (MCF threading model in GCC 14).
+            # libmcfgthread.a in turn needs libntdll.a (__imp_NtWaitForKeyedEvent etc.).
+            # Rust adds -lntdll before our link-args, so GNU ld's single-pass scan
+            # exhausts libntdll.a before libmcfgthread.a is even linked.
+            # --start-group/--end-group forces repeated passes so the three archives
+            # can satisfy each other; the whole group lands after -lgcc_eh via link-arg.
+            CARGO_TARGET_X86_64_PC_WINDOWS_GNU_RUSTFLAGS = "-L ${pthreads}/lib -L ${mcfgthreads}/lib -C link-arg=-Wl,--start-group,-Bstatic,-lmcfgthread,-Bdynamic,-lntdll,-lkernel32,--end-group";
+            shellHook = ''
+              export WINEPREFIX="$HOME/.wine-fastqrab-test"
+            '';
+          };
+
         # Minimal shell for cargo-deny CI check — avoids pulling in cargo-afl
         # and the rest of the full devShell.  Usage: nix develop .#deny
         devShells.deny = pkgs.mkShell {
