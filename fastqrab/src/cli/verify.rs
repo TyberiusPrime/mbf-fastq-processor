@@ -1029,17 +1029,21 @@ impl ExpectedFailure {
         )
         .context("Failed to write actual stderr to file")?;
 
+        // Normalize after writing so the debug file retains the raw actual output
+        let stderr = normalize_os_errors(&stderr);
+
         match self {
             ExpectedFailure::ExactText(expected_text) => {
-                if !stderr.contains(expected_text) {
+                let expected_text = normalize_os_errors(expected_text);
+                if !stderr.contains(expected_text.as_str()) {
                     bail!(
                         "fastqrab did not fail in the way that was expected.\nExpected message (substring): {expected_text}\nActual stderr: \n{stderr}"
                     );
                 }
-                if stderr.matches(expected_text).count() > 1 {
+                if stderr.matches(expected_text.as_str()).count() > 1 {
                     bail!(
                         "fastqrab failed in the expected way, but the expected message was found multiple times ({}). This may indicate an unexpected duplication of error messages.\nExpected message (substring): {}\nActual stderr: \n{}",
-                        stderr.matches(expected_text).count(),
+                        stderr.matches(expected_text.as_str()).count(),
                         expected_text,
                         stderr
                     );
@@ -1057,6 +1061,15 @@ impl ExpectedFailure {
         }
         Ok(())
     }
+}
+
+/// Normalize OS-specific file-not-found error messages to their Linux equivalent so that
+/// expected_error.txt files written on Linux also match when tests run on Windows/Wine.
+fn normalize_os_errors(s: &str) -> String {
+    s.replace(
+        "File not found. (os error 2)",
+        "No such file or directory (os error 2)",
+    )
 }
 
 fn strip_backtrace(stderr: &str) -> Cow<'_, str> {

@@ -362,6 +362,7 @@ fn test_interactive_nonexistent_file() {
 }
 
 #[test]
+#[cfg(unix)]
 fn test_interactive_processes_file_on_first_run() {
     use std::time::{Duration, Instant};
 
@@ -3301,6 +3302,7 @@ prefix = 'output'
 }
 
 #[test]
+#[cfg(unix)]
 fn test_verify_broken_prep_sh_fails() {
     // Verify that when prep.sh exits with a non-zero status, the verify command fails
     // with the expected error message (covers verify.rs line 303).
@@ -3384,9 +3386,7 @@ fn make_executable(path: &std::path::Path) {
 }
 
 #[cfg(not(unix))]
-fn make_executable(_path: &std::path::Path) {
-}
-
+fn make_executable(_path: &std::path::Path) {}
 
 #[test]
 fn test_verify_prep_sh_without_unsafe_flag_fails() {
@@ -3517,6 +3517,7 @@ prefix = 'output'
 }
 
 #[test]
+#[cfg(unix)]
 fn test_verify_failing_post_sh_is_detected() {
     // When post.sh exits non-zero, verify should report "post.sh failed with exit code"
     // as part of the "Output verification failed:" mismatch list.
@@ -3565,6 +3566,7 @@ fn test_verify_failing_post_sh_is_detected() {
 }
 
 #[test]
+#[cfg(unix)]
 fn test_verify_failing_test_sh_is_detected() {
     // When test.sh exits non-zero, verify should fail with "Test script failed:"
     let temp_dir = tempfile::tempdir().unwrap();

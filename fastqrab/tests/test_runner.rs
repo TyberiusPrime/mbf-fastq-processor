@@ -8,6 +8,13 @@ use std::path::{Path, PathBuf};
 pub fn run_test(path: &std::path::Path, toml_name: &str, test_no_in_directory: usize) {
     #[cfg(target_os = "windows")]
     if path.join("skip_windows").exists() {
+        if path.join("should_panic").exists() {
+            // Test is marked #[should_panic] in generated.rs; panic so it passes.
+            panic!(
+                "Skipping {} on Windows (skip_windows marker present)",
+                path.display()
+            );
+        }
         println!(
             "Skipping {} on Windows (skip_windows marker present)",
             path.display()
@@ -33,9 +40,7 @@ pub fn run_test(path: &std::path::Path, toml_name: &str, test_no_in_directory: u
         );
         return;
     }
-    if env::var_os("GITHUB_ACTIONS").is_some()
-        && path.join("skip_github").exists()
-    {
+    if env::var_os("GITHUB_ACTIONS").is_some() && path.join("skip_github").exists() {
         println!(
             "Skipping {} on GitHub Actions (skip_github marker present)",
             path.display()
