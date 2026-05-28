@@ -41,7 +41,7 @@ jobs:
         uses: cachix/install-nix-action@8aa03977d8d733052d78f4e008a241fd1dbf36b3 # v31.10.6
 
       - name: Audit dependencies with cargo-deny
-        run: nix develop .# --command cargo deny check advisories bans sources
+        run: nix develop .#deny --command cargo deny check advisories bans sources
 
       - name: Test
         run: nix build .#test

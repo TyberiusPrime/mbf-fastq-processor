@@ -277,6 +277,16 @@
         apps.fastqrab = utils.lib.mkApp { drv = packages.fastqrab; };
         defaultApp = apps.fastqrab;
 
+        # Minimal shell for cargo-deny CI check — avoids pulling in cargo-afl
+        # and the rest of the full devShell.  Usage: nix develop .#deny
+        devShells.deny = pkgs.mkShell {
+          nativeBuildInputs = [
+            pkgs.cargo-deny
+            pkgs.git
+            rust
+          ];
+        };
+
         # `nix develop`
         devShell = pkgs.mkShell {
           COMMIT_HASH = self.rev or (pkgs.lib.removeSuffix "-dirty" self.dirtyRev or "unknown-not-in-git");
