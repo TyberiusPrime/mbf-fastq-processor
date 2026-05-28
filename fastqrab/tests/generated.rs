@@ -665,6 +665,17 @@ fn test_cases_x_error_handling_x_replace_tag_with_letter_x_no_letter() {
 
 #[test]
 
+fn test_cases_x_from_the_field_x_basecount_expansion() {
+    println!("Test case is in: test_cases/from_the_field/basecount_expansion");
+    run_test(
+        std::path::Path::new("../test_cases/from_the_field/basecount_expansion"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_if_tag_x_cut_start_conditional() {
     println!("Test case is in: test_cases/if_tag/cut_start_conditional");
     run_test(

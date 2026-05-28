@@ -36,7 +36,10 @@ impl TagUser for PartialTaggedVariant<PartialNContent> {
         _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> Option<TagUsageInfo<'_>> {
-        unreachable!("Should have been swapped for BaseCount in expansion");
+        //unreachable!("Should have been swapped for BaseCount in expansion");
+        //this is totally rechable since we *must* call get_tag_usage on not-fully
+        //validated transforms
+        None
     }
 }
 

@@ -1,0 +1,134 @@
+Error Details ==
+Error 1/7
+  ╭─config.toml
+  ┆
+4 │     [output]
+5 │         prefix = 'output'
+6 │         format = 'raw'
+  ┆                  ──┬──
+  ┆                    │
+  ┆                    ╰─── Invalid enum variant: 'raw'
+──╯
+Hint: Did you mean: Bam, Fastq, or Fasta?
+
+Error 2/7
+   ╭─config.toml
+   ┆
+ 9 │     [[step]]
+10 │         action = "ExtractPolyTail"
+   ┆                  ────────┬────────
+   ┆                          │
+   ┆                          ╰───────── In this step
+   ┆
+11 │         out_label = "polyG"
+12 │         min_length = 10 # --poly_g_min_len, default is 10 in fastp
+13 │         base = "G" 
+14 │         max_mismatch_rate = 0.125 # not configurable in fastp, but 1/8 is what it uses internally.
+15 │         max_consecutive_mismatches = 5 # not configurable in fastp
+   ┆                                       ┬
+   ┆                                       │
+   ┆                                       ╰──────────────────────────── Segment not specified but multiple segments available
+───╯
+Hint: Available segments: read1, read2
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/ExtractPolyTail
+      Or run: `fastqrab template ExtractPolyTail` for more information.
+
+Error 3/7
+   ╭─config.toml
+   ┆
+26 │     [[step]]
+27 │       action = 'ExtractIUPAC'
+   ┆                ───────┬──────
+   ┆                       │
+   ┆                       ╰─────── In this step
+   ┆
+28 │       out_label='adapter'
+29 │       query = "AGATCGGAAGAGCACACGTCTGAACTCCAGTCA"
+30 │       anchor = 'anywhere'
+31 │       max_mismatches = 5
+   ┆                         ┬
+   ┆                         │
+   ┆                         ╰─ Segment not specified but multiple segments available
+───╯
+Hint: Available segments: read1, read2
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/ExtractIUPAC
+      Or run: `fastqrab template ExtractIUPAC` for more information.
+
+Error 4/7
+   ╭─config.toml
+   ┆
+43 │     [[step]]
+44 │       action = 'CalcQualifiedBases'
+   ┆                ──────────┬─────────
+   ┆                          │
+   ┆                          ╰────────── In this step
+   ┆
+45 │       out_label = 'qual_base_rate'
+46 │       threshold = 48 # our qualities are in FASTQ-space, not in phred spacep
+47 │       operator = ">="
+48 │       relative = true # we want a rate.
+   ┆                      ┬
+   ┆                      │
+   ┆                      ╰────────────────── Segment not specified but multiple segments available
+───╯
+Hint: Available segments: read1, read2
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/CalcQualifiedBases
+      Or run: `fastqrab template CalcQualifiedBases` for more information.
+
+Error 5/7
+   ╭─config.toml
+   ┆
+51 │     [[step]]
+52 │       action = 'CalcNCount'
+   ┆                ──────┬─────
+   ┆                      │
+   ┆                      ╰────── In this step
+   ┆
+53 │       out_label = 'n_count'
+54 │       relative = false
+   ┆                       ┬
+   ┆                       │
+   ┆                       ╰─ Segment not specified but multiple segments available
+───╯
+Hint: Available segments: read1, read2
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/CalcNContent
+      Or run: `fastqrab template CalcNContent` for more information.
+
+Error 6/7
+   ╭─config.toml
+   ┆
+56 │     [[step]]
+57 │       action = 'FilterByNumericTag'
+   ┆                ──────────┬─────────
+   ┆                          │
+   ┆                          ╰────────── In this step
+   ┆
+58 │       max_value = 6
+59 │       keep_or_remove='keep'
+60 │       in_label = 'n_count'
+   ┆                  ────┬────
+   ┆                      │
+   ┆                      ╰───── No such tag: 'n_count'
+───╯
+Hint: Did you mean: 'polyG', 'adapter', or 'qual_base_rate'?
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/FilterByNumericTag
+      Or run: `fastqrab template FilterByNumericTag` for more information.
+
+Error 7/7
+   ╭─config.toml
+   ┆
+70 │     [[step]]
+71 │       action = 'CalcLength'
+   ┆                ──────┬─────
+   ┆                      │
+   ┆                      ╰────── In this step
+72 │       out_label = 'length_r1'
+   ┆                              ┬
+   ┆                              │
+   ┆                              ╰─ Segment not specified but multiple segments available
+───╯
+Hint: Available segments: read1, read2
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/CalcLength
+      Or run: `fastqrab template CalcLength` for more information.
+
+
