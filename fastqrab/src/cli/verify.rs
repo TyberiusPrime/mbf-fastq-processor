@@ -116,6 +116,13 @@ pub fn verify_outputs(
         )?;
     }
 
+    // On Windows, a process cannot delete its own CWD (ERROR_SHARING_VIOLATION).
+    // We set CWD to temp_path above, so cd away before cleanup.
+    if let Some(ref d) = output_dir {
+        if let Some(parent) = d.parent() {
+            let _ = std::env::set_current_dir(parent);
+        }
+    }
     cleanup_output_dir(output_dir.as_deref())?;
     Ok(())
 }
@@ -1199,22 +1206,50 @@ fn create_symlink(source: &Path, target: &Path) -> Result<()> {
 #[cfg(windows)]
 fn create_symlink(source: &Path, target: &Path) -> Result<()> {
     if std::fs::symlink_metadata(target).is_err() {
-        if source.is_dir() {
-            std::os::windows::fs::symlink_dir(source, target).with_context(|| {
-                format!(
-                    "Failed to create directory symlink from {} to {}",
-                    source.display(),
-                    target.display()
-                )
-            })?;
+        // Try a real symlink first. Wine's CreateSymbolicLinkW is a no-op stub that
+        // returns success without creating anything, so we also check that the target
+        // actually exists afterwards before deciding to fall back.
+        let symlink_worked = if source.is_dir() {
+            std::os::windows::fs::symlink_dir(source, target).is_ok()
+                && std::fs::symlink_metadata(target).is_ok()
         } else {
-            std::os::windows::fs::symlink_file(source, target).with_context(|| {
-                format!(
-                    "Failed to create file symlink from {} to {}",
-                    source.display(),
-                    target.display()
-                )
-            })?;
+            std::os::windows::fs::symlink_file(source, target).is_ok()
+                && std::fs::symlink_metadata(target).is_ok()
+        };
+        if !symlink_worked {
+            // Symlinks not available (Wine / no SeCreateSymbolicLinkPrivilege); copy instead.
+            if source.is_dir() {
+                copy_dir_all(source, target).with_context(|| {
+                    format!(
+                        "Failed to copy directory from {} to {}",
+                        source.display(),
+                        target.display()
+                    )
+                })?;
+            } else {
+                std::fs::copy(source, target).with_context(|| {
+                    format!(
+                        "Failed to copy file from {} to {}",
+                        source.display(),
+                        target.display()
+                    )
+                })?;
+            }
+        }
+    }
+    Ok(())
+}
+
+#[cfg(windows)]
+fn copy_dir_all(src: &Path, dst: &Path) -> Result<()> {
+    std::fs::create_dir_all(dst)?;
+    for entry in std::fs::read_dir(src)? {
+        let entry = entry?;
+        let ty = entry.file_type()?;
+        if ty.is_dir() {
+            copy_dir_all(&entry.path(), &dst.join(entry.file_name()))?;
+        } else {
+            std::fs::copy(entry.path(), dst.join(entry.file_name()))?;
         }
     }
     Ok(())
