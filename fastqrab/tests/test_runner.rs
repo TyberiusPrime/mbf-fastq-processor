@@ -1,7 +1,6 @@
 #![expect(clippy::unwrap_used, reason = "it's tests")]
 use anyhow::{Context, Result};
 use std::env;
-use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
 
 /// # Panics
@@ -73,7 +72,8 @@ fn run_verify_test(
         // to toml_dir (i.e. just "actual"), not relative to the test-runner CWD.
         if test_case_dir
             .file_name()
-            .and_then(|ostr| ostr.as_bytes().iter().last())
+            .and_then(|ostr| ostr.to_str())
+            .and_then(|s| s.bytes().last())
             .is_some_and(|x| x & 1 == 1)
         {
             test_case_dir.canonicalize().unwrap().join("actual")
