@@ -14,6 +14,17 @@ pub fn run_test(path: &std::path::Path, toml_name: &str, test_no_in_directory: u
         );
         return;
     }
+    #[cfg(target_os = "windows")]
+    if path.join("test.sh").exists()
+        || path.join("prep.sh").exists()
+        || path.join("post.sh").exists()
+    {
+        println!(
+            "Skipping {} on Windows (shell scripts not supported)",
+            path.display()
+        );
+        return;
+    }
     #[cfg(target_os = "macos")]
     if path.join("skip_macos").exists() {
         println!(
