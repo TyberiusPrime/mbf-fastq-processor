@@ -309,6 +309,7 @@ fn symlink_input_files(
     Ok(())
 }
 
+#[allow(unused_variables)] // temp_path not used on windows
 fn run_prep_if_needed(
     prep_script: &Path,
     post_script: &Path,
@@ -320,7 +321,7 @@ fn run_prep_if_needed(
     if unsafe_prep {
         if prep_script.exists() {
             #[cfg(target_os = "windows")]
-            let mut prep_command = {
+            {
                 bail!("prep.sh execution on Windows is not currently supported");
             };
 

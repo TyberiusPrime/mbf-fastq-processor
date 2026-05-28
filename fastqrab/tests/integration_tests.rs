@@ -3375,13 +3375,18 @@ prefix = 'output'
     config_path
 }
 
+#[cfg(unix)]
 fn make_executable(path: &std::path::Path) {
-    #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
         fs::set_permissions(path, fs::Permissions::from_mode(0o755)).unwrap();
     }
 }
+
+#[cfg(not(unix))]
+fn make_executable(_path: &std::path::Path) {
+}
+
 
 #[test]
 fn test_verify_prep_sh_without_unsafe_flag_fails() {

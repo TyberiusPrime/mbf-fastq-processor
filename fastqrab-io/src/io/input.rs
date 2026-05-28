@@ -4,7 +4,7 @@ use schemars::JsonSchema;
 use std::num::NonZero;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
-use std::{fs, io::Read, path::Path};
+use std::{io::Read, path::Path};
 use toml_pretty_deser::prelude::*;
 
 use crate::io::parsers::{self, ThreadCount};
@@ -244,9 +244,9 @@ pub fn detect_input_format(path: &Path) -> Result<(DetectedInputFormat, Compress
     if path == Path::new(STDIN_MAGIC_PATH) {
         return Ok((DetectedInputFormat::Fastq, CompressionFormat::Uncompressed));
     }
-    if let Ok(metadata) = fs::metadata(path) {
+    #[cfg(unix)]
+    if let Ok(metadata) = std::fs::metadata(path) {
         //this is a band aid.
-        #[cfg(unix)]
         {
             use std::os::unix::fs::FileTypeExt;
             if metadata.file_type().is_fifo() {
@@ -363,45 +363,45 @@ pub fn spawn_rapidgzip(
     thread_count: ThreadCount,
     index_gzip: bool,
 ) -> Result<std::fs::File> {
-    // Check for index file
-    let index_path = format!("{}.rapidgzip_index", filename.display());
-    let has_index = std::path::Path::new(&index_path).exists();
-
-    let rapidgzip_command = find_rapidgzip_in_path().unwrap_or_else(|| "rapidgzip".into());
-    // Build rapidgzip command
-    let mut cmd = Command::new(rapidgzip_command);
-    cmd.arg("--stdout")
-        .arg("-d")
-        .arg("-P")
-        .arg(thread_count.0.to_string())
-        .arg(filename)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::inherit());
-
-    // Use index if it exists
-    if has_index {
-        cmd.arg("--import-index").arg(&index_path);
-    }
-
-    // Export index if requested and it doesn't exist
-    if index_gzip && !has_index {
-        cmd.arg("--export-index").arg(&index_path);
-    }
-
-    let mut child = cmd.spawn().context(format!(
-        "Failed to spawn rapidgzip process for file: {}. Make sure you have a rapidgzip binary on your path.",
-        filename.display()
-    ))?; // cov:excl-line
-
-    let stdout = child
-        .stdout
-        .take()
-        .context("Failed to capture rapidgzip stdout")?;
-
-    // Convert the stdout pipe to an ex::fs::File
-    // We need to use the file descriptor directly
     #[cfg(unix)]
     {
+        // Check for index file
+        let index_path = format!("{}.rapidgzip_index", filename.display());
+        let has_index = std::path::Path::new(&index_path).exists();
+
+        let rapidgzip_command = find_rapidgzip_in_path().unwrap_or_else(|| "rapidgzip".into());
+        // Build rapidgzip command
+        let mut cmd = Command::new(rapidgzip_command);
+        cmd.arg("--stdout")
+            .arg("-d")
+            .arg("-P")
+            .arg(thread_count.0.to_string())
+            .arg(filename)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::inherit());
+
+        // Use index if it exists
+        if has_index {
+            cmd.arg("--import-index").arg(&index_path);
+        }
+
+        // Export index if requested and it doesn't exist
+        if index_gzip && !has_index {
+            cmd.arg("--export-index").arg(&index_path);
+        }
+
+
+        let mut child = cmd.spawn().context(format!(
+            "Failed to spawn rapidgzip process for file: {}. Make sure you have a rapidgzip binary on your path.",
+            filename.display()
+        ))?; // cov:excl-line
+        let stdout = child
+            .stdout
+            .take()
+            .context("Failed to capture rapidgzip stdout")?;
+
+        // Convert the stdout pipe to an ex::fs::File
+        // We need to use the file descriptor directly
         use std::os::unix::io::{FromRawFd, IntoRawFd};
         let raw_fd = stdout.into_raw_fd();
         // SAFETY: We own the file descriptor from the child process stdout

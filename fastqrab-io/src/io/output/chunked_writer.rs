@@ -902,8 +902,8 @@ impl ChunkedRecordWriter {
         }
         let digit_count = usize::from(chunk_policy.records_per_chunk.is_some());
 
+        #[cfg(unix)]
         if let WriteTarget::Files(paths) = &target {
-            #[cfg(unix)]
             {
                 if chunk_policy.records_per_chunk.is_some() {
                     let check_paths = &[
