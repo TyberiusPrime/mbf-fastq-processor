@@ -616,6 +616,7 @@ read1 = "/already/absolute.fq"
     }
 
     #[test]
+    #[cfg(unix)]
     fn test_make_paths_absolute_handles_array_paths() {
         let toml = "[input]\nread1 = [\"a.fq\", \"b.fq\"]\n";
         let mut doc = parse_doc(toml);
