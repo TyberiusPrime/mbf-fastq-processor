@@ -145,7 +145,7 @@ jobs:
 
       - name: Setup WSL
         if: matrix.runner == 'windows-latest'
-        uses: Vampire/setup-wsl@78d83c457803a02f599fa9794be3646964edd72c # v1.3.6
+        uses: Vampire/setup-wsl@d1da7f2c0322a5ee4f24975344f67fc0f5baf364 # v7.0.0
         with:
           distribution: Ubuntu-22.04
 
