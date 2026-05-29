@@ -1,3 +1,4 @@
+* -text diff
 *.css -text diff
 *.csv -text diff
 *.fasta -text diff
