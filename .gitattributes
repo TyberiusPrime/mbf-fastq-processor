@@ -1,22 +1,22 @@
-*.css text eol=binary
-*.csv text eol=binary
-*.fasta text eol=binary
-*.fastq text eol=binary
-*.fq text eol=binary
-*.html text eol=binary
-*.json text eol=binary
-*.js text eol=binary
-*.py text eol=binary
-*.rs text eol=binary
-*.sh text eol=binary
-*.toml text eol=binary
-*.tsv text eol=binary
-*.txt text eol=binary
-*.xml text eol=binary
-*.yaml text eol=binary
-*.yml text eol=binary
-*.progress text eol=binary
-stdout text eol=binary
+*.css -text diff
+*.csv -text diff
+*.fasta -text diff
+*.fastq -text diff
+*.fq -text diff
+*.html -text diff
+*.json -text diff
+*.js -text diff
+*.py -text diff
+*.rs -text diff
+*.sh -text diff
+*.toml -text diff
+*.tsv -text diff
+*.txt -text diff
+*.xml -text diff
+*.yaml -text diff
+*.yml -text diff
+*.progress -text diff
+stdout -text diff
 /docs/** linguist-documentation=true
 /cookbooks/** linguist-documentation=true
 /dev/** linguist-detectable=false

@@ -1066,10 +1066,11 @@ impl ExpectedFailure {
 /// Normalize OS-specific file-not-found error messages to their Linux equivalent so that
 /// expected_error.txt files written on Linux also match when tests run on Windows/Wine.
 fn normalize_os_errors(s: &str) -> String {
-    s.replace(
-        "File not found. (os error 2)",
-        "No such file or directory (os error 2)",
-    )
+    s.replace("\r\n", "\n")
+        .replace(
+            "File not found. (os error 2)",
+            "No such file or directory (os error 2)",
+        )
 }
 
 fn strip_backtrace(stderr: &str) -> Cow<'_, str> {
