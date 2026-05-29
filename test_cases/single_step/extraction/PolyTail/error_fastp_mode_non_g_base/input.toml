@@ -1,0 +1,25 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'Head'
+    n = 2
+
+[[step]]
+    action = 'ExtractPolyTail'
+    out_label = 'ept'
+    min_length = 10
+    base = 'A'
+    max_mismatch_rate = 0.1
+    max_consecutive_mismatches = 2
+    fastp_mode = true
+
+[[step]]
+    action = 'TrimAtTag'
+    in_label = 'ept'
+    direction = 'end'
+    keep_tag = false
+
+[output]
+    output_hash_uncompressed = true
+    prefix = 'output'

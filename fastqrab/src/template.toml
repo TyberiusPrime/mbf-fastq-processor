@@ -214,6 +214,7 @@
 #    base = "A" # one of AGTCN., the 'base' to trim (or . for 'any repeated base'. 'N' explicitly looks for NNNN, not for 'any repeated base'.)
 #    max_mismatch_rate = 0.1 # float 0.0..=1.0, how many mismatches are allowed in the repeat
 #    max_consecutive_mismatches = 3 # how many consecutive mismatches are allowed
+#    fastp_mode = false # boolean, optional (default: false). When true, use fastp's polyG algorithm: 1 mismatch allowed per 8 bases, max 5 total mismatches. Requires base = 'G'.
 
 # ==== ExtractLongestPolyX ====
 ## Identify the longest homopolymer anywhere in the read (useful for internal poly-runs).

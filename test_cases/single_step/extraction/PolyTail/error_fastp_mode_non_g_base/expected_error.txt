@@ -1,0 +1,25 @@
+Error 1/1
+   ╭─config.toml
+   ┆
+ 8 │ [[step]]
+ 9 │     action = 'ExtractPolyTail'
+   ┆              ────────┬────────
+   ┆                      │
+   ┆                      ╰───────── In this step
+   ┆
+10 │     out_label = 'ept'
+11 │     min_length = 10
+12 │     base = 'A'
+   ┆            ─┬─
+   ┆             │
+   ┆             ╰── This must be 'G' when fastp_mode is enabled
+   ┆
+13 │     max_mismatch_rate = 0.1
+14 │     max_consecutive_mismatches = 2
+15 │     fastp_mode = true
+   ┆                  ──┬─
+   ┆                    │
+   ┆                    ╰── fastp_mode is enabled here
+───╯
+Hint: Set base = 'G' or disable fastp_mode.
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/ExtractPolyTail

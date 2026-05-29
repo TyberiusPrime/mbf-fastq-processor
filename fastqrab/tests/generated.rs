@@ -7391,6 +7391,21 @@ fn test_cases_x_single_step_x_eval_x_varname_all() {
 
 #[test]
 
+fn test_cases_x_single_step_x_extraction_x_polytail_x_error_fastp_mode_non_g_base() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/PolyTail/error_fastp_mode_non_g_base"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/PolyTail/error_fastp_mode_non_g_base",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_extraction_x_polytail_x_error_max_mismatch_rate_too_high() {
     println!(
         "Test case is in: test_cases/single_step/extraction/PolyTail/error_max_mismatch_rate_too_high"
@@ -7425,6 +7440,17 @@ fn test_cases_x_single_step_x_extraction_x_polytail_x_error_min_length() {
     println!("Test case is in: test_cases/single_step/extraction/PolyTail/error_min_length");
     run_test(
         std::path::Path::new("../test_cases/single_step/extraction/PolyTail/error_min_length"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_extraction_x_polytail_x_fastp_mode() {
+    println!("Test case is in: test_cases/single_step/extraction/PolyTail/fastp_mode");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/extraction/PolyTail/fastp_mode"),
         "input.toml",
         1,
     );

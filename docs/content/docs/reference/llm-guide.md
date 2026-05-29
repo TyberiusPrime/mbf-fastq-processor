@@ -552,11 +552,14 @@ Find homopolymer tail at read end.
     max_mismatch_rate = 0.1        # TYPE: float (0.0-1.0), REQUIRED
     max_consecutive_mismatches = 3 # TYPE: usize, REQUIRED
     out_label = 'polyA'            # TYPE: string, REQUIRED
+    fastp_mode = false             # TYPE: bool, DEFAULT: false, OPTIONAL
 ```
 
 **base VALUES**:
 - `'A'`, `'T'`, `'G'`, `'C'`, `'N'`: Specific base
 - `'.'`: Any repeated base
+
+**fastp_mode**: When `true`, uses fastp's exact `trimPolyG` algorithm instead of the mismatch-rate algorithm. Requires `base = 'G'`. Uses fixed constants: 1 mismatch allowed per 8 bases (integer division), max 5 total mismatches. Use when byte-for-byte fastp polyG compatibility is needed.
 
 #### ExtractLongestPolyX
 

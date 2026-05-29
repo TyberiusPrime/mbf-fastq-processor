@@ -1,0 +1,6 @@
+ReadName	pt
+seq1_fastp_leaves_intact	
+seq2_fastp_cuts_at_88	GGGGGGGGGTGG
+seq3_fastp_cuts_at_91	GGGGGGGGG
+seq4_pure_g_tail	GTGGGGGGGGGGGGGGGG
+seq5_too_short_no_trim	

@@ -36,7 +36,9 @@ fn no_hashmaps_in_src() {
 #[test]
 fn symlinks_in_test_cases_are_relative_and_within_repo() {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let repo_root = manifest_dir.parent().expect("CARGO_MANIFEST_DIR has no parent");
+    let repo_root = manifest_dir
+        .parent()
+        .expect("CARGO_MANIFEST_DIR has no parent");
     let test_cases_dir = repo_root.join("test_cases");
     let canon_repo_root = repo_root
         .canonicalize()
@@ -52,10 +54,7 @@ fn symlinks_in_test_cases_are_relative_and_within_repo() {
         let link_path = entry.path();
 
         // Skip symlinks inside actual/ dirs — those are created at test runtime by verify
-        if link_path
-            .components()
-            .any(|c| c.as_os_str() == "actual")
-        {
+        if link_path.components().any(|c| c.as_os_str() == "actual") {
             continue;
         }
 

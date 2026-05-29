@@ -1,0 +1,24 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'ExtractPolyTail'
+    out_label = 'pt'
+    min_length = 10
+    base = 'G'
+    max_mismatch_rate = 0.1
+    max_consecutive_mismatches = 2
+    fastp_mode = true
+
+[[step]]
+    action = 'StoreTagsInTable'
+    infix = 'table'
+
+[[step]]
+    action = 'TrimAtTag'
+    in_label = 'pt'
+    direction = 'end'
+    keep_tag = false
+
+[output]
+    prefix = 'output'

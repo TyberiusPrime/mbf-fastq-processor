@@ -17,6 +17,9 @@ pub struct PolyTail {
     pub base: u8,
     pub max_mismatch_rate: f64,
     pub max_consecutive_mismatches: usize,
+    /// Use fastp's polyG trimming algorithm (requires base = 'G').
+    /// Applies fastp's fixed constants: 1 mismatch allowed per 8 bases, max 5 total mismatches.
+    pub fastp_mode: Option<bool>,
 }
 
 impl VerifyIn<PartialConfig> for PartialPolyTail {
@@ -49,6 +52,25 @@ impl VerifyIn<PartialConfig> for PartialPolyTail {
                 Ok(())
             }
         });
+        let fastp_enabled = self.fastp_mode.as_ref().copied().flatten().unwrap_or(false);
+        if fastp_enabled {
+            if let Some(base) = self.base.as_ref()
+                && *base != b'G'
+            {
+                let spans = vec![
+                    (
+                        self.base.span(),
+                        "This must be 'G' when fastp_mode is enabled".to_string(),
+                    ),
+                    (
+                        self.fastp_mode.span(),
+                        "fastp_mode is enabled here".to_string(),
+                    ),
+                ];
+                self.fastp_mode.state = TomlValueState::Custom { spans };
+                self.fastp_mode.help = Some("Set base = 'G' or disable fastp_mode.".to_string());
+            }
+        }
         Ok(())
     }
 }
@@ -81,29 +103,29 @@ impl Step for PolyTail {
         let min_length = self.min_length;
         let max_mismatch_fraction = self.max_mismatch_rate;
         let max_consecutive_mismatches = self.max_consecutive_mismatches;
+        let fastp_mode = self.fastp_mode.unwrap_or(false);
         extract_region_tags(&mut block, self.segment, &self.out_label, |read| {
-            {
-                let seq = read.seq();
-                //dbg!(std::str::from_utf8(self.name()).unwrap());
-                //
-                let last_pos = find_poly_tail(
+            let seq = read.seq();
+            let last_pos = if fastp_mode {
+                find_poly_tail_fastp(seq, min_length)
+            } else {
+                find_poly_tail(
                     seq,
                     base,
                     min_length,
                     max_mismatch_fraction,
                     max_consecutive_mismatches,
-                );
+                )
+            };
 
-                //dbg!(last_pos);
-                last_pos.map(|last_pos| HitDraft {
-                    location: Some(HitRegionView {
-                        start: last_pos,
-                        len: seq.len() - last_pos,
-                        segment_index: self.segment,
-                    }),
-                    sequence: seq[last_pos..].to_vec(),
-                })
-            }
+            last_pos.map(|last_pos| HitDraft {
+                location: Some(HitRegionView {
+                    start: last_pos,
+                    len: seq.len() - last_pos,
+                    segment_index: self.segment,
+                }),
+                sequence: seq[last_pos..].to_vec(),
+            })
         });
         Ok((block, true))
     }
@@ -244,9 +266,46 @@ fn calc_run_length(
     last_base_pos
 }
 
+fn find_poly_tail_fastp(seq: &[u8], min_length: usize) -> Option<usize> {
+    // Replicates fastp's trimPolyG algorithm:
+    //   allow 1 mismatch per ALLOW_ONE_MISMATCH_FOR_EACH bases (integer division),
+    //   hard cap of MAX_MISMATCH total mismatches,
+    //   compareReq = min_length.
+    const ALLOW_ONE_MISMATCH_FOR_EACH: usize = 8;
+    const MAX_MISMATCH: usize = 5;
+
+    let rlen = seq.len();
+    if rlen < min_length {
+        return None;
+    }
+
+    let mut mismatch: usize = 0;
+    let mut first_g_pos = rlen - 1;
+    let mut i: usize = 0;
+    while i < rlen {
+        let pos = rlen - i - 1;
+        if seq[pos] != b'G' {
+            mismatch += 1;
+        } else {
+            first_g_pos = pos;
+        }
+        let allowed_mismatch = (i + 1) / ALLOW_ONE_MISMATCH_FOR_EACH;
+        if mismatch > MAX_MISMATCH || (mismatch > allowed_mismatch && i >= min_length - 1) {
+            break;
+        }
+        i += 1;
+    }
+
+    if i >= min_length {
+        Some(first_g_pos)
+    } else {
+        None
+    }
+}
+
 #[cfg(test)]
 mod test {
-    use super::{calc_run_length, find_poly_tail};
+    use super::{calc_run_length, find_poly_tail, find_poly_tail_fastp};
 
     #[test]
     fn test_calc_run_length() {
@@ -277,5 +336,54 @@ mod test {
         assert_eq!(find_poly_tail(b"AAAAAAAAACCC", b'.', 3, 0.4, 3), Some(0));
         assert_eq!(find_poly_tail(b"GGGGGGGGGCCC", b'.', 3, 0.4, 3), Some(0));
         assert_eq!(find_poly_tail(b"CCCCCCCCCAAA", b'.', 3, 0.4, 3), Some(0));
+    }
+
+    #[test]
+    fn test_find_poly_tail_fastp() {
+        // seq1: complex mix of Gs and non-Gs at the end — regular mode trims but fastp leaves intact
+        // because the loop stops at i=9 < min_length=10 due to mismatch rate exceeded.
+        assert_eq!(
+            find_poly_tail_fastp(
+                b"GTCCGTGTCCCTTGCGTAGATGAGTGTTTCATGAGTGTGGGTGTGAGTGTGAATGTGTCTAGATGAGAATGGGGGGGGGGGGGGGGGGGGGTTAGGGGGG",
+                10
+            ),
+            None
+        );
+
+        // seq2: fastp stops at the 2nd T from the right (pos 87 is last T kept, tail starts at 88).
+        // Regular mode would extend further into the G-rich region.
+        assert_eq!(
+            find_poly_tail_fastp(
+                b"CTTTTGCTGTTTTTTTTTTTTTTTTTTTTTGGGGTAGGGGGGGGAAGCTTTTGATGCAGTTGCCGGGGTGCGACGGAACGGACGGGGTGGGGGGGGGTGG",
+                10
+            ),
+            Some(88)
+        );
+
+        // seq3: fastp trims the 9-G run at the end (tail starts at 91).
+        // Regular mode with lenient parameters leaves intact because the non-G chars before
+        // the tail interrupt the count before min_length is reached.
+        assert_eq!(
+            find_poly_tail_fastp(
+                b"AGGAGCAGCGGGTGCGGAGTAGGCGGGAGCAGCGGGTGCGGAGTAGGCTGGGGCAGCTGGAGCAGAGTAGGCCTGGGCAGCGGGAGCGGCTGGGGGGGGG",
+                10
+            ),
+            Some(91)
+        );
+
+        // Pure G run: tail is the whole sequence.
+        assert_eq!(find_poly_tail_fastp(b"GGGGGGGGGG", 10), Some(0));
+
+        // One short of min_length: not trimmed.
+        assert_eq!(find_poly_tail_fastp(b"GGGGGGGGG", 10), None);
+
+        // Single non-G before sufficient Gs: within the 1-per-8 allowance, tail still detected.
+        // 15 Gs + 1 T + 1 G = 17 chars; scanning from right: i=0 G, ..., i=14 G, i=15 T (mismatch=1,
+        // allowed=2, no break), i=16 G (firstGPos=0). i=16 >= 10, return Some(0).
+        assert_eq!(find_poly_tail_fastp(b"GGGGGGGGGGGGGGGTG", 10), Some(0));
+
+        // 4 leading Ts followed by 13 Gs: the T run triggers the break but i=14>=10, so
+        // the 13-G tail (starting at pos 4) is still detected.
+        assert_eq!(find_poly_tail_fastp(b"TTTTGGGGGGGGGGGGG", 10), Some(4));
     }
 }
