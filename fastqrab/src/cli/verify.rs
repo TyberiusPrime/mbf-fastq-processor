@@ -1071,6 +1071,10 @@ fn normalize_os_errors(s: &str) -> String {
             "File not found. (os error 2)",
             "No such file or directory (os error 2)",
         )
+        .replace(
+            "The system cannot find the file specified. (os error 2)",
+            "No such file or directory (os error 2)",
+        )
 }
 
 fn strip_backtrace(stderr: &str) -> Cow<'_, str> {
