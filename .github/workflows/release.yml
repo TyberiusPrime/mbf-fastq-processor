@@ -179,7 +179,12 @@ jobs:
           toolchain: 1.93.1
 
       - name: Publish to crates.io
-        run: cargo publish --token ${{ secrets.CRATES_IO_TOKEN }}
+        run: |
+          output=$(cargo publish --token ${{ secrets.CRATES_IO_TOKEN }} 2>&1) && echo "$output" || {
+            echo "$output"
+            echo "$output" | grep -q 'already exists on crates.io index' || exit 1
+            echo "Version already published to crates.io, treating as success."
+          }
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
 
