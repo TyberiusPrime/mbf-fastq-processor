@@ -8058,6 +8058,17 @@ fn test_cases_x_single_step_x_extraction_x_extract_iupac_x_multiple_right_most()
 
 #[test]
 
+fn test_cases_x_single_step_x_extraction_x_extract_iupac_x_non_dna_query() {
+    println!("Test case is in: test_cases/single_step/extraction/extract_iupac/non_dna_query");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/extraction/extract_iupac/non_dna_query"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_extraction_x_extract_iupac_x_suffix() {
     println!("Test case is in: test_cases/single_step/extraction/extract_iupac/suffix");
     run_test(

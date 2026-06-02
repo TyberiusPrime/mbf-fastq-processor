@@ -1,0 +1,19 @@
+[input]
+    read1 = "test_R1_.fastq"
+    read2 = "test_R2_.fastq"
+
+
+[barcodes.sample_barcodes]
+    CTGGCA = "Rep1"
+    GGTCGA = "Rep2"
+    ACTGTG = "Rep3"
+
+[[step]]
+    action = "ExtractIUPAC"
+    out_label = "barcode_in_R2"
+    anchor = 'Left' # Left | Right | Anywhere
+    search = "${sample_barcodes:list}" # what we are searching. May also be a list ["CTN", "GAN", ...]
+    segment = 'read2' # Any of your input segments
+    max_mismatches = 1 # required. How many mismatches are allowed
+    on_tie = 'leftmost'
+    max_anchor_distance = 12

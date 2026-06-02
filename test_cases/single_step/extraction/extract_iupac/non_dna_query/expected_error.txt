@@ -1,0 +1,44 @@
+Error Details ==
+Error 1/3
+  ╭─config.toml
+1 │ [input]
+  ┆ ┬
+  ┆ │
+  ┆ ╰─────── No output files and no reports requested. Nothing to do.
+──╯
+Hint: Add an [output] section with output files or reports, or use a benchmark configuration.
+
+Error 2/3
+  ╭─config.toml
+  ┆
+6 │ [barcodes.sample_barcodes]
+7 │     CTGGCA = "Rep1"
+8 │     GGTCGA = "Rep2"
+9 │     ACTGTG = "Rep3"
+  ┆                    ┬
+  ┆                    │
+  ┆                    ╰─ Barcode section not referenced by any step
+──╯
+Hint: Add a step that uses this barcode section, use it in `output.bam.references_from_barcodes`, or remove it.
+
+Error 3/3
+   ╭─config.toml
+   ┆
+11 │ [[step]]
+12 │     action = "ExtractIUPAC"
+   ┆              ───────┬──────
+   ┆                     │
+   ┆                     ╰─────── In this step
+   ┆
+13 │     out_label = "barcode_in_R2"
+14 │     anchor = 'Left' # Left | Right | Anywhere
+15 │     search = "${sample_barcodes:list}" # what we are searching. May also be a list ["CTN", "GAN", ...]
+   ┆              ────────────┬────────────
+   ┆                          │
+   ┆                          ╰───────────────────────────────────────────────────────────────────────────── Invalid DNA base: '$' (ascii: 36). Allowed letters are A, C, G, T and N.
+───╯
+Hint: Allowed letters are A G T C I R Y S W K M B D H V N 
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/ExtractIUPAC
+      Or run: `fastqrab template ExtractIUPAC` for more information.
+
+

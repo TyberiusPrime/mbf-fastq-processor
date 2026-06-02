@@ -2299,9 +2299,9 @@ dependencies = [
 
 [[package]]
 name = "toml-pretty-deser"
-version = "0.3.6"
+version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "051a45c8eeefd64d395501dfd850a52245f46b6307d47a3d5590f5c5d0f8e979"
+checksum = "46dd29c0d2036c500fb78717190e044d8ce9d619c70e4f286ccb5cc3300f2f75"
 dependencies = [
  "codesnake",
  "indexmap",
@@ -2314,9 +2314,9 @@ dependencies = [
 
 [[package]]
 name = "toml-pretty-deser-macros"
-version = "0.3.3"
+version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d5555955aa9fc53a9b73a7d54573031a56927a458f62d63383d7b1c1d976b03f"
+checksum = "7b574ed27775e06ff79f4dd04be8453b6724346b1e9cd1f8e7b903bef7f080dc"
 dependencies = [
  "proc-macro2 1.0.106",
  "quote 1.0.45",
