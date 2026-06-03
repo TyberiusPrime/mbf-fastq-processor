@@ -91,6 +91,18 @@ Docs:
                         .value_hint(ValueHint::FilePath),
                 ),
         )
+
+        .subcommand(
+            Command::new("output-files")
+                .about("List the output files a (valid) config would produce")
+                .arg(
+                    Arg::new("config")
+                        .help("Path to the TOML configuration file to validate, or '-' to read from stdin")
+                        .required(false)
+                        .value_name("CONFIG_TOML")
+                        .value_hint(ValueHint::FilePath),
+                ),
+        )
         .subcommand(
             Command::new("verify")
                 .about("Run processing in a temp directory and verify outputs match expected outputs or expected panics")
@@ -358,6 +370,10 @@ pub fn entry_point() -> Result<()> {
             let toml_path = handle_toml_arg(sub_matches.get_one::<String>("config"));
             validate_config_file(&toml_path);
         }
+        Some(("output-files", sub_matches)) => {
+            let toml_path = handle_toml_arg(sub_matches.get_one::<String>("config"));
+            output_files(&toml_path);
+        }
         Some(("verify", sub_matches)) => {
             let output_dir = sub_matches.get_one::<String>("output-dir");
             let unsafe_prep = sub_matches.get_flag("unsafe-call-prep-sh");
@@ -438,6 +454,39 @@ fn validate_config_file(toml_path: &Path) {
                     eprintln!("Warning: {warning}");
                 }
                 std::process::exit(0);
+            }
+        }
+        Err(e) => {
+            eprintln!("Configuration validation failed:\n");
+            // let docs = docs_matching_error_message(&e);
+            // if !docs.is_empty() {
+            //     let indented_docs = docs
+            //         .trim()
+            //         .lines()
+            //         .map(|line| format!("    {line}"))
+            //         .collect::<Vec<_>>()
+            //         .join("\n");
+            //     eprintln!(
+            //         "# == Documentation == \n(from the 'template' command)\n{indented_docs}\n",
+            //     );
+            // }
+
+            eprintln!("# == Error Details ==\n{e:?}",);
+            std::process::exit(1);
+        }
+    }
+}
+
+fn output_files(toml_path: &Path) {
+    match crate::list_config_output_files(toml_path) {
+        Ok(output_files) => {
+            if output_files.is_empty() {
+                println!("No output files would be produced by this configuration.");
+            } else {
+                println!("This configuration would produce the following output files:");
+                for file in output_files {
+                    println!("  {file}");
+                }
             }
         }
         Err(e) => {

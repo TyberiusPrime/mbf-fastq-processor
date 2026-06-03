@@ -7,6 +7,7 @@ use crate::config::PartialConfig;
 
 pub mod main;
 pub mod process;
+pub mod output_files;
 pub mod validate;
 pub mod verify;
 

@@ -207,6 +207,7 @@ pub struct CheckedConfig {
     /// Populated by the caller after `check()`; empty when unavailable. Shared
     /// (`Arc`) so the report metadata does not duplicate it in memory.
     pub raw_config: std::sync::Arc<str>,
+    pub output_declarations_per_transformation: Vec<Option<Vec<OutputDeclaration>>>,
 }
 
 impl VerifyIn<TPDRoot> for PartialConfig {
@@ -1849,6 +1850,7 @@ impl Config {
             report_labels: self.report_labels,
             threading_configuration,
             raw_config: std::sync::Arc::from(""),
+            output_declarations_per_transformation: self.output_declarations_per_transformation,
         })
     }
 

@@ -12,6 +12,8 @@ fastqrab is configured exclusively through a TOML document. The CLI is therefore
 fastqrab process [config.toml|-]  [--allow-overwrite]
 fastqrab template
 fastqrab verify [config.toml] [--output-dir <OUTPUT_DIR>]
+fastqrab validate [config.toml] 
+fastqrab output-files [config.toml] 
 fastqrab interactive [config.toml]
 fastqrab completions <SHELL>
 ```
@@ -122,7 +124,10 @@ This is particularly useful for:
 
 #### Stdin Support
 
-**FASTQ from stdin:** When your configuration uses stdin input (by specifying `--stdin--` as an input file), the verify command can simulate stdin input by reading from a file named `stdin` in the same directory as your configuration file.
+**FASTQ from stdin:** When your configuration uses stdin input (by specifying
+`--stdin--` as an input file), the verify command can simulate stdin input by
+reading from a file named `stdin` in the same directory as your configuration
+file.
 
 For example, if your `config.toml` contains:
 ```toml
@@ -132,6 +137,16 @@ read1 = '--stdin--'
 Place a file named `stdin` in the same directory containing the FASTQ data to pipe to the subprocess.
 
 **Config from stdin:** To test a pipeline that reads its configuration from stdin, place an empty file named `stdin_config` in the test directory. The verify command will then invoke `fastqrab process -` and pipe `config.toml` as its stdin.
+
+
+### Validate
+
+Verify a configuration is parsable. Does not overwrite any files. Will warn (but not fail)
+if any input files are missing.
+
+### output_files
+
+Validate (see above), then list all generated output files
 
 ### Interactive
 
