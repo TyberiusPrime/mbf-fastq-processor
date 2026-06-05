@@ -1440,19 +1440,14 @@ impl FastQBlocksCombined {
         else {
             panic!("Tag {label:?} is not a Location column");
         };
-        // Safety: col borrows self.tags (immut); reads borrow self.segments (mut).
-        // These are different fields of self.
-        let col_ptr: *const LocationColumn = col;
         for ii in 0..self.segments[0].entries.len() {
             let mut reads: Vec<WrappedFastQReadMut> = Vec::new();
             for v in &mut self.segments {
                 reads.push(WrappedFastQReadMut(&mut v.entries[ii], &mut v.block));
             }
-            // SAFETY: col_ptr points into self.tags which is not mutated here.
-            let col_ref: &LocationColumn = unsafe { &*col_ptr };
-            let hits = col_ref.get(ii);
+            let hits = col.get(ii);
             let opt_hits = if hits.is_empty() { None } else { Some(hits) };
-            f(&mut reads, opt_hits, col_ref);
+            f(&mut reads, opt_hits, col);
             reads.clear();
         }
     }
