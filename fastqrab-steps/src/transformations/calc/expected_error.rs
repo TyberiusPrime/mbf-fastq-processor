@@ -1,9 +1,5 @@
-use std::cell::RefCell;
-
 use super::super::reports::common::{PHRED33OFFSET, Q_LOOKUP};
-use super::extract_numeric_tags_plus_all;
 use crate::transformations::prelude::*;
-use fastqrab_io::io::WrappedFastQRead;
 
 const PHRED33_MAX: u8 = 126;
 
@@ -68,75 +64,51 @@ impl Step for ExpectedError {
     fn apply(
         &self,
         mut block: FastQBlocksCombined,
-        _input_info: &InputInfo,
+        input_info: &InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let error_state: RefCell<Option<anyhow::Error>> = RefCell::new(None);
-
         let aggregate = self.aggregate;
 
-        extract_numeric_tags_plus_all(
-            self.segment,
-            &self.out_label,
-            |read| {
-                if error_state.borrow().is_some() {
-                    return f64::NAN; // cov:excl-line
-                }
-                match expected_error_for_read(read, aggregate) {
-                    Ok(value) => value,
+        let mut result = vec![0.0f64; block.len()];
+        for (segment_no, segment) in block.segments.iter().enumerate() {
+            for (ii, qual) in segment.seq_quals.iter_qual().enumerate() {
+                result[ii] = match expected_error_for_read(qual, aggregate) {
+                    Ok(value) => match aggregate {
+                        ExpectedErrorAggregate::Sum => value + result[ii],
+                        ExpectedErrorAggregate::Max => result[ii].max(value),
+                    },
                     Err(err) => {
-                        *error_state.borrow_mut() = Some(err);
-                        f64::NAN
+                        return Err(err.context(format!(
+                            "Error calculating expected error for read {} in segment {}",
+                            segment.names.get(ii),
+                            input_info.segment_order[segment_no]
+                        )));
                     }
-                }
-            },
-            |reads| {
-                if error_state.borrow().is_some() {
-                    return f64::NAN; // cov:excl-line
-                }
-                let mut aggregated_value = 0.0;
-                for read in reads {
-                    match expected_error_for_read(read, aggregate) {
-                        Ok(value) => match aggregate {
-                            ExpectedErrorAggregate::Sum => {
-                                aggregated_value += value;
-                            }
-                            ExpectedErrorAggregate::Max => {
-                                aggregated_value = aggregated_value.max(value);
-                            }
-                        },
-                        Err(err) => {
-                            *error_state.borrow_mut() = Some(err);
-                            return f64::NAN;
-                        }
-                    }
-                }
-                aggregated_value
-            },
-            &mut block,
-        );
-
-        match error_state.into_inner() {
-            Some(err) => Err(err),
-            None => Ok((block, true)),
+                };
+            }
         }
+
+        block
+            .tags
+            .insert(self.out_label.clone(), TagColumn::Numeric(result));
+        Ok((block, true))
     }
 }
 
 fn expected_error_for_read(
-    read: &WrappedFastQRead,
+    read_quality: &BStr,
     aggregate: ExpectedErrorAggregate,
 ) -> anyhow::Result<f64> {
     let mut agg = 0.0;
 
-    for &quality in read.qual() {
+    for &quality in read_quality.iter() {
         if !(PHRED33OFFSET..=PHRED33_MAX).contains(&quality) {
             let quality_display = BString::from(vec![quality]);
-            let read_name = BString::from(read.name().to_vec());
             anyhow::bail!(
-                "CalcExpectedError requires PHRED+33 encoded qualities (ASCII 33..=126). Observed byte {quality} ('{}') in read '{}'. Consider running ConvertQuality before CalcExpectedError.",
+                "CalcExpectedError requires PHRED+33 encoded qualities (ASCII 33..=126). \
+                    Observed byte {quality} ('{}'). \
+                    Consider running ConvertQuality before CalcExpectedError.",
                 quality_display.escape_ascii(),
-                read_name.escape_ascii()
             );
         }
         let expected_error = Q_LOOKUP[quality as usize];

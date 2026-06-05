@@ -73,23 +73,18 @@ impl Step for ConvertQuality {
             block: &mut FastQBlocksCombined,
             func: impl Fn(u8) -> i16,
         ) {
-            block.apply_mut(|segments| {
-                for read in segments {
-                    let qual = read.qual();
-                    let new_qual: Vec<_> = qual
-                        .iter()
-                        .map(|x| {
-                            let v = func(*x);
-                            if v <= i16::from(lower) {
-                                lower
-                            } else if v >= i16::from(upper) {
-                                upper
-                            } else {
-                                u8::try_from(v).expect("value must be in u8 range after validation")
-                            }
-                        })
-                        .collect();
-                    read.replace_qual(&new_qual);
+            block.apply_mut_qualities(|qualities| {
+                for quality in qualities {
+                    for qual in quality.iter_mut() {
+                        let v = func(*qual);
+                        *qual = if v <= i16::from(lower) {
+                            lower
+                        } else if v >= i16::from(upper) {
+                            upper
+                        } else {
+                            u8::try_from(v).expect("value must be in u8 range after validation")
+                        };
+                    }
                 }
             });
         }

@@ -4,7 +4,9 @@ use indexmap::IndexMap;
 use std::marker::PhantomData;
 use std::num::NonZero;
 use std::ops::Range;
+use stringpod::CrossPodLocations;
 
+use crate::blocks::FastQChunk;
 use fastqrab_config::{TagLabel, segments::SegmentIndexOrAll};
 use fastqrab_dna::dna::{
     Anchor, HAS_LOC, HitDraft, HitRegion, HitRegionView, Hits, LocationColumn, TagColumn,
@@ -372,6 +374,46 @@ pub struct FastQBlock {
     pub block: Vec<u8>,
     pub entries: Vec<FastQRead>,
     pub first_read_sequential_number: usize,
+}
+
+// transitional, until we have the parsers produce the chunks
+// directly, just to get of the groundp
+impl Into<FastQChunk> for FastQBlock {
+    fn into(self) -> FastQChunk {
+        use stringpod::{DualStringPod, DualStringPodBuilder, StringPod, StringPodBuilder};
+        let mut names = StringPodBuilder::with_capacity(
+            self.entries
+                .iter()
+                .map(|e| e.name.len())
+                .next()
+                .unwrap_or(0),
+            self.entries.len(),
+        );
+        let mut seq_quals = DualStringPodBuilder::with_capacity(
+            self.entries.iter().map(|e| e.seq.len()).next().unwrap_or(0),
+            self.entries.len(),
+        );
+        let mut pluses = StringPod::new_all_empty(
+            self.entries
+                .len()
+                .try_into()
+                .expect("Too many reads for u32"),
+        );
+
+        for read in &self.entries {
+            let name = read.name.get(&self.block);
+            let seq = read.seq.get(&self.block);
+            let qual = read.qual.get(&self.block);
+            names.push(name);
+            seq_quals.push(seq, qual);
+        }
+        FastQChunk {
+            names: names.finish(),
+            seq_quals: seq_quals.finish(),
+            pluses,
+            first_read_sequential_number: self.first_read_sequential_number,
+        }
+    }
 }
 
 // cov:excl-start
@@ -1273,7 +1315,7 @@ pub struct SegmentsCombined<T> {
 /// Contract: segments must not be empty.
 #[derive(Clone, Debug)]
 pub struct FastQBlocksCombined {
-    pub segments: Vec<FastQBlock>,
+    pub segments: Vec<FastQChunk>,
     pub output_tags: Option<Vec<DemultiplexTag>>, // used by Demultiplex
     pub tags: IndexMap<TagLabel, TagColumn>,
     pub is_final: bool,
@@ -1286,7 +1328,7 @@ impl FastQBlocksCombined {
     ///  if segments is empty
     #[must_use]
     pub fn new(
-        segments: Vec<FastQBlock>,
+        segments: Vec<FastQChunk>,
         output_tags: Option<Vec<DemultiplexTag>>,
         tags: IndexMap<TagLabel, TagColumn>,
         is_final: bool,
@@ -1323,7 +1365,7 @@ impl FastQBlocksCombined {
     #[must_use]
     pub fn empty(&self) -> FastQBlocksCombined {
         FastQBlocksCombined {
-            segments: vec![FastQBlock::empty(); self.segments.len()],
+            segments: vec![FastQChunk::new_empty(); self.segments.len()],
             output_tags: if self.output_tags.is_some() {
                 Some(Vec::new())
             } else {
@@ -1344,59 +1386,20 @@ impl FastQBlocksCombined {
     }
 
     #[must_use]
-    pub fn get_pseudo_iter(&self) -> FastQBlocksCombinedIterator<'_> {
-        FastQBlocksCombinedIterator {
-            pos: 0,
-            inner: self,
-        }
-    }
-
-    #[must_use]
-    pub fn get_pseudo_iter_including_tag(&self) -> FastQBlocksCombinedIteratorIncludingTag<'_> {
-        if let Some(output_tags) = &self.output_tags {
-            debug_assert!(
-                output_tags.len() == self.segments[0].entries.len(),
-                "Output tags must have the same length as segments"
-            );
-        }
-        FastQBlocksCombinedIteratorIncludingTag {
-            pos: 0,
-            inner: self,
-        }
-    }
-    #[must_use]
     #[expect(clippy::len_without_is_empty, reason = "We never check for empty?")]
     pub fn len(&self) -> usize {
-        self.segments[0].entries.len()
+        self.segments[0].len()
     }
 
-    // #[must_use] //todo: remove
-    // pub fn is_empty(&self) -> bool {
-    //     panic!();
-    //     self.segments[0].entries.is_empty()
-    // }
-
-    /// # Panics
-    /// when the new length is larger
-    pub fn resize(&mut self, len: usize) {
+    pub fn truncate(&mut self, len: usize) {
         for v in &mut self.segments {
-            v.entries.resize_with(len, || {
-                // cov:excl-start
-                panic!("Read amplification not expected. Can't resize to larger")
-                // cov:excl-stop
-            });
+            v.truncate(len);
         }
         if let Some(output_tags) = &mut self.output_tags {
-            // cov:excl-start
-            output_tags.resize_with(len, || {
-                panic!("Read amplification not expected. Can't resize to larger")
-            });
-            // cov:excl-stop
+            output_tags.truncate(len);
         }
         for tags in self.tags.values_mut() {
-            // cov:excl-start
-            tags.resize_with(len)
-            // cov:excl-stop
+            tags.truncate(len)
         }
     }
 
@@ -1404,7 +1407,7 @@ impl FastQBlocksCombined {
     /// when used on demultiplexed blocks
     pub fn drain(&mut self, range: Range<usize>) {
         for v in &mut self.segments {
-            v.entries.drain(range.clone());
+            v.drain(range.clone());
         }
         assert!(
             self.output_tags.is_none(),
@@ -1416,15 +1419,61 @@ impl FastQBlocksCombined {
         // }
     }
 
-    pub fn apply_mut<F>(&mut self, f: F)
+    ///in place mutation.
+    pub fn apply_mut_sequences<F>(&mut self, f: F)
     where
-        F: for<'a> Fn(&mut [WrappedFastQReadMut<'a>]),
+        F: for<'a> Fn(&[&'a mut BStr]),
     {
-        let count = self.segments[0].entries.len();
+        let count = self.segments[0].len();
         for ii in 0..count {
-            let mut reads: Vec<WrappedFastQReadMut> = Vec::new();
-            for v in &mut self.segments {
-                reads.push(WrappedFastQReadMut(&mut v.entries[ii], &mut v.block));
+            let mut reads: Vec<&mut BStr> = Vec::new();
+            for chunk in &mut self.segments {
+                reads.push(
+                    chunk
+                        .seq_quals
+                        .seq_mut(ii)
+                        .expect("Apply to_exclusive first!"),
+                );
+            }
+            f(&mut reads);
+        }
+    }
+    
+    ///in place mutation.
+    pub fn apply_mut_qualities<F>(&mut self, f: F)
+    where
+        F: for<'a> Fn(&[&'a mut BStr]),
+    {
+        let count = self.segments[0].len();
+        for ii in 0..count {
+            let mut reads: Vec<&mut BStr> = Vec::new();
+            for chunk in &mut self.segments {
+                reads.push(
+                    chunk
+                        .seq_quals
+                        .qual_mut(ii)
+                        .expect("Apply to_exclusive first!"),
+                );
+            }
+            f(&mut reads);
+        }
+    }
+    
+    ///in place mutation.
+    pub fn apply_mut_both<F>(&mut self, f: F)
+    where
+        F: for<'a> Fn(&mut [(&'a  mut BStr, &'a mut BStr)]),
+    {
+        let count = self.segments[0].len();
+        for ii in 0..count {
+            let mut reads: Vec<(&mut BStr, &mut BStr)> = Vec::new();
+            for chunk in &mut self.segments {
+                reads.push(
+                    chunk
+                        .seq_quals
+                        .pair_mut(ii)
+                        .expect("Apply to_exclusive first!"),
+                );
             }
             f(&mut reads);
         }
@@ -1434,16 +1483,16 @@ impl FastQBlocksCombined {
     /// when the tag is missing or not a Location column
     pub fn apply_mut_with_location_tag<F>(&mut self, label: &TagLabel, mut f: F)
     where
-        F: for<'a> FnMut(&mut [WrappedFastQReadMut<'a>], Option<&Hits>, &LocationColumn),
+        F: for<'a> FnMut(&mut [&'a BStr], Option<&Hits>, &LocationColumn),
     {
         let TagColumn::Location(col) = self.tags.get(label).expect("Tag must be present, bug")
         else {
             panic!("Tag {label:?} is not a Location column");
         };
-        for ii in 0..self.segments[0].entries.len() {
-            let mut reads: Vec<WrappedFastQReadMut> = Vec::new();
+        for ii in 0..self.segments[0].len() {
+            let mut reads: Vec<&BStr> = Vec::new();
             for v in &mut self.segments {
-                reads.push(WrappedFastQReadMut(&mut v.entries[ii], &mut v.block));
+                reads.push(v.seq_quals.seq_mut(ii).expect("Chunks of unequal size"));
             }
             let hits = col.get(ii);
             let opt_hits = if hits.is_empty() { None } else { Some(hits) };
@@ -1456,16 +1505,16 @@ impl FastQBlocksCombined {
     /// when the tag is missing or not a String column
     pub fn apply_mut_with_string_tag<F>(&mut self, label: &TagLabel, mut f: F)
     where
-        F: for<'a> FnMut(&mut [WrappedFastQReadMut<'a>], Option<&BString>),
+        F: for<'a> FnMut(&mut [&'a BStr], Option<&BString>),
     {
         let TagColumn::String(tags) = self.tags.get(label).expect("Tag must be present, bug")
         else {
             panic!("Tag {label:?} is not a String column");
         };
-        for ii in 0..self.segments[0].entries.len() {
-            let mut reads: Vec<WrappedFastQReadMut> = Vec::new();
+        for ii in 0..self.segments[0].len() {
+            let mut reads: Vec<&BStr> = Vec::new();
             for v in &mut self.segments {
-                reads.push(WrappedFastQReadMut(&mut v.entries[ii], &mut v.block));
+                reads.push(v.seq_quals.seq_mut(ii).expect("Chunks of unequal size"));
             }
             f(&mut reads, tags[ii].as_ref());
             reads.clear();
@@ -1476,16 +1525,16 @@ impl FastQBlocksCombined {
     /// when the tag is missing or not a Numeric column
     pub fn apply_mut_with_numeric_tag<F>(&mut self, label: &TagLabel, mut f: F)
     where
-        F: for<'a> FnMut(&mut [WrappedFastQReadMut<'a>], f64),
+        F: for<'a> FnMut(&mut [&'a BStr], f64),
     {
         let TagColumn::Numeric(tags) = self.tags.get(label).expect("Tag must be present, bug")
         else {
             panic!("Tag {label:?} is not a Numeric column");
         };
-        for ii in 0..self.segments[0].entries.len() {
-            let mut reads: Vec<WrappedFastQReadMut> = Vec::new();
+        for ii in 0..self.segments[0].len() {
+            let mut reads: Vec<&BStr> = Vec::new();
             for v in &mut self.segments {
-                reads.push(WrappedFastQReadMut(&mut v.entries[ii], &mut v.block));
+                reads.push(v.seq_quals.seq_mut(ii).expect("Chunks of unequal size"));
             }
             f(&mut reads, tags[ii]);
             reads.clear();
@@ -1496,15 +1545,15 @@ impl FastQBlocksCombined {
     /// when the tag is missing or not a Bool column
     pub fn apply_mut_with_bool_tag<F>(&mut self, label: &TagLabel, mut f: F)
     where
-        F: for<'a> FnMut(&mut [WrappedFastQReadMut<'a>], bool),
+        F: for<'a> FnMut(&mut [&'a BStr], bool),
     {
         let TagColumn::Bool(tags) = self.tags.get(label).expect("Tag must be present, bug") else {
             panic!("Tag {label:?} is not a Bool column");
         };
-        for ii in 0..self.segments[0].entries.len() {
-            let mut reads: Vec<WrappedFastQReadMut> = Vec::new();
+        for ii in 0..self.segments[0].len() {
+            let mut reads: Vec<&BStr> = Vec::new();
             for v in &mut self.segments {
-                reads.push(WrappedFastQReadMut(&mut v.entries[ii], &mut v.block));
+                reads.push(v.seq_quals.seq_mut(ii).expect("Chunks of unequal size"));
             }
             f(&mut reads, tags[ii]);
             reads.clear();
@@ -1540,14 +1589,14 @@ impl FastQBlocksCombined {
         let mut count = None;
         for (ii, v) in self.segments.iter().enumerate() {
             if let Some(c) = count {
-                if c != v.entries.len() {
+                if c != v.len() {
                     bail!(
                         "Segment counts differ (unequal number of reads), expected {c}, got {} in segment {ii}",
-                        v.entries.len()
+                        v.len()
                     );
                 }
             } else {
-                count = Some(v.entries.len());
+                count = Some(v.len());
             }
         }
         if let Some(count) = count
@@ -1569,24 +1618,26 @@ impl FastQBlocksCombined {
     pub fn apply_in_place(
         &mut self,
         segment: SegmentIndex,
-        f: impl Fn(&mut FastQRead),
+        f: impl Fn(&mut crate::blocks::FastQRead),
         condition: Option<&[bool]>,
     ) {
-        if let Some(condition) = condition {
-            for (idx, read) in self.segments[segment.as_index()]
-                .entries
-                .iter_mut()
-                .enumerate()
-            {
-                if condition[idx] {
-                    f(read);
-                }
-            }
-        } else {
-            for read in &mut self.segments[segment.as_index()].entries {
-                f(read);
-            }
-        }
+        todo!();
+        // if let Some(condition) = condition {
+        //     for (idx, read) in
+        //         CrossPodLocations::per_row(&mut self.segments[segment.as_index()]).iter_mut(
+        //                 &mut self.segments[segment.as_index()])
+        //         .enumerate()
+        //     {
+        //         if condition[idx] {
+        //             f(read);
+        //         }
+        //     }
+        // } else {
+        //     for read in CrossPodLocations::per_row(&mut self.segments[segment.as_index()]).iter_mut(
+        //                 &mut self.segments[segment.as_index()])
+        //         f(read);
+        //     }
+        // }
     }
 
     /// Apply a function in place to all reads in a segment,
@@ -1599,11 +1650,12 @@ impl FastQBlocksCombined {
         f: impl FnMut(&mut WrappedFastQReadMut),
         condition: Option<&[bool]>,
     ) {
-        if let Some(condition) = condition {
-            self.segments[segment.as_index()].apply_mut_conditional(f, condition);
-        } else {
-            self.segments[segment.as_index()].apply_mut(f);
-        }
+        todo!();
+        // if let Some(condition) = condition {
+        //     self.segments[segment.as_index()].apply_mut_conditional(f, condition);
+        // } else {
+        //     self.segments[segment.as_index()].apply_mut(f);
+        // }
     }
 
     /// `apply_in_place_wrapped`, but support `SegmentIndexOrAll::All`
@@ -1614,17 +1666,18 @@ impl FastQBlocksCombined {
         mut f: impl FnMut(&mut WrappedFastQReadMut),
         condition: Option<&[bool]>,
     ) {
-        if let Ok(target) = segment.try_into() as Result<SegmentIndex, _> {
-            self.apply_in_place_wrapped(target, f, condition);
-        } else if let Some(condition) = condition {
-            for read_block in &mut self.segments {
-                read_block.apply_mut_conditional(&mut f, condition);
-            }
-        } else {
-            for read_block in &mut self.segments {
-                read_block.apply_mut(&mut f);
-            }
-        }
+        todo!();
+        // if let Ok(target) = segment.try_into() as Result<SegmentIndex, _> {
+        //     self.apply_in_place_wrapped(target, f, condition);
+        // } else if let Some(condition) = condition {
+        //     for read_block in &mut self.segments {
+        //         read_block.apply_mut_conditional(&mut f, condition);
+        //     }
+        // } else {
+        //     for read_block in &mut self.segments {
+        //         read_block.apply_mut(&mut f);
+        //     }
+        // }
     }
 
     /* fn apply_filter(
@@ -1643,13 +1696,8 @@ impl FastQBlocksCombined {
     pub fn apply_bool_filter(&mut self, keep: &[bool]) {
         let should: usize = keep.iter().map(|x| usize::from(*x)).sum();
         for segment_block in &mut self.segments {
-            let mut iter = keep.iter();
-            segment_block.entries.retain(|_| {
-                *iter
-                    .next()
-                    .expect("iterator has exact number of elements matching filter")
-            });
-            assert_eq!(segment_block.entries.len(), should);
+            segment_block.retain_by_bools(keep);
+            assert_eq!(segment_block.len(), should);
         }
         for tag_entries in self.tags.values_mut() {
             let mut iter = keep.iter();
@@ -1677,7 +1725,7 @@ impl FastQBlocksCombined {
         f: impl Fn(HitRegionView, usize, &[u8], usize) -> NewLocation,
         condition: Option<&[bool]>,
     ) {
-        let reads = &self.segments[segment.as_index()].entries;
+        let reads = &self.segments[segment.as_index()];
 
         for values in self.tags.values_mut() {
             if let TagColumn::Location(col) = values {
@@ -1687,7 +1735,7 @@ impl FastQBlocksCombined {
                     {
                         continue;
                     }
-                    let read_length = reads[ii].seq.len();
+                    let read_length = reads.seq_quals.entry_len(ii);
                     let slot_len = col.hits[ii].len();
                     if slot_len == 0 {
                         continue;
@@ -1810,79 +1858,6 @@ impl FastQBlocksCombined {
                 }
             }
         }
-    }
-}
-
-pub struct FastQBlocksCombinedIterator<'a> {
-    pos: usize,
-    inner: &'a FastQBlocksCombined,
-}
-
-pub struct CombinedFastQBlock<'a> {
-    pub segments: Vec<WrappedFastQRead<'a>>,
-}
-
-impl CombinedFastQBlock<'_> {
-    #[must_use]
-    pub fn hit_to_qualities(&self, hits: &Hits) -> Option<BString> {
-        let mut res = BString::new(Vec::new());
-        for &hit in hits.iter() {
-            if (hit.flags & HAS_LOC) == 0 {
-                return None;
-            }
-            let segment_quality = self.segments[hit.segment_index as usize].qual();
-            let start = hit.loc_start as usize;
-            let end = (hit.loc_start + hit.loc_len as u32) as usize;
-            res.push_str(&segment_quality[start..end]);
-        }
-        Some(res)
-    }
-}
-
-impl FastQBlocksCombinedIterator<'_> {
-    pub fn pseudo_next(&mut self) -> Option<CombinedFastQBlock<'_>> {
-        let len = self.inner.segments[0].entries.len();
-        if self.pos >= len || len == 0 {
-            return None;
-        }
-        let segments = self
-            .inner
-            .segments
-            .iter()
-            .map(|segment| WrappedFastQRead(&segment.entries[self.pos], &segment.block))
-            .collect();
-
-        let e = CombinedFastQBlock { segments };
-        self.pos += 1;
-        Some(e)
-    }
-}
-
-pub struct FastQBlocksCombinedIteratorIncludingTag<'a> {
-    pos: usize,
-    inner: &'a FastQBlocksCombined,
-}
-
-impl FastQBlocksCombinedIteratorIncludingTag<'_> {
-    pub fn pseudo_next(&mut self) -> Option<(CombinedFastQBlock<'_>, DemultiplexTag)> {
-        let len = self.inner.segments[0].entries.len();
-        if self.pos >= len || len == 0 {
-            return None;
-        }
-        let segments = self
-            .inner
-            .segments
-            .iter()
-            .map(|segment| WrappedFastQRead(&segment.entries[self.pos], &segment.block))
-            .collect();
-
-        let tag = match &self.inner.output_tags {
-            Some(tags) => tags[self.pos],
-            None => 0,
-        };
-        let e = (CombinedFastQBlock { segments }, tag);
-        self.pos += 1;
-        Some(e)
     }
 }
 
@@ -2438,179 +2413,6 @@ mod test {
         let mut wrapped = WrappedFastQReadMut(&mut read, &mut block);
         wrapped.trim_poly_base_suffix(25, 0.3, 3, b'A');
         assert!(wrapped.seq() == read2.seq.get(&block2));
-    }
-
-    #[test]
-    fn test_fastq_block_combined_sanity_check_empty() {
-        let empty = FastQBlocksCombined::new(
-            vec![FastQBlock::empty()],
-            None,
-            Default::default(),
-            false,
-            0,
-        );
-        empty
-            .sanity_check()
-            .expect("sanity check should pass in test");
-    }
-    #[test]
-    #[should_panic(expected = "Segment counts differ")]
-    fn test_fastq_block_combined_sanity_check_r1_neq_r2() {
-        let empty = FastQBlocksCombined::new(
-            vec![
-                FastQBlock {
-                    block: b"hello".to_vec(),
-                    entries: vec![FastQRead {
-                        name: FastQElement::Owned(b"hello".to_vec()),
-                        seq: FastQElement::Owned(b"agtc".to_vec()),
-                        qual: FastQElement::Owned(b"ABCD".to_vec()),
-                    }],
-                    first_read_sequential_number: 0,
-                },
-                FastQBlock::empty(),
-                FastQBlock::empty(),
-                FastQBlock::empty(),
-            ],
-            None,
-            Default::default(),
-            false,
-            0,
-        );
-        empty
-            .sanity_check()
-            .expect("sanity check should pass in test");
-    }
-
-    #[test]
-    #[should_panic(expected = "Segment counts differ")]
-    fn test_fastq_block_combined_sanity_check_r1_neq_i1() {
-        let empty = FastQBlocksCombined::new(
-            vec![
-                FastQBlock {
-                    block: b"hello/1".to_vec(),
-                    entries: vec![FastQRead {
-                        name: FastQElement::Owned(b"hello".to_vec()),
-                        seq: FastQElement::Owned(b"agtc".to_vec()),
-                        qual: FastQElement::Owned(b"ABCD".to_vec()),
-                    }],
-                    first_read_sequential_number: 0,
-                },
-                FastQBlock {
-                    block: b"hello/2".to_vec(),
-                    entries: vec![FastQRead {
-                        name: FastQElement::Owned(b"hello".to_vec()),
-                        seq: FastQElement::Owned(b"agtc".to_vec()),
-                        qual: FastQElement::Owned(b"ABCD".to_vec()),
-                    }],
-                    first_read_sequential_number: 0,
-                },
-                FastQBlock::empty(),
-                FastQBlock::empty(),
-            ],
-            None,
-            Default::default(),
-            false,
-            0,
-        );
-        empty
-            .sanity_check()
-            .expect("sanity check should pass in test");
-    }
-
-    #[test]
-    #[should_panic(expected = "Segment counts differ")]
-    fn test_fastq_block_combined_sanity_check_r1_neq_i2() {
-        let empty = FastQBlocksCombined::new(
-            vec![
-                FastQBlock {
-                    block: b"hello/1".to_vec(),
-                    entries: vec![FastQRead {
-                        name: FastQElement::Owned(b"hello".to_vec()),
-                        seq: FastQElement::Owned(b"agtc".to_vec()),
-                        qual: FastQElement::Owned(b"ABCD".to_vec()),
-                    }],
-                    first_read_sequential_number: 0,
-                },
-                FastQBlock {
-                    block: b"hello/2".to_vec(),
-                    entries: vec![FastQRead {
-                        name: FastQElement::Owned(b"hello".to_vec()),
-                        seq: FastQElement::Owned(b"agtc".to_vec()),
-                        qual: FastQElement::Owned(b"ABCD".to_vec()),
-                    }],
-                    first_read_sequential_number: 0,
-                },
-                FastQBlock {
-                    block: b"hello/i1".to_vec(),
-                    entries: vec![FastQRead {
-                        name: FastQElement::Owned(b"hello".to_vec()),
-                        seq: FastQElement::Owned(b"agtc".to_vec()),
-                        qual: FastQElement::Owned(b"ABCD".to_vec()),
-                    }],
-                    first_read_sequential_number: 0,
-                },
-                FastQBlock::empty(),
-            ],
-            None,
-            Default::default(),
-            false,
-            0,
-        );
-        empty
-            .sanity_check()
-            .expect("sanity check should pass in test");
-    }
-
-    #[test]
-    #[should_panic(expected = "Output tag count differs")]
-    fn test_fastq_block_combined_sanity_check_r1_eq_output_tags() {
-        let empty = FastQBlocksCombined::new(
-            vec![
-                FastQBlock {
-                    block: b"hello/1".to_vec(),
-                    entries: vec![FastQRead {
-                        name: FastQElement::Owned(b"hello".to_vec()),
-                        seq: FastQElement::Owned(b"agtc".to_vec()),
-                        qual: FastQElement::Owned(b"ABCD".to_vec()),
-                    }],
-                    first_read_sequential_number: 0,
-                },
-                FastQBlock {
-                    block: b"hello/2".to_vec(),
-                    entries: vec![FastQRead {
-                        name: FastQElement::Owned(b"hello".to_vec()),
-                        seq: FastQElement::Owned(b"agtc".to_vec()),
-                        qual: FastQElement::Owned(b"ABCD".to_vec()),
-                    }],
-                    first_read_sequential_number: 0,
-                },
-                FastQBlock {
-                    block: b"hello/i1".to_vec(),
-                    entries: vec![FastQRead {
-                        name: FastQElement::Owned(b"hello".to_vec()),
-                        seq: FastQElement::Owned(b"agtc".to_vec()),
-                        qual: FastQElement::Owned(b"ABCD".to_vec()),
-                    }],
-                    first_read_sequential_number: 0,
-                },
-                FastQBlock {
-                    block: b"hello/i2".to_vec(),
-                    entries: vec![FastQRead {
-                        name: FastQElement::Owned(b"hello".to_vec()),
-                        seq: FastQElement::Owned(b"agtc".to_vec()),
-                        qual: FastQElement::Owned(b"ABCD".to_vec()),
-                    }],
-                    first_read_sequential_number: 0,
-                },
-            ],
-            Some(vec![]),
-            Default::default(),
-            false,
-            0,
-        );
-        empty
-            .sanity_check()
-            .expect("sanity check should pass in test");
     }
 
     // Tests for FastQElement::swap_with

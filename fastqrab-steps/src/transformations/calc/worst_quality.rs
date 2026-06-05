@@ -1,4 +1,4 @@
-use super::extract_numeric_tags_plus_all;
+use super::extract_numeric_tags_plus_all_from_qualities;
 use crate::transformations::prelude::*;
 use fastqrab_io::io::WrappedFastQRead;
 
@@ -63,7 +63,7 @@ impl Step for WorstQuality {
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         match &self.source {
             ResolvedSourceAll::Segment(seg_or_all) => {
-                extract_numeric_tags_plus_all(
+                extract_numeric_tags_plus_all_from_qualities(
                     *seg_or_all,
                     &self.out_label,
                     |read| min_quality(read, self.offset) as f64,
@@ -89,30 +89,31 @@ impl Step for WorstQuality {
                     _ => anyhow::bail!("WorstQuality source tag must be a Location column"),
                 };
                 let missing_value = 33.0 + self.offset as f64;
-                let mut values = Vec::with_capacity(location_items.len());
-                let mut iter = block.get_pseudo_iter();
-
-                for hits in location_items.iter() {
-                    let molecule = iter.pseudo_next().expect("tag and read count should match");
-                    let q = if hits.is_empty() {
-                        missing_value
-                    } else {
-                        match molecule.hit_to_qualities(hits) {
-                            Some(qual_bytes) if !qual_bytes.is_empty() => qual_bytes
-                                .iter()
-                                .map(|x| Into::<i16>::into(*x) + self.offset as i16)
-                                .min()
-                                .unwrap_or(33 + self.offset as i16)
-                                as f64,
-                            _ => missing_value,
-                        }
-                    };
-                    values.push(q);
-                }
-
-                block
-                    .tags
-                    .insert(self.out_label.clone(), TagColumn::Numeric(values));
+                todo!();
+                // let mut values = Vec::with_capacity(location_items.len());
+                // let mut iter = block.get_pseudo_iter();
+                //
+                // for hits in location_items.iter() {
+                //     let molecule = iter.pseudo_next().expect("tag and read count should match");
+                //     let q = if hits.is_empty() {
+                //         missing_value
+                //     } else {
+                //         match molecule.hit_to_qualities(hits) {
+                //             Some(qual_bytes) if !qual_bytes.is_empty() => qual_bytes
+                //                 .iter()
+                //                 .map(|x| Into::<i16>::into(*x) + self.offset as i16)
+                //                 .min()
+                //                 .unwrap_or(33 + self.offset as i16)
+                //                 as f64,
+                //             _ => missing_value,
+                //         }
+                //     };
+                //     values.push(q);
+                // }
+                //
+                // block
+                //     .tags
+                //     .insert(self.out_label.clone(), TagColumn::Numeric(values));
             }
             ResolvedSourceAll::Name { .. } => unreachable!(), // cov:excl-line
         }
@@ -121,8 +122,8 @@ impl Step for WorstQuality {
     }
 }
 
-fn min_quality(read: &WrappedFastQRead, offset: i8) -> i16 {
-    read.qual()
+fn min_quality(quality: &BStr, offset: i8) -> i16 {
+    quality
         .iter()
         .map(|x| Into::<i16>::into(*x) + offset as i16)
         .min()

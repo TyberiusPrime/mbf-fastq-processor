@@ -17,6 +17,7 @@ exclude.workspace = true
   anyhow = {workspace = true}
   bio = {workspace = true}
   bstr = {workspace = true}
+  crossbeam = {workspace = true}
   ex = {workspace = true}
   fastqrab-config= {workspace = true}
   fastqrab-dna = {workspace = true}
@@ -32,6 +33,8 @@ exclude.workspace = true
   schemars = {workspace = true}
   serde = {workspace = true}
   sha2 = {workspace = true}
+  smallvec = {workspace = true}
+  stringpod = {workspace = true}
   tempfile = {workspace = true}
   toml-pretty-deser = {workspace = true}
   which = {workspace = true}

@@ -67,11 +67,7 @@ impl Step for CutEnd {
             .as_ref()
             .map(|tag| get_bool_vec_from_tag(&block, tag));
 
-        block.apply_in_place(
-            self.segment,
-            |read| read.cut_end(self.n),
-            condition.as_deref(),
-        );
+        block.segments[self.segment.as_index()].seq_quals.cut_end(self.n, condition.as_deref());
         block.filter_tag_locations_beyond_read_length(self.segment);
 
         Ok((block, true))

@@ -754,6 +754,7 @@ dependencies = [
  "anyhow",
  "bio",
  "bstr",
+ "crossbeam",
  "ex",
  "fastqrab-config",
  "fastqrab-dna",
@@ -769,6 +770,8 @@ dependencies = [
  "schemars",
  "serde",
  "sha2",
+ "smallvec",
+ "stringpod",
  "tempfile",
  "toml-pretty-deser",
  "which",
@@ -803,6 +806,7 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
+ "stringpod",
  "toml-pretty-deser",
  "typed_floats",
  "union-find-rs",
@@ -2158,6 +2162,14 @@ dependencies = [
  "nalgebra",
  "num-traits",
  "rand 0.8.5",
+]
+
+[[package]]
+name = "stringpod"
+version = "0.1.0"
+dependencies = [
+ "bstr",
+ "smallvec",
 ]
 
 [[package]]

@@ -1,6 +1,6 @@
 use typed_floats::tf64::NonNaN;
 
-use super::extract_numeric_tags_plus_all;
+use super::extract_numeric_tags_plus_all_from_sequences;
 use crate::transformations::prelude::*;
 
 /// Calculate complexity score (# transitions / (len -1))
@@ -60,13 +60,13 @@ impl Step for Complexity {
             clippy::cast_precision_loss,
             reason = "Read lengths unlikely to exceed f64 precise regions"
         )]
-        extract_numeric_tags_plus_all(
+        extract_numeric_tags_plus_all_from_sequences(
             self.segment,
             &self.out_label,
-            |read| {
+            |read_sequence| {
                 // Calculate the number of transitions
                 let mut transitions = 0;
-                let seq = read.seq();
+                let seq = read_sequence;
                 if seq.len() <= 1 {
                     return 0.0;
                 }
@@ -82,8 +82,8 @@ impl Step for Complexity {
                 let mut total_positions = 0usize;
 
                 // Process all reads
-                for read in reads {
-                    let seq = read.seq();
+                for read_sequence in reads {
+                    let seq = read_sequence;
                     if seq.len() > 1 {
                         for ii in 0..seq.len() - 1 {
                             if seq[ii] != seq[ii + 1] {

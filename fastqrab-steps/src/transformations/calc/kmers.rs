@@ -135,15 +135,15 @@ impl Step for Kmers {
             .expect("resolved_kmer_db must be set during initialization");
         let k = self.k;
 
-        super::extract_numeric_tags_plus_all(
+        super::extract_numeric_tags_plus_all_from_sequences(
             self.segment,
             &self.out_label,
             #[expect(
                 clippy::cast_precision_loss,
                 reason = "loss is acceptable, it's going to be within u32 range"
             )]
-            |read| {
-                let count = count_kmers_in_database(read.seq(), k, kmer_db);
+            |read_sequence| {
+                let count = count_kmers_in_database(read_sequence, k, kmer_db);
                 count as f64
             },
             #[expect(
@@ -153,7 +153,7 @@ impl Step for Kmers {
             |reads| {
                 let total_count: usize = reads
                     .iter()
-                    .map(|read| count_kmers_in_database(read.seq(), k, kmer_db))
+                    .map(|seq| count_kmers_in_database(seq, k, kmer_db))
                     .sum();
                 total_count as f64
             },

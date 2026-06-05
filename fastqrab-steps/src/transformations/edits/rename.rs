@@ -60,7 +60,7 @@ impl Step for Rename {
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let first_segment = block.segments.first().expect("no segments!?");
 
-        let read_count = first_segment.entries.len();
+        let read_count = first_segment.len();
         if read_count == 0 {
             return Ok((block, true));
         }
@@ -73,23 +73,21 @@ impl Step for Rename {
             0
         };
 
-        for segment_block in &mut block.segments {
-            for read_idx in 0..read_count {
+        for segment in &mut block.segments {
+            let mut new_names = StringPodBuilder::with_capacity(segment.names.get(0).len(), read_count);
+            for (read_idx, name) in segment.names.iter().enumerate() {
                 //just like the atomic
-                let mut read = segment_block.get_mut(read_idx);
-                let name = read.name();
-                let renamed = self
+                let mut renamed = self
                     .search
                     .replace_all(name, replacement_bytes)
                     .into_owned();
                 if self.needs_counting {
                     let current_index = base_index.wrapping_add(read_idx as u64); //can overflow,
-                    let renamed = renamed.replace(b"{{READ_INDEX}}", current_index.to_string());
-                    read.replace_name(&renamed);
-                } else {
-                    read.replace_name(&renamed);
+                    renamed = renamed.replace(b"{{READ_INDEX}}", current_index.to_string());
                 }
+                new_names.push(&renamed);
             }
+            segment.names = new_names.finish();
         }
 
         Ok((block, true))

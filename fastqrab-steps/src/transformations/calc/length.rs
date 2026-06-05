@@ -1,6 +1,6 @@
 use toml_pretty_deser::PartialTaggedVariant;
 
-use super::extract_numeric_tags_plus_all;
+use super::extract_numeric_tags_plus_all_from_sequences;
 use crate::transformations::prelude::*;
 
 /// Convert read length into a tag
@@ -56,20 +56,20 @@ impl Step for Length {
         _input_info: &InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        extract_numeric_tags_plus_all(
+        extract_numeric_tags_plus_all_from_sequences(
             self.segment,
             &self.out_label,
             #[expect(
                 clippy::cast_precision_loss,
                 reason = "loss is acceptable, it's going to be within u32 range"
             )]
-            |read| read.seq().len() as f64,
+            |read_sequence| read_sequence.len() as f64,
             #[expect(
                 clippy::cast_precision_loss,
                 reason = "loss is acceptable, it's going to be within u32 range"
             )]
             |reads| {
-                let total_length: usize = reads.iter().map(|read| read.seq().len()).sum();
+                let total_length: usize = reads.iter().map(|read| read.len()).sum();
                 total_length as f64
             },
             &mut block,

@@ -20,12 +20,12 @@ use crate::{
     output::{open_output_files, output_block, output_html_report, output_json_report},
     transformations::{self, FinalizeReportResult, Step, Transformation},
 };
-use fastqrab_io::io::{
+use fastqrab_io::{blocks::FastQChunk, io::{
     self,
     input::InputOptions,
     output::chunked_writer::{ChunkPaths, ChunkedRecordWriter, WriteTarget, WriteTargetConfig},
     parsers::{ChainedParser, ThreadCount},
-};
+}};
 use fastqrab_steps::{demultiplex::StepOutputFiles, join_nonempty};
 
 fn build_step_output_files(
@@ -100,7 +100,7 @@ fn build_step_output_files(
 #[expect(clippy::collapsible_if, reason = "obscures")]
 fn parse_and_send(
     readers: Vec<io::InputFile>,
-    raw_tx: &crossbeam::channel::Sender<(io::FastQBlock, Option<usize>)>,
+    raw_tx: &crossbeam::channel::Sender<(FastQChunk, Option<usize>)>,
     buffer_size: usize,
     block_size: NonZero<usize>,
     input_thread_count: ThreadCount,
@@ -115,7 +115,7 @@ fn parse_and_send(
     );
     loop {
         let res = parser.parse()?;
-        if !res.fastq_block.entries.is_empty() || !res.was_final {
+        if !res.fastq_block.is_empty() || !res.was_final {
             if raw_tx
                 .send((res.fastq_block, res.expected_read_count))
                 .is_err()
@@ -155,7 +155,7 @@ fn parse_interleaved_and_send(
         {
             expected_read_count = Some(value);
         }
-        if !res.fastq_block.entries.is_empty() {
+        if !res.fastq_block.is_empty() {
             let out_blocks = res.fastq_block.split_interleaved(segment_count);
             let out = (
                 io::FastQBlocksCombined::new(

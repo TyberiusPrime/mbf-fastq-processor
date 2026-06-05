@@ -1,4 +1,4 @@
-use crate::transformations::calc::extract_numeric_tags_plus_all;
+use crate::transformations::calc::extract_numeric_tags_plus_all_from_sequences;
 use crate::transformations::prelude::*;
 use fastqrab_config::tpd_adapt_bstring_uppercase;
 
@@ -197,11 +197,11 @@ impl Step for BaseContent {
         let bases_to_ignore_all = self.bases_to_ignore_lookup.clone();
         let relative = self.relative;
 
-        extract_numeric_tags_plus_all(
+        extract_numeric_tags_plus_all_from_sequences(
             segment,
             &self.out_label,
-            move |read| {
-                let sequence = read.seq();
+            move |read_sequence| {
+                let sequence = read_sequence;
                 let (considered, counted) = Self::sequence_totals(
                     sequence,
                     &bases_to_count_single,
@@ -217,9 +217,9 @@ impl Step for BaseContent {
                 let mut total_considered = 0usize;
                 let mut total_counted = 0usize;
 
-                for read in reads {
+                for read_sequence in reads {
                     let (considered, counted) = Self::sequence_totals(
-                        read.seq(),
+                        read_sequence,
                         &bases_to_count_all,
                         &bases_to_ignore_all,
                     );

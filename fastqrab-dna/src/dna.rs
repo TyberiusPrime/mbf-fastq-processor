@@ -100,6 +100,10 @@ impl LocationColumn {
         }
     }
 
+    pub fn truncate(&mut self, len: usize) {
+        self.hits.truncate(len);
+    }
+
     // ── builders ──────────────────────────────────────────────────────────────
 
     pub fn push_none(&mut self) {
@@ -465,15 +469,12 @@ impl TagColumn {
         }
     }
 
-    pub fn resize_with(&mut self, len: usize) {
-        fn unreachable_growth<T>() -> T {
-            panic!("Read amplification not expected. Can't resize to larger")
-        }
+    pub fn truncate(&mut self, len: usize) {
         match self {
-            TagColumn::Location(col) => col.resize_with_empty(len),
-            TagColumn::String(items) => items.resize_with(len, unreachable_growth),
-            TagColumn::Numeric(items) => items.resize_with(len, unreachable_growth),
-            TagColumn::Bool(items) => items.resize_with(len, unreachable_growth),
+            TagColumn::Location(col) => col.truncate(len),
+            TagColumn::String(items) => items.truncate(len),
+            TagColumn::Numeric(items) => items.truncate(len),
+            TagColumn::Bool(items) => items.truncate(len),
         }
     }
 

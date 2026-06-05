@@ -65,7 +65,7 @@ impl Step for Head {
                 //we know so_far is smaller than n
                 let remaining = self.n.saturating_sub(*so_far);
                 assert!(remaining > 0);
-                block.resize(remaining.min(block.len()));
+                block.truncate(remaining.min(block.len()));
                 let do_continue = remaining > block.len();
                 *so_far += block.len();
                 Ok((block, do_continue))

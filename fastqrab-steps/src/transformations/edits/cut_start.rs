@@ -68,12 +68,8 @@ impl Step for CutStart {
             .if_tag
             .as_ref()
             .map(|tag| get_bool_vec_from_tag(&block, tag));
+        block.segments[self.segment.as_index()].seq_quals.cut_start(self.n, condition.as_deref());
 
-        block.apply_in_place(
-            self.segment,
-            |read| read.cut_start(self.n),
-            condition.as_deref(),
-        );
 
         block.filter_tag_locations(
             self.segment,

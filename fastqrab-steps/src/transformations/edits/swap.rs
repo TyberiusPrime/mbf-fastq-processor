@@ -172,27 +172,28 @@ impl Step for Swap {
         };
         //make sure that actually worked.
 
-        // Swap individual reads using the optimized swap_with method
-        let mut actual_swap_count = 0;
-        for (read_idx, &should_swap) in swap_these.iter().enumerate() {
-            if should_swap {
-                actual_swap_count += 1;
-                // Get mutable references to both blocks for swapping
-                let (block_a, block_b) = {
-                    let (left, right) = block.segments.split_at_mut(index_b as usize);
-                    (&mut left[index_a as usize], &mut right[0])
-                };
-
-                // Swap the FastQRead entries between the two segments for this read
-                block_a.entries[read_idx as usize].swap_with(
-                    &mut block_b.entries[read_idx as usize],
-                    &mut block_a.block,
-                    &mut block_b.block,
-                );
-            }
-        }
-        assert!(actual_swap_count <= total_count / 2); //verify we actually went with the smaller
-        //one. Makes mutation testing happy.
+        todo!();
+        // // Swap individual reads using the optimized swap_with method
+        // let mut actual_swap_count = 0;
+        // for (read_idx, &should_swap) in swap_these.iter().enumerate() {
+        //     if should_swap {
+        //         actual_swap_count += 1;
+        //         // Get mutable references to both blocks for swapping
+        //         let (block_a, block_b) = {
+        //             let (left, right) = block.segments.split_at_mut(index_b as usize);
+        //             (&mut left[index_a as usize], &mut right[0])
+        //         };
+        //
+        //         // Swap the FastQRead entries between the two segments for this read
+        //         block_a.entries[read_idx as usize].swap_with(
+        //             &mut block_b.entries[read_idx as usize],
+        //             &mut block_a.block,
+        //             &mut block_b.block,
+        //         );
+        //     }
+        // }
+        // assert!(actual_swap_count <= total_count / 2); //verify we actually went with the smaller
+        // //one. Makes mutation testing happy.
 
         // Update tag locations for all reads where swap occurred
         block.filter_tag_locations_all_targets(|location: HitRegion, pos: usize| -> NewLocation {

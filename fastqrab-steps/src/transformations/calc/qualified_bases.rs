@@ -1,4 +1,4 @@
-use super::extract_numeric_tags_plus_all;
+use super::extract_numeric_tags_plus_all_from_qualities;
 use crate::transformations::prelude::*;
 use fastqrab_config::tpd_adapt_u8_from_byte_or_char;
 use fastqrab_io::io::WrappedFastQRead;
@@ -100,8 +100,8 @@ impl Step for QualifiedBases {
         let op = self.operator;
         let relative = self.relative;
         let threshold = self.threshold;
-        let one_read = |read: &WrappedFastQRead| {
-            let it = read.qual().iter();
+        let one_read = |quality: &BStr| {
+            let it = quality.iter();
             let count: usize = match op {
                 Operator::Above => it.map(|x| usize::from(*x > threshold)).sum(),
                 Operator::Below => it.map(|x| usize::from(*x < threshold)).sum(),
@@ -109,17 +109,17 @@ impl Step for QualifiedBases {
                 Operator::BelowOrEqual => it.map(|x| usize::from(*x <= threshold)).sum(),
             };
             if relative {
-                count as f64 / read.len() as f64
+                count as f64 / quality.len() as f64
             } else {
                 count as f64
             }
         };
 
-        extract_numeric_tags_plus_all(
+        extract_numeric_tags_plus_all_from_qualities(
             self.segment,
             &self.out_label,
             one_read,
-            |reads| reads.iter().map(one_read).sum(),
+            |quals| quals.iter().map(|&q| one_read(q)).sum(),
             &mut block,
         );
 

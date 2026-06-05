@@ -81,9 +81,7 @@ impl Step for CompareStringTags {
                 (Some(sa), Some(sb)) => {
                     if sa.len() != sb.len() {
                         let read_name = BStr::new(
-                            block.segments[0].entries[idx]
-                                .name
-                                .get(&block.segments[0].block),
+                            block.segments[0].names.get(idx)
                         );
                         anyhow::bail!(
                             "CompareStringTags requires identical length tags.\n\

@@ -1,6 +1,7 @@
 use anyhow::Context;
 
 pub mod io;
+pub mod blocks;
 
 pub use fastqrab_config::{CompressionFormat, FileFormat, STDIN_MAGIC_PATH, get_number_of_cores};
 

@@ -73,7 +73,7 @@ impl Step for ConvertToRate {
         let mut source_iter = source_values.into_iter();
 
         if let Ok(segment_index) = TryInto::<SegmentIndex>::try_into(self.segment) {
-            super::extract_numeric_tags(
+            super::extract_numeric_tags_from_sequences(
                 segment_index,
                 &self.out_label,
                 #[expect(
@@ -84,32 +84,18 @@ impl Step for ConvertToRate {
                     let source = source_iter
                         .next()
                         .expect("source and segment have same read count");
-                    let len = read.seq().len() as f64;
+                    let len = read.len() as f64;
                     if len > 0.0 { source / len } else { 0.0 }
                 },
                 &mut block,
             );
         } else {
-            let mut values = Vec::with_capacity(block.segments[0].len());
-            let mut block_iter = block.get_pseudo_iter();
-            while let Some(molecule) = block_iter.pseudo_next() {
-                let source = source_iter
-                    .next()
-                    .expect("source and segments have same read count");
-                #[expect(
-                    clippy::cast_precision_loss,
-                    reason = "loss is acceptable, it's going to be within u32 range"
-                )]
-                let total_len = molecule
-                    .segments
-                    .iter()
-                    .map(|r| r.seq().len())
-                    .sum::<usize>() as f64;
-                values.push(if total_len > 0.0 {
-                    source / total_len
-                } else {
-                    0.0
-                });
+            let len = block.segments[0].len();
+            let mut values = vec![0.0; len];
+            for segment in &block.segments {
+                for ii in 0..len {
+                    values[ii] += segment.seq_quals.entry_len(ii) as f64;
+                }
             }
             block
                 .tags

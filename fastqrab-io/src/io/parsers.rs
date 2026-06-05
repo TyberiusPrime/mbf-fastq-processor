@@ -4,6 +4,7 @@ use std::path::PathBuf;
 
 use crate::io::input::InputOptions;
 use crate::io::{FastQBlock, InputFile};
+use crate::blocks::FastQChunk;
 
 mod bam;
 mod fasta;
@@ -44,7 +45,7 @@ pub struct ChainedParser {
 }
 
 pub struct ChainParseResult {
-    pub fastq_block: FastQBlock,
+    pub fastq_block: FastQChunk,
     pub was_final: bool,
     pub expected_read_count: Option<usize>,
 }
@@ -129,7 +130,7 @@ impl ChainedParser {
                     block: Vec::new(),
                     entries: Vec::new(),
                     first_read_sequential_number: self.reads_so_far,
-                },
+                }.into(),
                 was_final: true,
                 expected_read_count: self.expected_read_count_power_of_two,
             });
@@ -223,7 +224,7 @@ impl ChainedParser {
         res.fastq_block.first_read_sequential_number = self.reads_so_far;
         self.reads_so_far += res.fastq_block.entries.len();
         Ok(ChainParseResult {
-            fastq_block: res.fastq_block,
+            fastq_block: res.fastq_block.into(),
             was_final: res.was_final,
             expected_read_count: self.expected_read_count_power_of_two,
         })

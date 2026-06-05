@@ -3,6 +3,7 @@ use std::cell::RefCell;
 
 use crate::transformations::prelude::*;
 use fastqrab_dna::dna::reverse_complement;
+use stringpod::DualStringPodBuilder;
 use fastqrab_io::io::WrappedFastQReadMut;
 
 /// Algorithm to use for scoring overlaps and resolving mismatches
@@ -183,8 +184,8 @@ impl Step for MergeReads {
         _input_info: &InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let seg1_idx = self.segment1.0;
-        let seg2_idx = self.segment2.0;
+        let seg1_idx = self.segment1.as_index();
+        let seg2_idx = self.segment2.as_index();
         let reverse_complement_segment2 = self.reverse_complement_segment2;
         let no_overlap_strategy = self.no_overlap_strategy.clone();
         let concatenate_spacer = self.concatenate_spacer.clone();
@@ -201,14 +202,20 @@ impl Step for MergeReads {
                 .map(|_| Vec::with_capacity(block.len())),
         );
 
-        // Process each read pair using apply_mut
-        block.apply_mut(|reads: &mut [WrappedFastQReadMut]| {
-            let read1_seq = reads[seg1_idx as usize].seq();
-            let read1_qual = reads[seg1_idx as usize].qual();
-            let read2_seq = reads[seg2_idx as usize].seq();
-            let read2_qual = reads[seg2_idx as usize].qual();
+
+        let mut new_merged_reads= DualStringPodBuilder::with_capacity(block.len(), block.len());
+        let keep_read2: Vec<bool> = Vec::with_capacity(block.len());
+
+        for (read1, read2) in block.segments[seg1_idx].iter().zip(
+                block.segments[seg2_idx].iter()) {
+
+            let read1_seq = read1.seq;
+            let read1_qual = read1.qual;
+            let read2_seq = read2.seq;
+            let read2_qual = read2.qual;
 
             // Optionally reverse complement read2
+            // TODO: Remove this, that's a separate step!
             let (read2_seq_processed, read2_qual_processed): (Cow<[u8]>, Cow<[u8]>) =
                 if reverse_complement_segment2 {
                     let rc_seq = reverse_complement(read2_seq);
@@ -237,9 +244,8 @@ impl Step for MergeReads {
                     merged_qual,
                 } => {
                     // Update segment1 with merged sequence
-                    reads[seg1_idx as usize].replace_seq(&merged_seq, &merged_qual);
-                    // Clear segment2
-                    reads[seg2_idx as usize].clear();
+                    new_merged_reads.push(&merged_seq, &merged_qual);
+                    keep_read2.push(false); // read2 is merged, so we won't keep it as is
                     true
                 }
                 MergeResult::NoOverlap => {
@@ -259,11 +265,13 @@ impl Step for MergeReads {
                         concatenated_qual.extend_from_slice(&read2_qual_processed);
 
                         // Update segment1 with concatenated sequence
-                        reads[seg1_idx as usize].replace_seq(&concatenated_seq, &concatenated_qual);
+                        new_merged_reads.push(&concatenated_seq, &concatenated_qual);
                         // Clear segment2
-                        reads[seg2_idx as usize].clear();
+                        keep_read2.push(false); // read2 is "merged" into read1, so we won't keep
+                        // it as is
                     }
                     // Otherwise keep reads as they are (NoOverlapStrategy::AsIs)
+                    keep_read2.push(true); // read2 is not merged, so we keep it as is
                     false
                 }
             };
@@ -272,7 +280,7 @@ impl Step for MergeReads {
             if let Some(merge_status) = merge_status.borrow_mut().as_mut() {
                 merge_status.push(was_merged);
             }
-        });
+        };
 
         // Add merge status tag if label was specified
 

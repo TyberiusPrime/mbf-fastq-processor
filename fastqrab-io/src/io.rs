@@ -15,10 +15,12 @@ pub use reads::{
 
 pub use output::simulated_failure;
 pub use parsers::bam_read_count_from_index;
+pub use pod_parser::{FastqChunk, parse_pods_from_channel};
 
 pub mod input;
 pub mod output;
 pub mod parsers;
+pub mod pod_parser;
 pub mod reads;
 
 /// Given a fastq or bam file, run a call back on all reads
