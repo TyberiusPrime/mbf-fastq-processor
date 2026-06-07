@@ -1,12 +1,12 @@
 use anyhow::{Result, bail};
 use bstr::{BStr, BString, ByteVec};
 use indexmap::IndexMap;
+use smallvec::SmallVec;
 use std::marker::PhantomData;
 use std::num::NonZero;
 use std::ops::Range;
-use stringpod::CrossPodLocations;
 
-use crate::blocks::FastQChunk;
+use crate::blocks::{self, FastQChunk, Molecules, MoleculesMut};
 use fastqrab_config::{TagLabel, segments::SegmentIndexOrAll};
 use fastqrab_dna::dna::{
     Anchor, HAS_LOC, HitDraft, HitRegion, HitRegionView, Hits, LocationColumn, TagColumn,
@@ -411,7 +411,6 @@ impl Into<FastQChunk> for FastQBlock {
             names: names.finish(),
             seq_quals: seq_quals.finish(),
             pluses,
-            first_read_sequential_number: self.first_read_sequential_number,
         }
     }
 }
@@ -1315,17 +1314,26 @@ pub struct SegmentsCombined<T> {
 /// Contract: segments must not be empty.
 #[derive(Clone, Debug)]
 pub struct FastQBlocksCombined {
+    /// One segment per read mate (R1, R2, index, ...), kept in lockstep: read
+    /// `i` of every segment belongs to the same molecule. The lockstep invariant
+    /// (every segment has the same read count) is established at construction and
+    /// preserved by the count-changing methods ([`truncate`](Self::truncate) /
+    /// [`drain`](Self::drain) / [`apply_bool_filter`](Self::apply_bool_filter)).
+    /// Mutate a single segment's reads via [`member_mut`](Self::member_mut),
+    /// which re-checks the invariant on drop.
     pub segments: Vec<FastQChunk>,
     pub output_tags: Option<Vec<DemultiplexTag>>, // used by Demultiplex
     pub tags: IndexMap<TagLabel, TagColumn>,
     pub is_final: bool,
     block_no: usize,
+    pub first_read_sequential_number: usize,
     _force_private: PhantomData<u8>,
 }
 
 impl FastQBlocksCombined {
     /// # Panics
-    ///  if segments is empty
+    /// - if `segments` is empty
+    /// - if the segments are not in lockstep (differ in read count)
     #[must_use]
     pub fn new(
         segments: Vec<FastQChunk>,
@@ -1333,17 +1341,29 @@ impl FastQBlocksCombined {
         tags: IndexMap<TagLabel, TagColumn>,
         is_final: bool,
         block_no: usize,
+        first_read_sequential_number: usize,
     ) -> Self {
         assert!(
             !segments.is_empty(),
             "Empty segments not supported in FastQBlocksCombined"
         );
+        let expected = segments[0].row_count();
+        for (idx, segment) in segments.iter().enumerate().skip(1) {
+            assert_eq!(
+                segment.row_count(),
+                expected,
+                "FastQBlocksCombined segment {idx} has {} reads but segment 0 has {expected}; \
+                 segments must be in lockstep",
+                segment.row_count(),
+            );
+        }
         FastQBlocksCombined {
             segments,
             output_tags,
             tags,
             is_final,
             block_no,
+            first_read_sequential_number,
             _force_private: PhantomData,
         }
     }
@@ -1356,7 +1376,7 @@ impl FastQBlocksCombined {
     #[must_use]
     pub fn iter_segment_indices(&self, idx: SegmentIndexOrAll) -> Vec<usize> {
         match idx {
-            SegmentIndexOrAll::All => (0..self.segments.len()).collect(),
+            SegmentIndexOrAll::All => (0..self.member_count()).collect(),
             SegmentIndexOrAll::Indexed(idx) => vec![idx.as_index()],
         }
     }
@@ -1365,7 +1385,7 @@ impl FastQBlocksCombined {
     #[must_use]
     pub fn empty(&self) -> FastQBlocksCombined {
         FastQBlocksCombined {
-            segments: vec![FastQChunk::new_empty(); self.segments.len()],
+            segments: vec![FastQChunk::new_empty(); self.member_count()],
             output_tags: if self.output_tags.is_some() {
                 Some(Vec::new())
             } else {
@@ -1374,6 +1394,7 @@ impl FastQBlocksCombined {
             tags: IndexMap::default(),
             is_final: self.is_final,
             block_no: self.block_no,
+            first_read_sequential_number: self.first_read_sequential_number,
             _force_private: PhantomData,
         }
     }
@@ -1388,12 +1409,79 @@ impl FastQBlocksCombined {
     #[must_use]
     #[expect(clippy::len_without_is_empty, reason = "We never check for empty?")]
     pub fn len(&self) -> usize {
-        self.segments[0].len()
+        self.row_count()
+    }
+
+    /// Number of molecules — the shared read count across all segments.
+    #[must_use]
+    pub fn row_count(&self) -> usize {
+        self.segments.first().map_or(0, FastQChunk::row_count)
+    }
+
+    /// Number of segments (mates) per molecule.
+    #[must_use]
+    pub fn member_count(&self) -> usize {
+        self.segments.len()
+    }
+
+    /// Read-only access to one segment.
+    ///
+    /// # Panics
+    /// If `index >= self.member_count()`.
+    #[must_use]
+    pub fn member(&self, index: usize) -> &FastQChunk {
+        &self.segments[index]
+    }
+
+    /// Mutable access to one segment, for in-place work that **keeps the read
+    /// count unchanged**. The returned guard re-checks this segment's read count
+    /// on drop and panics if it drifted out of lockstep — count changes must go
+    /// through [`truncate`](Self::truncate) / [`drain`](Self::drain) /
+    /// [`apply_bool_filter`](Self::apply_bool_filter).
+    ///
+    /// # Panics
+    /// If `index >= self.member_count()`.
+    #[must_use]
+    pub fn member_mut(&mut self, index: usize) -> MemberGuard<'_> {
+        let expected = self.segments[index].row_count();
+        MemberGuard {
+            segment: &mut self.segments[index],
+            expected,
+        }
+    }
+
+    /// Swap two segments (mates). Reorders only — every segment keeps its read
+    /// count, so the lockstep invariant is preserved.
+    ///
+    /// # Panics
+    /// If either index is out of range.
+    pub fn swap_members(&mut self, a: usize, b: usize) {
+        self.segments.swap(a, b);
+    }
+
+    /// Iterate molecules: each item is read `i` drawn from every segment, in
+    /// segment order.
+    #[must_use]
+    pub fn molecules(&self) -> Molecules<'_> {
+        blocks::molecules(&self.segments)
+    }
+
+    /// Iterate molecules mutably. Shared buffers are made exclusive first
+    /// (silent copy-on-write).
+    pub fn molecules_mut(&mut self) -> MoleculesMut<'_> {
+        blocks::molecules_mut(&mut self.segments)
+    }
+
+    /// Ensure every segment owns its byte buffers outright.
+    pub fn make_exclusive(&mut self) {
+        for segment in &mut self.segments {
+            segment.make_exclusive();
+        }
     }
 
     pub fn truncate(&mut self, len: usize) {
-        for v in &mut self.segments {
-            v.truncate(len);
+        for segment in &mut self.segments {
+            segment.truncate(len);
         }
         if let Some(output_tags) = &mut self.output_tags {
             output_tags.truncate(len);
@@ -1406,13 +1494,13 @@ impl FastQBlocksCombined {
     /// # Panics
     /// when used on demultiplexed blocks
     pub fn drain(&mut self, range: Range<usize>) {
-        for v in &mut self.segments {
-            v.drain(range.clone());
-        }
         assert!(
             self.output_tags.is_none(),
             "Drain used on a demultiplexed block. I don't think that's sensible"
         );
+        for segment in &mut self.segments {
+            segment.drain(range.clone());
+        }
         // if let Some(output_tags) = &mut self.output_tags {
         //     output_tags.drain(range.clone()); // cov:excl-line currently not being used, since we
         //     // only use drain in the non-demultiplexing case, completeness and future use.
@@ -1422,59 +1510,41 @@ impl FastQBlocksCombined {
     ///in place mutation.
     pub fn apply_mut_sequences<F>(&mut self, f: F)
     where
-        F: for<'a> Fn(&[&'a mut BStr]),
+        F: for<'a> Fn(&SmallVec<[&'a mut BStr; 4]>),
     {
-        let count = self.segments[0].len();
-        for ii in 0..count {
-            let mut reads: Vec<&mut BStr> = Vec::new();
-            for chunk in &mut self.segments {
-                reads.push(
-                    chunk
-                        .seq_quals
-                        .seq_mut(ii)
-                        .expect("Apply to_exclusive first!"),
-                );
-            }
+        // One molecule per row; gather each segment's seq into the slice the
+        // closure expects. `molecules_mut` makes the buffers exclusive itself
+        // (silent copy-on-write), so the old "apply to_exclusive first" caveat
+        // is gone.
+        for molecule in blocks::molecules_mut(&mut self.segments) {
+            let mut reads: SmallVec<[&mut BStr; 4]> =
+                molecule.into_iter().map(|read| read.seq).collect();
             f(&mut reads);
         }
     }
-    
-    ///in place mutation.
+
+    ///in place mutati
     pub fn apply_mut_qualities<F>(&mut self, f: F)
     where
-        F: for<'a> Fn(&[&'a mut BStr]),
+        F: for<'a> Fn(&SmallVec<[&'a mut BStr; 4]>),
     {
-        let count = self.segments[0].len();
-        for ii in 0..count {
-            let mut reads: Vec<&mut BStr> = Vec::new();
-            for chunk in &mut self.segments {
-                reads.push(
-                    chunk
-                        .seq_quals
-                        .qual_mut(ii)
-                        .expect("Apply to_exclusive first!"),
-                );
-            }
+        for molecule in blocks::molecules_mut(&mut self.segments) {
+            let mut reads: SmallVec<[&mut BStr; 4]> =
+                molecule.into_iter().map(|read| read.qual).collect();
             f(&mut reads);
         }
     }
-    
+
     ///in place mutation.
     pub fn apply_mut_both<F>(&mut self, f: F)
     where
-        F: for<'a> Fn(&mut [(&'a  mut BStr, &'a mut BStr)]),
+        F: for<'a> Fn(&mut SmallVec<[(&'a mut BStr, &'a mut BStr); 4]>),
     {
-        let count = self.segments[0].len();
-        for ii in 0..count {
-            let mut reads: Vec<(&mut BStr, &mut BStr)> = Vec::new();
-            for chunk in &mut self.segments {
-                reads.push(
-                    chunk
-                        .seq_quals
-                        .pair_mut(ii)
-                        .expect("Apply to_exclusive first!"),
-                );
-            }
+        for molecule in blocks::molecules_mut(&mut self.segments) {
+            let mut reads: SmallVec<[(&mut BStr, &mut BStr); 4]> = molecule
+                .into_iter()
+                .map(|read| (read.seq, read.qual))
+                .collect();
             f(&mut reads);
         }
     }
@@ -1483,21 +1553,21 @@ impl FastQBlocksCombined {
     /// when the tag is missing or not a Location column
     pub fn apply_mut_with_location_tag<F>(&mut self, label: &TagLabel, mut f: F)
     where
-        F: for<'a> FnMut(&mut [&'a BStr], Option<&Hits>, &LocationColumn),
+        F: for<'a> FnMut(&mut SmallVec<[&'a BStr; 4]>, Option<&Hits>, &LocationColumn),
     {
         let TagColumn::Location(col) = self.tags.get(label).expect("Tag must be present, bug")
         else {
             panic!("Tag {label:?} is not a Location column");
         };
-        for ii in 0..self.segments[0].len() {
-            let mut reads: Vec<&BStr> = Vec::new();
-            for v in &mut self.segments {
-                reads.push(v.seq_quals.seq_mut(ii).expect("Chunks of unequal size"));
-            }
+        // `col` borrows `self.tags`; `molecules()` borrows `self.segments` — two
+        // disjoint, immutable field borrows. The closure only sees `&BStr`, so
+        // read-only molecule iteration is enough (no copy-on-write needed).
+        for (ii, molecule) in blocks::molecules(&self.segments).enumerate() {
+            let mut reads: SmallVec<[&BStr; 4]> =
+                molecule.into_iter().map(|read| read.seq).collect();
             let hits = col.get(ii);
             let opt_hits = if hits.is_empty() { None } else { Some(hits) };
             f(&mut reads, opt_hits, col);
-            reads.clear();
         }
     }
 
@@ -1505,19 +1575,16 @@ impl FastQBlocksCombined {
     /// when the tag is missing or not a String column
     pub fn apply_mut_with_string_tag<F>(&mut self, label: &TagLabel, mut f: F)
     where
-        F: for<'a> FnMut(&mut [&'a BStr], Option<&BString>),
+        F: for<'a> FnMut(&mut SmallVec<[&BStr; 4]>, Option<&BString>),
     {
         let TagColumn::String(tags) = self.tags.get(label).expect("Tag must be present, bug")
         else {
             panic!("Tag {label:?} is not a String column");
         };
-        for ii in 0..self.segments[0].len() {
-            let mut reads: Vec<&BStr> = Vec::new();
-            for v in &mut self.segments {
-                reads.push(v.seq_quals.seq_mut(ii).expect("Chunks of unequal size"));
-            }
+        for (ii, molecule) in blocks::molecules(&self.segments).enumerate() {
+            let mut reads: SmallVec<[&BStr; 4]> =
+                molecule.into_iter().map(|read| read.seq).collect();
             f(&mut reads, tags[ii].as_ref());
-            reads.clear();
         }
     }
 
@@ -1525,19 +1592,16 @@ impl FastQBlocksCombined {
     /// when the tag is missing or not a Numeric column
     pub fn apply_mut_with_numeric_tag<F>(&mut self, label: &TagLabel, mut f: F)
     where
-        F: for<'a> FnMut(&mut [&'a BStr], f64),
+        F: for<'a> FnMut(&mut SmallVec<[&BStr; 4]>, f64),
     {
         let TagColumn::Numeric(tags) = self.tags.get(label).expect("Tag must be present, bug")
         else {
             panic!("Tag {label:?} is not a Numeric column");
         };
-        for ii in 0..self.segments[0].len() {
-            let mut reads: Vec<&BStr> = Vec::new();
-            for v in &mut self.segments {
-                reads.push(v.seq_quals.seq_mut(ii).expect("Chunks of unequal size"));
-            }
+        for (ii, molecule) in blocks::molecules(&self.segments).enumerate() {
+            let mut reads: SmallVec<[&BStr; 4]> =
+                molecule.into_iter().map(|read| read.seq).collect();
             f(&mut reads, tags[ii]);
-            reads.clear();
         }
     }
 
@@ -1545,18 +1609,15 @@ impl FastQBlocksCombined {
     /// when the tag is missing or not a Bool column
     pub fn apply_mut_with_bool_tag<F>(&mut self, label: &TagLabel, mut f: F)
     where
-        F: for<'a> FnMut(&mut [&'a BStr], bool),
+        F: for<'a> FnMut(&mut SmallVec<[&BStr; 4]>, bool),
     {
         let TagColumn::Bool(tags) = self.tags.get(label).expect("Tag must be present, bug") else {
             panic!("Tag {label:?} is not a Bool column");
         };
-        for ii in 0..self.segments[0].len() {
-            let mut reads: Vec<&BStr> = Vec::new();
-            for v in &mut self.segments {
-                reads.push(v.seq_quals.seq_mut(ii).expect("Chunks of unequal size"));
-            }
+        for (ii, molecule) in blocks::molecules(&self.segments).enumerate() {
+            let mut reads: SmallVec<[&BStr; 4]> =
+                molecule.into_iter().map(|read| read.seq).collect();
             f(&mut reads, tags[ii]);
-            reads.clear();
         }
     }
 
@@ -1585,7 +1646,10 @@ impl FastQBlocksCombined {
 
     /// # Panics
     /// When the segments have different read counts
+    /// (that's teh point of this function)
     pub fn sanity_check(&self) -> Result<()> {
+        // The PodStack should prevent this for the segments,
+        // but let's just be safe.
         let mut count = None;
         for (ii, v) in self.segments.iter().enumerate() {
             if let Some(c) = count {
@@ -1695,10 +1759,11 @@ impl FastQBlocksCombined {
     /// when the tag is missing
     pub fn apply_bool_filter(&mut self, keep: &[bool]) {
         let should: usize = keep.iter().map(|x| usize::from(*x)).sum();
-        for segment_block in &mut self.segments {
-            segment_block.retain_by_bools(keep);
-            assert_eq!(segment_block.len(), should);
+        // Fan the filter out to every segment at once, keeping them in lockstep.
+        for segment in &mut self.segments {
+            segment.retain_by_bools(keep);
         }
+        assert_eq!(self.row_count(), should);
         for tag_entries in self.tags.values_mut() {
             let mut iter = keep.iter();
             tag_entries.retain(|| {
@@ -1743,13 +1808,13 @@ impl FastQBlocksCombined {
                     let mut any_removed = false;
                     for jj in 0..slot_len {
                         let hit = col.hits[ii][jj]; // Hit is Copy
-                        if (hit.flags & HAS_LOC) == 0 || hit.segment_index != segment.0 {
+                        if (hit.flags & HAS_LOC) == 0 || hit.segment_index != segment {
                             continue;
                         }
                         let view = HitRegionView {
                             start: hit.loc_start as usize,
                             len: hit.loc_len as usize,
-                            segment_index: SegmentIndex(hit.segment_index),
+                            segment_index: hit.segment_index,
                         };
                         let result = {
                             let seq = &col.slab[hit.seq_start as usize
@@ -1765,14 +1830,14 @@ impl FastQBlocksCombined {
                             NewLocation::New(new_view) => {
                                 col.hits[ii][jj].loc_start = new_view.start as u32;
                                 col.hits[ii][jj].loc_len = new_view.len as u16;
-                                col.hits[ii][jj].segment_index = new_view.segment_index.0;
+                                col.hits[ii][jj].segment_index = new_view.segment_index;
                             }
                             NewLocation::NewWithSeq(new_view, new_bytes) => {
                                 let new_start = col.slab.len() as u32;
                                 col.slab.extend_from_slice(&new_bytes);
                                 col.hits[ii][jj].loc_start = new_view.start as u32;
                                 col.hits[ii][jj].loc_len = new_view.len as u16;
-                                col.hits[ii][jj].segment_index = new_view.segment_index.0;
+                                col.hits[ii][jj].segment_index = new_view.segment_index;
                                 col.hits[ii][jj].seq_start = new_start;
                                 #[expect(
                                     clippy::cast_possible_truncation,
@@ -1828,7 +1893,7 @@ impl FastQBlocksCombined {
                         let view = HitRegionView {
                             start: hit.loc_start as usize,
                             len: hit.loc_len as usize,
-                            segment_index: SegmentIndex(hit.segment_index),
+                            segment_index: hit.segment_index,
                         };
                         match f(view, ii) {
                             NewLocation::Remove => {
@@ -1840,7 +1905,7 @@ impl FastQBlocksCombined {
                             NewLocation::New(new_view) => {
                                 col.hits[ii][jj].loc_start = new_view.start as u32;
                                 col.hits[ii][jj].loc_len = new_view.len as u16;
-                                col.hits[ii][jj].segment_index = new_view.segment_index.0;
+                                col.hits[ii][jj].segment_index = new_view.segment_index;
                             }
                             // cov:excl-start
                             NewLocation::NewWithSeq(_new_loc, _new_seq) => {
@@ -1858,6 +1923,44 @@ impl FastQBlocksCombined {
                 }
             }
         }
+    }
+}
+
+/// Mutable handle to one [`FastQBlocksCombined`] segment, from
+/// [`FastQBlocksCombined::member_mut`]. Derefs to the segment; re-validates the
+/// segment's read count on drop so a count change can't silently break the
+/// lockstep invariant.
+pub struct MemberGuard<'a> {
+    segment: &'a mut FastQChunk,
+    expected: usize,
+}
+
+impl std::ops::Deref for MemberGuard<'_> {
+    type Target = FastQChunk;
+    fn deref(&self) -> &FastQChunk {
+        self.segment
+    }
+}
+
+impl std::ops::DerefMut for MemberGuard<'_> {
+    fn deref_mut(&mut self) -> &mut FastQChunk {
+        self.segment
+    }
+}
+
+impl Drop for MemberGuard<'_> {
+    fn drop(&mut self) {
+        // Don't mask an in-flight panic with a second one (that would abort).
+        if std::thread::panicking() {
+            return;
+        }
+        let now = self.segment.row_count();
+        assert_eq!(
+            now, self.expected,
+            "FastQBlocksCombined::member_mut changed a segment's read count from {} to {now}: \
+             use truncate/drain/apply_bool_filter so every segment stays in lockstep",
+            self.expected,
+        );
     }
 }
 

@@ -69,13 +69,12 @@ impl Step for RegionsOfLowQuality {
         let segment = self.segment;
         let min_quality = self.min_quality;
         let min_length = self.min_length;
-        let f = |read: &mut fastqrab_io::io::WrappedFastQRead| {
-            let quality_scores = read.qual();
+        for read in block.member_mut(self.segment.as_index()).seq_quals.iter() {
             let mut entries: Vec<(Option<HitRegionView>, Vec<u8>)> = Vec::new();
             let mut in_low_quality_region = false;
             let mut region_start = 0;
 
-            for (pos, &qual) in quality_scores.iter().enumerate() {
+            for (pos, &qual) in read.qual.iter().enumerate() {
                 let is_low_quality = qual < min_quality;
 
                 if is_low_quality && !in_low_quality_region {
@@ -91,14 +90,14 @@ impl Step for RegionsOfLowQuality {
                                 start: region_start,
                                 len: region_len,
                             }),
-                            read.seq()[region_start..pos].to_vec(),
+                            read.seq[region_start..pos].to_vec(),
                         ));
                     }
                 }
             }
 
             if in_low_quality_region {
-                let region_len = quality_scores.len() - region_start;
+                let region_len = read.qual.len() - region_start;
                 if region_len >= min_length {
                     entries.push((
                         Some(HitRegionView {
@@ -106,7 +105,7 @@ impl Step for RegionsOfLowQuality {
                             start: region_start,
                             len: region_len,
                         }),
-                        read.seq()[region_start..].to_vec(),
+                        read.seq[region_start..].to_vec(),
                     ));
                 }
             }
@@ -120,8 +119,7 @@ impl Step for RegionsOfLowQuality {
                     .collect();
                 col.push_many(&refs);
             }
-        };
-        block.segments[self.segment.as_index()].apply(f);
+        }
         block
             .tags
             .insert(self.out_label.clone(), TagColumn::Location(col));

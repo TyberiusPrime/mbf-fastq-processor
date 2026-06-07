@@ -1,5 +1,5 @@
-use super::extract_region_tags;
-use crate::transformations::prelude::*;
+use super::extract_region_tags_from_seq;
+use crate::transformations::{extract::extract_region_tags_from_both, prelude::*};
 use fastqrab_config::tpd_adapt_u8_from_byte_or_char;
 
 /// Turn low quality start's of reads into a tag
@@ -55,9 +55,8 @@ impl Step for LowQualityStart {
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let min_qual = self.min_qual;
-        extract_region_tags(&mut block, self.segment, &self.out_label, |read| {
+        extract_region_tags_from_both(&mut block, self.segment, &self.out_label, |seq, qual| {
             let mut cut_pos = 0;
-            let qual = read.qual();
             for (ii, q) in qual.iter().enumerate() {
                 if *q < min_qual {
                     cut_pos = ii + 1;
@@ -72,7 +71,7 @@ impl Step for LowQualityStart {
                         len: cut_pos,
                         segment_index: self.segment,
                     }),
-                    sequence: read.seq()[..cut_pos].to_vec(),
+                    sequence: seq[..cut_pos].to_vec(),
                 })
             } else {
                 None

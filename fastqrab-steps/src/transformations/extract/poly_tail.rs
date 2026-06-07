@@ -1,4 +1,4 @@
-use super::extract_region_tags;
+use super::extract_region_tags_from_seq;
 use crate::transformations::prelude::*;
 use fastqrab_config::tpd_adapt_extract_base_or_dot;
 
@@ -104,13 +104,12 @@ impl Step for PolyTail {
         let max_mismatch_fraction = self.max_mismatch_rate;
         let max_consecutive_mismatches = self.max_consecutive_mismatches;
         let fastp_mode = self.fastp_mode.unwrap_or(false);
-        extract_region_tags(&mut block, self.segment, &self.out_label, |read| {
-            let seq = read.seq();
+        extract_region_tags_from_seq(&mut block, self.segment, &self.out_label, |read_seq| {
             let last_pos = if fastp_mode {
-                find_poly_tail_fastp(seq, min_length)
+                find_poly_tail_fastp(read_seq, min_length)
             } else {
                 find_poly_tail(
-                    seq,
+                    read_seq,
                     base,
                     min_length,
                     max_mismatch_fraction,
@@ -121,10 +120,10 @@ impl Step for PolyTail {
             last_pos.map(|last_pos| HitDraft {
                 location: Some(HitRegionView {
                     start: last_pos,
-                    len: seq.len() - last_pos,
+                    len: read_seq.len() - last_pos,
                     segment_index: self.segment,
                 }),
-                sequence: seq[last_pos..].to_vec(),
+                sequence: read_seq[last_pos..].to_vec(),
             })
         });
         Ok((block, true))

@@ -274,7 +274,7 @@ impl Step for OtherFile {
                             .filter
                             .as_ref()
                             .expect("filter must be set during initialization");
-                        let query = read.seq();
+                        let query = read.seq;
                         filter.contains(&FragmentEntry(&[query]))
                     },
                 );
@@ -308,7 +308,7 @@ impl Step for OtherFile {
                     *segment_index,
                     &self.out_label,
                     |read, _ignored_demultiplex_tag| {
-                        let query = read_name_canonical_prefix(read.name(), Some(*split_character));
+                        let query = read_name_canonical_prefix(read.name, Some(*split_character));
 
                         self.filter
                             .as_ref()

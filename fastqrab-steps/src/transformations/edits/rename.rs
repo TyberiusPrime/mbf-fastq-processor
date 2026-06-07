@@ -73,8 +73,12 @@ impl Step for Rename {
             0
         };
 
-        for segment in &mut block.segments {
-            let mut new_names = StringPodBuilder::with_capacity(segment.names.get(0).len(), read_count);
+        for seg_idx in 0..block.member_count() {
+            // `member_mut` keeps the per-segment edit count-guarded: the names
+            // column is rebuilt with the same read_count, so the drop check passes.
+            let mut segment = block.member_mut(seg_idx);
+            let mut new_names =
+                StringPodBuilder::with_capacity(segment.names.get(0).len(), read_count);
             for (read_idx, name) in segment.names.iter().enumerate() {
                 //just like the atomic
                 let mut renamed = self

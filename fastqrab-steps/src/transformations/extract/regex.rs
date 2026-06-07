@@ -194,32 +194,40 @@ impl Step for Regex {
                 );
             }
             ResolvedSourceNoAll::Name { segment_index, .. } => {
-                extract_string_tags_using_tags(
-                    &mut block,
-                    *segment_index,
-                    &self.out_label,
-                    |read, read_no, block_tags| {
-                        // Choose source based on whether it's name or sequence
-                        let haystack = read.name();
+                let block_tags = &block.tags;
+                let read_no = block.first_read_sequential_number;
+                let mut out = Vec::with_capacity(block.row_count());
+                for (ii, read_name) in block
+                    .member(segment_index.as_index())
+                    .names
+                    .iter()
+                    .enumerate()
+                {
+                    // Choose source based on whether it's name or sequence
+                    let haystack = read_name;
+                    out.push(
                         apply_regexp(
                             &self.search,
                             &self.replacement,
                             haystack,
-                            read_no,
+                            read_no + ii,
                             block_tags,
                         )
-                        .map(|x| x.into())
-                    },
-                );
+                        .map(|x| x.into()),
+                    );
+                }
+                block
+                    .tags
+                    .insert(self.out_label.clone(), TagColumn::String(out));
             }
             ResolvedSourceNoAll::Segment(segment_index) => {
                 extract_region_tags_using_tags(
                     &mut block,
                     *segment_index,
                     &self.out_label,
-                    |read, read_no, block_tags| {
+                    |read_seq, read_no, block_tags| {
                         // Choose source based on whether it's name or sequence
-                        let haystack = read.seq();
+                        let haystack = read_seq;
 
                         let re_hit = self.search.captures(haystack);
                         if let Some(hit) = re_hit {

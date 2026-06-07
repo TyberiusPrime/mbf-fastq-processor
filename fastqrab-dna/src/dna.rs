@@ -29,7 +29,7 @@ pub struct Hit {
     pub loc_start: u32,
     pub seq_len: u16,
     pub loc_len: u16,
-    pub segment_index: u8,
+    pub segment_index: SegmentIndex,
     pub flags: u8,
     _pad: [u8; 2],
 }
@@ -130,7 +130,7 @@ impl LocationColumn {
                 seq_len,
                 loc_start: loc.start as u32,
                 loc_len: loc.len as u16,
-                segment_index: loc.segment_index.0,
+                segment_index: loc.segment_index,
                 flags: HAS_LOC,
                 _pad: [0; 2],
             }
@@ -140,7 +140,7 @@ impl LocationColumn {
                 seq_len,
                 loc_start: 0,
                 loc_len: 0,
-                segment_index: 0,
+                segment_index: SegmentIndex::first(),
                 flags: 0,
                 _pad: [0; 2],
             }
@@ -164,7 +164,7 @@ impl LocationColumn {
                     seq_len,
                     loc_start: loc.start as u32,
                     loc_len: loc.len as u16,
-                    segment_index: loc.segment_index.0,
+                    segment_index: loc.segment_index,
                     flags: HAS_LOC,
                     _pad: [0; 2],
                 }
@@ -174,7 +174,7 @@ impl LocationColumn {
                     seq_len,
                     loc_start: 0,
                     loc_len: 0,
-                    segment_index: 0,
+                    segment_index: SegmentIndex::first(),
                     flags: 0,
                     _pad: [0; 2],
                 }
@@ -197,7 +197,7 @@ impl LocationColumn {
                     seq_len,
                     loc_start: loc.start as u32,
                     loc_len: loc.len as u16,
-                    segment_index: loc.segment_index.0,
+                    segment_index: loc.segment_index,
                     flags: HAS_LOC,
                     _pad: [0; 2],
                 }
@@ -207,7 +207,7 @@ impl LocationColumn {
                     seq_len,
                     loc_start: 0,
                     loc_len: 0,
-                    segment_index: 0,
+                    segment_index: SegmentIndex::first(),
                     flags: 0,
                     _pad: [0; 2],
                 }
@@ -300,7 +300,7 @@ impl LocationColumn {
             Some(HitRegionView {
                 start: h.loc_start as usize,
                 len: h.loc_len as usize,
-                segment_index: SegmentIndex(h.segment_index),
+                segment_index: h.segment_index,
             })
         } else {
             None
@@ -315,7 +315,7 @@ impl LocationColumn {
             Some(v) => {
                 hit.loc_start = v.start as u32;
                 hit.loc_len = v.len as u16;
-                hit.segment_index = v.segment_index.0;
+                hit.segment_index = v.segment_index;
                 hit.flags |= HAS_LOC;
             }
         }

@@ -89,10 +89,17 @@ impl Step for TagMatches {
         let accepted_set = &self.accepted_set;
         let found: Vec<bool> = match &self.source {
             ResolvedSourceNoAll::Segment(segment_index) => block.segments[segment_index.as_index()]
-                .apply(|read| accepted_set.contains(read.seq())),
+                .seq_quals
+                .iter_seq()
+                .map(|sequence| accepted_set.contains(sequence))
+                .collect(),
             ResolvedSourceNoAll::Name { segment_index, .. } => block.segments
                 [segment_index.as_index()]
-            .apply(|read| accepted_set.contains(read.name())),
+            .names
+            .iter()
+            .map(|name| accepted_set.contains(name))
+            .collect(),
+
             ResolvedSourceNoAll::Tag(tag_label) => {
                 let tag_values = block
                     .tags

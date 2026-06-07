@@ -1,4 +1,4 @@
-use super::extract_region_tags;
+use super::extract_region_tags_from_seq;
 use crate::transformations::prelude::*;
 use fastqrab_config::tpd_adapt_extract_base_or_dot;
 
@@ -337,24 +337,28 @@ impl Step for LongestPolyX {
         let max_mismatch_fraction = self.max_mismatch_rate;
         let max_consecutive_mismatches = self.max_consecutive_mismatches;
 
-        extract_region_tags(&mut block, segment_index, &self.out_label, move |read| {
-            let seq = read.seq();
-            Self::find_best(
-                seq,
-                base,
-                min_length,
-                max_mismatch_fraction,
-                max_consecutive_mismatches,
-            )
-            .map(|(start, len)| HitDraft {
-                location: Some(HitRegionView {
-                    start,
-                    len,
-                    segment_index,
-                }),
-                sequence: seq[start..start + len].to_vec(),
-            })
-        });
+        extract_region_tags_from_seq(
+            &mut block,
+            segment_index,
+            &self.out_label,
+            move |read_seq| {
+                Self::find_best(
+                    read_seq,
+                    base,
+                    min_length,
+                    max_mismatch_fraction,
+                    max_consecutive_mismatches,
+                )
+                .map(|(start, len)| HitDraft {
+                    location: Some(HitRegionView {
+                        start,
+                        len,
+                        segment_index,
+                    }),
+                    sequence: read_seq[start..start + len].to_vec(),
+                })
+            },
+        );
         Ok((block, true))
     }
 }

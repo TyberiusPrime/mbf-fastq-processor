@@ -495,13 +495,10 @@ fn run_match_phase(
     }
     if needs_qualities && let Some(block) = block {
         if let TagColumn::Location(col) = input_tags {
-            let mut read_iter = block.get_pseudo_iter();
-            for (hits, slot) in col.iter().zip(results.iter_mut()) {
-                let read = read_iter
-                    .pseudo_next()
-                    .context("Read & tag count mismatch!?")?;
+            for ((hits, slot), molecule) in col.iter().zip(results.iter_mut()).zip(block.molecules())
+            {
                 if !hits.is_empty() && matches!(&slot.result, Some(MatchResultOwned::Tie(_))) {
-                    slot.quality = read.hit_to_qualities(hits);
+                    slot.quality = Some(fastqrab_io::blocks::hit_to_qualities(molecule, hits));
                 }
             }
         }

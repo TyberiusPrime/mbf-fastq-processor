@@ -1,6 +1,7 @@
-use super::extract_region_tags;
+use super::extract_region_tags_from_seq;
 use crate::transformations::prelude::*;
 use fastqrab_config::{StringOrVecString, dna::Anchor, tpd_adapt_iupac_bstring};
+use fastqrab_dna::dna::{self, find_iupac};
 
 #[derive(Clone, JsonSchema, Debug, Default)]
 #[tpd]
@@ -93,12 +94,13 @@ impl Step for IUPAC {
         _input_info: &InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<(FastQBlocksCombined, bool)> {
-        extract_region_tags(&mut block, self.segment, &self.out_label, |read| {
+        extract_region_tags_from_seq(&mut block, self.segment, &self.out_label, |read_seq| {
             // Try each query pattern and return the first match
             match &self.on_tie {
                 TieBreak::Earliest => {
                     for query in &self.search {
-                        if let Some(hit) = read.find_iupac(
+                        if let Some(hit) = find_iupac(
+                            read_seq,
                             query,
                             self.anchor,
                             self.max_mismatches,
@@ -115,7 +117,8 @@ impl Step for IUPAC {
                         .search
                         .iter()
                         .filter_map(|query| {
-                            read.find_iupac(
+                            find_iupac(
+                                read_seq,
                                 query,
                                 self.anchor,
                                 self.max_mismatches,
@@ -135,7 +138,8 @@ impl Step for IUPAC {
                         .search
                         .iter()
                         .filter_map(|query| {
-                            read.find_iupac(
+                            find_iupac(
+                                read_seq,
                                 query,
                                 self.anchor,
                                 self.max_mismatches,

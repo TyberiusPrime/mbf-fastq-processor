@@ -1,6 +1,9 @@
-use super::extract_region_tags;
+use bstr::ByteSlice;
+
+use super::extract_region_tags_from_seq;
 use crate::transformations::prelude::*;
 use fastqrab_config::{dna::Anchor, tpd_adapt_iupac_bstring};
+use fastqrab_dna::dna::find_iupac_with_indel;
 
 /// Extract an IUPAC-described sequence while tolerating insertions and deletions.
 /// Useful for adapters where small indels are expected.
@@ -79,9 +82,10 @@ impl Step for IUPACWithIndel {
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let segment_index = self.segment;
 
-        extract_region_tags(&mut block, segment_index, &self.out_label, |read| {
-            read.find_iupac_with_indel(
-                &self.search,
+        extract_region_tags_from_seq(&mut block, segment_index, &self.out_label, |read_seq| {
+            find_iupac_with_indel(
+                read_seq,
+                self.search.as_bstr(),
                 self.anchor,
                 self.max_mismatches,
                 self.max_indel_bases,

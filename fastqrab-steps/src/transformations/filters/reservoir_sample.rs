@@ -1,11 +1,11 @@
 use rand::Rng;
 
 use crate::transformations::{extend_seed, prelude::*};
-use fastqrab_io::io::FastQBlock;
+use fastqrab_io::blocks::{FastQChunk, OwnedFastQRead};
 
 #[derive(Clone, Debug, Default)]
 struct ReservoirBuffer {
-    segments: Vec<FastQBlock>,
+    molecules: Vec<OwnedMolecule>,
     count: usize,
     tags: IndexMap<TagLabel, TagColumn>,
 }
@@ -99,21 +99,15 @@ impl Step for ReservoirSample {
             .lock();
         let data = data_lock.as_mut().expect("runtime_data mutex poisoned");
 
-        let block_len = block.len();
-        for pos in 0..block_len {
+        for (pos, molecule) in block.molecules().enumerate() {
             let demultiplex_tag = block.output_tags.as_ref().map_or(0, |tags| tags[pos]);
             let buf = data.entry(demultiplex_tag).or_default();
             buf.count += 1;
 
-            if buf.segments.is_empty() || buf.segments[0].len() < self.n {
-                for (segment_no, segment) in block.segments.iter().enumerate() {
-                    if buf.segments.len() <= segment_no {
-                        buf.segments.push(FastQBlock::empty());
-                    }
-                    buf.segments[segment_no].append_read(&segment.get(pos));
-                }
+            if buf.molecules.len() < self.n {
+                buf.molecules.push(molecule.into());
                 for (label, values) in &block.tags {
-                    match &mut buf
+                    match buf
                         .tags
                         .entry(label.clone())
                         .or_insert_with(|| values.new_empty())
@@ -130,9 +124,7 @@ impl Step for ReservoirSample {
                 //algorithm R
                 let j = rng.random_range(1..=buf.count);
                 if j <= self.n {
-                    for (ii, segment) in block.segments.iter().enumerate() {
-                        buf.segments[ii].replace_read(j - 1, &segment.get(pos));
-                    }
+                    buf.molecules[j - 1] = molecule.into();
                     for (label, values) in &block.tags {
                         if let Some(tag_buf) = buf.tags.get_mut(label) {
                             match tag_buf {
@@ -157,18 +149,31 @@ impl Step for ReservoirSample {
             //we gotta copy it all back together, so no easy just hand out our internal
             //storage, I suppose.
             let mut output = block.empty();
+            let member_count = output.segments.len();
             let all_data = data.replace(DemultiplexedData::new());
-            for (demultiplex_tag, buf) in all_data {
-                if let Some(demultiplex_tags) = output.output_tags.as_mut() {
-                    for _ in 0..buf.segments[0].len() {
-                        demultiplex_tags.push(demultiplex_tag);
+            // Materialize the groups so we can rebuild every segment from the same
+            // sampled molecules, preserving group order.
+            let groups: Vec<(DemultiplexTag, ReservoirBuffer)> = all_data.into_iter().collect();
+
+            // Rebuild each segment from every sampled molecule's read for that
+            // segment index, in group order.
+            for segment_no in 0..member_count {
+                let reads: Vec<&OwnedFastQRead> = groups
+                    .iter()
+                    .flat_map(|(_, buf)| buf.molecules.iter().map(move |m| m.get(segment_no)))
+                    .collect();
+                output.segments[segment_no] = FastQChunk::from_owned_reads(reads);
+            }
+
+            if let Some(demultiplex_tags) = output.output_tags.as_mut() {
+                for (demultiplex_tag, buf) in &groups {
+                    for _ in 0..buf.molecules.len() {
+                        demultiplex_tags.push(*demultiplex_tag);
                     }
                 }
-                for (segment_no, molecule) in buf.segments.iter().enumerate() {
-                    for read_idx in 0..molecule.entries.len() {
-                        output.segments[segment_no].append_read(&molecule.get(read_idx));
-                    }
-                }
+            }
+
+            for (_, buf) in &groups {
                 for (label, values) in &buf.tags {
                     output
                         .tags

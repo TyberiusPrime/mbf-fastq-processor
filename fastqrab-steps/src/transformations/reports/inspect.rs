@@ -5,8 +5,6 @@ use crate::transformations::prelude::*;
 use fastqrab_io::io::WrappedFastQRead;
 use fastqrab_io::{CompressionFormat, FileFormat};
 
-pub type NameSeqQualTuple = (Vec<u8>, Vec<u8>, Vec<u8>, DemultiplexTag);
-
 /// Inspect reads within the workflow
 #[derive(JsonSchema)]
 #[tpd]
@@ -33,7 +31,7 @@ pub struct Inspect {
 
     #[tpd(skip)]
     #[schemars(skip)]
-    pub collector: Arc<Mutex<Vec<Vec<NameSeqQualTuple>>>>,
+    pub collector: Arc<Mutex<Vec<(OwnedMolecule, DemultiplexTag)>>>,
     #[tpd(skip)]
     collected: std::sync::atomic::AtomicUsize,
 
@@ -85,12 +83,7 @@ impl VerifyIn<PartialConfig> for PartialInspect {
                     .unwrap_or_default(),
             };
             self.resolved_segment_name = Some(target_name);
-            self.collector = Some(Arc::new(Mutex::new(match segment {
-                SegmentIndexOrAll::All => (0..segment_order.len())
-                    .map(|_| Vec::with_capacity(n))
-                    .collect(),
-                SegmentIndexOrAll::Indexed(_) => vec![Vec::with_capacity(n)],
-            })));
+            self.collector = Some(Arc::new(Mutex::new(Vec::new())));
         } // cov:excl-line
         self.collected = Some(std::sync::atomic::AtomicUsize::new(0));
         Ok(())
@@ -235,7 +228,12 @@ impl Step for Inspect {
         }
 
         let mut collector = self.collector.lock().expect("collector mutex poisoned");
-        let mut iter = block.get_pseudo_iter_including_tag();
+        let mut iter: Box<dyn Iterator<Item = (Molecule, u64)>> =
+            if let Some(output_tags) = block.output_tags.as_ref() {
+                Box::new(block.molecules().zip(output_tags.iter().copied()))
+            } else {
+                Box::new(block.molecules().zip(std::iter::repeat(0))) // if no output tags, treat all as tag 0
+            };
         let name_read = |read: &WrappedFastQRead, read_idx: usize| {
             let mut out = read.name().to_vec();
             for (key, values) in &block.tags {
@@ -248,33 +246,18 @@ impl Step for Inspect {
             out
         };
         let mut read_idx = 0;
-        while let Some((read, tag)) = iter.pseudo_next() {
+        for (molecule, tag) in iter {
             if collected >= self.n {
                 break;
             }
 
             match self.segment {
                 SegmentIndexOrAll::All => {
-                    for (collector_idx, segment_index) in
-                        (0..input_info.segment_order.len()).enumerate()
-                    {
-                        let segment_read = &read.segments[segment_index];
-                        collector[collector_idx].push((
-                            name_read(segment_read, read_idx),
-                            segment_read.seq().to_vec(),
-                            segment_read.qual().to_vec(),
-                            tag,
-                        ));
-                    }
+                    collector.push((molecule.into(), tag));
                 }
                 SegmentIndexOrAll::Indexed(idx) => {
-                    let segment_read = &read.segments[idx.as_index()];
-                    collector[0].push((
-                        name_read(segment_read, read_idx),
-                        segment_read.seq().to_vec(),
-                        segment_read.qual().to_vec(),
-                        tag,
-                    ));
+                    let single_segment_molecule: OwnedMolecule = molecule[idx.as_index()].into();
+                    collector.push((single_segment_molecule, tag));
                 }
             }
 

@@ -2,7 +2,9 @@ use std::{borrow::Cow, cell::RefCell};
 
 use bstr::{BStr, BString};
 use fastqrab_dna::dna::TagColumn;
+use fastqrab_io::blocks::Molecule;
 use indexmap::IndexMap;
+use stringpod::CrossPods;
 
 use super::prelude::DemultiplexTag;
 use fastqrab_config::{
@@ -37,19 +39,36 @@ pub use region::{PartialRegion, Region};
 pub use regions::{PartialRegions, Regions};
 pub use regions_of_low_quality::{PartialRegionsOfLowQuality, RegionsOfLowQuality};
 
-pub(crate) fn extract_region_tags(
+pub(crate) fn extract_region_tags_from_seq(
     block: &mut FastQBlocksCombined,
     segment: SegmentIndex,
     label: &TagLabel,
-    f: impl Fn(&mut WrappedFastQRead) -> Option<HitDraft>,
+    f: impl Fn(&BStr) -> Option<HitDraft>,
 ) {
     let mut col = LocationColumn::new();
+    for seq in block.segments[segment.as_index()].seq_quals.iter_seq() {
+        match f(seq) {
+            Some(draft) => col.push_single(draft.location, &draft.sequence),
+            None => col.push_none(),
+        }
+    }
 
-    let f2 = |read: &mut WrappedFastQRead| match f(read) {
-        Some(draft) => col.push_single(draft.location, &draft.sequence),
-        None => col.push_none(),
-    };
-    block.segments[segment.as_index()].apply(f2);
+    block.tags.insert(label.clone(), TagColumn::Location(col));
+}
+
+pub(crate) fn extract_region_tags_from_both(
+    block: &mut FastQBlocksCombined,
+    segment: SegmentIndex,
+    label: &TagLabel,
+    f: impl Fn(&BStr, &BStr) -> Option<HitDraft>,
+) {
+    let mut col = LocationColumn::new();
+    for read in block.segments[segment.as_index()].seq_quals.iter() {
+        match f(read.seq, read.qual) {
+            Some(draft) => col.push_single(draft.location, &draft.sequence),
+            None => col.push_none(),
+        }
+    }
 
     block.tags.insert(label.clone(), TagColumn::Location(col));
 }
@@ -77,19 +96,21 @@ pub(crate) fn extract_region_tags_using_tags(
     block: &mut FastQBlocksCombined,
     segment: SegmentIndex,
     label: &TagLabel,
-    f: impl Fn(&mut WrappedFastQRead, usize, &IndexMap<TagLabel, TagColumn>) -> Option<HitDraft>,
+    f: impl Fn(&BStr, usize, &IndexMap<TagLabel, TagColumn>) -> Option<HitDraft>,
 ) {
     let mut col = LocationColumn::new();
 
-    let mut read_no = RefCell::new(0usize);
-    let f2 = |read: &mut WrappedFastQRead| {
-        match f(read, *read_no.borrow(), &mut block.tags) {
+    let read_no = block.first_read_sequential_number;
+    for (ii, seq) in block.segments[segment.as_index()]
+        .seq_quals
+        .iter_seq()
+        .enumerate()
+    {
+        match f(seq, read_no + ii, &mut block.tags) {
             Some(draft) => col.push_single(draft.location, &draft.sequence),
             None => col.push_none(),
         }
-        *read_no.get_mut() += 1;
-    };
-    block.segments[segment.as_index()].apply(f2);
+    }
 
     block.tags.insert(label.clone(), TagColumn::Location(col));
 }
@@ -98,19 +119,22 @@ pub(crate) fn extract_string_tags_using_tags(
     block: &mut FastQBlocksCombined,
     segment: SegmentIndex,
     label: &TagLabel,
-    f: impl Fn(&mut WrappedFastQRead, usize, &IndexMap<TagLabel, TagColumn>) -> Option<BString>,
+    f: impl Fn(&BStr, usize, &IndexMap<TagLabel, TagColumn>) -> Option<BString>,
 ) {
     let mut out = Vec::new();
-    let mut read_no = RefCell::new(0usize);
+    let read_no = block.first_read_sequential_number;
 
-    let f2 = |read: &mut WrappedFastQRead| {
-        out.push(match f(read, *read_no.borrow(), &mut block.tags) {
+    let read_no = block.first_read_sequential_number;
+    for (ii, seq) in block.segments[segment.as_index()]
+        .seq_quals
+        .iter_seq()
+        .enumerate()
+    {
+        out.push(match f(seq, read_no + ii, &mut block.tags) {
             Some(str) => Some(str),
             None => None,
         });
-        *read_no.get_mut() += 1;
-    };
-    block.segments[segment.as_index()].apply(f2);
+    }
 
     block.tags.insert(label.clone(), TagColumn::String(out));
 }
@@ -121,13 +145,17 @@ pub(crate) fn extract_bool_tags<F>(
     label: &TagLabel,
     mut extractor: F,
 ) where
-    F: FnMut(&WrappedFastQRead, DemultiplexTag) -> bool,
+    F: FnMut(&fastqrab_io::blocks::FastQRead, DemultiplexTag) -> bool,
 {
     let mut values = Vec::new();
-    let f = |read: &mut WrappedFastQRead, output_tag| {
-        values.push(extractor(read, output_tag));
-    };
-    block.segments[segment.as_index()].apply_with_demultiplex_tag(f, block.output_tags.as_ref());
+    for (idx, read) in block.segments[segment.as_index()].iter().enumerate() {
+        let output_tag = block
+            .output_tags
+            .as_ref()
+            .map(|x| x[idx])
+            .unwrap_or_default();
+        values.push(extractor(&read, output_tag));
+    }
 
     block.tags.insert(label.clone(), TagColumn::Bool(values));
 }
@@ -139,8 +167,8 @@ pub(crate) fn extract_bool_tags_plus_all<F, G>(
     extractor_single: F,
     mut extractor_all: G,
 ) where
-    F: FnMut(&WrappedFastQRead, DemultiplexTag) -> bool,
-    G: FnMut(&Vec<WrappedFastQRead>, DemultiplexTag) -> bool,
+    F: FnMut(&fastqrab_io::blocks::FastQRead, DemultiplexTag) -> bool,
+    G: FnMut(&Molecule<'_>, DemultiplexTag) -> bool,
 {
     let target: Result<SegmentIndex, _> = segment.try_into();
     if let Ok(target) = target {
@@ -149,16 +177,13 @@ pub(crate) fn extract_bool_tags_plus_all<F, G>(
     } else {
         // Handle "All" target case
         let mut values = Vec::new();
-        let mut block_iter = block.get_pseudo_iter();
-        let mut pos = 0;
-        while let Some(molecule) = block_iter.pseudo_next() {
+        for (idx, molecule) in block.molecules().enumerate() {
             let output_tag = block
                 .output_tags
                 .as_ref()
-                .map(|x| x[pos])
+                .map(|x| x[idx])
                 .unwrap_or_default();
-            pos += 1;
-            let value = extractor_all(&molecule.segments, output_tag);
+            let value = extractor_all(&molecule, output_tag);
             values.push(value);
         }
         block.tags.insert(label.clone(), TagColumn::Bool(values));

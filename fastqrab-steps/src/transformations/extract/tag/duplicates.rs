@@ -1,3 +1,4 @@
+use bstr::ByteSlice;
 use std::cell::RefCell;
 
 use super::super::extract_bool_tags_plus_all;
@@ -123,11 +124,11 @@ impl Step for Duplicates {
                             .borrow_mut()
                             .get_mut(&demultiplex_tag)
                             .expect("demultiplex_tag must exist in filters")
-                            .containsert(&FragmentEntry(&[read.seq()]))
+                            .containsert(&FragmentEntry(&[read.seq]))
                     },
                     |reads, demultiplex_tag| {
                         // Virtually combine sequences for filter check
-                        let inner: Vec<_> = reads.iter().map(WrappedFastQRead::seq).collect();
+                        let inner: Vec<_> = reads.iter().map(|read| read.seq.as_bytes()).collect();
                         let entry = FragmentEntry(&inner);
                         filters
                             .borrow_mut()
@@ -168,7 +169,7 @@ impl Step for Duplicates {
                     *segment_index_or_all,
                     &self.out_label,
                     |read, demultiplex_tag| {
-                        let name = read.name();
+                        let name = read.name;
                         let canonical = read_name_canonical_prefix(name, Some(*split_character));
                         let owned = canonical.to_vec();
                         filters
@@ -179,7 +180,7 @@ impl Step for Duplicates {
                     },
                     |reads, demultiplex_tag| {
                         // Virtually combine sequences for filter check
-                        let inner: Vec<_> = reads.iter().map(WrappedFastQRead::name).collect();
+                        let inner: Vec<_> = reads.iter().map(|read| read.name.as_bytes()).collect();
                         let entry = FragmentEntry(&inner);
                         filters
                             .borrow_mut()

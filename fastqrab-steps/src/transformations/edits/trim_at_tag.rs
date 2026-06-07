@@ -88,31 +88,51 @@ impl Step for TrimAtTag {
         _input_info: &InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let error_encountered = std::cell::RefCell::new(Option::<String>::None);
-        block.apply_mut_with_location_tag(
-            &self.in_label,
-            |reads, hit, col| {
-                if let Some(hit) = hit {
-                    if hit.len() > 1 {
-                                *error_encountered.borrow_mut() = Some(
-                                "TrimAtTag only supports Tags that cover one single region. Could be extended to multiple hits within one target, but not to multiple hits in multiple targets.".to_string());
-                        return;
-                    }
-                    let region = hit[0];
-                    let location = col.hit_location(region).expect("TrimTag only works on regions with location data. Might have been lost by subsequent transformations?");
-                    let read = &mut reads[location.segment_index.as_index()];
-                    match (self.direction, self.keep_tag) {
-                        (Direction::Start, true) => read.cut_start(location.start),
-                        (Direction::Start, false) => read.cut_start(location.start + location.len),
-                        (Direction::End, true) => read.max_len(location.start + location.len),
-                        (Direction::End, false) => read.max_len(location.start),
-                    }
-                }
-            },
-        );
-        if let Some(error_msg) = error_encountered.borrow().as_ref() {
-            return Err(anyhow::anyhow!("{error_msg}"));
+        let tag_column = block
+            .tags
+            .get(&self.in_label)
+            .expect("in_label tag must exist in block")
+            .as_locations()
+            .expect("Must be a location tag");
+        // Collect the targeted regions first: `member_mut` borrows the whole
+        // block mutably, so the immutable `tag_column` borrow must end before we
+        // start mutating segments.
+        let mut targets = Vec::new();
+        for hit in tag_column.hits.iter() {
+            if hit.len() > 1 {
+                bail!(
+                    "TrimAtTag only supports Tags that cover one single region.\
+                            Could be extended to multiple hits within one target,\
+                            but not to multiple hits in multiple targets."
+                        .to_string()
+                );
+            } else if hit.len() == 1 {
+                targets.push(hit[0]);
+            }
         }
+        for region in targets {
+            let _read = &mut block.member_mut(region.segment_index.as_index());
+            //let location = col.hit_location(region).expect("TrimTag only works on regions with location data. Might have been lost by subsequent transformations?");
+        }
+
+        // let error_encountered = std::cell::RefCell::new(Option::<String>::None);
+        // block.apply_mut_with_location_tag(
+        //     &self.in_label,
+        //     |reads, hit, col| {
+        //
+        //             let read = &mut reads[location.segment_index.as_index()];
+        //             match (self.direction, self.keep_tag) {
+        //                 (Direction::Start, true) => read.cut_start(location.start),
+        //                 (Direction::Start, false) => read.cut_start(location.start + location.len),
+        //                 (Direction::End, true) => read.max_len(location.start + location.len),
+        //                 (Direction::End, false) => read.max_len(location.start),
+        //             }
+        //         }
+        //     },
+        // );
+        // if let Some(error_msg) = error_encountered.borrow().as_ref() {
+        //     return Err(anyhow::anyhow!("{error_msg}"));
+        // }
 
         let mut cut_locations = block
             .tags
@@ -189,7 +209,7 @@ impl Step for TrimAtTag {
                             Some(HitRegion {
                                 start: 0,
                                 len: h.loc_len as usize,
-                                segment_index: SegmentIndex(h.segment_index),
+                                segment_index: h.segment_index,
                             }),
                         );
                     }

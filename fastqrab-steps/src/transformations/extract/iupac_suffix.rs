@@ -1,4 +1,4 @@
-use super::extract_region_tags;
+use super::extract_region_tags_from_seq;
 use crate::transformations::prelude::*;
 use fastqrab_config::{dna::iupac_hamming_distance, tpd_adapt_iupac_bstring};
 
@@ -106,9 +106,7 @@ impl Step for IUPACSuffix {
         _input_info: &InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        extract_region_tags(&mut block, self.segment, &self.out_label, |read| {
-            let seq = read.seq();
-
+        extract_region_tags_from_seq(&mut block, self.segment, &self.out_label, |seq| {
             //cheap empty range if read length too short no need for explicit check
             Self::longest_suffix_that_is_a_prefix(
                 seq,

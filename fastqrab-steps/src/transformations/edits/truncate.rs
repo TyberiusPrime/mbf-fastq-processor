@@ -59,7 +59,10 @@ impl Step for Truncate {
             .as_ref()
             .map(|tag| get_bool_vec_from_tag(&block, tag));
 
-        block.segments[self.segment.as_index()].max_len(self.n, condition.as_deref());
+        block
+            .member_mut(self.segment.as_index())
+            .seq_quals
+            .max_len(self.n, condition.as_deref());
         block.filter_tag_locations_beyond_read_length(self.segment);
         Ok((block, true))
     }

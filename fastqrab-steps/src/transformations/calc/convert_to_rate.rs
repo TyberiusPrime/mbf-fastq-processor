@@ -92,7 +92,7 @@ impl Step for ConvertToRate {
         } else {
             let len = block.segments[0].len();
             let mut values = vec![0.0; len];
-            for segment in &block.segments {
+            for segment in block.segments.iter() {
                 for ii in 0..len {
                     values[ii] += segment.seq_quals.entry_len(ii) as f64;
                 }

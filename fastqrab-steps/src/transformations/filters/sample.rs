@@ -79,7 +79,7 @@ impl Step for Sample {
             .as_mut()
             .expect("rng must be initialized before process()");
 
-        let keep = (0..block.segments[0].entries.len())
+        let keep = (0..block.len())
             .map(|_| rng.random_bool(self.p))
             .collect::<Vec<_>>();
         block.apply_bool_filter(&keep);
