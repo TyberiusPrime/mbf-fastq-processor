@@ -1,6 +1,7 @@
+use bstr::ByteSlice;
+
 use crate::transformations::prelude::*;
 use crate::transformations::tag::calculate_filter_capacity;
-use fastqrab_io::io::WrappedFastQRead;
 
 #[derive(Default, Debug, Clone)]
 pub struct DuplicateFragmentCountData {
@@ -105,15 +106,10 @@ impl Step for Box<_ReportDuplicateFragmentCount> {
         }
 
         {
-            let mut block_iter = block.get_pseudo_iter();
             let mut pos = 0usize;
             let demultiplex_tags = block.output_tags.as_ref();
-            while let Some(molecule) = block_iter.pseudo_next() {
-                let inner: Vec<_> = molecule
-                    .segments
-                    .iter()
-                    .map(WrappedFastQRead::seq)
-                    .collect();
+            for molecule in block.segments.iter() {
+                let inner: Vec<_> = molecule.iter().map(|x| x.seq.as_bytes()).collect();
                 let seq = FragmentEntry(&inner);
                 // passing in this complex/reference type into the cuckoo_filter
                 // is a nightmare.

@@ -204,7 +204,7 @@ impl Step for MergeReads {
 
 
         let mut new_merged_reads= DualStringPodBuilder::with_capacity(block.len(), block.len());
-        let keep_read2: Vec<bool> = Vec::with_capacity(block.len());
+        let mut keep_read2: Vec<bool> = Vec::with_capacity(block.len());
 
         use stringpod::CrossPods;
         for (read1, read2) in block.segments[seg1_idx].iter().zip(

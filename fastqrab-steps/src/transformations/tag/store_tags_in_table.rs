@@ -236,20 +236,20 @@ impl Step for StoreTagsInTable {
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let output_tags = block.output_tags.as_ref();
         let mut ii = 0;
-        let mut iter = block.segments[0].get_pseudo_iter();
         let mut output_handles = self
             .output_handles
             .as_ref()
             .expect("was set in init?")
             .lock()
             .expect("lock poisoned");
-        while let Some(read) = iter.pseudo_next() {
+        for name in block.segments[0].names.iter() {
             let output_tag = output_tags.map_or(0, |x| x[ii]);
             if let Some(Some(writer)) = output_handles.get_mut(&output_tag) {
                 let mut record: Vec<Vec<u8>> = Vec::new();
                 if self.include_read_name {
                     record.push(
-                        read.name_without_comment(input_info.comment_insert_char)
+                        split_name_and_comment(name, input_info.comment_insert_char)
+                            .0
                             .to_vec(),
                     );
                 }

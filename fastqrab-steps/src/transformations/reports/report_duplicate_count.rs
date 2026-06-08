@@ -88,8 +88,7 @@ impl Step for Box<_ReportDuplicateCount> {
         input_info: &InputInfo,
         demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        fn update_from_read(target: &mut DuplicateCountData, read: &WrappedFastQRead) {
-            let seq = read.seq();
+        fn update_from_read(target: &mut DuplicateCountData, seq: &BStr) {
             if target
                 .duplication_filter
                 .as_ref()
@@ -145,16 +144,24 @@ impl Step for Box<_ReportDuplicateCount> {
                 .get_mut(&tag)
                 .expect("tag must exist in data_per_read");
 
-            for (ii, read_block) in block.segments.iter().enumerate() {
+            for (ii, segment) in block.segments.iter().enumerate() {
                 let storage = &mut output.segments[ii].1;
-                let mut iter = match &block.output_tags {
-                    Some(output_tags) => {
-                        read_block.get_pseudo_iter_filtered_to_tag(tag, output_tags)
-                    }
-                    None => read_block.get_pseudo_iter(),
+                //Todo: refactor all these repetitions of iter...
+                let iter: Box<dyn Iterator<Item = &BStr>> = match &block.output_tags {
+                    Some(output_tags) => Box::new(
+                        segment
+                            .seq_quals
+                            .iter_seq()
+                            .zip(output_tags.iter())
+                            .filter_map(
+                                |(read, read_tag)| if *read_tag == tag { Some(read) } else { None },
+                            ),
+                    ),
+                    None => Box::new(segment.seq_quals.iter_seq()),
                 };
-                while let Some(read) = iter.pseudo_next() {
-                    update_from_read(storage, &read);
+
+                for seq in iter {
+                    update_from_read(storage, &seq);
                 }
             }
         }

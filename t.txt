@@ -1,0 +1,1237 @@
+       Fresh unicode-ident v1.0.24
+       Fresh proc-macro2 v1.0.106
+       Fresh quote v1.0.45
+       Fresh syn v2.0.117
+       Fresh cfg-if v1.0.4
+       Fresh libc v0.2.183
+       Fresh jobserver v0.1.34
+       Fresh find-msvc-tools v0.1.9
+       Fresh shlex v1.3.0
+       Fresh cc v1.2.58
+       Fresh pkg-config v0.3.32
+       Fresh memchr v2.8.0
+       Fresh serde_core v1.0.228
+       Fresh autocfg v1.5.0
+       Fresh crossbeam-utils v0.8.21
+       Fresh libm v0.2.16
+       Fresh num-traits v0.2.19
+       Fresh aho-corasick v1.1.4
+       Fresh equivalent v1.0.2
+       Fresh regex-syntax v0.8.10
+       Fresh hashbrown v0.16.1
+       Fresh indexmap v2.13.0
+       Fresh regex-automata v0.4.14
+       Fresh zerocopy v0.8.47
+       Fresh getrandom v0.2.17
+       Fresh adler2 v2.0.1
+       Fresh simd-adler32 v0.3.9
+       Fresh vcpkg v0.2.15
+       Fresh miniz_oxide v0.8.9
+       Fresh ppv-lite86 v0.2.21
+       Fresh typenum v1.19.0
+       Fresh libz-sys v1.1.25
+       Fresh crc32fast v1.5.0
+       Fresh bstr v1.12.1
+       Fresh crossbeam-epoch v0.9.18
+       Fresh serde_derive v1.0.228
+       Fresh either v1.15.0
+       Fresh zlib-rs v0.6.3
+       Fresh flate2 v1.1.9
+       Fresh serde v1.0.228
+       Fresh crossbeam-deque v0.8.6
+       Fresh rand_core v0.6.4
+       Fresh bitflags v2.11.0
+       Fresh bytemuck v1.25.0
+       Fresh lexical-util v1.0.7
+       Fresh rand_chacha v0.3.1
+       Fresh rustversion v1.0.22
+       Fresh num-complex v0.4.6
+       Fresh num-integer v0.1.46
+       Fresh thiserror-impl v2.0.18
+       Fresh thiserror-impl v1.0.69
+       Fresh semver v0.1.20
+       Fresh rawpointer v0.2.1
+       Fresh winnow v1.0.0
+       Fresh unicode-xid v0.1.0
+       Fresh version_check v0.9.5
+       Fresh itoa v1.0.18
+       Fresh approx v0.5.1
+       Fresh crossbeam-channel v0.5.15
+       Fresh toml_datetime v0.7.5+spec-1.1.0
+       Fresh toml_writer v1.1.0+spec-1.1.0
+       Fresh strsim v0.11.1
+       Fresh winnow v0.7.15
+       Fresh feature-probe v0.1.1
+       Fresh bytes v1.11.1
+       Fresh safe_arch v0.7.4
+       Fresh rand v0.8.5
+       Fresh matrixmultiply v0.3.10
+       Fresh rustc_version v0.1.7
+       Fresh toml_parser v1.1.0+spec-1.1.0
+       Fresh proc-macro2 v0.4.30
+       Fresh lexical-parse-integer v1.0.6
+       Fresh lexical-write-integer v1.0.6
+       Fresh num-rational v0.4.2
+       Fresh proc-macro-error-attr2 v2.0.0
+       Fresh heck v0.5.0
+       Fresh byteorder v1.5.0
+       Fresh foldhash v0.1.5
+       Fresh noodles-bgzf v0.46.0
+       Fresh noodles-core v0.19.0
+       Fresh regex v1.12.3
+       Fresh csv-core v0.1.13
+       Fresh rayon-core v1.13.0
+       Fresh thiserror v2.0.18
+       Fresh wide v0.7.33
+       Fresh thiserror v1.0.69
+       Fresh paste v1.0.15
+       Fresh quote v0.6.13
+       Fresh rand_distr v0.4.3
+       Fresh zmij v1.0.21
+       Fresh lexical-parse-float v1.0.6
+       Fresh lexical-write-float v1.0.6
+       Fresh strum_macros v0.26.4
+       Fresh proc-macro-error2 v2.0.1
+       Fresh hashbrown v0.15.5
+       Fresh derive-new v0.6.0
+       Fresh enum-map-derive v0.17.0
+       Fresh ref-cast-impl v1.0.25
+       Fresh serde_derive_internals v0.29.1
+       Fresh lazy_static v1.5.0
+       Fresh fixedbitset v0.5.7
+       Fresh scopeguard v1.2.0
+       Fresh bit-vec v0.9.1
+       Fresh bit-vec v0.8.0
+       Fresh ryu v1.0.23
+       Fresh simba v0.9.1
+       Fresh rayon v1.11.0
+       Fresh syn v0.15.44
+       Fresh generic-array v0.14.7
+       Fresh serde_json v1.0.149
+       Fresh noodles-csi v0.55.0
+       Fresh getrandom v0.3.4
+       Fresh bv v0.11.1
+       Fresh ref-cast v1.0.25
+       Fresh csv v1.4.0
+       Fresh petgraph v0.8.3
+       Fresh bio-types v1.0.4
+       Fresh lexical-core v1.0.6
+       Fresh enum-map v2.7.3
+       Fresh anyhow v1.0.102
+       Fresh getset v0.1.6
+       Fresh lock_api v0.4.14
+       Fresh schemars_derive v1.2.1
+       Fresh bit-set v0.8.0
+       Fresh zstd-sys v2.0.16+zstd.1.5.7
+       Fresh fxhash v0.2.1
+       Fresh toml_edit v0.24.1+spec-1.1.0
+       Fresh ndarray v0.16.1
+       Fresh multimap v0.10.1
+       Fresh vec_map v0.8.2
+       Fresh itertools v0.14.0
+       Fresh nalgebra v0.33.2
+       Fresh derefable v0.1.0
+       Fresh newtype_derive v0.1.6
+       Fresh itertools-num v0.1.3
+       Fresh ordered-float v5.2.0
+       Fresh toml-pretty-deser-macros v0.3.7
+       Fresh num_cpus v1.17.0
+       Fresh linux-raw-sys v0.12.1
+       Fresh smallvec v1.15.1
+       Fresh unicode-width v0.2.2
+       Fresh triple_accel v0.4.0
+       Fresh bytecount v0.6.9
+       Fresh custom_derive v0.1.7
+       Fresh strum v0.26.3
+       Fresh log v0.4.29
+       Fresh editdistancek v1.0.2
+       Fresh codesnake v0.2.1
+       Fresh mutants v0.0.4
+       Fresh dyn-clone v1.0.20
+       Fresh rand_core v0.9.5
+       Fresh spin v0.9.8
+       Fresh const_fn v0.4.12
+       Fresh bzip2-sys v0.1.13+1.0.8
+       Fresh hamming-resonate v0.4.0
+       Fresh liblzma-sys v0.3.13
+       Fresh crypto-common v0.1.7
+       Fresh block-buffer v0.10.4
+       Fresh noodles-sam v0.83.0
+       Fresh zstd-safe v7.2.4
+       Fresh typed_floats_macros v1.0.7
+       Fresh nanorand v0.7.0
+       Fresh statrs v0.18.0
+       Fresh toml-pretty-deser v0.3.7
+       Fresh rustix v1.1.4
+       Fresh schemars v1.2.1
+       Fresh futures-core v0.3.32
+       Fresh cfg_aliases v0.2.1
+       Fresh futures-sink v0.3.32
+       Fresh liblzma v0.3.6
+       Fresh core_affinity v0.8.3
+       Fresh bzip2 v0.5.2
+       Fresh bgzip v0.3.1
+       Fresh rand_chacha v0.9.0
+       Fresh digest v0.10.7
+       Fresh typed_floats v1.0.7
+       Fresh zstd v0.13.3
+       Fresh noodles-bam v0.87.0
+       Fresh crossbeam-queue v0.3.12
+       Fresh quick-error v1.2.3
+       Fresh mutants v0.0.3
+       Fresh cpufeatures v0.2.17
+       Fresh fastrand v2.3.0
+       Fresh anstyle v1.0.14
+       Fresh env_home v0.1.0
+       Fresh clap_lex v1.1.0
+       Fresh gimli v0.32.3
+       Fresh stringpod v0.1.0 (/home/finkernagel/upstream/fastqrab/stringpod)
+       Fresh serde_spanned v1.1.0
+       Fresh siphasher v1.0.2
+       Fresh bio v3.0.0
+       Fresh flume v0.11.1
+       Fresh object v0.37.3
+       Fresh crossbeam v0.8.4
+       Fresh niffler v3.0.0
+       Fresh which v7.0.3
+       Fresh sha2 v0.10.9
+       Fresh addr2line v0.25.1
+       Fresh ex v0.1.3
+       Fresh clap_builder v4.6.0
+       Fresh tempfile v3.27.0
+       Fresh rand v0.9.4
+       Fresh noodles v0.108.0
+       Fresh rustc-demangle v0.1.27
+       Fresh once_cell v1.21.4
+       Fresh toml v0.9.12+spec-1.1.0
+       Fresh sysinfo v0.37.2
+       Fresh fasteval v0.2.4
+       Fresh rustc-hash v2.1.2
+       Fresh disjoint v0.8.0
+       Fresh union-find-rs v0.2.1
+       Fresh json_value_merge v2.0.1
+       Fresh wait-timeout v0.2.1
+       Fresh allocation-counter v0.8.1
+       Fresh fastqrab-dna v0.9.0 (/home/finkernagel/upstream/fastqrab/main/fastqrab-dna)
+       Fresh gzp v2.0.2
+       Fresh getrandom v0.4.2
+       Fresh scalable_cuckoo_filter v0.5.1
+       Fresh backtrace v0.3.76
+       Fresh clap v4.6.0
+       Fresh enum_dispatch v0.3.13
+       Fresh libmimalloc-sys v0.1.48
+       Fresh fastqrab-config v0.9.0 (/home/finkernagel/upstream/fastqrab/main/fastqrab-config)
+       Fresh uuid v1.23.0
+       Fresh nix v0.31.2
+       Fresh clap_complete v4.6.0
+       Fresh mimalloc v0.1.51
+       Fresh fastqrab-io v0.9.0 (/home/finkernagel/upstream/fastqrab/main/fastqrab-io)
+warning: unused import: `DualStringPod`
+   --> fastqrab-io/src/io/reads.rs:383:25
+    |
+383 |         use stringpod::{DualStringPod, DualStringPodBuilder, StringPod, StringPodBuilder};
+    |                         ^^^^^^^^^^^^^
+    |
+    = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `ByteVec`
+ --> fastqrab-io/src/io/reads.rs:2:27
+  |
+2 | use bstr::{BStr, BString, ByteVec};
+  |                           ^^^^^^^
+
+warning: unused import: `borrow::Borrow`
+ --> fastqrab-io/src/blocks.rs:4:11
+  |
+4 | use std::{borrow::Borrow, num::NonZero, ops::Range};
+  |           ^^^^^^^^^^^^^^
+
+warning: variable does not need to be mutable
+   --> fastqrab-io/src/io/reads.rs:396:13
+    |
+396 |         let mut pluses = StringPod::new_all_empty(
+    |             ----^^^^^^
+    |             |
+    |             help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `segment`
+    --> fastqrab-io/src/io/reads.rs:1682:9
+     |
+1682 |         segment: SegmentIndex,
+     |         ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_segment`
+     |
+     = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `f`
+    --> fastqrab-io/src/io/reads.rs:1683:9
+     |
+1683 |         f: impl Fn(&mut crate::blocks::FastQRead),
+     |         ^ help: if this is intentional, prefix it with an underscore: `_f`
+
+warning: unused variable: `condition`
+    --> fastqrab-io/src/io/reads.rs:1684:9
+     |
+1684 |         condition: Option<&[bool]>,
+     |         ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_condition`
+
+warning: unused variable: `segment`
+    --> fastqrab-io/src/io/reads.rs:1711:9
+     |
+1711 |         segment: SegmentIndex,
+     |         ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_segment`
+
+warning: unused variable: `f`
+    --> fastqrab-io/src/io/reads.rs:1712:9
+     |
+1712 |         f: impl FnMut(&mut WrappedFastQReadMut),
+     |         ^ help: if this is intentional, prefix it with an underscore: `_f`
+
+warning: unused variable: `condition`
+    --> fastqrab-io/src/io/reads.rs:1713:9
+     |
+1713 |         condition: Option<&[bool]>,
+     |         ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_condition`
+
+warning: variable does not need to be mutable
+    --> fastqrab-io/src/io/reads.rs:1728:9
+     |
+1728 |         mut f: impl FnMut(&mut WrappedFastQReadMut),
+     |         ----^
+     |         |
+     |         help: remove this `mut`
+
+warning: unused variable: `segment`
+    --> fastqrab-io/src/io/reads.rs:1727:9
+     |
+1727 |         segment: SegmentIndexOrAll,
+     |         ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_segment`
+
+warning: unused variable: `f`
+    --> fastqrab-io/src/io/reads.rs:1728:9
+     |
+1728 |         mut f: impl FnMut(&mut WrappedFastQReadMut),
+     |         ^^^^^ help: if this is intentional, prefix it with an underscore: `_f`
+
+warning: unused variable: `condition`
+    --> fastqrab-io/src/io/reads.rs:1729:9
+     |
+1729 |         condition: Option<&[bool]>,
+     |         ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_condition`
+
+warning: unused variable: `n`
+  --> fastqrab-io/src/blocks.rs:63:36
+   |
+63 |     pub fn split_interleaved(self, n: NonZero<usize>) -> Vec<FastQChunk> {
+   |                                    ^ help: if this is intentional, prefix it with an underscore: `_n`
+
+       Fresh human-panic v2.0.6
+       Fresh ctrlc v3.5.2
+warning: `fastqrab-io` (lib) generated 15 warnings (run `cargo fix --lib -p fastqrab-io` to apply 13 suggestions)
+       Fresh fastqrab-steps v0.9.0 (/home/finkernagel/upstream/fastqrab/main/fastqrab-steps)
+warning: unused import: `WrappedFastQRead`
+ --> fastqrab-steps/src/transformations/calc.rs:3:44
+  |
+3 | use fastqrab_io::io::{FastQBlocksCombined, WrappedFastQRead};
+  |                                            ^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `fastqrab_io::io::WrappedFastQRead`
+ --> fastqrab-steps/src/transformations/calc/qualified_bases.rs:4:5
+  |
+4 | use fastqrab_io::io::WrappedFastQRead;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `fastqrab_io::io::WrappedFastQRead`
+ --> fastqrab-steps/src/transformations/calc/worst_quality.rs:3:5
+  |
+3 | use fastqrab_io::io::WrappedFastQRead;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `fastqrab_io::io::WrappedFastQReadMut`
+ --> fastqrab-steps/src/transformations/edits/merge_reads.rs:7:5
+  |
+7 | use fastqrab_io::io::WrappedFastQReadMut;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `cell::RefCell`
+ --> fastqrab-steps/src/transformations/extract.rs:1:24
+  |
+1 | use std::{borrow::Cow, cell::RefCell};
+  |                        ^^^^^^^^^^^^^
+
+warning: unused import: `WrappedFastQRead`
+  --> fastqrab-steps/src/transformations/extract.rs:15:44
+   |
+15 | use fastqrab_io::io::{FastQBlocksCombined, WrappedFastQRead};
+   |                                            ^^^^^^^^^^^^^^^^
+
+warning: unused import: `self`
+ --> fastqrab-steps/src/transformations/extract/iupac.rs:4:25
+  |
+4 | use fastqrab_dna::dna::{self, find_iupac};
+  |                         ^^^^
+
+warning: unused import: `super::extract_region_tags_from_seq`
+ --> fastqrab-steps/src/transformations/extract/low_quality_end.rs:1:5
+  |
+1 | use super::extract_region_tags_from_seq;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `super::extract_region_tags_from_seq`
+ --> fastqrab-steps/src/transformations/extract/low_quality_start.rs:1:5
+  |
+1 | use super::extract_region_tags_from_seq;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `fastqrab_io::io::WrappedFastQRead`
+ --> fastqrab-steps/src/transformations/extract/tag/duplicates.rs:9:5
+  |
+9 | use fastqrab_io::io::WrappedFastQRead;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `MoleculeMut`
+  --> fastqrab-steps/src/transformations/prelude.rs:60:41
+   |
+60 | pub use fastqrab_io::blocks::{Molecule, MoleculeMut, OwnedMolecule, split_name_and_comment};
+   |                                         ^^^^^^^^^^^
+
+warning: unused import: `fastqrab_io::io::WrappedFastQRead`
+ --> fastqrab-steps/src/transformations/reports/report_base_statistics_part1.rs:3:5
+  |
+3 | use fastqrab_io::io::WrappedFastQRead;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `fastqrab_io::io::WrappedFastQRead`
+ --> fastqrab-steps/src/transformations/reports/report_base_statistics_part2.rs:5:5
+  |
+5 | use fastqrab_io::io::WrappedFastQRead;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `fastqrab_io::io::WrappedFastQRead`
+ --> fastqrab-steps/src/transformations/reports/report_duplicate_count.rs:4:5
+  |
+4 | use fastqrab_io::io::WrappedFastQRead;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `fastqrab_io::io::WrappedFastQRead`
+ --> fastqrab-steps/src/transformations/reports/report_length_distribution.rs:3:5
+  |
+3 | use fastqrab_io::io::WrappedFastQRead;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unreachable statement
+   --> fastqrab-steps/src/transformations/edits/swap.rs:199:9
+    |
+175 |           todo!();
+    |           ------- any code following this expression is unreachable
+...
+199 | /         block.filter_tag_locations_all_targets(|location: HitRegion, pos: usize| -> NewLocation {
+200 | |             // Check if this read position was swapped
+201 | |             // If we did a block swap, the logic is inverted
+202 | |             let was_swapped = if did_block_swap {
+...   |
+223 | |         });
+    | |___________^ unreachable statement
+    |
+    = note: `#[warn(unreachable_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: unreachable statement
+  --> fastqrab-steps/src/transformations/tag/store_tag_back_in_sequence.rs:63:9
+   |
+58 |         todo!("This needs a complete rewrite with the StringPods API");
+   |         -------------------------------------------------------------- any code following this expression is unreachable
+...
+63 |         let mut builders: Vec<Option<DualStringPodBuilder>> = vec![None; block.segments.len()];
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ unreachable statement
+
+warning: unreachable expression
+   --> fastqrab-steps/src/transformations/tag/store_tag_in_sequence.rs:247:9
+    |
+ 89 |         todo!("This needs a complete rewrite with the StringPods API");
+    |         -------------------------------------------------------------- any code following this expression is unreachable
+...
+247 |         Ok((block, true))
+    |         ^^^^^^^^^^^^^^^^^ unreachable expression
+
+warning: unused import: `reads::WrappedFastQReadCommon`
+  --> fastqrab-steps/src/transformations.rs:23:44
+   |
+23 | use fastqrab_io::io::{FastQBlocksCombined, reads::WrappedFastQReadCommon};
+   |                                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused variable: `location_items`
+  --> fastqrab-steps/src/transformations/calc/worst_quality.rs:87:21
+   |
+87 |                 let location_items = match &tag_values {
+   |                     ^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_location_items`
+   |
+   = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `missing_value`
+  --> fastqrab-steps/src/transformations/calc/worst_quality.rs:91:21
+   |
+91 |                 let missing_value = 33.0 + self.offset as f64;
+   |                     ^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_missing_value`
+
+warning: unused variable: `swap_these`
+   --> fastqrab-steps/src/transformations/edits/swap.rs:164:14
+    |
+164 |         let (swap_these, did_block_swap) = if swap_count > total_count / 2 {
+    |              ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_swap_these`
+
+warning: unused variable: `did_block_swap`
+   --> fastqrab-steps/src/transformations/edits/swap.rs:164:26
+    |
+164 |         let (swap_these, did_block_swap) = if swap_count > total_count / 2 {
+    |                          ^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_did_block_swap`
+
+warning: unused variable: `read_no`
+   --> fastqrab-steps/src/transformations/extract.rs:125:9
+    |
+125 |     let read_no = block.first_read_sequential_number;
+    |         ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_read_no`
+
+warning: unused variable: `n`
+  --> fastqrab-steps/src/transformations/reports/inspect.rs:77:17
+   |
+77 |             let n = self.n.as_ref().map_or(0, |x| *x);
+   |                 ^ help: if this is intentional, prefix it with an underscore: `_n`
+
+warning: variable does not need to be mutable
+   --> fastqrab-steps/src/transformations/reports/inspect.rs:231:13
+    |
+231 |         let mut iter: Box<dyn Iterator<Item = (Molecule, u64)>> =
+    |             ----^^^^
+    |             |
+    |             help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `input_info`
+   --> fastqrab-steps/src/transformations/reports/inspect.rs:222:9
+    |
+222 |         input_info: &InputInfo,
+    |         ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_input_info`
+
+warning: unused variable: `name_read`
+   --> fastqrab-steps/src/transformations/reports/inspect.rs:237:13
+    |
+237 |         let name_read = |read: &WrappedFastQRead, read_idx: usize| {
+    |             ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_name_read`
+
+warning: variable `read_idx` is assigned to, but never used
+   --> fastqrab-steps/src/transformations/reports/inspect.rs:248:13
+    |
+248 |         let mut read_idx = 0;
+    |             ^^^^^^^^^^^^
+    |
+    = note: consider using `_read_idx` instead
+
+warning: value assigned to `read_idx` is never read
+   --> fastqrab-steps/src/transformations/reports/inspect.rs:265:13
+    |
+265 |             read_idx += 1;
+    |             ^^^^^^^^^^^^^
+    |
+    = help: maybe it is overwritten before being read?
+    = note: `#[warn(unused_assignments)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `read_idx`
+   --> fastqrab-steps/src/transformations/reports/inspect.rs:286:25
+    |
+286 |                     for read_idx in 0..reads_to_write {
+    |                         ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_read_idx`
+
+warning: unused variable: `read_idx`
+   --> fastqrab-steps/src/transformations/reports/inspect.rs:309:25
+    |
+309 |                     for read_idx in 0..reads_to_write {
+    |                         ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_read_idx`
+
+warning: variable does not need to be mutable
+  --> fastqrab-steps/src/transformations/tag/store_tag_back_in_sequence.rs:43:9
+   |
+43 |         mut block: FastQBlocksCombined,
+   |         ----^^^^^
+   |         |
+   |         help: remove this `mut`
+
+warning: variable does not need to be mutable
+  --> fastqrab-steps/src/transformations/tag/store_tag_back_in_sequence.rs:54:13
+   |
+54 |         let mut what_happend = Vec::with_capacity(block.len());
+   |             ----^^^^^^^^^^^^
+   |             |
+   |             help: remove this `mut`
+
+warning: unused variable: `what_happend`
+  --> fastqrab-steps/src/transformations/tag/store_tag_back_in_sequence.rs:54:13
+   |
+54 |         let mut what_happend = Vec::with_capacity(block.len());
+   |             ^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_what_happend`
+
+warning: unused variable: `error_encountered`
+  --> fastqrab-steps/src/transformations/tag/store_tag_back_in_sequence.rs:55:13
+   |
+55 |         let error_encountered = std::cell::RefCell::new(Option::<String>::None);
+   |             ^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_error_encountered`
+
+warning: unused variable: `error_encountered`
+   --> fastqrab-steps/src/transformations/tag/store_tag_in_comment.rs:165:13
+    |
+165 |         let error_encountered = std::cell::RefCell::new(Option::<String>::None);
+    |             ^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_error_encountered`
+
+warning: variable does not need to be mutable
+  --> fastqrab-steps/src/transformations/tag/store_tag_in_sequence.rs:77:9
+   |
+77 |         mut block: FastQBlocksCombined,
+   |         ----^^^^^
+   |         |
+   |         help: remove this `mut`
+
+warning: unused variable: `block`
+  --> fastqrab-steps/src/transformations/tag/store_tag_in_sequence.rs:77:9
+   |
+77 |         mut block: FastQBlocksCombined,
+   |         ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_block`
+
+warning: variable `length_here` is assigned to, but never used
+   --> fastqrab-steps/src/transformations/validation/all_reads_same_length.rs:119:25
+    |
+119 |                     let mut length_here = 0;
+    |                         ^^^^^^^^^^^^^^^
+    |
+    = note: consider using `_length_here` instead
+
+warning: value assigned to `length_here` is never read
+   --> fastqrab-steps/src/transformations/validation/all_reads_same_length.rs:123:29
+    |
+123 | ...                   length_here += nn.len();
+    |                       ^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: maybe it is overwritten before being read?
+
+warning: field `ignore_missing` is never read
+  --> fastqrab-steps/src/transformations/tag/store_tag_back_in_sequence.rs:14:5
+   |
+11 | pub struct StoreTagBackInSequence {
+   |            ---------------------- field in this struct
+...
+14 |     ignore_missing: bool,
+   |     ^^^^^^^^^^^^^^
+   |
+   = note: `StoreTagBackInSequence` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: fields `in_value_label`, `in_position_label`, and `anchor` are never read
+  --> fastqrab-steps/src/transformations/tag/store_tag_in_sequence.rs:42:5
+   |
+40 | pub struct StoreTagInSequence {
+   |            ------------------ fields in this struct
+41 |     /// Location or string tag whose sequence to insert into the read.
+42 |     in_value_label: TagLabel,
+   |     ^^^^^^^^^^^^^^
+43 |     /// Location tag that defines the insertion position.
+44 |     in_position_label: TagLabel,
+   |     ^^^^^^^^^^^^^^^^^
+45 |     /// Where to insert relative to the position tag.
+46 |     anchor: ReplacementAnchor,
+   |     ^^^^^^
+   |
+   = note: `StoreTagInSequence` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: struct `InsertInfo` is never constructed
+  --> fastqrab-steps/src/transformations/tag/store_tag_in_sequence.rs:82:16
+   |
+82 |         struct InsertInfo {
+   |                ^^^^^^^^^^
+
+warning: unused return value of `DualStringPod::max_len` that must be used
+  --> fastqrab-steps/src/transformations/edits/truncate.rs:62:9
+   |
+62 | /         block
+63 | |             .member_mut(self.segment.as_index())
+64 | |             .seq_quals
+65 | |             .max_len(self.n, condition.as_deref());
+   | |__________________________________________________^
+   |
+   = note: `#[warn(unused_must_use)]` (part of `#[warn(unused)]`) on by default
+help: use `let _ = ...` to ignore the resulting value
+   |
+62 |         let _ = block
+   |         +++++++
+
+warning: `fastqrab-steps` (lib) generated 45 warnings (run `cargo fix --lib -p fastqrab-steps` to apply 33 suggestions)
+    Checking fastqrab v0.9.0 (/home/finkernagel/upstream/fastqrab/main/fastqrab)
+     Running `rustc --crate-name fastqrab --edition=2024 fastqrab/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata -C embed-bitcode=no -C debuginfo=line-tables-only '--deny=clippy::zero_sized_map_values' '--deny=clippy::wildcard_imports' '--deny=clippy::verbose_bit_mask' '--deny=clippy::used_underscore_items' '--deny=clippy::used_underscore_binding' '--deny=clippy::unwrap_used' '--allow=clippy::unwrap_in_result' '--deny=clippy::unused_self' '--warn=clippy::unused_result_ok' '--deny=clippy::unused_async' '--deny=clippy::unsafe_derive_deserialize' '--deny=clippy::unreadable_literal' '--allow=clippy::unreachable' '--deny=clippy::unnested_or_patterns' '--deny=clippy::unnecessary_wraps' '--deny=clippy::unnecessary_semicolon' '--warn=clippy::unnecessary_safety_doc' '--warn=clippy::unnecessary_safety_comment' '--deny=clippy::unnecessary_literal_bound' '--deny=clippy::unnecessary_join' '--deny=clippy::unnecessary_debug_formatting' '--deny=clippy::unnecessary_box_returns' '--deny=clippy::uninlined_format_args' '--warn=clippy::unimplemented' '--deny=clippy::unicode_not_nfc' '--warn=clippy::undocumented_unsafe_blocks' '--deny=clippy::unchecked_time_subtraction' '--deny=clippy::trivially_copy_pass_by_ref' '--deny=clippy::transmute_ptr_to_ptr' '--allow=clippy::too_many_lines' '--warn=clippy::todo' '--deny=clippy::struct_field_names' '--allow=clippy::struct_excessive_bools' '--warn=clippy::string_slice' '--deny=clippy::string_add_assign' '--deny=clippy::str_split_at_newline' '--deny=clippy::stable_sort_primitive' '--allow=clippy::single_match_else' '--deny=clippy::single_char_pattern' '--deny=clippy::similar_names' '--deny=clippy::should_panic_without_expect' '--deny=clippy::semicolon_if_nothing_returned' '--deny=clippy::self_only_used_in_recursion' '--deny=clippy::same_functions_in_if_condition' '--deny=clippy::return_self_not_must_use' '--deny=clippy::ref_option_ref' '--deny=clippy::ref_option' '--deny=clippy::ref_binding_to_reference' '--deny=clippy::ref_as_ptr' '--allow=clippy::redundant_else' '--deny=clippy::redundant_closure_for_method_calls' '--warn=clippy::rc_mutex' '--deny=clippy::range_plus_one' '--deny=clippy::range_minus_one' '--deny=clippy::pub_underscore_fields' '--deny=clippy::ptr_cast_constness' '--deny=clippy::ptr_as_ptr' '--allow=clippy::panic_in_result_fn' '--allow=clippy::panic' '--deny=clippy::option_option' '--deny=clippy::option_as_ref_cloned' '--deny=clippy::non_std_lazy_statics' '--deny=clippy::no_mangle_with_rust_abi' '--deny=clippy::no_effect_underscore_binding' '--deny=clippy::needless_raw_string_hashes' '--deny=clippy::needless_pass_by_value' '--deny=clippy::needless_for_each' '--deny=clippy::needless_continue' '--deny=clippy::needless_bitwise_bool' '--deny=clippy::naive_bytecount' '--deny=clippy::mut_mut' '--deny=clippy::must_use_candidate' '--allow=clippy::multiple_unsafe_ops_per_block' '--deny=clippy::missing_panics_doc' '--deny=clippy::missing_fields_in_debug' '--allow=clippy::missing_errors_doc' '--deny=clippy::mismatching_type_param_order' '--warn=clippy::mem_forget' '--deny=clippy::maybe_infinite_iter' '--deny=clippy::match_wildcard_for_single_variants' '--deny=clippy::match_wild_err_arm' '--deny=clippy::match_same_arms' '--deny=clippy::match_bool' '--deny=clippy::map_unwrap_or' '--warn=clippy::map_err_ignore' '--deny=clippy::many_single_char_names' '--allow=clippy::manual_string_new' '--deny=clippy::manual_midpoint' '--deny=clippy::manual_let_else' '--deny=clippy::manual_is_variant_and' '--deny=clippy::manual_is_power_of_two' '--deny=clippy::manual_instant_elapsed' '--deny=clippy::manual_assert' '--deny=clippy::macro_use_imports' '--warn=clippy::lossy_float_literal' '--deny=clippy::linkedlist' '--allow=clippy::let_underscore_must_use' '--warn=clippy::let_underscore_future' '--deny=clippy::large_types_passed_by_value' '--deny=clippy::large_stack_arrays' '--deny=clippy::large_futures' '--deny=clippy::large_digit_groups' '--deny=clippy::iter_without_into_iter' '--deny=clippy::iter_not_returning_iterator' '--deny=clippy::iter_filter_is_some' '--deny=clippy::iter_filter_is_ok' '--deny=clippy::items_after_statements' '--deny=clippy::ip_constant' '--deny=clippy::invalid_upcast_comparisons' '--deny=clippy::into_iter_without_iter' '--deny=clippy::inline_always' '--warn=clippy::infallible_try_from' '--deny=clippy::inefficient_to_string' '--allow=clippy::indexing_slicing' '--deny=clippy::index_refutable_slice' '--deny=clippy::inconsistent_struct_constructor' '--deny=clippy::implicit_hasher' '--deny=clippy::implicit_clone' '--deny=clippy::ignored_unit_patterns' '--deny=clippy::ignore_without_reason' '--deny=clippy::if_not_else' '--warn=clippy::if_let_mutex' '--allow=clippy::if-not-else' '--warn=clippy::get_unwrap' '--deny=clippy::from_iter_instead_of_collect' '--deny=clippy::format_push_string' '--deny=clippy::format_collect' '--deny=clippy::fn_params_excessive_bools' '--warn=clippy::float_cmp_const' '--deny=clippy::float_cmp' '--deny=clippy::flat_map_option' '--deny=clippy::filter_map_next' '--deny=clippy::explicit_iter_loop' '--deny=clippy::explicit_into_iter_loop' '--deny=clippy::explicit_deref_methods' '--deny=clippy::expl_impl_clone_on_copy' '--deny=clippy::enum_glob_use' '--deny=clippy::empty_enums' '--deny=clippy::elidable_lifetime_names' '--deny=clippy::doc_markdown' '--deny=clippy::doc_link_with_quotes' '--deny=clippy::doc_comment_double_space_linebreaks' '--deny=clippy::doc_broken_link' '--allow=clippy::default_trait_access' '--warn=clippy::debug_assert_with_mut_call' '--warn=clippy::dbg_macro' '--deny=clippy::copy_iterator' '--deny=clippy::comparison_chain' '--deny=clippy::collapsible_else_if' '--deny=clippy::cloned_instead_of_copied' '--deny=clippy::checked_conversions' '--deny=clippy::cast_sign_loss' '--deny=clippy::cast_ptr_alignment' '--deny=clippy::cast_precision_loss' '--deny=clippy::cast_possible_wrap' '--deny=clippy::cast_possible_truncation' '--deny=clippy::cast_lossless' '--deny=clippy::case_sensitive_file_extension_comparisons' '--deny=clippy::borrow_as_ptr' '--deny=clippy::bool_to_int_with_if' '--warn=clippy::await_holding_refcell_ref' '--warn=clippy::await_holding_lock' '--deny=clippy::assigning_clones' '--warn=clippy::assertions_on_result_states' '--warn=clippy::allow_attributes_without_reason' '--warn=clippy::allow_attributes' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=d0a38febd82424b6 -C extra-filename=-c3f4d0fd544322c8 --out-dir /home/finkernagel/.cache/cargo/target/debug/deps -C incremental=/home/finkernagel/.cache/cargo/target/debug/incremental -L dependency=/home/finkernagel/.cache/cargo/target/debug/deps --extern allocation_counter=/home/finkernagel/.cache/cargo/target/debug/deps/liballocation_counter-9255c82421973229.rmeta --extern anyhow=/home/finkernagel/.cache/cargo/target/debug/deps/libanyhow-7cbecf7e190d788c.rmeta --extern bstr=/home/finkernagel/.cache/cargo/target/debug/deps/libbstr-30d8f04297548a2e.rmeta --extern clap=/home/finkernagel/.cache/cargo/target/debug/deps/libclap-d4ee38395d81252f.rmeta --extern clap_complete=/home/finkernagel/.cache/cargo/target/debug/deps/libclap_complete-6fa90e1b860c0c31.rmeta --extern crossbeam=/home/finkernagel/.cache/cargo/target/debug/deps/libcrossbeam-d18adde1ad098ab5.rmeta --extern ctrlc=/home/finkernagel/.cache/cargo/target/debug/deps/libctrlc-d38ffdd9f6795bc8.rmeta --extern ex=/home/finkernagel/.cache/cargo/target/debug/deps/libex-05f05d61fc28f6fb.rmeta --extern fastqrab_config=/home/finkernagel/.cache/cargo/target/debug/deps/libfastqrab_config-79edc25389d2f41e.rmeta --extern fastqrab_io=/home/finkernagel/.cache/cargo/target/debug/deps/libfastqrab_io-12820f4cf95fb2f0.rmeta --extern fastqrab_steps=/home/finkernagel/.cache/cargo/target/debug/deps/libfastqrab_steps-c972c90ed7a1fedb.rmeta --extern flate2=/home/finkernagel/.cache/cargo/target/debug/deps/libflate2-ac98f5f5ee61dab7.rmeta --extern human_panic=/home/finkernagel/.cache/cargo/target/debug/deps/libhuman_panic-02f922b2e3070f47.rmeta --extern indexmap=/home/finkernagel/.cache/cargo/target/debug/deps/libindexmap-4718af9b8f8e64d6.rmeta --extern itertools=/home/finkernagel/.cache/cargo/target/debug/deps/libitertools-15ec70b62cc67910.rmeta --extern json_value_merge=/home/finkernagel/.cache/cargo/target/debug/deps/libjson_value_merge-6db06df2a6236584.rmeta --extern mimalloc=/home/finkernagel/.cache/cargo/target/debug/deps/libmimalloc-6df2c562a84e6bbc.rmeta --extern mutants=/home/finkernagel/.cache/cargo/target/debug/deps/libmutants-eaa52f311181ffb2.so --extern niffler=/home/finkernagel/.cache/cargo/target/debug/deps/libniffler-c3ebaa01ecfb029b.rmeta --extern noodles=/home/finkernagel/.cache/cargo/target/debug/deps/libnoodles-2d498668161a63e4.rmeta --extern noodles_core=/home/finkernagel/.cache/cargo/target/debug/deps/libnoodles_core-c6a0bfcd8e42f865.rmeta --extern regex=/home/finkernagel/.cache/cargo/target/debug/deps/libregex-8162f3de6dd54e1e.rmeta --extern schemars=/home/finkernagel/.cache/cargo/target/debug/deps/libschemars-a36c6d935d38ec91.rmeta --extern serde_json=/home/finkernagel/.cache/cargo/target/debug/deps/libserde_json-ad9672067848fa3d.rmeta --extern stringpod=/home/finkernagel/.cache/cargo/target/debug/deps/libstringpod-e402f177d1aedff7.rmeta --extern tempfile=/home/finkernagel/.cache/cargo/target/debug/deps/libtempfile-de121209549f0bff.rmeta --extern toml=/home/finkernagel/.cache/cargo/target/debug/deps/libtoml-492cb03eb3e220bb.rmeta --extern toml_pretty_deser=/home/finkernagel/.cache/cargo/target/debug/deps/libtoml_pretty_deser-1b54e7370ede5750.rmeta --extern toml_edit=/home/finkernagel/.cache/cargo/target/debug/deps/libtoml_edit-98d6105d61c126ff.rmeta --extern wait_timeout=/home/finkernagel/.cache/cargo/target/debug/deps/libwait_timeout-d8d3abb4f7faca34.rmeta -C link-arg=-fuse-ld=mold -L native=/home/finkernagel/.cache/cargo/target/debug/build/libz-sys-e518268c737d9676/out/lib -L native=/home/finkernagel/.cache/cargo/target/debug/build/libz-sys-e518268c737d9676/out/lib -L native=/home/finkernagel/.cache/cargo/target/debug/build/bzip2-sys-5cfd288f1af3d0e9/out/lib -L native=/home/finkernagel/.cache/cargo/target/debug/build/liblzma-sys-9f10a8ab182ebc2f/out -L native=/home/finkernagel/.cache/cargo/target/debug/build/zstd-sys-bf412bb53b319429/out -L native=/home/finkernagel/.cache/cargo/target/debug/build/libmimalloc-sys-07ab1bffd359a2b3/out`
+error[E0308]: mismatched types
+   --> fastqrab/src/output.rs:654:54
+    |
+654 |               (Some(filter_to), Some(filter_these)) => block
+    |  ______________________________________________________^
+655 | |                 .iter()
+656 | |                 .zip(filter_these)
+657 | |                 .enumerate()
+658 | |                 .filter(|(read_idx, (read, dt))| **dt == filter_to)
+659 | |                 .map(|(read_idx, (read, _dt))| (read_idx, read)),
+    | |________________________________________________________________^ expected `Box<dyn Iterator<Item = (u64, ...)>>`, found `Map<Filter<Enumerate<...>, ...>, ...>`
+    |
+    = note: expected struct `Box<dyn Iterator<Item = (u64, fastqrab_io::blocks::FastQRead<'_>)>>`
+               found struct `Map<Filter<Enumerate<Zip<..., ...>>, ...>, ...>`
+    = note: the full name for the type has been written to '/home/finkernagel/.cache/cargo/target/debug/deps/fastqrab-c3f4d0fd544322c8.long-type-14426500580759830416.txt'
+    = note: consider using `--verbose` to print the full type name to the console
+
+error[E0282]: type annotations needed
+   --> fastqrab/src/output.rs:668:17
+    |
+668 |                 read.append_as_fastq(&mut buf);
+    |                 ^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> fastqrab/src/output.rs:676:17
+    |
+676 |                 read.as_fasta(&mut buf);
+    |                 ^^^^ cannot infer type
+
+error[E0599]: no method named `get_pseudo_iter_filtered_to_tag` found for reference `&&FastQChunk` in the current scope
+   --> fastqrab/src/output.rs:704:30
+    |
+704 |             Some(t) => block.get_pseudo_iter_filtered_to_tag(
+    |                        ------^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ method not found in `&&FastQChunk`
+
+error[E0599]: no method named `get_pseudo_iter` found for reference `&&FastQChunk` in the current scope
+   --> fastqrab/src/output.rs:708:27
+    |
+708 |             None => block.get_pseudo_iter(),
+    |                           ^^^^^^^^^^^^^^^ method not found in `&&FastQChunk`
+
+error[E0282]: type annotations needed
+   --> fastqrab/src/output.rs:718:38
+    |
+718 |                     let Some(read) = iter.pseudo_next() else {
+    |                                      ^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> fastqrab/src/output.rs:723:21
+    |
+723 |                     read.append_as_fastq(&mut buf);
+    |                     ^^^^ cannot infer type
+
+error[E0282]: type annotations needed
+   --> fastqrab/src/output.rs:732:21
+    |
+732 |                     read.as_fasta(&mut buf);
+    |                     ^^^^ cannot infer type
+
+error[E0061]: this function takes 6 arguments but 5 arguments were supplied
+    --> fastqrab/src/pipeline.rs:161:17
+     |
+ 161 |                   io::FastQBlocksCombined::new(
+     |  _________________^^^^^^^^^^^^^^^^^^^^^^^^^^^^-
+ 162 | |                     out_blocks,
+ 163 | |                     None,
+ 164 | |                     IndexMap::default(),
+ 165 | |                     false,
+ 166 | |                     block_no,
+ 167 | |                 ),
+     | |_________________- argument #6 of type `usize` is missing
+     |
+note: associated function defined here
+    --> /home/finkernagel/upstream/fastqrab/main/fastqrab-io/src/io/reads.rs:1338:12
+     |
+1338 |     pub fn new(
+     |            ^^^
+help: provide the argument
+     |
+ 161 |                 io::FastQBlocksCombined::new(
+ ...
+ 166 |                     block_no,
+ 167 ~                     /* usize */,
+ 168 ~                 ),
+     |
+
+error[E0308]: mismatched types
+   --> fastqrab/src/pipeline.rs:179:22
+    |
+179 |                 vec![io::FastQBlock::empty()],
+    |                      ^^^^^^^^^^^^^^^^^^^^^^^ expected `FastQChunk`, found `FastQBlock`
+    |
+help: call `Into::into` on this expression to convert `FastQBlock` into `FastQChunk`
+    |
+179 |                 vec![io::FastQBlock::empty().into()],
+    |                                             +++++++
+
+error[E0061]: this function takes 6 arguments but 5 arguments were supplied
+    --> fastqrab/src/pipeline.rs:178:31
+     |
+ 178 |               let final_block = io::FastQBlocksCombined::new(
+     |  _______________________________^^^^^^^^^^^^^^^^^^^^^^^^^^^^-
+ 179 | |                 vec![io::FastQBlock::empty()],
+ 180 | |                 None,
+ 181 | |                 IndexMap::default(),
+ 182 | |                 true,
+ 183 | |                 block_no,
+ 184 | |             );
+     | |_____________- argument #6 of type `usize` is missing
+     |
+note: associated function defined here
+    --> /home/finkernagel/upstream/fastqrab/main/fastqrab-io/src/io/reads.rs:1338:12
+     |
+1338 |     pub fn new(
+     |            ^^^
+help: provide the argument
+     |
+ 178 |             let final_block = io::FastQBlocksCombined::new(
+ ...
+ 183 |                 block_no,
+ 184 ~                 /* usize */,
+ 185 ~             );
+     |
+
+error[E0061]: this function takes 6 arguments but 5 arguments were supplied
+    --> fastqrab/src/pipeline.rs:233:35
+     |
+ 233 |                   let final_block = io::FastQBlocksCombined::new(
+     |  ___________________________________^^^^^^^^^^^^^^^^^^^^^^^^^^^^-
+ 234 | |                     empty_segments,
+ 235 | |                     None,
+ 236 | |                     Default::default(),
+ 237 | |                     true,
+ 238 | |                     block_no,
+ 239 | |                 );
+     | |_________________- argument #6 of type `usize` is missing
+     |
+note: expected `Vec<FastQChunk>`, found `Vec<FastQBlock>`
+    --> fastqrab/src/pipeline.rs:234:21
+     |
+ 234 |                     empty_segments,
+     |                     ^^^^^^^^^^^^^^
+     = note: expected struct `std::vec::Vec<FastQChunk>`
+                found struct `std::vec::Vec<FastQBlock>`
+note: associated function defined here
+    --> /home/finkernagel/upstream/fastqrab/main/fastqrab-io/src/io/reads.rs:1338:12
+     |
+1338 |     pub fn new(
+     |            ^^^
+help: provide the argument
+     |
+ 233 ~                 let final_block = io::FastQBlocksCombined::new(
+ 234 +                     /* std::vec::Vec<FastQChunk> */,
+ 235 +                     None,
+ 236 +                     Default::default(),
+ 237 +                     true,
+ 238 +                     block_no,
+ 239 +                     /* usize */,
+ 240 ~                 );
+     |
+
+error[E0061]: this function takes 6 arguments but 5 arguments were supplied
+    --> fastqrab/src/pipeline.rs:264:13
+     |
+ 215 |                 blocks.push(block);
+     |                 ------      ----- this argument has type `FastQBlock`...
+     |                 |
+     |                 ... which causes `blocks` to have type `std::vec::Vec<FastQBlock>`
+...
+ 264 |             io::FastQBlocksCombined::new(blocks, None, Default::default(), false, block_no),
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^--------------------------------------------------- argument #6 of type `usize` is missing
+     |
+note: expected `Vec<FastQChunk>`, found `Vec<FastQBlock>`
+    --> fastqrab/src/pipeline.rs:264:42
+     |
+ 264 |             io::FastQBlocksCombined::new(blocks, None, Default::default(), false, block_no),
+     |                                          ^^^^^^
+     = note: expected struct `std::vec::Vec<FastQChunk>`
+                found struct `std::vec::Vec<FastQBlock>`
+note: associated function defined here
+    --> /home/finkernagel/upstream/fastqrab/main/fastqrab-io/src/io/reads.rs:1338:12
+     |
+1338 |     pub fn new(
+     |            ^^^
+help: call `Into::into` on this expression to convert `FastQBlock` into `FastQChunk`
+     |
+ 215 |                 blocks.push(block.into());
+     |                                  +++++++
+help: provide the argument
+     |
+ 264 -             io::FastQBlocksCombined::new(blocks, None, Default::default(), false, block_no),
+ 264 +             io::FastQBlocksCombined::new(/* std::vec::Vec<FastQChunk> */, None, Default::default(), false, block_no, /* usize */),
+     |
+
+error[E0631]: type mismatch in function arguments
+   --> fastqrab/src/pipeline.rs:289:14
+    |
+289 |         .map(io::FastQBlock::len)
+    |          --- ^^^^^^^^^^^^^^^^^^^
+    |          |   |
+    |          |   expected due to this
+    |          |   found signature defined here
+    |          required by a bound introduced by this call
+    |
+    = note: expected function signature `fn(&FastQChunk) -> _`
+               found function signature `fn(&FastQBlock) -> _`
+note: required by a bound in `std::iter::Iterator::map`
+   --> /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/core/src/iter/traits/iterator.rs:773:5
+help: consider wrapping the function in a closure
+    |
+289 |         .map(|arg0: &FastQChunk| io::FastQBlock::len(/* &FastQBlock */))
+    |              +++++++++++++++++++                    +++++++++++++++++++
+
+error[E0599]: the method `min` exists for struct `Map<Iter<'_, FastQChunk>, ...>`, but its trait bounds were not satisfied
+   --> fastqrab/src/pipeline.rs:290:10
+    |
+286 |       let block_molecule_count = first_block
+    |  ________________________________-
+287 | |         .segments
+288 | |         .iter()
+289 | |         .map(io::FastQBlock::len)
+290 | |         .min()
+    | |         -^^^ method cannot be called on `Map<Iter<'_, FastQChunk>, ...>` due to unsatisfied trait bounds
+    | |_________|
+    |
+    |
+    = note: the following trait bounds were not satisfied:
+            `<for<'a> fn(&'a FastQBlock) -> usize {FastQBlock::len} as FnOnce<(&FastQChunk,)>>::Output = _`
+            which is required by `std::iter::Map<std::slice::Iter<'_, FastQChunk>, for<'a> fn(&'a FastQBlock) -> usize {FastQBlock::len}>: Iterator`
+            `for<'a> fn(&'a FastQBlock) -> usize {FastQBlock::len}: FnMut<(&FastQChunk,)>`
+            which is required by `std::iter::Map<std::slice::Iter<'_, FastQChunk>, for<'a> fn(&'a FastQBlock) -> usize {FastQBlock::len}>: Iterator`
+            `std::iter::Map<std::slice::Iter<'_, FastQChunk>, for<'a> fn(&'a FastQBlock) -> usize {FastQBlock::len}>: Ord`
+            which is required by `&std::iter::Map<std::slice::Iter<'_, FastQChunk>, for<'a> fn(&'a FastQBlock) -> usize {FastQBlock::len}>: Ord`
+            `std::iter::Map<std::slice::Iter<'_, FastQChunk>, for<'a> fn(&'a FastQBlock) -> usize {FastQBlock::len}>: Ord`
+            which is required by `&mut std::iter::Map<std::slice::Iter<'_, FastQChunk>, for<'a> fn(&'a FastQBlock) -> usize {FastQBlock::len}>: Ord`
+            `std::iter::Map<std::slice::Iter<'_, FastQChunk>, for<'a> fn(&'a FastQBlock) -> usize {FastQBlock::len}>: Iterator`
+            which is required by `&mut std::iter::Map<std::slice::Iter<'_, FastQChunk>, for<'a> fn(&'a FastQBlock) -> usize {FastQBlock::len}>: Iterator`
+    = note: the full name for the type has been written to '/home/finkernagel/.cache/cargo/target/debug/deps/fastqrab-c3f4d0fd544322c8.long-type-14061280340623193030.txt'
+    = note: consider using `--verbose` to print the full type name to the console
+
+error[E0631]: type mismatch in function arguments
+   --> fastqrab/src/pipeline.rs:308:18
+    |
+308 |             .map(io::FastQBlock::len)
+    |              --- ^^^^^^^^^^^^^^^^^^^
+    |              |   |
+    |              |   expected due to this
+    |              |   found signature defined here
+    |              required by a bound introduced by this call
+    |
+    = note: expected function signature `fn(&FastQChunk) -> _`
+               found function signature `fn(&FastQBlock) -> _`
+note: required by a bound in `std::iter::Iterator::map`
+   --> /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/core/src/iter/traits/iterator.rs:773:5
+help: consider wrapping the function in a closure
+    |
+308 |             .map(|arg0: &FastQChunk| io::FastQBlock::len(/* &FastQBlock */))
+    |                  +++++++++++++++++++                    +++++++++++++++++++
+
+error[E0599]: the method `min` exists for struct `Map<Iter<'_, FastQChunk>, ...>`, but its trait bounds were not satisfied
+   --> fastqrab/src/pipeline.rs:309:14
+    |
+305 |           let current_block_size = cloned_block
+    |  __________________________________-
+306 | |             .segments
+307 | |             .iter()
+308 | |             .map(io::FastQBlock::len)
+309 | |             .min()
+    | |             -^^^ method cannot be called on `Map<Iter<'_, FastQChunk>, ...>` due to unsatisfied trait bounds
+    | |_____________|
+    |
+    |
+    = note: the following trait bounds were not satisfied:
+            `<for<'a> fn(&'a FastQBlock) -> usize {FastQBlock::len} as FnOnce<(&FastQChunk,)>>::Output = _`
+            which is required by `std::iter::Map<std::slice::Iter<'_, FastQChunk>, for<'a> fn(&'a FastQBlock) -> usize {FastQBlock::len}>: Iterator`
+            `for<'a> fn(&'a FastQBlock) -> usize {FastQBlock::len}: FnMut<(&FastQChunk,)>`
+            which is required by `std::iter::Map<std::slice::Iter<'_, FastQChunk>, for<'a> fn(&'a FastQBlock) -> usize {FastQBlock::len}>: Iterator`
+            `std::iter::Map<std::slice::Iter<'_, FastQChunk>, for<'a> fn(&'a FastQBlock) -> usize {FastQBlock::len}>: Ord`
+            which is required by `&std::iter::Map<std::slice::Iter<'_, FastQChunk>, for<'a> fn(&'a FastQBlock) -> usize {FastQBlock::len}>: Ord`
+            `std::iter::Map<std::slice::Iter<'_, FastQChunk>, for<'a> fn(&'a FastQBlock) -> usize {FastQBlock::len}>: Ord`
+            which is required by `&mut std::iter::Map<std::slice::Iter<'_, FastQChunk>, for<'a> fn(&'a FastQBlock) -> usize {FastQBlock::len}>: Ord`
+            `std::iter::Map<std::slice::Iter<'_, FastQChunk>, for<'a> fn(&'a FastQBlock) -> usize {FastQBlock::len}>: Iterator`
+            which is required by `&mut std::iter::Map<std::slice::Iter<'_, FastQChunk>, for<'a> fn(&'a FastQBlock) -> usize {FastQBlock::len}>: Iterator`
+    = note: the full name for the type has been written to '/home/finkernagel/.cache/cargo/target/debug/deps/fastqrab-c3f4d0fd544322c8.long-type-18444139494234542403.txt'
+    = note: consider using `--verbose` to print the full type name to the console
+
+error[E0277]: a value of type `std::vec::Vec<FastQChunk>` cannot be built from an iterator over elements of type `FastQBlock`
+   --> fastqrab/src/pipeline.rs:336:14
+    |
+336 |             .collect(),
+    |              ^^^^^^^ value of type `std::vec::Vec<FastQChunk>` cannot be built from `std::iter::Iterator<Item=FastQBlock>`
+    |
+help: the trait `FromIterator<FastQBlock>` is not implemented for `std::vec::Vec<FastQChunk>`
+      but trait `FromIterator<FastQChunk>` is implemented for it
+   --> /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/alloc/src/vec/mod.rs:3721:1
+    = help: for that trait implementation, expected `FastQChunk`, found `FastQBlock`
+note: the method call chain might not have had the expected associated types
+   --> fastqrab/src/pipeline.rs:335:14
+    |
+332 | /         first_block
+333 | |             .segments
+    | |_____________________- this expression has type `Vec<FastQChunk>`
+334 |               .iter()
+    |                ------ `Iterator::Item` is `&FastQChunk` here
+335 |               .map(|_| io::FastQBlock::empty())
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `Iterator::Item` changed to `FastQBlock` here
+note: required by a bound in `collect`
+   --> /rustc/01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf/library/core/src/iter/traits/iterator.rs:2015:5
+
+error[E0061]: this function takes 6 arguments but 5 arguments were supplied
+    --> fastqrab/src/pipeline.rs:331:23
+     |
+ 331 |       let final_block = io::FastQBlocksCombined::new(
+     |  _______________________^^^^^^^^^^^^^^^^^^^^^^^^^^^^-
+ 332 | |         first_block
+ 333 | |             .segments
+ 334 | |             .iter()
+...    |
+ 340 | |         block_no,
+ 341 | |     );
+     | |_____- argument #6 of type `usize` is missing
+     |
+note: associated function defined here
+    --> /home/finkernagel/upstream/fastqrab/main/fastqrab-io/src/io/reads.rs:1338:12
+     |
+1338 |     pub fn new(
+     |            ^^^
+help: provide the argument
+     |
+ 331 |     let final_block = io::FastQBlocksCombined::new(
+ ...
+ 340 |         block_no,
+ 341 ~         /* usize */,
+ 342 ~     );
+     |
+
+error[E0061]: this function takes 6 arguments but 5 arguments were supplied
+    --> fastqrab/src/pipeline.rs:369:13
+     |
+ 369 |             io::FastQBlocksCombined::new(out_blocks, None, Default::default(), false, block_no),
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^------------------------------------------------------- argument #6 of type `usize` is missing
+     |
+note: expected `Vec<FastQChunk>`, found `Vec<FastQBlock>`
+    --> fastqrab/src/pipeline.rs:369:42
+     |
+ 369 |             io::FastQBlocksCombined::new(out_blocks, None, Default::default(), false, block_no),
+     |                                          ^^^^^^^^^^
+     = note: expected struct `std::vec::Vec<FastQChunk>`
+                found struct `std::vec::Vec<FastQBlock>`
+note: associated function defined here
+    --> /home/finkernagel/upstream/fastqrab/main/fastqrab-io/src/io/reads.rs:1338:12
+     |
+1338 |     pub fn new(
+     |            ^^^
+help: provide the argument
+     |
+ 369 -             io::FastQBlocksCombined::new(out_blocks, None, Default::default(), false, block_no),
+ 369 +             io::FastQBlocksCombined::new(/* std::vec::Vec<FastQChunk> */, None, Default::default(), false, block_no, /* usize */),
+     |
+
+error[E0308]: mismatched types
+   --> fastqrab/src/pipeline.rs:392:14
+    |
+392 |         vec![io::FastQBlock::empty()],
+    |              ^^^^^^^^^^^^^^^^^^^^^^^ expected `FastQChunk`, found `FastQBlock`
+    |
+help: call `Into::into` on this expression to convert `FastQBlock` into `FastQChunk`
+    |
+392 |         vec![io::FastQBlock::empty().into()],
+    |                                     +++++++
+
+error[E0061]: this function takes 6 arguments but 5 arguments were supplied
+    --> fastqrab/src/pipeline.rs:391:23
+     |
+ 391 |       let final_block = io::FastQBlocksCombined::new(
+     |  _______________________^^^^^^^^^^^^^^^^^^^^^^^^^^^^-
+ 392 | |         vec![io::FastQBlock::empty()],
+ 393 | |         None,
+ 394 | |         Default::default(),
+ 395 | |         true,
+ 396 | |         block_no,
+ 397 | |     );
+     | |_____- argument #6 of type `usize` is missing
+     |
+note: associated function defined here
+    --> /home/finkernagel/upstream/fastqrab/main/fastqrab-io/src/io/reads.rs:1338:12
+     |
+1338 |     pub fn new(
+     |            ^^^
+help: provide the argument
+     |
+ 391 |     let final_block = io::FastQBlocksCombined::new(
+ ...
+ 396 |         block_no,
+ 397 ~         /* usize */,
+ 398 ~     );
+     |
+
+error[E0609]: no field `entries` on type `FastQChunk`
+   --> fastqrab/src/pipeline.rs:703:52
+    |
+703 |                         if first_block.fastq_block.entries.is_empty() {
+    |                                                    ^^^^^^^ unknown field
+    |
+    = note: available fields are: `names`, `seq_quals`, `pluses`
+
+error[E0308]: mismatched types
+   --> fastqrab/src/pipeline.rs:715:37
+    |
+714 | ...                   run_benchmark_interleaved_thread(
+    |                       -------------------------------- arguments to this function are incorrect
+715 | ...                       first_block.fastq_block,
+    |                           ^^^^^^^^^^^^^^^^^^^^^^^ expected `FastQBlock`, found `FastQChunk`
+    |
+note: function defined here
+   --> fastqrab/src/pipeline.rs:346:4
+    |
+346 | fn run_benchmark_interleaved_thread(
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+347 |     first_block: io::FastQBlock,
+    |     ---------------------------
+
+error[E0609]: no field `entries` on type `FastQChunk`
+   --> fastqrab/src/pipeline.rs:745:56
+    |
+745 | ...                   if first_block.fastq_block.entries.is_empty() {
+    |                                                  ^^^^^^^ unknown field
+    |
+    = note: available fields are: `names`, `seq_quals`, `pluses`
+
+error[E0061]: this function takes 6 arguments but 5 arguments were supplied
+    --> fastqrab/src/pipeline.rs:765:46
+     |
+ 765 |                           let first_combined = io::FastQBlocksCombined::new(
+     |  ______________________________________________^^^^^^^^^^^^^^^^^^^^^^^^^^^^-
+ 766 | |                             first_blocks,
+ 767 | |                             None,
+ 768 | |                             Default::default(),
+ 769 | |                             false,
+ 770 | |                             0,
+ 771 | |                         );
+     | |_________________________- argument #6 of type `usize` is missing
+     |
+note: associated function defined here
+    --> /home/finkernagel/upstream/fastqrab/main/fastqrab-io/src/io/reads.rs:1338:12
+     |
+1338 |     pub fn new(
+     |            ^^^
+help: provide the argument
+     |
+ 765 |                         let first_combined = io::FastQBlocksCombined::new(
+ ...
+ 770 |                             0,
+ 771 ~                             /* usize */,
+ 772 ~                         );
+     |
+
+error[E0308]: mismatched types
+   --> fastqrab/src/pipeline.rs:878:37
+    |
+877 | ...                   run_combiner_thread(
+    |                       ------------------- arguments to this function are incorrect
+878 | ...                       &raw_rx_readers,
+    |                           ^^^^^^^^^^^^^^^ expected `&Vec<Receiver<(FastQBlock, ...)>>`, found `&Vec<Receiver<(FastQChunk, ...)>>`
+    |
+    = note: expected reference `&std::vec::Vec<crossbeam::crossbeam_channel::Receiver<(FastQBlock, Option<_>)>>`
+               found reference `&std::vec::Vec<crossbeam::crossbeam_channel::Receiver<(FastQChunk, Option<_>)>>`
+note: function defined here
+   --> fastqrab/src/pipeline.rs:193:4
+    |
+193 | fn run_combiner_thread(
+    |    ^^^^^^^^^^^^^^^^^^^
+194 |     raw_rx_readers: &Vec<crossbeam::channel::Receiver<(io::FastQBlock, Option<usize>)>>,
+    |     -----------------------------------------------------------------------------------
+
+error[E0609]: no field `entries` on type `FastQChunk`
+   --> fastqrab/src/pipeline_workpool.rs:553:69
+    |
+553 | ...                   vec![0; work_item.block.segments[0].entries.len()];
+    |                                                           ^^^^^^^ unknown field
+    |
+    = note: available fields are: `names`, `seq_quals`, `pluses`
+
+error[E0609]: no field `entries` on type `&FastQChunk`
+   --> fastqrab/src/pipeline_workpool.rs:555:59
+    |
+555 | ...                   for (ii, read) in segment.entries.iter().enumerate() {
+    |                                                 ^^^^^^^ unknown field
+    |
+    = note: available fields are: `names`, `seq_quals`, `pluses`
+
+error[E0609]: no field `entries` on type `FastQChunk`
+   --> fastqrab/src/pipeline_workpool.rs:564:86
+    |
+564 | ...                   for entry in &work_item.block.segments[index.as_index()].entries {
+    |                                                                                ^^^^^^^ unknown field
+    |
+    = note: available fields are: `names`, `seq_quals`, `pluses`
+
+error[E0609]: no field `first_read_sequential_number` on type `FastQChunk`
+   --> fastqrab/src/pipeline_workpool.rs:649:57
+    |
+649 |                 let start = work_item.block.segments[0].first_read_sequential_number;
+    |                                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ unknown field
+    |
+    = note: available fields are: `names`, `seq_quals`, `pluses`
+
+error[E0609]: no field `first_read_sequential_number` on type `FastQChunk`
+   --> fastqrab/src/pipeline_workpool.rs:650:55
+    |
+650 |                 let end = work_item.block.segments[0].first_read_sequential_number
+    |                                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ unknown field
+    |
+    = note: available fields are: `names`, `seq_quals`, `pluses`
+
+error[E0609]: no field `entries` on type `FastQChunk`
+   --> fastqrab/src/pipeline_workpool.rs:651:51
+    |
+651 |                     + work_item.block.segments[0].entries.len();
+    |                                                   ^^^^^^^ unknown field
+    |
+    = note: available fields are: `names`, `seq_quals`, `pluses`
+
+error[E0308]: mismatched types
+   --> fastqrab/src/pipeline_workpool.rs:755:26
+    |
+755 |                     vec![io::FastQBlock::empty()],
+    |                          ^^^^^^^^^^^^^^^^^^^^^^^ expected `FastQChunk`, found `FastQBlock`
+    |
+help: call `Into::into` on this expression to convert `FastQBlock` into `FastQChunk`
+    |
+755 |                     vec![io::FastQBlock::empty().into()],
+    |                                                 +++++++
+
+error[E0061]: this function takes 6 arguments but 5 arguments were supplied
+    --> fastqrab/src/pipeline_workpool.rs:754:24
+     |
+ 754 |                   block: io::FastQBlocksCombined::new(
+     |  ________________________^^^^^^^^^^^^^^^^^^^^^^^^^^^^-
+ 755 | |                     vec![io::FastQBlock::empty()],
+ 756 | |                     None,
+ 757 | |                     Default::default(),
+ 758 | |                     false,
+ 759 | |                     block_no,
+ 760 | |                 ),
+     | |_________________- argument #6 of type `usize` is missing
+     |
+note: associated function defined here
+    --> /home/finkernagel/upstream/fastqrab/main/fastqrab-io/src/io/reads.rs:1338:12
+     |
+1338 |     pub fn new(
+     |            ^^^
+help: provide the argument
+     |
+ 754 |                 block: io::FastQBlocksCombined::new(
+ ...
+ 759 |                     block_no,
+ 760 ~                     /* usize */,
+ 761 ~                 ),
+     |
+
+Some errors have detailed explanations: E0061, E0277, E0282, E0308, E0599, E0609, E0631.
+For more information about an error, try `rustc --explain E0061`.
+error: could not compile `fastqrab` (lib) due to 35 previous errors
+
+Caused by:
+  process didn't exit successfully: `rustc --crate-name fastqrab --edition=2024 fastqrab/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata -C embed-bitcode=no -C debuginfo=line-tables-only '--deny=clippy::zero_sized_map_values' '--deny=clippy::wildcard_imports' '--deny=clippy::verbose_bit_mask' '--deny=clippy::used_underscore_items' '--deny=clippy::used_underscore_binding' '--deny=clippy::unwrap_used' '--allow=clippy::unwrap_in_result' '--deny=clippy::unused_self' '--warn=clippy::unused_result_ok' '--deny=clippy::unused_async' '--deny=clippy::unsafe_derive_deserialize' '--deny=clippy::unreadable_literal' '--allow=clippy::unreachable' '--deny=clippy::unnested_or_patterns' '--deny=clippy::unnecessary_wraps' '--deny=clippy::unnecessary_semicolon' '--warn=clippy::unnecessary_safety_doc' '--warn=clippy::unnecessary_safety_comment' '--deny=clippy::unnecessary_literal_bound' '--deny=clippy::unnecessary_join' '--deny=clippy::unnecessary_debug_formatting' '--deny=clippy::unnecessary_box_returns' '--deny=clippy::uninlined_format_args' '--warn=clippy::unimplemented' '--deny=clippy::unicode_not_nfc' '--warn=clippy::undocumented_unsafe_blocks' '--deny=clippy::unchecked_time_subtraction' '--deny=clippy::trivially_copy_pass_by_ref' '--deny=clippy::transmute_ptr_to_ptr' '--allow=clippy::too_many_lines' '--warn=clippy::todo' '--deny=clippy::struct_field_names' '--allow=clippy::struct_excessive_bools' '--warn=clippy::string_slice' '--deny=clippy::string_add_assign' '--deny=clippy::str_split_at_newline' '--deny=clippy::stable_sort_primitive' '--allow=clippy::single_match_else' '--deny=clippy::single_char_pattern' '--deny=clippy::similar_names' '--deny=clippy::should_panic_without_expect' '--deny=clippy::semicolon_if_nothing_returned' '--deny=clippy::self_only_used_in_recursion' '--deny=clippy::same_functions_in_if_condition' '--deny=clippy::return_self_not_must_use' '--deny=clippy::ref_option_ref' '--deny=clippy::ref_option' '--deny=clippy::ref_binding_to_reference' '--deny=clippy::ref_as_ptr' '--allow=clippy::redundant_else' '--deny=clippy::redundant_closure_for_method_calls' '--warn=clippy::rc_mutex' '--deny=clippy::range_plus_one' '--deny=clippy::range_minus_one' '--deny=clippy::pub_underscore_fields' '--deny=clippy::ptr_cast_constness' '--deny=clippy::ptr_as_ptr' '--allow=clippy::panic_in_result_fn' '--allow=clippy::panic' '--deny=clippy::option_option' '--deny=clippy::option_as_ref_cloned' '--deny=clippy::non_std_lazy_statics' '--deny=clippy::no_mangle_with_rust_abi' '--deny=clippy::no_effect_underscore_binding' '--deny=clippy::needless_raw_string_hashes' '--deny=clippy::needless_pass_by_value' '--deny=clippy::needless_for_each' '--deny=clippy::needless_continue' '--deny=clippy::needless_bitwise_bool' '--deny=clippy::naive_bytecount' '--deny=clippy::mut_mut' '--deny=clippy::must_use_candidate' '--allow=clippy::multiple_unsafe_ops_per_block' '--deny=clippy::missing_panics_doc' '--deny=clippy::missing_fields_in_debug' '--allow=clippy::missing_errors_doc' '--deny=clippy::mismatching_type_param_order' '--warn=clippy::mem_forget' '--deny=clippy::maybe_infinite_iter' '--deny=clippy::match_wildcard_for_single_variants' '--deny=clippy::match_wild_err_arm' '--deny=clippy::match_same_arms' '--deny=clippy::match_bool' '--deny=clippy::map_unwrap_or' '--warn=clippy::map_err_ignore' '--deny=clippy::many_single_char_names' '--allow=clippy::manual_string_new' '--deny=clippy::manual_midpoint' '--deny=clippy::manual_let_else' '--deny=clippy::manual_is_variant_and' '--deny=clippy::manual_is_power_of_two' '--deny=clippy::manual_instant_elapsed' '--deny=clippy::manual_assert' '--deny=clippy::macro_use_imports' '--warn=clippy::lossy_float_literal' '--deny=clippy::linkedlist' '--allow=clippy::let_underscore_must_use' '--warn=clippy::let_underscore_future' '--deny=clippy::large_types_passed_by_value' '--deny=clippy::large_stack_arrays' '--deny=clippy::large_futures' '--deny=clippy::large_digit_groups' '--deny=clippy::iter_without_into_iter' '--deny=clippy::iter_not_returning_iterator' '--deny=clippy::iter_filter_is_some' '--deny=clippy::iter_filter_is_ok' '--deny=clippy::items_after_statements' '--deny=clippy::ip_constant' '--deny=clippy::invalid_upcast_comparisons' '--deny=clippy::into_iter_without_iter' '--deny=clippy::inline_always' '--warn=clippy::infallible_try_from' '--deny=clippy::inefficient_to_string' '--allow=clippy::indexing_slicing' '--deny=clippy::index_refutable_slice' '--deny=clippy::inconsistent_struct_constructor' '--deny=clippy::implicit_hasher' '--deny=clippy::implicit_clone' '--deny=clippy::ignored_unit_patterns' '--deny=clippy::ignore_without_reason' '--deny=clippy::if_not_else' '--warn=clippy::if_let_mutex' '--allow=clippy::if-not-else' '--warn=clippy::get_unwrap' '--deny=clippy::from_iter_instead_of_collect' '--deny=clippy::format_push_string' '--deny=clippy::format_collect' '--deny=clippy::fn_params_excessive_bools' '--warn=clippy::float_cmp_const' '--deny=clippy::float_cmp' '--deny=clippy::flat_map_option' '--deny=clippy::filter_map_next' '--deny=clippy::explicit_iter_loop' '--deny=clippy::explicit_into_iter_loop' '--deny=clippy::explicit_deref_methods' '--deny=clippy::expl_impl_clone_on_copy' '--deny=clippy::enum_glob_use' '--deny=clippy::empty_enums' '--deny=clippy::elidable_lifetime_names' '--deny=clippy::doc_markdown' '--deny=clippy::doc_link_with_quotes' '--deny=clippy::doc_comment_double_space_linebreaks' '--deny=clippy::doc_broken_link' '--allow=clippy::default_trait_access' '--warn=clippy::debug_assert_with_mut_call' '--warn=clippy::dbg_macro' '--deny=clippy::copy_iterator' '--deny=clippy::comparison_chain' '--deny=clippy::collapsible_else_if' '--deny=clippy::cloned_instead_of_copied' '--deny=clippy::checked_conversions' '--deny=clippy::cast_sign_loss' '--deny=clippy::cast_ptr_alignment' '--deny=clippy::cast_precision_loss' '--deny=clippy::cast_possible_wrap' '--deny=clippy::cast_possible_truncation' '--deny=clippy::cast_lossless' '--deny=clippy::case_sensitive_file_extension_comparisons' '--deny=clippy::borrow_as_ptr' '--deny=clippy::bool_to_int_with_if' '--warn=clippy::await_holding_refcell_ref' '--warn=clippy::await_holding_lock' '--deny=clippy::assigning_clones' '--warn=clippy::assertions_on_result_states' '--warn=clippy::allow_attributes_without_reason' '--warn=clippy::allow_attributes' --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=d0a38febd82424b6 -C extra-filename=-c3f4d0fd544322c8 --out-dir /home/finkernagel/.cache/cargo/target/debug/deps -C incremental=/home/finkernagel/.cache/cargo/target/debug/incremental -L dependency=/home/finkernagel/.cache/cargo/target/debug/deps --extern allocation_counter=/home/finkernagel/.cache/cargo/target/debug/deps/liballocation_counter-9255c82421973229.rmeta --extern anyhow=/home/finkernagel/.cache/cargo/target/debug/deps/libanyhow-7cbecf7e190d788c.rmeta --extern bstr=/home/finkernagel/.cache/cargo/target/debug/deps/libbstr-30d8f04297548a2e.rmeta --extern clap=/home/finkernagel/.cache/cargo/target/debug/deps/libclap-d4ee38395d81252f.rmeta --extern clap_complete=/home/finkernagel/.cache/cargo/target/debug/deps/libclap_complete-6fa90e1b860c0c31.rmeta --extern crossbeam=/home/finkernagel/.cache/cargo/target/debug/deps/libcrossbeam-d18adde1ad098ab5.rmeta --extern ctrlc=/home/finkernagel/.cache/cargo/target/debug/deps/libctrlc-d38ffdd9f6795bc8.rmeta --extern ex=/home/finkernagel/.cache/cargo/target/debug/deps/libex-05f05d61fc28f6fb.rmeta --extern fastqrab_config=/home/finkernagel/.cache/cargo/target/debug/deps/libfastqrab_config-79edc25389d2f41e.rmeta --extern fastqrab_io=/home/finkernagel/.cache/cargo/target/debug/deps/libfastqrab_io-12820f4cf95fb2f0.rmeta --extern fastqrab_steps=/home/finkernagel/.cache/cargo/target/debug/deps/libfastqrab_steps-c972c90ed7a1fedb.rmeta --extern flate2=/home/finkernagel/.cache/cargo/target/debug/deps/libflate2-ac98f5f5ee61dab7.rmeta --extern human_panic=/home/finkernagel/.cache/cargo/target/debug/deps/libhuman_panic-02f922b2e3070f47.rmeta --extern indexmap=/home/finkernagel/.cache/cargo/target/debug/deps/libindexmap-4718af9b8f8e64d6.rmeta --extern itertools=/home/finkernagel/.cache/cargo/target/debug/deps/libitertools-15ec70b62cc67910.rmeta --extern json_value_merge=/home/finkernagel/.cache/cargo/target/debug/deps/libjson_value_merge-6db06df2a6236584.rmeta --extern mimalloc=/home/finkernagel/.cache/cargo/target/debug/deps/libmimalloc-6df2c562a84e6bbc.rmeta --extern mutants=/home/finkernagel/.cache/cargo/target/debug/deps/libmutants-eaa52f311181ffb2.so --extern niffler=/home/finkernagel/.cache/cargo/target/debug/deps/libniffler-c3ebaa01ecfb029b.rmeta --extern noodles=/home/finkernagel/.cache/cargo/target/debug/deps/libnoodles-2d498668161a63e4.rmeta --extern noodles_core=/home/finkernagel/.cache/cargo/target/debug/deps/libnoodles_core-c6a0bfcd8e42f865.rmeta --extern regex=/home/finkernagel/.cache/cargo/target/debug/deps/libregex-8162f3de6dd54e1e.rmeta --extern schemars=/home/finkernagel/.cache/cargo/target/debug/deps/libschemars-a36c6d935d38ec91.rmeta --extern serde_json=/home/finkernagel/.cache/cargo/target/debug/deps/libserde_json-ad9672067848fa3d.rmeta --extern stringpod=/home/finkernagel/.cache/cargo/target/debug/deps/libstringpod-e402f177d1aedff7.rmeta --extern tempfile=/home/finkernagel/.cache/cargo/target/debug/deps/libtempfile-de121209549f0bff.rmeta --extern toml=/home/finkernagel/.cache/cargo/target/debug/deps/libtoml-492cb03eb3e220bb.rmeta --extern toml_pretty_deser=/home/finkernagel/.cache/cargo/target/debug/deps/libtoml_pretty_deser-1b54e7370ede5750.rmeta --extern toml_edit=/home/finkernagel/.cache/cargo/target/debug/deps/libtoml_edit-98d6105d61c126ff.rmeta --extern wait_timeout=/home/finkernagel/.cache/cargo/target/debug/deps/libwait_timeout-d8d3abb4f7faca34.rmeta -C link-arg=-fuse-ld=mold -L native=/home/finkernagel/.cache/cargo/target/debug/build/libz-sys-e518268c737d9676/out/lib -L native=/home/finkernagel/.cache/cargo/target/debug/build/libz-sys-e518268c737d9676/out/lib -L native=/home/finkernagel/.cache/cargo/target/debug/build/bzip2-sys-5cfd288f1af3d0e9/out/lib -L native=/home/finkernagel/.cache/cargo/target/debug/build/liblzma-sys-9f10a8ab182ebc2f/out -L native=/home/finkernagel/.cache/cargo/target/debug/build/zstd-sys-bf412bb53b319429/out -L native=/home/finkernagel/.cache/cargo/target/debug/build/libmimalloc-sys-07ab1bffd359a2b3/out` (exit status: 1)

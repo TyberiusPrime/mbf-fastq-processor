@@ -1,4 +1,4 @@
-use bstr::{BStr, BString};
+use bstr::{BStr, BString, ByteSlice};
 use fastqrab_dna::dna::Hit;
 use smallvec::{SmallVec, smallvec};
 use std::{borrow::Borrow, num::NonZero, ops::Range};
@@ -140,6 +140,33 @@ impl FastQRead<'_> {
             plus: self.plus.to_owned(),
         }
     }
+
+    pub fn append_as_fastq(&self, out: &mut Vec<u8>) {
+        let name = self.name;
+        let seq = self.seq;
+        let qual = self.qual;
+        out.push(b'@');
+
+        out.extend(name.as_bytes());
+
+        out.push(b'\n');
+        out.extend(seq.as_bytes());
+
+        out.extend(b"\n+\n");
+        out.extend(qual.as_bytes());
+        out.push(b'\n');
+    }
+
+    pub fn append_as_fasta(&self, out: &mut Vec<u8>) {
+        let name = self.name;
+        let seq = self.seq;
+        out.push(b'>');
+        out.extend(name.as_bytes());
+        out.push(b'\n');
+        out.extend(seq.as_bytes());
+        out.push(b'\n');
+    }
+
 }
 
 impl CrossPods for FastQChunk {
@@ -221,6 +248,38 @@ impl FastQChunk {
     pub fn make_exclusive(&mut self) {
         CrossPods::make_exclusive(self);
     }
+
+    /// Iterate `(read_index_within_block, read)` pairs, optionally restricted to the reads
+    /// carrying a given demultiplex tag.
+    ///
+    /// - `target_tag == None` and `output_tags == None`: yield every read.
+    /// - `target_tag == Some(t)` and `output_tags == Some(tags)`: yield only the
+    ///   reads whose entry in `tags` equals `t`. The yielded index is the read's
+    ///   position within the full block, not within the filtered subset.
+    ///
+    /// # Panics
+    /// If exactly one of `target_tag` / `output_tags` is set — supplying a tag to
+    /// filter to without the per-read tags (or vice versa) is a contract
+    /// violation.
+    pub fn iter_filtered_to_tag<'a>(
+        &'a self,
+        target_tag: Option<crate::io::reads::DemultiplexTag>,
+        output_tags: Option<&'a Vec<crate::io::reads::DemultiplexTag>>,
+    ) -> Box<dyn Iterator<Item = (usize, FastQRead<'a>)> + 'a> {
+        match (target_tag, output_tags) {
+            (Some(filter_to), Some(per_read_tags)) => Box::new(
+                self.iter()
+                    .zip(per_read_tags)
+                    .enumerate()
+                    .filter(move |(_read_idx, (_read, dt))| **dt == filter_to)
+                    .map(|(read_idx, (read, _dt))| (read_idx, read)),
+            ),
+            (None, None) => Box::new(self.iter().enumerate()),
+            _ => panic!(
+                "iter_filtered_to_tag: target_tag and output_tags must both be set or both be None; got {target_tag:?}, {output_tags:?}"
+            ),
+        }
+    }
 }
 
 /// A molecule: read `i` drawn from every segment of a block, in segment order.
@@ -241,7 +300,6 @@ pub struct OwnedMolecule {
 }
 
 impl OwnedMolecule {
-
     /// Number of segments contributing a read to this molecule.
     #[must_use]
     pub fn len(&self) -> usize {
@@ -273,6 +331,13 @@ impl From<Molecule<'_>> for OwnedMolecule {
 
 impl From<FastQRead<'_>> for OwnedMolecule {
     fn from(read: FastQRead<'_>) -> Self {
+        OwnedMolecule {
+            reads: smallvec![read.to_owned()],
+        }
+    }
+}
+impl From<&FastQRead<'_>> for OwnedMolecule {
+    fn from(read: &FastQRead<'_>) -> Self {
         OwnedMolecule {
             reads: smallvec![read.to_owned()],
         }
@@ -324,15 +389,14 @@ pub fn molecules_mut(segments: &mut [FastQChunk]) -> MoleculesMut<'_> {
 pub struct Molecules<'a> {
     members: SmallVec<[RowCompanions<'a, FastQChunk>; 4]>,
 }
-            
-        
 
 pub fn hit_to_qualities(molecule: Molecule, hits: &SmallVec<[Hit; 1]>) -> BString {
     let mut qual = BString::new(Vec::new());
     for hit in hits.iter() {
         qual.extend_from_slice(
-            &molecule[hit.segment_index.as_index()].seq[(hit.loc_start as usize)..(hit.loc_start + 
-        hit.loc_len as u32) as usize]);
+            &molecule[hit.segment_index.as_index()].seq
+                [(hit.loc_start as usize)..(hit.loc_start + hit.loc_len as u32) as usize],
+        );
     }
     qual
 }
@@ -395,3 +459,13 @@ impl<'a> Iterator for MoleculesMut<'a> {
 }
 
 impl ExactSizeIterator for MoleculesMut<'_> {}
+
+/// Splits a read 'name' into the actual name/id and the comment
+pub fn split_name_and_comment(name: &BStr, read_comment_insert_char: u8) -> (&BStr, &BStr) {
+    use bstr::ByteSlice;
+    //let pos_of_first_space = name.iter().position(|&x| x == read_comment_insert_char);
+    match name.find_byte(read_comment_insert_char) {
+        Some(pos) => (name[..pos].as_ref(), name[pos + 1..].as_ref()),
+        None => (name, BStr::new("")),
+    }
+}

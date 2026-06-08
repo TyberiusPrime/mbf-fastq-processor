@@ -38,6 +38,7 @@ use std::io::{self, BufWriter, Write};
 use std::num::{NonZero, NonZeroUsize};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use bstr::ByteSlice;
 
 use super::simulated_failure::{FailForTestWriter, SimulatedWriteFailure};
 use crate::ensure_output_destination_available;
@@ -431,7 +432,7 @@ impl BamRecordSink {
 
     pub fn write_record(
         &mut self,
-        read: &crate::io::reads::WrappedFastQRead<'_>,
+        read: &crate::blocks::FastQRead,
         read_index: usize,
         segment_index: usize,
         segment_count: usize,
@@ -477,7 +478,7 @@ fn write_one_bam_record<W>(
     writer: &mut noodles::bam::io::Writer<W>,
     header: &noodles::sam::Header,
     options: &BamSinkOptions,
-    read: &crate::io::reads::WrappedFastQRead<'_>,
+    read: &crate::blocks::FastQRead,
     read_index: usize,
     segment_index: usize,
     segment_count: usize,
@@ -486,7 +487,6 @@ fn write_one_bam_record<W>(
 where
     W: Write,
 {
-    use crate::io::reads::WrappedFastQReadCommon;
     use anyhow::bail;
     use bstr::{BStr, BString};
     use fastqrab_dna::dna::TagColumn;
@@ -512,21 +512,21 @@ where
     }
 
     let adjusted_quality_scores = read
-        .qual()
+        .qual
         .iter()
         .map(|&q| q.saturating_sub(33))
         .collect::<Vec<u8>>();
     let (name, comment) = if let Some(space_pos) = read
-        .name()
+        .name
         .iter()
         .position(|&c| c == options.comment_separation_char)
     {
         (
-            &read.name()[..space_pos],
-            Some(&read.name()[space_pos + 1..]),
+            &read.name[..space_pos],
+            Some(&read.name[space_pos + 1..]),
         )
     } else {
-        (read.name(), None)
+        (read.name, None)
     };
 
     let mut data_fields: Vec<(Tag, Value)> = Vec::new();
@@ -585,7 +585,7 @@ where
                         the value '{ref_name}' for tag '{ref_tag_name}' was not a valid reference sequence.\n\
                        Check that your output.bam.tag_to_reference.from_bam|from_barcodes derived values match\n\
                        with the actual tag values. Read name involved: '{}'",
-                    BStr::new(read.name()),
+                    BStr::new(read.name),
                 );
             }
         }
@@ -594,7 +594,7 @@ where
     let mut record_builder = RecordBuf::builder()
         .set_name(name)
         .set_flags(flags)
-        .set_sequence(SamSequence::from(read.seq().to_vec()))
+        .set_sequence(SamSequence::from(read.seq.as_bytes()))
         .set_quality_scores(SamQualityScores::from(adjusted_quality_scores))
         .set_data(data);
 
@@ -986,7 +986,7 @@ impl ChunkedRecordWriter {
 
     pub fn write_bam_record(
         &mut self,
-        read: &crate::io::reads::WrappedFastQRead<'_>,
+        read: &crate::blocks::FastQRead,
         read_index: usize,
         segment_index: usize,
         segment_count: usize,

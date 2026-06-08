@@ -74,7 +74,7 @@ impl Step for ConvertQuality {
             func: impl Fn(u8) -> i16,
         ) {
             block.apply_mut_qualities(|qualities| {
-                for quality in qualities {
+                for quality in qualities.iter_mut() {
                     for qual in quality.iter_mut() {
                         let v = func(*qual);
                         *qual = if v <= i16::from(lower) {

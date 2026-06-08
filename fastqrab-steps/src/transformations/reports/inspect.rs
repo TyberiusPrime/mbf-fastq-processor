@@ -256,7 +256,7 @@ impl Step for Inspect {
                     collector.push((molecule.into(), tag));
                 }
                 SegmentIndexOrAll::Indexed(idx) => {
-                    let single_segment_molecule: OwnedMolecule = molecule[idx.as_index()].into();
+                    let single_segment_molecule: OwnedMolecule = (&molecule[idx.as_index()]).into();
                     collector.push((single_segment_molecule, tag));
                 }
             }
@@ -284,11 +284,11 @@ impl Step for Inspect {
             match self.format {
                 FileFormat::None | FileFormat::Fastq | FileFormat::Text => {
                     for read_idx in 0..reads_to_write {
-                        for segment_reads in collector.iter() {
-                            if let Some((name, seq, qual, tag)) = segment_reads.get(read_idx) {
+                        for (molecule, tag) in collector.iter() {
+                            for read in molecule.reads.iter() {
                                 buf.clear();
                                 buf.push(b'@');
-                                buf.extend_from_slice(name);
+                                buf.extend_from_slice(&read.name);
                                 if let Some(demux_names) = &self.demultiplex_names
                                     && let Some(demux_name) = demux_names.get(tag)
                                 {
@@ -296,22 +296,22 @@ impl Step for Inspect {
                                     buf.extend_from_slice(demux_name.as_bytes());
                                 }
                                 buf.push(b'\n');
-                                buf.extend_from_slice(seq);
+                                buf.extend_from_slice(&read.seq);
                                 buf.extend_from_slice(b"\n+\n");
-                                buf.extend_from_slice(qual);
+                                buf.extend_from_slice(&read.name);
                                 buf.push(b'\n');
                                 writer.write_text_record(&buf)?;
-                            } // cov:excl-line
+                            }
                         }
                     }
                 }
                 FileFormat::Fasta => {
                     for read_idx in 0..reads_to_write {
-                        for segment_reads in collector.iter() {
-                            if let Some((name, seq, _qual, tag)) = segment_reads.get(read_idx) {
+                        for (molecule,tag) in collector.iter() {
+                            for read in molecule.reads.iter() {
                                 buf.clear();
                                 buf.push(b'>');
-                                buf.extend_from_slice(name);
+                                buf.extend_from_slice(&read.name);
                                 if let Some(demux_names) = &self.demultiplex_names
                                     && let Some(demux_name) = demux_names.get(tag)
                                 {
@@ -319,7 +319,7 @@ impl Step for Inspect {
                                     buf.extend_from_slice(demux_name.as_bytes());
                                 }
                                 buf.push(b'\n');
-                                buf.extend_from_slice(seq);
+                                buf.extend_from_slice(&read.seq);
                                 buf.push(b'\n');
                                 writer.write_text_record(&buf)?;
                             } // cov:excl-line

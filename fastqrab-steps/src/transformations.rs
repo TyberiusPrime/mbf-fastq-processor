@@ -440,8 +440,9 @@ fn extract_from_resolved_source(
 ) -> Option<(BString, Option<Coords>)> {
     let res: (Option<BString>, Option<Coords>) = match resolved_source {
         ResolvedSourceNoAll::Segment(segment_index) => {
-            let read = block.segments[segment_index.as_index()].get(read_no);
-            let read_seq = read.seq();
+            let read_seq = block.segments[segment_index.as_index()]
+                .seq_quals
+                .seq(read_no);
             if let Some((seq, start, length)) =
                 extract_from_sequence(read_seq, 0, read_seq.len(), start, length, anchor)
             {
@@ -472,8 +473,7 @@ fn extract_from_resolved_source(
                             let loc_opt = locations.hit_location(hit);
                             if let Some(loc) = loc_opt {
                                 let segment_block = &block.segments[loc.segment_index.as_index()];
-                                let seq =
-                                    segment_block.entries[read_no].seq.get(&segment_block.block);
+                                let seq = segment_block.seq_quals.seq(read_no);
                                 if let Some((seq, start, length)) = extract_from_sequence(
                                     seq,
                                     loc.start,
@@ -535,8 +535,7 @@ fn extract_from_resolved_source(
             split_character: _,
         } => {
             // Extract from read name
-            let read = block.segments[segment_index.as_index()].get(read_no);
-            let name = read.name();
+            let name = block.segments[segment_index.as_index()].names.get(read_no);
             (
                 extract_from_sequence(name, 0, name.len(), start, length, anchor).map(|x| x.0),
                 None,

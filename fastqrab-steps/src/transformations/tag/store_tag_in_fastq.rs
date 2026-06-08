@@ -249,7 +249,7 @@ impl Step for StoreTagInFastQ {
                             .expect("lock poisoned");
                         if let Some(Some(writer)) = output_handles.get_mut(&output_idx) {
                             //if we have demultiplex & no-unmatched-output, this happens
-                            let mut name = wrapped.name().to_vec();
+                            let mut name = wrapped.name.to_vec();
                             if let Some(comment_tags) = self.comment_tags.as_ref() {
                                 for tag in comment_tags {
                                     let tag_col =

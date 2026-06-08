@@ -15,7 +15,7 @@ use crate::{
 };
 use bstr::BString;
 use fastqrab_config::{TagLabel, dna::TagColumn};
-use fastqrab_io::io;
+use fastqrab_io::{blocks::FastQChunk, io};
 
 pub struct WorkItem {
     pub block: io::FastQBlocksCombined,
@@ -549,22 +549,19 @@ fn process_work_item(
                 let read_lengths = {
                     match segment_index {
                         fastqrab_steps::config::SegmentIndexOrAll::All => {
-                            let mut read_lengths =
-                                vec![0; work_item.block.segments[0].entries.len()];
+                            let mut read_lengths = vec![0; work_item.block.segments[0].len()];
                             for segment in &work_item.block.segments {
-                                for (ii, read) in segment.entries.iter().enumerate() {
-                                    let read_len = read.seq.len();
+                                for (ii, read_len) in segment.seq_quals.iter_seq_lens().enumerate() {
                                     read_lengths[ii] += read_len;
                                 }
                             }
                             read_lengths
                         }
                         fastqrab_steps::config::SegmentIndexOrAll::Indexed(index) => {
-                            let mut read_lengths = Vec::new();
-                            for entry in &work_item.block.segments[index.as_index()].entries {
-                                read_lengths.push(entry.seq.len());
-                            }
-                            read_lengths
+                            work_item.block.segments[index.as_index()]
+                                .seq_quals
+                                .iter_seq_lens()
+                                .collect()
                         }
                     }
                 };
@@ -646,9 +643,9 @@ fn process_work_item(
                     .insert(tag.clone(), TagColumn::String(tag_locations));
             }
             TagLabel::ReadNo => {
-                let start = work_item.block.segments[0].first_read_sequential_number;
-                let end = work_item.block.segments[0].first_read_sequential_number
-                    + work_item.block.segments[0].entries.len();
+                let start = work_item.block.first_read_sequential_number;
+                let end = work_item.block.first_read_sequential_number
+                    + work_item.block.segments.len();
                 #[expect(
                     clippy::cast_precision_loss,
                     reason = "Unlikely to exceed f64 precise regions"
@@ -666,6 +663,8 @@ fn process_work_item(
         .tags
         .extract_if(.., |k, _v| !stage.allowed_tags.contains(k))
         .collect();
+
+    let first_read_sequential_number = work_item.block.first_read_sequential_number;
 
     let result = {
         let mut input_info = input_info.clone();
@@ -752,11 +751,12 @@ fn process_work_item(
         Err(e) => WorkResult {
             work_item: WorkItem {
                 block: io::FastQBlocksCombined::new(
-                    vec![io::FastQBlock::empty()],
+                    vec![FastQChunk::new_empty()],
                     None,
                     Default::default(),
                     false,
                     block_no,
+                    first_read_sequential_number
                 ),
                 expected_read_count,
                 stage_index,

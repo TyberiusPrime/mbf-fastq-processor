@@ -408,7 +408,7 @@ impl Into<FastQChunk> for FastQBlock {
             seq_quals.push(seq, qual);
         }
         FastQChunk {
-            names: names.finish(),
+            names: names.finish().into(),
             seq_quals: seq_quals.finish(),
             pluses,
         }
@@ -934,32 +934,7 @@ pub trait WrappedFastQReadCommon {
         self.seq().is_empty()
     }
 
-    fn append_as_fastq(&self, out: &mut Vec<u8>) {
-        let name = self.name();
-        let seq = self.seq();
-        let qual = self.qual();
-        out.push(b'@');
-
-        out.extend(name);
-
-        out.push(b'\n');
-        out.extend(seq);
-
-        out.extend(b"\n+\n");
-        out.extend(qual);
-        out.push(b'\n');
-    }
-
-    fn as_fasta(&self, out: &mut Vec<u8>) {
-        let name = self.name();
-        let seq = self.seq();
-        out.push(b'>');
-        out.extend(name);
-        out.push(b'\n');
-        out.extend(seq);
-        out.push(b'\n');
-    }
-
+    
     #[must_use]
     fn find_iupac(
         &self,
@@ -1321,7 +1296,7 @@ pub struct FastQBlocksCombined {
     /// [`drain`](Self::drain) / [`apply_bool_filter`](Self::apply_bool_filter)).
     /// Mutate a single segment's reads via [`member_mut`](Self::member_mut),
     /// which re-checks the invariant on drop.
-    pub segments: Vec<FastQChunk>,
+    pub segments: Vec<FastQChunk>, //todo: Make private, rename molecules?
     pub output_tags: Option<Vec<DemultiplexTag>>, // used by Demultiplex
     pub tags: IndexMap<TagLabel, TagColumn>,
     pub is_final: bool,
@@ -1526,7 +1501,7 @@ impl FastQBlocksCombined {
     ///in place mutati
     pub fn apply_mut_qualities<F>(&mut self, f: F)
     where
-        F: for<'a> Fn(&SmallVec<[&'a mut BStr; 4]>),
+        F: for<'a> Fn(&mut SmallVec<[&'a mut BStr; 4]>),
     {
         for molecule in blocks::molecules_mut(&mut self.segments) {
             let mut reads: SmallVec<[&mut BStr; 4]> =
@@ -1553,7 +1528,7 @@ impl FastQBlocksCombined {
     /// when the tag is missing or not a Location column
     pub fn apply_mut_with_location_tag<F>(&mut self, label: &TagLabel, mut f: F)
     where
-        F: for<'a> FnMut(&mut SmallVec<[&'a BStr; 4]>, Option<&Hits>, &LocationColumn),
+        F: for<'a> FnMut(&mut blocks::MoleculeMut, Option<&Hits>, &LocationColumn),
     {
         let TagColumn::Location(col) = self.tags.get(label).expect("Tag must be present, bug")
         else {
@@ -1562,12 +1537,10 @@ impl FastQBlocksCombined {
         // `col` borrows `self.tags`; `molecules()` borrows `self.segments` — two
         // disjoint, immutable field borrows. The closure only sees `&BStr`, so
         // read-only molecule iteration is enough (no copy-on-write needed).
-        for (ii, molecule) in blocks::molecules(&self.segments).enumerate() {
-            let mut reads: SmallVec<[&BStr; 4]> =
-                molecule.into_iter().map(|read| read.seq).collect();
+        for (ii, mut molecule) in blocks::molecules_mut(&mut self.segments).enumerate() {
             let hits = col.get(ii);
             let opt_hits = if hits.is_empty() { None } else { Some(hits) };
-            f(&mut reads, opt_hits, col);
+            f(&mut molecule, opt_hits, col);
         }
     }
 

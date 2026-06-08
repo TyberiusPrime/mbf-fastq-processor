@@ -20,12 +20,15 @@ use crate::{
     output::{open_output_files, output_block, output_html_report, output_json_report},
     transformations::{self, FinalizeReportResult, Step, Transformation},
 };
-use fastqrab_io::{blocks::FastQChunk, io::{
-    self,
-    input::InputOptions,
-    output::chunked_writer::{ChunkPaths, ChunkedRecordWriter, WriteTarget, WriteTargetConfig},
-    parsers::{ChainedParser, ThreadCount},
-}};
+use fastqrab_io::{
+    blocks::FastQChunk,
+    io::{
+        self,
+        input::InputOptions,
+        output::chunked_writer::{ChunkPaths, ChunkedRecordWriter, WriteTarget, WriteTargetConfig},
+        parsers::{ChainedParser, ThreadCount},
+    },
+};
 use fastqrab_steps::{demultiplex::StepOutputFiles, join_nonempty};
 
 fn build_step_output_files(
@@ -148,6 +151,7 @@ fn parse_interleaved_and_send(
     );
     let mut block_no = 1; //block numbers are 1 based. Why though? 
     let mut expected_read_count = None;
+    let mut first_read_in_block_no = 0;
     loop {
         let res = parser.parse()?;
         if let None = expected_read_count
@@ -157,6 +161,7 @@ fn parse_interleaved_and_send(
         }
         if !res.fastq_block.is_empty() {
             let out_blocks = res.fastq_block.split_interleaved(segment_count);
+            first_read_in_block_no += out_blocks[0].len();
             let out = (
                 io::FastQBlocksCombined::new(
                     out_blocks,
@@ -164,6 +169,7 @@ fn parse_interleaved_and_send(
                     IndexMap::default(),
                     false,
                     block_no,
+                    first_read_in_block_no,
                 ),
                 expected_read_count,
             );
@@ -176,11 +182,12 @@ fn parse_interleaved_and_send(
         if res.was_final {
             // Send final empty block
             let final_block = io::FastQBlocksCombined::new(
-                vec![io::FastQBlock::empty()],
+                vec![FastQChunk::new_empty()],
                 None,
                 IndexMap::default(),
                 true,
                 block_no,
+                first_read_in_block_no,
             );
             let _ = combiner_output_tx.send((final_block, expected_read_count));
             break;
@@ -191,7 +198,7 @@ fn parse_interleaved_and_send(
 
 //#[allow(clippy::needless_pass_by_value)]
 fn run_combiner_thread(
-    raw_rx_readers: &Vec<crossbeam::channel::Receiver<(io::FastQBlock, Option<usize>)>>,
+    raw_rx_readers: &Vec<crossbeam::channel::Receiver<(FastQChunk, Option<usize>)>>,
     combiner_output_tx: &crossbeam::channel::Sender<(io::FastQBlocksCombined, Option<usize>)>,
     largest_segment_idx: usize,
     error_collector: &Arc<Mutex<Vec<String>>>,
@@ -200,6 +207,7 @@ fn run_combiner_thread(
     //and then, match them up into something that's the same length!
     let mut block_no = 1; // for the sorting later on.
     let expected_read_count = OnceCell::new();
+    let mut first_read_in_block_no = 0;
     loop {
         let mut blocks = Vec::new();
         for receiver in raw_rx_readers {
@@ -226,9 +234,9 @@ fn run_combiner_thread(
                     }
                 }
                 // Send final empty block
-                let empty_segments: Vec<io::FastQBlock> = raw_rx_readers
+                let empty_segments: Vec<FastQChunk> = raw_rx_readers
                     .iter()
-                    .map(|_| io::FastQBlock::empty())
+                    .map(|_| FastQChunk::new_empty())
                     .collect();
                 let final_block = io::FastQBlocksCombined::new(
                     empty_segments,
@@ -236,6 +244,7 @@ fn run_combiner_thread(
                     Default::default(),
                     true,
                     block_no,
+                    first_read_in_block_no,
                 );
                 let _ = combiner_output_tx.send((
                     final_block,
@@ -261,9 +270,11 @@ fn run_combiner_thread(
             return;
         }
         let out = (
-            io::FastQBlocksCombined::new(blocks, None, Default::default(), false, block_no),
+            io::FastQBlocksCombined::new(blocks, None, Default::default(), false, block_no,
+            first_read_in_block_no),
             *expected_read_count.get().expect("Should have been set"),
         );
+        first_read_in_block_no += out.0.len();
         block_no += 1;
         match combiner_output_tx.send(out) {
             Ok(()) => {}
@@ -286,7 +297,7 @@ fn run_benchmark_combiner_thread(
     let block_molecule_count = first_block
         .segments
         .iter()
-        .map(io::FastQBlock::len)
+        .map(FastQChunk::len)
         .min()
         .unwrap_or(0);
 
@@ -305,7 +316,7 @@ fn run_benchmark_combiner_thread(
         let current_block_size = cloned_block
             .segments
             .iter()
-            .map(io::FastQBlock::len)
+            .map(FastQChunk::len)
             .min()
             .unwrap_or(0);
         molecules_sent += current_block_size;
@@ -332,19 +343,20 @@ fn run_benchmark_combiner_thread(
         first_block
             .segments
             .iter()
-            .map(|_| io::FastQBlock::empty())
+            .map(|_| FastQChunk::new_empty())
             .collect(),
         None,
         Default::default(),
         true,
         block_no,
+        molecules_sent
     );
     let _ = combiner_output_tx.send((final_block, Some(molecule_count)));
 }
 
 //#[allow(clippy::needless_pass_by_value)]
 fn run_benchmark_interleaved_thread(
-    first_block: io::FastQBlock,
+    first_block: FastQChunk,
     combiner_output_tx: &crossbeam::channel::Sender<(io::FastQBlocksCombined, Option<usize>)>,
     segment_count: NonZero<usize>,
     molecule_count: usize,
@@ -362,14 +374,15 @@ fn run_benchmark_interleaved_thread(
 
     while molecules_sent < molecule_count {
         //we don't worry about having a few reads too many here.
-        molecules_sent += block_molecule_count;
         let out_blocks = out_blocks.clone();
 
         let out = (
-            io::FastQBlocksCombined::new(out_blocks, None, Default::default(), false, block_no),
+            io::FastQBlocksCombined::new(out_blocks, None, Default::default(), false, block_no,
+            molecules_sent),
             Some(molecule_count),
         );
 
+        molecules_sent += block_molecule_count;
         match combiner_output_tx.send(out) {
             Ok(()) => {}
             Err(_) => {
@@ -389,11 +402,12 @@ fn run_benchmark_interleaved_thread(
 
     // Send final empty block
     let final_block = io::FastQBlocksCombined::new(
-        vec![io::FastQBlock::empty()],
+        vec![FastQChunk::new_empty()],
         None,
         Default::default(),
         true,
         block_no,
+        molecules_sent,
     );
     let _ = combiner_output_tx.send((final_block, Some(molecule_count)));
 }
@@ -700,7 +714,7 @@ impl RunStage1 {
                         let first_block = parser
                             .parse()
                             .context("Failed to read first block for benchmark")?;
-                        if first_block.fastq_block.entries.is_empty() {
+                        if first_block.fastq_block.is_empty() {
                             // cov:excl-start
                             bail!(
                                 "Benchmark error: Input is empty - cannot benchmark with empty input"
@@ -742,7 +756,7 @@ impl RunStage1 {
                             let first_block = parser
                                 .parse()
                                 .context("Failed to read first block for benchmark")?;
-                            if first_block.fastq_block.entries.is_empty() {
+                            if first_block.fastq_block.is_empty() {
                                 // cov:excl-start
                                 bail!(
                                     "Benchmark error: Input segment is empty - cannot benchmark with empty input"
@@ -768,6 +782,7 @@ impl RunStage1 {
                             Default::default(),
                             false,
                             0,
+                            0
                         );
 
                         let combiner_thread = thread::Builder::new()

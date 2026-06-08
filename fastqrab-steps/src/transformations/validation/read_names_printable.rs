@@ -33,10 +33,10 @@ impl Step for ValidateReadNamesPrintable {
         _input_info: &InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let reads_in_block = block.segments[0].entries.len();
+        let reads_in_block = block.segments.len();
         for read_idx in 0..reads_in_block {
             let read = block.segments[0].get(read_idx);
-            let name = read.name();
+            let name = read.name;
 
             if name.len() > MAX_QNAME_LEN {
                 bail!(

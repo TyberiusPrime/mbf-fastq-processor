@@ -166,10 +166,12 @@ impl Step for StoreTagInComment {
 
         let tag_list = &self.in_labels;
 
-        'outer: for segment_idx in block.iter_segment_indices(self.segment) {
+        for segment_idx in block.iter_segment_indices(self.segment) {
+            let mut new_names = StringPodBuilder::new(); //TODO: profile if prealloc is sensible
+            let old_names = &block.segments[segment_idx].names;
             for read_idx in 0..block.len() {
-                let mut read = block.segments[segment_idx].get_mut(read_idx);
-                let mut new_name: Result<Vec<u8>> = Ok(read.name().to_vec());
+                let name = old_names.get(read_idx);
+                let mut new_name: Result<Vec<u8>> = Ok(name.to_vec());
                 for tag_label in tag_list {
                     let tag_col = block.tags.get(tag_label).expect("Tags were checked before");
                     let tag_value: Vec<u8> = match tag_col {
@@ -205,17 +207,14 @@ impl Step for StoreTagInComment {
                         self.comment_insert_char,
                     );
                     if let Err(err) = new_name {
-                        *error_encountered.borrow_mut() = Some(format!("{err}"));
-                        break 'outer;
+                        bail!(err)
                     }
                 }
                 if let Ok(new_name) = new_name {
-                    read.replace_name(&new_name);
+                    new_names.push(&new_name);
                 }
             }
-        }
-        if let Some(error_msg) = error_encountered.borrow().as_ref() {
-            return Err(anyhow::anyhow!("{error_msg}"));
+            block.segments[segment_idx].names = new_names.finish().into();
         }
 
         Ok((block, true))

@@ -62,20 +62,19 @@ impl Step for ValidateName {
         assert!(self.sample_stride > 0);
 
         let segment_count = block.segments.len();
-        let reads_in_block = block.segments[0].entries.len();
+        let reads_in_block = block.segments.len();
 
         let offset = self
             .processed_reads
             .fetch_add(reads_in_block as u64, Ordering::Relaxed);
 
-        for read_idx in 0..reads_in_block {
+        for (read_idx, read) in block.segments[0].iter().enumerate() {
             let global_index = offset + read_idx as u64;
             if !global_index.is_multiple_of(self.sample_stride) {
                 continue;
             }
 
-            let reference = block.segments[0].get(read_idx);
-            let reference_name = reference.name();
+            let reference_name = read.name;
 
             assert!(
                 !reference_name.is_empty(),
@@ -96,7 +95,7 @@ impl Step for ValidateName {
 
             for segment_idx in 1..segment_count {
                 let candidate = block.segments[segment_idx].get(read_idx);
-                let candidate_name = candidate.name();
+                let candidate_name = candidate.name;
 
                 let candidate_prefix =
                     read_name_canonical_prefix_strict(candidate_name, self.readname_end_char)

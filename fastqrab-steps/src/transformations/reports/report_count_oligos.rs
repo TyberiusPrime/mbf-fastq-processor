@@ -93,10 +93,15 @@ impl Step for Box<_ReportCountOligos> {
             counts.insert(valid_tag, vec![0; self.oligos.len()]);
         }
 
-        for read_iter in blocks {
-            let mut iter = read_iter.get_pseudo_iter_including_tag(&block.output_tags);
-            while let Some((read, demultiplex_tag)) = iter.pseudo_next() {
-                let seq = read.seq();
+        for segment in blocks {
+            let iter: Box<dyn Iterator<Item = (&BStr, DemultiplexTag)>> = match &block.output_tags {
+                Some(output_tags) => {
+                    Box::new(segment.seq_quals.iter_seq().zip(output_tags.iter().copied()))
+                }
+                None => Box::new(segment.seq_quals.iter_seq().zip(std::iter::repeat(0))),
+            };
+
+            for (seq ,demultiplex_tag) in iter {
 
                 // Optimized search using memchr for faster substring matching
                 for (ii, oligo) in self.oligos.values().enumerate() {

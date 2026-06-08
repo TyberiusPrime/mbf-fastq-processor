@@ -1,10 +1,12 @@
 use anyhow::{Context, Result, anyhow};
+use fastqrab_io::blocks::{FastQChunk, FastQRead};
 use noodles::bam;
 use std::collections::BTreeMap;
 use std::io::{BufWriter, Write};
 use std::num::{NonZero, NonZeroUsize};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
+use stringpod::CrossPods;
 
 use crate::config::CheckedConfig;
 use crate::demultiplex::OptDemultiplex;
@@ -641,39 +643,32 @@ fn output_block_demultiplex(
 
 fn output_block_inner(
     writer: &mut ChunkedRecordWriter,
-    block: &io::FastQBlock,
+    block: &FastQChunk,
     demultiplex_tag: Option<crate::demultiplex::Tag>,
     output_tags: Option<&Vec<crate::demultiplex::Tag>>,
     tags: &Tags,
 ) -> Result<()> {
     let format = writer.format();
-    let mut pseudo_iter = match demultiplex_tag {
-        Some(t) => block.get_pseudo_iter_filtered_to_tag(
-            t,
-            output_tags.expect("Demultiplex output tags missing"),
-        ),
-        None => block.get_pseudo_iter(),
-    };
+    let iter = block.iter_filtered_to_tag(demultiplex_tag, output_tags);
+
     let mut buf = Vec::<u8>::with_capacity(256);
     match format {
         FileFormat::Fastq => {
-            while let Some(read) = pseudo_iter.pseudo_next() {
-                use fastqrab_io::io::reads::WrappedFastQReadCommon;
+            for (_idx, read) in iter {
                 buf.clear();
                 read.append_as_fastq(&mut buf);
                 writer.write_text_record(&buf)?;
             }
         }
         FileFormat::Fasta => {
-            while let Some(read) = pseudo_iter.pseudo_next() {
-                use fastqrab_io::io::reads::WrappedFastQReadCommon;
+            for (_idx, read) in iter {
                 buf.clear();
-                read.as_fasta(&mut buf);
+                read.append_as_fasta(&mut buf);
                 writer.write_text_record(&buf)?;
             }
         }
         FileFormat::Bam => {
-            while let Some((read, read_index)) = pseudo_iter.pseudo_next_with_index() {
+            for (read_index, read) in iter {
                 writer.write_bam_record(&read, read_index, 0, 1, tags)?;
             }
         }
@@ -687,48 +682,40 @@ fn output_block_inner(
 
 fn output_block_interleaved(
     writer: &mut ChunkedRecordWriter,
-    blocks_to_interleave: &[&io::FastQBlock],
+    blocks_to_interleave: &[&FastQChunk],
     demultiplex_tag: Option<crate::demultiplex::Tag>,
     output_tags: Option<&Vec<crate::demultiplex::Tag>>,
     tags: &Tags,
 ) -> Result<()> {
     let format = writer.format();
-    let mut pseudo_iters: Vec<_> = blocks_to_interleave
+    let mut iters: Vec<_> = blocks_to_interleave
         .iter()
-        .map(|block| match demultiplex_tag {
-            Some(t) => block.get_pseudo_iter_filtered_to_tag(
-                t,
-                output_tags.expect("Demultiplex output tags missing"),
-            ),
-            None => block.get_pseudo_iter(),
-        })
+        .map(|block| block.iter_filtered_to_tag(demultiplex_tag, output_tags))
         .collect();
-    let segment_count = pseudo_iters.len();
+    let segment_count = iters.len();
     assert!(segment_count > 0, "Interleave output but no blocks?");
     let mut buf = Vec::<u8>::with_capacity(256);
     'outer: loop {
-        for (segment_index, iter) in pseudo_iters.iter_mut().enumerate() {
+        for (segment_index, iter) in iters.iter_mut().enumerate() {
             match format {
                 FileFormat::Fastq => {
-                    let Some(read) = iter.pseudo_next() else {
+                    let Some((read_idx, read)) = iter.next() else {
                         break 'outer;
                     };
-                    use fastqrab_io::io::reads::WrappedFastQReadCommon;
                     buf.clear();
                     read.append_as_fastq(&mut buf);
                     writer.write_text_record(&buf)?;
                 }
                 FileFormat::Fasta => {
-                    let Some(read) = iter.pseudo_next() else {
+                    let Some((read_index, read)) = iter.next() else {
                         break 'outer;
                     };
-                    use fastqrab_io::io::reads::WrappedFastQReadCommon;
                     buf.clear();
-                    read.as_fasta(&mut buf);
+                    read.append_as_fasta(&mut buf);
                     writer.write_text_record(&buf)?;
                 }
                 FileFormat::Bam => {
-                    let Some((read, read_index)) = iter.pseudo_next_with_index() else {
+                    let Some((read_index, read)) = iter.next() else {
                         break 'outer;
                     };
                     writer.write_bam_record(

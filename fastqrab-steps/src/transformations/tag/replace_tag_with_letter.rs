@@ -39,14 +39,13 @@ impl Step for ReplaceTagWithLetter {
         _input_info: &InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        block.apply_mut_with_location_tag(&self.in_label, |reads, hit, col| {
+        block.apply_mut_with_location_tag(&self.in_label, |molecule, hit, col| {
             if let Some(hit) = hit {
                 for &region in hit.iter() {
                     if let Some(location) = col.hit_location(region) {
-                        let read = &mut reads[location.segment_index.as_index()];
+                        let seq = &mut molecule[location.segment_index.as_index()].seq;
 
                         // Replace the sequence bases in the specified region with the replacement letter
-                        let seq = read.seq_mut();
                         //robust against out-of-bounds, just in case
                         for i in location.start..(location.start + location.len).min(seq.len()) {
                             seq[i] = self.letter;

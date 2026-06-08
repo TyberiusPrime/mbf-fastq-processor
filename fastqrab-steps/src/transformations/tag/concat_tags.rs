@@ -165,7 +165,7 @@ impl Step for ConcatTags {
         _input_info: &InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let num_reads = block.segments[0].entries.len();
+        let num_reads = block.segments[0].len();
 
         // Collect tag columns for all input labels
         let tag_columns: Vec<&TagColumn> = self

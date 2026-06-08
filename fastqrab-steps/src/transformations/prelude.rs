@@ -57,5 +57,5 @@ pub use typed_floats::tf64::NonNaN;
 
 pub type FxIndexMap<K, V> = IndexMap<K, V, rustc_hash::FxBuildHasher>;
 
-pub use fastqrab_io::blocks::{Molecule, MoleculeMut, OwnedMolecule};
+pub use fastqrab_io::blocks::{Molecule, MoleculeMut, OwnedMolecule, split_name_and_comment};
 pub use stringpod::{CrossPods, DualStringPodBuilder, StringPodBuilder};

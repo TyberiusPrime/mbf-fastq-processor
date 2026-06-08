@@ -66,8 +66,11 @@ impl Step for Box<_ReportBaseStatisticsPart1> {
         _input_info: &InputInfo,
         demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        fn update_from_read(target: &mut BaseStatisticsPart1, read: &WrappedFastQRead) {
-            let read_len = read.len();
+        fn update_from_read(
+            target: &mut BaseStatisticsPart1,
+            qual: &BStr,
+        ) {
+            let read_len = qual.len();
             target.total_bases += read_len;
             if target.expected_errors_from_quality_curve.len() <= read_len {
                 target
@@ -79,7 +82,7 @@ impl Step for Box<_ReportBaseStatisticsPart1> {
             let mut q20_count = 0usize;
             let mut q30_count = 0usize;
 
-            for (ii, base) in read.qual().iter().enumerate() {
+            for (ii, base) in qual.iter().enumerate() {
                 // Use lookup table to eliminate branches
                 let (q20, q30) = Q20_Q30_LOOKUP[*base as usize];
                 q20_count += q20 as usize;
@@ -104,13 +107,16 @@ impl Step for Box<_ReportBaseStatisticsPart1> {
             for (ii, read_block) in block.segments.iter().enumerate() {
                 let storage = &mut output.segments[ii].1;
 
-                let mut iter = match &block.output_tags {
-                    Some(output_tags) => {
-                        read_block.get_pseudo_iter_filtered_to_tag(tag, output_tags)
-                    }
-                    None => read_block.get_pseudo_iter(),
-                };
-                while let Some(read) = iter.pseudo_next() {
+                let iter: Box<dyn Iterator<Item = &BStr>> =
+                    match &block.output_tags {
+                        Some(output_tags) => {
+                            Box::new(read_block.seq_quals.iter_qual().zip(output_tags.iter()).filter_map(
+                                |(read, read_tag)| if *read_tag == tag { Some(read) } else { None },
+                            ))
+                        }
+                        None => Box::new(read_block.seq_quals.iter_qual()),
+                    };
+                for read in iter {
                     update_from_read(storage, &read);
                 }
             }

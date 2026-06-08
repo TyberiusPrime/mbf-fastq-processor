@@ -69,26 +69,23 @@ impl Step for ValidateAllReadsSameLength {
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<(FastQBlocksCombined, bool)> {
         match &self.source {
-            ResolvedSourceAll::Segment(segment_index_or_all) => {
-                let mut pseudo_iter = block.get_pseudo_iter();
-                match segment_index_or_all {
-                    SegmentIndexOrAll::All => {
-                        while let Some(read) = pseudo_iter.pseudo_next() {
-                            let mut length_here = 0;
-                            for segment in &read.segments {
-                                length_here += segment.seq().len();
-                            }
-                            self.check(length_here)?;
+            ResolvedSourceAll::Segment(segment_index_or_all) => match segment_index_or_all {
+                SegmentIndexOrAll::All => {
+                    for molecule in block.segments.iter() {
+                        let mut length_here = 0;
+                        for read in molecule.iter() {
+                            length_here += read.seq.len();
                         }
-                    }
-                    SegmentIndexOrAll::Indexed(segment_index) => {
-                        while let Some(read) = pseudo_iter.pseudo_next() {
-                            let length_here = read.segments[segment_index.as_index()].seq().len();
-                            self.check(length_here)?;
-                        }
+                        self.check(length_here)?;
                     }
                 }
-            }
+                SegmentIndexOrAll::Indexed(segment_index) => {
+                    for read in block.segments[segment_index.as_index()].iter() {
+                        let length_here = read.seq.len();
+                        self.check(length_here)?;
+                    }
+                }
+            },
             ResolvedSourceAll::Tag(name) => {
                 let col = block
                     .tags
@@ -117,30 +114,23 @@ impl Step for ValidateAllReadsSameLength {
             ResolvedSourceAll::Name {
                 segment_index_or_all,
                 split_character,
-            } => {
-                let mut pseudo_iter = block.get_pseudo_iter();
-
-                match segment_index_or_all {
-                    SegmentIndexOrAll::All => {
-                        while let Some(read) = pseudo_iter.pseudo_next() {
-                            let length_here = read
-                                .segments
-                                .iter()
-                                .map(|segment| segment.name_without_comment(*split_character).len())
-                                .sum();
-                            self.check(length_here)?;
-                        }
-                    }
-                    SegmentIndexOrAll::Indexed(segment_index) => {
-                        while let Some(read) = pseudo_iter.pseudo_next() {
-                            let length_here = read.segments[segment_index.as_index()]
-                                .name_without_comment(*split_character)
-                                .len();
-                            self.check(length_here)?;
+            } => match segment_index_or_all {
+                SegmentIndexOrAll::All => {
+                    let mut length_here = 0;
+                    for molecule in block.segments.iter() { //todo: We want an iter_names?
+                        for read in molecule.iter() {
+                            let nn = split_name_and_comment(read.name, *split_character).0;
+                            length_here += nn.len();
                         }
                     }
                 }
-            }
+                SegmentIndexOrAll::Indexed(segment_index) => {
+                    for name in block.segments[segment_index.as_index()].names.iter() {
+                        let nn = split_name_and_comment(name, *split_character).0;
+                        self.check(nn.len())?;
+                    }
+                }
+            },
         }
 
         Ok((block, true))

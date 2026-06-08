@@ -77,13 +77,14 @@ impl Step for ValidateReadPairing {
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let segment_count = block.segments.len();
-        let reads_in_block = block.segments[0].entries.len();
+        let reads_in_block = block.segments.len();
         assert!(self.sample_stride > 0);
 
         let offset = self
             .processed_reads
             .fetch_add(reads_in_block as u64, Ordering::Relaxed);
 
+        //todo: verify that this is the best approach to iter.
         for read_idx in 0..reads_in_block {
             let global_index = offset + read_idx as u64;
             if !global_index.is_multiple_of(self.sample_stride) {
@@ -91,7 +92,7 @@ impl Step for ValidateReadPairing {
             }
 
             let reference = block.segments[0].get(read_idx);
-            let reference_name = reference.name();
+            let reference_name = reference.name;
 
             assert!(
                 !reference_name.is_empty(),
@@ -100,7 +101,7 @@ impl Step for ValidateReadPairing {
 
             for segment_idx in 1..segment_count {
                 let candidate = block.segments[segment_idx].get(read_idx);
-                let candidate_name = candidate.name();
+                let candidate_name = candidate.name;
 
                 if reference_name.len() == candidate_name.len() {
                     let dist = hamming_distance(reference_name, candidate_name);
