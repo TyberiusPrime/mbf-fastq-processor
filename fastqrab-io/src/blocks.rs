@@ -169,6 +169,16 @@ impl FastQRead<'_> {
 
 }
 
+impl FastQReadMut<'_> {
+    pub fn reverse_complement_iupac(&mut self) {
+        self.qual.reverse();
+        let new_seq = fastqrab_dna::dna::reverse_complement_iupac(self.seq.as_ref());
+        for (a,b) in self.seq.iter_mut().zip(new_seq.iter().rev()) {
+            *a = *b;
+        }
+    }
+}
+
 impl CrossPods for FastQChunk {
     type Companion<'a> = FastQRead<'a>;
     type CompanionMut<'a> = FastQReadMut<'a>;
@@ -467,5 +477,20 @@ pub fn split_name_and_comment(name: &BStr, read_comment_insert_char: u8) -> (&BS
     match name.find_byte(read_comment_insert_char) {
         Some(pos) => (name[..pos].as_ref(), name[pos + 1..].as_ref()),
         None => (name, BStr::new("")),
+    }
+}
+
+/// Splits a read 'name' into the actual name/id and the comment, mutably.
+pub fn split_name_and_comment_mut(
+    name: &mut BStr,
+    read_comment_insert_char: u8,
+) -> (&mut BStr, &mut BStr) {
+    use bstr::ByteSlice;
+    match name.find_byte(read_comment_insert_char) {
+        Some(pos) => {
+            let (left, right) = name.split_at_mut(pos);
+            (left.as_bstr_mut(), right[1..].as_bstr_mut())
+        }
+        None => (name, <&mut BStr>::default()),
     }
 }

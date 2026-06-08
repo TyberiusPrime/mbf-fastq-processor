@@ -115,9 +115,12 @@ impl Step for TrimAtTag {
             //let location = col.hit_location(region).expect("TrimTag only works on regions with location data. Might have been lost by subsequent transformations?");
         }
 
-        todo!("implement");
+        //block.segments[self.segment_index.as_index()].resize(resize_func);
+        todo!(
+            "implement - we can't just refer to resize, since the locations may be on differentmultiple segments! "
+        );
         // let error_encountered = std::cell::RefCell::new(Option::<String>::None);
-        // block.apply_mut_with_location_tag(
+        //block.apply_mut_with_location_tag(
         //     &self.in_label,
         //     |reads, hit, col| {
         //

@@ -1,3 +1,5 @@
+use fastqrab_io::blocks::split_name_and_comment_mut;
+
 use crate::transformations::prelude::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -102,9 +104,9 @@ impl Step for _ChangeCase {
                 block.apply_in_place_wrapped_plus_all(
                     *segment_index_or_all,
                     |read| {
-                        let seq = read.seq().to_vec();
-                        let new_seq: Vec<u8> = seq.iter().map(|&b| case_converter(b)).collect();
-                        read.replace_seq_keep_qual(&new_seq);
+                        for b in read.seq.iter_mut() {
+                            *b = case_converter(*b);
+                        }
                     },
                     condition.as_deref(),
                 );
@@ -146,19 +148,9 @@ impl Step for _ChangeCase {
                 block.apply_in_place_wrapped_plus_all(
                     *segment_index_or_all,
                     |read| {
-                        let new: Vec<u8> = read
-                            .name_without_comment(*split_character)
-                            .to_vec()
-                            .into_iter()
-                            .map(case_converter)
-                            .collect();
-                        if let Some(comment) = read.name_only_comment(*split_character) {
-                            let mut full = new;
-                            full.push(*split_character);
-                            full.extend(comment);
-                            read.replace_name(&full);
-                        } else {
-                            read.replace_name(&new);
+                        let (name, _comment) = split_name_and_comment_mut(read.name, *split_character);
+                        for b in name.iter_mut() {
+                            *b = case_converter(*b);
                         }
                     },
                     condition.as_deref(),

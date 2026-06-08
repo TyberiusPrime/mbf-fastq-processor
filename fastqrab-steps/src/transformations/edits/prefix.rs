@@ -100,11 +100,30 @@ impl Step for Prefix {
             .as_ref()
             .map(|tag| get_bool_vec_from_tag(&block, tag));
 
-        block.apply_in_place_wrapped(
-            self.segment,
-            |read| read.prefix(&self.seq, &self.qual),
-            condition.as_deref(),
-        );
+        let first_read_len = block.segments[self.segment.as_index()]
+            .seq_quals
+            .iter_seq_lens()
+            .next()
+            .unwrap_or(0);
+        let mut new =
+            DualStringPodBuilder::with_capacity(block.len(), first_read_len + self.seq.len());
+        let mut new_seq = BString::new(Vec::new());
+        let mut new_qual = BString::new(Vec::new());
+        for (idx, read) in block.segments[self.segment.as_index()].iter().enumerate() {
+            if condition.as_ref().is_some_and(|cond| !cond[idx]) {
+                new.push(&read.seq, &read.qual);
+            } else {
+                new_seq.extend_from_slice(&self.seq);
+                new_seq.extend_from_slice(&read.seq);
+                new_qual.extend_from_slice(&self.qual);
+                new_qual.extend_from_slice(&read.qual);
+                new.push(&new_seq, &new_qual);
+                new_seq.clear();
+                new_qual.clear();
+            }
+        }
+        block.segments[self.segment.as_index()].seq_quals = new.finish();
+
         let prefix_len = self.seq.len();
 
         block.filter_tag_locations(

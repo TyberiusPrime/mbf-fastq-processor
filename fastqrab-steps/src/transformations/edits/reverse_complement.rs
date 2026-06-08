@@ -68,7 +68,7 @@ impl Step for ReverseComplement {
                 block.apply_in_place_wrapped_plus_all(
                     *segment_index_or_all,
                     |read| {
-                        read.reverse_complement();
+                        read.reverse_complement_iupac();
                     },
                     condition.as_deref(),
                 );

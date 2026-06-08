@@ -5,8 +5,9 @@ use smallvec::SmallVec;
 use std::marker::PhantomData;
 use std::num::NonZero;
 use std::ops::Range;
+use stringpod::CrossPods;
 
-use crate::blocks::{self, FastQChunk, Molecules, MoleculesMut};
+use crate::blocks::{self, FastQChunk, FastQReadMut, Molecules, MoleculesMut};
 use fastqrab_config::{TagLabel, segments::SegmentIndexOrAll};
 use fastqrab_dna::dna::{
     Anchor, HAS_LOC, HitDraft, HitRegion, HitRegionView, Hits, LocationColumn, TagColumn,
@@ -1377,6 +1378,27 @@ impl FastQBlocksCombined {
         }
     }
 
+ #[must_use]
+    pub fn iter_matching_segments_mut<'a>(
+        &'a mut self,
+        idx: SegmentIndexOrAll,
+    ) -> Box<dyn Iterator<Item = &'a mut FastQChunk> + 'a> {
+        match idx {
+            SegmentIndexOrAll::All => Box::new(self.segments.iter_mut()),
+            SegmentIndexOrAll::Indexed(query_index) => Box::new(
+                self.segments
+                    .iter_mut()
+                    .enumerate()
+                    .filter_map(move |(idx, segment)| {
+                        if idx == query_index.as_index() {
+                            Some(segment)
+                        } else {
+                            None
+                        }
+                    }),
+            ),
+        }
+    }
     /// create an empty one with the same options filled, and same `block_no`
     #[must_use]
     pub fn empty(&self) -> FastQBlocksCombined {
@@ -1703,21 +1725,21 @@ impl FastQBlocksCombined {
     }
 
     /// Apply a function in place to all reads in a segment,
+    /// allowing mutation on the reads (non length changing!) 
     /// with optional condition filter
     /// wrapped
     /// for easy access.
     pub fn apply_in_place_wrapped(
         &mut self,
         segment: SegmentIndex,
-        f: impl FnMut(&mut WrappedFastQReadMut),
+        mut f: impl FnMut(&mut FastQReadMut),
         condition: Option<&[bool]>,
     ) {
-        todo!();
-        // if let Some(condition) = condition {
-        //     self.segments[segment.as_index()].apply_mut_conditional(f, condition);
-        // } else {
-        //     self.segments[segment.as_index()].apply_mut(f);
-        // }
+        for (idx, mut read) in self.segments[segment.as_index()].iter_mut().enumerate(){
+            if condition.is_some_and(|c| !c[idx]) {
+                f(&mut read)
+            }
+        }
     }
 
     /// `apply_in_place_wrapped`, but support `SegmentIndexOrAll::All`
@@ -1725,21 +1747,16 @@ impl FastQBlocksCombined {
     pub fn apply_in_place_wrapped_plus_all(
         &mut self,
         segment: SegmentIndexOrAll,
-        mut f: impl FnMut(&mut WrappedFastQReadMut),
+        mut f: impl FnMut(&mut FastQReadMut),
         condition: Option<&[bool]>,
     ) {
-        todo!();
-        // if let Ok(target) = segment.try_into() as Result<SegmentIndex, _> {
-        //     self.apply_in_place_wrapped(target, f, condition);
-        // } else if let Some(condition) = condition {
-        //     for read_block in &mut self.segments {
-        //         read_block.apply_mut_conditional(&mut f, condition);
-        //     }
-        // } else {
-        //     for read_block in &mut self.segments {
-        //         read_block.apply_mut(&mut f);
-        //     }
-        // }
+        for segment in self.iter_matching_segments_mut(segment) {
+            for (idx, mut read) in segment.iter_mut().enumerate() {
+                if condition.is_some_and(|c| !c[idx]) {
+                    f(&mut read)
+                }
+            }
+        }
     }
 
     /* fn apply_filter(

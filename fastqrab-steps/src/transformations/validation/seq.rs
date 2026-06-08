@@ -1,3 +1,5 @@
+use bstr::ByteSlice;
+
 use crate::transformations::prelude::*;
 use fastqrab_config::tpd_adapt_bstring;
 
@@ -40,27 +42,21 @@ impl Step for ValidateSeq {
         _input_info: &InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let mut res = Ok(());
-        block.apply_in_place_wrapped_plus_all(
-            self.segment,
-            |read| {
-                if res.is_ok() && read.seq().iter().any(|x| !self.allowed.contains(x)) {
-                    res = Err(anyhow::anyhow!(
+        for segment in block.iter_matching_segments(self.segment) {
+            for read in segment.iter() {
+                if read.seq.iter().any(|x| !self.allowed.contains(x)) {
+                    bail!(
                         "Invalid base found in read named '{}'\n\
                         Accepted: any of '{}'.\n\
                         Read sequence : '{}' Bytes: {:?}",
-                        BString::from(read.name()),
+                        read.name,
                         self.allowed,
-                        BString::from(read.seq()),
-                        read.seq()
-                    ));
+                        read.seq,
+                        read.seq.as_bytes()
+                    );
                 }
-            },
-            None,
-        );
-        match res {
-            Ok(()) => Ok((block, true)),
-            Err(e) => Err(e),
+            }
         }
+        Ok((block, true))
     }
 }
