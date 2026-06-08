@@ -716,7 +716,7 @@ pub(crate) fn compare_files(expected: &Path, actual: &Path, input_dir: &Path) ->
 
         if size_diff_percent > 5.0 {
             bail!(
-                "Compressed file size difference too large: expected {expected_compressed_size} bytes, got {actual_compressed_size} bytes ({size_diff_percent}% difference)",
+                "Compressed file size difference too large: expected {expected_compressed_size} bytes, got {actual_compressed_size} bytes ({size_diff_percent:.2}% difference)",
             );
         }
 

@@ -228,22 +228,20 @@ impl Step for Inspect {
         }
 
         let mut collector = self.collector.lock().expect("collector mutex poisoned");
-        let mut iter: Box<dyn Iterator<Item = (Molecule, u64)>> =
+        let mut iter: Box<dyn Iterator<Item = (Molecule, DemultiplexTag)>> =
             if let Some(output_tags) = block.output_tags.as_ref() {
                 Box::new(block.molecules().zip(output_tags.iter().copied()))
             } else {
                 Box::new(block.molecules().zip(std::iter::repeat(0))) // if no output tags, treat all as tag 0
             };
-        let name_read = |read: &WrappedFastQRead, read_idx: usize| {
-            let mut out = read.name().to_vec();
+        let name_read = |name: &mut BString, read_idx: usize| {
             for (key, values) in &block.tags {
                 let str_key: &str = key.as_ref();
-                out.push(b' ');
-                out.extend_from_slice(str_key.as_bytes());
-                out.push(b'=');
-                out.extend_from_slice(&values.to_bstr(read_idx));
+                name.push(b' ');
+                name.extend_from_slice(str_key.as_bytes());
+                name.push(b'=');
+                name.extend_from_slice(&values.to_bstr(read_idx));
             }
-            out
         };
         let mut read_idx = 0;
         for (molecule, tag) in iter {
@@ -251,15 +249,15 @@ impl Step for Inspect {
                 break;
             }
 
-            match self.segment {
-                SegmentIndexOrAll::All => {
-                    collector.push((molecule.into(), tag));
-                }
+            let mut molecule: OwnedMolecule = match self.segment {
+                SegmentIndexOrAll::All => molecule.into(),
                 SegmentIndexOrAll::Indexed(idx) => {
                     let single_segment_molecule: OwnedMolecule = (&molecule[idx.as_index()]).into();
-                    collector.push((single_segment_molecule, tag));
+                    single_segment_molecule
                 }
-            }
+            };
+            name_read(&mut molecule.reads[0].name, read_idx);
+            collector.push((molecule, tag));
 
             collected += 1; //count per molecule, not per segment
             read_idx += 1;
@@ -283,47 +281,43 @@ impl Step for Inspect {
             let mut buf = Vec::with_capacity(256);
             match self.format {
                 FileFormat::None | FileFormat::Fastq | FileFormat::Text => {
-                    for read_idx in 0..reads_to_write {
-                        for (molecule, tag) in collector.iter() {
-                            for read in molecule.reads.iter() {
-                                buf.clear();
-                                buf.push(b'@');
-                                buf.extend_from_slice(&read.name);
-                                if let Some(demux_names) = &self.demultiplex_names
-                                    && let Some(demux_name) = demux_names.get(tag)
-                                {
-                                    buf.extend_from_slice(b" _Demultiplex=");
-                                    buf.extend_from_slice(demux_name.as_bytes());
-                                }
-                                buf.push(b'\n');
-                                buf.extend_from_slice(&read.seq);
-                                buf.extend_from_slice(b"\n+\n");
-                                buf.extend_from_slice(&read.name);
-                                buf.push(b'\n');
-                                writer.write_text_record(&buf)?;
+                    for (molecule, tag) in collector.iter() {
+                        for read in molecule.reads.iter() {
+                            buf.clear();
+                            buf.push(b'@');
+                            buf.extend_from_slice(&read.name);
+                            if let Some(demux_names) = &self.demultiplex_names
+                                && let Some(demux_name) = demux_names.get(tag)
+                            {
+                                buf.extend_from_slice(b" _Demultiplex=");
+                                buf.extend_from_slice(demux_name.as_bytes());
                             }
+                            buf.push(b'\n');
+                            buf.extend_from_slice(&read.seq);
+                            buf.extend_from_slice(b"\n+\n");
+                            buf.extend_from_slice(&read.qual);
+                            buf.push(b'\n');
+                            writer.write_text_record(&buf)?;
                         }
                     }
                 }
                 FileFormat::Fasta => {
-                    for read_idx in 0..reads_to_write {
-                        for (molecule,tag) in collector.iter() {
-                            for read in molecule.reads.iter() {
-                                buf.clear();
-                                buf.push(b'>');
-                                buf.extend_from_slice(&read.name);
-                                if let Some(demux_names) = &self.demultiplex_names
-                                    && let Some(demux_name) = demux_names.get(tag)
-                                {
-                                    buf.extend_from_slice(b" Demultiplex=");
-                                    buf.extend_from_slice(demux_name.as_bytes());
-                                }
-                                buf.push(b'\n');
-                                buf.extend_from_slice(&read.seq);
-                                buf.push(b'\n');
-                                writer.write_text_record(&buf)?;
-                            } // cov:excl-line
-                        }
+                    for (molecule, tag) in collector.iter() {
+                        for read in molecule.reads.iter() {
+                            buf.clear();
+                            buf.push(b'>');
+                            buf.extend_from_slice(&read.name);
+                            if let Some(demux_names) = &self.demultiplex_names
+                                && let Some(demux_name) = demux_names.get(tag)
+                            {
+                                buf.extend_from_slice(b" Demultiplex=");
+                                buf.extend_from_slice(demux_name.as_bytes());
+                            }
+                            buf.push(b'\n');
+                            buf.extend_from_slice(&read.seq);
+                            buf.push(b'\n');
+                            writer.write_text_record(&buf)?;
+                        } // cov:excl-line
                     }
                 }
                 // cov:excl-start

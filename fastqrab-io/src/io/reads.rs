@@ -1,5 +1,5 @@
 use anyhow::{Result, bail};
-use bstr::{BStr, BString, ByteVec};
+use bstr::{BStr, BString};
 use indexmap::IndexMap;
 use smallvec::SmallVec;
 use std::marker::PhantomData;
@@ -380,7 +380,7 @@ pub struct FastQBlock {
 // directly, just to get of the groundp
 impl Into<FastQChunk> for FastQBlock {
     fn into(self) -> FastQChunk {
-        use stringpod::{DualStringPod, DualStringPodBuilder, StringPod, StringPodBuilder};
+        use stringpod::{DualStringPodBuilder, StringPod, StringPodBuilder};
         let mut names = StringPodBuilder::with_capacity(
             self.entries
                 .iter()
@@ -393,7 +393,7 @@ impl Into<FastQChunk> for FastQBlock {
             self.entries.iter().map(|e| e.seq.len()).next().unwrap_or(0),
             self.entries.len(),
         );
-        let mut pluses = StringPod::new_all_empty(
+        let pluses = StringPod::new_all_empty(
             self.entries
                 .len()
                 .try_into()
@@ -934,7 +934,6 @@ pub trait WrappedFastQReadCommon {
         self.seq().is_empty()
     }
 
-    
     #[must_use]
     fn find_iupac(
         &self,
@@ -1356,6 +1355,28 @@ impl FastQBlocksCombined {
         }
     }
 
+    #[must_use]
+    pub fn iter_matching_segments<'a>(
+        &'a self,
+        idx: SegmentIndexOrAll,
+    ) -> Box<dyn Iterator<Item = &'a FastQChunk> + 'a> {
+        match idx {
+            SegmentIndexOrAll::All => Box::new(self.segments.iter()),
+            SegmentIndexOrAll::Indexed(query_index) => Box::new(
+                self.segments
+                    .iter()
+                    .enumerate()
+                    .filter_map(move |(idx, segment)| {
+                        if idx == query_index.as_index() {
+                            Some(segment)
+                        } else {
+                            None
+                        }
+                    }),
+            ),
+        }
+    }
+
     /// create an empty one with the same options filled, and same `block_no`
     #[must_use]
     pub fn empty(&self) -> FastQBlocksCombined {
@@ -1385,6 +1406,10 @@ impl FastQBlocksCombined {
     #[expect(clippy::len_without_is_empty, reason = "We never check for empty?")]
     pub fn len(&self) -> usize {
         self.row_count()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.row_count() == 0
     }
 
     /// Number of molecules — the shared read count across all segments.

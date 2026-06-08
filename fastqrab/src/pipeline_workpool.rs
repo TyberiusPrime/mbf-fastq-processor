@@ -645,7 +645,7 @@ fn process_work_item(
             TagLabel::ReadNo => {
                 let start = work_item.block.first_read_sequential_number;
                 let end = work_item.block.first_read_sequential_number
-                    + work_item.block.segments.len();
+                    + work_item.block.len();
                 #[expect(
                     clippy::cast_precision_loss,
                     reason = "Unlikely to exceed f64 precise regions"

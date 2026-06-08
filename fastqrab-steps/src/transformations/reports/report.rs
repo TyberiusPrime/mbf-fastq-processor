@@ -20,7 +20,7 @@ pub struct Report {
     #[tpd(default)]
     pub duplicate_count_per_read: bool,
     #[tpd(default)]
-    pub duplicate_count_per_fragment: bool,
+    pub duplicate_count_per_fragment: bool, // that needs renaming to molecule? maybe. Todo: check
 
     #[schemars(skip)]
     #[tpd(default)]

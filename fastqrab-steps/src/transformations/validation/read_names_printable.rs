@@ -1,4 +1,5 @@
 use crate::transformations::prelude::*;
+use bstr::ByteSlice;
 
 /// Validate that read names conform to the SAM/BAM specification.
 ///
@@ -33,7 +34,7 @@ impl Step for ValidateReadNamesPrintable {
         _input_info: &InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let reads_in_block = block.segments.len();
+        let reads_in_block = block.len();
         for read_idx in 0..reads_in_block {
             let read = block.segments[0].get(read_idx);
             let name = read.name;
@@ -43,7 +44,7 @@ impl Step for ValidateReadNamesPrintable {
                     "ValidateReadNamesPrintable: Read name is {} characters long, exceeding the SAM/BAM limit of {MAX_QNAME_LEN}.\n\
                      Read name (first 80 bytes): '{}'",
                     name.len(),
-                    BString::from(&name[..name.len().min(80)]),
+                    &name[..name.len().min(80)],
                 );
             }
 
@@ -53,7 +54,7 @@ impl Step for ValidateReadNamesPrintable {
                      Allowed characters: [!-?A-~] (printable ASCII, excluding '@' and space).\n\
                      Bytes: {:?}",
                     BString::from(name),
-                    name,
+                    name.as_bytes(),
                 );
             }
         }

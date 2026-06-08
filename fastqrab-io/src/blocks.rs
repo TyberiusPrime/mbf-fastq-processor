@@ -1,7 +1,7 @@
 use bstr::{BStr, BString, ByteSlice};
 use fastqrab_dna::dna::Hit;
 use smallvec::{SmallVec, smallvec};
-use std::{borrow::Borrow, num::NonZero, ops::Range};
+use std::{ num::NonZero, ops::Range};
 use stringpod::{
     CrossPods, CrossPodsRecordsMut, DualStringPod, DualStringPodBuilder, PodMut, PodRef,
     RowCompanions, StringPod, StringPodBuilder,

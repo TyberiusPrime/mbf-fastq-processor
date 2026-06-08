@@ -37,27 +37,21 @@ impl Step for ValidateQuality {
         _input_info: &InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let mut res = Ok(());
         let (lower, upper) = self.encoding.limits();
-        block.apply_in_place_wrapped_plus_all(
-            self.segment,
-            |read| {
-                if res.is_ok() && read.qual().iter().any(|x| *x < lower || *x > upper) {
-                    res = Err(anyhow::anyhow!(
+        for segment in block.iter_matching_segments(self.segment) {
+            for read in segment.iter() {
+                if read.qual.iter().any(|x| *x < lower || *x > upper) {
+                    bail!(
                         "Invalid phred quality found. Expected {lower}..={upper} ({}..={}) : Error in read named '{}', Quality: '{}' Bytes: {:?}",
                         lower as char,
                         upper as char,
-                        BString::from(read.name()),
-                        BString::from(read.qual()),
-                        read.qual(),
-                    ));
+                        read.name,
+                        read.qual,
+                        read.qual,
+                    );
                 }
-            },
-            None,
-        );
-        match res {
-            Ok(()) => Ok((block, true)),
-            Err(e) => Err(e),
+            }
         }
+        Ok((block, true))
     }
 }

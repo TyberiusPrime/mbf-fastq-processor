@@ -6,25 +6,23 @@ mod tests {
     use super::chunked_writer::{
         BamSinkOptions, ChunkPaths, ChunkPolicy, ChunkedRecordWriter, SinkConfig, WriteTarget,
     };
-    use crate::io::reads::{FastQBlock, FastQElement, FastQRead, Tags};
+    use crate::blocks::{FastQChunk, OwnedFastQRead};
+    use crate::io::reads::{FastQBlock, FastQElement, Tags};
     use fastqrab_config::FileFormat;
     use noodles::bam;
     use noodles::sam::alignment::record::Flags as SamFlags;
     use std::num::NonZero;
+    use stringpod::CrossPods;
     use tempfile::TempDir;
 
-    fn make_read_block() -> FastQBlock {
-        let read = FastQRead::new(
-            FastQElement::Owned(b"testread".to_vec()),
-            FastQElement::Owned(b"ACGT".to_vec()),
-            FastQElement::Owned(b"IIII".to_vec()),
-        )
-        .unwrap();
-        FastQBlock {
-            block: Vec::new(),
-            entries: vec![read],
-            first_read_sequential_number: 0,
-        }
+    fn make_read_block() -> FastQChunk {
+        let read = OwnedFastQRead {
+            name: b"testread".into(),
+            seq: b"ACGT".into(),
+            qual: b"IIII".into(),
+            plus: b"".into(),
+        };
+        FastQChunk::from_owned_reads(&[read])
     }
 
     fn write_and_read_flags(segment_index: usize, segment_count: usize) -> SamFlags {

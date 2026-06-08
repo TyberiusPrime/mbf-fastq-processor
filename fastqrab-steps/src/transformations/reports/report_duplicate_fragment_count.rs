@@ -108,7 +108,7 @@ impl Step for Box<_ReportDuplicateFragmentCount> {
         {
             let mut pos = 0usize;
             let demultiplex_tags = block.output_tags.as_ref();
-            for molecule in block.segments.iter() {
+            for molecule in block.molecules() {
                 let inner: Vec<_> = molecule.iter().map(|x| x.seq.as_bytes()).collect();
                 let seq = FragmentEntry(&inner);
                 // passing in this complex/reference type into the cuckoo_filter
