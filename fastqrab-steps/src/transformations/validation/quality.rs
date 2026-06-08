@@ -1,3 +1,5 @@
+use bstr::ByteSlice;
+
 use crate::transformations::prelude::*;
 use fastqrab_config::fileformats::PhredEncoding;
 
@@ -47,7 +49,7 @@ impl Step for ValidateQuality {
                         upper as char,
                         read.name,
                         read.qual,
-                        read.qual,
+                        read.qual.as_bytes(),
                     );
                 }
             }

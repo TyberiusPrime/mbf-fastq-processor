@@ -71,7 +71,7 @@ Error 4/7
    ┆                      │
    ┆                      ╰────────────────── Segment not specified but multiple segments available
 ───╯
-Hint: Available segments: read1, read2
+Hint: Available segments: read1, read2. 'All' for all segments is also valid.
       See https://doc_url.example/version-stripped-from-test/docs/redirects/CalcQualifiedBases
       Or run: `fastqrab template CalcQualifiedBases` for more information.
 
@@ -90,7 +90,7 @@ Error 5/7
    ┆                       │
    ┆                       ╰─ Segment not specified but multiple segments available
 ───╯
-Hint: Available segments: read1, read2
+Hint: Available segments: read1, read2. 'All' for all segments is also valid.
       See https://doc_url.example/version-stripped-from-test/docs/redirects/CalcNContent
       Or run: `fastqrab template CalcNContent` for more information.
 
@@ -127,7 +127,7 @@ Error 7/7
    ┆                              │
    ┆                              ╰─ Segment not specified but multiple segments available
 ───╯
-Hint: Available segments: read1, read2
+Hint: Available segments: read1, read2. 'All' for all segments is also valid.
       See https://doc_url.example/version-stripped-from-test/docs/redirects/CalcLength
       Or run: `fastqrab template CalcLength` for more information.
 
