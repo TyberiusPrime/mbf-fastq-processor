@@ -1,4 +1,4 @@
-use std::{borrow::Cow, cell::RefCell};
+use std::{borrow::Cow, cell::RefCell, ops::Range};
 
 use bstr::{BStr, BString};
 use fastqrab_dna::dna::TagColumn;
@@ -9,7 +9,6 @@ use stringpod::CrossPods;
 use super::prelude::DemultiplexTag;
 use fastqrab_config::{
     TagLabel,
-    dna::{HitDraft, LocationColumn},
     segments::{SegmentIndex, SegmentIndexOrAll},
 };
 use fastqrab_io::io::{FastQBlocksCombined, WrappedFastQRead};
@@ -43,7 +42,7 @@ pub(crate) fn extract_region_tags_from_seq(
     block: &mut FastQBlocksCombined,
     segment: SegmentIndex,
     label: &TagLabel,
-    f: impl Fn(&BStr) -> Option<HitDraft>,
+    f: impl Fn(&BStr) -> Option<Range<u32>>,
 ) {
     let mut col = LocationColumn::new();
     for seq in block.segments[segment.as_index()].seq_quals.iter_seq() {
@@ -60,7 +59,7 @@ pub(crate) fn extract_region_tags_from_both(
     block: &mut FastQBlocksCombined,
     segment: SegmentIndex,
     label: &TagLabel,
-    f: impl Fn(&BStr, &BStr) -> Option<HitDraft>,
+    f: impl Fn(&BStr, &BStr) -> Option<Range<u32>>,
 ) {
     let mut col = LocationColumn::new();
     for read in block.segments[segment.as_index()].seq_quals.iter() {
@@ -96,7 +95,7 @@ pub(crate) fn extract_region_tags_using_tags(
     block: &mut FastQBlocksCombined,
     segment: SegmentIndex,
     label: &TagLabel,
-    f: impl Fn(&BStr, usize, &IndexMap<TagLabel, TagColumn>) -> Option<HitDraft>,
+    f: impl Fn(&BStr, usize, &IndexMap<TagLabel, TagColumn>) -> Option<Range<u32>>,
 ) {
     let mut col = LocationColumn::new();
 

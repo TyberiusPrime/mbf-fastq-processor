@@ -3,8 +3,8 @@ use std::cell::RefCell;
 
 use crate::transformations::prelude::*;
 use fastqrab_dna::dna::reverse_complement;
-use stringpod::DualStringPodBuilder;
 use fastqrab_io::io::WrappedFastQReadMut;
+use stringpod::DualStringPodBuilder;
 
 /// Algorithm to use for scoring overlaps and resolving mismatches
 #[derive(Clone, PartialEq, Eq, JsonSchema)]
@@ -202,14 +202,14 @@ impl Step for MergeReads {
                 .map(|_| Vec::with_capacity(block.len())),
         );
 
-
-        let mut new_merged_reads= DualStringPodBuilder::with_capacity(block.len(), block.len());
+        let mut new_merged_reads = DualStringPodBuilder::with_capacity(block.len(), block.len());
         let mut keep_read2: Vec<bool> = Vec::with_capacity(block.len());
 
         use stringpod::CrossPods;
-        for (read1, read2) in block.segments[seg1_idx].iter().zip(
-                block.segments[seg2_idx].iter()) {
-
+        for (read1, read2) in block.segments[seg1_idx]
+            .iter()
+            .zip(block.segments[seg2_idx].iter())
+        {
             let read1_seq = read1.seq;
             let read1_qual = read1.qual;
             let read2_seq = read2.seq;
@@ -281,7 +281,7 @@ impl Step for MergeReads {
             if let Some(merge_status) = merge_status.borrow_mut().as_mut() {
                 merge_status.push(was_merged);
             }
-        };
+        }
 
         // Add merge status tag if label was specified
 

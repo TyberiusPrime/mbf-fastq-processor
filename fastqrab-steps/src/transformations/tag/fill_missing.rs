@@ -100,7 +100,6 @@ impl Step for FillMissing {
 
         let output_col = match (primary_vec, secondary_vec) {
             (TagColumn::Location(prim), TagColumn::Location(sec)) => {
-                use fastqrab_config::dna::LocationColumn;
                 let mut out = LocationColumn::new();
                 for i in 0..num_reads {
                     let prim_hits = prim.get(i);

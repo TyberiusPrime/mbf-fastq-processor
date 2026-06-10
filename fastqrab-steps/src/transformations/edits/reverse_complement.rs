@@ -1,5 +1,5 @@
 use crate::transformations::prelude::*;
-use fastqrab_dna::dna::{HitRegion, reverse_complement_iupac};
+use fastqrab_dna::dna::reverse_complement_iupac;
 
 /// Reverse complement a read
 #[derive(Clone, JsonSchema)]
@@ -72,52 +72,33 @@ impl Step for ReverseComplement {
                     },
                     condition.as_deref(),
                 );
-                let ftl = |location: HitRegion, _pos, seq: &[u8], read_len: usize| -> NewLocation {
-                    let new_start = read_len
-                        .checked_sub(location.start + location.len)
-                        .expect("Start position underflow");
-                    let new_seq = reverse_complement_iupac(seq);
-                    NewLocation::NewWithSeq(
-                        HitRegion {
-                            start: new_start,
-                            len: location.len,
-                            segment_index: location.segment_index,
-                        },
-                        new_seq.into(),
-                    )
-                };
-                match segment_index_or_all {
-                    SegmentIndexOrAll::All => {
-                        for idx in 0..block.segments.len() {
-                            block.filter_tag_locations(
-                                SegmentIndex::new(idx),
-                                ftl,
-                                condition.as_deref(),
-                            );
-                        }
-                    }
-                    SegmentIndexOrAll::Indexed(segment) => {
-                        block.filter_tag_locations(*segment, ftl, condition.as_deref())
-                    }
-                }
             }
             ResolvedSourceAll::Tag(tag_name) => {
                 if let Some(hits) = block.tags.get_mut(tag_name) {
                     match hits {
                         TagColumn::Location(col) => {
-                            for slot_idx in 0..col.hits.len() {
-                                let nhits = col.hits[slot_idx].len();
-                                for hit_idx in 0..nhits {
-                                    let hit = col.hits[slot_idx][hit_idx];
-                                    let bytes = col.hit_bytes_mut(hit);
-                                    for b in bytes.iter_mut() {
-                                        *b = reverse_complement_iupac(&[*b])[0];
-                                    }
-                                }
-                            }
+                            todo!("Implement");
+
+                            // for slot_idx in 0..col.hits.len() {
+                            //     let nhits = col.hits[slot_idx].len();
+                            //     for hit_idx in 0..nhits {
+                            //         let hit = col.hits[slot_idx][hit_idx];
+                            //         let bytes = col.hit_bytes_mut(hit);
+                            //         for b in bytes.iter_mut() {
+                            //             *b = reverse_complement_iupac(&[*b])[0];
+                            //         }
+                            //     }
+                            // }
                         }
 
                         TagColumn::String(bstrings) => {
+                            todo!(
+                                "Decide what to do. This seems terribly wrong,\
+                            to at one hand mutate the reads (on location tags)
+                            and on the other to be manipulating string tags 
+                            in place"
+                            );
+
                             for bstring in bstrings.iter_mut() {
                                 if let Some(s) = bstring.as_mut() {
                                     *s = reverse_complement_iupac(s).into();

@@ -239,7 +239,7 @@ impl Step for Box<EvalExpression> {
             for (var_name, tag_values) in &tag_data {
                 let numeric_value = match tag_values {
                     TagColumn::Location(col) => {
-                        if !col.get(read_idx).is_empty() {
+                        if !col.row_is_empty(read_idx) {
                             1.0
                         } else {
                             0.0

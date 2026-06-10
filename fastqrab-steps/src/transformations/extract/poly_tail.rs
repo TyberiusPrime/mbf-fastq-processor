@@ -117,14 +117,7 @@ impl Step for PolyTail {
                 )
             };
 
-            last_pos.map(|last_pos| HitDraft {
-                location: Some(HitRegionView {
-                    start: last_pos,
-                    len: read_seq.len() - last_pos,
-                    segment_index: self.segment,
-                }),
-                sequence: read_seq[last_pos..].to_vec(),
-            })
+            last_pos.map(|last_pos| last_pos as u32..read_seq.len() as u32)
         });
         Ok((block, true))
     }

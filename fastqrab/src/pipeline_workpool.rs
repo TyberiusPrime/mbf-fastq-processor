@@ -551,7 +551,8 @@ fn process_work_item(
                         fastqrab_steps::config::SegmentIndexOrAll::All => {
                             let mut read_lengths = vec![0; work_item.block.segments[0].len()];
                             for segment in &work_item.block.segments {
-                                for (ii, read_len) in segment.seq_quals.iter_seq_lens().enumerate() {
+                                for (ii, read_len) in segment.seq_quals.iter_seq_lens().enumerate()
+                                {
                                     read_lengths[ii] += read_len;
                                 }
                             }
@@ -644,8 +645,7 @@ fn process_work_item(
             }
             TagLabel::ReadNo => {
                 let start = work_item.block.first_read_sequential_number;
-                let end = work_item.block.first_read_sequential_number
-                    + work_item.block.len();
+                let end = work_item.block.first_read_sequential_number + work_item.block.len();
                 #[expect(
                     clippy::cast_precision_loss,
                     reason = "Unlikely to exceed f64 precise regions"
@@ -756,7 +756,7 @@ fn process_work_item(
                     Default::default(),
                     false,
                     block_no,
-                    first_read_sequential_number
+                    first_read_sequential_number,
                 ),
                 expected_read_count,
                 stage_index,

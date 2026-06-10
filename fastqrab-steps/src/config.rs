@@ -654,7 +654,6 @@ impl PartialConfig {
                             let regions = TomlValue::new_ok(
                                 vec![TomlValue::new_ok(
                                     crate::transformations::PartialRegionDefinition {
-                                        source: step_config.source,
                                         start: step_config.start,
                                         length: step_config.len,
                                         anchor: step_config.anchor,
@@ -671,6 +670,7 @@ impl PartialConfig {
                                             regions,
                                             // region_separator: None,
                                             output_tag_type: None,
+                                            source: step_config.source.clone(),
                                         },
                                     ),
                                     tag_span: tag_span.clone(),

@@ -42,6 +42,7 @@
   schemars = {workspace = true}
   serde_json = {workspace = true}
   serde = {workspace = true}
+  smallvec = {workspace = true}
   stringpod = {workspace = true}
   toml-pretty-deser = {workspace = true}
   typed_floats.workspace = true

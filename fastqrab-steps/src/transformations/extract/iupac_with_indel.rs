@@ -90,7 +90,6 @@ impl Step for IUPACWithIndel {
                 self.max_mismatches,
                 self.max_indel_bases,
                 self.max_total_edits,
-                segment_index,
             )
         });
 

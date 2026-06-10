@@ -1,5 +1,4 @@
 use crate::transformations::prelude::*;
-use fastqrab_dna::dna::HitRegion;
 
 #[derive(Clone, Eq, PartialEq, Copy, JsonSchema)]
 #[tpd]
@@ -97,23 +96,7 @@ impl Step for TrimAtTag {
         // Collect the targeted regions first: `member_mut` borrows the whole
         // block mutably, so the immutable `tag_column` borrow must end before we
         // start mutating segments.
-        let mut targets = Vec::new();
-        for hit in tag_column.hits.iter() {
-            if hit.len() > 1 {
-                bail!(
-                    "TrimAtTag only supports Tags that cover one single region.\
-                            Could be extended to multiple hits within one target,\
-                            but not to multiple hits in multiple targets."
-                        .to_string()
-                );
-            } else if hit.len() == 1 {
-                targets.push(hit[0]);
-            }
-        }
-        for region in targets {
-            let _read = &mut block.member_mut(region.segment_index.as_index());
-            //let location = col.hit_location(region).expect("TrimTag only works on regions with location data. Might have been lost by subsequent transformations?");
-        }
+        //let mut targets = Vec::new();
 
         //block.segments[self.segment_index.as_index()].resize(resize_func);
         todo!(
@@ -146,99 +129,61 @@ impl Step for TrimAtTag {
             .expect("in_label tag must exist in block")
             .into_locations()
             .expect("Expected to be location tag, check verify");
-        if let Some(target) = cut_locations
-            .iter()
-            //first not none with locations
-            .filter_map(|hits| {
-                if hits.is_empty() {
-                    None
-                } else {
-                    hits.first().copied()
-                }
-            })
-            //and the target from the first hit
-            .filter_map(|hit| cut_locations.hit_location(hit))
-            .map(|location| location.segment_index)
-            .next()
+        // if let Some(target) = cut_locations
+        //     .iter()
+        //     //first not none with locations
+        //     .filter_map(|hits| {
+        //         if hits.is_empty() {
+        //             None
+        //         } else {
+        //             hits.first().copied()
+        //         }
+        //     })
+        //     //and the target from the first hit
+        //     .filter_map(|hit| cut_locations.hit_location(hit))
+        //     .map(|location| location.segment_index)
+        //     .next()
         //otherwise, we didn't have a single hit, no need to filter anything...
-        {
-            match (self.direction, self.keep_tag) {
-                (Direction::End, _) => {
-                    block.filter_tag_locations_beyond_read_length(target);
-                }
-                (Direction::Start, keep_tag) => {
-                    block.filter_tag_locations(
-                        target,
-                        |location: HitRegion, pos: usize, _seq, _read_len: usize| -> NewLocation {
-                            let cls = cut_locations.get(pos);
-                            if !cls.is_empty() {
-                                let first_hit = cls[0];
-                                if let Some(trim_location) = cut_locations.hit_location(first_hit) {
-                                    let cut_point = if keep_tag {
-                                        trim_location.start
-                                    } else {
-                                        trim_location.start + trim_location.len
-                                    };
-                                    //todo: this could use some more test cases
-                                    if location.start < cut_point {
-                                        return NewLocation::Remove;
-                                    } else {
-                                        return NewLocation::New(HitRegion {
-                                            start: location.start - cut_point,
-                                            len: location.len,
-                                            segment_index: location.segment_index,
-                                        });
-                                    }
-                                }
-                            }
-
-                            NewLocation::Keep
-                        },
-                        None,
-                    );
-                }
-            }
-        }
         //now remove all locations from cut_locations
-        if self.direction == Direction::Start {
-            if self.keep_tag {
-                //guess they're 0..len now.
-                for slot_idx in 0..cut_locations.hits.len() {
-                    let nhits = cut_locations.hits[slot_idx].len();
-                    for hit_idx in 0..nhits {
-                        let h = cut_locations.hits[slot_idx][hit_idx];
-                        cut_locations.set_hit_location(
-                            slot_idx,
-                            hit_idx,
-                            Some(HitRegion {
-                                start: 0,
-                                len: h.loc_len as usize,
-                                segment_index: h.segment_index,
-                            }),
-                        );
-                    }
-                }
-            } else {
-                for slot_idx in 0..cut_locations.hits.len() {
-                    let nhits = cut_locations.hits[slot_idx].len();
-                    for hit_idx in 0..nhits {
-                        cut_locations.set_hit_location(slot_idx, hit_idx, None);
-                    }
-                }
-            }
-        } else if self.keep_tag {
-            //do nothing, they're still good
-        } else {
-            for slot_idx in 0..cut_locations.hits.len() {
-                let nhits = cut_locations.hits[slot_idx].len();
-                for hit_idx in 0..nhits {
-                    cut_locations.set_hit_location(slot_idx, hit_idx, None);
-                }
-            }
-        }
-
-        let cut_locations = TagColumn::Location(cut_locations);
-        block.tags.insert(self.in_label.clone(), cut_locations);
+        // if self.direction == Direction::Start {
+        //     if self.keep_tag {
+        //         //guess they're 0..len now.
+        //         for slot_idx in 0..cut_locations.hits.len() {
+        //             let nhits = cut_locations.hits[slot_idx].len();
+        //             for hit_idx in 0..nhits {
+        //                 let h = cut_locations.hits[slot_idx][hit_idx];
+        //                 cut_locations.set_hit_location(
+        //                     slot_idx,
+        //                     hit_idx,
+        //                     Some(HitRegion {
+        //                         start: 0,
+        //                         len: h.loc_len as usize,
+        //                         segment_index: h.segment_index,
+        //                     }),
+        //                 );
+        //             }
+        //         }
+        //     } else {
+        //         for slot_idx in 0..cut_locations.hits.len() {
+        //             let nhits = cut_locations.hits[slot_idx].len();
+        //             for hit_idx in 0..nhits {
+        //                 cut_locations.set_hit_location(slot_idx, hit_idx, None);
+        //             }
+        //         }
+        //     }
+        // } else if self.keep_tag {
+        //     //do nothing, they're still good
+        // } else {
+        //     for slot_idx in 0..cut_locations.hits.len() {
+        //         let nhits = cut_locations.hits[slot_idx].len();
+        //         for hit_idx in 0..nhits {
+        //             cut_locations.set_hit_location(slot_idx, hit_idx, None);
+        //         }
+        //     }
+        // }
+        //
+        // let cut_locations = TagColumn::Location(cut_locations);
+        // block.tags.insert(self.in_label.clone(), cut_locations);
 
         Ok((block, true))
     }

@@ -2,9 +2,9 @@ use anyhow::Result;
 use std::num::NonZero;
 use std::path::PathBuf;
 
+use crate::blocks::FastQChunk;
 use crate::io::input::InputOptions;
 use crate::io::{FastQBlock, InputFile};
-use crate::blocks::FastQChunk;
 
 mod bam;
 mod fasta;
@@ -130,7 +130,8 @@ impl ChainedParser {
                     block: Vec::new(),
                     entries: Vec::new(),
                     first_read_sequential_number: self.reads_so_far,
-                }.into(),
+                }
+                .into(),
                 was_final: true,
                 expected_read_count: self.expected_read_count_power_of_two,
             });

@@ -1,7 +1,6 @@
 use bstr::{BStr, BString, ByteSlice};
-use fastqrab_dna::dna::Hit;
 use smallvec::{SmallVec, smallvec};
-use std::{ num::NonZero, ops::Range};
+use std::{num::NonZero, ops::Range};
 use stringpod::{
     CrossPods, CrossPodsRecordsMut, DualStringPod, DualStringPodBuilder, PodMut, PodRef,
     RowCompanions, StringPod, StringPodBuilder,
@@ -166,14 +165,13 @@ impl FastQRead<'_> {
         out.extend(seq.as_bytes());
         out.push(b'\n');
     }
-
 }
 
 impl FastQReadMut<'_> {
     pub fn reverse_complement_iupac(&mut self) {
         self.qual.reverse();
         let new_seq = fastqrab_dna::dna::reverse_complement_iupac(self.seq.as_ref());
-        for (a,b) in self.seq.iter_mut().zip(new_seq.iter().rev()) {
+        for (a, b) in self.seq.iter_mut().zip(new_seq.iter().rev()) {
             *a = *b;
         }
     }
@@ -398,17 +396,6 @@ pub fn molecules_mut(segments: &mut [FastQChunk]) -> MoleculesMut<'_> {
 /// Iterator over a block's molecules. Created by [`molecules`].
 pub struct Molecules<'a> {
     members: SmallVec<[RowCompanions<'a, FastQChunk>; 4]>,
-}
-
-pub fn hit_to_qualities(molecule: Molecule, hits: &SmallVec<[Hit; 1]>) -> BString {
-    let mut qual = BString::new(Vec::new());
-    for hit in hits.iter() {
-        qual.extend_from_slice(
-            &molecule[hit.segment_index.as_index()].seq
-                [(hit.loc_start as usize)..(hit.loc_start + hit.loc_len as u32) as usize],
-        );
-    }
-    qual
 }
 
 impl<'a> Iterator for Molecules<'a> {

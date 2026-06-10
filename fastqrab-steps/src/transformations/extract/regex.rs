@@ -245,14 +245,7 @@ impl Step for Regex {
                                 replacement = replacement.replace(query, value.as_bytes());
                                 //dbg!(bstr::BStr::new(&replacement));
                             }
-                            Some(HitDraft {
-                                location: Some(HitRegionView {
-                                    start: g.start(),
-                                    len: g.end() - g.start(),
-                                    segment_index: *segment_index,
-                                }),
-                                sequence: replacement,
-                            })
+                            Some(g.start() as u32..g.end() as u32)
                         } else {
                             None
                         }

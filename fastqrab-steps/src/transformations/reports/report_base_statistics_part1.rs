@@ -66,10 +66,7 @@ impl Step for Box<_ReportBaseStatisticsPart1> {
         _input_info: &InputInfo,
         demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        fn update_from_read(
-            target: &mut BaseStatisticsPart1,
-            qual: &BStr,
-        ) {
+        fn update_from_read(target: &mut BaseStatisticsPart1, qual: &BStr) {
             let read_len = qual.len();
             target.total_bases += read_len;
             if target.expected_errors_from_quality_curve.len() <= read_len {
@@ -107,15 +104,18 @@ impl Step for Box<_ReportBaseStatisticsPart1> {
             for (ii, read_block) in block.segments.iter().enumerate() {
                 let storage = &mut output.segments[ii].1;
 
-                let iter: Box<dyn Iterator<Item = &BStr>> =
-                    match &block.output_tags {
-                        Some(output_tags) => {
-                            Box::new(read_block.seq_quals.iter_qual().zip(output_tags.iter()).filter_map(
+                let iter: Box<dyn Iterator<Item = &BStr>> = match &block.output_tags {
+                    Some(output_tags) => Box::new(
+                        read_block
+                            .seq_quals
+                            .iter_qual()
+                            .zip(output_tags.iter())
+                            .filter_map(
                                 |(read, read_tag)| if *read_tag == tag { Some(read) } else { None },
-                            ))
-                        }
-                        None => Box::new(read_block.seq_quals.iter_qual()),
-                    };
+                            ),
+                    ),
+                    None => Box::new(read_block.seq_quals.iter_qual()),
+                };
                 for read in iter {
                     update_from_read(storage, &read);
                 }

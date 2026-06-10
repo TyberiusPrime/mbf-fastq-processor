@@ -8,467 +8,24 @@ use hamming_resonate::HammingResonator;
 use indexmap::IndexMap;
 use schemars::JsonSchema;
 use smallvec::SmallVec;
-use std::borrow::Cow;
 use std::collections::HashMap;
+use std::{borrow::Cow, ops::Range};
+use stringpod::DualStringPodMultiLocation;
 use toml_pretty_deser::prelude::*;
 
 use crate::segments::SegmentIndex;
 
-pub use triple_accel::hamming;
-
-// ── Compact hit flag ──────────────────────────────────────────────────────────
-
-pub const HAS_LOC: u8 = 0b0000_0001;
-
-// ── New Hit (16 B, Copy) ──────────────────────────────────────────────────────
-
-#[repr(C)]
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct Hit {
-    pub seq_start: u32,
-    pub loc_start: u32,
-    pub seq_len: u16,
-    pub loc_len: u16,
-    pub segment_index: SegmentIndex,
-    pub flags: u8,
-    _pad: [u8; 2],
-}
-
-/// A growable list of hits for one read slot; empty ≡ no hit.
-pub type Hits = SmallVec<[Hit; 1]>;
-
-// ── View / draft types ────────────────────────────────────────────────────────
-
-/// The read-position data attached to a hit (resolved from a LocationColumn).
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct HitRegionView {
-    pub start: usize,
-    pub len: usize,
-    pub segment_index: SegmentIndex,
-}
-
-impl HitRegionView {
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.len == 0
-    }
-}
-
-/// Backward-compatibility alias used everywhere that previously said `HitRegion`.
-pub type HitRegion = HitRegionView;
-
-/// Intermediate result from `find_iupac` / `find_iupac_with_indel`; caller
-/// feeds this into `LocationColumn::push_single`.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct HitDraft {
-    pub location: Option<HitRegionView>,
-    pub sequence: Vec<u8>,
-}
-
-// ── LocationColumn ────────────────────────────────────────────────────────────
-
-/// Flat-slab storage for a column of hit data.
-///
-/// `hits[i]` is an empty `SmallVec` when slot `i` has no hit (≡ old `None`).
-/// All sequence bytes live in `slab`; `Hit::seq_start / seq_len` index into it.
-#[derive(Clone, Debug)]
-pub struct LocationColumn {
-    pub slab: Vec<u8>,
-    pub hits: Vec<Hits>,
-}
-
-impl Default for LocationColumn {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl LocationColumn {
-    #[must_use]
-    pub fn new() -> Self {
-        Self {
-            slab: Vec::new(),
-            hits: Vec::new(),
-        }
-    }
-
-    #[must_use]
-    pub fn with_capacity(slots: usize, slab_bytes: usize) -> Self {
-        Self {
-            slab: Vec::with_capacity(slab_bytes),
-            hits: Vec::with_capacity(slots),
-        }
-    }
-
-    pub fn truncate(&mut self, len: usize) {
-        self.hits.truncate(len);
-    }
-
-    // ── builders ──────────────────────────────────────────────────────────────
-
-    pub fn push_none(&mut self) {
-        self.hits.push(SmallVec::new());
-    }
-
-    pub fn push_single(&mut self, loc: Option<HitRegionView>, seq: &[u8]) {
-        debug_assert!(
-            seq.len() <= u16::MAX as usize,
-            "sequence too long for u16 seq_len"
-        );
-        let seq_start = self.slab.len() as u32;
-        let seq_len = seq.len() as u16;
-        self.slab.extend_from_slice(seq);
-
-        let hit = if let Some(loc) = loc {
-            debug_assert!(
-                loc.start <= u32::MAX as usize,
-                "loc.start too large for u32"
-            );
-            debug_assert!(loc.len <= u16::MAX as usize, "loc.len too large for u16");
-            Hit {
-                seq_start,
-                seq_len,
-                loc_start: loc.start as u32,
-                loc_len: loc.len as u16,
-                segment_index: loc.segment_index,
-                flags: HAS_LOC,
-                _pad: [0; 2],
-            }
-        } else {
-            Hit {
-                seq_start,
-                seq_len,
-                loc_start: 0,
-                loc_len: 0,
-                segment_index: SegmentIndex::first(),
-                flags: 0,
-                _pad: [0; 2],
-            }
-        };
-        let mut sv: Hits = SmallVec::new();
-        sv.push(hit);
-        self.hits.push(sv);
-    }
-
-    pub fn push_many(&mut self, entries: &[(Option<HitRegionView>, &[u8])]) {
-        let mut sv: Hits = SmallVec::new();
-        for (loc, seq) in entries {
-            debug_assert!(seq.len() <= u16::MAX as usize, "sequence too long");
-            let seq_start = self.slab.len() as u32;
-            let seq_len = seq.len() as u16;
-            self.slab.extend_from_slice(seq);
-
-            let hit = if let Some(loc) = loc {
-                Hit {
-                    seq_start,
-                    seq_len,
-                    loc_start: loc.start as u32,
-                    loc_len: loc.len as u16,
-                    segment_index: loc.segment_index,
-                    flags: HAS_LOC,
-                    _pad: [0; 2],
-                }
-            } else {
-                Hit {
-                    seq_start,
-                    seq_len,
-                    loc_start: 0,
-                    loc_len: 0,
-                    segment_index: SegmentIndex::first(),
-                    flags: 0,
-                    _pad: [0; 2],
-                }
-            };
-            sv.push(hit);
-        }
-        self.hits.push(sv);
-    }
-
-    /// Replace slot; new bytes appended to slab (old bytes go dead until compact).
-    pub fn set_slot(&mut self, idx: usize, entries: &[(Option<HitRegionView>, &[u8])]) {
-        let mut sv: Hits = SmallVec::new();
-        for (loc, seq) in entries {
-            let seq_start = self.slab.len() as u32;
-            let seq_len = seq.len() as u16;
-            self.slab.extend_from_slice(seq);
-            let hit = if let Some(loc) = loc {
-                Hit {
-                    seq_start,
-                    seq_len,
-                    loc_start: loc.start as u32,
-                    loc_len: loc.len as u16,
-                    segment_index: loc.segment_index,
-                    flags: HAS_LOC,
-                    _pad: [0; 2],
-                }
-            } else {
-                Hit {
-                    seq_start,
-                    seq_len,
-                    loc_start: 0,
-                    loc_len: 0,
-                    segment_index: SegmentIndex::first(),
-                    flags: 0,
-                    _pad: [0; 2],
-                }
-            };
-            sv.push(hit);
-        }
-        self.hits[idx] = sv;
-    }
-
-    pub fn clear_slot(&mut self, idx: usize) {
-        self.hits[idx] = SmallVec::new();
-    }
-
-    /// Copy a slot from `src` (translating `seq_start` into our slab).
-    pub fn push_from(&mut self, src: &LocationColumn, slot_idx: usize) {
-        let src_hits = src.get(slot_idx);
-        if src_hits.is_empty() {
-            self.push_none();
-            return;
-        }
-        let mut sv: Hits = SmallVec::new();
-        for &hit in src_hits.iter() {
-            let new_seq_start = self.slab.len() as u32;
-            self.slab.extend_from_slice(src.hit_bytes(hit));
-            sv.push(Hit {
-                seq_start: new_seq_start,
-                ..hit
-            });
-        }
-        self.hits.push(sv);
-    }
-
-    /// Replace `dst_idx` slot with a copy from `src` slot `src_idx`.
-    pub fn set_slot_from(&mut self, src: &LocationColumn, dst_idx: usize, src_idx: usize) {
-        let src_hits = src.get(src_idx);
-        if src_hits.is_empty() {
-            self.hits[dst_idx] = SmallVec::new();
-            return;
-        }
-        let mut sv: Hits = SmallVec::new();
-        for &hit in src_hits.iter() {
-            let new_seq_start = self.slab.len() as u32;
-            self.slab.extend_from_slice(src.hit_bytes(hit));
-            sv.push(Hit {
-                seq_start: new_seq_start,
-                ..hit
-            });
-        }
-        self.hits[dst_idx] = sv;
-    }
-
-    // ── accessors ─────────────────────────────────────────────────────────────
-
-    #[must_use]
-    pub fn len(&self) -> usize {
-        self.hits.len()
-    }
-
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.hits.is_empty()
-    }
-
-    #[must_use]
-    pub fn get(&self, idx: usize) -> &Hits {
-        &self.hits[idx]
-    }
-
-    pub fn iter(&self) -> impl Iterator<Item = &Hits> {
-        self.hits.iter()
-    }
-
-    /// Sequence bytes for `h` from the slab.
-    #[must_use]
-    pub fn hit_bytes(&self, h: Hit) -> &[u8] {
-        &self.slab[h.seq_start as usize..(h.seq_start + h.seq_len as u32) as usize]
-    }
-
-    /// Mutable sequence bytes for `h` — **length-preserving only**.
-    pub fn hit_bytes_mut(&mut self, h: Hit) -> &mut [u8] {
-        let start = h.seq_start as usize;
-        let end = (h.seq_start + h.seq_len as u32) as usize;
-        &mut self.slab[start..end]
-    }
-
-    /// Location metadata for `h`, or `None` if `HAS_LOC` is not set.
-    #[must_use]
-    pub fn hit_location(&self, h: Hit) -> Option<HitRegionView> {
-        if (h.flags & HAS_LOC) != 0 {
-            Some(HitRegionView {
-                start: h.loc_start as usize,
-                len: h.loc_len as usize,
-                segment_index: h.segment_index,
-            })
-        } else {
-            None
-        }
-    }
-
-    /// Overwrite the location metadata for a specific hit within a slot.
-    pub fn set_hit_location(&mut self, slot: usize, hit_idx: usize, loc: Option<HitRegionView>) {
-        let hit = &mut self.hits[slot][hit_idx];
-        match loc {
-            None => hit.flags &= !HAS_LOC,
-            Some(v) => {
-                hit.loc_start = v.start as u32;
-                hit.loc_len = v.len as u16;
-                hit.segment_index = v.segment_index;
-                hit.flags |= HAS_LOC;
-            }
-        }
-    }
-
-    // ── bulk ops ──────────────────────────────────────────────────────────────
-
-    /// Grow to `len` slots (with empty Hits). Panics if `len < self.len()`.
-    pub fn resize_with_empty(&mut self, len: usize) {
-        self.hits.resize_with(len, SmallVec::new);
-    }
-
-    pub fn retain<F: FnMut(usize) -> bool>(&mut self, mut f: F) {
-        let mut idx = 0;
-        self.hits.retain(|_| {
-            let keep = f(idx);
-            idx += 1;
-            keep
-        });
-    }
-
-    pub fn drain(&mut self, range: std::ops::Range<usize>) {
-        self.hits.drain(range);
-    }
-
-    /// Append all slots from `other`, translating `seq_start` by `self.slab.len()`.
-    pub fn extend_from(&mut self, other: &LocationColumn) {
-        let offset = self.slab.len() as u32;
-        self.slab.extend_from_slice(&other.slab);
-        for slot in &other.hits {
-            let mut new_slot = slot.clone();
-            for hit in new_slot.iter_mut() {
-                hit.seq_start += offset;
-            }
-            self.hits.push(new_slot);
-        }
-    }
-
-    // ── views / joins ─────────────────────────────────────────────────────────
-
-    #[must_use]
-    pub fn joined_sequence(&self, hits: &Hits, sep: Option<&[u8]>) -> Vec<u8> {
-        let mut res = Vec::new();
-        let mut first = true;
-        for &hit in hits.iter() {
-            if !first {
-                if let Some(sep) = sep {
-                    res.extend_from_slice(sep);
-                }
-            }
-            first = false;
-            res.extend_from_slice(self.hit_bytes(hit));
-        }
-        res
-    }
-
-    /// Borrows when there is exactly one hit (no allocation); allocates otherwise.
-    #[must_use]
-    pub fn joined_sequence_cow<'a>(&'a self, hits: &Hits, sep: Option<&[u8]>) -> Cow<'a, [u8]> {
-        if hits.len() == 1 {
-            Cow::Borrowed(self.hit_bytes(hits[0]))
-        } else {
-            Cow::Owned(self.joined_sequence(hits, sep))
-        }
-    }
-
-    #[must_use]
-    pub fn covered_len(&self, hits: &Hits) -> usize {
-        hits.iter()
-            .filter_map(|&h| self.hit_location(h))
-            .map(|loc| loc.len)
-            .sum()
-    }
-
-    #[must_use]
-    pub fn location_str(&self, hits: &Hits, segment_order: &[String]) -> BString {
-        let mut seq = BString::new(Vec::new());
-        let mut first = true;
-        for &hit in hits.iter() {
-            if let Some(loc) = self.hit_location(hit) {
-                if !first {
-                    seq.push(b',');
-                }
-                first = false;
-                seq.extend_from_slice(
-                    format!(
-                        "{}:{}-{}",
-                        segment_order[loc.segment_index.as_index()],
-                        loc.start,
-                        loc.start + loc.len,
-                    )
-                    .as_bytes(),
-                );
-            }
-        }
-        seq
-    }
-
-    // ── compaction ────────────────────────────────────────────────────────────
-
-    /// Drop unreferenced slab bytes; rewrite all `seq_start` offsets.
-    pub fn compact_slab(&mut self) {
-        // Collect referenced ranges (may have duplicates after set_slot).
-        let mut old_to_new: HashMap<u32, u32> = HashMap::new();
-        let mut new_slab: Vec<u8> = Vec::with_capacity(self.slab.len());
-
-        for slot in &self.hits {
-            for &hit in slot.iter() {
-                if hit.seq_len == 0 {
-                    continue;
-                }
-                let old_start = hit.seq_start;
-                if old_to_new.contains_key(&old_start) {
-                    continue;
-                }
-                let new_start = new_slab.len() as u32;
-                let end = (old_start + hit.seq_len as u32) as usize;
-                new_slab.extend_from_slice(&self.slab[old_start as usize..end]);
-                old_to_new.insert(old_start, new_start);
-            }
-        }
-
-        self.slab = new_slab;
-        for slot in self.hits.iter_mut() {
-            for hit in slot.iter_mut() {
-                if hit.seq_len > 0 {
-                    hit.seq_start = old_to_new[&hit.seq_start];
-                }
-            }
-        }
-    }
-}
-
-// ── TagColumn ─────────────────────────────────────────────────────────────────
+pub use triple_accel::hamming; //todo: do we need this. Profile.
 
 #[derive(Debug, Clone)]
 pub enum TagColumn {
-    Location(LocationColumn),
+    Location(DualStringPodMultiLocation),
     String(Vec<Option<BString>>),
     Numeric(Vec<f64>),
     Bool(Vec<bool>),
 }
 
 impl TagColumn {
-    pub fn new_empty(&self) -> TagColumn {
-        match self {
-            TagColumn::Location(_) => TagColumn::Location(LocationColumn::new()),
-            TagColumn::String(_) => TagColumn::String(Vec::new()),
-            TagColumn::Numeric(_) => TagColumn::Numeric(Vec::new()),
-            TagColumn::Bool(_) => TagColumn::Bool(Vec::new()),
-        }
-    }
-
     pub fn truncate(&mut self, len: usize) {
         match self {
             TagColumn::Location(col) => col.truncate(len),
@@ -480,7 +37,7 @@ impl TagColumn {
 
     pub fn len(&self) -> usize {
         match self {
-            TagColumn::Location(col) => col.len(),
+            TagColumn::Location(col) => col.row_count(),
             TagColumn::String(items) => items.len(),
             TagColumn::Numeric(items) => items.len(),
             TagColumn::Bool(items) => items.len(),
@@ -496,14 +53,14 @@ impl TagColumn {
         F: FnMut() -> bool,
     {
         match self {
-            TagColumn::Location(col) => col.retain(|_| f()),
+            TagColumn::Location(col) => col.retain(|| f()),
             TagColumn::String(items) => items.retain(|_| f()),
             TagColumn::Numeric(items) => items.retain(|_| f()),
             TagColumn::Bool(items) => items.retain(|_| f()),
         }
     }
 
-    pub fn into_locations(self) -> Option<LocationColumn> {
+    pub fn into_locations(self) -> Option<DualStringPodMultiLocation> {
         if let TagColumn::Location(col) = self {
             Some(col)
         } else {
@@ -511,7 +68,7 @@ impl TagColumn {
         }
     }
 
-    pub fn as_locations(&self) -> Option<&LocationColumn> {
+    pub fn as_locations(&self) -> Option<&DualStringPodMultiLocation> {
         if let TagColumn::Location(col) = self {
             Some(col)
         } else {
@@ -519,20 +76,11 @@ impl TagColumn {
         }
     }
 
-    pub fn as_locations_mut(&mut self) -> Option<&mut LocationColumn> {
+    pub fn as_locations_mut(&mut self) -> Option<&mut DualStringPodMultiLocation> {
         if let TagColumn::Location(col) = self {
             Some(col)
         } else {
             None
-        }
-    }
-
-    /// Returns `&LocationColumn`; callers can iterate `.iter()` and resolve bytes.
-    pub fn iter_locations(&self) -> &LocationColumn {
-        if let TagColumn::Location(col) = self {
-            col
-        } else {
-            panic!("iter_locations called on a non-location tag column");
         }
     }
 
@@ -544,29 +92,24 @@ impl TagColumn {
         }
     }
 
-    pub fn iter_stringified<'a>(&'a self) -> Box<dyn Iterator<Item = Option<Cow<'a, BStr>>> + 'a> {
+    pub fn iter_stringified<'a>(&'a self) -> Box<dyn Iterator<Item = Cow<'a, BStr>> + 'a> {
         match self {
             TagColumn::Numeric(_) => unreachable!("Cant stringify numeric values"),
             TagColumn::Bool(bools) => Box::new(bools.iter().map(|x| {
                 if *x {
-                    Some(Cow::Borrowed(BStr::new(b"true")))
+                    Cow::Borrowed(BStr::new(b"true"))
                 } else {
-                    Some(Cow::Borrowed(BStr::new(b"false")))
+                    Cow::Borrowed(BStr::new(b"false"))
                 }
             })),
-            TagColumn::Location(col) => Box::new(col.iter().map(|hits| {
-                if hits.is_empty() {
-                    None
-                } else {
-                    Some(match col.joined_sequence_cow(hits, None) {
-                        Cow::Borrowed(b) => Cow::Borrowed(BStr::new(b)),
-                        Cow::Owned(v) => Cow::Owned(v.into()),
-                    })
-                }
+            TagColumn::Location(col) => Box::new(col.iter_seq().map(|x| match x {
+                Some(x) => x,
+                None => Cow::Borrowed(BStr::new("")),
             })),
             TagColumn::String(strings) => Box::new(strings.iter().map(|x| {
                 x.as_ref()
                     .map(|bstring| Cow::Borrowed(BStr::new(&bstring[..])))
+                    .unwrap_or_else(|| Cow::Borrowed(BStr::new("")))
             })),
         }
     }
@@ -575,16 +118,11 @@ impl TagColumn {
         match self {
             TagColumn::Numeric(_) => unreachable!("Cant get truthy of numeric values."), //cov:excl-line
             TagColumn::Bool(bools) => Box::new(bools.iter().copied()),
-            TagColumn::Location(col) => Box::new(col.iter().map(|hits| !hits.is_empty())),
-            TagColumn::String(strings) => Box::new(strings.iter().map(|x| x.is_some())),
-        }
-    }
+            TagColumn::Location(col) => {
+                Box::new((0..col.row_count()).map(|idx| col.row_is_empty(idx)))
+            }
 
-    pub fn get_location(&self, index: usize) -> &Hits {
-        if let TagColumn::Location(col) = self {
-            col.get(index)
-        } else {
-            panic!("get_location called on a non-location tag column");
+            TagColumn::String(strings) => Box::new(strings.iter().map(|x| x.is_some())),
         }
     }
 
@@ -616,17 +154,7 @@ impl TagColumn {
     #[expect(clippy::elidable_lifetime_names, reason = "Conflicting lints")]
     pub fn to_bstr<'a>(&'a self, index: usize) -> Cow<'a, BStr> {
         match &self {
-            TagColumn::Location(col) => {
-                let hits = col.get(index);
-                if hits.is_empty() {
-                    Cow::Borrowed(BStr::new(b""))
-                } else {
-                    match col.joined_sequence_cow(hits, None) {
-                        Cow::Borrowed(b) => Cow::Borrowed(BStr::new(b)),
-                        Cow::Owned(v) => Cow::Owned(v.into()),
-                    }
-                }
-            }
+            TagColumn::Location(col) => col.joined_seq(index, None),
             TagColumn::String(items) => match &items[index] {
                 Some(bstring) => Cow::Borrowed(BStr::new(&bstring[..])),
                 None => Cow::Borrowed(BStr::new(b"")),
@@ -640,24 +168,24 @@ impl TagColumn {
         }
     }
 
-    pub fn extend(&mut self, other: &TagColumn) {
-        match self {
-            TagColumn::Location(col) => {
-                if let TagColumn::Location(other_col) = other {
-                    col.extend_from(other_col);
-                } else {
-                    panic!("Cannot extend Location column from non-Location column");
-                }
-            }
-            TagColumn::String(items) => items.extend(
-                other
-                    .iter_stringified()
-                    .map(|x| x.map(|cow| cow.into_owned())),
-            ),
-            TagColumn::Numeric(items) => items.extend(other.iter_numeric().copied()),
-            TagColumn::Bool(items) => items.extend(other.iter_truthy()),
-        }
-    }
+    // pub fn extend(&mut self, other: &TagColumn) {
+    //     match self {
+    //         TagColumn::Location(col) => {
+    //             if let TagColumn::Location(other_col) = other {
+    //                 col.extend_from(other_col);
+    //             } else {
+    //                 panic!("Cannot extend Location column from non-Location column");
+    //             }
+    //         }
+    //         TagColumn::String(items) => items.extend(
+    //             other
+    //                 .iter_stringified()
+    //                 .map(|x| x.map(|cow| cow.into_owned())),
+    //         ),
+    //         TagColumn::Numeric(items) => items.extend(other.iter_numeric().copied()),
+    //         TagColumn::Bool(items) => items.extend(other.iter_truthy()),
+    //     }
+    // }
 
     /// Removes elements without returning them.
     pub fn drain(&mut self, range: std::ops::Range<usize>) {
@@ -690,28 +218,22 @@ pub enum Anchor {
     Anywhere,
 }
 
-// ── IUPAC finding (returns HitDraft; callers push into LocationColumn) ────────
-
 #[must_use]
+/// find one hit of the iupac pattern/query.
+///
+///
 pub fn find_iupac(
     reference: &[u8],
     pattern: &[u8],
     anchor: Anchor,
     max_mismatches: u8,
-    segment: SegmentIndex,
     max_anchor_distance: usize,
-) -> Option<HitDraft> {
+) -> Option<std::ops::Range<u32>> {
     if reference.len() < pattern.len() {
         return None;
     }
-    let make_draft = |start: usize| HitDraft {
-        location: Some(HitRegionView {
-            start,
-            len: pattern.len(),
-            segment_index: segment,
-        }),
-        sequence: reference[start..start + pattern.len()].to_vec(),
-    };
+    let make_draft =
+        |start: usize| -> std::ops::Range<u32> { start as u32..(start + pattern.len()) as u32 };
     match anchor {
         Anchor::Left => iupac_find_best(
             pattern,
@@ -728,13 +250,8 @@ pub fn find_iupac(
                 max_mismatches as usize,
                 Direction::Reverse,
             )
-            .map(|start| HitDraft {
-                location: Some(HitRegionView {
-                    start: start + offset,
-                    len: pattern.len(),
-                    segment_index: segment,
-                }),
-                sequence: reference[offset + start..offset + start + pattern.len()].to_vec(),
+            .map(|start| -> std::ops::Range<u32> {
+                (offset + start) as u32..(offset + start + pattern.len()) as u32
             })
         }
         Anchor::Anywhere => iupac_find_best(
@@ -765,8 +282,7 @@ pub fn find_iupac_with_indel(
     max_mismatches: usize,
     max_indel_bases: usize,
     max_total_edits: Option<usize>,
-    segment: SegmentIndex,
-) -> Option<HitDraft> {
+) -> Option<Range<u32>> {
     if query.is_empty() || reference.is_empty() {
         return None;
     }
@@ -836,14 +352,7 @@ pub fn find_iupac_with_indel(
         "Alignment produced invalid coordinates (end > reference length)"
     );
 
-    Some(HitDraft {
-        location: Some(HitRegionView {
-            start,
-            len: end - start,
-            segment_index: segment,
-        }),
-        sequence: reference[start..end].to_vec(),
-    })
+    Some(start as u32..end as u32)
 }
 
 pub enum Direction {

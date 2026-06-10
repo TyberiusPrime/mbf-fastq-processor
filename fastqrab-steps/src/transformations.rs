@@ -45,12 +45,7 @@ pub use internal_steps::{
 #[tpd]
 #[derive(Debug)]
 pub struct RegionDefinition {
-    /// Source for extraction - segment name, "tag:name" for tag source, or "name:segment" for read name source
-    #[schemars(with = "String")]
-    #[tpd(adapt_in_verify(String))]
-    #[tpd(alias = "segment")]
-    pub source: ResolvedSourceNoAll,
-
+    
     pub start: isize,
     #[tpd(alias = "len")]
     #[tpd(alias = "count")]

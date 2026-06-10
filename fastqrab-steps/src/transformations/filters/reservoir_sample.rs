@@ -106,20 +106,21 @@ impl Step for ReservoirSample {
 
             if buf.molecules.len() < self.n {
                 buf.molecules.push(molecule.into());
-                for (label, values) in &block.tags {
-                    match buf
-                        .tags
-                        .entry(label.clone())
-                        .or_insert_with(|| values.new_empty())
-                    {
-                        TagColumn::Location(items) => {
-                            items.push_from(values.as_locations().expect("matched Location"), pos)
-                        }
-                        TagColumn::String(items) => items.push(values.get_string(pos).clone()),
-                        TagColumn::Numeric(items) => items.push(values.get_numeric(pos)),
-                        TagColumn::Bool(items) => items.push(values.get_bool(pos)),
-                    }
-                }
+                todo!("figure this one out for location tags");
+                // for (label, values) in &block.tags {
+                //     match buf
+                //         .tags
+                //         .entry(label.clone())
+                //         .or_insert_with(|| values.new_empty())
+                //     {
+                //         TagColumn::Location(items) => {
+                //             items.push_from(values.as_locations().expect("matched Location"), pos)
+                //         }
+                //         TagColumn::String(items) => items.push(values.get_string(pos).clone()),
+                //         TagColumn::Numeric(items) => items.push(values.get_numeric(pos)),
+                //         TagColumn::Bool(items) => items.push(values.get_bool(pos)),
+                //     }
+                // }
             } else {
                 //algorithm R
                 let j = rng.random_range(1..=buf.count);

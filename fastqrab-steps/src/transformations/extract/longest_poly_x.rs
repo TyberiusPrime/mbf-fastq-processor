@@ -349,15 +349,8 @@ impl Step for LongestPolyX {
                     max_mismatch_fraction,
                     max_consecutive_mismatches,
                 )
-                .map(|(start, len)| HitDraft {
-                    location: Some(HitRegionView {
-                        start,
-                        len,
-                        segment_index,
-                    }),
-                    sequence: read_seq[start..start + len].to_vec(),
-                })
-            },
+                .map(|(start, len)| start as u32..(start + len) as u32)
+            }
         );
         Ok((block, true))
     }

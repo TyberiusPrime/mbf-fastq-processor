@@ -1,5 +1,4 @@
 use crate::transformations::prelude::*;
-use fastqrab_dna::dna::HitRegion;
 
 /// Cut a fixed number of bases from the start of reads
 #[derive(Clone, JsonSchema)]
@@ -72,22 +71,6 @@ impl Step for CutStart {
             .member_mut(self.segment.as_index())
             .seq_quals
             .cut_start(self.n, condition.as_deref());
-
-        block.filter_tag_locations(
-            self.segment,
-            |location: HitRegion, _pos, _seq, _read_len: usize| -> NewLocation {
-                if location.start < self.n {
-                    NewLocation::Remove
-                } else {
-                    NewLocation::New(HitRegion {
-                        start: location.start - self.n,
-                        len: location.len,
-                        segment_index: location.segment_index,
-                    })
-                }
-            },
-            condition.as_deref(),
-        );
 
         Ok((block, true))
     }

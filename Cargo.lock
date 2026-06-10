@@ -744,6 +744,7 @@ dependencies = [
  "indexmap",
  "schemars",
  "smallvec",
+ "stringpod",
  "toml-pretty-deser",
  "triple_accel",
 ]
@@ -807,6 +808,7 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
+ "smallvec",
  "stringpod",
  "toml-pretty-deser",
  "typed_floats",

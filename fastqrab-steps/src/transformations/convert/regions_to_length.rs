@@ -71,20 +71,8 @@ impl Step for RegionsToLength {
 
         if let TagColumn::Location(locations) = region_values {
             let lengths: Vec<_> = locations
-                .iter()
-                .map(|hits| {
-                    if hits.is_empty() {
-                        0.0
-                    } else {
-                        hits.iter()
-                            .map(|&hit| {
-                                locations
-                                    .hit_location(hit)
-                                    .map_or_else(|| locations.hit_bytes(hit).len(), |loc| loc.len)
-                            })
-                            .sum::<usize>() as f64
-                    }
-                })
+                .iter_row_lengths(None)
+                .map(|x| x as f64)
                 .collect();
 
             block

@@ -127,15 +127,18 @@ impl Step for Box<_ReportBaseStatisticsPart2> {
             for (ii, segment) in block.segments.iter().enumerate() {
                 let storage = &mut output.segments[ii].1;
 
-                let iter: Box<dyn Iterator<Item = &BStr>> =
-                    match &block.output_tags {
-                        Some(output_tags) => {
-                            Box::new(segment.seq_quals.iter_seq().zip(output_tags.iter()).filter_map(
+                let iter: Box<dyn Iterator<Item = &BStr>> = match &block.output_tags {
+                    Some(output_tags) => Box::new(
+                        segment
+                            .seq_quals
+                            .iter_seq()
+                            .zip(output_tags.iter())
+                            .filter_map(
                                 |(read, read_tag)| if *read_tag == tag { Some(read) } else { None },
-                            ))
-                        }
-                        None => Box::new(segment.seq_quals.iter_seq()),
-                    };
+                            ),
+                    ),
+                    None => Box::new(segment.seq_quals.iter_seq()),
+                };
                 for sequence in iter {
                     update_from_read(storage, &sequence);
                 }

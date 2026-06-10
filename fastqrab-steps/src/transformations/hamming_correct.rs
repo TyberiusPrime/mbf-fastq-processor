@@ -328,7 +328,7 @@ impl TagUser for PartialTaggedVariant<PartialHammingCorrect> {
             Some(TagUsageInfo {
                 declared_tag: inner.out_label.to_declared_tag(
                     match inner.output.as_ref().unwrap_or(&HammingOutput::Barcode) {
-                        HammingOutput::Barcode => TagValueType::Location,
+                        HammingOutput::Barcode => TagValueType::String,
                         HammingOutput::Label => TagValueType::String,
                     },
                 ),
@@ -495,10 +495,9 @@ fn run_match_phase(
     }
     if needs_qualities && let Some(block) = block {
         if let TagColumn::Location(col) = input_tags {
-            for ((hits, slot), molecule) in col.iter().zip(results.iter_mut()).zip(block.molecules())
-            {
-                if !hits.is_empty() && matches!(&slot.result, Some(MatchResultOwned::Tie(_))) {
-                    slot.quality = Some(fastqrab_io::blocks::hit_to_qualities(molecule, hits));
+            for ((hits, slot)) in col.iter().zip(results.iter_mut()) {
+                if !hits.1.is_empty() && matches!(&slot.result, Some(MatchResultOwned::Tie(_))) {
+                    slot.quality = hits.1;
                 }
             }
         }
@@ -509,33 +508,39 @@ fn run_match_phase(
 impl HammingCorrect {
     fn push_output_location(
         &self,
-        out_col: &mut LocationColumn,
+        out_col: &mut Vec<Option<BString>>,
         matched_idx: usize,
-        input_col: &LocationColumn,
-        input_hits: &Hits,
+        input_col: &DualStringPodMultiLocation,
+        input_hits: &SmallVec<[Range<u32>;  1]>,
         output_barcode: bool,
     ) {
+        //todo: optimize by taking instead of cloning?
         let (matched_seq, matched_name) = self
             .seq_to_name
             .get_index(matched_idx)
             .expect("seq_to_name index out of range");
-        if output_barcode {
-            // Preserve location from the single input hit if available
-            let loc = if input_hits.len() == 1 {
-                input_col.hit_location(input_hits[0])
+        out_col.push(
+         if output_barcode {
+                matched_seq.clone()
             } else {
-                None
-            };
-            out_col.push_single(loc, matched_seq.as_slice());
-        } else {
-            // Output the matched name as sequence, no location
-            out_col.push_single(None, matched_name.as_bytes());
-        }
+                matched_name.clone()
+        });
+        //     // Preserve location from the single input hit if available
+        //     // let loc = if input_hits.len() == 1 {
+        //     //     input_col.hit_location(input_hits[0])
+        //     // } else {
+        //     //     None
+        //     // };
+        //     out_col.push_row(&[loc.start, loc.end])
+        // } else {
+        //     // Output the matched name as sequence, no location
+        //     out_col.push_single(None, matched_name.as_bytes());
+        // }
     }
 
-    fn push_empty_location(out_col: &mut LocationColumn) {
+    fn push_empty_location(out_col: &mut Vec<Option<BString>>) {
         // An "empty" hit: present but no sequence content
-        out_col.push_single(None, b"");
+        out_col.push(b"".into());
     }
 
     fn output_string(&self, matched_idx: usize, output_barcode: bool) -> Option<BString> {

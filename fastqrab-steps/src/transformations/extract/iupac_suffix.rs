@@ -114,14 +114,7 @@ impl Step for IUPACSuffix {
                 self.max_mismatches,
                 self.min_length,
             )
-            .map(|suffix_len| HitDraft {
-                location: Some(HitRegionView {
-                    start: seq.len() - suffix_len,
-                    len: suffix_len,
-                    segment_index: self.segment,
-                }),
-                sequence: seq[seq.len() - suffix_len..].to_vec(),
-            })
+            .map(|suffix_len| (seq.len() - suffix_len) as u32..seq.len() as u32)
         });
         Ok((block, true))
     }

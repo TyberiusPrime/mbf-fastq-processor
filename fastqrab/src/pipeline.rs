@@ -270,8 +270,14 @@ fn run_combiner_thread(
             return;
         }
         let out = (
-            io::FastQBlocksCombined::new(blocks, None, Default::default(), false, block_no,
-            first_read_in_block_no),
+            io::FastQBlocksCombined::new(
+                blocks,
+                None,
+                Default::default(),
+                false,
+                block_no,
+                first_read_in_block_no,
+            ),
             *expected_read_count.get().expect("Should have been set"),
         );
         first_read_in_block_no += out.0.len();
@@ -349,7 +355,7 @@ fn run_benchmark_combiner_thread(
         Default::default(),
         true,
         block_no,
-        molecules_sent
+        molecules_sent,
     );
     let _ = combiner_output_tx.send((final_block, Some(molecule_count)));
 }
@@ -377,8 +383,14 @@ fn run_benchmark_interleaved_thread(
         let out_blocks = out_blocks.clone();
 
         let out = (
-            io::FastQBlocksCombined::new(out_blocks, None, Default::default(), false, block_no,
-            molecules_sent),
+            io::FastQBlocksCombined::new(
+                out_blocks,
+                None,
+                Default::default(),
+                false,
+                block_no,
+                molecules_sent,
+            ),
             Some(molecule_count),
         );
 
@@ -782,7 +794,7 @@ impl RunStage1 {
                             Default::default(),
                             false,
                             0,
-                            0
+                            0,
                         );
 
                         let combiner_thread = thread::Builder::new()

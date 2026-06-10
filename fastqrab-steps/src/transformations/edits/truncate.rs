@@ -63,7 +63,6 @@ impl Step for Truncate {
             .member_mut(self.segment.as_index())
             .seq_quals
             .max_len(self.n, condition.as_deref());
-        block.filter_tag_locations_beyond_read_length(self.segment);
         Ok((block, true))
     }
 }

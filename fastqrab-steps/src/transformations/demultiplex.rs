@@ -261,7 +261,7 @@ impl Step for Demultiplex {
             .unwrap_or_else(|| vec![0; block.len()]);
 
         for (ii, key) in hits.iter_stringified().enumerate() {
-            if let Some(key) = key {
+            if !key.is_empty() {
                 match self.lookup_mode {
                     LookupMode::Lookup => {
                         if let Some(tag) = demultiplex_info.barcode_to_tag(&key) {

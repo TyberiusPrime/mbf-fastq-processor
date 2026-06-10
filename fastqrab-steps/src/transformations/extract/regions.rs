@@ -1,5 +1,5 @@
 use bstr::ByteVec;
-use std::{cell::RefCell, collections::HashSet, rc::Rc};
+use std::{cell::RefCell, collections::HashSet, ops::Range, rc::Rc};
 use toml_pretty_deser::Visitor;
 
 use super::super::{PartialRegionDefinition, RegionDefinition, extract_regions};
@@ -15,6 +15,12 @@ use crate::transformations::prelude::*;
 pub struct Regions {
     #[tpd(nested)]
     pub regions: Vec<RegionDefinition>, //validated to be non_empty in transformations::validate_regions
+    ///
+    /// Source for extraction - segment name, "tag:name" for tag source, or "name:segment" for read name source
+    #[schemars(with = "String")]
+    #[tpd(adapt_in_verify(String))]
+    #[tpd(alias = "segment")]
+    pub source: ResolvedSourceNoAll,
 
     pub out_label: TagLabel,
 
@@ -32,19 +38,20 @@ impl VerifyIn<PartialConfig> for PartialRegions {
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {
-        if let Some(regions) = self.regions.value.as_mut() {
-            for region in regions.iter_mut() {
-                if let Some(region_def) = region.value.as_mut() {
-                    region_def.source.validate_segment(parent);
-                    if region_def.can_concrete() {
-                        region.state = TomlValueState::Ok;
-                    }
-                } // cov:excl-line
-            }
-            if regions.iter().all(TomlValue::is_ok) {
-                self.regions.state = TomlValueState::Ok;
-            }
-        } // cov:excl-line
+        self.source.validate_segment(parent);
+        // if let Some(regions) = self.regions.value.as_mut() {
+        //     for region in regions.iter_mut() {
+        //         if let Some(region_def) = region.value.as_mut() {
+        //             //region_def.source.validate_segment(parent);
+        //             if region_def.can_concrete() {
+        //                 region.state = TomlValueState::Ok;
+        //             }
+        //         } // cov:excl-line
+        //     }
+        //     if regions.iter().all(TomlValue::is_ok) {
+        //         self.regions.state = TomlValueState::Ok;
+        //     }
+        // } // cov:excl-line
         self.regions.verify(|regions| {
             if regions.is_empty() {
                 Err(ValidationFailure::new(
@@ -73,8 +80,7 @@ impl TagUser for PartialTaggedVariant<PartialRegions> {
             let all_segments = if let Some(regions) = inner.regions.as_mut() {
                 let mut all_segments = true;
                 for tv_region in regions.iter_mut() {
-                    let region = tv_region.as_ref().expect("Parent was ok?");
-                    let source = region
+                    let source = &inner
                         .source
                         .as_ref()
                         .expect("parent was ok")
@@ -133,110 +139,66 @@ impl TagUser for PartialTaggedVariant<PartialRegions> {
 }
 
 impl Step for Regions {
-    // fn uses_tags(
-    //     &self,
-    //     tags_available: &IndexMap<TagLabel, TagMetadata>,
-    // ) -> Option<Vec<(String, &[TagValueType])>> {
-    //     let mut tags = Vec::new();
-    //     let mut seen = HashSet::new();
-    //     let mut all_location = true;
-    //     let mut any_tags = false;
-    //     for region in &self.regions {
-    //         if let Some(source_tags) = region.source.get_tags() {
-    //             any_tags = true;
-    //             for entry in source_tags {
-    //                 if seen.insert(entry.0.clone()) {
-    //                     //only add unseen tags
-    //                     if let Some(provided_tag_types) = tags_available.get(&entry.0) {
-    //                         if !matches!(provided_tag_types.tag_type, TagValueType::Location) {
-    //                             all_location = false;
-    //                         }
-    //                     } else {
-    //                         all_location = false;
-    //                     }
-    //                     tags.push(entry);
-    //                 }
-    //             }
-    //         }
-    //     }
-    //     let all_segments = self
-    //         .regions
-    //         .iter()
-    //         .all(|x| matches!(x.source, crate::config::ResolvedSourceNoAll::Segment(_)));
-    //     if (any_tags && all_location) || all_segments {
-    //         self.output_tag_type
-    //             .set(TagValueType::Location)
-    //             .expect("can't have been set yet");
-    //     } else {
-    //         self.output_tag_type
-    //             .set(TagValueType::String)
-    //             .expect("can't have been set yet");
-    //     }
-    //
-    //     if tags.is_empty() { None } else { Some(tags) }
-    // }
-
     fn apply(
         &self,
         mut block: FastQBlocksCombined,
         _input_info: &InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        if matches!(self.output_tag_type, TagValueType::Location) {
-            let mut col = LocationColumn::new();
-            for ii in 0..block.len() {
-                let extracted = extract_regions(ii, &block, &self.regions);
-                if extracted.iter().any(Option::is_none) {
-                    //if any region could not be extracted, we store Missing
-                    col.push_none();
-                    continue;
-                }
-                //all segments -> Location.
-                let mut entries: Vec<(Option<HitRegionView>, Vec<u8>)> = Vec::new();
-                for (seq, opt_coords) in extracted.into_iter().flatten() {
-                    // eats Nones.
-                    if let Some(coords) = opt_coords {
-                        entries.push((
-                            Some(HitRegionView {
-                                segment_index: coords.segment_index,
-                                start: coords.start,
-                                len: coords.length,
-                            }),
-                            seq.to_vec(),
-                        ));
-                    } else if !seq.is_empty() {
-                        //mutants false positive
-                        // cov:excl-start
-                        unreachable!();
-                        // cov:excl-stop
-                    } // cov:excl-line
-                }
-                if entries.is_empty() {
-                    col.push_none();
-                } else {
-                    let refs: Vec<(Option<HitRegionView>, &[u8])> = entries
-                        .iter()
-                        .map(|(loc, seq)| (loc.clone(), seq.as_slice()))
-                        .collect::<Vec<_>>();
-                    col.push_many(&refs);
-                }
+        match self.source {
+            ResolvedSourceNoAll::Tag(tag_label) => {
+                todo!();
+                // let mut out = Vec::with_capacity(block.segments[0].len());
+                // for ii in 0..block.len() {
+                //     let mut h = BString::default();
+                //     let extracted = extract_regions(ii, &block, &self.regions);
+                //     for (seq, _coords) in extracted.into_iter().flatten() {
+                //         h.push_str(&seq);
+                //     }
+                //     out.push(Some(h));
+                // }
+                // block
+                //     .tags
+                //     .insert(self.out_label.clone(), TagColumn::String(out));
             }
-            block
-                .tags
-                .insert(self.out_label.clone(), TagColumn::Location(col));
-        } else {
-            let mut out = Vec::with_capacity(block.segments[0].len());
-            for ii in 0..block.len() {
-                let mut h = BString::default();
-                let extracted = extract_regions(ii, &block, &self.regions);
-                for (seq, _segment_index) in extracted.into_iter().flatten() {
-                    h.push_str(&seq);
+            ResolvedSourceNoAll::Name {
+                segment_index,
+                split_character,
+            } => todo!(),
+            ResolvedSourceNoAll::Segment(segment_index) => {
+                let mut col = block.segments[segment_index.as_index()].seq_quals.multi_location_alias_builder();
+                for ii in 0..block.len() {
+                    let extracted = extract_regions(ii, &block, &self.regions);
+                    if extracted.iter().any(Option::is_none) {
+                        //if any region could not be extracted, we store Missing
+                        col.push_row(&[]);
+                        continue;
+                    }
+                    //all segments -> Location.
+                    let mut entries: Vec<(u32, u32)> = Vec::new();
+                    for (seq, opt_coords) in extracted.into_iter().flatten() {
+                        // eats Nones.
+                        if let Some(coords) = opt_coords {
+                            entries.push(
+                                (coords.start as u32, coords.length as u32)
+                            );
+                        } else if !seq.is_empty() {
+                            //mutants false positive
+                            // cov:excl-start
+                            unreachable!();
+                            // cov:excl-stop
+                        } // cov:excl-line
+                    }
+                    if entries.is_empty() {
+                        col.push_row(&[]);
+                    } else {
+                        col.push_row(&entries);
+                    }
                 }
-                out.push(Some(h));
+                block
+                    .tags
+                    .insert(self.out_label.clone(), TagColumn::Location(col.finish()));
             }
-            block
-                .tags
-                .insert(self.out_label.clone(), TagColumn::String(out));
         }
 
         Ok((block, true))

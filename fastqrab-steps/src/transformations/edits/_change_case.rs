@@ -115,25 +115,32 @@ impl Step for _ChangeCase {
                 if let Some(hits) = block.tags.get_mut(tag_name) {
                     match hits {
                         TagColumn::Location(col) => {
-                            for slot_idx in 0..col.hits.len() {
-                                let nhits = col.hits[slot_idx].len();
-                                for hit_idx in 0..nhits {
-                                    let hit = col.hits[slot_idx][hit_idx];
-                                    let bytes = col.hit_bytes_mut(hit);
-                                    for b in bytes.iter_mut() {
-                                        *b = case_converter(*b);
-                                    }
-                                }
-                            }
+                            todo!("Implement");
+                            // for slot_idx in 0..col.hits.len() {
+                            //     let nhits = col.hits[slot_idx].len();
+                            //     for hit_idx in 0..nhits {
+                            //         let hit = col.hits[slot_idx][hit_idx];
+                            //         let bytes = col.hit_bytes_mut(hit);
+                            //         for b in bytes.iter_mut() {
+                            //             *b = case_converter(*b);
+                            //         }
+                            //     }
+                            // }
                         }
                         TagColumn::String(opt_bstrings) => {
-                            for opt_value in opt_bstrings.iter_mut() {
-                                if let Some(value) = opt_value {
-                                    for ii in 0..value.len() {
-                                        value[ii] = case_converter(value[ii]);
-                                    }
-                                }
-                            }
+                            todo!(
+                                "Decide what to do. This seems terribly wrong,\
+                            to at one hand mutate the reads (on location tags)
+                            and on the other to be manipulating string tags 
+                            in place"
+                            );
+                            // for opt_value in opt_bstrings.iter_mut() {
+                            //     if let Some(value) = opt_value {
+                            //         for ii in 0..value.len() {
+                            //             value[ii] = case_converter(value[ii]);
+                            //         }
+                            //     }
+                            // }
                         }
                         TagColumn::Numeric(_) | TagColumn::Bool(_) => panic!(
                             "Can't convert case on non-string tags. Should have been caught in validation"
@@ -148,7 +155,8 @@ impl Step for _ChangeCase {
                 block.apply_in_place_wrapped_plus_all(
                     *segment_index_or_all,
                     |read| {
-                        let (name, _comment) = split_name_and_comment_mut(read.name, *split_character);
+                        let (name, _comment) =
+                            split_name_and_comment_mut(read.name, *split_character);
                         for b in name.iter_mut() {
                             *b = case_converter(*b);
                         }

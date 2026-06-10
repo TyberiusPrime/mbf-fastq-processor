@@ -65,14 +65,7 @@ impl Step for LowQualityEnd {
                 }
             }
             if cut_pos < qual.len() {
-                Some(HitDraft {
-                    location: Some(HitRegionView {
-                        start: cut_pos,
-                        len: qual.len() - cut_pos,
-                        segment_index: self.segment,
-                    }),
-                    sequence: seq[cut_pos..].to_vec(),
-                })
+                Some(cut_pos as u32..qual.len() as u32)
             } else {
                 None
             }

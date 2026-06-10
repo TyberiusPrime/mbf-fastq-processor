@@ -185,41 +185,41 @@ impl Step for ConcatTags {
             .all(|col| matches!(col, TagColumn::Location(_)));
 
         if all_location {
-            // Output is Location
-            use fastqrab_config::dna::LocationColumn;
-            let mut output_col = LocationColumn::new();
-            for read_idx in 0..num_reads {
-                let mut any_missing = false;
-                // Collect all (location, seq) pairs from each column for this read
-                let mut entries: Vec<(Option<fastqrab_config::dna::HitRegionView>, Vec<u8>)> =
-                    Vec::new();
-                for col in &tag_columns {
-                    if let TagColumn::Location(loc_col) = col {
-                        let slot_hits = loc_col.get(read_idx);
-                        if slot_hits.is_empty() {
-                            any_missing = true;
-                        } else {
-                            for &h in slot_hits.iter() {
-                                let loc = loc_col.hit_location(h);
-                                let seq = loc_col.hit_bytes(h).to_vec();
-                                entries.push((loc, seq));
-                            }
-                        }
-                    }
-                }
-                if (any_missing && self.on_missing == OnMissing::SetMissing) || entries.is_empty() {
-                    output_col.push_none();
-                } else {
-                    let refs: Vec<(Option<fastqrab_config::dna::HitRegionView>, &[u8])> = entries
-                        .iter()
-                        .map(|(loc, seq)| (loc.clone(), seq.as_slice()))
-                        .collect();
-                    output_col.push_many(&refs);
-                }
-            }
-            block
-                .tags
-                .insert(self.out_label.clone(), TagColumn::Location(output_col));
+            todo!();
+            // // Output is Location
+            // let mut output_col = LocationColumn::new();
+            // for read_idx in 0..num_reads {
+            //     let mut any_missing = false;
+            //     // Collect all (location, seq) pairs from each column for this read
+            //     let mut entries: Vec<(Option<Range<u32>>, Vec<u8>)> =
+            //         Vec::new();
+            //     for col in &tag_columns {
+            //         if let TagColumn::Location(loc_col) = col {
+            //             let slot_hits = loc_col.get(read_idx);
+            //             if slot_hits.is_empty() {
+            //                 any_missing = true;
+            //             } else {
+            //                 for &h in slot_hits.iter() {
+            //                     let loc = loc_col.hit_location(h);
+            //                     let seq = loc_col.hit_bytes(h).to_vec();
+            //                     entries.push((loc, seq));
+            //                 }
+            //             }
+            //         }
+            //     }
+            //     if (any_missing && self.on_missing == OnMissing::SetMissing) || entries.is_empty() {
+            //         output_col.push_none();
+            //     } else {
+            //         let refs: Vec<(Option<fastqrab_config::dna::HitRegionView>, &[u8])> = entries
+            //             .iter()
+            //             .map(|(loc, seq)| (loc.clone(), seq.as_slice()))
+            //             .collect();
+            //         output_col.push_many(&refs);
+            //     }
+            // }
+            // block
+            //     .tags
+            //     .insert(self.out_label.clone(), TagColumn::Location(output_col));
         } else {
             // Output is String (convert Location to sequence bytes)
             let mut output_tags: Vec<Option<BString>> = Vec::with_capacity(num_reads);

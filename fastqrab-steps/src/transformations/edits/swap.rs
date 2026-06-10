@@ -1,5 +1,4 @@
 use crate::transformations::prelude::*;
-use fastqrab_dna::dna::HitRegion;
 
 /// Swap two segments
 #[derive(Clone, JsonSchema)]
@@ -131,20 +130,6 @@ impl Step for Swap {
         if self.if_tag.is_none() {
             block.swap_members(index_a as usize, index_b as usize);
 
-            block.filter_tag_locations_all_targets(
-                |location: HitRegion, _pos: usize| -> NewLocation {
-                    NewLocation::New(HitRegion {
-                        start: location.start,
-                        len: location.len,
-                        segment_index: match location.segment_index {
-                            SegmentIndex(index) if index == index_a => SegmentIndex(index_b),
-                            SegmentIndex(index) if index == index_b => SegmentIndex(index_a),
-                            _ => location.segment_index, // others unchanged
-                        },
-                    })
-                },
-            );
-
             return Ok((block, true));
         }
 
@@ -196,32 +181,6 @@ impl Step for Swap {
         // //one. Makes mutation testing happy.
 
         // Update tag locations for all reads where swap occurred
-        block.filter_tag_locations_all_targets(|location: HitRegion, pos: usize| -> NewLocation {
-            // Check if this read position was swapped
-            // If we did a block swap, the logic is inverted
-            let was_swapped = if did_block_swap {
-                // Block was swapped, so all reads are swapped unless they're in swap_these
-                !swap_these[pos]
-            } else {
-                // Normal case: only reads in swap_these were swapped
-                swap_these[pos]
-            };
-
-            if was_swapped {
-                NewLocation::New(HitRegion {
-                    start: location.start,
-                    len: location.len,
-                    segment_index: match location.segment_index {
-                        SegmentIndex(index) if index == index_a => SegmentIndex(index_b),
-                        SegmentIndex(index) if index == index_b => SegmentIndex(index_a),
-                        _ => location.segment_index, // others unchanged
-                    },
-                })
-            } else {
-                NewLocation::Keep
-            }
-        });
-
         Ok((block, true))
     }
 }

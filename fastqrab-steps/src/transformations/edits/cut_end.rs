@@ -71,7 +71,6 @@ impl Step for CutEnd {
             .member_mut(self.segment.as_index())
             .seq_quals
             .cut_end(self.n, condition.as_deref());
-        block.filter_tag_locations_beyond_read_length(self.segment);
 
         Ok((block, true))
     }

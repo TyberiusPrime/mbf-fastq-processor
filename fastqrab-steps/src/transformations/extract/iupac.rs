@@ -104,7 +104,6 @@ impl Step for IUPAC {
                             query,
                             self.anchor,
                             self.max_mismatches,
-                            self.segment,
                             self.max_anchor_distance,
                         ) {
                             return Some(hit);
@@ -122,15 +121,11 @@ impl Step for IUPAC {
                                 query,
                                 self.anchor,
                                 self.max_mismatches,
-                                self.segment,
                                 self.max_anchor_distance,
                             )
                         })
                         .min_by_key(|hit| {
-                            hit.location
-                                .as_ref()
-                                .map(|x| x.start)
-                                .expect("Found iupac should have had location set")
+                            hit.start
                         });
                 }
                 TieBreak::RightMost => {
@@ -143,15 +138,11 @@ impl Step for IUPAC {
                                 query,
                                 self.anchor,
                                 self.max_mismatches,
-                                self.segment,
                                 self.max_anchor_distance,
                             )
                         })
                         .max_by_key(|hit| {
-                            hit.location
-                                .as_ref()
-                                .map(|x| x.start)
-                                .expect("Found iupac should have had location set")
+                            hit.start
                         });
                 }
             }

@@ -1,6 +1,6 @@
 use crate::transformations::prelude::*;
 use fastqrab_config::{
-    dna::HitRegion, fileformats::PhredEncoding, tpd_adapt_bstring, tpd_adapt_dna_bstring_plus_n,
+    fileformats::PhredEncoding, tpd_adapt_bstring, tpd_adapt_dna_bstring_plus_n,
 };
 
 /// add a fixed prefix to the start of reads
@@ -123,22 +123,6 @@ impl Step for Prefix {
             }
         }
         block.segments[self.segment.as_index()].seq_quals = new.finish();
-
-        let prefix_len = self.seq.len();
-
-        block.filter_tag_locations(
-            self.segment,
-            |location: HitRegion, _pos, _seq, _read_len: usize| -> NewLocation {
-                {
-                    NewLocation::New(HitRegion {
-                        start: location.start + prefix_len,
-                        len: location.len,
-                        segment_index: location.segment_index,
-                    })
-                }
-            },
-            condition.as_deref(),
-        );
 
         Ok((block, true))
     }

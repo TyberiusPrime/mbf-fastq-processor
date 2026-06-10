@@ -134,7 +134,9 @@ impl ValidateSegment for TomlValue<MustAdapt<String, SegmentIndexOrAll>> {
                     *self = TomlValue::new_validation_failed(
                         self.span.clone(),
                         "Segment not specified but multiple segments available".to_string(),
-                        Some(format!("Available segments: {segment_names}. 'All' for all segments is also valid.")),
+                        Some(format!(
+                            "Available segments: {segment_names}. 'All' for all segments is also valid."
+                        )),
                     );
                 }
             }

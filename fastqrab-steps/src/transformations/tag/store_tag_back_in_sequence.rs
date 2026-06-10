@@ -54,15 +54,17 @@ impl Step for StoreTagBackInSequence {
         let mut what_happend = Vec::with_capacity(block.len());
         let error_encountered = std::cell::RefCell::new(Option::<String>::None);
 
-
         todo!("This needs a complete rewrite with the StringPods API");
         //Todo: We can't do it like that.
         //We need to build new seqs/quals for the affected reads
         //and not change the unaffected ones
         // bonus point is that we don't need to care about WhatHappend...
         let mut builders: Vec<Option<DualStringPodBuilder>> = vec![None; block.segments.len()];
-        let column = block.tags.get(&self.in_label).expect("Tag not found in block");
-        let column = column.as_locations().expect("Tag is not a location column"); 
+        let column = block
+            .tags
+            .get(&self.in_label)
+            .expect("Tag not found in block");
+        let column = column.as_locations().expect("Tag is not a location column");
         // for (molecule, hit)  in block.molecules.zip(column){
         // }
 
@@ -133,19 +135,7 @@ impl Step for StoreTagBackInSequence {
         if let Some(error_msg) = error_encountered.borrow().as_ref() {
             return Err(anyhow::anyhow!("{error_msg}"));
         }
-
-        block.filter_tag_locations_all_targets(|_location: HitRegion, pos: usize| -> NewLocation {
-            match &what_happend[pos] {
-                true => NewLocation::Keep,
-                false => {
-                    //now the fun part. TODO
-                    //Also todo: test cases
-                    //for now, I'll just filter them
-                    NewLocation::Remove
-                }
-            }
-        });
-
+        
         Ok((block, true))
     }
 }

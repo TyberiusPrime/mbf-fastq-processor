@@ -10,7 +10,7 @@ pub(crate) use crate::config::{
 pub use fastqrab_config::{
     ConditionalTagLabel, FileFormat, RemovedTags, TagLabel, TagValueType, ToDeclaredTag, ToUsedTag,
     ToUsedTags, UsedTag,
-    dna::{HitDraft, HitRegion, HitRegionView, Hits, LocationColumn, TagColumn},
+    dna::TagColumn,
     offer_alternatives,
     segments::{
         ResolvedSourceAll,
@@ -31,7 +31,6 @@ pub(crate) use fastqrab_io::io::{
     output::chunked_writer::{
         ChunkPolicy, ChunkedRecordWriter, OutputDeclaration, SinkConfig, WriteTargetConfig,
     },
-    reads::NewLocation,
     reads::WrappedFastQReadCommon,
 };
 
@@ -57,5 +56,11 @@ pub use typed_floats::tf64::NonNaN;
 
 pub type FxIndexMap<K, V> = IndexMap<K, V, rustc_hash::FxBuildHasher>;
 
-pub use fastqrab_io::blocks::{Molecule, MoleculeMut, OwnedMolecule, split_name_and_comment};
-pub use stringpod::{CrossPods, DualStringPodBuilder, StringPodBuilder};
+pub use fastqrab_io::blocks::{Molecule, OwnedMolecule, split_name_and_comment};
+pub use stringpod::{
+    CrossPods, DualStringPodBuilder, DualStringPodMultiLocation,
+    DualStringPodMultiLocationAliasBuilder, StringPodBuilder,
+};
+
+pub use std::ops::Range;
+pub use smallvec::SmallVec;

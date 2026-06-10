@@ -89,31 +89,28 @@ impl Step for WorstQuality {
                     _ => anyhow::bail!("WorstQuality source tag must be a Location column"),
                 };
                 let missing_value = 33.0 + self.offset as f64;
-                todo!();
-                // let mut values = Vec::with_capacity(location_items.len());
-                // let mut iter = block.get_pseudo_iter();
-                //
-                // for hits in location_items.iter() {
-                //     let molecule = iter.pseudo_next().expect("tag and read count should match");
-                //     let q = if hits.is_empty() {
-                //         missing_value
-                //     } else {
-                //         match molecule.hit_to_qualities(hits) {
-                //             Some(qual_bytes) if !qual_bytes.is_empty() => qual_bytes
-                //                 .iter()
-                //                 .map(|x| Into::<i16>::into(*x) + self.offset as i16)
-                //                 .min()
-                //                 .unwrap_or(33 + self.offset as i16)
-                //                 as f64,
-                //             _ => missing_value,
-                //         }
-                //     };
-                //     values.push(q);
-                // }
-                //
-                // block
-                //     .tags
-                //     .insert(self.out_label.clone(), TagColumn::Numeric(values));
+                let mut values = Vec::with_capacity(location_items.row_count());
+                {
+                    let mut iter = block.molecules();
+
+                    for qual in location_items.iter_qual() {
+                        let molecule = iter.next().expect("tag and read count should match");
+                        let q = qual
+                            .map(|qual| {
+                                qual.iter()
+                                    .map(|x| Into::<i16>::into(*x) + self.offset as i16)
+                                    .min()
+                                    .unwrap_or(33 + self.offset as i16)
+                                    as f64
+                            })
+                            .unwrap_or(missing_value);
+                        values.push(q);
+                    }
+                }
+
+                block
+                    .tags
+                    .insert(self.out_label.clone(), TagColumn::Numeric(values));
             }
             ResolvedSourceAll::Name { .. } => unreachable!(), // cov:excl-line
         }

@@ -32,13 +32,13 @@
 #![allow(clippy::module_name_repetitions)]
 
 use anyhow::{Context, Result};
+use bstr::ByteSlice;
 use fastqrab_config::{CompressionFormat, FileFormat};
 use sha2::Digest;
 use std::io::{self, BufWriter, Write};
 use std::num::{NonZero, NonZeroUsize};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use bstr::ByteSlice;
 
 use super::simulated_failure::{FailForTestWriter, SimulatedWriteFailure};
 use crate::ensure_output_destination_available;
@@ -521,10 +521,7 @@ where
         .iter()
         .position(|&c| c == options.comment_separation_char)
     {
-        (
-            &read.name[..space_pos],
-            Some(&read.name[space_pos + 1..]),
-        )
+        (&read.name[..space_pos], Some(&read.name[space_pos + 1..]))
     } else {
         (read.name, None)
     };
@@ -544,17 +541,8 @@ where
             .expect("Tag was missing, config validation failure");
         let value_opt: Option<Value> = match tag_col {
             TagColumn::Location(col) => {
-                let hits = col.get(read_index);
-                if hits.is_empty() {
-                    None
-                } else {
-                    let joined = hits
-                        .iter()
-                        .map(|&h| col.hit_bytes(h))
-                        .collect::<Vec<_>>()
-                        .join(b",".as_ref());
-                    Some(Value::String(BString::from(joined)))
-                }
+                let joined = col.joined_seq(read_index, Some(b","));
+                Some(Value::String((*joined).into()))
             }
             TagColumn::String(items) => items
                 .get(read_index)

@@ -64,10 +64,8 @@ impl Step for Box<_InternalReadCount> {
         _input_info: &InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        self.count.fetch_add(
-            block.len(),
-            std::sync::atomic::Ordering::Relaxed,
-        );
+        self.count
+            .fetch_add(block.len(), std::sync::atomic::Ordering::Relaxed);
         Ok((block, true))
     }
 

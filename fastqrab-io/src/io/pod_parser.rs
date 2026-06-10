@@ -18,7 +18,7 @@
 
 use std::sync::Arc;
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{Result, anyhow, bail};
 use crossbeam::channel::{self, Receiver, Sender};
 
 use stringpod::{DualStringPod, StringPod, StringPodBuilder};

@@ -65,14 +65,7 @@ impl Step for LowQualityStart {
                 }
             }
             if cut_pos > 0 {
-                Some(HitDraft {
-                    location: Some(HitRegionView {
-                        start: 0,
-                        len: cut_pos,
-                        segment_index: self.segment,
-                    }),
-                    sequence: seq[..cut_pos].to_vec(),
-                })
+                Some(0..cut_pos as u32)
             } else {
                 None
             }
