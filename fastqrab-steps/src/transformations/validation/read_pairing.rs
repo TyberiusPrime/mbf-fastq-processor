@@ -77,7 +77,7 @@ impl Step for ValidateReadPairing {
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let segment_count = block.segments.len();
-        let reads_in_block = block.segments.len();
+        let reads_in_block = block.row_count();
         assert!(self.sample_stride > 0);
 
         let offset = self

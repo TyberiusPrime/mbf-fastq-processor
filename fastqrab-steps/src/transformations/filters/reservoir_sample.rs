@@ -62,7 +62,6 @@ impl TagUser for PartialTaggedVariant<PartialReservoirSample> {
     }
 }
 
-
 impl Step for ReservoirSample {
     fn init(
         &mut self,

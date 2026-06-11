@@ -209,13 +209,15 @@ impl VerifyIn<PartialConfig> for PartialStoreSingleCellMatrix {
     }
 }
 
+//todo: unify with demultiplex that makes the same decision, I suppose
 fn determine_lookup_mode(
-    upstream_label_type: Option<&TagValueType>,
+    upstream_label_meta: Option<&TagMetadata>,
     tag_contains_barcode: &TomlValue<Option<bool>>,
 ) -> Option<LookupMode> {
-    if let Some(upstream_label_type) = upstream_label_type {
-        match upstream_label_type {
-            TagValueType::Location | TagValueType::String => {
+    if let Some(meta) = upstream_label_meta {
+        match meta.tag_type {
+            TagValueType::Location => Some(LookupMode::Barcode),
+            TagValueType::String => {
                 if let Some(Some(tag_contains_barcode)) = tag_contains_barcode.as_ref() {
                     //user has explicitly told us what the tag contains,
                     //barcodes or barcode-names
@@ -224,11 +226,17 @@ fn determine_lookup_mode(
                     } else {
                         Some(LookupMode::Label)
                     }
-                } else if matches!(upstream_label_type, TagValueType::Location) {
-                    Some(LookupMode::Barcode)
                 } else {
-                    Some(LookupMode::Label)
+                    match meta.contents {
+                        StringTagContent::Undefined => {
+                            // require the user to set it
+                            None
+                        }
+                        StringTagContent::Barcodes => Some(LookupMode::Barcode),
+                        StringTagContent::Labels => Some(LookupMode::Label),
+                    }
                 }
+                // complain otherwise.
             }
             // cov:excl-start
             _ => {
@@ -325,15 +333,11 @@ impl TagUser for PartialTaggedVariant<PartialStoreSingleCellMatrix> {
     ) -> Option<TagUsageInfo<'_>> {
         let inner = self.toml_value.value.as_mut()?;
         inner.cell_lookup_mode = determine_lookup_mode(
-            tags_available
-                .get(inner.cell_tag.as_ref().expect("parent was ok"))
-                .map(|meta| &meta.tag_type),
+            tags_available.get(inner.cell_tag.as_ref().expect("parent was ok")),
             &inner.cell_tag_contains_barcode,
         );
         inner.gene_lookup_mode = determine_lookup_mode(
-            tags_available
-                .get(inner.gene_tag.as_ref().expect("parent was ok"))
-                .map(|meta| &meta.tag_type),
+            tags_available.get(inner.gene_tag.as_ref().expect("parent was ok")),
             &inner.gene_tag_contains_barcode,
         );
 
@@ -499,7 +503,7 @@ impl Step for StoreSingleCellMatrix {
                     if seq.is_empty() {
                         0
                     } else {
-                        seq_to_idx(&seq, cell_map)
+                        seq_to_idx(&seq, gene_map)
                     }
                 }
                 _ => 0,
@@ -702,6 +706,15 @@ impl Step for StoreSingleCellMatrix {
                         )?;
                     }
                 }
+            }
+            if !any_gene_matches && !any_cell_matches {
+                bail!(
+                    "No reads matched the gene nor the cell barcode/label. \
+                    Check your barcodes and possibly set `gene_tag_contains_barcode` \
+                    and `cell_tag_contains_barcode` to either 'barcode' or 'label' \
+                    if the auto-detection has failed you.
+                    "
+                );
             }
             if !any_gene_matches {
                 bail!(

@@ -8,8 +8,8 @@ pub(crate) use crate::config::{
 };
 
 pub use fastqrab_config::{
-    ConditionalTagLabel, FileFormat, RemovedTags, TagLabel, TagValueType, ToDeclaredTag, ToUsedTag,
-    ToUsedTags, UsedTag,
+    ConditionalTagLabel, FileFormat, RemovedTags, StringTagContent, TagLabel, TagValueType,
+    ToDeclaredTag, ToUsedTag, ToUsedTags, UsedTag,
     dna::TagColumn,
     offer_alternatives,
     segments::{
@@ -62,6 +62,6 @@ pub use stringpod::{
     DualStringPodMultiLocationAliasBuilder, StringPodBuilder,
 };
 
-pub use std::ops::Range;
 pub use smallvec::SmallVec;
 pub use std::borrow::Cow;
+pub use std::ops::Range;

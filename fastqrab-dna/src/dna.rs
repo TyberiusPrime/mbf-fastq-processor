@@ -117,7 +117,7 @@ impl TagColumn {
             TagColumn::Numeric(_) => unreachable!("Cant get truthy of numeric values."), //cov:excl-line
             TagColumn::Bool(bools) => Box::new(bools.iter().copied()),
             TagColumn::Location(col) => {
-                Box::new((0..col.row_count()).map(|idx| col.row_is_empty(idx)))
+                Box::new((0..col.row_count()).map(|idx| !col.row_is_empty(idx)))
             }
 
             TagColumn::String(strings) => Box::new(strings.iter().map(|x| x.is_some())),
@@ -907,7 +907,7 @@ mod test {
         }
     }
 
-    fn draft_for(start: usize, len: usize, seg: u8, seq: &[u8]) -> Range<u32>{
+    fn draft_for(start: usize, len: usize, seg: u8, seq: &[u8]) -> Range<u32> {
         start as u32..(start + len) as u32
     }
 
@@ -918,43 +918,19 @@ mod test {
             Some(draft_for(0, 3, 0, b"AGT"))
         );
         assert_eq!(
-            super::find_iupac(
-                b"AGTTC",
-                b"TTC",
-                super::Anchor::Right,
-                0,
-                0
-            ),
+            super::find_iupac(b"AGTTC", b"TTC", super::Anchor::Right, 0, 0),
             Some(draft_for(2, 3, 1, b"TTC"))
         );
         assert_eq!(
-            super::find_iupac(
-                b"AGTTC",
-                b"GT",
-                super::Anchor::Anywhere,
-                0,
-                0
-            ),
+            super::find_iupac(b"AGTTC", b"GT", super::Anchor::Anywhere, 0, 0),
             Some(draft_for(1, 2, 2, b"GT"))
         );
         assert_eq!(
-            super::find_iupac(
-                b"AGTTC",
-                b"AGT",
-                super::Anchor::Anywhere,
-                0,
-                0
-            ),
+            super::find_iupac(b"AGTTC", b"AGT", super::Anchor::Anywhere, 0, 0),
             Some(draft_for(0, 3, 2, b"AGT"))
         );
         assert_eq!(
-            super::find_iupac(
-                b"AGTTC",
-                b"TTC",
-                super::Anchor::Anywhere,
-                0,
-                0
-            ),
+            super::find_iupac(b"AGTTC", b"TTC", super::Anchor::Anywhere, 0, 0),
             Some(draft_for(2, 3, 2, b"TTC"))
         );
         assert_eq!(
@@ -962,44 +938,23 @@ mod test {
             None
         );
         assert_eq!(
-            super::find_iupac(b"AGTTC", b"GT", super::Anchor::Right, 0,  0),
+            super::find_iupac(b"AGTTC", b"GT", super::Anchor::Right, 0, 0),
             None
         );
         assert_eq!(
-            super::find_iupac(
-                b"AGTTC",
-                b"GG",
-                super::Anchor::Anywhere,
-                0,
-                
-                0
-            ),
+            super::find_iupac(b"AGTTC", b"GG", super::Anchor::Anywhere, 0, 0),
             None,
         );
         assert_eq!(
-            super::find_iupac(
-                b"AGTTC",
-                b"T",
-                super::Anchor::Anywhere,
-                0,
-                
-                0
-            ),
+            super::find_iupac(b"AGTTC", b"T", super::Anchor::Anywhere, 0, 0),
             Some(draft_for(2, 1, 1, b"T"))
         );
         assert_eq!(
-            super::find_iupac(b"AGTTC", b"AA", super::Anchor::Left, 1,  0),
+            super::find_iupac(b"AGTTC", b"AA", super::Anchor::Left, 1, 0),
             Some(draft_for(0, 2, 1, b"AG"))
         );
         assert_eq!(
-            super::find_iupac(
-                b"AGTTC",
-                b"AGTTN",
-                super::Anchor::Left,
-                0,
-             
-                0
-            ),
+            super::find_iupac(b"AGTTC", b"AGTTN", super::Anchor::Left, 0, 0),
             Some(draft_for(0, 5, 1, b"AGTTC"))
         );
     }
@@ -1008,110 +963,47 @@ mod test {
     #[expect(clippy::too_many_lines, reason = "it's a test")]
     fn test_find_iupac_with_indel() {
         assert_eq!(
-            super::find_iupac_with_indel(
-                b"AGTTC",
-                b"AGT",
-                super::Anchor::Anywhere,
-                0,
-                0,
-                None,
-            ),
+            super::find_iupac_with_indel(b"AGTTC", b"AGT", super::Anchor::Anywhere, 0, 0, None,),
             Some(draft_for(0, 3, 0, b"AGT"))
         );
 
         assert_eq!(
-            super::find_iupac_with_indel(
-                b"AGTTC",
-                b"AAT",
-                super::Anchor::Left,
-                1,
-                0,
-                None,
-            ),
+            super::find_iupac_with_indel(b"AGTTC", b"AAT", super::Anchor::Left, 1, 0, None,),
             Some(draft_for(0, 3, 2, b"AGT"))
         );
 
         assert_eq!(
-            super::find_iupac_with_indel(
-                b"AGGTC",
-                b"AGTC",
-                super::Anchor::Anywhere,
-                0,
-                1,
-                None,
-            ),
+            super::find_iupac_with_indel(b"AGGTC", b"AGTC", super::Anchor::Anywhere, 0, 1, None,),
             Some(draft_for(0, 5, 3, b"AGGTC"))
         );
 
         assert_eq!(
-            super::find_iupac_with_indel(
-                b"AGTC",
-                b"AGGTC",
-                super::Anchor::Anywhere,
-                0,
-                1,
-                None,
-            ),
+            super::find_iupac_with_indel(b"AGTC", b"AGGTC", super::Anchor::Anywhere, 0, 1, None,),
             Some(draft_for(0, 4, 4, b"AGTC"))
         );
 
         assert_eq!(
-            super::find_iupac_with_indel(
-                b"CCAGTTC",
-                b"AGT",
-                super::Anchor::Left,
-                0,
-                1,
-                None,
-            ),
+            super::find_iupac_with_indel(b"CCAGTTC", b"AGT", super::Anchor::Left, 0, 1, None,),
             None
         );
 
         assert_eq!(
-            super::find_iupac_with_indel(
-                b"CCAGTTC",
-                b"AGT",
-                super::Anchor::Right,
-                0,
-                1,
-                None,
-            ),
+            super::find_iupac_with_indel(b"CCAGTTC", b"AGT", super::Anchor::Right, 0, 1, None,),
             None
         );
 
         assert_eq!(
-            super::find_iupac_with_indel(
-                b"CCAGTTC",
-                b"TTC",
-                super::Anchor::Right,
-                0,
-                1,
-                None,
-            ),
+            super::find_iupac_with_indel(b"CCAGTTC", b"TTC", super::Anchor::Right, 0, 1, None,),
             Some(draft_for(4, 3, 5, b"TTC"))
         );
 
         assert_eq!(
-            super::find_iupac_with_indel(
-                b"AGGTC",
-                b"AATC",
-                super::Anchor::Anywhere,
-                0,
-                1,
-                None,
-            ),
+            super::find_iupac_with_indel(b"AGGTC", b"AATC", super::Anchor::Anywhere, 0, 1, None,),
             None
         );
 
         assert_eq!(
-            super::find_iupac_with_indel(
-                b"AGGTC",
-                b"AATC",
-                super::Anchor::Anywhere,
-                1,
-                1,
-                Some(1),
-            ),
+            super::find_iupac_with_indel(b"AGGTC", b"AATC", super::Anchor::Anywhere, 1, 1, Some(1),),
             None
         );
 
@@ -1128,32 +1020,16 @@ mod test {
         );
 
         assert_eq!(
-            super::find_iupac_with_indel(
-                b"",
-                b"AGT",
-                super::Anchor::Anywhere,
-                0,
-                0,
-                None,
-            ),
+            super::find_iupac_with_indel(b"", b"AGT", super::Anchor::Anywhere, 0, 0, None,),
             None
         );
         assert_eq!(
-            super::find_iupac_with_indel(
-                b"AG",
-                b"",
-                super::Anchor::Anywhere,
-                0,
-                0,
-                None,
-            ),
+            super::find_iupac_with_indel(b"AG", b"", super::Anchor::Anywhere, 0, 0, None,),
             None
         );
     }
 
     use super::*;
-
-
 
     #[test]
     fn test_positions_compatible() {

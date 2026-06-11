@@ -72,7 +72,7 @@ impl Step for RegionsOfLowQuality {
         let min_quality = self.min_quality;
         let min_length = self.min_length;
         for read in block.member(self.segment.as_index()).seq_quals.iter() {
-            let mut entries: Vec<(u32,u32)> = Vec::new();
+            let mut entries: Vec<(u32, u32)> = Vec::new();
             let mut in_low_quality_region = false;
             let mut region_start = 0;
 

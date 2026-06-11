@@ -1680,34 +1680,24 @@ impl FastQBlocksCombined {
         Ok(())
     }
 
-    /// Apply a function in place to all reads in a segment
-    /// with optional condition filter
-    /// using raw `FastQRead`
+    /// Apply a function in place to all read sequencs in a segment
+
     pub fn apply_in_place(
         &mut self,
         segment: SegmentIndex,
-        f: impl Fn(&mut crate::blocks::FastQRead),
+        mut f: impl FnMut(&mut BStr),
         condition: Option<&[bool]>,
     ) {
-        todo!();
-        // if let Some(condition) = condition {
-        //     for (idx, read) in
-        //         CrossPodLocations::per_row(&mut self.segments[segment.as_index()]).iter_mut(
-        //                 &mut self.segments[segment.as_index()])
-        //         .enumerate()
-        //     {
-        //         if condition[idx] {
-        //             f(read);
-        //         }
-        //     }
-        // } else {
-        //     for read in CrossPodLocations::per_row(&mut self.segments[segment.as_index()]).iter_mut(
-        //                 &mut self.segments[segment.as_index()])
-        //         f(read);
-        //     }
-        // }
+        for (idx, mut seq) in self.segments[segment.as_index()]
+            .seq_quals
+            .iter_seq_mut()
+            .enumerate()
+        {
+            if condition.is_none_or(|c| c[idx]) {
+                f(&mut seq)
+            }
+        }
     }
-
     /// Apply a function in place to all reads in a segment,
     /// allowing mutation on the reads (non length changing!)
     /// with optional condition filter
@@ -1720,7 +1710,7 @@ impl FastQBlocksCombined {
         condition: Option<&[bool]>,
     ) {
         for (idx, mut read) in self.segments[segment.as_index()].iter_mut().enumerate() {
-            if condition.is_some_and(|c| !c[idx]) {
+            if condition.is_none_or(|c| c[idx]) {
                 f(&mut read)
             }
         }
@@ -1736,7 +1726,7 @@ impl FastQBlocksCombined {
     ) {
         for segment in self.iter_matching_segments_mut(segment) {
             for (idx, mut read) in segment.iter_mut().enumerate() {
-                if condition.is_some_and(|c| !c[idx]) {
+                if condition.is_none_or(|c| c[idx]) {
                     f(&mut read)
                 }
             }

@@ -43,6 +43,7 @@
     action = 'Demultiplex'
     in_label = 'b46'
 	barcodes='bc46'
+    in_label_contains_barcode=true
 
     output_unmatched = true
 

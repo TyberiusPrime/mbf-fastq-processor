@@ -124,69 +124,38 @@ impl Step for ConcatTags {
         let num_reads = block.segments[0].len();
 
         let output_tags = {
-        // Collect tag columns for all input labels
-        let tag_columns: Vec<&TagColumn> = self
-            .in_labels
-            .iter()
-            .map(|label| {
-                block
-                    .tags
-                    .get(label)
-                    .ok_or_else(|| anyhow::anyhow!("Tag '{label}' not found in block"))
-            })
-            .collect::<Result<Vec<_>, _>>()?;
+            // Collect tag columns for all input labels
+            let tag_columns: Vec<&TagColumn> = self
+                .in_labels
+                .iter()
+                .map(|label| {
+                    block
+                        .tags
+                        .get(label)
+                        .ok_or_else(|| anyhow::anyhow!("Tag '{label}' not found in block"))
+                })
+                .collect::<Result<Vec<_>, _>>()?;
 
-        let mut string_iters: Vec<_> = tag_columns
-            .into_iter()
-            .map(TagColumn::iter_stringified)
-            .collect();
+            let mut string_iters: Vec<_> = tag_columns
+                .into_iter()
+                .map(TagColumn::iter_stringified)
+                .collect();
 
-        // Output is String (convert Location to sequence bytes)
-        let mut output_tags: Vec<Option<BString>> = Vec::with_capacity(num_reads);
-        match self.on_missing {
-            OnMissing::MergePresent => {
-                for read_idx in 0..num_reads {
-                    let parts: Vec<_> = string_iters
-                        .iter_mut()
-                        .map(|iter| {
-                            iter.next()
-                                .expect("tag length != block length!?")
-                                .unwrap_or(Cow::Borrowed(BStr::new("")))
-                        })
-                        .collect();
-                    let mut new_value: BString = BString::new(Vec::with_capacity(
-                        parts.iter().map(|x| x.len()).sum::<usize>()
-                            + (if self.separator.is_some() {
-                                self.separator.as_ref().unwrap().len() * (parts.len() - 1)
-                            } else {
-                                0
-                            }),
-                    )); // initial
-                    let mut first = true;
-                    for p in parts {
-                        if !first && let Some(sep) = self.separator.as_ref() {
-                            new_value.extend_from_slice(sep.as_bytes());
-                        } else {
-                            first = false;
-                        }
-                        new_value.extend_from_slice(&p);
-                    }
-                }
-            }
-            OnMissing::SetMissing => {
-                for read_idx in 0..num_reads {
-                    let parts: Vec<_> = string_iters
-                        .iter_mut()
-                        .map(|iter| iter.next().expect("tag length != block length!?"))
-                        .collect();
-                    if parts.iter().any(|x| x.is_none()) {
-                        output_tags.push(None);
-                    } else {
+            // Output is String (convert Location to sequence bytes)
+            let mut output_tags: Vec<Option<BString>> = Vec::with_capacity(num_reads);
+            match self.on_missing {
+                OnMissing::MergePresent => {
+                    for read_idx in 0..num_reads {
+                        let parts: Vec<_> = string_iters
+                            .iter_mut()
+                            .map(|iter| {
+                                iter.next()
+                                    .expect("tag length != block length!?")
+                                    .unwrap_or(Cow::Borrowed(BStr::new("")))
+                            })
+                            .collect();
                         let mut new_value: BString = BString::new(Vec::with_capacity(
-                            parts
-                                .iter()
-                                .map(|x| x.as_ref().expect("just checked").len())
-                                .sum::<usize>()
+                            parts.iter().map(|x| x.len()).sum::<usize>()
                                 + (if self.separator.is_some() {
                                     self.separator.as_ref().unwrap().len() * (parts.len() - 1)
                                 } else {
@@ -195,7 +164,6 @@ impl Step for ConcatTags {
                         )); // initial
                         let mut first = true;
                         for p in parts {
-                            let p = p.expect("just checked");
                             if !first && let Some(sep) = self.separator.as_ref() {
                                 new_value.extend_from_slice(sep.as_bytes());
                             } else {
@@ -205,8 +173,40 @@ impl Step for ConcatTags {
                         }
                     }
                 }
+                OnMissing::SetMissing => {
+                    for read_idx in 0..num_reads {
+                        let parts: Vec<_> = string_iters
+                            .iter_mut()
+                            .map(|iter| iter.next().expect("tag length != block length!?"))
+                            .collect();
+                        if parts.iter().any(|x| x.is_none()) {
+                            output_tags.push(None);
+                        } else {
+                            let mut new_value: BString = BString::new(Vec::with_capacity(
+                                parts
+                                    .iter()
+                                    .map(|x| x.as_ref().expect("just checked").len())
+                                    .sum::<usize>()
+                                    + (if self.separator.is_some() {
+                                        self.separator.as_ref().unwrap().len() * (parts.len() - 1)
+                                    } else {
+                                        0
+                                    }),
+                            )); // initial
+                            let mut first = true;
+                            for p in parts {
+                                let p = p.expect("just checked");
+                                if !first && let Some(sep) = self.separator.as_ref() {
+                                    new_value.extend_from_slice(sep.as_bytes());
+                                } else {
+                                    first = false;
+                                }
+                                new_value.extend_from_slice(&p);
+                            }
+                        }
+                    }
+                }
             }
-        }
             output_tags
         };
         block

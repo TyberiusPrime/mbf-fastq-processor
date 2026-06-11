@@ -112,10 +112,29 @@ impl Step for _ChangeCase {
                 );
             }
             ResolvedSourceAll::Tag(tag_name) => {
-                if let Some(hits) = block.tags.get_mut(tag_name) {
+                if let Some(hits) = block.tags.get(tag_name) {
                     match hits {
                         TagColumn::Location(col) => {
-                            todo!("Implement");
+                            let mut iter = col.iter_row_regions();
+                            for (idx, mut seq) in block.segments[col.source_id() as usize]
+                                .seq_quals
+                                .iter_seq_mut()
+                                .enumerate()
+                            {
+                                if condition.as_ref().is_none_or(|c| c[idx]) {
+                                    let regions = iter
+                                        .next()
+                                        .expect("Number of reads should match number of regions");
+                                    for &(start, len) in regions {
+                                        for b in
+                                            seq[start as usize..(start + len) as usize].iter_mut()
+                                        {
+                                            *b = case_converter(*b);
+                                        }
+                                    }
+                                }
+                            }
+
                             // for slot_idx in 0..col.hits.len() {
                             //     let nhits = col.hits[slot_idx].len();
                             //     for hit_idx in 0..nhits {

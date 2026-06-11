@@ -135,7 +135,7 @@ impl Step for StoreTagBackInSequence {
         // if let Some(error_msg) = error_encountered.borrow().as_ref() {
         //     return Err(anyhow::anyhow!("{error_msg}"));
         // }
-        
+
         Ok((block, true))
     }
 }

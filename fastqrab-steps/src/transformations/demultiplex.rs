@@ -15,7 +15,10 @@ pub struct Demultiplex {
     pub barcodes: Option<TagLabel>,
 
     // by default, set from tag type...
-    pub tag_contains_barcode: Option<bool>,
+    #[tpd(alias = "tag_contains_barcode")]
+    #[tpd(alias = "tag_contains_barcodes")]
+    #[tpd(alias = "in_label_contains_barcodes")]
+    pub in_label_contains_barcode: bool,
 
     #[tpd(skip, default)]
     #[schemars(skip)]
@@ -32,8 +35,8 @@ pub struct Demultiplex {
 
 #[derive(Debug)]
 pub enum LookupMode {
-    NoLookup,
-    Lookup,
+    Label,   //tag contains the final value
+    Barcode, //tag contains dna
 }
 
 impl VerifyIn<PartialConfig> for PartialDemultiplex {
@@ -145,74 +148,115 @@ impl TagUser for PartialTaggedVariant<PartialDemultiplex> {
         tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> Option<TagUsageInfo<'_>> {
-        if let Some(inner) = self.toml_value.as_ref() {
+        if let Some(inner) = self.toml_value.value.as_mut() {
+            //we might not have in_label_contains_barcode
             // Multiple demultiplex steps are now supported
             // Each demultiplex step defines a bit region for its variants
             // When demultiplexing, they are combined with OR logic
-            let upstream_label_type = tags_available
-                .get(inner.in_label.as_ref().expect("parent was ok"))
-                .map(|meta| &meta.tag_type);
             let inner = self
                 .toml_value
                 .value
                 .as_mut()
                 .expect("Was ok before, now might not be ok, but should be still set");
+            if let Some(in_label) = inner.in_label.as_ref() {
+                let upstream_label_type = tags_available.get(in_label).map(|meta| &meta.tag_type);
 
-            if let Some(upstream_label_type) = upstream_label_type {
-                match upstream_label_type {
-                    TagValueType::Location | TagValueType::String => {
-                        if let Some(Some(tag_contains_barcode)) =
-                            inner.tag_contains_barcode.as_ref()
-                        {
-                            //user has explicitly told us what the tag contains,
-                            //barcodes or barcode-names
-                            if *tag_contains_barcode {
-                                inner.lookup_mode = Some(LookupMode::Lookup);
+                if let Some(upstream_label_type) = upstream_label_type {
+                    //todo: refactor to just set the in_label_contains_barcode based on the tag
+                    //type, and then set the lookup mode based on that, rather than having the
+                    //logic intertwined like this. It's a bit hard to follow and error prone as is.
+                    match upstream_label_type {
+                        TagValueType::Location => {
+                            //set to default so user can leave it off if were' doing barcodes from
+                            //locations
+                            inner.lookup_mode = Some(LookupMode::Barcode);
+                            inner.in_label_contains_barcode.value = Some(true);
+                            inner.in_label_contains_barcode.state = TomlValueState::Ok;
+                            //todo: should we abort if it's set to false?
+                        }
+
+                        TagValueType::String => {
+                            if let Some(tag_contains_barcode) =
+                                inner.in_label_contains_barcode.as_ref()
+                            {
+                                //user has explicitly told us what the tag contains,
+                                //barcodes or barcode-names
+                                if *tag_contains_barcode {
+                                    inner.lookup_mode = Some(LookupMode::Barcode);
+                                } else {
+                                    inner.lookup_mode = Some(LookupMode::Label);
+                                }
                             } else {
-                                inner.lookup_mode = Some(LookupMode::NoLookup);
+                                let upstream_contents = tags_available
+                                    .get(in_label)
+                                    .map(|meta| &meta.contents)
+                                    .unwrap_or(&StringTagContent::Undefined);
+                                match upstream_contents {
+                                    StringTagContent::Undefined => { // require the user to set it
+                                    }
+                                    StringTagContent::Barcodes => {
+                                        inner.lookup_mode = Some(LookupMode::Barcode);
+
+                                        inner.in_label_contains_barcode.value = Some(true);
+                                        inner.in_label_contains_barcode.state = TomlValueState::Ok;
+                                    }
+                                    StringTagContent::Labels => {
+                                        inner.lookup_mode = Some(LookupMode::Label);
+
+                                        inner.in_label_contains_barcode.value = Some(false);
+                                        inner.in_label_contains_barcode.state = TomlValueState::Ok;
+                                    }
+                                }
                             }
-                        } else if matches!(upstream_label_type, TagValueType::Location) {
-                            inner.lookup_mode = Some(LookupMode::Lookup);
-                        } else {
-                            inner.lookup_mode = Some(LookupMode::NoLookup);
+                            // require the user to set it
+                        }
+                        // cov:excl-start
+                        TagValueType::Numeric(_) => {
+                            //will be complained about because of allowed tag modes below
+                        }
+                        // cov:excl-stop
+                        TagValueType::Bool => {
+                            // if inner.output_unmatched.as_ref().is_some() {
+                            //     self.toml_value.state = TomlValueState::new_validation_failed(
+                            //         "output_unmatched must be *not* set when using boolean values for demultiplex.",
+                            //     );
+                            //     self.toml_value.help =
+                            //         Some("Remove output_unmatched=true (or false)".to_string());
+                            // }
+                            inner.output_unmatched.value = Some(false);
+                            inner.lookup_mode = Some(LookupMode::Barcode);
+                            //set to default so user can leave it off if were' doing bool barcodes
+                            inner.in_label_contains_barcode.value = Some(true);
+                            inner.in_label_contains_barcode.state = TomlValueState::Ok;
                         }
                     }
-                    // cov:excl-start
-                    TagValueType::Numeric(_) => {
-                        //will be complained about because of allowed tag modes below
-                    }
-                    // cov:excl-stop
-                    TagValueType::Bool => {
-                        // if inner.output_unmatched.as_ref().is_some() {
-                        //     self.toml_value.state = TomlValueState::new_validation_failed(
-                        //         "output_unmatched must be *not* set when using boolean values for demultiplex.",
-                        //     );
-                        //     self.toml_value.help =
-                        //         Some("Remove output_unmatched=true (or false)".to_string());
-                        // }
-                        inner.lookup_mode = Some(LookupMode::Lookup);
-                        inner.output_unmatched.value = Some(false);
-                    }
                 }
-            }
 
-            Some(TagUsageInfo {
-                used_tags: vec![inner.in_label.to_used_tag(
-                    &[
-                        TagValueType::Bool,
-                        TagValueType::String,
-                        TagValueType::Location,
-                    ][..],
-                )],
-                used_barcodes: inner
-                    .barcodes
-                    .as_ref()
-                    .and_then(Option::as_ref)
-                    .cloned()
-                    .into_iter()
-                    .collect(),
-                ..Default::default()
-            })
+                Some(TagUsageInfo {
+                    used_tags: vec![inner.in_label.to_used_tag(
+                        &[
+                            TagValueType::Bool,
+                            TagValueType::String,
+                            TagValueType::Location,
+                        ][..],
+                    )],
+                    used_barcodes: inner
+                        .barcodes
+                        .as_ref()
+                        .and_then(Option::as_ref)
+                        .cloned()
+                        .into_iter()
+                        .collect(),
+                    ..Default::default()
+                })
+            } else {
+                // can't chek that without knowing wether the incoming tag is Location or string
+                // so have it be ignored for now
+                inner.in_label_contains_barcode.value = Some(true);
+                inner.in_label_contains_barcode.state = TomlValueState::Ok;
+
+                None
+            }
         } else {
             None
         }
@@ -263,7 +307,7 @@ impl Step for Demultiplex {
         for (ii, key) in hits.iter_stringified().enumerate() {
             if let Some(key) = key {
                 match self.lookup_mode {
-                    LookupMode::Lookup => {
+                    LookupMode::Barcode => {
                         if let Some(tag) = demultiplex_info.barcode_to_tag(&key) {
                             output_tags[ii] |= tag;
                             if tag > 0 {
@@ -272,7 +316,7 @@ impl Step for Demultiplex {
                             }
                         }
                     }
-                    LookupMode::NoLookup => {
+                    LookupMode::Label => {
                         if let Some(tag) = demultiplex_info
                         .name_to_tag(std::str::from_utf8(&key).expect(
                         "Tag sequence was not utf-8, barcode names must be utf-8 unicode strings",
@@ -300,14 +344,9 @@ impl Step for Demultiplex {
             let mut msg = format!(
                 "Demultiplex step for label '{}' did not observe any matching barcodes.\n\
                     Please check that the barcodes section matches the data,\n\
-                    or that the correct tag label is used.",
+                    or that the correct tag label is used and that in_label_contains_barcodes is set correctly.",
                 self.in_label
             );
-            if matches!(self.lookup_mode, LookupMode::NoLookup)
-                && self.tag_contains_barcode.is_none()
-            {
-                msg.push_str("\nYou might need to set tag_contains_barcode=true to trigger the lookup barcode->sequence.");
-            }
             bail!(msg);
         }
         Ok(None)

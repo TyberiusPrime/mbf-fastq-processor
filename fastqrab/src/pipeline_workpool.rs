@@ -612,19 +612,22 @@ fn process_work_item(
                 source,
                 definition: _,
             } => {
-                let tag_locations: Vec<Option<BString>> = match work_item
-                    .block
-                    .tags
-                    .get(&TagLabel::Normal(source.clone()))
-                    .expect("Tag not present. Should have been caught in validation. Bug")
-                {
-                    TagColumn::Location(col) => col
-                        .iter_row_regions()
+                let tag_locations: Vec<Option<BString>> = {
+                    let col = work_item
+                        .block
+                        .tags
+                        .get(&TagLabel::Normal(source.clone()))
+                        .expect("Tag not present. Should have been caught in validation. Bug")
+                        .as_locations()
+                        .expect("Tag was not location. should have been cought in validation. Bug");
+                    let segment_name = &input_info.segment_order[col.source_id() as usize];
+                    col.iter_row_regions()
                         .map(|start_lens| {
                             if start_lens.is_empty() {
                                 None
                             } else {
-                                let mut seq = BString::new(Vec::new());
+                                let mut seq = BString::new(segment_name.as_bytes().to_vec());
+                                seq.push(b':');
                                 let mut first = true;
                                 for (start, len) in start_lens.iter() {
                                     if !first {
@@ -638,8 +641,7 @@ fn process_work_item(
                                 Some(seq)
                             }
                         })
-                        .collect(),
-                    _ => unreachable!("Should have been caught in validation"), // cov:excl-line
+                        .collect()
                 };
                 work_item
                     .block

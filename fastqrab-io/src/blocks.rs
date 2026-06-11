@@ -171,7 +171,7 @@ impl FastQReadMut<'_> {
     pub fn reverse_complement_iupac(&mut self) {
         self.qual.reverse();
         let new_seq = fastqrab_dna::dna::reverse_complement_iupac(self.seq.as_ref());
-        for (a, b) in self.seq.iter_mut().zip(new_seq.iter().rev()) {
+        for (a, b) in self.seq.iter_mut().zip(new_seq.iter()) {
             *a = *b;
         }
     }

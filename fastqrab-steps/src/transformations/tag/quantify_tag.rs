@@ -125,7 +125,10 @@ impl Step for QuantifyTag {
             .expect("Tag not found. Should have been caught in validation");
         if let Some(col) = hits.as_locations() {
             if let Some(demultiplex_tags) = &block.output_tags {
-                for (seq, demultiplex_tag) in col.iter_seq_joined(Some(self.region_separator.as_ref())).zip(demultiplex_tags) {
+                for (seq, demultiplex_tag) in col
+                    .iter_seq_joined(Some(self.region_separator.as_ref()))
+                    .zip(demultiplex_tags)
+                {
                     if !seq.is_empty()
                         && let Some(inner) = collector.get_mut(demultiplex_tag)
                     {
@@ -139,9 +142,7 @@ impl Step for QuantifyTag {
                     if !seq.is_empty()
                         && let Some(inner) = collector.get_mut(&0)
                     {
-                        *inner
-                            .entry(BString::new(seq.to_vec()))
-                            .or_insert(0) += 1;
+                        *inner.entry(BString::new(seq.to_vec())).or_insert(0) += 1;
                     }
                 }
             }

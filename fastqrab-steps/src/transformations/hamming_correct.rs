@@ -330,12 +330,17 @@ impl TagUser for PartialTaggedVariant<PartialHammingCorrect> {
                 &[TagValueType::String, TagValueType::Location][..]
             };
             Some(TagUsageInfo {
-                declared_tag: inner.out_label.to_declared_tag(
-                    match inner.output.as_ref().unwrap_or(&HammingOutput::Barcode) {
-                        HammingOutput::Barcode => TagValueType::String,
-                        HammingOutput::Label => TagValueType::String,
-                    },
-                ),
+                declared_tag: inner
+                    .out_label
+                    .to_declared_tag(TagValueType::String)
+                    .map(|tag| {
+                        tag.with_contents(
+                            match inner.output.as_ref().unwrap_or(&HammingOutput::Barcode) {
+                                HammingOutput::Barcode => StringTagContent::Barcodes,
+                                HammingOutput::Label => StringTagContent::Labels,
+                            },
+                        )
+                    }),
                 used_tags: vec![inner.in_label.to_used_tag(input_kinds)],
                 used_barcodes: inner.barcodes.as_ref().cloned().into_iter().collect(),
                 ..Default::default()
@@ -662,7 +667,7 @@ impl Step for HammingCorrect {
         let input_strings = input_tags.iter_stringified();
         let mut output_strings: Vec<Option<BString>> = Vec::with_capacity(input_tags.len());
 
-        for (input_tag, slot) in input_strings.zip(results.into_iter()) {
+        for (read_idx, (input_tag, slot)) in input_strings.zip(results.into_iter()).enumerate() {
             let MatchSlot { result, .. } = slot;
             output_strings.push(match result {
                     None => None,
@@ -758,7 +763,59 @@ impl Step for HammingCorrect {
                                 }
                             }
                             OnTie::ByEditProbability => {
-                                unreachable!("ByEditProbability is not supported for String tags") // cov:excl-line
+                                let counts = barcode_counts.expect("Barcode_counts must be set in OnTie::ByEditProbability");
+                                let candidates: Vec<_> = items
+                                    .iter()
+                                    .map(|&i| {
+                                        let (k, _n) = self
+                                            .seq_to_name
+                                            .get_index(i)
+                                            .expect("seq_to_name index out of range");
+                                        (
+                                            BStr::new(k.as_slice()),
+                                            i,
+                                            counts[i].load(Ordering::Relaxed),
+                                        )
+                                    })
+                                    .collect();
+                                let candidates_for_likelihood: Vec<(&BStr, usize)> =
+                                    candidates
+                                        .iter()
+                                        .map(|(seq, _idx, c)| (*seq, *c))
+                                        .collect();
+                                if let Some(input_tag) = input_tag && !input_tag.is_empty() {
+                                    let (observed_sequence, observed_qualities) =
+                                    (
+                                        input_tag,
+                                        input_tags
+                                            .as_locations()
+                                            .expect("By Edit Probability not supporte on string tags. Validation should have cought this")
+                                        .joined_qual(read_idx, None)
+                                    );
+
+                                    if let Some(best_seq) =
+                                        correct_barcode_via_base_editing_likelihood(
+                                            self.on_tie_threshold,
+                                            &observed_sequence,
+                                            &observed_qualities,
+                                            &candidates_for_likelihood,
+                                        )
+                                        {
+                                            let best_idx = candidates
+                                                .iter()
+                                                .find(|(s, _, _)| *s == best_seq)
+                                                .map(|(_, i, _)| *i)
+                                                .expect("best_seq came from candidates");
+                                            self.output_string(
+                                                best_idx,
+                                                output_barcode,
+                                            )
+                                        } else {
+                                            Self::output_empty_string()
+                                        }
+                                } else {
+                                    None
+                                }
                             }
                         },
                     },

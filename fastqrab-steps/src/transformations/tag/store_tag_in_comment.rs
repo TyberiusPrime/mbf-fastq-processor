@@ -164,8 +164,6 @@ impl Step for StoreTagInComment {
         _input_info: &InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let error_encountered = std::cell::RefCell::new(Option::<String>::None);
-
         let tag_list = &self.in_labels;
 
         for segment_idx in block.iter_segment_indices(self.segment) {
@@ -176,23 +174,11 @@ impl Step for StoreTagInComment {
                 let mut new_name: Result<Vec<u8>> = Ok(name.to_vec());
                 for tag_label in tag_list {
                     let tag_col = block.tags.get(tag_label).expect("Tags were checked before");
-                    let tag_value: Cow<BStr> = match tag_col {
-                        TagColumn::Location(col) => col.joined_seq(read_idx, None),
-                        TagColumn::String(items) => match &items[read_idx] {
-                            Some(value) => Cow::Borrowed(value.as_ref()),
-                            None => Cow::Borrowed(BStr::new(b"")),
-                        },
-                        TagColumn::Numeric(items) => Cow::Owned(BString::new(
-                            format_numeric_for_comment(items[read_idx]).into_bytes(),
-                        )),
-                        TagColumn::Bool(items) => {
-                            if items[read_idx] {
-                                Cow::Borrowed(BStr::new(b"1"))
-                            } else {
-                                Cow::Borrowed(BStr::new(b"0"))
-                            }
-                        }
-                    };
+                    let tag_value = tag_col.to_bstr(
+                        read_idx,
+                        format_numeric_for_comment,
+                        Some(self.region_separator.as_ref()),
+                    );
                     let tag_name: &str = tag_label.as_ref();
                     new_name = store_tag_in_comment(
                         new_name.as_ref().expect("Err would have left the loop"),

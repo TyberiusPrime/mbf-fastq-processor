@@ -3,7 +3,9 @@ use crate::transformations::hamming_exact_counter::PartialHammingExactCounter;
 use crate::transformations::{PartialTransformation, TagUser, Transformation};
 use anyhow::{Result, anyhow, bail};
 use bstr::BString;
-use fastqrab_config::{RemovedTags, TagLabel, TagValueType, default_blocks_in_flight};
+use fastqrab_config::{
+    RemovedTags, StringTagContent, TagLabel, TagValueType, default_blocks_in_flight,
+};
 use fastqrab_config::{
     default_block_size, default_buffer_size, default_output_buffer_size,
     default_spot_check_read_pairing,
@@ -44,6 +46,7 @@ pub use tag_labels::ValidateTagLabel;
 pub struct TagMetadata {
     pub used: bool,
     pub tag_type: TagValueType,
+    pub contents: StringTagContent,
     pub span: std::ops::Range<usize>,
 }
 
@@ -1330,6 +1333,7 @@ impl PartialConfig {
                             TagMetadata {
                                 used: false,
                                 tag_type: dt.tag_type,
+                                contents: dt.contains,
                                 span: dt.toml_source_span,
                             },
                         );
@@ -1795,7 +1799,7 @@ impl PartialConfig {
                                     demultiplex_config.in_label.as_ref()
                                 && matches!(
                                     demultiplex_config.lookup_mode,
-                                    Some(crate::transformations::demultiplex::LookupMode::NoLookup)
+                                    Some(crate::transformations::demultiplex::LookupMode::Label)
                                         | None
                                 )
                             {

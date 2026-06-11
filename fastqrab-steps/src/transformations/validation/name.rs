@@ -62,7 +62,7 @@ impl Step for ValidateName {
         assert!(self.sample_stride > 0);
 
         let segment_count = block.segments.len();
-        let reads_in_block = block.segments.len();
+        let reads_in_block = block.row_count();
 
         let offset = self
             .processed_reads

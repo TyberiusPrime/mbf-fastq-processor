@@ -177,10 +177,7 @@ impl Step for HammingExactCounter {
                             continue;
                         } else {
                             let seq = hits.0;
-                            self.majority_data
-                                .seq_to_idx
-                                .get(seq.as_ref())
-                                .copied()
+                            self.majority_data.seq_to_idx.get(seq.as_ref()).copied()
                         };
                         if let Some(idx) = idx {
                             counts[idx].fetch_add(1, Ordering::Relaxed);

@@ -124,9 +124,7 @@ impl Step for IUPAC {
                                 self.max_anchor_distance,
                             )
                         })
-                        .min_by_key(|hit| {
-                            hit.start
-                        });
+                        .min_by_key(|hit| hit.start);
                 }
                 TieBreak::RightMost => {
                     return self
@@ -141,9 +139,7 @@ impl Step for IUPAC {
                                 self.max_anchor_distance,
                             )
                         })
-                        .max_by_key(|hit| {
-                            hit.start
-                        });
+                        .max_by_key(|hit| hit.start);
                 }
             }
         });

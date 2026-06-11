@@ -141,7 +141,7 @@ impl Step for AssignByHalves {
                     } else {
                         engine
                             .query(seq.as_ref())
-                                //BStr::new(&col.joined_sequence(slot_hits, None)))
+                            //BStr::new(&col.joined_sequence(slot_hits, None)))
                             .map_err(|e| anyhow::anyhow!("AssignToProbe query failed: {e}"))?
                     };
                     output_strings.push(hit.map(|name| name.as_bytes().into()));

@@ -91,12 +91,22 @@ impl Step for ConvertToRate {
             );
         } else {
             let len = block.segments[0].len();
-            let mut values = vec![0.0; len];
+            let mut totals = vec![0.0; len];
             for segment in block.segments.iter() {
                 for ii in 0..len {
-                    values[ii] += segment.seq_quals.entry_len(ii) as f64;
+                    totals[ii] += segment.seq_quals.entry_len(ii) as f64;
                 }
             }
+            let values: Vec<f64> = source_iter
+                .zip(totals.into_iter())
+                .map(|(source, total_len)| {
+                    if total_len > 0.0 {
+                        source / total_len
+                    } else {
+                        0.0
+                    }
+                })
+                .collect();
             block
                 .tags
                 .insert(self.out_label.clone(), TagColumn::Numeric(values));

@@ -215,7 +215,6 @@ impl Step for StoreTagInFastQ {
         _input_info: &InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<(FastQBlocksCombined, bool)> {
-
         let in_tag_col = block
             .tags
             .get(&self.in_label)
@@ -227,7 +226,8 @@ impl Step for StoreTagInFastQ {
                 .iter()
                 .zip(col.iter_seq_joined(Some(self.region_separator.as_ref())))
                 .zip(col.iter_qual_joined(Some(self.region_separator.as_ref())))
-                .enumerate() //todo: do we want itertools izip for this?
+                .enumerate()
+            //todo: do we want itertools izip for this?
             {
                 if !tag_seq.is_empty() {
                     // Determine which output stream to use based on demultiplexing

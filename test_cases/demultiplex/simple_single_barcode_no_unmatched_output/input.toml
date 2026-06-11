@@ -33,6 +33,7 @@
     barcodes = 'mine'
     in_label = 'xyz_corrected'
     output_unmatched = false
+    in_label_contains_barcode=true
 
 [barcodes.mine]
     CT = 'aaaa'

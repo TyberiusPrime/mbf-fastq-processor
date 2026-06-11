@@ -219,6 +219,14 @@ pub trait ToUsedTags {
     fn to_used_tags(&mut self) -> Vec<Option<UsedTag<'_>>>;
 }
 
+#[derive(Debug, Clone, Copy)]
+#[repr(u8)]
+pub enum StringTagContent {
+    Undefined,
+    Barcodes,
+    Labels,
+}
+
 #[derive(Debug)]
 pub struct DeclaredTag<'a> {
     pub name: TagLabel,
@@ -226,6 +234,13 @@ pub struct DeclaredTag<'a> {
     pub toml_source_state: &'a mut TomlValueState,
     pub toml_source_help: &'a mut Option<String>,
     pub toml_source_span: std::ops::Range<usize>,
+    pub contains: StringTagContent,
+}
+
+impl<'a> DeclaredTag<'a> {
+    pub fn with_contents(self, contains: StringTagContent) -> Self {
+        Self { contains, ..self }
+    }
 }
 
 pub trait ToDeclaredTag {
@@ -494,6 +509,7 @@ impl ToDeclaredTag for TomlValue<TagLabel> {
                 toml_source_state: &mut self.state,
                 toml_source_help: &mut self.help,
                 toml_source_span: span,
+                contains: StringTagContent::Undefined,
             })
         } else {
             // Since the virtual tag introduction, we do reach this on invalid TagLabes.
@@ -512,6 +528,7 @@ impl ToDeclaredTag for TomlValue<Option<TagLabel>> {
                 toml_source_state: &mut self.state,
                 toml_source_help: &mut self.help,
                 toml_source_span: span,
+                contains: StringTagContent::Undefined,
             })
         } else {
             None

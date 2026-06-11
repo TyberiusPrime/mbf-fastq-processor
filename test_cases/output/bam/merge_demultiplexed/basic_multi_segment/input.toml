@@ -18,20 +18,21 @@
     target = 'read2'
 
 [[step]]
-  action = "HammingCorrect"
-      output = 'label'
-      on_tie = 'fail'
-      on_no_match = 'remove'
-  barcodes = 'barcodes'
-  in_label='barcode'
-  out_label='refs'
-  max_hamming_distance =0
+    action = "HammingCorrect"
+    output = 'label'
+    on_tie = 'fail'
+    on_no_match = 'remove'
+    barcodes = 'barcodes'
+    in_label='barcode'
+    out_label='refs'
+    max_hamming_distance =0
 
 [[step]]
     action = 'Demultiplex'
     in_label = 'refs'
     output_unmatched = true
     barcodes = 'barcodes'
+    in_label_contains_barcodes = false
 
 [barcodes.barcodes]
     AA = 'sample1'

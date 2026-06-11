@@ -350,7 +350,7 @@ impl Step for LongestPolyX {
                     max_consecutive_mismatches,
                 )
                 .map(|(start, len)| start as u32..(start + len) as u32)
-            }
+            },
         );
         Ok((block, true))
     }
