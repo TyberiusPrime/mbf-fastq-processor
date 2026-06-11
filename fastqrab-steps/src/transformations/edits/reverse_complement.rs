@@ -76,37 +76,37 @@ impl Step for ReverseComplement {
             ResolvedSourceAll::Tag(tag_name) => {
                 if let Some(hits) = block.tags.get_mut(tag_name) {
                     match hits {
-                        TagColumn::Location(_col) => {
-                            todo!("Implement");
-
-                            // for slot_idx in 0..col.hits.len() {
-                            //     let nhits = col.hits[slot_idx].len();
-                            //     for hit_idx in 0..nhits {
-                            //         let hit = col.hits[slot_idx][hit_idx];
-                            //         let bytes = col.hit_bytes_mut(hit);
-                            //         for b in bytes.iter_mut() {
-                            //             *b = reverse_complement_iupac(&[*b])[0];
-                            //         }
-                            //     }
-                            // }
+                        TagColumn::Location(col) => {
+                            let segment = &mut block.segments[col.source_id() as usize];
+                            for (idx, read) in segment.seq_quals.iter_mut().enumerate() {
+                                if condition.as_ref().is_none_or(|c| c[idx]) {
+                                    let new_seq =
+                                        reverse_complement_iupac(&col.joined_seq(idx, None));
+                                    let new_qual = col.joined_qual(idx, None);
+                                    for ((pos, new_base), new_qual) in col
+                                        .covered_positions(idx)
+                                        .zip(new_seq)
+                                        .zip(new_qual.iter().rev())
+                                    {
+                                        read.seq[pos] = new_base;
+                                        read.qual[pos] = *new_qual;
+                                    }
+                                }
+                            }
                         }
 
                         TagColumn::String(bstrings) => {
                             todo!(
                                 "Decide what to do. This seems terribly wrong,\
                             to at one hand mutate the reads (on location tags)
-                            and on the other to be manipulating string tags 
-                            in place"
+                            and on the other to be manipulating string tags
+                            in place.
+                                Maybe we should just require teh tag to be an Location
+
+                                "
                             );
-
-                            for bstring in bstrings.iter_mut() {
-                                if let Some(s) = bstring.as_mut() {
-                                    *s = reverse_complement_iupac(s).into();
-                                }
-                            }
                         }
-
-                        TagColumn::Numeric(_) | TagColumn::Bool(_) => unreachable!(), // cov:excl-line
+                        _ => unreachable!(), // cov:excl-line
                     }
                 } // cov:excl-line    
             }

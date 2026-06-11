@@ -24,9 +24,9 @@
 	action='Lowercase'
 	source = 'tag:tag'
 
-[[step]]
-	action = 'StoreTagBackInSequence'
-	in_label ='tag'
+# [[step]]
+# 	action = 'StoreTagBackInSequence'
+# 	in_label ='tag'
 
 [output]
 	prefix = 'output'
