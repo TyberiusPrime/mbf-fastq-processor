@@ -72,28 +72,34 @@ impl Step for CompareStringTags {
             .expect("in_label_b not found - should have been verified at config time");
 
         let mut results: Vec<f64> = Vec::with_capacity(col_a.len());
-        for (idx, (sa, sb)) in col_a
+        for (idx, (a, b)) in col_a
             .iter_stringified()
             .zip(col_b.iter_stringified())
             .enumerate()
         {
-            if sa.len() != sb.len() {
-                let read_name = BStr::new(block.segments[0].names.get(idx));
-                anyhow::bail!(
-                    "CompareStringTags requires identical length tags.\n\
+            if let Some(sa) = a
+                && let Some(sb) = b
+            {
+                if sa.len() != sb.len() {
+                    let read_name = BStr::new(block.segments[0].names.get(idx));
+                    anyhow::bail!(
+                        "CompareStringTags requires identical length tags.\n\
                              Read '{read_name}': '{}' has length {} but '{}' has length {}.",
-                    self.in_label_a,
-                    sa.len(),
-                    self.in_label_b,
-                    sb.len()
-                );
+                        self.in_label_a,
+                        sa.len(),
+                        self.in_label_b,
+                        sb.len()
+                    );
+                }
+                let result = match sa.as_ref().cmp(sb.as_ref()) {
+                    std::cmp::Ordering::Less => -1.0,
+                    std::cmp::Ordering::Equal => 0.0,
+                    std::cmp::Ordering::Greater => 1.0,
+                };
+                results.push(result);
+            } else {
+                results.push(f64::NAN);
             }
-            let result = match sa.as_ref().cmp(sb.as_ref()) {
-                std::cmp::Ordering::Less => -1.0,
-                std::cmp::Ordering::Equal => 0.0,
-                std::cmp::Ordering::Greater => 1.0,
-            };
-            results.push(result);
         }
 
         block

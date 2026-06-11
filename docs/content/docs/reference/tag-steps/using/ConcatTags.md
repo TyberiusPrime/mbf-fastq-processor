@@ -16,46 +16,9 @@ Concatenate multiple tags into a single tag.
     separator = "_"  # (optional) separator for string concatenation
 ```
 
-This transformation combines multiple tags into a single output tag. The behavior depends on the types of input tags and how missing tags are handled.
+This transformation combines multiple tags into a single (string) output tag. 
 
-## Behavior by Tag Type
-
-### Location Tags Only
-When all input tags are location tags (e.g., from `ExtractIUPAC`, `ExtractAnchor`), the transformation:
-- Appends all regions from all tags into a single tag
-- Preserves hit ordering (tag1's hits first, then tag2's hits, etc.)
-- When displayed (e.g., with `StoreTagInComment`), regions are joined with "_" separator
-
-Example:
-```toml
-# ignore_in_test
-# Extract two barcodes
-[[step]]
-    action = "ExtractIUPAC"
-    segment = "read1"
-    search = "AAAA"
-    out_label = "barcode1"
-    anchor = "Left"
-
-[[step]]
-    action = "ExtractIUPAC"
-    segment = "read1"
-    search = "TTTT"
-    out_label = "barcode2"
-    anchor = "Right"
-
-# Concatenate them
-[[step]]
-    action = "ConcatTags"
-    in_labels = ["barcode1", "barcode2"]
-    out_label = "combined_barcode"
-    on_missing = "merge_present"
-```
-
-If the input sequence is `AAAACGTACGTTTT`, the combined tag will contain both regions and display as `AAAA_TTTT`.
-
-### String Tags Only
-When all input tags are string tags (e.g., from `ExtractRegex`), the transformation:
+Briefly it 
 - Concatenates the strings
 - Uses the optional `separator` parameter between strings (defaults to no separator)
 
@@ -70,14 +33,13 @@ Example:
     separator = "-"  # strings joined with "-"
 ```
 
-### Mixed Tag Types
-When mixing location and string tags:
-- All tags are converted to strings (location tags use their sequences)
-- Strings are concatenated with the optional separator
-- The result is a string tag (not a location tag)
-
+### Mixed 
 ## Multiple Hits per Tag
-If any input tag contains multiple hits (e.g., from `ExtractAnchor` with multiple regions), all hits from all tags are combined:
+If any input tag contains multiple hits (e.g., from `ExtractAnchor` with multiple regions), 
+all hits from all tags are combined, and the separater is placed between each one.
+
+(You can fake 'location separators' by first ConcatTags on a single location tag, then
+ConcatTags on the combined string tags).
 
 ```toml
 # ignore_in_test

@@ -94,9 +94,9 @@ impl Step for ValidateAllReadsSameLength {
                         .expect("Tag not set?! should have been caught earlier. bug");
                     match col {
                         TagColumn::Location(col) => {
-                            for hits in col.iter() {
-                                if !hits.is_empty() {
-                                    self.check(col.covered_len(hits))?;
+                            for len in col.iter_row_lengths(None) {
+                                if len > 0 {
+                                    self.check(len)?;
                                 }
                             }
                         }

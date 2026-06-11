@@ -1557,25 +1557,22 @@ impl FastQBlocksCombined {
     /// when the tag is missing or not a Location column
     pub fn apply_mut_with_location_tag<F>(&mut self, label: &TagLabel, mut f: F)
     where
-        F: for<'a> FnMut(
-            &mut blocks::MoleculeMut,
-            Option<&Range<u32>>,
-            &DualStringPodMultiLocation,
-        ),
+        F: for<'a> FnMut(&mut BStr, &SmallVec<[(u32, u32); 1]>, &DualStringPodMultiLocation),
     {
         let TagColumn::Location(col) = self.tags.get(label).expect("Tag must be present, bug")
         else {
             panic!("Tag {label:?} is not a Location column");
         };
-        todo!();
         // // `col` borrows `self.tags`; `molecules()` borrows `self.segments` — two
         // // disjoint, immutable field borrows. The closure only sees `&BStr`, so
         // // read-only molecule iteration is enough (no copy-on-write needed).
-        // for (ii, mut molecule) in blocks::molecules_mut(&mut self.segments).enumerate() {
-        //     let hits = col.get(ii);
-        //     let opt_hits = if hits.is_empty() { None } else { Some(hits) };
-        //     f(&mut molecule, opt_hits, col);
-        // }
+        for (seq, row_regions) in self.segments[col.source_id() as usize]
+            .seq_quals
+            .iter_seq_mut()
+            .zip(col.iter_row_regions())
+        {
+            f(seq, &row_regions, col);
+        }
     }
 
     /// # Panics
@@ -1784,6 +1781,45 @@ impl FastQBlocksCombined {
             });
             assert_eq!(output_tags.len(), should);
         }
+    }
+
+    /// Create a  location tag builder referencing the specific FastQChunk
+    pub fn location_column_builder(
+        &self,
+        segment: SegmentIndex,
+    ) -> stringpod::DualStringPodMultiLocationAliasBuilder<'_> {
+        // Stamp the source segment so the resulting Location column remembers
+        // which segment it was aliased from (recovered via
+        // `TagColumn::location_segment`). Needed by steps that later rebuild a
+        // location column against the same segment (e.g. ReservoirSample).
+        self.segments[segment.as_index()]
+            .seq_quals
+            .multi_location_alias_builder()
+            .with_source_id(segment.as_index() as u32)
+    }
+
+    /// Create a  location tag builder referencing the specific FastQChunk
+    /// and return references to other parts, spliting the struct temporarily
+    pub fn location_column_builder_and_tags_and_segment(
+        &mut self,
+        segment_index: SegmentIndex,
+    ) -> (
+        stringpod::DualStringPodMultiLocationAliasBuilder<'_>,
+        &mut IndexMap<TagLabel, TagColumn>,
+        &FastQChunk,
+    ) {
+        // Stamp the source segment so the resulting Location column remembers
+        // which segment it was aliased from (recovered via
+        // `TagColumn::location_segment`). Needed by steps that later rebuild a
+        // location column against the same segment (e.g. ReservoirSample).
+        (
+            self.segments[segment_index.as_index()]
+                .seq_quals
+                .multi_location_alias_builder()
+                .with_source_id(segment_index.as_index() as u32),
+            &mut self.tags,
+            &self.segments[segment_index.as_index()],
+        )
     }
 }
 

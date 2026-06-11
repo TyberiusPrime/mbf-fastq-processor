@@ -588,17 +588,9 @@ fn process_work_item(
                     .get(&TagLabel::Normal(tag_name.clone()))
                     .expect("Tag not present. Should have been caught in validation. Bug")
                 {
-                    TagColumn::Location(col) => col
-                        .iter()
-                        .map(|hits| {
-                            if hits.is_empty() {
-                                0usize
-                            } else {
-                                hits.iter().map(|&h| h.seq_len as usize).sum()
-                            }
-                        })
-                        .map(|n| n as f64)
-                        .collect(),
+                    TagColumn::Location(col) => {
+                        col.iter_row_lengths(None).map(|n| n as f64).collect()
+                    }
                     TagColumn::String(items) => items
                         .iter()
                         .map(|opt_str| opt_str.as_ref().map_or(0, |s| s.len()))
@@ -627,12 +619,23 @@ fn process_work_item(
                     .expect("Tag not present. Should have been caught in validation. Bug")
                 {
                     TagColumn::Location(col) => col
-                        .iter()
-                        .map(|hits| {
-                            if hits.is_empty() {
+                        .iter_row_regions()
+                        .map(|start_lens| {
+                            if start_lens.is_empty() {
                                 None
                             } else {
-                                Some(col.location_str(hits, &input_info.segment_order))
+                                let mut seq = BString::new(Vec::new());
+                                let mut first = true;
+                                for (start, len) in start_lens.iter() {
+                                    if !first {
+                                        seq.push(b',');
+                                    }
+                                    first = false;
+                                    seq.extend_from_slice(
+                                        format!("{}-{}", start, start + len).as_bytes(),
+                                    );
+                                }
+                                Some(seq)
                             }
                         })
                         .collect(),

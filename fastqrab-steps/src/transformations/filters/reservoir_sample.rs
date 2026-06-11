@@ -7,7 +7,7 @@ use fastqrab_io::blocks::{FastQChunk, OwnedFastQRead};
 struct ReservoirBuffer {
     molecules: Vec<OwnedMolecule>,
     count: usize,
-    tags: IndexMap<TagLabel, TagColumn>,
+    tags: IndexMap<TagLabel, TagColumnInAssembly>,
 }
 
 /// Fairly sample reads (expensive!)
@@ -62,6 +62,7 @@ impl TagUser for PartialTaggedVariant<PartialReservoirSample> {
     }
 }
 
+
 impl Step for ReservoirSample {
     fn init(
         &mut self,
@@ -106,21 +107,12 @@ impl Step for ReservoirSample {
 
             if buf.molecules.len() < self.n {
                 buf.molecules.push(molecule.into());
-                todo!("figure this one out for location tags");
-                // for (label, values) in &block.tags {
-                //     match buf
-                //         .tags
-                //         .entry(label.clone())
-                //         .or_insert_with(|| values.new_empty())
-                //     {
-                //         TagColumn::Location(items) => {
-                //             items.push_from(values.as_locations().expect("matched Location"), pos)
-                //         }
-                //         TagColumn::String(items) => items.push(values.get_string(pos).clone()),
-                //         TagColumn::Numeric(items) => items.push(values.get_numeric(pos)),
-                //         TagColumn::Bool(items) => items.push(values.get_bool(pos)),
-                //     }
-                // }
+                for (label, values) in &block.tags {
+                    buf.tags
+                        .entry(label.clone())
+                        .or_insert_with(|| TagColumnInAssembly::new_empty(values))
+                        .push_from(values, pos);
+                }
             } else {
                 //algorithm R
                 let j = rng.random_range(1..=buf.count);
@@ -128,18 +120,7 @@ impl Step for ReservoirSample {
                     buf.molecules[j - 1] = molecule.into();
                     for (label, values) in &block.tags {
                         if let Some(tag_buf) = buf.tags.get_mut(label) {
-                            match tag_buf {
-                                TagColumn::Location(items) => items.set_slot_from(
-                                    values.as_locations().expect("matched Location"),
-                                    j - 1,
-                                    pos,
-                                ),
-                                TagColumn::String(items) => {
-                                    items[j - 1] = values.get_string(pos).clone()
-                                }
-                                TagColumn::Numeric(items) => items[j - 1] = values.get_numeric(pos),
-                                TagColumn::Bool(items) => items[j - 1] = values.get_bool(pos),
-                            }
+                            tag_buf.set_slot_from(j - 1, values, pos);
                         }
                     }
                 }
@@ -174,23 +155,78 @@ impl Step for ReservoirSample {
                 }
             }
 
+            // Rebuild tag columns. Scalar columns (String/Numeric/Bool) are just
+            // concatenated across groups. Location columns must be re-aliased
+            // against the rebuilt segment chunk: the alias builder consumes that
+            // segment's entries in order, so we feed one builder per label in the
+            // exact same (group, molecule) order used to rebuild the segments
+            // above. Output column order follows first appearance across groups.
+            let mut labels: Vec<TagLabel> = Vec::new();
             for (_, buf) in &groups {
-                for (label, values) in &buf.tags {
-                    output
-                        .tags
-                        .entry(label.clone())
-                        .or_insert_with(|| values.new_empty())
-                        .extend(values);
+                for label in buf.tags.keys() {
+                    if !labels.contains(label) {
+                        labels.push(label.clone());
+                    }
+                }
+            }
+
+            for label in labels {
+                let sample = groups
+                    .iter()
+                    .find_map(|(_, buf)| buf.tags.get(&label))
+                    .expect("label came from some group");
+                match sample {
+                    TagColumnInAssembly::Location { segment, .. } => {
+                        let segment = *segment;
+                        // Scope the builder so its borrow of `output` ends before
+                        // we insert into `output.tags`.
+                        let col = {
+                            let mut builder = output.location_column_builder(segment);
+                            for (_, buf) in &groups {
+                                if let Some(TagColumnInAssembly::Location { rows, .. }) =
+                                    buf.tags.get(&label)
+                                {
+                                    for row in rows {
+                                        builder.push_row(row);
+                                    }
+                                }
+                            }
+                            builder.finish()
+                        };
+                        output.tags.insert(label, TagColumn::Location(col));
+                    }
+                    _ => {
+                        for (_, buf) in &groups {
+                            if let Some(col) = buf.tags.get(&label) {
+                                let target = output
+                                    .tags
+                                    .entry(label.clone())
+                                    .or_insert_with(|| col.new_scalar_tag_column());
+                                col.extend_scalar_into(target);
+                            }
+                        }
+                    }
                 }
             }
             Ok((output, true))
         } else {
             // Return empty block to continue processing, but preserve tag keys
-            // so downstream steps (e.g. StoreTagsInTable) can discover tag labels
-            // before the final block arrives.
+            // (and kinds) so downstream steps (e.g. StoreTagsInTable) can discover
+            // tag labels before the final block arrives. A location column needs a
+            // source pod to alias, so build an empty one against `empty`'s
+            // (zero-row) segment, preserving its source segment.
             let mut empty = block.empty();
-            for (label, column) in block.tags {
-                empty.tags.insert(label.clone(), column.new_empty());
+            for (label, column) in &block.tags {
+                let new_col = match column {
+                    TagColumn::Location(_) => {
+                        let segment = column.location_segment();
+                        TagColumn::Location(empty.location_column_builder(segment).finish())
+                    }
+                    TagColumn::String(_) => TagColumn::String(Vec::new()),
+                    TagColumn::Numeric(_) => TagColumn::Numeric(Vec::new()),
+                    TagColumn::Bool(_) => TagColumn::Bool(Vec::new()),
+                };
+                empty.tags.insert(label.clone(), new_col);
             }
             Ok((empty, true))
         }
@@ -198,5 +234,95 @@ impl Step for ReservoirSample {
 
     fn needs_serial(&self) -> bool {
         true
+    }
+}
+
+/// Location tag columns are zero-copy references into the source `FastQChunk`'s
+/// buffers. The reservoir keeps its sampled reads as owned molecules (a less
+/// compact `Vec`), not a chunk, so it can't hold those aliases — instead it
+/// stashes each row's *read-relative* `(start, len)` regions (still valid
+/// against the owned read's bytes) plus the source `segment`, and re-aliases
+/// them against the rebuilt segment chunk when the final block is emitted (see
+/// the `is_final` branch of [`ReservoirSample::apply`]).
+#[derive(Clone, Debug)]
+pub enum TagColumnInAssembly {
+    Location {
+        segment: SegmentIndex,
+        rows: Vec<SmallVec<[(u32, u32); 1]>>,
+    },
+    String(Vec<Option<BString>>),
+    Numeric(Vec<f64>),
+    Bool(Vec<bool>),
+}
+
+impl TagColumnInAssembly {
+    /// An empty assembly column of the same kind as `source`, carrying the
+    /// originating segment for `Location` columns (see
+    /// [`TagColumn::location_segment`]).
+    fn new_empty(source: &TagColumn) -> Self {
+        match source {
+            TagColumn::Location(_) => TagColumnInAssembly::Location {
+                segment: source.location_segment(),
+                rows: Vec::new(),
+            },
+            TagColumn::String(_) => TagColumnInAssembly::String(Vec::new()),
+            TagColumn::Numeric(_) => TagColumnInAssembly::Numeric(Vec::new()),
+            TagColumn::Bool(_) => TagColumnInAssembly::Bool(Vec::new()),
+        }
+    }
+
+    /// Append the value at `pos` of `source` (same kind as `self`, guaranteed by
+    /// construction via [`new_empty`](Self::new_empty)).
+    fn push_from(&mut self, source: &TagColumn, pos: usize) {
+        match self {
+            TagColumnInAssembly::Location { rows, .. } => rows.push(source.get_location(pos)),
+            TagColumnInAssembly::String(items) => items.push(source.get_string(pos).cloned()),
+            TagColumnInAssembly::Numeric(items) => items.push(source.get_numeric(pos)),
+            TagColumnInAssembly::Bool(items) => items.push(source.get_bool(pos)),
+        }
+    }
+
+    /// Overwrite slot `slot` with the value at `pos` of `source` (reservoir
+    /// replacement). Same-kind precondition as [`push_from`](Self::push_from).
+    fn set_slot_from(&mut self, slot: usize, source: &TagColumn, pos: usize) {
+        match self {
+            TagColumnInAssembly::Location { rows, .. } => rows[slot] = source.get_location(pos),
+            TagColumnInAssembly::String(items) => items[slot] = source.get_string(pos).cloned(),
+            TagColumnInAssembly::Numeric(items) => items[slot] = source.get_numeric(pos),
+            TagColumnInAssembly::Bool(items) => items[slot] = source.get_bool(pos),
+        }
+    }
+
+    /// An empty scalar `TagColumn` of the same kind. `Location` columns are
+    /// rebuilt via the alias builder, never through here.
+    fn new_scalar_tag_column(&self) -> TagColumn {
+        match self {
+            TagColumnInAssembly::Location { .. } => {
+                unreachable!("Location columns are rebuilt via the alias builder")
+            }
+            TagColumnInAssembly::String(_) => TagColumn::String(Vec::new()),
+            TagColumnInAssembly::Numeric(_) => TagColumn::Numeric(Vec::new()),
+            TagColumnInAssembly::Bool(_) => TagColumn::Bool(Vec::new()),
+        }
+    }
+
+    /// Append this scalar column's values onto `target` (same kind). `Location`
+    /// columns are rebuilt via the alias builder, never through here.
+    fn extend_scalar_into(&self, target: &mut TagColumn) {
+        match (self, target) {
+            (TagColumnInAssembly::String(src), TagColumn::String(dst)) => {
+                dst.extend(src.iter().cloned());
+            }
+            (TagColumnInAssembly::Numeric(src), TagColumn::Numeric(dst)) => {
+                dst.extend(src.iter().copied());
+            }
+            (TagColumnInAssembly::Bool(src), TagColumn::Bool(dst)) => {
+                dst.extend(src.iter().copied());
+            }
+            (TagColumnInAssembly::Location { .. }, _) => {
+                unreachable!("Location columns are rebuilt via the alias builder")
+            }
+            _ => panic!("mismatched tag column types"),
+        }
     }
 }

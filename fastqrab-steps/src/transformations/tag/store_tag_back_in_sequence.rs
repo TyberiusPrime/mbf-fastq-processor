@@ -50,22 +50,22 @@ impl Step for StoreTagBackInSequence {
         //     Smaller,
         //     Larger,
         // }
-
-        let mut what_happend = Vec::with_capacity(block.len());
-        let error_encountered = std::cell::RefCell::new(Option::<String>::None);
-
         todo!("This needs a complete rewrite with the StringPods API");
-        //Todo: We can't do it like that.
-        //We need to build new seqs/quals for the affected reads
-        //and not change the unaffected ones
-        // bonus point is that we don't need to care about WhatHappend...
-        let mut builders: Vec<Option<DualStringPodBuilder>> = vec![None; block.segments.len()];
-        let column = block
-            .tags
-            .get(&self.in_label)
-            .expect("Tag not found in block");
-        let column = column.as_locations().expect("Tag is not a location column");
-        // for (molecule, hit)  in block.molecules.zip(column){
+
+        //let mut what_happend = Vec::with_capacity(block.len());
+        // let error_encountered = std::cell::RefCell::new(Option::<String>::None);
+        //
+        // //Todo: We can't do it like that.
+        // //We need to build new seqs/quals for the affected reads
+        // //and not change the unaffected ones
+        // // bonus point is that we don't need to care about WhatHappend...
+        // let mut builders: Vec<Option<DualStringPodBuilder>> = vec![None; block.segments.len()];
+        // let column = block
+        //     .tags
+        //     .get(&self.in_label)
+        //     .expect("Tag not found in block");
+        // let column = column.as_locations().expect("Tag is not a location column");
+        // // for (molecule, hit)  in block.molecules.zip(column){
         // }
 
         // block.apply_mut_with_location_tag(&self.in_label, |molecule, hit, col| {
@@ -132,9 +132,9 @@ impl Step for StoreTagBackInSequence {
         // });
 
         // Check if any error was encountered during processing
-        if let Some(error_msg) = error_encountered.borrow().as_ref() {
-            return Err(anyhow::anyhow!("{error_msg}"));
-        }
+        // if let Some(error_msg) = error_encountered.borrow().as_ref() {
+        //     return Err(anyhow::anyhow!("{error_msg}"));
+        // }
         
         Ok((block, true))
     }

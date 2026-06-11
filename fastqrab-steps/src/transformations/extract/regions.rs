@@ -2,7 +2,7 @@ use bstr::ByteVec;
 use std::{cell::RefCell, collections::HashSet, ops::Range, rc::Rc};
 use toml_pretty_deser::Visitor;
 
-use super::super::{PartialRegionDefinition, RegionDefinition, extract_regions};
+use super::super::{PartialRegionDefinition, RegionDefinition, extract_from_sequence};
 use crate::transformations::prelude::*;
 
 /// Extract regions by coordinates
@@ -145,7 +145,7 @@ impl Step for Regions {
         _input_info: &InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        match self.source {
+        match &self.source {
             ResolvedSourceNoAll::Tag(tag_label) => {
                 todo!();
                 // let mut out = Vec::with_capacity(block.segments[0].len());
@@ -166,34 +166,28 @@ impl Step for Regions {
                 split_character,
             } => todo!(),
             ResolvedSourceNoAll::Segment(segment_index) => {
-                let mut col = block.segments[segment_index.as_index()].seq_quals.multi_location_alias_builder();
-                for ii in 0..block.len() {
-                    let extracted = extract_regions(ii, &block, &self.regions);
-                    if extracted.iter().any(Option::is_none) {
-                        //if any region could not be extracted, we store Missing
-                        col.push_row(&[]);
-                        continue;
-                    }
-                    //all segments -> Location.
-                    let mut entries: Vec<(u32, u32)> = Vec::new();
-                    for (seq, opt_coords) in extracted.into_iter().flatten() {
-                        // eats Nones.
-                        if let Some(coords) = opt_coords {
-                            entries.push(
-                                (coords.start as u32, coords.length as u32)
-                            );
-                        } else if !seq.is_empty() {
-                            //mutants false positive
-                            // cov:excl-start
-                            unreachable!();
-                            // cov:excl-stop
-                        } // cov:excl-line
-                    }
-                    if entries.is_empty() {
-                        col.push_row(&[]);
-                    } else {
-                        col.push_row(&entries);
-                    }
+                // Via `location_column_builder` so the column records its source
+                // segment (see `TagColumn::location_segment`).
+                let mut col = block.location_column_builder(*segment_index);
+                for seq_len in block.segments[segment_index.as_index()]
+                    .seq_quals
+                    .iter_seq_lens()
+                {
+                    let parts: Vec<_> = self
+                        .regions
+                        .iter()
+                        .filter_map(|region| {
+                            extract_from_sequence(
+                                seq_len,
+                                0,
+                                seq_len,
+                                region.start,
+                                region.length,
+                                &region.anchor,
+                            )
+                        })
+                        .collect();
+                    col.push_row(&parts);
                 }
                 block
                     .tags

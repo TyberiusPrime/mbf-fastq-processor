@@ -100,53 +100,44 @@ impl Step for FillMissing {
 
         let output_col = match (primary_vec, secondary_vec) {
             (TagColumn::Location(prim), TagColumn::Location(sec)) => {
-                let mut out = LocationColumn::new();
-                for i in 0..num_reads {
-                    let prim_hits = prim.get(i);
-                    if !prim_hits.is_empty() {
-                        out.push_from(prim, i);
+                if prim.source_id() != sec.source_id() {
+                    anyhow::bail!(
+                        "FillMissing: primary and secondary Location tags must have the same source segment"
+                    );
+                }
+                let mut out = block.location_column_builder(prim.source_id().into());
+                for (prim_hit, sec_hit) in prim.iter_row_regions().zip(sec.iter_row_regions()) {
+                    if !prim_hit.is_empty() {
+                        out.push_row(&prim_hit);
                     } else {
-                        out.push_from(sec, i);
+                        out.push_row(&sec_hit);
                     }
                 }
-                TagColumn::Location(out)
+                TagColumn::Location(out.finish())
             }
             (TagColumn::String(prim), TagColumn::String(sec)) => TagColumn::String(
-                (0..num_reads)
-                    .map(|i| {
-                        if prim[i].is_some() {
-                            prim[i].clone()
-                        } else {
-                            sec[i].clone()
-                        }
-                    })
+                prim.iter()
+                    .zip(sec.iter())
+                    .map(|(p, s)| p.clone().or_else(|| s.clone()))
                     .collect(),
             ),
             (TagColumn::Location(prim), TagColumn::String(sec)) => TagColumn::String(
-                (0..num_reads)
-                    .map(|i| {
-                        let hits = prim.get(i);
-                        if !hits.is_empty() {
-                            Some(prim.joined_sequence(hits, None).into())
-                        } else {
-                            sec[i].clone()
-                        }
+                prim.iter_seq()
+                    .zip(sec.iter())
+                    .map(|(prim_hit, sec_str)| {
+                        (!prim_hit.is_empty())
+                            .then(|| BString::new(prim_hit.to_vec()))
+                            .or(sec_str.as_ref().map(|x| BString::new(x.to_vec())))
                     })
                     .collect(),
             ),
             (TagColumn::String(prim), TagColumn::Location(sec)) => TagColumn::String(
-                (0..num_reads)
-                    .map(|i| {
-                        if let Some(s) = &prim[i] {
-                            Some(s.clone())
-                        } else {
-                            let hits = sec.get(i);
-                            if hits.is_empty() {
-                                None
-                            } else {
-                                Some(sec.joined_sequence(hits, None).into())
-                            }
-                        }
+                prim.iter()
+                    .zip(sec.iter_seq())
+                    .map(|(prim_str, sec_hit)| {
+                        prim_str.clone().or_else(|| {
+                            (!sec_hit.is_empty()).then(|| BString::new(sec_hit.to_vec()))
+                        })
                     })
                     .collect(),
             ),

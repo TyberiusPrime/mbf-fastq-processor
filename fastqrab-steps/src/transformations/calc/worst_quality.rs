@@ -95,15 +95,15 @@ impl Step for WorstQuality {
 
                     for qual in location_items.iter_qual() {
                         let molecule = iter.next().expect("tag and read count should match");
-                        let q = qual
-                            .map(|qual| {
-                                qual.iter()
-                                    .map(|x| Into::<i16>::into(*x) + self.offset as i16)
-                                    .min()
-                                    .unwrap_or(33 + self.offset as i16)
-                                    as f64
-                            })
-                            .unwrap_or(missing_value);
+                        let q = if qual.is_empty() {
+                            missing_value
+                        } else {
+                            qual.iter()
+                                .map(|x| Into::<i16>::into(*x) + self.offset as i16)
+                                .min()
+                                .unwrap_or(33 + self.offset as i16)
+                                as f64
+                        };
                         values.push(q);
                     }
                 }

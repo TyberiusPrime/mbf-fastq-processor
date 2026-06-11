@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use crate::transformations::prelude::*;
 use fastqrab_config::{default_region_separator, tpd_adapt_bstring};
 
-type QuantifyTagCollector = Arc<Mutex<DemultiplexedData<BTreeMap<Vec<u8>, usize>>>>;
+type QuantifyTagCollector = Arc<Mutex<DemultiplexedData<BTreeMap<BString, usize>>>>;
 type OutputHandles = Arc<Mutex<DemultiplexedData<Option<ChunkedRecordWriter>>>>;
 
 /// Write a histogram of tag values to a JSON file.
@@ -125,22 +125,22 @@ impl Step for QuantifyTag {
             .expect("Tag not found. Should have been caught in validation");
         if let Some(col) = hits.as_locations() {
             if let Some(demultiplex_tags) = &block.output_tags {
-                for (slot_hits, demultiplex_tag) in col.iter().zip(demultiplex_tags) {
-                    if !slot_hits.is_empty()
+                for (seq, demultiplex_tag) in col.iter_seq_joined(Some(self.region_separator.as_ref())).zip(demultiplex_tags) {
+                    if !seq.is_empty()
                         && let Some(inner) = collector.get_mut(demultiplex_tag)
                     {
                         *inner
-                            .entry(col.joined_sequence(slot_hits, Some(&self.region_separator)))
+                            .entry(BString::new(seq.to_vec())) //todo: avoid this allocation?
                             .or_insert(0) += 1;
                     }
                 }
             } else {
-                for slot_hits in col.iter() {
-                    if !slot_hits.is_empty()
+                for seq in col.iter_seq_joined(Some(self.region_separator.as_ref())) {
+                    if !seq.is_empty()
                         && let Some(inner) = collector.get_mut(&0)
                     {
                         *inner
-                            .entry(col.joined_sequence(slot_hits, Some(&self.region_separator)))
+                            .entry(BString::new(seq.to_vec()))
                             .or_insert(0) += 1;
                     }
                 }

@@ -160,7 +160,7 @@ impl Step for Regex {
                 for (tag_name, tags) in block_tags {
                     // only those we listed in use_tags.
                     let query = format!("[[{tag_name}]]");
-                    let value = tags.to_bstr(read_no);
+                    let value = tags.to_bstr(read_no, |float| float.to_string(), None);
                     out = out.replace(query, value.as_bytes());
                 }
                 Some(out)
@@ -181,7 +181,7 @@ impl Step for Regex {
                         let haystack = block_tags
                             .get(tag_name)
                             .expect("Tag not present?!")
-                            .to_bstr(read_no);
+                            .to_bstr(read_no, |float| float.to_string(), None);
                         apply_regexp(
                             &self.search,
                             &self.replacement,
@@ -239,7 +239,7 @@ impl Step for Regex {
                             for (tag_name, tags) in block_tags {
                                 // only those we listed in use_tags.
                                 let query = format!("[[{tag_name}]]");
-                                let value = tags.to_bstr(read_no);
+                                let value = tags.to_bstr(read_no, |float| float.to_string(), None);
                                 // dbg!(&query, &tags[read_no], &value);
                                 //  dbg!(bstr::BStr::new(&replacement));
                                 replacement = replacement.replace(query, value.as_bytes());

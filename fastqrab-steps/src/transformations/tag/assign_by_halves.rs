@@ -135,12 +135,13 @@ impl Step for AssignByHalves {
 
         match input_tags {
             TagColumn::Location(col) => {
-                for slot_hits in col.iter() {
-                    let hit = if slot_hits.is_empty() {
+                for seq in col.iter_seq() {
+                    let hit = if seq.is_empty() {
                         None
                     } else {
                         engine
-                            .query(BStr::new(&col.joined_sequence(slot_hits, None)))
+                            .query(seq.as_ref())
+                                //BStr::new(&col.joined_sequence(slot_hits, None)))
                             .map_err(|e| anyhow::anyhow!("AssignToProbe query failed: {e}"))?
                     };
                     output_strings.push(hit.map(|name| name.as_bytes().into()));

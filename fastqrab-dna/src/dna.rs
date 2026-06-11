@@ -92,24 +92,22 @@ impl TagColumn {
         }
     }
 
-    pub fn iter_stringified<'a>(&'a self) -> Box<dyn Iterator<Item = Cow<'a, BStr>> + 'a> {
+    pub fn iter_stringified<'a>(&'a self) -> Box<dyn Iterator<Item = Option<Cow<'a, BStr>>> + 'a> {
         match self {
             TagColumn::Numeric(_) => unreachable!("Cant stringify numeric values"),
             TagColumn::Bool(bools) => Box::new(bools.iter().map(|x| {
                 if *x {
-                    Cow::Borrowed(BStr::new(b"true"))
+                    Some(Cow::Borrowed(BStr::new(b"true")))
                 } else {
-                    Cow::Borrowed(BStr::new(b"false"))
+                    Some(Cow::Borrowed(BStr::new(b"false")))
                 }
             })),
-            TagColumn::Location(col) => Box::new(col.iter_seq().map(|x| match x {
-                Some(x) => x,
-                None => Cow::Borrowed(BStr::new("")),
-            })),
+            TagColumn::Location(col) => {
+                Box::new(col.iter_seq().map(|x| (!x.is_empty()).then(|| x)))
+            }
             TagColumn::String(strings) => Box::new(strings.iter().map(|x| {
                 x.as_ref()
                     .map(|bstring| Cow::Borrowed(BStr::new(&bstring[..])))
-                    .unwrap_or_else(|| Cow::Borrowed(BStr::new("")))
             })),
         }
     }
@@ -126,9 +124,33 @@ impl TagColumn {
         }
     }
 
-    pub fn get_string(&self, index: usize) -> &Option<BString> {
+    pub fn get_location(&self, index: usize) -> SmallVec<[(u32, u32); 1]> {
+        if let TagColumn::Location(items) = self {
+            items.row_regions(index).collect()
+        } else {
+            panic!("get_string called on a non-string tag column");
+        }
+    }
+
+    /// The segment this location column was aliased from, recovered from the
+    /// snapshot's `source_id` (stamped by
+    /// [`FastQBlocksCombined::location_column_builder`]). Steps that rebuild a
+    /// location column (e.g. `ReservoirSample`) need it to target the right
+    /// segment's buffer.
+    ///
+    /// # Panics
+    /// If `self` is not a `Location` column.
+    pub fn location_segment(&self) -> SegmentIndex {
+        if let TagColumn::Location(col) = self {
+            SegmentIndex::new(col.source_id() as usize)
+        } else {
+            panic!("location_segment called on a non-location tag column");
+        }
+    }
+
+    pub fn get_string(&self, index: usize) -> Option<&BString> {
         if let TagColumn::String(items) = self {
-            &items[index]
+            items[index].as_ref()
         } else {
             panic!("get_string called on a non-string tag column");
         }
@@ -152,14 +174,22 @@ impl TagColumn {
 
     #[must_use]
     #[expect(clippy::elidable_lifetime_names, reason = "Conflicting lints")]
-    pub fn to_bstr<'a>(&'a self, index: usize) -> Cow<'a, BStr> {
+    pub fn to_bstr<'a, F>(
+        &'a self,
+        index: usize,
+        number_formatter: F,
+        region_seperator: Option<&[u8]>,
+    ) -> Cow<'a, BStr>
+    where
+        F: Fn(f64) -> String,
+    {
         match &self {
-            TagColumn::Location(col) => col.joined_seq(index, None),
+            TagColumn::Location(col) => col.joined_seq(index, region_seperator),
             TagColumn::String(items) => match &items[index] {
                 Some(bstring) => Cow::Borrowed(BStr::new(&bstring[..])),
                 None => Cow::Borrowed(BStr::new(b"")),
             },
-            TagColumn::Numeric(items) => Cow::Owned(items[index].to_string().into()),
+            TagColumn::Numeric(items) => Cow::Owned(number_formatter(items[index]).into()),
             TagColumn::Bool(items) => Cow::Borrowed(if items[index] {
                 BStr::new(b"1")
             } else {
@@ -877,36 +907,14 @@ mod test {
         }
     }
 
-    // Helper: build a single-hit LocationColumn and return (col, hit).
-    fn one_hit(start: u32, len: u16, seg: u8, seq: &[u8]) -> (super::LocationColumn, super::Hit) {
-        let mut col = super::LocationColumn::new();
-        col.push_single(
-            Some(super::HitRegionView {
-                start: start as usize,
-                len: len as usize,
-                segment_index: SegmentIndex(seg),
-            }),
-            seq,
-        );
-        let hit = col.get(0)[0];
-        (col, hit)
-    }
-
-    fn draft_for(start: usize, len: usize, seg: u8, seq: &[u8]) -> super::HitDraft {
-        super::HitDraft {
-            location: Some(super::HitRegionView {
-                start,
-                len,
-                segment_index: SegmentIndex(seg),
-            }),
-            sequence: seq.to_vec(),
-        }
+    fn draft_for(start: usize, len: usize, seg: u8, seq: &[u8]) -> Range<u32>{
+        start as u32..(start + len) as u32
     }
 
     #[test]
     fn test_find_iupac() {
         assert_eq!(
-            super::find_iupac(b"AGTTC", b"AGT", super::Anchor::Left, 0, SegmentIndex(0), 0),
+            super::find_iupac(b"AGTTC", b"AGT", super::Anchor::Left, 0, 0),
             Some(draft_for(0, 3, 0, b"AGT"))
         );
         assert_eq!(
@@ -915,7 +923,6 @@ mod test {
                 b"TTC",
                 super::Anchor::Right,
                 0,
-                SegmentIndex(1),
                 0
             ),
             Some(draft_for(2, 3, 1, b"TTC"))
@@ -926,7 +933,6 @@ mod test {
                 b"GT",
                 super::Anchor::Anywhere,
                 0,
-                SegmentIndex(2),
                 0
             ),
             Some(draft_for(1, 2, 2, b"GT"))
@@ -937,7 +943,6 @@ mod test {
                 b"AGT",
                 super::Anchor::Anywhere,
                 0,
-                SegmentIndex(2),
                 0
             ),
             Some(draft_for(0, 3, 2, b"AGT"))
@@ -948,17 +953,16 @@ mod test {
                 b"TTC",
                 super::Anchor::Anywhere,
                 0,
-                SegmentIndex(2),
                 0
             ),
             Some(draft_for(2, 3, 2, b"TTC"))
         );
         assert_eq!(
-            super::find_iupac(b"AGTTC", b"GT", super::Anchor::Left, 0, SegmentIndex(1), 0),
+            super::find_iupac(b"AGTTC", b"GT", super::Anchor::Left, 0, 0),
             None
         );
         assert_eq!(
-            super::find_iupac(b"AGTTC", b"GT", super::Anchor::Right, 0, SegmentIndex(1), 0),
+            super::find_iupac(b"AGTTC", b"GT", super::Anchor::Right, 0,  0),
             None
         );
         assert_eq!(
@@ -967,7 +971,7 @@ mod test {
                 b"GG",
                 super::Anchor::Anywhere,
                 0,
-                SegmentIndex(1),
+                
                 0
             ),
             None,
@@ -978,13 +982,13 @@ mod test {
                 b"T",
                 super::Anchor::Anywhere,
                 0,
-                SegmentIndex(1),
+                
                 0
             ),
             Some(draft_for(2, 1, 1, b"T"))
         );
         assert_eq!(
-            super::find_iupac(b"AGTTC", b"AA", super::Anchor::Left, 1, SegmentIndex(1), 0),
+            super::find_iupac(b"AGTTC", b"AA", super::Anchor::Left, 1,  0),
             Some(draft_for(0, 2, 1, b"AG"))
         );
         assert_eq!(
@@ -993,7 +997,7 @@ mod test {
                 b"AGTTN",
                 super::Anchor::Left,
                 0,
-                SegmentIndex(1),
+             
                 0
             ),
             Some(draft_for(0, 5, 1, b"AGTTC"))
@@ -1011,7 +1015,6 @@ mod test {
                 0,
                 0,
                 None,
-                SegmentIndex(0),
             ),
             Some(draft_for(0, 3, 0, b"AGT"))
         );
@@ -1024,7 +1027,6 @@ mod test {
                 1,
                 0,
                 None,
-                SegmentIndex(2),
             ),
             Some(draft_for(0, 3, 2, b"AGT"))
         );
@@ -1037,7 +1039,6 @@ mod test {
                 0,
                 1,
                 None,
-                SegmentIndex(3),
             ),
             Some(draft_for(0, 5, 3, b"AGGTC"))
         );
@@ -1050,7 +1051,6 @@ mod test {
                 0,
                 1,
                 None,
-                SegmentIndex(4),
             ),
             Some(draft_for(0, 4, 4, b"AGTC"))
         );
@@ -1063,7 +1063,6 @@ mod test {
                 0,
                 1,
                 None,
-                SegmentIndex(5),
             ),
             None
         );
@@ -1076,7 +1075,6 @@ mod test {
                 0,
                 1,
                 None,
-                SegmentIndex(5),
             ),
             None
         );
@@ -1089,7 +1087,6 @@ mod test {
                 0,
                 1,
                 None,
-                SegmentIndex(5),
             ),
             Some(draft_for(4, 3, 5, b"TTC"))
         );
@@ -1102,7 +1099,6 @@ mod test {
                 0,
                 1,
                 None,
-                SegmentIndex(6),
             ),
             None
         );
@@ -1115,7 +1111,6 @@ mod test {
                 1,
                 1,
                 Some(1),
-                SegmentIndex(7),
             ),
             None
         );
@@ -1128,7 +1123,6 @@ mod test {
                 1,
                 20,
                 Some(5),
-                SegmentIndex(7),
             ),
             None
         );
@@ -1141,7 +1135,6 @@ mod test {
                 0,
                 0,
                 None,
-                SegmentIndex(0),
             ),
             None
         );
@@ -1153,7 +1146,6 @@ mod test {
                 0,
                 0,
                 None,
-                SegmentIndex(0),
             ),
             None
         );
@@ -1161,72 +1153,7 @@ mod test {
 
     use super::*;
 
-    #[test]
-    fn test_location_column_basic() {
-        let (col, hit) = one_hit(5, 3, 0, b"AGT");
-        assert_eq!(col.hit_bytes(hit), b"AGT");
-        let loc = col.hit_location(hit).expect("should have location");
-        assert_eq!(loc.start, 5);
-        assert_eq!(loc.len, 3);
-        assert_eq!(loc.segment_index, SegmentIndex(0));
-    }
 
-    #[test]
-    fn test_location_column_push_none() {
-        let mut col = LocationColumn::new();
-        col.push_none();
-        assert_eq!(col.len(), 1);
-        assert!(col.get(0).is_empty());
-    }
-
-    #[test]
-    fn test_location_column_no_loc() {
-        let mut col = LocationColumn::new();
-        col.push_single(None, b"ACGT");
-        let hit = col.get(0)[0];
-        assert_eq!(col.hit_bytes(hit), b"ACGT");
-        assert!(col.hit_location(hit).is_none());
-    }
-
-    #[test]
-    fn test_location_column_slab_independence() {
-        // Confirm two push_single calls copy into independent slab regions.
-        let mut col = LocationColumn::new();
-        col.push_single(None, b"AAAA");
-        col.push_single(None, b"CCCC");
-        let h0 = col.get(0)[0];
-        let h1 = col.get(1)[0];
-        col.hit_bytes_mut(h0)[0] = b'T';
-        assert_eq!(col.hit_bytes(h0), b"TAAA");
-        assert_eq!(col.hit_bytes(h1), b"CCCC");
-    }
-
-    #[test]
-    fn test_location_column_extend_from() {
-        let mut a = LocationColumn::new();
-        a.push_single(
-            Some(HitRegionView {
-                start: 0,
-                len: 2,
-                segment_index: SegmentIndex(0),
-            }),
-            b"AG",
-        );
-
-        let mut b = LocationColumn::new();
-        b.push_single(
-            Some(HitRegionView {
-                start: 3,
-                len: 2,
-                segment_index: SegmentIndex(0),
-            }),
-            b"TC",
-        );
-
-        a.extend_from(&b);
-        assert_eq!(a.len(), 2);
-        assert_eq!(a.hit_bytes(a.get(1)[0]), b"TC");
-    }
 
     #[test]
     fn test_positions_compatible() {

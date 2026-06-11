@@ -1,3 +1,6 @@
+use bstr::ByteSlice;
+use std::borrow::Cow;
+
 use crate::transformations::prelude::*;
 
 /// Behavior when encountering missing tags during concatenation
@@ -92,65 +95,18 @@ impl TagUser for PartialTaggedVariant<PartialConcatTags> {
         if let Some(inner) = self.toml_value.value.as_mut()
             && let Some(tv_in_labels) = inner.in_labels.value.as_mut()
         {
-            let in_labels: Vec<TagLabel> = {
-                tv_in_labels
-                    .iter()
-                    .filter_map(|v| v.value.as_ref())
-                    .cloned()
-                    .collect()
-            };
-            if in_labels.len() < 2 {
-                //we do this here so we can make suggestions.
-                let mut available: Vec<String> = tags_available
-                    .iter()
-                    .filter_map(|(tag_name, tag_meta)| {
-                        if !in_labels.contains(tag_name)
-                            && matches!(
-                                tag_meta.tag_type,
-                                TagValueType::Location | TagValueType::String
-                            )
-                        {
-                            Some(tag_name.to_string())
-                        } else {
-                            None
-                        }
-                    })
-                    .collect();
-                available.sort_unstable();
+            let used_tags: Vec<_> = tv_in_labels
+                .iter_mut()
+                .filter(|x| x.is_ok())
+                .map(|x| x.to_used_tag(&[TagValueType::Location, TagValueType::String]))
+                .collect();
 
-                inner.in_labels.state = TomlValueState::ValidationFailed {
-                    message: "Must have at least two input labels".to_string(),
-                };
-                inner.in_labels.help = Some(format!(
-                    "Provide at least two tags to concatenate. Available: {}",
-                    available.join(", ")
-                ));
-                None
-            } else {
-                let all_location = in_labels.iter().all(|v| {
-                    matches!(
-                        tags_available.get(v).map(|meta| &meta.tag_type),
-                        Some(TagValueType::Location)
-                    )
-                });
-                let output_type = if all_location {
-                    TagValueType::Location
-                } else {
-                    TagValueType::String
-                };
-                let used_tags: Vec<_> = tv_in_labels
-                    .iter_mut()
-                    .filter(|x| x.is_ok())
-                    .map(|x| x.to_used_tag(&[TagValueType::Location, TagValueType::String]))
-                    .collect();
-
-                Some(TagUsageInfo {
-                    used_tags,
-                    declared_tag: inner.out_label.to_declared_tag(output_type),
-                    must_see_all_tags: true,
-                    ..Default::default()
-                })
-            }
+            Some(TagUsageInfo {
+                used_tags,
+                declared_tag: inner.out_label.to_declared_tag(TagValueType::String),
+                must_see_all_tags: true,
+                ..Default::default()
+            })
         } else {
             None // cov:excl-line
         }
@@ -167,6 +123,7 @@ impl Step for ConcatTags {
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let num_reads = block.segments[0].len();
 
+        let output_tags = {
         // Collect tag columns for all input labels
         let tag_columns: Vec<&TagColumn> = self
             .in_labels
@@ -179,94 +136,82 @@ impl Step for ConcatTags {
             })
             .collect::<Result<Vec<_>, _>>()?;
 
-        // Determine if all columns are Location type
-        let all_location = tag_columns
-            .iter()
-            .all(|col| matches!(col, TagColumn::Location(_)));
+        let mut string_iters: Vec<_> = tag_columns
+            .into_iter()
+            .map(TagColumn::iter_stringified)
+            .collect();
 
-        if all_location {
-            todo!();
-            // // Output is Location
-            // let mut output_col = LocationColumn::new();
-            // for read_idx in 0..num_reads {
-            //     let mut any_missing = false;
-            //     // Collect all (location, seq) pairs from each column for this read
-            //     let mut entries: Vec<(Option<Range<u32>>, Vec<u8>)> =
-            //         Vec::new();
-            //     for col in &tag_columns {
-            //         if let TagColumn::Location(loc_col) = col {
-            //             let slot_hits = loc_col.get(read_idx);
-            //             if slot_hits.is_empty() {
-            //                 any_missing = true;
-            //             } else {
-            //                 for &h in slot_hits.iter() {
-            //                     let loc = loc_col.hit_location(h);
-            //                     let seq = loc_col.hit_bytes(h).to_vec();
-            //                     entries.push((loc, seq));
-            //                 }
-            //             }
-            //         }
-            //     }
-            //     if (any_missing && self.on_missing == OnMissing::SetMissing) || entries.is_empty() {
-            //         output_col.push_none();
-            //     } else {
-            //         let refs: Vec<(Option<fastqrab_config::dna::HitRegionView>, &[u8])> = entries
-            //             .iter()
-            //             .map(|(loc, seq)| (loc.clone(), seq.as_slice()))
-            //             .collect();
-            //         output_col.push_many(&refs);
-            //     }
-            // }
-            // block
-            //     .tags
-            //     .insert(self.out_label.clone(), TagColumn::Location(output_col));
-        } else {
-            // Output is String (convert Location to sequence bytes)
-            let mut output_tags: Vec<Option<BString>> = Vec::with_capacity(num_reads);
-            for read_idx in 0..num_reads {
-                let mut any_missing = false;
-                let mut parts: Vec<Vec<u8>> = Vec::new();
-                for col in &tag_columns {
-                    match col {
-                        TagColumn::Location(loc_col) => {
-                            let slot_hits = loc_col.get(read_idx);
-                            if slot_hits.is_empty() {
-                                any_missing = true;
+        // Output is String (convert Location to sequence bytes)
+        let mut output_tags: Vec<Option<BString>> = Vec::with_capacity(num_reads);
+        match self.on_missing {
+            OnMissing::MergePresent => {
+                for read_idx in 0..num_reads {
+                    let parts: Vec<_> = string_iters
+                        .iter_mut()
+                        .map(|iter| {
+                            iter.next()
+                                .expect("tag length != block length!?")
+                                .unwrap_or(Cow::Borrowed(BStr::new("")))
+                        })
+                        .collect();
+                    let mut new_value: BString = BString::new(Vec::with_capacity(
+                        parts.iter().map(|x| x.len()).sum::<usize>()
+                            + (if self.separator.is_some() {
+                                self.separator.as_ref().unwrap().len() * (parts.len() - 1)
                             } else {
-                                parts.push(loc_col.joined_sequence(slot_hits, None));
-                            }
+                                0
+                            }),
+                    )); // initial
+                    let mut first = true;
+                    for p in parts {
+                        if !first && let Some(sep) = self.separator.as_ref() {
+                            new_value.extend_from_slice(sep.as_bytes());
+                        } else {
+                            first = false;
                         }
-                        TagColumn::String(items) => match &items[read_idx] {
-                            None => any_missing = true,
-                            Some(s) => parts.push(s.to_vec()),
-                        },
-                        // cov:excl-start
-                        TagColumn::Numeric(_) | TagColumn::Bool(_) => {
-                            bail!(
-                                "ConcatTags does not support Numeric or Bool tags. Found in one of: {:?}",
-                                self.in_labels
-                            );
-                        } // cov:excl-stop
+                        new_value.extend_from_slice(&p);
                     }
                 }
-                if any_missing && self.on_missing == OnMissing::SetMissing {
-                    output_tags.push(None);
-                } else if parts.is_empty() {
-                    output_tags.push(None);
-                } else {
-                    let parts_refs: Vec<&[u8]> = parts.iter().map(Vec::as_slice).collect();
-                    let result = if let Some(sep) = &self.separator {
-                        parts_refs.join(sep.as_bytes())
+            }
+            OnMissing::SetMissing => {
+                for read_idx in 0..num_reads {
+                    let parts: Vec<_> = string_iters
+                        .iter_mut()
+                        .map(|iter| iter.next().expect("tag length != block length!?"))
+                        .collect();
+                    if parts.iter().any(|x| x.is_none()) {
+                        output_tags.push(None);
                     } else {
-                        parts_refs.concat()
-                    };
-                    output_tags.push(Some(result.into()));
+                        let mut new_value: BString = BString::new(Vec::with_capacity(
+                            parts
+                                .iter()
+                                .map(|x| x.as_ref().expect("just checked").len())
+                                .sum::<usize>()
+                                + (if self.separator.is_some() {
+                                    self.separator.as_ref().unwrap().len() * (parts.len() - 1)
+                                } else {
+                                    0
+                                }),
+                        )); // initial
+                        let mut first = true;
+                        for p in parts {
+                            let p = p.expect("just checked");
+                            if !first && let Some(sep) = self.separator.as_ref() {
+                                new_value.extend_from_slice(sep.as_bytes());
+                            } else {
+                                first = false;
+                            }
+                            new_value.extend_from_slice(&p);
+                        }
+                    }
                 }
             }
-            block
-                .tags
-                .insert(self.out_label.clone(), TagColumn::String(output_tags));
         }
+            output_tags
+        };
+        block
+            .tags
+            .insert(self.out_label.clone(), TagColumn::String(output_tags));
 
         Ok((block, true))
     }

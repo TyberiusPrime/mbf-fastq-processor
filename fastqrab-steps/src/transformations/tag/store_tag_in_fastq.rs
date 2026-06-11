@@ -215,124 +215,78 @@ impl Step for StoreTagInFastQ {
         _input_info: &InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<(FastQBlocksCombined, bool)> {
-        let mut error_encountered = None;
 
         let in_tag_col = block
             .tags
             .get(&self.in_label)
             .expect("in_label tag must exist in block");
         let n_reads = in_tag_col.len();
-        'outer: for ii in 0..n_reads {
-            //presence & tag = location checked before hand.
-            if let Some(col) = in_tag_col.as_locations() {
-                let slot_hits = col.get(ii);
-                if !slot_hits.is_empty() {
-                    let seq = col.joined_sequence(slot_hits, Some(&self.region_separator));
-                    if !seq.is_empty() {
-                        let qual = vec![b'~'; seq.len()]; // Dummy quality scores
-                        let first_hit = slot_hits[0];
-                        let segment_block = &block.segments[col
-                            .hit_location(first_hit)
-                            .expect("location must be set for tag")
-                            .segment_index
-                            .as_index()];
-                        let wrapped = segment_block.get(ii);
+        if let Some(col) = in_tag_col.as_locations() {
+            for (idx, ((name, tag_seq), tag_qual)) in block.segments[col.source_id() as usize]
+                .names
+                .iter()
+                .zip(col.iter_seq_joined(Some(self.region_separator.as_ref())))
+                .zip(col.iter_qual_joined(Some(self.region_separator.as_ref())))
+                .enumerate() //todo: do we want itertools izip for this?
+            {
+                if !tag_seq.is_empty() {
+                    // Determine which output stream to use based on demultiplexing
+                    let output_idx = block.output_tags.as_ref().map_or(0, |x| x[idx]);
 
-                        // Determine which output stream to use based on demultiplexing
-                        let output_idx = block.output_tags.as_ref().map_or(0, |x| x[ii]);
-
-                        let mut output_handles = self
-                            .output_handles
-                            .as_ref()
-                            .expect("Should have been set in init")
-                            .lock()
-                            .expect("lock poisoned");
-                        if let Some(Some(writer)) = output_handles.get_mut(&output_idx) {
-                            //if we have demultiplex & no-unmatched-output, this happens
-                            let mut name = wrapped.name.to_vec();
-                            if let Some(comment_tags) = self.comment_tags.as_ref() {
-                                for tag in comment_tags {
-                                    let tag_col =
-                                        block.tags.get(tag).expect("tag must exist in block");
-                                    let tag_bytes: Vec<u8> = match tag_col {
-                                        TagColumn::Location(loc_col) => {
-                                            let h = loc_col.get(ii);
-                                            if h.is_empty() {
-                                                Vec::new()
-                                            } else {
-                                                loc_col.joined_sequence(
-                                                    h,
-                                                    Some(&self.region_separator),
-                                                )
-                                            }
-                                        }
-                                        TagColumn::String(items) => match &items[ii] {
-                                            Some(value) => value.to_vec(),
-                                            None => Vec::new(),
-                                        },
-                                        TagColumn::Numeric(items) => {
-                                            format_numeric_for_comment(items[ii]).into_bytes()
-                                        }
-                                        TagColumn::Bool(items) => {
-                                            if items[ii] {
-                                                "1".into()
-                                            } else {
-                                                "0".into()
-                                            }
-                                        }
-                                    };
-                                    let new_name = store_tag_in_comment(
-                                        &name,
-                                        tag.as_ref().as_bytes(),
-                                        &tag_bytes,
-                                        self.comment_separator,
-                                        self.comment_insert_char,
-                                    );
-                                    match new_name {
-                                        Err(err) => {
-                                            error_encountered = Some(format!("{err}"));
-                                            break 'outer;
-                                        }
-                                        Ok(new_name) => {
-                                            name = new_name;
-                                        }
-                                    }
-                                }
+                    let mut output_handles = self
+                        .output_handles
+                        .as_ref()
+                        .expect("Should have been set in init")
+                        .lock()
+                        .expect("lock poisoned");
+                    if let Some(Some(writer)) = output_handles.get_mut(&output_idx) {
+                        //if we have demultiplex & no-unmatched-output, this happens
+                        if let Some(comment_tags) = self.comment_tags.as_ref() {
+                            for tag in comment_tags {
+                                let tag_col = block.tags.get(tag).expect("tag must exist in block");
+                                let tag_bytes = tag_col.to_bstr(
+                                    idx,
+                                    format_numeric_for_comment,
+                                    Some(self.region_separator.as_ref()),
+                                );
+                                let name = store_tag_in_comment(
+                                    &name,
+                                    tag.as_ref().as_bytes(),
+                                    &tag_bytes,
+                                    self.comment_separator,
+                                    self.comment_insert_char,
+                                )?;
                             }
-
-                            let mut buf = Vec::new();
-                            match self.format {
-                                FileFormat::Fastq | FileFormat::None | FileFormat::Text => {
-                                    buf.push(b'@');
-                                    buf.extend_from_slice(&name);
-                                    buf.push(b'\n');
-                                    buf.extend_from_slice(&seq);
-                                    buf.extend_from_slice(b"\n+\n");
-                                    buf.extend_from_slice(&qual);
-                                    buf.push(b'\n');
-                                }
-                                FileFormat::Fasta => {
-                                    buf.push(b'>');
-                                    buf.extend_from_slice(&name);
-                                    buf.push(b'\n');
-                                    buf.extend_from_slice(&seq);
-                                    buf.push(b'\n');
-                                }
-                                // cov:excl-start
-                                FileFormat::Bam => {
-                                    unreachable!("Unsupported format encountered after validation")
-                                } // cov:excl-stop
-                            }
-                            writer.write_text_record(&buf)?;
                         }
-                    } // cov:excl-line
-                } // !slot_hits.is_empty()
-            } // as_locations
-        }
-        if let Some(error_msg) = error_encountered {
-            return Err(anyhow::anyhow!("{error_msg}"));
-        }
 
+                        let mut buf = Vec::new();
+                        match self.format {
+                            FileFormat::Fastq | FileFormat::None | FileFormat::Text => {
+                                buf.push(b'@');
+                                buf.extend_from_slice(&name);
+                                buf.push(b'\n');
+                                buf.extend_from_slice(&tag_seq);
+                                buf.extend_from_slice(b"\n+\n");
+                                buf.extend_from_slice(&tag_qual);
+                                buf.push(b'\n');
+                            }
+                            FileFormat::Fasta => {
+                                buf.push(b'>');
+                                buf.extend_from_slice(&name);
+                                buf.push(b'\n');
+                                buf.extend_from_slice(&tag_seq);
+                                buf.push(b'\n');
+                            }
+                            // cov:excl-start
+                            FileFormat::Bam => {
+                                unreachable!("Unsupported format encountered after validation")
+                            } // cov:excl-stop
+                        }
+                        writer.write_text_record(&buf)?;
+                    }
+                }
+            } // cov:excl-line // end of as_location
+        }
         Ok((block, true))
     }
 

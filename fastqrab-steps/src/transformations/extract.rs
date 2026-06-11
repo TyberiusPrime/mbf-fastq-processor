@@ -44,15 +44,17 @@ pub(crate) fn extract_region_tags_from_seq(
     label: &TagLabel,
     f: impl Fn(&BStr) -> Option<Range<u32>>,
 ) {
-    let mut col = LocationColumn::new();
+    let mut col = block.location_column_builder(segment);
     for seq in block.segments[segment.as_index()].seq_quals.iter_seq() {
         match f(seq) {
-            Some(draft) => col.push_single(draft.location, &draft.sequence),
-            None => col.push_none(),
+            Some(region_range) => col.push_row_from_ranges(&[region_range]),
+            None => col.push_row(&[]),
         }
     }
 
-    block.tags.insert(label.clone(), TagColumn::Location(col));
+    block
+        .tags
+        .insert(label.clone(), TagColumn::Location(col.finish()));
 }
 
 pub(crate) fn extract_region_tags_from_both(
@@ -61,15 +63,17 @@ pub(crate) fn extract_region_tags_from_both(
     label: &TagLabel,
     f: impl Fn(&BStr, &BStr) -> Option<Range<u32>>,
 ) {
-    let mut col = LocationColumn::new();
+    let mut col = block.location_column_builder(segment);
     for read in block.segments[segment.as_index()].seq_quals.iter() {
         match f(read.seq, read.qual) {
-            Some(draft) => col.push_single(draft.location, &draft.sequence),
-            None => col.push_none(),
+            Some(region_range) => col.push_row_from_ranges(&[region_range]),
+            None => col.push_row(&[]),
         }
     }
 
-    block.tags.insert(label.clone(), TagColumn::Location(col));
+    block
+        .tags
+        .insert(label.clone(), TagColumn::Location(col.finish()));
 }
 
 // pub(crate) fn extract_string_tags(
@@ -93,25 +97,22 @@ pub(crate) fn extract_region_tags_from_both(
 
 pub(crate) fn extract_region_tags_using_tags(
     block: &mut FastQBlocksCombined,
-    segment: SegmentIndex,
+    segment_index: SegmentIndex,
     label: &TagLabel,
     f: impl Fn(&BStr, usize, &IndexMap<TagLabel, TagColumn>) -> Option<Range<u32>>,
 ) {
-    let mut col = LocationColumn::new();
-
     let read_no = block.first_read_sequential_number;
-    for (ii, seq) in block.segments[segment.as_index()]
-        .seq_quals
-        .iter_seq()
-        .enumerate()
-    {
-        match f(seq, read_no + ii, &mut block.tags) {
-            Some(draft) => col.push_single(draft.location, &draft.sequence),
-            None => col.push_none(),
+    let (mut col, mut tags, segment) =
+        block.location_column_builder_and_tags_and_segment(segment_index);
+
+    for (ii, seq) in segment.seq_quals.iter_seq().enumerate() {
+        match f(seq, read_no + ii, tags) {
+            Some(region_range) => col.push_row_from_ranges(&[region_range]),
+            None => col.push_row(&[]),
         }
     }
 
-    block.tags.insert(label.clone(), TagColumn::Location(col));
+    tags.insert(label.clone(), TagColumn::Location(col.finish()));
 }
 
 pub(crate) fn extract_string_tags_using_tags(
@@ -195,7 +196,7 @@ pub(crate) fn extract_bool_tags_from_tag<F>(
     input_label: &TagLabel,
     mut extractor: F,
 ) where
-    F: FnMut(Option<Cow<BStr>>, DemultiplexTag) -> bool,
+    F: FnMut(Option<Cow<'_, BStr>>, DemultiplexTag) -> bool,
 {
     let input_tags = block
         .tags

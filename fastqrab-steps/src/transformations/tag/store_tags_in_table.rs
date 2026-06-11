@@ -177,7 +177,7 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagsInTable> {
     }
 }
 
-fn format_tsv_row(fields: &[Vec<u8>]) -> Vec<u8> {
+fn format_tsv_row(fields: &[Cow<BStr>]) -> Vec<u8> {
     let mut row = Vec::new();
     for (i, field) in fields.iter().enumerate() {
         if i > 0 {
@@ -200,12 +200,12 @@ impl Step for StoreTagsInTable {
 
         // Build header bytes and call set_header on each writer
         let tag_list = &self.final_in_labels;
-        let mut header_fields: Vec<Vec<u8>> = Vec::new();
+        let mut header_fields: Vec<Cow<BStr>> = Vec::new();
         if self.include_read_name {
-            header_fields.push(b"ReadName".to_vec());
+            header_fields.push(Cow::Borrowed(b"ReadName".into()));
         }
         for tag in tag_list {
-            header_fields.push(tag.as_ref().as_bytes().to_vec());
+            header_fields.push(Cow::Borrowed(BStr::new(tag.as_ref())))
         }
         let header_bytes = format_tsv_row(&header_fields);
 
@@ -245,38 +245,19 @@ impl Step for StoreTagsInTable {
         for name in block.segments[0].names.iter() {
             let output_tag = output_tags.map_or(0, |x| x[ii]);
             if let Some(Some(writer)) = output_handles.get_mut(&output_tag) {
-                let mut record: Vec<Vec<u8>> = Vec::new();
+                let mut record: Vec<Cow<BStr>> = Vec::new();
                 if self.include_read_name {
-                    record.push(
-                        split_name_and_comment(name, input_info.comment_insert_char)
-                            .0
-                            .to_vec(),
-                    );
+                    record.push(Cow::Borrowed(
+                        split_name_and_comment(name, input_info.comment_insert_char).0,
+                    ));
                 }
                 for tag in &self.final_in_labels {
                     let col = block.tags.get(tag).expect("tag must exist in block.tags");
-                    record.push(match col {
-                        TagColumn::Location(col) => {
-                            let h = col.get(ii);
-                            if h.is_empty() {
-                                Vec::new()
-                            } else {
-                                col.joined_sequence(h, Some(&self.region_separator))
-                            }
-                        }
-                        TagColumn::String(items) => match &items[ii] {
-                            Some(value) => value.to_vec(),
-                            None => Vec::new(),
-                        },
-                        TagColumn::Numeric(items) => items[ii].to_string().into_bytes(),
-                        TagColumn::Bool(items) => {
-                            if items[ii] {
-                                "1".into()
-                            } else {
-                                "0".into()
-                            }
-                        }
-                    });
+                    record.push(col.to_bstr(
+                        ii,
+                        |float| float.to_string(),
+                        Some(self.region_separator.as_ref()),
+                    ));
                 }
                 ii += 1;
                 let row = format_tsv_row(&record);

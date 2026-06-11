@@ -67,12 +67,12 @@ impl Step for RegionsOfLowQuality {
         _input_info: &InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let mut col = LocationColumn::new();
         let segment = self.segment;
+        let mut col = block.location_column_builder(segment);
         let min_quality = self.min_quality;
         let min_length = self.min_length;
-        for read in block.member_mut(self.segment.as_index()).seq_quals.iter() {
-            let mut entries: Vec<(Option<Range<u32>>, Vec<u8>)> = Vec::new();
+        for read in block.member(self.segment.as_index()).seq_quals.iter() {
+            let mut entries: Vec<(u32,u32)> = Vec::new();
             let mut in_low_quality_region = false;
             let mut region_start = 0;
 
@@ -86,10 +86,7 @@ impl Step for RegionsOfLowQuality {
                     in_low_quality_region = false;
                     let region_len = pos - region_start;
                     if region_len >= min_length {
-                        entries.push((
-                            Some(region_start as u32..pos as u32),
-                            read.seq[region_start..pos].to_vec(),
-                        ));
+                        entries.push(((region_start as u32, region_len as u32)));
                     }
                 }
             }
@@ -97,26 +94,14 @@ impl Step for RegionsOfLowQuality {
             if in_low_quality_region {
                 let region_len = read.qual.len() - region_start;
                 if region_len >= min_length {
-                    entries.push((
-                        Some(region_start as u32..region_len as u32 ),
-                        read.seq[region_start..].to_vec(),
-                    ));
+                    entries.push(((region_start as u32, region_len as u32)));
                 }
             }
-
-            if entries.is_empty() {
-                col.push_none();
-            } else {
-                let refs: Vec<(Option<Range<u32>>, &[u8])> = entries
-                    .iter()
-                    .map(|(loc, seq)| (loc.clone(), seq.as_slice()))
-                    .collect();
-                col.push_many(&refs);
-            }
+            col.push_row(&entries);
         }
         block
             .tags
-            .insert(self.out_label.clone(), TagColumn::Location(col));
+            .insert(self.out_label.clone(), TagColumn::Location(col.finish()));
 
         Ok((block, true))
     }

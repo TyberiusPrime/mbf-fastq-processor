@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use super::{format_numeric_for_comment, store_tag_in_comment};
 use crate::transformations::prelude::*;
 use fastqrab_config::{
@@ -174,27 +176,20 @@ impl Step for StoreTagInComment {
                 let mut new_name: Result<Vec<u8>> = Ok(name.to_vec());
                 for tag_label in tag_list {
                     let tag_col = block.tags.get(tag_label).expect("Tags were checked before");
-                    let tag_value: Vec<u8> = match tag_col {
-                        TagColumn::Location(col) => {
-                            let hits = col.get(read_idx);
-                            if hits.is_empty() {
-                                Vec::new()
-                            } else {
-                                col.joined_sequence(hits, Some(&self.region_separator))
-                            }
-                        }
+                    let tag_value: Cow<BStr> = match tag_col {
+                        TagColumn::Location(col) => col.joined_seq(read_idx, None),
                         TagColumn::String(items) => match &items[read_idx] {
-                            Some(value) => value.to_vec(),
-                            None => Vec::new(),
+                            Some(value) => Cow::Borrowed(value.as_ref()),
+                            None => Cow::Borrowed(BStr::new(b"")),
                         },
-                        TagColumn::Numeric(items) => {
-                            format_numeric_for_comment(items[read_idx]).into_bytes()
-                        }
+                        TagColumn::Numeric(items) => Cow::Owned(BString::new(
+                            format_numeric_for_comment(items[read_idx]).into_bytes(),
+                        )),
                         TagColumn::Bool(items) => {
                             if items[read_idx] {
-                                "1".into()
+                                Cow::Borrowed(BStr::new(b"1"))
                             } else {
-                                "0".into()
+                                Cow::Borrowed(BStr::new(b"0"))
                             }
                         }
                     };

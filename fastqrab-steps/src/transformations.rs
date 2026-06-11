@@ -45,7 +45,6 @@ pub use internal_steps::{
 #[tpd]
 #[derive(Debug)]
 pub struct RegionDefinition {
-    
     pub start: isize,
     #[tpd(alias = "len")]
     #[tpd(alias = "count")]
@@ -404,155 +403,15 @@ pub struct Coords {
     pub length: usize,
 }
 
-fn extract_regions(
-    read_no: usize,
-    block: &FastQBlocksCombined,
-    regions: &[RegionDefinition],
-) -> Vec<Option<(BString, Option<Coords>)>> {
-    let mut out: Vec<_> = Vec::new();
-    for region in regions {
-        let extracted_seq = extract_from_resolved_source(
-            read_no,
-            block,
-            &region.source,
-            region.start,
-            region.length,
-            &region.anchor,
-        );
-
-        out.push(extracted_seq);
-    }
-    out
-}
-
-fn extract_from_resolved_source(
-    read_no: usize,
-    block: &FastQBlocksCombined,
-    resolved_source: &ResolvedSourceNoAll,
-    start: isize,
-    length: usize,
-    anchor: &RegionAnchor,
-) -> Option<(BString, Option<Coords>)> {
-    let res: (Option<BString>, Option<Coords>) = match resolved_source {
-        ResolvedSourceNoAll::Segment(segment_index) => {
-            let read_seq = block.segments[segment_index.as_index()]
-                .seq_quals
-                .seq(read_no);
-            if let Some((seq, start, length)) =
-                extract_from_sequence(read_seq, 0, read_seq.len(), start, length, anchor)
-            {
-                (
-                    Some(seq),
-                    Some(Coords {
-                        segment_index: *segment_index,
-                        start,
-                        length,
-                    }),
-                )
-            } else {
-                (None, None)
-            }
-        }
-        ResolvedSourceNoAll::Tag(tag_name) => {
-            // Extract from tag - we need to get the sequence from the tag
-            if let Some(_tag_values) = block.tags.get(tag_name) {
-                match block
-                    .tags
-                    .get(tag_name)
-                    .expect("Validation should have verified tag presence")
-                {
-                    TagColumn::Location(locations) => {
-                        let hits = locations.get(read_no);
-                        if !hits.is_empty() {
-                            let hit = hits[0];
-                            let loc_opt = locations.hit_location(hit);
-                            if let Some(loc) = loc_opt {
-                                let segment_block = &block.segments[loc.segment_index.as_index()];
-                                let seq = segment_block.seq_quals.seq(read_no);
-                                if let Some((seq, start, length)) = extract_from_sequence(
-                                    seq,
-                                    loc.start,
-                                    loc.start + loc.len,
-                                    start,
-                                    length,
-                                    anchor,
-                                ) {
-                                    let segment_index = Some(loc.segment_index);
-                                    (
-                                        Some(seq),
-                                        segment_index.map(|segment_index| Coords {
-                                            segment_index,
-                                            start,
-                                            length,
-                                        }),
-                                    )
-                                } else {
-                                    (None, None)
-                                }
-                            } else {
-                                (None, None)
-                            }
-                        } else {
-                            (None, None)
-                        }
-                    }
-                    TagColumn::String(string_vals) => {
-                        let string_val = string_vals
-                            .get(read_no)
-                            .expect("Tag vec length must match block length");
-                        if let Some(string_val) = string_val {
-                            (
-                                extract_from_sequence(
-                                    string_val.as_ref(),
-                                    0,
-                                    string_val.len(),
-                                    start,
-                                    length,
-                                    anchor,
-                                )
-                                .map(|x| x.0),
-                                None,
-                            )
-                        } else {
-                            (None, None)
-                        }
-                    }
-                    _ => {
-                        unreachable!("Tag value type should have been verified before!"); //cov:excl-line
-                    }
-                }
-            } else {
-                (None, None)
-            }
-        }
-        ResolvedSourceNoAll::Name {
-            segment_index,
-            split_character: _,
-        } => {
-            // Extract from read name
-            let name = block.segments[segment_index.as_index()].names.get(read_no);
-            (
-                extract_from_sequence(name, 0, name.len(), start, length, anchor).map(|x| x.0),
-                None,
-            )
-        }
-    };
-    res.0.map(|seq| (seq, res.1))
-}
-
 #[expect(clippy::cast_sign_loss, reason = "Checked before")]
 fn extract_from_sequence(
-    sequence: &[u8],
+    seq_len: usize,
     sub_sequence_start: usize,
     sub_sequence_end: usize,
     out_start: isize,
     out_length: usize,
     anchor: &RegionAnchor,
-) -> Option<(BString, usize, usize)> {
-    let seq_len = sequence
-        .len()
-        .try_into()
-        .expect("sequence length does not fit into isize");
+) -> Option<(u32, u32)> {
     let sub_sequence_start: isize = sub_sequence_start
         .try_into()
         .expect("sub_sequence_start did not fit into isize");
@@ -564,7 +423,10 @@ fn extract_from_sequence(
     let actual_start: isize = match anchor {
         RegionAnchor::Start => {
             // For start anchoring, negative values count from the beginning
-            (out_start + sub_sequence_start).min(seq_len)
+            (out_start + sub_sequence_start)
+                .min(seq_len.try_into().expect("seq_len did not fit into isize"))
+                .try_into()
+                .expect("actual_start did not fit into isize")
         }
         RegionAnchor::End => {
             // For end anchoring, negative values count from the end
@@ -576,21 +438,22 @@ fn extract_from_sequence(
     }
     let actual_start = actual_start as usize; // verified to be >= 0
 
-    if actual_start >= sequence.len() {
+    if actual_start >= seq_len {
         None
     } else {
         // Ensure we don't go beyond sequence bounds
         let end_pos = actual_start
             .checked_add(out_length)
             .expect("end_pos overflowed usize");
-        if end_pos > sequence.len() {
+        if end_pos > seq_len {
             return None;
         }
         let length = end_pos - actual_start;
         Some((
-            sequence[actual_start..end_pos].iter().copied().collect(),
-            actual_start,
-            length,
+            actual_start
+                .try_into()
+                .expect("actual_start did not fit into u32"),
+            length.try_into().expect("length did not fit into u32"),
         ))
     }
 }

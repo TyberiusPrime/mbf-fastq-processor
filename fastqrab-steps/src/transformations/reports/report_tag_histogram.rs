@@ -54,12 +54,7 @@ impl HistogramData {
         match col {
             TagColumn::Location(col) => {
                 if let HistogramData::String(map) = self {
-                    let hits = col.get(idx);
-                    let s = if hits.is_empty() {
-                        String::new()
-                    } else {
-                        String::from_utf8_lossy(&col.joined_sequence(hits, Some(b"_"))).into_owned()
-                    };
+                    let s = String::from_utf8_lossy(&col.joined_seq(idx, Some(b"_"))).into_owned();
                     *map.entry(s).or_insert(0) += 1;
                 } else {
                     unreachable!() // cov:excl-line

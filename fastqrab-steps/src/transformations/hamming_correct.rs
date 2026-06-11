@@ -1,4 +1,8 @@
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::{
+    arch::x86_64::_CMP_UNORD_S,
+    borrow::Cow,
+    sync::atomic::{AtomicBool, AtomicUsize, Ordering},
+};
 
 use anyhow::anyhow;
 
@@ -462,14 +466,10 @@ fn run_match_phase(
     match input_tags {
         TagColumn::Location(col) => {
             for hits in col.iter() {
-                let result = if hits.is_empty() {
+                let result = if hits.0.is_empty() {
                     None
                 } else {
-                    Some(match_sequence(
-                        seq_to_idx,
-                        resonator,
-                        BStr::new(col.joined_sequence_cow(hits, None).as_ref()),
-                    )?)
+                    Some(match_sequence(seq_to_idx, resonator, &hits.0)?)
                 };
                 results.push(MatchSlot {
                     result,
@@ -497,7 +497,7 @@ fn run_match_phase(
         if let TagColumn::Location(col) = input_tags {
             for ((hits, slot)) in col.iter().zip(results.iter_mut()) {
                 if !hits.1.is_empty() && matches!(&slot.result, Some(MatchResultOwned::Tie(_))) {
-                    slot.quality = hits.1;
+                    slot.quality = Some(hits.1.into_owned())
                 }
             }
         }
@@ -508,10 +508,8 @@ fn run_match_phase(
 impl HammingCorrect {
     fn push_output_location(
         &self,
-        out_col: &mut Vec<Option<BString>>,
+        out_col: &mut Vec<BString>,
         matched_idx: usize,
-        input_col: &DualStringPodMultiLocation,
-        input_hits: &SmallVec<[Range<u32>;  1]>,
         output_barcode: bool,
     ) {
         //todo: optimize by taking instead of cloning?
@@ -519,11 +517,10 @@ impl HammingCorrect {
             .seq_to_name
             .get_index(matched_idx)
             .expect("seq_to_name index out of range");
-        out_col.push(
-         if output_barcode {
-                matched_seq.clone()
-            } else {
-                matched_name.clone()
+        out_col.push(if output_barcode {
+            matched_seq.clone()
+        } else {
+            BString::new(matched_name.as_bytes().to_vec())
         });
         //     // Preserve location from the single input hit if available
         //     // let loc = if input_hits.len() == 1 {
@@ -538,9 +535,9 @@ impl HammingCorrect {
         // }
     }
 
-    fn push_empty_location(out_col: &mut Vec<Option<BString>>) {
+    fn push_empty_location(out_col: &mut Vec<BString>) {
         // An "empty" hit: present but no sequence content
-        out_col.push(b"".into());
+        out_col.push(BString::new(vec![]))
     }
 
     fn output_string(&self, matched_idx: usize, output_barcode: bool) -> Option<BString> {
@@ -651,328 +648,125 @@ impl Step for HammingCorrect {
         };
 
         // Phase 2: count updates + output construction (counts-hot).
-        match input_tags {
-            TagColumn::Location(in_col) => {
-                let mut out_col = LocationColumn::new();
-                for (src_idx, (input_hits, slot)) in
-                    in_col.iter().zip(results.into_iter()).enumerate()
-                {
-                    let MatchSlot { result, quality } = slot;
-                    match result {
-                        None => out_col.push_none(),
-                        Some(hit) => {
-                            match hit {
-                                MatchResultOwned::NoMatch => match self.on_no_match {
-                                    OnNoMatch::Remove => out_col.push_none(),
-                                    OnNoMatch::Empty => Self::push_empty_location(&mut out_col),
-                                    OnNoMatch::Keep => out_col.push_from(in_col, src_idx),
-                                },
-                                MatchResultOwned::OneMatch { idx, was_exact } => {
-                                    if was_exact
-                                        && let Some(counts) = barcode_counts
-                                        && count_here
-                                    {
-                                        counts[idx].fetch_add(1, Ordering::Relaxed);
-                                    }
-                                    self.push_output_location(
-                                        &mut out_col,
-                                        idx,
-                                        in_col,
-                                        input_hits,
-                                        output_barcode,
-                                    );
-                                }
-                                MatchResultOwned::Tie(items) => {
-                                    match self.on_tie {
-                                        OnTie::Remove => out_col.push_none(),
-                                        OnTie::Empty => Self::push_empty_location(&mut out_col),
-                                        OnTie::Keep => out_col.push_from(in_col, src_idx),
-                                        OnTie::First => {
-                                            self.push_output_location(
-                                                &mut out_col,
-                                                items[0],
-                                                in_col,
-                                                input_hits,
-                                                output_barcode,
-                                            );
-                                        }
-                                        OnTie::FirstStrict => {
-                                            let split = self.name_split_character;
-                                            let canonical_name = |idx: usize| -> &[u8] {
-                                                let (_k, name) = self
-                                                    .seq_to_name
-                                                    .get_index(idx)
-                                                    .expect("seq_to_name index out of range");
-                                                let bytes = name.as_bytes();
-                                                match split {
-                                                    Some(split_char) => bytes
-                                                        .splitn(2, |&c| c == split_char)
-                                                        .next()
-                                                        .unwrap_or(bytes),
-                                                    None => bytes,
-                                                }
-                                            };
-                                            let first = canonical_name(items[0]);
-                                            let all_the_same =
-                                                items.iter().all(|&i| canonical_name(i) == first);
-                                            if all_the_same {
-                                                self.push_output_location(
-                                                    &mut out_col,
-                                                    items[0],
-                                                    in_col,
-                                                    input_hits,
-                                                    output_barcode,
-                                                );
-                                            } else {
-                                                out_col.push_none();
-                                            }
-                                        }
-                                        OnTie::Fail => {
-                                            let query_seq = if !input_hits.is_empty() {
-                                                in_col.joined_sequence(input_hits, None)
-                                            } else {
-                                                Vec::new()
-                                            };
-                                            let display: Vec<_> = items
-                                                .iter()
-                                                .map(|&i| {
-                                                    let (k, n) = self
-                                                        .seq_to_name
-                                                        .get_index(i)
-                                                        .expect("seq_to_name index out of range");
-                                                    (BStr::new(k.as_slice()), n)
-                                                })
-                                                .collect();
-                                            bail!(
-                                                "HammingCorrect on in_label={} \n\
-                                             Uncorrectable sequence '{}', \n\
-                                             matches multiple sequences within hamming distance: {:?}.\n\
-                                             Set `on_tie` to one of Keep, Remove, Empty, First, or FirstStrict to resolve ties.\n\
-                                             If using FirstStrict, consider setting `name_split_character`?",
-                                                self.in_label,
-                                                BStr::new(&query_seq),
-                                                display
-                                            );
-                                        }
-                                        OnTie::ByMajority => {
-                                            let counts = barcode_counts.expect(
-                                                "Barcode_counts must be set in OnTie::ByMajority",
-                                            );
-                                            let mut best: Option<(usize, usize)> = None;
-                                            let mut total = 0;
-                                            for &idx in &items {
-                                                let count = counts[idx].load(Ordering::Relaxed) + 1;
-                                                best = Some(match best {
-                                                    Some(ibest) => {
-                                                        if ibest.1 < count {
-                                                            (idx, count)
-                                                        } else {
-                                                            ibest
-                                                        }
-                                                    }
-                                                    None => (idx, count),
-                                                });
-                                                total += count;
-                                            }
-                                            let best = best.expect("Items can't have been empty");
-                                            #[expect(
-                                                clippy::cast_precision_loss,
-                                                reason = "If lengths reach f64 imprecison region, precision loss would be acceptable"
-                                            )]
-                                            if best.1 as f64 / total as f64 >= self.on_tie_threshold
-                                            {
-                                                self.push_output_location(
-                                                    &mut out_col,
-                                                    best.0,
-                                                    in_col,
-                                                    input_hits,
-                                                    output_barcode,
-                                                );
-                                            } else {
-                                                out_col.push_none();
-                                            }
-                                        }
-                                        OnTie::ByEditProbability => {
-                                            let counts = barcode_counts.expect("Barcode_counts must be set in OnTie::ByEditProbability");
-                                            let candidates: Vec<_> = items
-                                                .iter()
-                                                .map(|&i| {
-                                                    let (k, _n) = self
-                                                        .seq_to_name
-                                                        .get_index(i)
-                                                        .expect("seq_to_name index out of range");
-                                                    (
-                                                        BStr::new(k.as_slice()),
-                                                        i,
-                                                        counts[i].load(Ordering::Relaxed),
-                                                    )
-                                                })
-                                                .collect();
-                                            let candidates_for_likelihood: Vec<(&BStr, usize)> =
-                                                candidates
-                                                    .iter()
-                                                    .map(|(seq, _idx, c)| (*seq, *c))
-                                                    .collect();
-                                            let (observed_sequence, observed_qualities) =
-                                                if !input_hits.is_empty() {
-                                                    (
-                                                        in_col.joined_sequence(input_hits, None),
-                                                        quality,
-                                                    )
-                                                } else {
-                                                    unreachable!(
-                                                        "ByEditProbability called on missing tag"
-                                                    ) // cov:excl-line
-                                                };
-                                            let observed_qualities = observed_qualities.with_context(||format!("Hamming correction with ByEditProbability impossible.\n\
-                                                    The location tag {in_label} has lost it's location data (due to editing), can't retrieve qualities.\n\
-                                                    Maybe you can reorder your steps?", in_label=self.in_label))?;
-                                            if let Some(best_seq) =
-                                                correct_barcode_via_base_editing_likelihood(
-                                                    self.on_tie_threshold,
-                                                    BStr::new(&observed_sequence),
-                                                    &observed_qualities,
-                                                    &candidates_for_likelihood,
-                                                )
-                                            {
-                                                let best_idx = candidates
-                                                    .iter()
-                                                    .find(|(s, _, _)| *s == best_seq)
-                                                    .map(|(_, i, _)| *i)
-                                                    .expect("best_seq came from candidates");
-                                                self.push_output_location(
-                                                    &mut out_col,
-                                                    best_idx,
-                                                    in_col,
-                                                    input_hits,
-                                                    output_barcode,
-                                                );
-                                            } else {
-                                                out_col.push_none();
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                block
-                    .tags
-                    .insert(self.out_label.clone(), TagColumn::Location(out_col));
-            }
-            TagColumn::String(bstrings) => {
-                let mut output_strings: Vec<Option<BString>> = Vec::with_capacity(bstrings.len());
-                for (input_tag, slot) in bstrings.iter().zip(results.into_iter()) {
-                    let MatchSlot { result, .. } = slot;
-                    output_strings.push(match result {
-                        None => None,
-                        Some(hit) => match hit {
-                            MatchResultOwned::NoMatch => match self.on_no_match {
-                                OnNoMatch::Remove => None,
-                                OnNoMatch::Empty => Self::output_empty_string(),
-                                OnNoMatch::Keep => input_tag.clone(),
-                            },
-                            MatchResultOwned::OneMatch { idx, was_exact } => {
-                                if was_exact && let Some(counts) = barcode_counts && count_here {
-                                    counts[idx].fetch_add(1, Ordering::Relaxed);
-                                }
-                                self.output_string(idx, output_barcode)
-                            }
-                            MatchResultOwned::Tie(items) => match self.on_tie {
-                                OnTie::Remove => None,
-                                OnTie::Empty => Self::output_empty_string(),
-                                OnTie::Keep => input_tag.clone(),
-                                OnTie::First => self.output_string(items[0], output_barcode),
-                                OnTie::FirstStrict => {
-                                    let split = self.name_split_character;
-                                    let canonical_name = |idx: usize| -> &[u8] {
-                                        let (_k, name) = self
-                                            .seq_to_name
-                                            .get_index(idx)
-                                            .expect("seq_to_name index out of range");
-                                        let bytes = name.as_bytes();
-                                        match split {
-                                            Some(split_char) => bytes
-                                                .splitn(2, |&c| c == split_char)
-                                                .next()
-                                                .unwrap_or(bytes),
-                                            None => bytes,
-                                        }
-                                    };
-                                    let first = canonical_name(items[0]);
-                                    let all_the_same =
-                                        items.iter().all(|&i| canonical_name(i) == first);
-                                    if all_the_same {
-                                        self.output_string(items[0], output_barcode)
-                                    } else {
-                                        None
-                                    }
-                                }
-                                OnTie::Fail => {
-                                    let query_seq = input_tag
-                                        .as_deref()
-                                        .map(|s| s.to_vec())
-                                        .unwrap_or_default();
-                                    let display: Vec<_> = items
-                                        .iter()
-                                        .map(|&i| {
-                                            let (k, n) = self
-                                                .seq_to_name
-                                                .get_index(i)
-                                                .expect("seq_to_name index out of range");
-                                            (BStr::new(k.as_slice()), n)
-                                        })
-                                        .collect();
-                                    bail!(
-                                        "HammingCorrect on in_label={} \n\
-                                         Uncorrectable sequence '{}', \n\
-                                         matches multiple sequences within hamming distance: {:?}.\n\
-                                         Set `on_tie` to one of Keep, Remove, Empty, First, or FirstStrict to resolve ties.\n\
-                                         If using FirstStrict, consider setting `name_split_character`?",
-                                        self.in_label,
-                                        BStr::new(&query_seq),
-                                        display
-                                    );
-                                }
-                                OnTie::ByMajority => {
-                                    let counts = barcode_counts
-                                        .expect("Barcode_counts must be set in OnTie::ByMajority");
-                                    let mut best: Option<(usize, usize)> = None;
-                                    let mut total = 0;
-                                    for &idx in &items {
-                                        let count = counts[idx].load(Ordering::Relaxed) + 1;
-                                        best = Some(match best {
-                                            Some(ibest) => {
-                                                if ibest.1 < count { (idx, count) } else { ibest }
-                                            }
-                                            None => (idx, count),
-                                        });
-                                        total += count;
-                                    }
-                                    let best = best.expect("Items can't have been empty");
-                                    #[expect(clippy::cast_precision_loss, reason = "acceptable")]
-                                    if best.1 as f64 / total as f64 >= self.on_tie_threshold {
-                                        self.output_string(best.0, output_barcode)
-                                    } else {
-                                        None
-                                    }
-                                }
-                                OnTie::ByEditProbability => {
-                                    unreachable!("ByEditProbability is not supported for String tags") // cov:excl-line
-                                }
-                            },
+        // let input_strings: Box<dyn Iterator<Item = Option<Cow<BStr>>>> = match input_tags {
+        //     TagColumn::Location(in_col) => {
+        //         Box::new(in_col.iter_seq().map(|x| (!x.is_empty()).then(|| x)))
+        //     }
+        //     TagColumn::String(bstrings) => Box::new(
+        //         bstrings
+        //             .iter()
+        //             .map(|x| x.map(|y| Cow::Borrowed(y.as_ref()))),
+        //     ),
+        //     _ => unreachable!("Validation should have prevented non-String, non-Location tags"), //cov:excl-line
+        // };
+        let input_strings = input_tags.iter_stringified();
+        let mut output_strings: Vec<Option<BString>> = Vec::with_capacity(input_tags.len());
+
+        for (input_tag, slot) in input_strings.zip(results.into_iter()) {
+            let MatchSlot { result, .. } = slot;
+            output_strings.push(match result {
+                    None => None,
+                    Some(hit) => match hit {
+                        MatchResultOwned::NoMatch => match self.on_no_match {
+                            OnNoMatch::Remove => None,
+                            OnNoMatch::Empty => Self::output_empty_string(),
+                            OnNoMatch::Keep => input_tag.map(|x| BString::from(x.to_vec())),
                         },
-                    });
-                }
-                block
-                    .tags
-                    .insert(self.out_label.clone(), TagColumn::String(output_strings));
-            }
-            TagColumn::Numeric(_) | TagColumn::Bool(_) => {
-                unreachable!("Validation was meant to prevent this situation. Bug?")
-            } // cov:excl-line
+                        MatchResultOwned::OneMatch { idx, was_exact } => {
+                            if was_exact && let Some(counts) = barcode_counts && count_here {
+                                counts[idx].fetch_add(1, Ordering::Relaxed);
+                            }
+                            self.output_string(idx, output_barcode)
+                        }
+                        MatchResultOwned::Tie(items) => match self.on_tie {
+                            OnTie::Remove => None,
+                            OnTie::Empty => Self::output_empty_string(),
+                            OnTie::Keep => input_tag.map(|x| BString::from(x.to_vec())),
+                            OnTie::First => self.output_string(items[0], output_barcode),
+                            OnTie::FirstStrict => {
+                                let split = self.name_split_character;
+                                let canonical_name = |idx: usize| -> &[u8] {
+                                    let (_k, name) = self
+                                        .seq_to_name
+                                        .get_index(idx)
+                                        .expect("seq_to_name index out of range");
+                                    let bytes = name.as_bytes();
+                                    match split {
+                                        Some(split_char) => bytes
+                                            .splitn(2, |&c| c == split_char)
+                                            .next()
+                                            .unwrap_or(bytes),
+                                        None => bytes,
+                                    }
+                                };
+                                let first = canonical_name(items[0]);
+                                let all_the_same =
+                                    items.iter().all(|&i| canonical_name(i) == first);
+                                if all_the_same {
+                                    self.output_string(items[0], output_barcode)
+                                } else {
+                                    None
+                                }
+                            }
+                            OnTie::Fail => {
+                                let query_seq = input_tag
+                                    .as_deref()
+                                    .map(|s| s.to_vec())
+                                    .unwrap_or_default();
+                                let display: Vec<_> = items
+                                    .iter()
+                                    .map(|&i| {
+                                        let (k, n) = self
+                                            .seq_to_name
+                                            .get_index(i)
+                                            .expect("seq_to_name index out of range");
+                                        (BStr::new(k.as_slice()), n)
+                                    })
+                                    .collect();
+                                bail!(
+                                    "HammingCorrect on in_label={} \n\
+                                     Uncorrectable sequence '{}', \n\
+                                     matches multiple sequences within hamming distance: {:?}.\n\
+                                     Set `on_tie` to one of Keep, Remove, Empty, First, or FirstStrict to resolve ties.\n\
+                                     If using FirstStrict, consider setting `name_split_character`?",
+                                    self.in_label,
+                                    BStr::new(&query_seq),
+                                    display
+                                );
+                            }
+                            OnTie::ByMajority => {
+                                let counts = barcode_counts
+                                    .expect("Barcode_counts must be set in OnTie::ByMajority");
+                                let mut best: Option<(usize, usize)> = None;
+                                let mut total = 0;
+                                for &idx in &items {
+                                    let count = counts[idx].load(Ordering::Relaxed) + 1;
+                                    best = Some(match best {
+                                        Some(ibest) => {
+                                            if ibest.1 < count { (idx, count) } else { ibest }
+                                        }
+                                        None => (idx, count),
+                                    });
+                                    total += count;
+                                }
+                                let best = best.expect("Items can't have been empty");
+                                #[expect(clippy::cast_precision_loss, reason = "acceptable")]
+                                if best.1 as f64 / total as f64 >= self.on_tie_threshold {
+                                    self.output_string(best.0, output_barcode)
+                                } else {
+                                    None
+                                }
+                            }
+                            OnTie::ByEditProbability => {
+                                unreachable!("ByEditProbability is not supported for String tags") // cov:excl-line
+                            }
+                        },
+                    },
+                });
         }
+        block
+            .tags
+            .insert(self.out_label.clone(), TagColumn::String(output_strings));
         // Add the corrected tags to the output
 
         Ok((block, true))

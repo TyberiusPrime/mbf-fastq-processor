@@ -561,7 +561,7 @@ where
     if let Some(ref_tag_name) = &options.tag_to_reference
         && let Some(tag_col) = tags.get(ref_tag_name.as_str())
     {
-        let ref_name = tag_col.to_bstr(read_index);
+        let ref_name = tag_col.to_bstr(read_index, |float| float.to_string(), None);
         let key: &[u8] = &ref_name;
         if !key.is_empty() {
             if let Some(idx) = header.reference_sequences().get_index_of(key) {

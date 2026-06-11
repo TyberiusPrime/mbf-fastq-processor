@@ -173,13 +173,13 @@ impl Step for HammingExactCounter {
             match input_tags {
                 TagColumn::Location(col) => {
                     for hits in col.iter() {
-                        let idx = if hits.is_empty() {
+                        let idx = if hits.0.is_empty() {
                             continue;
                         } else {
-                            let seq = col.joined_sequence_cow(hits, None);
+                            let seq = hits.0;
                             self.majority_data
                                 .seq_to_idx
-                                .get(BStr::new(seq.as_ref()))
+                                .get(seq.as_ref())
                                 .copied()
                         };
                         if let Some(idx) = idx {

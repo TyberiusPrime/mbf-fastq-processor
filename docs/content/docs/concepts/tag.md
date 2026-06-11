@@ -34,10 +34,10 @@ Represent a region within a [segment]({{< relref "docs/concepts/segments.md" >}}
 - A segment reference,
 - Start position (0-based, inclusive)
 - End position (0-based, exclusive)
-- The extracted sequence (which may be changed by downstream steps) 
+- The extracted sequence (which will never change).
 
-If you modify the segment's sequence, tag positions may become invalid.
-The extracted sequence however is retained. 
+If you modify the segment's sequence, tag positions may become invalid (for steps that write back into the sequence).
+The extracted sequence however is always retained. 
 
 **Created by:**
 - [ExtractIUPAC]({{< relref "docs/reference/tag-steps/extract/ExtractIUPAC.md" >}}) – Find IUPAC patterns (e.g., adapters, barcodes)

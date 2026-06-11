@@ -64,3 +64,4 @@ pub use stringpod::{
 
 pub use std::ops::Range;
 pub use smallvec::SmallVec;
+pub use std::borrow::Cow;

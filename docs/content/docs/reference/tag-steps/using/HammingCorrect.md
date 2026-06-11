@@ -12,8 +12,8 @@ Correct a tag to one of a predefined set of 'barcodes' using closest hamming dis
     output = "barcode" # or "label"
 
     max_hamming_distance = 1
-    on_no_match = 'remove' # 'remove', 'empty', 'keep'
-    on_tie = 'remove' # 'remove', 'empty', 'keep', 'first', 'first_strict', 'fail', 'by_majority', 'by_edit_probability'
+    on_no_match = 'remove' # 'remove', 'keep'
+    on_tie = 'remove' # 'remove', 'keep', 'first', 'first_strict', 'fail', 'by_majority', 'by_edit_probability'
     name_split_character = '|' # optional
     on_tie_threshold = 0.975 # optional, default 0.975. Adjusted frequency: (n+1) / (N+k)
     on_tie_min_molecules_to_start = 1_000_000 # optional, default 1_000_000. See below
@@ -43,7 +43,6 @@ Either way, the result is a string tag, the locations are 'lost' along the way.
  * remove: Remove the hit (location and sequence), 
    useful for [FilterByTag]({{< relref "docs/reference/filter-steps/FilterByTag.md" >}}) later.
  * keep: Keep the original tag (and location)
- * empty: Keep the original location, but set the tag to empty.
 
 
 `on_tie` controls what happens when if the tag can't be corrected uniquely, i.e. how to handle 
@@ -52,7 +51,6 @@ multiple equally good matches within `max_hamming_distance` (lower distance matc
 * remove: Remove the hit (location and sequence), 
    useful for [FilterByTag]({{< relref "docs/reference/filter-steps/FilterByTag.md" >}}) later.
 * keep: Keep the original tag (and location)
-* empty: Keep the original location, but set the tag to empty.
 * first: Just take the first (lexicographical ordering)
 * first_strict: Take the first (lexicographical ordering),
   but only if they all map to the same barcode label (or label prefix up to the first `name_split_character`, if that is set).

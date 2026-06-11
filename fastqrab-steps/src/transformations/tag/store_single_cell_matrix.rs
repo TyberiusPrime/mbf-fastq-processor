@@ -479,11 +479,11 @@ impl Step for StoreSingleCellMatrix {
                     None => 0,
                 },
                 TagColumn::Location(col) => {
-                    let h = col.get(ii);
-                    if h.is_empty() {
+                    let seq = col.joined_seq(ii, None);
+                    if seq.is_empty() {
                         0
                     } else {
-                        seq_to_idx(&col.joined_sequence_cow(h, None), cell_map)
+                        seq_to_idx(&seq, cell_map)
                     }
                 }
                 _ => 0,
@@ -495,11 +495,11 @@ impl Step for StoreSingleCellMatrix {
                     None => 0,
                 },
                 TagColumn::Location(col) => {
-                    let h = col.get(ii);
-                    if h.is_empty() {
+                    let seq = col.joined_seq(ii, None);
+                    if seq.is_empty() {
                         0
                     } else {
-                        seq_to_idx(&col.joined_sequence_cow(h, None), gene_map)
+                        seq_to_idx(&seq, cell_map)
                     }
                 }
                 _ => 0,
@@ -516,11 +516,10 @@ impl Step for StoreSingleCellMatrix {
                     None => (Umi::new_unmatched(), 0u8),
                 },
                 TagColumn::Location(col) => {
-                    let h = col.get(ii);
-                    if h.is_empty() {
+                    let seq = col.joined_seq(ii, None);
+                    if seq.is_empty() {
                         (Umi::new_unmatched(), 0u8)
                     } else {
-                        let seq = col.joined_sequence(h, None);
                         if seq.len() > 16 {
                             anyhow::bail!(
                                 "UMI is {}bp, maximum supported length is 16bp",

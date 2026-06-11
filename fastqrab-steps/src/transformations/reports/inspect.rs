@@ -240,7 +240,7 @@ impl Step for Inspect {
                 name.push(b' ');
                 name.extend_from_slice(str_key.as_bytes());
                 name.push(b'=');
-                name.extend_from_slice(&values.to_bstr(read_idx));
+                name.extend_from_slice(&values.to_bstr(read_idx, |float| float.to_string(), None));
             }
         };
         let mut read_idx = 0;

@@ -29,3 +29,10 @@ impl std::fmt::Display for SegmentIndex {
         write!(f, "SegmentIndex({})", self.0)
     }
 }
+
+impl From<u32> for SegmentIndex 
+{
+    fn from(value: u32) -> Self {
+        SegmentIndex::new(value as usize)
+    }
+}
