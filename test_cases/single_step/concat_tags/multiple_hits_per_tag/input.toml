@@ -13,9 +13,10 @@
 [[step]]
     action = 'ExtractRegions'
     regions = [
-			{ source = "tag:anchor1", start=0, length=2, anchor='left'},
-			{ source = "tag:anchor1", start=2, length=2, anchor='left'}
+			{ start=0, length=2, anchor='left'},
+			{ start=2, length=2, anchor='left'}
 ]
+    source = "tag:anchor1"
 	out_label = 'multi_tag1'
 
 # Extract second anchor
@@ -30,9 +31,10 @@
 [[step]]
     action = 'ExtractRegions'
 	regions = [
-	{ source = "tag:anchor2", start=0, length=2, anchor='left'},
-	{ source = "tag:anchor2", start=2, length=2, anchor='left'}
+	{ start=0, length=2, anchor='left'},
+	{ start=2, length=2, anchor='left'}
 	]
+    source = "tag:anchor2"
     out_label = 'multi_tag2'
 
 # Concatenate the two multi-hit tags

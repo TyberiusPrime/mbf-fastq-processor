@@ -6,10 +6,11 @@
 [[step]]
     action = 'ExtractRegions'
     regions = [
-        {segment = "read1", start = 10, length = 4, anchor="Start"},  # This is later
-        {segment = "read1", start = 5, length = 3, anchor="Start"},   # This is the leftmost (should be used as anchor)
-        {segment = "read1", start = 15, length = 2, anchor="Start"},  # This is even later
+        { start = 10, length = 4, anchor="Start"},  # This is later
+        { start = 5, length = 3, anchor="Start"},   # This is the leftmost (should be used as anchor)
+        { start = 15, length = 2, anchor="Start"},  # This is even later
     ]
+    segment = "read1"
     out_label = 'anchor_tag'
 
 # ExtractRegions can now extract from the tag directly
@@ -17,9 +18,10 @@
 [[step]]
     action = 'ExtractRegions'
     regions = [
-        { source = "tag:anchor_tag", start = 0, length = 3, anchor = "Start" },  # Extract from anchor position
-        { source = "tag:anchor_tag", start = 10, length = 2, anchor = "Start" }  # 10 bases after
+        { start = 0, length = 3, anchor = "Start" },  # Extract from anchor position
+        { start = 10, length = 2, anchor = "Start" }  # 10 bases after
     ]
+    source = "tag:anchor_tag"
     out_label = 'test'
 
 # [[step]]

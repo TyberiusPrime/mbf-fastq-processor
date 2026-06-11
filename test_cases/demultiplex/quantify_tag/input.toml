@@ -23,8 +23,9 @@
 [[step]]
     action = 'ExtractRegions'
     regions = [
-        { source = 'read1', start = 1, length = 3, anchor='Start' }
+        { start = 1, length = 3, anchor='Start' }
     ]
+    source = 'read1'
     out_label = 'kmer'
 
 [[step]]

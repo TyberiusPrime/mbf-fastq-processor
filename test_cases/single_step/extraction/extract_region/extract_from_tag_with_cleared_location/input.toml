@@ -23,8 +23,9 @@
     action = 'ExtractRegions'
     out_label = 'extracted'
     regions = [
-        { source = 'tag:anchor', start = 0, length = 2, anchor = 'Start' }
+        { start = 0, length = 2, anchor = 'Start' }
     ]
+    source = 'tag:anchor'
 
 [[step]]
     action = 'StoreTagInComment'

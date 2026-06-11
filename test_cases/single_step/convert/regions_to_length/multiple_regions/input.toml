@@ -5,9 +5,10 @@
     action = 'ExtractRegions'
     out_label = 'mytag'
     regions = [
-        { segment = 'read1', start = 0, length = 2, anchor="start" },
-        { segment = 'read1', start = 4, length = 4, anchor="start" },
+        { start = 0, length = 2, anchor="start" },
+        { start = 4, length = 4, anchor="start" },
     ]
+    segment = 'read1'
 
 [[step]]
     action = 'ConvertRegionsToLength'

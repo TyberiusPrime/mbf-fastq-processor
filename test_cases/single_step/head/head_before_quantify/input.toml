@@ -16,8 +16,9 @@
     out_label = 'kmer'
 
     regions = [
-            { segment = 'read1', anchor="Start", start = 6, length = 6},
+            { anchor="Start", start = 6, length = 6},
     ]
+    segment = 'read1'
 [[step]]
     action = 'QuantifyTag'
     infix = 'kmer'

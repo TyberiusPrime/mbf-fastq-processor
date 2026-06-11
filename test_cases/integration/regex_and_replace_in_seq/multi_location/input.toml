@@ -5,9 +5,10 @@
   action= 'ExtractRegions'
   out_label = 'barcode'
   regions = [
-    {start=0,len=2, segment='read1', anchor='left'},
-    {start=4,len=2, segment='read1', anchor='left'}
+    {start=0,len=2, anchor='left'},
+    {start=4,len=2, anchor='left'}
 ]
+  segment = 'read1'
 
 [[step]]
   action = 'StoreTagInComment'  

@@ -4,9 +4,10 @@
 [[step]]
   action = "ExtractRegions"
   regions = [
-  { start = 0, length = 75, segment = 'read1', anchor = 'left', },
-  { start = 75, length = 75, segment = 'read1', anchor = 'left', }
+  { start = 0, length = 75, anchor = 'left', },
+  { start = 75, length = 75, anchor = 'left', }
 ]
+  segment = 'read1'
   out_label = 'tag_seq_1'
 
 [[step]]

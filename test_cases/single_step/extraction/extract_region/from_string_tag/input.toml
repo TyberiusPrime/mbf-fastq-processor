@@ -16,8 +16,9 @@
     action = 'ExtractRegions'
     out_label='umi'
     regions = [
-        {segment = 'tag:sample_id', start = -1, length = 1, anchor="End"},
+        { start = -1, length = 1, anchor="End"},
     ]
+    segment = 'tag:sample_id'
 
 [[step]]
     action = 'StoreTagInComment'

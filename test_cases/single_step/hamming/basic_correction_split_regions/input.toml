@@ -15,18 +15,17 @@
     action = 'ExtractRegions'
     regions = [
   {
-      source = "read1",
       anchor = "start",
       start = 0,
       length = 2,
   },
   {
-      source = "read1",
       anchor = "start",
       start = 2,
       length = 2,
   },
 ]
+    source = "read1"
     out_label = 'barcode_extracted'
 
 [[step]]

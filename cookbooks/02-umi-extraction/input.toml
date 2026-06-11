@@ -5,7 +5,8 @@
     # Extract UMI from the first 8 bases of read1
     action = 'ExtractRegions'
     out_label = 'umi'
-    regions = [{source = 'read1', start = 0, length = 8, anchor="Start"}]
+    regions = [{ start = 0, length = 8, anchor="Start"}]
+    source = 'read1'
 
 [[step]]
     # Store the UMI tag in the FASTQ comment

@@ -9,8 +9,9 @@
     action = 'ExtractRegions'
     out_label='umi'
     regions = [
-        {segment = 'read1', start = 0, length = 51, anchor="Start"},
+        { start = 0, length = 51, anchor="Start"},
     ]
+    segment = 'read1'
 
 [[step]]
     action = 'Lowercase'
