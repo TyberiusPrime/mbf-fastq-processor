@@ -35,7 +35,7 @@ impl TagUser for PartialTaggedVariant<PartialValidateQuality> {
 impl Step for ValidateQuality {
     fn apply(
         &self,
-        mut block: FastQBlocksCombined,
+        block: FastQBlocksCombined,
         _input_info: &InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {

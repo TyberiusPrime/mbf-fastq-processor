@@ -1,5 +1,5 @@
 use anyhow::{Context, Result, anyhow};
-use fastqrab_io::blocks::{FastQChunk, FastQRead};
+use fastqrab_io::blocks::FastQChunk;
 use noodles::bam;
 use std::collections::BTreeMap;
 use std::io::{BufWriter, Write};
@@ -699,7 +699,7 @@ fn output_block_interleaved(
         for (segment_index, iter) in iters.iter_mut().enumerate() {
             match format {
                 FileFormat::Fastq => {
-                    let Some((read_idx, read)) = iter.next() else {
+                    let Some((_read_idx, read)) = iter.next() else {
                         break 'outer;
                     };
                     buf.clear();
@@ -707,7 +707,7 @@ fn output_block_interleaved(
                     writer.write_text_record(&buf)?;
                 }
                 FileFormat::Fasta => {
-                    let Some((read_index, read)) = iter.next() else {
+                    let Some((_read_index, read)) = iter.next() else {
                         break 'outer;
                     };
                     buf.clear();

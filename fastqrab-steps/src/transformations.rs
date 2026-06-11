@@ -1,7 +1,6 @@
 #![expect(non_camel_case_types, reason = "Derived Partial_* is ok for internals")]
 
 use anyhow::Result;
-use bstr::BString;
 use enum_dispatch::enum_dispatch;
 use indexmap::IndexMap;
 use prelude::TagMetadata;
@@ -16,11 +15,10 @@ use crate::{
 };
 use fastqrab_config::{
     DeclaredTag, RemovedTags, TagLabel, UsedTag,
-    dna::TagColumn,
-    segments::{ResolvedSourceNoAll, SegmentIndex},
+    segments::{SegmentIndex},
 };
 use fastqrab_io::io::output::chunked_writer::OutputDeclaration;
-use fastqrab_io::io::{FastQBlocksCombined, reads::WrappedFastQReadCommon};
+use fastqrab_io::io::{FastQBlocksCombined};
 use std::collections::HashSet;
 
 pub(crate) mod calc;

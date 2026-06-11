@@ -3,7 +3,6 @@ use std::cell::RefCell;
 
 use crate::transformations::prelude::*;
 use fastqrab_dna::dna::reverse_complement;
-use fastqrab_io::io::WrappedFastQReadMut;
 use stringpod::DualStringPodBuilder;
 
 /// Algorithm to use for scoring overlaps and resolving mismatches

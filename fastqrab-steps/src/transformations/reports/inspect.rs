@@ -2,7 +2,6 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::transformations::prelude::*;
-use fastqrab_io::io::WrappedFastQRead;
 use fastqrab_io::{CompressionFormat, FileFormat};
 
 /// Inspect reads within the workflow

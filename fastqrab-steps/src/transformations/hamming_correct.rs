@@ -1,6 +1,4 @@
 use std::{
-    arch::x86_64::_CMP_UNORD_S,
-    borrow::Cow,
     sync::atomic::{AtomicBool, AtomicUsize, Ordering},
 };
 
@@ -500,7 +498,7 @@ fn run_match_phase(
     }
     if needs_qualities && let Some(block) = block {
         if let TagColumn::Location(col) = input_tags {
-            for ((hits, slot)) in col.iter().zip(results.iter_mut()) {
+            for (hits, slot) in col.iter().zip(results.iter_mut()) {
                 if !hits.1.is_empty() && matches!(&slot.result, Some(MatchResultOwned::Tie(_))) {
                     slot.quality = Some(hits.1.into_owned())
                 }

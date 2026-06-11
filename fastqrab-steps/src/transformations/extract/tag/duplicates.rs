@@ -6,7 +6,6 @@ use super::ApproxOrExactFilter;
 use crate::transformations::extract::extract_bool_tags_from_tag;
 use crate::transformations::prelude::*;
 use crate::transformations::{read_name_canonical_prefix, tag::calculate_filter_capacity};
-use fastqrab_io::io::WrappedFastQRead;
 
 #[derive(Clone, JsonSchema)]
 #[tpd]

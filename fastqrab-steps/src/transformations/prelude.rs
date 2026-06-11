@@ -31,7 +31,6 @@ pub(crate) use fastqrab_io::io::{
     output::chunked_writer::{
         ChunkPolicy, ChunkedRecordWriter, OutputDeclaration, SinkConfig, WriteTargetConfig,
     },
-    reads::WrappedFastQReadCommon,
 };
 
 pub(crate) use bstr::{BStr, BString};
@@ -57,11 +56,7 @@ pub use typed_floats::tf64::NonNaN;
 pub type FxIndexMap<K, V> = IndexMap<K, V, rustc_hash::FxBuildHasher>;
 
 pub use fastqrab_io::blocks::{Molecule, OwnedMolecule, split_name_and_comment};
-pub use stringpod::{
-    CrossPods, DualStringPodBuilder, DualStringPodMultiLocation,
-    DualStringPodMultiLocationAliasBuilder, StringPodBuilder,
-};
+pub use stringpod::{CrossPods, DualStringPodBuilder, StringPodBuilder};
 
 pub use smallvec::SmallVec;
 pub use std::borrow::Cow;
-pub use std::ops::Range;

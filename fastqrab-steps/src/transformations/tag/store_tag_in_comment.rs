@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 use super::{format_numeric_for_comment, store_tag_in_comment};
 use crate::transformations::prelude::*;
 use fastqrab_config::{

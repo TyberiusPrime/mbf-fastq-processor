@@ -1,4 +1,3 @@
-use super::extract_region_tags_from_seq;
 use crate::transformations::{extract::extract_region_tags_from_both, prelude::*};
 use fastqrab_config::tpd_adapt_u8_from_byte_or_char;
 

@@ -153,11 +153,6 @@ impl TagUser for PartialTaggedVariant<PartialDemultiplex> {
             // Multiple demultiplex steps are now supported
             // Each demultiplex step defines a bit region for its variants
             // When demultiplexing, they are combined with OR logic
-            let inner = self
-                .toml_value
-                .value
-                .as_mut()
-                .expect("Was ok before, now might not be ok, but should be still set");
             if let Some(in_label) = inner.in_label.as_ref() {
                 let upstream_label_type = tags_available.get(in_label).map(|meta| &meta.tag_type);
 
@@ -341,13 +336,12 @@ impl Step for Demultiplex {
             .any_hit_observed
             .load(std::sync::atomic::Ordering::Relaxed)
         {
-            let mut msg = format!(
+            bail!(
                 "Demultiplex step for label '{}' did not observe any matching barcodes.\n\
                     Please check that the barcodes section matches the data,\n\
                     or that the correct tag label is used and that in_label_contains_barcodes is set correctly.",
                 self.in_label
             );
-            bail!(msg);
         }
         Ok(None)
     }

@@ -1,6 +1,5 @@
 use super::common::{PerReadReportData, Q_LOOKUP, Q20_Q30_LOOKUP};
 use crate::transformations::prelude::*;
-use fastqrab_io::io::WrappedFastQRead;
 
 #[derive(Debug, Default, Clone, serde::Serialize)]
 pub struct BaseStatisticsPart1 {

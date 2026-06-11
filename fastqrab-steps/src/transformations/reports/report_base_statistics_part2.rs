@@ -2,7 +2,6 @@ use serde_json::json;
 
 use super::common::{BASE_TO_INDEX, PerReadReportData, PositionCount};
 use crate::transformations::prelude::*;
-use fastqrab_io::io::WrappedFastQRead;
 
 #[derive(Debug, Default, Clone)]
 pub struct BaseStatisticsPart2 {

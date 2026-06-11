@@ -76,7 +76,7 @@ impl Step for ReverseComplement {
             ResolvedSourceAll::Tag(tag_name) => {
                 if let Some(hits) = block.tags.get_mut(tag_name) {
                     match hits {
-                        TagColumn::Location(col) => {
+                        TagColumn::Location(_col) => {
                             todo!("Implement");
 
                             // for slot_idx in 0..col.hits.len() {

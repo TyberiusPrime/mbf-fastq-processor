@@ -8,7 +8,6 @@ use hamming_resonate::HammingResonator;
 use indexmap::IndexMap;
 use schemars::JsonSchema;
 use smallvec::SmallVec;
-use std::collections::HashMap;
 use std::{borrow::Cow, ops::Range};
 use stringpod::DualStringPodMultiLocation;
 use toml_pretty_deser::prelude::*;

@@ -1,4 +1,3 @@
-use bstr::ByteSlice;
 use std::borrow::Cow;
 
 use crate::transformations::prelude::*;

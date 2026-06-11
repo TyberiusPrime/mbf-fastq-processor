@@ -1,4 +1,3 @@
-use std::ops::Range;
 
 use crate::transformations::prelude::*;
 use fastqrab_config::tpd_adapt_u8_from_byte_or_char;
@@ -86,7 +85,7 @@ impl Step for RegionsOfLowQuality {
                     in_low_quality_region = false;
                     let region_len = pos - region_start;
                     if region_len >= min_length {
-                        entries.push(((region_start as u32, region_len as u32)));
+                        entries.push((region_start as u32, region_len as u32));
                     }
                 }
             }
@@ -94,7 +93,7 @@ impl Step for RegionsOfLowQuality {
             if in_low_quality_region {
                 let region_len = read.qual.len() - region_start;
                 if region_len >= min_length {
-                    entries.push(((region_start as u32, region_len as u32)));
+                    entries.push((region_start as u32, region_len as u32));
                 }
             }
             col.push_row(&entries);

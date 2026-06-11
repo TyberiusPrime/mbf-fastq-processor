@@ -1,7 +1,7 @@
 use super::extract_region_tags_from_seq;
 use crate::transformations::prelude::*;
 use fastqrab_config::{StringOrVecString, dna::Anchor, tpd_adapt_iupac_bstring};
-use fastqrab_dna::dna::{self, find_iupac};
+use fastqrab_dna::dna::find_iupac;
 
 #[derive(Clone, JsonSchema, Debug, Default)]
 #[tpd]

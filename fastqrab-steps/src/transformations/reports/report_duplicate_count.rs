@@ -1,7 +1,6 @@
 use super::common::PerReadReportData;
 use crate::transformations::prelude::*;
 use crate::transformations::tag::calculate_filter_capacity;
-use fastqrab_io::io::WrappedFastQRead;
 
 #[derive(Default, Debug, Clone)]
 pub struct DuplicateCountData {

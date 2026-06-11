@@ -1,6 +1,5 @@
 use super::extract_numeric_tags_plus_all_from_qualities;
 use crate::transformations::prelude::*;
-use fastqrab_io::io::WrappedFastQRead;
 
 /// Calculate minimum quality byte value across a segment or a tagged region
 #[derive(Clone, JsonSchema)]
@@ -91,10 +90,8 @@ impl Step for WorstQuality {
                 let missing_value = 33.0 + self.offset as f64;
                 let mut values = Vec::with_capacity(location_items.row_count());
                 {
-                    let mut iter = block.molecules();
 
                     for qual in location_items.iter_qual() {
-                        let molecule = iter.next().expect("tag and read count should match");
                         let q = if qual.is_empty() {
                             missing_value
                         } else {

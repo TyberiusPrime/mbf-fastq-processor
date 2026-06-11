@@ -1,7 +1,6 @@
 use super::extract_numeric_tags_plus_all_from_qualities;
 use crate::transformations::prelude::*;
 use fastqrab_config::tpd_adapt_u8_from_byte_or_char;
-use fastqrab_io::io::WrappedFastQRead;
 
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq, JsonSchema)]

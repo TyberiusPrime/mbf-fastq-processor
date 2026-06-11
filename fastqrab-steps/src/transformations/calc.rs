@@ -1,6 +1,6 @@
 use bstr::BStr;
 use fastqrab_dna::dna::TagColumn;
-use fastqrab_io::io::{FastQBlocksCombined, WrappedFastQRead};
+use fastqrab_io::io::{FastQBlocksCombined};
 
 mod base_content;
 mod complexity;
@@ -73,7 +73,6 @@ pub(crate) fn extract_numeric_tags_plus_all_from_sequences<F>(
         extract_numeric_tags_from_sequences(target, label, extractor_single, block);
     } else {
         // Handle "All" target case
-        let target_len = block.len();
         let mut values = Vec::with_capacity(block.len());
         for molecule in block.molecules() {
             let argument: Vec<&BStr> = molecule.iter().map(|x| x.seq).collect();

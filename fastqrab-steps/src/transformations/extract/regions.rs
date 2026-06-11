@@ -1,6 +1,4 @@
-use bstr::ByteVec;
-use std::{cell::RefCell, collections::HashSet, ops::Range, rc::Rc};
-use toml_pretty_deser::Visitor;
+use std::{cell::RefCell, collections::HashSet, rc::Rc};
 
 use super::super::{PartialRegionDefinition, RegionDefinition, extract_from_sequence};
 use crate::transformations::prelude::*;

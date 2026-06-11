@@ -116,7 +116,7 @@ impl Step for _ChangeCase {
                     match hits {
                         TagColumn::Location(col) => {
                             let mut iter = col.iter_row_regions();
-                            for (idx, mut seq) in block.segments[col.source_id() as usize]
+                            for (idx, seq) in block.segments[col.source_id() as usize]
                                 .seq_quals
                                 .iter_seq_mut()
                                 .enumerate()
@@ -146,7 +146,7 @@ impl Step for _ChangeCase {
                             //     }
                             // }
                         }
-                        TagColumn::String(opt_bstrings) => {
+                        TagColumn::String(_opt_bstrings) => {
                             todo!(
                                 "Decide what to do. This seems terribly wrong,\
                             to at one hand mutate the reads (on location tags)

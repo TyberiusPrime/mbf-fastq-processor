@@ -1,6 +1,5 @@
 use super::common::PerReadReportData;
 use crate::transformations::prelude::*;
-use fastqrab_io::io::WrappedFastQRead;
 
 #[derive(Default, Clone)]
 #[tpd(no_verify)]

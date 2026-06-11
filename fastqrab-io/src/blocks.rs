@@ -59,7 +59,7 @@ impl FastQChunk {
         }
     }
 
-    pub fn split_interleaved(self, n: NonZero<usize>) -> Vec<FastQChunk> {
+    pub fn split_interleaved(self, _n: NonZero<usize>) -> Vec<FastQChunk> {
         //TODO: what happens if count % n isn't 0?
         todo!();
         // let split_names = self.names.split_interleaved(n);

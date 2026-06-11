@@ -1,4 +1,4 @@
-use std::{borrow::Cow, cell::RefCell, ops::Range};
+use std::{borrow::Cow, ops::Range};
 
 use bstr::{BStr, BString};
 use fastqrab_dna::dna::TagColumn;
@@ -11,7 +11,7 @@ use fastqrab_config::{
     TagLabel,
     segments::{SegmentIndex, SegmentIndexOrAll},
 };
-use fastqrab_io::io::{FastQBlocksCombined, WrappedFastQRead};
+use fastqrab_io::io::FastQBlocksCombined;
 
 mod iupac;
 mod iupac_suffix;
