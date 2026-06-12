@@ -29,6 +29,7 @@ pub struct StoreTagBackInSequence {
     ignore_missing: bool,
     /// What to do when the tag's location was lost to a later edit.
     #[tpd(default)]
+    #[tpd(alias="on_loss")]
     on_lost: OnLost,
 }
 
@@ -76,7 +77,7 @@ impl Step for StoreTagBackInSequence {
             value,
             WriteAnchor::Replace,
             self.on_lost,
-            "StoreTagBackInSequence",
+            &format!("StoreTagBackInSequence({})", self.in_label)
         )?;
 
         Ok((block, true))

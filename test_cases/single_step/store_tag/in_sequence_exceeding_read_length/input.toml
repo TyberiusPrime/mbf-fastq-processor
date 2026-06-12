@@ -46,6 +46,7 @@
   in_value_label = 'rr'
   in_position_label = 'badpos'
   anchor = 'end'
+  on_lost = 'ignore'
 
 [[step]]
   action = 'StoreTagInSequence'
@@ -59,6 +60,7 @@
   in_value_label = 'rr'
   in_position_label = 'goneaftertrunc'
   anchor = 'start'
+  on_lost = 'ignore'
 
 
 [[step]]

@@ -10,18 +10,34 @@
 
 [[step]]
     action = 'ExtractRegions'
-    out_label = 'kmer'
+    out_label = 'kmer1'
 
     regions = [
-            { segment = 'read1', start = 6, length = 6, anchor="Start"},
-            { segment = 'read2', start = 10, length = 7, anchor="Start"}
+            {  start = 6, length = 6, anchor="Start"},
     ]
+    segment = 'read1'
+
+[[step]]
+    action = 'ExtractRegions'
+    out_label = 'kmer2'
+
+    regions = [
+            {  start = 10, length = 7, anchor="Start"}
+    ]
+    segment = 'read2'
+
+[[step]]
+  action= 'ConcatTags'
+  in_labels = ['kmer1', 'kmer2']
+  out_label = 'kmer'
+  on_missing = 'SetMissing'
+  separator = 'xyz'
 
 [[step]]
     action = 'QuantifyTag'
     infix = 'kmer'
     in_label = 'kmer'
-    region_separator = 'xyz'
+    # region_separator = 'xyz'
 
 [[step]]
     action ='Head'

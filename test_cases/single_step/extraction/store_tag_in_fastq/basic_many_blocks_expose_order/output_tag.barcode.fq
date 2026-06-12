@@ -1,12 +1,12 @@
 @read1_has_barcode|location_barcode=read1:0-4
 ATCG
 +
-~~~~
+IIII
 @read2_has_barcode|location_barcode=read1:0-4
 ATCG
 +
-~~~~
+IIII
 @read4_has_barcode|location_barcode=read1:0-4
 ATCG
 +
-~~~~
+IIII

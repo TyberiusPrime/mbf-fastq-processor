@@ -1,3 +1,4 @@
+use bstr::ByteSlice;
 use std::collections::BTreeMap;
 
 use crate::transformations::prelude::*;
@@ -49,7 +50,11 @@ impl TagUser for PartialTaggedVariant<PartialQuantifyTag> {
     ) -> Option<TagUsageInfo<'_>> {
         if let Some(inner) = self.toml_value.value.as_mut() {
             Some(TagUsageInfo {
-                used_tags: vec![inner.in_label.to_used_tag(&[TagValueType::Location])],
+                used_tags: vec![
+                    inner
+                        .in_label
+                        .to_used_tag(&[TagValueType::Location, TagValueType::String]),
+                ],
                 ..Default::default()
             })
         } else {
@@ -123,27 +128,36 @@ impl Step for QuantifyTag {
             .tags
             .get(&self.in_label)
             .expect("Tag not found. Should have been caught in validation");
-        if let Some(col) = hits.as_locations() {
-            if let Some(demultiplex_tags) = &block.output_tags {
-                for (seq, demultiplex_tag) in col
-                    .iter_seq_joined(Some(self.region_separator.as_ref()))
-                    .zip(demultiplex_tags)
+        let iter: Box<dyn Iterator<Item = Cow<BStr>>> = match hits {
+            TagColumn::Location(col) => {
+                Box::new(col.iter_seq_joined(Some(self.region_separator.as_ref())))
+            }
+            TagColumn::String(col) => Box::new(col.iter().map(|s| {
+                Cow::Borrowed(
+                    s.as_ref()
+                        .map(|x| x.as_bstr())
+                        .unwrap_or_else(|| BStr::new(b"")),
+                )
+            })),
+            _ => unreachable!("Tag validation must prevent numeric/bool tags from reaching here")
+        };
+
+        if let Some(demultiplex_tags) = &block.output_tags {
+            for (seq, demultiplex_tag) in iter.zip(demultiplex_tags) {
+                if !seq.is_empty()
+                    && let Some(inner) = collector.get_mut(demultiplex_tag)
                 {
-                    if !seq.is_empty()
-                        && let Some(inner) = collector.get_mut(demultiplex_tag)
-                    {
-                        *inner
-                            .entry(BString::new(seq.to_vec())) //todo: avoid this allocation?
-                            .or_insert(0) += 1;
-                    }
+                    *inner
+                        .entry(BString::new(seq.to_vec())) //todo: avoid this allocation?
+                        .or_insert(0) += 1;
                 }
-            } else {
-                for seq in col.iter_seq_joined(Some(self.region_separator.as_ref())) {
-                    if !seq.is_empty()
-                        && let Some(inner) = collector.get_mut(&0)
-                    {
-                        *inner.entry(BString::new(seq.to_vec())).or_insert(0) += 1;
-                    }
+            }
+        } else {
+            for seq in iter {
+                if !seq.is_empty()
+                    && let Some(inner) = collector.get_mut(&0)
+                {
+                    *inner.entry(BString::new(seq.to_vec())).or_insert(0) += 1;
                 }
             }
         }

@@ -219,7 +219,6 @@ impl Step for StoreTagInFastQ {
             .tags
             .get(&self.in_label)
             .expect("in_label tag must exist in block");
-        let n_reads = in_tag_col.len();
         if let Some(col) = in_tag_col.as_locations() {
             for (idx, ((name, tag_seq), tag_qual)) in block.segments[col.source_id() as usize]
                 .names
@@ -241,7 +240,8 @@ impl Step for StoreTagInFastQ {
                         .expect("lock poisoned");
                     if let Some(Some(writer)) = output_handles.get_mut(&output_idx) {
                         //if we have demultiplex & no-unmatched-output, this happens
-                        if let Some(comment_tags) = self.comment_tags.as_ref() {
+                        let name = if let Some(comment_tags) = self.comment_tags.as_ref() {
+                            let mut name: BString = BString::from(name);
                             for tag in comment_tags {
                                 let tag_col = block.tags.get(tag).expect("tag must exist in block");
                                 let tag_bytes = tag_col.to_bstr(
@@ -249,15 +249,18 @@ impl Step for StoreTagInFastQ {
                                     format_numeric_for_comment,
                                     Some(self.region_separator.as_ref()),
                                 );
-                                let name = store_tag_in_comment(
+                                name = store_tag_in_comment(
                                     &name,
                                     tag.as_ref().as_bytes(),
                                     &tag_bytes,
                                     self.comment_separator,
                                     self.comment_insert_char,
-                                )?;
+                                )?.into();
                             }
-                        }
+                            Cow::Owned(name)
+                        } else {
+                            Cow::Borrowed(name)
+                        };
 
                         let mut buf = Vec::new();
                         match self.format {
