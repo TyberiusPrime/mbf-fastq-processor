@@ -1613,6 +1613,17 @@ fn test_cases_x_integration_x_regex_and_replace_in_seq_x_multi_location() {
 
 #[test]
 
+fn test_cases_x_integration_x_reverse_complement_and_lowercase() {
+    println!("Test case is in: test_cases/integration/reverse_complement_and_lowercase");
+    run_test(
+        std::path::Path::new("../test_cases/integration/reverse_complement_and_lowercase"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_integration_x_tag_histogram_and_demultiplex() {
     println!("Test case is in: test_cases/integration/tag_histogram_and_demultiplex");
     run_test(

@@ -190,7 +190,8 @@ The UMI `ATCGATCG` is now in the comment and removed from the sequence.
     # Extract UMI from the first 8 bases of read1
     action = 'ExtractRegions'
     out_label = 'umi'
-    regions = [{source = 'read1', start = 0, length = 8, anchor="Start"}]
+    regions = [{ start = 0, length = 8, anchor="Start"}]
+    source = 'read1'
 
 [[step]]
     # Store the UMI tag in the FASTQ comment
@@ -298,7 +299,8 @@ After processing with this cookbook:
     # QuantSeq uses 8bp random UMI for PCR duplicate identification
     action = 'ExtractRegions'
     out_label = 'umi'
-    regions = [{source = 'read1', start = 0, length = 6, anchor="Start"}]
+    regions = [{ start = 0, length = 6, anchor="Start"}]
+    source = 'read1'
 
 [[step]]
     # Store the UMI in the FASTQ comment

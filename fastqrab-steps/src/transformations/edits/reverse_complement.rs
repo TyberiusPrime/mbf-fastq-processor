@@ -1,5 +1,6 @@
 use crate::transformations::prelude::*;
 use fastqrab_dna::dna::reverse_complement_iupac;
+use stringpod::Lifted;
 
 /// Reverse complement a read
 #[derive(Clone, JsonSchema)]
@@ -72,6 +73,13 @@ impl Step for ReverseComplement {
                     },
                     condition.as_deref(),
                 );
+                // The in-place RC reverses byte order, permuting positions. Record
+                // a `reflect` on each affected segment's edit log so a still-attached
+                // tag's POSITION lifts to its mirrored span (its captured bytes stay
+                // as-is — content only changes when a step targets the tag itself).
+                for segment in block.iter_matching_segments_mut(*segment_index_or_all) {
+                    segment.seq_quals.record_reverse(condition.as_deref());
+                }
             }
             ResolvedSourceAll::Tag(tag_name) => {
                 if let Some(hits) = block.tags.get_mut(tag_name) {
