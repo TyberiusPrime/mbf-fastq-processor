@@ -2,31 +2,23 @@
     read1 = 'input_read1.fq'
 
 [[step]]
-    action = 'ExtractIUPAC'
-    search = "AAAA"
+    action = 'ExtractRegions'
+    regions = [
+      {start= 0, length= 6, anchor= 'left'},
+      {start= 2, length= 2, anchor= 'left'},
+]
+    source = 'read1'
     out_label = 'tag1'
-    anchor = 'Left'
-    max_mismatches = 0
-
-[[step]]
-    action = 'ExtractIUPAC'
-    search = "AAAA"
-    out_label = 'tag2'
-    anchor = 'Left'
-    max_mismatches = 0
-
-[[step]]
-  action=  'CalcLength'
-  out_label = 'll'
 
 [[step]]
     action = 'ConcatTags'
     in_labels = ['tag1']
     out_label = 'combined'
     on_missing = 'merge_present'
+    separator = "-"
 
 [[step]]
-  action ="forgetalltags"
-
+  action = 'StoreTagsInTable'
 [output]
     prefix = 'output'
+    format = 'none'

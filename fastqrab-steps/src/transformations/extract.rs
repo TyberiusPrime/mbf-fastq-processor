@@ -115,6 +115,54 @@ pub(crate) fn extract_region_tags_using_tags(
     tags.insert(label.clone(), TagColumn::Location(col.finish()));
 }
 
+/// What an [`extract_region_or_value_tags_using_tags`] closure produces for one
+/// read: nothing, a live alias window, or owned divergent content.
+pub(crate) enum RegexExtraction {
+    /// No match — a no-hit row.
+    None,
+    /// A single contiguous window into the live read (an alias): its coordinates
+    /// follow later edits and its quality stays the read's own.
+    Region(Range<u32>),
+    /// Content the read does not contain as one slice (a regex replacement that
+    /// conjures, repeats, or reorders bytes). The bytes are owned in the column's
+    /// arena; `anchor` is the read-relative span they stand in for — what
+    /// write-back overwrites and what liftover lifts (its length may differ from
+    /// the content's).
+    Owned {
+        anchor: Range<u32>,
+        seq: Vec<u8>,
+        qual: Vec<u8>,
+    },
+}
+
+/// Like [`extract_region_tags_using_tags`], but the closure may return owned
+/// content (a [`RegexExtraction::Owned`]) when the result can't be expressed as a
+/// slice of the read — it is given the read's `seq` *and* `qual` so it can carry
+/// real or synthesized quality with that content. Still produces a single
+/// `TagColumn::Location` column (alias rows and owned rows coexist).
+pub(crate) fn extract_region_or_value_tags_using_tags(
+    block: &mut FastQBlocksCombined,
+    segment_index: SegmentIndex,
+    label: &TagLabel,
+    f: impl Fn(&BStr, &BStr, usize, &IndexMap<TagLabel, TagColumn>) -> RegexExtraction,
+) {
+    let read_no = block.first_read_sequential_number;
+    let (mut col, tags, segment) =
+        block.location_column_builder_and_tags_and_segment(segment_index);
+
+    for (ii, read) in segment.seq_quals.iter().enumerate() {
+        match f(read.seq, read.qual, read_no + ii, tags) {
+            RegexExtraction::None => col.push_row(&[]),
+            RegexExtraction::Region(region_range) => col.push_row_from_ranges(&[region_range]),
+            RegexExtraction::Owned { anchor, seq, qual } => {
+                col.push_owned_row((anchor.start, anchor.end - anchor.start), &seq, &qual);
+            }
+        }
+    }
+
+    tags.insert(label.clone(), TagColumn::Location(col.finish()));
+}
+
 pub(crate) fn extract_string_tags_using_tags(
     block: &mut FastQBlocksCombined,
     segment: SegmentIndex,

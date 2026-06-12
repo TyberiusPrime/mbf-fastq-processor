@@ -112,54 +112,44 @@ impl Step for _ChangeCase {
                 );
             }
             ResolvedSourceAll::Tag(tag_name) => {
-                if let Some(hits) = block.tags.get(tag_name) {
+                if let Some(hits) = block.tags.get_mut(tag_name) {
                     match hits {
+                        // Changing a tag's case changes the *tag's* contents, not
+                        // the read. The row COW-detaches into owned bytes; the read
+                        // only changes via an explicit write-back step.
                         TagColumn::Location(col) => {
-                            let mut iter = col.iter_row_regions();
-                            for (idx, seq) in block.segments[col.source_id() as usize]
-                                .seq_quals
-                                .iter_seq_mut()
-                                .enumerate()
-                            {
-                                if condition.as_ref().is_none_or(|c| c[idx]) {
-                                    let regions = iter
-                                        .next()
-                                        .expect("Number of reads should match number of regions");
-                                    for &(start, len) in regions {
-                                        for b in
-                                            seq[start as usize..(start + len) as usize].iter_mut()
-                                        {
-                                            *b = case_converter(*b);
-                                        }
+                            for idx in 0..col.row_count() {
+                                if col.row_is_empty(idx) {
+                                    continue;
+                                }
+                                if condition.as_ref().is_some_and(|c| !c[idx]) {
+                                    continue;
+                                }
+                                let (anchor_start, anchor_len) = col.row_span(idx);
+                                let mut new_seq = col.joined_seq(idx, None).to_vec();
+                                for b in &mut new_seq {
+                                    *b = case_converter(*b);
+                                }
+                                let new_qual = col.joined_qual(idx, None).to_vec();
+                                col.set_row_content(
+                                    idx,
+                                    (anchor_start as u32, anchor_len as u32),
+                                    &new_seq,
+                                    &new_qual,
+                                );
+                            }
+                        }
+                        TagColumn::String(opt_bstrings) => {
+                            for (idx, slot) in opt_bstrings.iter_mut().enumerate() {
+                                if condition.as_ref().is_some_and(|c| !c[idx]) {
+                                    continue;
+                                }
+                                if let Some(value) = slot {
+                                    for b in value.iter_mut() {
+                                        *b = case_converter(*b);
                                     }
                                 }
                             }
-
-                            // for slot_idx in 0..col.hits.len() {
-                            //     let nhits = col.hits[slot_idx].len();
-                            //     for hit_idx in 0..nhits {
-                            //         let hit = col.hits[slot_idx][hit_idx];
-                            //         let bytes = col.hit_bytes_mut(hit);
-                            //         for b in bytes.iter_mut() {
-                            //             *b = case_converter(*b);
-                            //         }
-                            //     }
-                            // }
-                        }
-                        TagColumn::String(_opt_bstrings) => {
-                            todo!(
-                                "Decide what to do. This seems terribly wrong,\
-                            to at one hand mutate the reads (on location tags)
-                            and on the other to be manipulating string tags 
-                            in place"
-                            );
-                            // for opt_value in opt_bstrings.iter_mut() {
-                            //     if let Some(value) = opt_value {
-                            //         for ii in 0..value.len() {
-                            //             value[ii] = case_converter(value[ii]);
-                            //         }
-                            //     }
-                            // }
                         }
                         TagColumn::Numeric(_) | TagColumn::Bool(_) => panic!(
                             "Can't convert case on non-string tags. Should have been caught in validation"

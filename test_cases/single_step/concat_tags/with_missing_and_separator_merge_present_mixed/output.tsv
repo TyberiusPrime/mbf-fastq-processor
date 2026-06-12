@@ -1,5 +1,5 @@
 ReadName	barcode2	barcode3	combined
 read1_both_tags|combined=read1!AAAA	AAAA	read1	read1!AAAA
-read2_missing_second|combined=read2		read2	read2
-read3_missing_first|combined=AAAA	AAAA		AAAA
-read4_missing_both|combined=			
+read2_missing_second|combined=read2!		read2	read2!
+read3_missing_first|combined=!AAAA	AAAA		!AAAA
+read4_missing_both|combined=!			!

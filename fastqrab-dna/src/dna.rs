@@ -196,6 +196,16 @@ impl TagColumn {
             }),
         }
     }
+    pub fn iter_bstr<'a>(
+        &'a self,
+        number_formatter: impl Fn(f64) -> String + 'a,
+        region_seperator: Option<&'a [u8]>,
+    ) -> Box<dyn Iterator<Item = Cow<'a, BStr>> + 'a> {
+        Box::new(
+            (0..self.len())
+                .map(move |idx| self.to_bstr(idx, &number_formatter, region_seperator)),
+        )
+    }
 
     // pub fn extend(&mut self, other: &TagColumn) {
     //     match self {

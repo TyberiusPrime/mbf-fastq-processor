@@ -76,39 +76,46 @@ impl Step for ReverseComplement {
             ResolvedSourceAll::Tag(tag_name) => {
                 if let Some(hits) = block.tags.get_mut(tag_name) {
                     match hits {
+                        // Reverse-complementing a tag changes the *tag's* contents,
+                        // not the read. The row COW-detaches into owned bytes; the
+                        // read is only ever modified by an explicit write-back step.
                         TagColumn::Location(col) => {
-                            let segment = &mut block.segments[col.source_id() as usize];
-                            for (idx, read) in segment.seq_quals.iter_mut().enumerate() {
-                                if condition.as_ref().is_none_or(|c| c[idx]) {
-                                    let new_seq =
-                                        reverse_complement_iupac(&col.joined_seq(idx, None));
-                                    let new_qual = col.joined_qual(idx, None);
-                                    for ((pos, new_base), new_qual) in col
-                                        .covered_positions(idx)
-                                        .zip(new_seq)
-                                        .zip(new_qual.iter().rev())
-                                    {
-                                        read.seq[pos] = new_base;
-                                        read.qual[pos] = *new_qual;
-                                    }
+                            for idx in 0..col.row_count() {
+                                if col.row_is_empty(idx) {
+                                    continue;
                                 }
+                                if condition.as_ref().is_some_and(|c| !c[idx]) {
+                                    continue;
+                                }
+                                let (anchor_start, anchor_len) = col.row_span(idx);
+                                let new_seq =
+                                    reverse_complement_iupac(&col.joined_seq(idx, None));
+                                let mut new_qual = col.joined_qual(idx, None).to_vec();
+                                new_qual.reverse();
+                                col.set_row_content(
+                                    idx,
+                                    (anchor_start as u32, anchor_len as u32),
+                                    &new_seq,
+                                    &new_qual,
+                                );
                             }
                         }
 
+                        // A string tag has no read coordinates or quality — just
+                        // reverse-complement its stored bytes.
                         TagColumn::String(bstrings) => {
-                            todo!(
-                                "Decide what to do. This seems terribly wrong,\
-                            to at one hand mutate the reads (on location tags)
-                            and on the other to be manipulating string tags
-                            in place.
-                                Maybe we should just require teh tag to be an Location
-
-                                "
-                            );
+                            for (idx, slot) in bstrings.iter_mut().enumerate() {
+                                if condition.as_ref().is_some_and(|c| !c[idx]) {
+                                    continue;
+                                }
+                                if let Some(value) = slot {
+                                    *value = reverse_complement_iupac(value).into();
+                                }
+                            }
                         }
                         _ => unreachable!(), // cov:excl-line
                     }
-                } // cov:excl-line    
+                } // cov:excl-line
             }
             ResolvedSourceAll::Name { .. } => unreachable!(), // cov:excl-line
         }

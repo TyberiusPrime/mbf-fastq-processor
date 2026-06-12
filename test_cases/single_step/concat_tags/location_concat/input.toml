@@ -25,9 +25,9 @@
     action = 'StoreTagInComment'
     in_label = 'combined'
 
-[[step]]
-    action = 'StoreTagInComment'
-    in_label = 'location_combined'
+# [[step]] # no longer a thing.
+#     action = 'StoreTagInComment'
+#     in_label = 'location_combined'
 
 
 [output]

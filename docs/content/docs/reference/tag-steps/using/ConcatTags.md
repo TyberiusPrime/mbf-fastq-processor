@@ -33,13 +33,12 @@ Example:
     separator = "-"  # strings joined with "-"
 ```
 
-### Mixed 
 ## Multiple Hits per Tag
 If any input tag contains multiple hits (e.g., from `ExtractAnchor` with multiple regions), 
 all hits from all tags are combined, and the separater is placed between each one.
 
-(You can fake 'location separators' by first ConcatTags on a single location tag, then
-ConcatTags on the combined string tags).
+(You can fake 'two level separators' by first ConcatTags on the single location tags, then
+ConcatTags on the resulting string tags).
 
 ```toml
 # ignore_in_test
@@ -78,13 +77,14 @@ Skips missing tags and concatenates only the present ones:
     in_labels = ["barcode1", "barcode2"]
     out_label = "combined"
     on_missing = "merge_present"
+    separator = '-' # the default, set to '' for none!
 ```
 
 Behavior:
-- If both tags present: `combined = barcode1 + barcode2`
-- If only barcode1 present: `combined = barcode1`
-- If only barcode2 present: `combined = barcode2`
-- If neither present: `combined` is missing
+- If both tags present: `combined = barcode1_barcode2`
+- If only barcode1 present: `combined = barcode1_`
+- If only barcode2 present: `combined = _barcode2`
+- If neither present: `combined` is '_'
 
 ### `set_missing`
 Sets the output tag to missing if any input tag is missing:

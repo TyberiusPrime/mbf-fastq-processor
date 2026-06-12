@@ -3,7 +3,12 @@ use crate::transformations::prelude::*;
 ///Store the tag's 'sequence', probably modified by a previous step,
 ///back into the reads' sequence.
 ///
-///Does work with `ExtractRegions` and multiple regions.
+///Only rows whose content has *diverged* from the read (owned rows — produced by
+///a regex replacement, a reverse-complement or case change on the tag, etc.) are
+///written back; an unmodified location tag is already the read's own bytes, so
+///writing it back is a no-op. The spliced content may be longer or shorter than
+///the span it replaces, so the read grows or shrinks accordingly; its quality
+///travels with the tag.
 ///
 #[derive(Clone, JsonSchema)]
 #[tpd(no_verify)]
@@ -32,109 +37,74 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagBackInSequence> {
 }
 
 impl Step for StoreTagBackInSequence {
-    #[expect(
-        clippy::cast_precision_loss,
-        clippy::cast_possible_truncation,
-        clippy::cast_sign_loss,
-        reason = "Avg quality calculation won't be affected"
-    )]
     fn apply(
         &self,
         mut block: FastQBlocksCombined,
         _input_info: &InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        //#[derive(Eq, PartialEq, Debug)]
-        // enum WhatHappend {
-        //     SameSize,
-        //     Smaller,
-        //     Larger,
-        // }
-        todo!("This needs a complete rewrite with the StringPods API");
+        // Collect the per-read splices (owned/divergent rows only), then drop the
+        // borrow on `block.tags` before rebuilding the segment's reads.
+        let (segment_index, edits) = {
+            let TagColumn::Location(col) = block
+                .tags
+                .get(&self.in_label)
+                .expect("Tag must be present in block")
+            else {
+                panic!("StoreTagBackInSequence requires a Location tag '{}'", self.in_label);
+            };
+            let mut edits: Vec<Option<(usize, usize, Vec<u8>, Vec<u8>)>> =
+                Vec::with_capacity(col.row_count());
+            for row in 0..col.row_count() {
+                match col.owned_writeback_span(row) {
+                    Some((start, len)) => edits.push(Some((
+                        start,
+                        len,
+                        col.joined_seq(row, None).to_vec(),
+                        col.joined_qual(row, None).to_vec(),
+                    ))),
+                    None => edits.push(None),
+                }
+            }
+            (col.source_id() as usize, edits)
+        };
 
-        //let mut what_happend = Vec::with_capacity(block.len());
-        // let error_encountered = std::cell::RefCell::new(Option::<String>::None);
-        //
-        // //Todo: We can't do it like that.
-        // //We need to build new seqs/quals for the affected reads
-        // //and not change the unaffected ones
-        // // bonus point is that we don't need to care about WhatHappend...
-        // let mut builders: Vec<Option<DualStringPodBuilder>> = vec![None; block.segments.len()];
-        // let column = block
-        //     .tags
-        //     .get(&self.in_label)
-        //     .expect("Tag not found in block");
-        // let column = column.as_locations().expect("Tag is not a location column");
-        // // for (molecule, hit)  in block.molecules.zip(column){
-        // }
+        // Nothing diverged → leave the reads untouched.
+        if edits.iter().all(Option::is_none) {
+            return Ok((block, true));
+        }
 
-        // block.apply_mut_with_location_tag(&self.in_label, |molecule, hit, col| {
-        //     if let Some(hit) = hit {
-        //         let mut kept_size  = true;
-        //         for &region in hit.iter() {
-        //             let location = col.hit_location(region);
-        //             match location {
-        //                 None => {
-        //                     if self.ignore_missing {
-        //                         //if we ignore missing locations, we just skip this region
-        //                     } else {
-        //                         *error_encountered.borrow_mut() = Some(format!(
-        //                             "StoreTagBackInSequence only works on regions with location data.\n\nSuggestion: Set ignore_missing=true to skip regions without location data, or check if location data was lost in previous transformations"
-        //                         ));
-        //                         return;
-        //                     }
-        //                 }
-        //                 Some(location) => {
-        //
-        //                 let region_seq = col.hit_bytes(region).to_vec();
-        //                 let seq = &mut molecule[location.segment_index.as_index()].seq();
-        //                 let mut new_seq: Vec<u8> = Vec::new();
-        //                 new_seq.extend_from_slice(&seq[..location.start]);
-        //                 new_seq.extend_from_slice(&region_seq);
-        //                 new_seq.extend_from_slice(&seq[location.start + location.len..]);
-        //
-        //                 let mut new_qual: Vec<u8> = Vec::new();
-        //                 let qual = molecule[location.segment_index.as_index()].qual();
-        //                 new_qual.extend_from_slice(
-        //                         &qual[..location.start]);
-        //                 if region_seq.len() == location.len {
-        //                     //if the sequence is the same length as the location excised, we can just copy the quality
-        //                     new_qual.extend_from_slice(
-        //                         &qual[location.start..location.start + location.len],
-        //                     );
-        //                     //size was kept
-        //                 } else {
-        //                     //otherwise, we need replace it with the average quality, repeated
-        //                     let avg_qual = if location.len == 0 {
-        //                         b'B'
-        //                     } else {
-        //                         let sum_qual = qual
-        //                             [location.start..location.start + location.len]
-        //                             .iter()
-        //                             .map(|&x| u32::from(x))
-        //                             .sum::<u32>() ;
-        //                         let avg_qual = f64::from(sum_qual) / location.len as f64;
-        //                         avg_qual.round() as u8
-        //                     };
-        //                     new_qual.extend_from_slice(&vec![avg_qual; region_seq.len()]);
-        //                     kept_size = region_seq.len() <= location.len;
-        //                 }
-        //                 new_qual.extend_from_slice(&qual[location.start + location.len..]);
-        //
-        //                 read.replace_seq(&new_seq, &new_qual);
-        //                 }
-        //             }
-        //         }
-        //         what_happend.push(kept_size);
-        //     } else {
-        //         what_happend.push(true);
-        //     }
-        // });
-
-        // Check if any error was encountered during processing
-        // if let Some(error_msg) = error_encountered.borrow().as_ref() {
-        //     return Err(anyhow::anyhow!("{error_msg}"));
-        // }
+        // Rebuild the segment's seq+qual with the splices applied. A length change
+        // can't live in the read pod's overlay, so we rebuild eagerly (the read's
+        // own bytes are copied; spliced rows get the tag's owned bytes).
+        let segment = &mut block.segments[segment_index];
+        assert_eq!(
+            segment.seq_quals.len(),
+            edits.len(),
+            "tag column and segment row counts must match"
+        );
+        let mut builder = DualStringPodBuilder::with_capacity(0, edits.len());
+        for (ii, read) in segment.seq_quals.iter().enumerate() {
+            match &edits[ii] {
+                None => builder.push(read.seq, read.qual),
+                Some((start, len, new_seq, new_qual)) => {
+                    let seq = read.seq;
+                    let qual = read.qual;
+                    let start = (*start).min(seq.len());
+                    let end = (start + *len).min(seq.len());
+                    let mut out_seq = Vec::with_capacity(seq.len() - (end - start) + new_seq.len());
+                    out_seq.extend_from_slice(&seq[..start]);
+                    out_seq.extend_from_slice(new_seq);
+                    out_seq.extend_from_slice(&seq[end..]);
+                    let mut out_qual = Vec::with_capacity(out_seq.len());
+                    out_qual.extend_from_slice(&qual[..start]);
+                    out_qual.extend_from_slice(new_qual);
+                    out_qual.extend_from_slice(&qual[end..]);
+                    builder.push(&out_seq, &out_qual);
+                }
+            }
+        }
+        segment.seq_quals = builder.finish();
 
         Ok((block, true))
     }
