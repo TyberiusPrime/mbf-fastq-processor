@@ -135,7 +135,7 @@ pub(crate) fn extract_region_or_value_tags_using_tags(
             RegexExtraction::None => col.push_row(&[]),
             RegexExtraction::Region(region_range) => col.push_row_from_ranges(&[region_range]),
             RegexExtraction::Owned { anchor, seq, qual } => {
-                col.push_owned_row((anchor.start, anchor.end - anchor.start), &seq, &qual);
+                col.push_owned_row(&[(anchor.start, anchor.end - anchor.start)], &seq, &qual);
             }
         }
     }

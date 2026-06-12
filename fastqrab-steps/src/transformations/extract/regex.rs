@@ -1,9 +1,9 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use super::RegexExtraction;
 use super::extract_region_or_value_tags_using_tags;
 use super::extract_string_tags_using_tags;
-use super::RegexExtraction;
 use crate::transformations::prelude::*;
 use bstr::ByteSlice;
 use fastqrab_config::{tpd_adapt_bstring, tpd_adapt_regex};

@@ -1,0 +1,37 @@
+[input]
+	read1 = 'input_read1.fq'
+
+[[step]]
+  action = 'CutStart'
+  n = 1
+
+[[step]]
+	action = 'ExtractIUPAC'
+	out_label = 'tag'
+	search = 'TCA'
+	anchor = 'Anywhere'
+	max_mismatches = 0
+
+
+[[step]]
+  action = 'CutStart'
+  n = 9 
+
+[[step]]
+    action ='ReverseComplement'
+    source = 'tag:tag'
+
+[[step]]
+	action='Lowercase'
+	source = 'tag:tag'
+
+[[step]]
+	action = 'StoreTagsInTable'
+    in_labels = ['tag','location_tag', 'initial_location_tag']
+
+[[step]]
+  action = 'StoreTagBackInSequence'
+  in_label='tag'
+
+[output]
+	prefix = 'output'

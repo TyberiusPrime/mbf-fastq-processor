@@ -13,12 +13,9 @@ use crate::{
     config::ThreadingConfiguration,
     demultiplex::{DemultiplexBarcodes, OptDemultiplex, StepOutputFiles},
 };
-use fastqrab_config::{
-    DeclaredTag, RemovedTags, TagLabel, UsedTag,
-    segments::{SegmentIndex},
-};
+use fastqrab_config::{DeclaredTag, RemovedTags, TagLabel, UsedTag, segments::SegmentIndex};
+use fastqrab_io::io::FastQBlocksCombined;
 use fastqrab_io::io::output::chunked_writer::OutputDeclaration;
-use fastqrab_io::io::{FastQBlocksCombined};
 use std::collections::HashSet;
 
 pub(crate) mod calc;

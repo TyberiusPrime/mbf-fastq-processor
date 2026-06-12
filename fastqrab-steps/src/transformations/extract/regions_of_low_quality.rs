@@ -1,4 +1,3 @@
-
 use crate::transformations::prelude::*;
 use fastqrab_config::tpd_adapt_u8_from_byte_or_char;
 

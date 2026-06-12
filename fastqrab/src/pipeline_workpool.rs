@@ -632,27 +632,21 @@ fn process_work_item(
                     let segment = &work_item.block.segments[segment_index];
                     (0..col.row_count())
                         .map(|row| {
-                            // Lift from the tag's birth frame. We don't yet store
-                            // a per-column birth generation, so we replay the
-                            // whole history (generation 0) — correct whenever the
-                            // tag is extracted before any length edit on its
-                            // segment, which is the case we exercise.
-                            let view = segment.seq_quals.ops_since(0, row).expect(
-                                "row in range and generation 0 always valid. Bug",
+                            // Lift each captured (birth-frame) region forward into
+                            // the segment's *current* frame, replaying only the
+                            // edits applied since the tag was born.
+                            let (born_gen, born_len) = col.row_born(row);
+                            let view = segment.seq_quals.ops_since(born_gen, row).expect(
+                                "born generation captured from this pod; row in range. Bug",
                             );
                             let mut lifted: Vec<(usize, usize)> = Vec::new();
                             for (start, len) in col.row_regions(row) {
                                 let (start, len) = (start as usize, len as usize);
-                                // `orig_len = start + len` is the minimal valid
-                                // birth-frame length for this region; it suffices
-                                // for front edits (the case here). Cut-end /
-                                // reflect on the *read* would need the true birth
-                                // length (the per-column birth bookkeeping that is
-                                // still TODO).
-                                match view.map_region(start, len, start + len) {
+                                match view.map_region(start, len, born_len) {
                                     Ok(RegionLift::Kept { start, len }) => {
                                         lifted.push((start, len));
                                     }
+                                    // Cut away or split by an intervening edit.
                                     Ok(RegionLift::Dropped) | Err(_) => {}
                                 }
                             }

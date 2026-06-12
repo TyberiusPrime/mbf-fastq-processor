@@ -1,4 +1,5 @@
 use crate::transformations::prelude::*;
+use crate::transformations::tag::lifted_writeback::{OnLost, WriteAnchor, store_tag_into_segment};
 
 #[derive(Clone, JsonSchema)]
 #[tpd]
@@ -17,22 +18,26 @@ enum ReplacementAnchor {
 /// `in_value_label` must be a location or string tag — its byte sequence (via `as_ref()` on
 /// the value) is the text inserted into the read.
 ///
-/// `in_position_label` must be a location tag — it defines *where* to insert:
+/// A location value carries its own (possibly edited) quality with it; a string value has
+/// no quality, so its inserted bases get `~` (Phred 93, maximum Sanger quality).
+///
+/// `in_position_label` must be a location tag — it defines *where* to act:
 ///
 /// - `anchor = "Start"` (alias `"left"`) — inserts **before** the leftmost start of the
 ///   location (the hit with the smallest `start` coordinate).
 /// - `anchor = "End"` (alias `"right"`) — inserts **after** the rightmost end of the
 ///   location (the hit with the largest `start + len` value).
+/// - `anchor = "Replace"` — overwrites the location. A single span (or several regions that
+///   lift to a contiguous range) may be replaced by content of any length; several disjoint
+///   regions require the content to match their total length, and the content is then laid
+///   down byte-for-byte over exactly the covered positions. Any other disjoint case is a
+///   runtime error.
 ///
-/// Quality scores for the inserted bases are set to `~` (Phred 93, maximum Sanger quality).
+/// All coordinates are lifted through edits applied since the position tag was captured, and
+/// the length change is recorded so later location tags shift correctly.
 ///
-/// After insertion, all location tags on the same segment whose start position is ≥ the
-/// insertion point are shifted forward by the number of inserted bases.  Any location that
-/// straddles the insertion point (starts before it, ends after it) has its location
-/// information removed while its sequence data is preserved.
-///
-/// If either tag value is `Missing`, or the position tag carries no location information,
-/// the read is left unchanged.
+/// If either tag value is `Missing`, the position tag carries no location, or an edit cut the
+/// position away (subject to `on_lost`), the read is left unchanged.
 ///
 #[derive(Clone, JsonSchema)]
 #[tpd(no_verify)]
@@ -44,6 +49,9 @@ pub struct StoreTagInSequence {
     in_position_label: TagLabel,
     /// Where to insert relative to the position tag.
     anchor: ReplacementAnchor,
+    /// What to do when the position tag's location was lost to a later edit.
+    #[tpd(default)]
+    on_lost: OnLost,
 }
 
 impl TagUser for PartialTaggedVariant<PartialStoreTagInSequence> {
@@ -78,113 +86,37 @@ impl Step for StoreTagInSequence {
         _input_info: &InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        // Pass 1: from the value + position tag columns, compute each read's
-        // (left, right, insert_bytes) splice. Scoped so the borrows of block.tags
-        // drop before we rebuild block.segments.
-        let (segment_index, edits): (usize, Vec<Option<(usize, usize, Vec<u8>)>>) = {
-            let TagColumn::Location(position_col) = block
-                .tags
-                .get(&self.in_position_label)
-                .expect("position tag must be present")
-            else {
-                panic!("position tag '{}' must be a Location column", self.in_position_label);
-            };
-            let value_col = block
-                .tags
-                .get(&self.in_value_label)
-                .expect("value tag must be present");
-
-            let mut edits: Vec<Option<(usize, usize, Vec<u8>)>> =
-                Vec::with_capacity(position_col.row_count());
-            for row in 0..position_col.row_count() {
-                if position_col.row_is_empty(row) {
-                    edits.push(None);
-                    continue;
-                }
-                let regions: Vec<(usize, usize)> = position_col
-                    .row_regions(row)
-                    .map(|(s, l)| (s as usize, l as usize))
-                    .collect();
-                let (left, right) = match self.anchor {
-                    ReplacementAnchor::Start => {
-                        let start = regions.iter().map(|&(s, _)| s).min().expect("non-empty");
-                        (start, start)
-                    }
-                    ReplacementAnchor::End => {
-                        let end = regions.iter().map(|&(s, l)| s + l).max().expect("non-empty");
-                        (end, end)
-                    }
-                    ReplacementAnchor::Replace => {
-                        if regions.len() != 1 {
-                            anyhow::bail!(
-                                "Error processing StoreTagInSequence: Found a multi region location, StoreTagInSequence only works with single-region location"
-                            );
-                        }
-                        let (s, l) = regions[0];
-                        (s, s + l)
-                    }
-                };
-                let insert_bytes: Vec<u8> = match value_col {
-                    TagColumn::Location(col) => {
-                        if col.row_is_empty(row) {
-                            edits.push(None);
-                            continue;
-                        }
-                        col.joined_seq(row, None).to_vec()
-                    }
-                    TagColumn::String(items) => match &items[row] {
-                        Some(value) => value.to_vec(),
-                        None => {
-                            edits.push(None);
-                            continue;
-                        }
-                    },
-                    _ => panic!("value tag '{}' must be Location or String", self.in_value_label),
-                };
-                if insert_bytes.is_empty() {
-                    edits.push(None);
-                } else {
-                    edits.push(Some((left, right, insert_bytes)));
-                }
-            }
-            (position_col.source_id() as usize, edits)
+        // Pick the content (value) and position columns, then hand both to the
+        // shared write-back path. The two columns borrow `block.tags`; the segment
+        // borrows the disjoint `block.segments`, so all three can be held at once.
+        let value = block
+            .tags
+            .get(&self.in_value_label)
+            .expect("value tag must be present");
+        let TagColumn::Location(position) = block
+            .tags
+            .get(&self.in_position_label)
+            .expect("position tag must be present")
+        else {
+            panic!(
+                "position tag '{}' must be a Location column",
+                self.in_position_label
+            );
         };
-
-        if edits.iter().all(Option::is_none) {
-            return Ok((block, true));
-        }
-
-        // Pass 2: rebuild the segment's reads with the splices applied. Inserted
-        // bases get '~' (Phred 93) quality.
-        let segment = &mut block.segments[segment_index];
-        assert_eq!(
-            segment.seq_quals.len(),
-            edits.len(),
-            "tag column and segment row counts must match"
-        );
-        let mut builder = DualStringPodBuilder::with_capacity(0, edits.len());
-        for (ii, read) in segment.seq_quals.iter().enumerate() {
-            match &edits[ii] {
-                None => builder.push(read.seq, read.qual),
-                Some((left, right, insert_bytes)) => {
-                    let seq = read.seq;
-                    let qual = read.qual;
-                    let left = (*left).min(seq.len());
-                    let right = (*right).min(seq.len()).max(left);
-                    let mut out_seq =
-                        Vec::with_capacity(seq.len() - (right - left) + insert_bytes.len());
-                    out_seq.extend_from_slice(&seq[..left]);
-                    out_seq.extend_from_slice(insert_bytes);
-                    out_seq.extend_from_slice(&seq[right..]);
-                    let mut out_qual = Vec::with_capacity(out_seq.len());
-                    out_qual.extend_from_slice(&qual[..left]);
-                    out_qual.extend_from_slice(&vec![b'~'; insert_bytes.len()]);
-                    out_qual.extend_from_slice(&qual[right..]);
-                    builder.push(&out_seq, &out_qual);
-                }
-            }
-        }
-        segment.seq_quals = builder.finish();
+        let anchor = match self.anchor {
+            ReplacementAnchor::Start => WriteAnchor::Start,
+            ReplacementAnchor::End => WriteAnchor::End,
+            ReplacementAnchor::Replace => WriteAnchor::Replace,
+        };
+        let segment_index = position.source_id() as usize;
+        store_tag_into_segment(
+            &mut block.segments[segment_index],
+            position,
+            value,
+            anchor,
+            self.on_lost,
+            "StoreTagInSequence",
+        )?;
 
         Ok((block, true))
     }

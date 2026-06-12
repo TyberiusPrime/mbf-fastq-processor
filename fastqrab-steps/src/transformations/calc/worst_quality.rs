@@ -90,7 +90,6 @@ impl Step for WorstQuality {
                 let missing_value = 33.0 + self.offset as f64;
                 let mut values = Vec::with_capacity(location_items.row_count());
                 {
-
                     for qual in location_items.iter_qual() {
                         let q = if qual.is_empty() {
                             missing_value

@@ -559,6 +559,9 @@
 #    action = "StoreTagBackInSequence"
 #    in_label = "mytag"
 #    ignore_missing = true # if false, an error is raised if the tag is missing
+#    on_lost = "complain"    # or "Complain": what to do when the tag's location was
+#                          # cut away by an edit applied after it was captured.
+#                          # Ignore leaves the read unchanged; Complain errors.
 
 
 # ==== StoreTagInSequence ====
@@ -574,6 +577,9 @@
 #    in_value_label = "mytag"      # location or string tag to insert
 #    in_position_label = "mytag2"  # location tag defining the insert position
 #    anchor = "Start"              # or "End" / "left" / "right"
+#    on_lost = "complain"           # or "Ignore": what to do when the position
+#                                  # tag's location was cut away by a later edit.
+#                                  # Ignore ) leaves the read unchanged.
 
 
 # ==== StoreTagInComment ====

@@ -1,0 +1,1 @@
+StoreTagInSequence: the write-back target of 1 read(s) covers multiple disjoint regions whose total length differs from the replacement content, so it cannot be applied unambiguously (rows [0]).

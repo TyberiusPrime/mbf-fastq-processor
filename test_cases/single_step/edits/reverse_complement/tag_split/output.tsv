@@ -1,0 +1,5 @@
+ReadName	regs	location_regs	initial_location_regs
+Read1	acctga	read1:0-3,38-41	read1:10-13,48-51
+Read2	nnncat	read1:0-3,38-41	read1:10-13,48-51
+Read3	tga		read1:3-6
+Read4	tga		read1:9-12

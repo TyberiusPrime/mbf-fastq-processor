@@ -1155,6 +1155,7 @@ Replace sequence at tag position with tag content.
     action = 'StoreTagBackInSequence'
     in_label = 'corrected_barcode' # TYPE: existing tag, REQUIRED
     ignore_missing = true          # TYPE: bool, REQUIRED
+    on_lost = "complain"           # TYPE: string, 'complain' or 'ignore'
 ```
 
 ### StoreTagInSequence
@@ -1169,6 +1170,7 @@ Insert a tag's sequence into a read at the position defined by another location 
     in_value_label    = "mytag"  # TYPE: location or string tag, REQUIRED
     in_position_label = "mytag2" # TYPE: location tag, REQUIRED
     anchor = "Start"             # TYPE: 'Start'|'left'|'End'|'right', REQUIRED
+    on_lost = "complain"         # TYPE: string, 'complain' or 'ignore'
 ```
 
 **ANCHOR VALUES**:

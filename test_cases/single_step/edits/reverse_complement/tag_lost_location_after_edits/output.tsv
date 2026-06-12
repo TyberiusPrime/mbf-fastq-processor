@@ -1,0 +1,5 @@
+ReadName	tag	location_tag	initial_location_tag
+Read1	tga	read1:0-3	read1:9-12
+Read2	tga		read1:6-9
+Read3	tga		read1:2-5
+Read4	tga		read1:8-11

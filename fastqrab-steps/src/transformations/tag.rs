@@ -9,6 +9,7 @@ pub mod concat_tags;
 pub mod fill_missing;
 pub mod forget_all_tags;
 pub mod forget_tag;
+pub mod lifted_writeback;
 pub mod quantify_tag;
 pub mod replace_tag_with_letter;
 pub mod store_single_cell_matrix;

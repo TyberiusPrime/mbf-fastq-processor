@@ -94,24 +94,20 @@ impl Step for TrimAtTag {
             .as_locations()
             .expect("Must be a location tag");
 
-        match (self.direction, self.keep_tag){
+        match (self.direction, self.keep_tag) {
             (Direction::Start, true) => {
-                block.apply_mut_with_location_tag(
-                    &self.in_label,
-                    |read, hits, col| {
-                        if !hits.is_empty() {
-                            let left_most = hits.iter().map(|(start, len)| start).min();
-                            //read.cut_start(left_most)
-                        }
+                block.apply_mut_with_location_tag(&self.in_label, |read, hits, col| {
+                    if !hits.is_empty() {
+                        let left_most = hits.iter().map(|(start, len)| start).min();
+                        //read.cut_start(left_most)
                     }
-                );
+                });
             }
 
             (Direction::Start, false) => todo!(),
             (Direction::End, true) => todo!(),
             (Direction::End, false) => todo!(),
         }
-
 
         // Collect the targeted regions first: `member_mut` borrows the whole
         // block mutably, so the immutable `tag_column` borrow must end before we

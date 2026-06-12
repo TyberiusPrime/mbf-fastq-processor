@@ -1,6 +1,4 @@
-use std::{
-    sync::atomic::{AtomicBool, AtomicUsize, Ordering},
-};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
 use anyhow::anyhow;
 

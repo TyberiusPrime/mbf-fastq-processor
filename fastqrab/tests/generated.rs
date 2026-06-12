@@ -3125,6 +3125,17 @@ fn test_cases_x_single_step_x_concat_tags_x_three_tags() {
 
 #[test]
 
+fn test_cases_x_single_step_x_concat_tags_x_three_tags_set_missing() {
+    println!("Test case is in: test_cases/single_step/concat_tags/three_tags_set_missing");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/concat_tags/three_tags_set_missing"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_concat_tags_x_with_missing_and_separator() {
     println!("Test case is in: test_cases/single_step/concat_tags/with_missing_and_separator");
     run_test(
@@ -3948,6 +3959,47 @@ fn test_cases_x_single_step_x_edits_x_reverse_complement_x_tag_lost_location() {
         std::path::Path::new(
             "../test_cases/single_step/edits/reverse_complement/tag_lost_location",
         ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_edits_x_reverse_complement_x_tag_lost_location_after_edits() {
+    println!(
+        "Test case is in: test_cases/single_step/edits/reverse_complement/tag_lost_location_after_edits"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/edits/reverse_complement/tag_lost_location_after_edits",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_edits_x_reverse_complement_x_tag_lost_location_complain() {
+    println!(
+        "Test case is in: test_cases/single_step/edits/reverse_complement/tag_lost_location_complain"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/edits/reverse_complement/tag_lost_location_complain",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_edits_x_reverse_complement_x_tag_split() {
+    println!("Test case is in: test_cases/single_step/edits/reverse_complement/tag_split");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/edits/reverse_complement/tag_split"),
         "input.toml",
         1,
     );
@@ -9160,6 +9212,21 @@ fn test_cases_x_single_step_x_extraction_x_store_tag_in_sequence_x_end_anchor() 
     run_test(
         std::path::Path::new(
             "../test_cases/single_step/extraction/store_tag_in_sequence/end_anchor",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_extraction_x_store_tag_in_sequence_x_replace_disjoint_length_error() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/store_tag_in_sequence/replace_disjoint_length_error"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/store_tag_in_sequence/replace_disjoint_length_error",
         ),
         "input.toml",
         1,

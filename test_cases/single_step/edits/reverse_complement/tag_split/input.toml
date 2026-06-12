@@ -1,0 +1,41 @@
+[input]
+	read1 = 'input_read1.fq'
+
+# [[step]]
+# 	action = 'ExtractIUPAC'
+# 	out_label = 'tag'
+# 	search = 'TCA'
+# 	anchor = 'Anywhere'
+	# max_mismatches = 0
+
+[[step]]
+	action = 'ExtractRegions'
+	out_label = 'regs'
+    source = 'read1'
+    regions = [
+    {start = 10, len =3, anchor='left' },
+    {start = -3, len =3, anchor='right' },
+]
+
+[[step]]
+  action = 'CutStart'
+  n = 10
+
+[[step]]
+    action ='ReverseComplement'
+    source = 'tag:regs'
+
+[[step]]
+	action='Lowercase'
+	source = 'tag:regs'
+
+[[step]]
+	action = 'StoreTagsInTable'
+    in_labels = ['regs','location_regs', 'initial_location_regs']
+
+[[step]]
+  action = 'StoreTagBackInSequence'
+  in_label='regs'
+
+[output]
+	prefix = 'output'

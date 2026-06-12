@@ -12,6 +12,7 @@ Insert a tag's string value into a read sequence at the position defined by anot
     in_value_label    = "mytag"    # location or string tag to insert
     in_position_label = "mytag2"   # location tag defining where to insert
     anchor = "Start"               # "Start"/"left" or "End"/"right" or 'replace'
+    on_lost = "Complain" # Ignore|Complain
 ```
 
 ## Parameters
@@ -20,7 +21,7 @@ Insert a tag's string value into a read sequence at the position defined by anot
 |---|---|---|---|
 | `in_value_label` | location or string tag | yes | Tag whose sequence is inserted into the read |
 | `in_position_label` | location tag | yes | Tag that defines the insertion position |
-| `anchor` | `"Start"` / `"left"` / `"End"` / `"right"` / `"Replace"` | yes | Whether to insert before the leftmost position (`Start`), after the rightmost end (`End`) of the position tag, or replace the tag from start..end (single location tags only)|
+| `anchor` | `"Start"` / `"left"` / `"End"` / `"right"` / `"Replace"` | yes | Whether to insert before the leftmost position (`Start`), after the rightmost end (`End`) of the position tag, or replace the tag from start..end (single location tags or same length tags only)|
 
 ## How it works
 
@@ -36,24 +37,29 @@ The bytes inserted come from `in_value_label`:
 - If it is a **location tag**, its sequences are joined (without spacer) and used.
 - If it is a **string tag**, the string value is used directly.
 
-Quality scores for the inserted bases are set to `~` (Phred+33 = Q93, maximum Sanger quality).
+Quality scores for the inserted bases are taken from the in_value 
+if available, otherwise set to `~` (Phred+33 = Q93, maximum Sanger quality).
 
-For replace, the tag must be a single consecutive location.
-Otherwise, a runtime failure will be issued. 
+For replace, the positon tag must be a single consecutive location, 
+or have the same length as replacement strings (individually for each read).
+Otherwise, a run-time failure will be issued. 
 
 ## Location tag adjustment
 
-After insertion, all location tags on the same segment are updated:
-
-- Locations **after** the insertion are shifted forward by the number of inserted bases.
-- Locations that **straddle** the insertion (start before, end after) have their
-  coordinate information removed (sequence data is preserved).
-- Locations **before** the insertion point are unchanged.
+Location tag's are tracked through all edits, though 
 
 ## Behaviour when tags are missing
 
+
 If `in_value_label` is `Missing` or produces an empty sequence, or if `in_position_label`
 carries no location information, the read is left unchanged and no error is raised.
+
+## Behaviour when the location is no longer available
+
+If reads have been manipulated in away that this tag's bases are (even partially lost), 
+the on_lost handling comes to pass. By default, a run-time error is raised.
+Set it to 'Ignore' to instead leave the reads unchanged.
+
 
 ## Example
 

@@ -1,0 +1,35 @@
+# StoreTagInSequence with anchor = 'replace' onto a location that covers two
+# *disjoint* regions (covered length 4: positions 0-1 and 4-5) while the value to
+# write is length 3. Disjoint regions can only be replaced byte-for-byte when the
+# content matches their total covered length, so this must be a runtime error.
+
+[input]
+    read1 = 'input_read1.fq'
+
+# Value: 3 bases — deliberately NOT equal to the position's covered length.
+[[step]]
+    action = 'ExtractRegion'
+    segment = 'read1'
+    start = 0
+    length = 3
+    out_label = 'val_tag'
+    anchor = 'Start'
+
+# Position: two disjoint 2-base regions (covered length 4, with a gap at 2-3).
+[[step]]
+    action = 'ExtractRegions'
+    out_label = 'pos_tag'
+    segment = 'read1'
+    regions = [
+        {start = 0, len = 2, anchor = 'left'},
+        {start = 4, len = 2, anchor = 'left'},
+    ]
+
+[[step]]
+    action = 'StoreTagInSequence'
+    in_value_label = 'val_tag'
+    in_position_label = 'pos_tag'
+    anchor = 'replace'
+
+[output]
+    prefix = 'output'

@@ -1,6 +1,6 @@
 use bstr::BStr;
 use fastqrab_dna::dna::TagColumn;
-use fastqrab_io::io::{FastQBlocksCombined};
+use fastqrab_io::io::FastQBlocksCombined;
 
 mod base_content;
 mod complexity;

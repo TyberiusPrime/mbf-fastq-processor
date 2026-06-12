@@ -87,17 +87,12 @@ impl Step for ReverseComplement {
                                 if condition.as_ref().is_some_and(|c| !c[idx]) {
                                     continue;
                                 }
-                                let (anchor_start, anchor_len) = col.row_span(idx);
-                                let new_seq =
-                                    reverse_complement_iupac(&col.joined_seq(idx, None));
+                                let new_seq = reverse_complement_iupac(&col.joined_seq(idx, None));
                                 let mut new_qual = col.joined_qual(idx, None).to_vec();
                                 new_qual.reverse();
-                                col.set_row_content(
-                                    idx,
-                                    (anchor_start as u32, anchor_len as u32),
-                                    &new_seq,
-                                    &new_qual,
-                                );
+                                // The row keeps its existing anchor (the original
+                                // references); only the bytes diverge.
+                                col.set_row_content(idx, &new_seq, &new_qual);
                             }
                         }
 

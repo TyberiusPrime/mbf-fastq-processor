@@ -1,14 +1,24 @@
 use crate::transformations::prelude::*;
+use crate::transformations::tag::lifted_writeback::{OnLost, WriteAnchor, store_tag_into_segment};
 
 ///Store the tag's 'sequence', probably modified by a previous step,
 ///back into the reads' sequence.
 ///
-///Only rows whose content has *diverged* from the read (owned rows — produced by
-///a regex replacement, a reverse-complement or case change on the tag, etc.) are
-///written back; an unmodified location tag is already the read's own bytes, so
-///writing it back is a no-op. The spliced content may be longer or shorter than
-///the span it replaces, so the read grows or shrinks accordingly; its quality
-///travels with the tag.
+///This is exactly [`StoreTagInSequence`] with the tag used as both the content
+///source and the position (anchor `Replace`): the tag's (possibly modified) bytes
+///overwrite the location they came from. An unmodified location tag is already the
+///read's own bytes, so writing it back is a no-op; a tag whose content diverged
+///(a regex replacement, a reverse-complement or case change) replaces those bytes.
+///Its quality travels with it.
+///
+///If the location is a single span the content may be longer or shorter than what
+///it replaces (the read grows or shrinks); if it covers several disjoint regions
+///the content must match their total length. The location is lifted through any
+///edits applied since it was captured, so the content lands where the tag *now*
+///sits in the read. If an intervening edit cut that location away, `on_lost`
+///decides what happens (default: leave the read unchanged).
+///
+///[`StoreTagInSequence`]: super::store_tag_in_sequence::StoreTagInSequence
 ///
 #[derive(Clone, JsonSchema)]
 #[tpd(no_verify)]
@@ -17,6 +27,9 @@ pub struct StoreTagBackInSequence {
     in_label: TagLabel,
     #[tpd(default)]
     ignore_missing: bool,
+    /// What to do when the tag's location was lost to a later edit.
+    #[tpd(default)]
+    on_lost: OnLost,
 }
 
 impl TagUser for PartialTaggedVariant<PartialStoreTagBackInSequence> {
@@ -43,68 +56,28 @@ impl Step for StoreTagBackInSequence {
         _input_info: &InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        // Collect the per-read splices (owned/divergent rows only), then drop the
-        // borrow on `block.tags` before rebuilding the segment's reads.
-        let (segment_index, edits) = {
-            let TagColumn::Location(col) = block
-                .tags
-                .get(&self.in_label)
-                .expect("Tag must be present in block")
-            else {
-                panic!("StoreTagBackInSequence requires a Location tag '{}'", self.in_label);
-            };
-            let mut edits: Vec<Option<(usize, usize, Vec<u8>, Vec<u8>)>> =
-                Vec::with_capacity(col.row_count());
-            for row in 0..col.row_count() {
-                match col.owned_writeback_span(row) {
-                    Some((start, len)) => edits.push(Some((
-                        start,
-                        len,
-                        col.joined_seq(row, None).to_vec(),
-                        col.joined_qual(row, None).to_vec(),
-                    ))),
-                    None => edits.push(None),
-                }
-            }
-            (col.source_id() as usize, edits)
+        // Store-back is StoreTagInSequence with the same tag as both content and
+        // position, anchor `Replace`. The position column borrows `block.tags`; the
+        // segment borrows the disjoint `block.segments`, so both can be held at once.
+        let value = block
+            .tags
+            .get(&self.in_label)
+            .expect("Tag must be present in block");
+        let TagColumn::Location(position) = value else {
+            panic!(
+                "StoreTagBackInSequence requires a Location tag '{}'",
+                self.in_label
+            );
         };
-
-        // Nothing diverged → leave the reads untouched.
-        if edits.iter().all(Option::is_none) {
-            return Ok((block, true));
-        }
-
-        // Rebuild the segment's seq+qual with the splices applied. A length change
-        // can't live in the read pod's overlay, so we rebuild eagerly (the read's
-        // own bytes are copied; spliced rows get the tag's owned bytes).
-        let segment = &mut block.segments[segment_index];
-        assert_eq!(
-            segment.seq_quals.len(),
-            edits.len(),
-            "tag column and segment row counts must match"
-        );
-        let mut builder = DualStringPodBuilder::with_capacity(0, edits.len());
-        for (ii, read) in segment.seq_quals.iter().enumerate() {
-            match &edits[ii] {
-                None => builder.push(read.seq, read.qual),
-                Some((start, len, new_seq, new_qual)) => {
-                    let seq = read.seq;
-                    let qual = read.qual;
-                    let start = (*start).min(seq.len());
-                    let end = (start + *len).min(seq.len());
-                    let mut out_seq = Vec::with_capacity(seq.len() - (end - start) + new_seq.len());
-                    out_seq.extend_from_slice(&seq[..start]);
-                    out_seq.extend_from_slice(new_seq);
-                    out_seq.extend_from_slice(&seq[end..]);
-                    let mut out_qual = Vec::with_capacity(out_seq.len());
-                    out_qual.extend_from_slice(&qual[..start]);
-                    out_qual.extend_from_slice(new_qual);
-                    out_qual.extend_from_slice(&qual[end..]);
-                    builder.push(&out_seq, &out_qual);
-                }
-            }
-        }
-        segment.seq_quals = builder.finish();
+        let segment_index = position.source_id() as usize;
+        store_tag_into_segment(
+            &mut block.segments[segment_index],
+            position,
+            value,
+            WriteAnchor::Replace,
+            self.on_lost,
+            "StoreTagBackInSequence",
+        )?;
 
         Ok((block, true))
     }

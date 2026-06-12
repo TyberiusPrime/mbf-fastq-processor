@@ -202,8 +202,7 @@ impl TagColumn {
         region_seperator: Option<&'a [u8]>,
     ) -> Box<dyn Iterator<Item = Cow<'a, BStr>> + 'a> {
         Box::new(
-            (0..self.len())
-                .map(move |idx| self.to_bstr(idx, &number_formatter, region_seperator)),
+            (0..self.len()).map(move |idx| self.to_bstr(idx, &number_formatter, region_seperator)),
         )
     }
 

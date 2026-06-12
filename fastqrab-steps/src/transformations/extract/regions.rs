@@ -182,9 +182,11 @@ impl Step for Regions {
                         .collect();
                     col.push_row(&parts);
                 }
+                let col = col.finish();
+
                 block
                     .tags
-                    .insert(self.out_label.clone(), TagColumn::Location(col.finish()));
+                    .insert(self.out_label.clone(), TagColumn::Location(col));
             }
         }
 

@@ -125,18 +125,14 @@ impl Step for _ChangeCase {
                                 if condition.as_ref().is_some_and(|c| !c[idx]) {
                                     continue;
                                 }
-                                let (anchor_start, anchor_len) = col.row_span(idx);
                                 let mut new_seq = col.joined_seq(idx, None).to_vec();
                                 for b in &mut new_seq {
                                     *b = case_converter(*b);
                                 }
                                 let new_qual = col.joined_qual(idx, None).to_vec();
-                                col.set_row_content(
-                                    idx,
-                                    (anchor_start as u32, anchor_len as u32),
-                                    &new_seq,
-                                    &new_qual,
-                                );
+                                // The row keeps its existing anchor (the original
+                                // references); only the bytes diverge.
+                                col.set_row_content(idx, &new_seq, &new_qual);
                             }
                         }
                         TagColumn::String(opt_bstrings) => {

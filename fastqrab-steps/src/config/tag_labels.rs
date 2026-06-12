@@ -93,7 +93,8 @@ impl ValidateTagLabel for TomlValue<MustAdapt<String, TagLabel>> {
                                 )),
                             ))
                         }
-                    } else if let Some(incoming_tag_name) = value.strip_prefix("initial_location_") {
+                    } else if let Some(incoming_tag_name) = value.strip_prefix("initial_location_")
+                    {
                         if tags_available.keys().any(|tag_label| match tag_label {
                             TagLabel::Normal(name) => name == incoming_tag_name,
                             _ => false, // cov:excl-line available are always normal
@@ -121,8 +122,7 @@ impl ValidateTagLabel for TomlValue<MustAdapt<String, TagLabel>> {
                                 )),
                             ))
                         }
-                    } 
-                    else {
+                    } else {
                         match validate_tag_name(value) {
                             Ok(()) => Ok(TagLabel::Normal(value.clone())),
                             Err(e) => Err(ValidationFailure::new(
