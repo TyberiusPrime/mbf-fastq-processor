@@ -1,0 +1,26 @@
+[input]
+  read1 = "input_read1.fq"
+
+[[step]]    
+  action = 'ExtractRegion'
+  source = 'read1'
+  start = 1
+  len = 3
+  anchor = 'left'
+  out_label = 'atag'
+
+[[step]]
+  action = 'reversecomplement'  
+  target = 'read1'
+
+[[step]]
+  action = 'lowercase'
+  target = 'tag:atag'
+
+[[step]]
+  action = 'storetagbackinsequence'
+  inlabel = 'atag'
+
+[output]
+  prefix = 'output'
+

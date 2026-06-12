@@ -43,7 +43,7 @@
 
 [[step]]
 	action = "StoreTagBackInSequence"
-	ignore_missing = false
+    on_lost = 'complain'
 	in_label = "tag2"
 
 [output]

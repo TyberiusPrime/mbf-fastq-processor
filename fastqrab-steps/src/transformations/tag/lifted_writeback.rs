@@ -196,7 +196,8 @@ fn apply_plans(
     // immutably, so it must finish before any mutation).
     let mut splices: Vec<Option<(usize, usize, Vec<u8>, Vec<u8>)>> = vec![None; n];
     let mut in_place: Vec<(usize, Vec<(usize, u8, u8)>)> = Vec::new();
-    let mut lost: Vec<usize> = Vec::new();
+    // Keep the plan of each lost row so the error can show a concrete example.
+    let mut lost: Vec<(usize, Plan)> = Vec::new();
     let mut invalid: Vec<usize> = Vec::new();
     for (row, plan) in plans.into_iter().enumerate() {
         let Some(plan) = plan else { continue };
@@ -207,7 +208,7 @@ fn apply_plans(
                     in_place.push((row, writes));
                 }
             }
-            Resolved::Lost => lost.push(row),
+            Resolved::Lost => lost.push((row, plan)),
             Resolved::Invalid => invalid.push(row),
         }
     }
@@ -224,10 +225,14 @@ fn apply_plans(
         );
     }
     if matches!(on_lost, OnLost::Complain) && !lost.is_empty() {
+        let rows: Vec<usize> = lost.iter().map(|(row, _)| *row).collect();
+        let (example_row, example_plan) = &lost[0];
+        let example = describe_lost(segment, *example_row, example_plan);
         bail!(
             "{step_name}: the captured location of {} read(s) was lost to edits applied after \
-             the tag was captured (rows {lost:?}). Set on_lost = 'Ignore' to skip them instead.",
-            lost.len(),
+             the tag was captured (rows {rows:?}).\n  For example, {example}\n\
+             Set on_lost = 'Ignore' to skip these reads instead.",
+            rows.len(),
         );
     }
 
@@ -258,6 +263,34 @@ fn apply_plans(
         segment.seq_quals.splice_entries(&splices);
     }
     Ok(())
+}
+
+/// Build a one-line, human-readable explanation of why `row`'s captured location
+/// could not be lifted into the read's current frame: which read, where the tag
+/// was captured (in the read's *birth* frame), and the edits applied since that
+/// removed or split those bases. Used to give the `OnLost::Complain` error a
+/// concrete example instead of a bare row index.
+fn describe_lost(segment: &FastQChunk, row: usize, plan: &Plan) -> String {
+    let name = segment.names.get(row);
+    let edits = match segment.seq_quals.ops_since(plan.born_generation, row) {
+        Ok(view) => view.to_string(),
+        Err(_) => "(edit history unavailable)".to_string(),
+    };
+    let captured = match &plan.target {
+        Target::Replace { regions } => {
+            let regs: Vec<String> = regions
+                .iter()
+                .map(|&(start, len)| format!("{start}..{}", start + len))
+                .collect();
+            format!("covering {}", regs.join(", "))
+        }
+        Target::InsertAt { at } => format!("anchored at {at}"),
+    };
+    format!(
+        "read '{name}' had its tag {captured} in a {born_len}bp read, but the edits applied \
+         since ({edits}) removed or split those bases, leaving nowhere to write it back",
+        born_len = plan.born_len,
+    )
 }
 
 /// Lift one row's [`Plan`] into the read's current frame, classifying it into an
