@@ -1,4 +1,6 @@
 use crate::transformations::prelude::*;
+use fastqrab_io::blocks::FastQChunk;
+use stringpod::{DualStringPodMultiLocation, Lifted, RegionLift};
 
 #[derive(Clone, Eq, PartialEq, Copy, JsonSchema)]
 #[tpd]
@@ -36,172 +38,93 @@ impl TagUser for PartialTaggedVariant<PartialTrimAtTag> {
             None // cov:excl-line
         }
     }
-
-    fn verify_others(
-        &mut self,
-        _input_def: Option<&crate::config::PartialInput>,
-        _output_def: Option<&crate::config::PartialOutput>,
-        transformations_before_this_one: &[TomlValue<PartialTransformation>],
-    ) {
-        let inner = self
-            .toml_value
-            .as_mut()
-            .expect("get_tag_usage should only be called after successful verification");
-        for trafo in transformations_before_this_one {
-            if let Some(PartialTransformation::ExtractRegions(tv_extract_region_config)) =
-                trafo.as_ref()
-                && let Some(extract_region_config) = tv_extract_region_config.toml_value.as_ref()
-                && let Some(region_out_label) = extract_region_config.out_label.as_ref()
-                && let Some(regions) = &&extract_region_config.regions.as_ref()
-                && regions.len() != 1
-                && let Some(in_label) = inner.in_label.as_ref()
-                && region_out_label == in_label
-            {
-                let spans = vec![
-                    (
-                        self.toml_value.span(),
-                        "TrimAtTag does not support multiple regions.".to_string(),
-                    ),
-                    (
-                        extract_region_config.regions.span(),
-                        "The regions were generated here".to_string(),
-                    ),
-                ];
-                self.toml_value.state = TomlValueState::Custom { spans };
-                self.toml_value.help = Some(
-                    "Adjust your regions to cover only one span on the reads\n\
-                        This is an implementation limitation, not a design one, PR welcome."
-                        .to_string(),
-                );
-                return;
-            }
-        }
-    }
 }
 
 impl Step for TrimAtTag {
-    #[expect(clippy::too_many_lines, reason = "straightforward, but tedious")]
     fn apply(
         &self,
         mut block: FastQBlocksCombined,
         _input_info: &InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let tag_column = block
+        let col = block
             .tags
             .get(&self.in_label)
             .expect("in_label tag must exist in block")
             .as_locations()
             .expect("Must be a location tag");
+        let segment_index = col.source_id() as usize;
+        let row_count = col.row_count();
 
-        match (self.direction, self.keep_tag) {
-            (Direction::Start, true) => {
-                block.apply_mut_with_location_tag(&self.in_label, |read, hits, col| {
-                    if !hits.is_empty() {
-                        let left_most = hits.iter().map(|(start, len)| start).min();
-                        //read.cut_start(left_most)
-                    }
-                });
-            }
+        // Pass 1: for each read, work out the keep-window in the read's *current*
+        // frame. The tag stores born-frame coordinates, so each region is lifted
+        // forward through whatever edits ran since the tag was captured. This
+        // borrows `block.tags` and `block.segments` immutably, so it must finish
+        // before the mutable `member_mut` below.
+        let segment = &block.segments[segment_index];
+        let windows: Vec<Option<(usize, usize)>> = (0..row_count)
+            .map(|row| self.keep_window(segment, col, row))
+            .collect();
 
-            (Direction::Start, false) => todo!(),
-            (Direction::End, true) => todo!(),
-            (Direction::End, false) => todo!(),
-        }
-
-        // Collect the targeted regions first: `member_mut` borrows the whole
-        // block mutably, so the immutable `tag_column` borrow must end before we
-        // start mutating segments.
-        //let mut targets = Vec::new();
-
-        //block.segments[self.segment_index.as_index()].resize(resize_func);
-        todo!(
-            "implement - we can't just refer to resize, since the locations may be on differentmultiple segments! "
-        );
-        // let error_encountered = std::cell::RefCell::new(Option::<String>::None);
-        //block.apply_mut_with_location_tag(
-        //     &self.in_label,
-        //     |reads, hit, col| {
-        //
-        //             let read = &mut reads[location.segment_index.as_index()];
-        //             match (self.direction, self.keep_tag) {
-        //                 (Direction::Start, true) => read.cut_start(location.start),
-        //                 (Direction::Start, false) => read.cut_start(location.start + location.len),
-        //                 (Direction::End, true) => read.max_len(location.start + location.len),
-        //                 (Direction::End, false) => read.max_len(location.start),
-        //             }
-        //         }
-        //     },
-        // );
-        // if let Some(error_msg) = error_encountered.borrow().as_ref() {
-        //     return Err(anyhow::anyhow!("{error_msg}"));
-        // }
-
-        let mut cut_locations = block
-            .tags
-            .extract_if(.., |k, _v| k == &self.in_label) //We're putting them back at the bottom
-            .next()
-            .map(|(_k, v)| v)
-            .expect("in_label tag must exist in block")
-            .into_locations()
-            .expect("Expected to be location tag, check verify");
-        // if let Some(target) = cut_locations
-        //     .iter()
-        //     //first not none with locations
-        //     .filter_map(|hits| {
-        //         if hits.is_empty() {
-        //             None
-        //         } else {
-        //             hits.first().copied()
-        //         }
-        //     })
-        //     //and the target from the first hit
-        //     .filter_map(|hit| cut_locations.hit_location(hit))
-        //     .map(|location| location.segment_index)
-        //     .next()
-        //otherwise, we didn't have a single hit, no need to filter anything...
-        //now remove all locations from cut_locations
-        // if self.direction == Direction::Start {
-        //     if self.keep_tag {
-        //         //guess they're 0..len now.
-        //         for slot_idx in 0..cut_locations.hits.len() {
-        //             let nhits = cut_locations.hits[slot_idx].len();
-        //             for hit_idx in 0..nhits {
-        //                 let h = cut_locations.hits[slot_idx][hit_idx];
-        //                 cut_locations.set_hit_location(
-        //                     slot_idx,
-        //                     hit_idx,
-        //                     Some(HitRegion {
-        //                         start: 0,
-        //                         len: h.loc_len as usize,
-        //                         segment_index: h.segment_index,
-        //                     }),
-        //                 );
-        //             }
-        //         }
-        //     } else {
-        //         for slot_idx in 0..cut_locations.hits.len() {
-        //             let nhits = cut_locations.hits[slot_idx].len();
-        //             for hit_idx in 0..nhits {
-        //                 cut_locations.set_hit_location(slot_idx, hit_idx, None);
-        //             }
-        //         }
-        //     }
-        // } else if self.keep_tag {
-        //     //do nothing, they're still good
-        // } else {
-        //     for slot_idx in 0..cut_locations.hits.len() {
-        //         let nhits = cut_locations.hits[slot_idx].len();
-        //         for hit_idx in 0..nhits {
-        //             cut_locations.set_hit_location(slot_idx, hit_idx, None);
-        //         }
-        //     }
-        // }
-        //
-        // let cut_locations = TagColumn::Location(cut_locations);
-        // block.tags.insert(self.in_label.clone(), cut_locations);
+        // Pass 2: narrow each read to its window. `resize` is a no-copy narrowing
+        // (it only rewrites the per-entry offsets) and records the implied
+        // cut_start/cut_end into the segment's edit log, so any tag still pointing
+        // into these reads — including `in_label` itself — lifts forward correctly
+        // afterwards. No need to rewrite the tag column by hand.
+        block
+            .member_mut(segment_index)
+            .seq_quals
+            .resize(|row, _seq, _qual| windows[row]);
 
         Ok((block, true))
     }
-    //
+}
+
+impl TrimAtTag {
+    /// The sub-range `[start..start + len]` (in the read's *current* frame) that
+    /// this trim keeps for `row`, or `None` to leave the read untouched — used
+    /// when the read has no hit, or when the captured location was cut away by an
+    /// earlier edit and can no longer be located.
+    fn keep_window(
+        &self,
+        segment: &FastQChunk,
+        col: &DualStringPodMultiLocation,
+        row: usize,
+    ) -> Option<(usize, usize)> {
+        if col.row_is_empty(row) {
+            return None;
+        }
+        let (born_generation, born_len) = col.row_born(row);
+        let view = segment
+            .seq_quals
+            .ops_since(born_generation, row)
+            .expect("born generation captured from this pod; row in range. Bug");
+
+        // Lift every region into the current frame; if any was cut away or split
+        // we can no longer place the trim point, so leave the read as-is. A tag
+        // with several regions is trimmed at its outermost edge — `min_start` /
+        // `max_end` span all of them, so the whole tag is kept or removed as one.
+        let mut min_start = usize::MAX;
+        let mut max_end = 0usize;
+        for (start, len) in col.row_regions(row) {
+            match view.map_region(start as usize, len as usize, born_len) {
+                Ok(RegionLift::Kept { start, len }) => {
+                    min_start = min_start.min(start);
+                    max_end = max_end.max(start + len);
+                }
+                Ok(RegionLift::Dropped) | Err(_) => return None,
+            }
+        }
+
+        let cur_len = segment.seq_quals.entry_len(row);
+        // Keep/drop at the tag's far edge in the cut direction, so the whole tag
+        // (all its regions) is either entirely kept or entirely removed.
+        let (start, end) = match (self.direction, self.keep_tag) {
+            (Direction::Start, true) => (min_start, cur_len),
+            (Direction::Start, false) => (max_end, cur_len),
+            (Direction::End, true) => (0, max_end),
+            (Direction::End, false) => (0, min_start),
+        };
+        Some((start, end - start))
+    }
 }

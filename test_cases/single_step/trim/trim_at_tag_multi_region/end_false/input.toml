@@ -1,0 +1,20 @@
+[input]
+	read1 = 'input_read1.fq'
+
+# Two low-quality stretches (the IIII runs) make 'elq' a multi-region tag:
+# regions [4,8) and [12,16). TrimAtTag must trim at the outermost edge across
+# both regions (min_start=4 / max_end=16), not at a single region.
+[[step]]
+	action = 'ExtractRegionsOfLowQuality'
+	out_label = 'elq'
+	min_quality = 'J'
+	min_length = 1
+
+[[step]]
+	action = 'TrimAtTag'
+	in_label = 'elq'
+	direction = 'end'
+	keep_tag = false
+
+[output]
+	prefix = 'output'

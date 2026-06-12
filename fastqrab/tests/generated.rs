@@ -4971,21 +4971,6 @@ fn test_cases_x_single_step_x_error_handling_x_extraction_x_tag_name_x_tag_name_
 
 #[test]
 
-fn test_cases_x_single_step_x_error_handling_x_extraction_x_trim_tag_multi_locations() {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/extraction/trim_tag_multi_locations"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/extraction/trim_tag_multi_locations",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
 fn test_cases_x_single_step_x_error_handling_x_extraction_x_unused_extract_tag_x_one_unused_tag() {
     println!(
         "Test case is in: test_cases/single_step/error_handling/extraction/unused_extract_tag/one_unused_tag"
@@ -12545,6 +12530,50 @@ fn test_cases_x_single_step_x_trim_x_cut_start() {
     println!("Test case is in: test_cases/single_step/trim/cut_start");
     run_test(
         std::path::Path::new("../test_cases/single_step/trim/cut_start"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_trim_x_trim_at_tag_multi_region_x_end_false() {
+    println!("Test case is in: test_cases/single_step/trim/trim_at_tag_multi_region/end_false");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/trim/trim_at_tag_multi_region/end_false"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_trim_x_trim_at_tag_multi_region_x_end_true() {
+    println!("Test case is in: test_cases/single_step/trim/trim_at_tag_multi_region/end_true");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/trim/trim_at_tag_multi_region/end_true"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_trim_x_trim_at_tag_multi_region_x_start_false() {
+    println!("Test case is in: test_cases/single_step/trim/trim_at_tag_multi_region/start_false");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/trim/trim_at_tag_multi_region/start_false"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_trim_x_trim_at_tag_multi_region_x_start_true() {
+    println!("Test case is in: test_cases/single_step/trim/trim_at_tag_multi_region/start_true");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/trim/trim_at_tag_multi_region/start_true"),
         "input.toml",
         1,
     );
