@@ -1,1 +1,16 @@
-../../../../sample_data/demultiplex/home_input_read1.fq
+@Read1
+CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNNNNNN
++
+CCCCDCCCCCCCCCC?A???###############################
+@Read2
+GGCGATTTCAATGTCCAAGGNCAGTTTNNNNNNNNNNNNNNNNNNNNNNNN
++
+CCBCBCCCCCBCCDC?CAC=#@@A@##########################
+@Read3
+TCATCA
++
+CCCCCC
+@Read4
+AAAAAAAAATCA
++
+AAAAAAAAAAAA

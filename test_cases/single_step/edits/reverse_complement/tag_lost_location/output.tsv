@@ -1,3 +1,5 @@
-ReadName	tag
-Read1	agt
-Read2	agt
+ReadName	tag	location_tag	initial_location_tag
+Read1	tga	read1:0-3	read1:10-13
+Read2	tga		read1:7-10
+Read3	tga		read1:0-3
+Read4	tga	read1:0-2	read1:0-3

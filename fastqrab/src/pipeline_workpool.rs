@@ -16,6 +16,7 @@ use crate::{
 use bstr::BString;
 use fastqrab_config::{TagLabel, dna::TagColumn};
 use fastqrab_io::{blocks::FastQChunk, io};
+use stringpod::{Lifted, RegionLift};
 
 pub struct WorkItem {
     pub block: io::FastQBlocksCombined,
@@ -609,6 +610,78 @@ fn process_work_item(
                     .insert(tag.clone(), TagColumn::Numeric(tag_lengths));
             }
             TagLabel::TagLocation {
+                source,
+                definition: _,
+            } => {
+                // The *current* location: the tag's captured (read-relative)
+                // regions lifted through every edit the source segment has seen
+                // since the tag was born, into the segment's present frame. A
+                // region that was cut away (or split) by an intervening edit has
+                // no contiguous image and is reported as lost (an empty cell);
+                // `initial_location_<tag>` still shows where it started.
+                let tag_locations: Vec<Option<BString>> = {
+                    let col = work_item
+                        .block
+                        .tags
+                        .get(&TagLabel::Normal(source.clone()))
+                        .expect("Tag not present. Should have been caught in validation. Bug")
+                        .as_locations()
+                        .expect("Tag was not location. should have been cought in validation. Bug");
+                    let segment_index = col.source_id() as usize;
+                    let segment_name = &input_info.segment_order[segment_index];
+                    let segment = &work_item.block.segments[segment_index];
+                    (0..col.row_count())
+                        .map(|row| {
+                            // Lift from the tag's birth frame. We don't yet store
+                            // a per-column birth generation, so we replay the
+                            // whole history (generation 0) — correct whenever the
+                            // tag is extracted before any length edit on its
+                            // segment, which is the case we exercise.
+                            let view = segment.seq_quals.ops_since(0, row).expect(
+                                "row in range and generation 0 always valid. Bug",
+                            );
+                            let mut lifted: Vec<(usize, usize)> = Vec::new();
+                            for (start, len) in col.row_regions(row) {
+                                let (start, len) = (start as usize, len as usize);
+                                // `orig_len = start + len` is the minimal valid
+                                // birth-frame length for this region; it suffices
+                                // for front edits (the case here). Cut-end /
+                                // reflect on the *read* would need the true birth
+                                // length (the per-column birth bookkeeping that is
+                                // still TODO).
+                                match view.map_region(start, len, start + len) {
+                                    Ok(RegionLift::Kept { start, len }) => {
+                                        lifted.push((start, len));
+                                    }
+                                    Ok(RegionLift::Dropped) | Err(_) => {}
+                                }
+                            }
+                            if lifted.is_empty() {
+                                None
+                            } else {
+                                let mut seq = BString::new(segment_name.as_bytes().to_vec());
+                                seq.push(b':');
+                                let mut first = true;
+                                for (start, len) in &lifted {
+                                    if !first {
+                                        seq.push(b',');
+                                    }
+                                    first = false;
+                                    seq.extend_from_slice(
+                                        format!("{}-{}", start, start + len).as_bytes(),
+                                    );
+                                }
+                                Some(seq)
+                            }
+                        })
+                        .collect()
+                };
+                work_item
+                    .block
+                    .tags
+                    .insert(tag.clone(), TagColumn::String(tag_locations));
+            }
+            TagLabel::TagInitialLocation {
                 source,
                 definition: _,
             } => {

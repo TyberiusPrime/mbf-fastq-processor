@@ -2,10 +2,6 @@
 	read1 = 'input_read1.fq'
 
 [[step]]
-	action = 'Head'
-	n = 2
-
-[[step]]
 	action = 'ExtractIUPAC'
 	out_label = 'tag'
 	search = 'TCA'
@@ -27,6 +23,11 @@
 
 [[step]]
 	action = 'StoreTagsInTable'
+    in_labels = ['tag','location_tag', 'initial_location_tag']
+
+[[step]]
+  action = 'StoreTagBackInSequence'
+  in_label='tag'
 
 [output]
 	prefix = 'output'

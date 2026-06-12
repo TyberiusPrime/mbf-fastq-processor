@@ -1291,6 +1291,7 @@ impl PartialConfig {
                                         );
                                     }
                                 }
+                                TagLabel::TagInitialLocation { .. } | 
                                 TagLabel::TagLocation { .. } => {
                                     if !entry.tag_type.compatible(TagValueType::Location) {
                                         let toml_source = &used_tag_info.toml_source;

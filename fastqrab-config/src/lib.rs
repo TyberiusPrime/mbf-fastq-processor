@@ -426,6 +426,7 @@ pub enum TagLabel {
     Length(SegmentIndexOrAll, String),
     TagLength(String, String),
     TagLocation { source: String, definition: String },
+    TagInitialLocation { source: String, definition: String },
     ReadNo,
 }
 
@@ -438,6 +439,7 @@ impl TagLabel {
                 | TagLabel::ReadNo
                 | TagLabel::TagLength(_, _)
                 | TagLabel::TagLocation { .. }
+                | TagLabel::TagInitialLocation { .. }
         )
     }
 
@@ -445,8 +447,9 @@ impl TagLabel {
     pub fn source_tag(&self) -> Option<&String> {
         match self {
             TagLabel::Normal(_) | TagLabel::Length(_, _) | TagLabel::ReadNo => None,
-            TagLabel::TagLength(source_tag, _) => Some(source_tag),
-            TagLabel::TagLocation { source, .. } => Some(source),
+            TagLabel::TagLength(source, _)
+            | TagLabel::TagLocation { source, .. }
+            | TagLabel::TagInitialLocation { source, .. } => Some(source),
         }
     }
 }
@@ -492,6 +495,7 @@ impl AsRef<str> for TagLabel {
             TagLabel::Normal(s)
             | TagLabel::Length(_, s)
             | TagLabel::TagLength(_, s)
+            | TagLabel::TagInitialLocation { definition: s, .. }
             | TagLabel::TagLocation { definition: s, .. } => s.as_str(),
             TagLabel::ReadNo => "ReadNo",
         }

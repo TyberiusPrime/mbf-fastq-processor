@@ -95,26 +95,6 @@ pub(crate) fn extract_region_tags_from_both(
 //     block.tags.insert(label.clone(), out);
 // }
 
-pub(crate) fn extract_region_tags_using_tags(
-    block: &mut FastQBlocksCombined,
-    segment_index: SegmentIndex,
-    label: &TagLabel,
-    f: impl Fn(&BStr, usize, &IndexMap<TagLabel, TagColumn>) -> Option<Range<u32>>,
-) {
-    let read_no = block.first_read_sequential_number;
-    let (mut col, mut tags, segment) =
-        block.location_column_builder_and_tags_and_segment(segment_index);
-
-    for (ii, seq) in segment.seq_quals.iter_seq().enumerate() {
-        match f(seq, read_no + ii, tags) {
-            Some(region_range) => col.push_row_from_ranges(&[region_range]),
-            None => col.push_row(&[]),
-        }
-    }
-
-    tags.insert(label.clone(), TagColumn::Location(col.finish()));
-}
-
 /// What an [`extract_region_or_value_tags_using_tags`] closure produces for one
 /// read: nothing, a live alias window, or owned divergent content.
 pub(crate) enum RegexExtraction {
@@ -135,11 +115,11 @@ pub(crate) enum RegexExtraction {
     },
 }
 
-/// Like [`extract_region_tags_using_tags`], but the closure may return owned
-/// content (a [`RegexExtraction::Owned`]) when the result can't be expressed as a
-/// slice of the read — it is given the read's `seq` *and* `qual` so it can carry
-/// real or synthesized quality with that content. Still produces a single
-/// `TagColumn::Location` column (alias rows and owned rows coexist).
+/// Build a `TagColumn::Location` from a regex-style closure that, per read, may
+/// return owned content (a [`RegexExtraction::Owned`]) when the result can't be
+/// expressed as a slice of the read — it is given the read's `seq` *and* `qual`
+/// so it can carry real or synthesized quality with that content. Alias rows
+/// (live windows) and owned rows coexist in the one column.
 pub(crate) fn extract_region_or_value_tags_using_tags(
     block: &mut FastQBlocksCombined,
     segment_index: SegmentIndex,

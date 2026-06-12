@@ -145,7 +145,15 @@ The following virtual tags are supported:
 * len_<segment|all> - the length of the read (or the molecule) at this step in the pipeline. 
 * len_<tag_name> - the length of a tag's string value (for location tags, that's after regex replacement etc).
   (requires a string or location typed tag)
-* location_<tag_name> - the location of a (location) tag, as string typed segment:start..end (left inclusive, right exclusive, 0 based)
+* location_<tag_name> - the location of a (location) tag, as of this step, as string segment:start..end (left inclusive, right exclusive, 0 based)
+* initial_location_<tag_name> - the location as it was when this tag was captured
+
+
+The difference between `location_` and `initial_location_` is that the former
+reflects all read modification steps, such as trimming, since the definition of the tag,
+until the step using the virtual tag. Note that that means that locations that have been 
+'clipped off' will appear lost. The initial one retains the location-as-captured
+on tag definition.
 
 ### Example Len Tags in EvalExpression
 

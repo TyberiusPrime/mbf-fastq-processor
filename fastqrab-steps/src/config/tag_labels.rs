@@ -93,7 +93,36 @@ impl ValidateTagLabel for TomlValue<MustAdapt<String, TagLabel>> {
                                 )),
                             ))
                         }
-                    } else {
+                    } else if let Some(incoming_tag_name) = value.strip_prefix("initial_location_") {
+                        if tags_available.keys().any(|tag_label| match tag_label {
+                            TagLabel::Normal(name) => name == incoming_tag_name,
+                            _ => false, // cov:excl-line available are always normal
+                        }) {
+                            Ok(TagLabel::TagInitialLocation {
+                                source: incoming_tag_name.to_string(),
+                                definition: value.clone(),
+                            })
+                        } else {
+                            let available: Vec<String> = tags_available
+                                .keys()
+                                .filter_map(|k| {
+                                    if let TagLabel::Normal(name) = k {
+                                        Some(name.clone())
+                                    } else {
+                                        None // cov:excl-line available are always normal
+                                    }
+                                })
+                                .collect();
+                            Err(ValidationFailure::new(
+                                "Unknown location tag label".to_string(),
+                                Some(format!(
+                                    "'{incoming_tag_name}' is not a tag name. Choose an existing name.\n{}",
+                                    suggest_alternatives(incoming_tag_name, &available)
+                                )),
+                            ))
+                        }
+                    } 
+                    else {
                         match validate_tag_name(value) {
                             Ok(()) => Ok(TagLabel::Normal(value.clone())),
                             Err(e) => Err(ValidationFailure::new(
