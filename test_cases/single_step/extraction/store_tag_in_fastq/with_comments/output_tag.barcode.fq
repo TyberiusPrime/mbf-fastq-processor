@@ -1,12 +1,12 @@
 @read1_with_barcode_and_umi|umi=TTTT|da_len=16|even=1
 ATCG
 +
-~~~~
+IIII
 @read2_with_different_umi|umi=GGGG|da_len=16|even=0
 ATCG
 +
-~~~~
+IIII
 @read4_with_third_umi|umi=AAAA|da_len=16|even=0
 ATCG
 +
-~~~~
+IIII

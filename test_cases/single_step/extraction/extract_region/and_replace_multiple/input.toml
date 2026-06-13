@@ -24,7 +24,7 @@
 
 [[step]]
     action = 'StoreTagInComment'
-	region_separator = '-'
+    #region_separator = '-' # ignored, lowercase has turned it into a contigous block 
     in_label = 'umi'
 
 [output]

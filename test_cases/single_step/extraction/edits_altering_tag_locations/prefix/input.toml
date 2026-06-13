@@ -13,9 +13,10 @@
     action ='Prefix'
 	seq = 'AGT'
 	qual = "ABC"
+
 [[step]]
 	action='StoreTagInComment'
-	in_label = 'location_tag'
+	in_label = ['initial_location_tag', 'location_tag']
 
 [[step]]
 	action='Lowercase'

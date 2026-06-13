@@ -95,31 +95,15 @@ impl Step for Postfix {
             .if_tag
             .as_ref()
             .map(|tag| get_bool_vec_from_tag(&block, tag));
-        let first_read_len = block.segments[self.segment.as_index()]
-            .seq_quals
-            .iter_seq_lens()
-            .next()
-            .unwrap_or(0);
-        let mut new =
-            DualStringPodBuilder::with_capacity(block.len(), first_read_len + self.seq.len());
-        let mut new_seq = BString::new(Vec::new());
-        let mut new_qual = BString::new(Vec::new());
-        for (idx, read) in block.segments[self.segment.as_index()].iter().enumerate() {
-            if condition.as_ref().is_some_and(|cond| !cond[idx]) {
-                new.push(&read.seq, &read.qual);
-            } else {
-                new_seq.extend_from_slice(&read.seq);
-                new_seq.extend_from_slice(&self.seq);
-                new_qual.extend_from_slice(&read.qual);
-                new_qual.extend_from_slice(&self.qual);
-                new.push(&new_seq, &new_qual);
-                new_seq.clear();
-                new_qual.clear();
-            }
-        }
-        block.segments[self.segment.as_index()].seq_quals = new.finish();
 
-        // postfix doesn't change tags.
+        // Route through `DualStringPod::postfix` so the column's edit history
+        // survives the rebuild. Appending at the end leaves existing tag
+        // locations where they are, but a blind manual rebuild would reset the
+        // edit log and strand any tag born before this step.
+        let seg = &mut block.segments[self.segment.as_index()];
+        let pod = std::mem::replace(&mut seg.seq_quals, DualStringPod::empty());
+        seg.seq_quals = pod.postfix(&self.seq, &self.qual, condition.as_deref());
+
         Ok((block, true))
     }
 }

@@ -1,12 +1,12 @@
 @read1|location_sequence=read1:2-6
 ATCG
 +
-~~~~
+IIII
 @read4|location_sequence=read1:2-6
 CGTT
 +
-~~~~
+IIII
 @read8|location_sequence=read1:2-6
 GGCC
 +
-~~~~
+IIII

@@ -11,10 +11,10 @@
 [[step]]
     action = 'ExtractRegions'
 	regions = [
-	{'source'= 'tag:anchor_tag', 'start'= -2, 'length'= 4, 'anchor'= 'Start'},
-	{'source'= 'tag:anchor_tag', 'start'= 4, 'length'= 100, 'anchor'= 'Start'},	]
+	{ 'start'= -2, 'length'= 4, 'anchor'= 'Start'},
+	{ 'start'= 4, 'length'= 100, 'anchor'= 'Start'},	]
     out_label = 'test'
-
+    'source'= 'tag:anchor_tag'
 [[step]]
     action = 'FilterByTag'
     in_label = 'test'

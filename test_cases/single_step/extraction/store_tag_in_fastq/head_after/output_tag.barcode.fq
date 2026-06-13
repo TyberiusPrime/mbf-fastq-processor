@@ -1,4000 +1,4000 @@
 @BASCET__A1_A4_A8_H11:T:0|location_barcode=read1:0-4 2
 CAGC
 +
-~~~~
+:00/
 @BASCET__A1_A4_A8_H11:T:1|location_barcode=read1:0-4 2
 CAGC
 +
-~~~~
+000/
 @BASCET__A1_A4_A8_H11:T:2|location_barcode=read1:0-4 2
 CCGC
 +
-~~~~
+C0.-
 @BASCET__A1_A4_A8_H11:A:3|location_barcode=read1:0-4 2
 TGTG
 +
-~~~~
+FGBF
 @BASCET__A1_A4_A8_H11:A:4|location_barcode=read1:0-4 2
 TGTG
 +
-~~~~
+FFFE
 @BASCET__A1_A4_A8_H11:A:5|location_barcode=read1:0-4 2
 TGGA
 +
-~~~~
+B?EG
 @BASCET__A1_A4_A8_H11:A:6|location_barcode=read1:0-4 2
 TGTG
 +
-~~~~
+BDBG
 @BASCET__A1_A4_A8_H11:A:7|location_barcode=read1:0-4 2
 TGTG
 +
-~~~~
+4FBB
 @BASCET__A1_A4_A8_H11:A:8|location_barcode=read1:0-4 2
 TGTG
 +
-~~~~
+BF4F
 @BASCET__A1_A4_A8_H11:A:9|location_barcode=read1:0-4 2
 TGTG
 +
-~~~~
+HHGF
 @BASCET__A1_A4_A8_H11:T:10|location_barcode=read1:0-4 2
 GCCG
 +
-~~~~
+A/0-
 @BASCET__A1_A4_A8_H11:T:11|location_barcode=read1:0-4 2
 GCTA
 +
-~~~~
+;//0
 @BASCET__A1_A4_A8_H11:T:12|location_barcode=read1:0-4 2
 GGTT
 +
-~~~~
+:-99
 @BASCET__A1_A4_A8_H11:T:13|location_barcode=read1:0-4 2
 GTCG
 +
-~~~~
+BA9-
 @BASCET__A1_A4_A8_H11:T:14|location_barcode=read1:0-4 2
 GTTT
 +
-~~~~
+-;.9
 @BASCET__A1_A4_A8_H11:T:15|location_barcode=read1:0-4 2
 GGCC
 +
-~~~~
+-.9.
 @BASCET__A1_A4_A8_H11:T:16|location_barcode=read1:0-4 2
 GGGT
 +
-~~~~
+-D-:
 @BASCET__A1_A4_A8_H11:T:17|location_barcode=read1:0-4 2
 GGGT
 +
-~~~~
+9.-.
 @BASCET__A1_A4_A8_H11:T:18|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+BFF.
 @BASCET__A1_A4_A8_H11:T:19|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+00BA
 @BASCET__A1_A4_A8_H11:T:20|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+99..
 @BASCET__A1_A4_A8_H11:T:21|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+B:/;
 @BASCET__A1_A4_A8_H11:T:22|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+B0/.
 @BASCET__A1_A4_A8_H11:T:23|location_barcode=read1:0-4 2
 GTCC
 +
-~~~~
+/://
 @BASCET__A1_A4_A8_H11:T:24|location_barcode=read1:0-4 2
 GTTC
 +
-~~~~
+/;9C
 @BASCET__A1_A4_A8_H11:T:25|location_barcode=read1:0-4 2
 AAAC
 +
-~~~~
+:0:0
 @BASCET__A1_A4_A8_H11:T:26|location_barcode=read1:0-4 2
 AAAC
 +
-~~~~
+0;0C
 @BASCET__A1_A4_A8_H11:T:27|location_barcode=read1:0-4 2
 AACC
 +
-~~~~
+000:
 @BASCET__A1_A4_A8_H11:T:28|location_barcode=read1:0-4 2
 AACC
 +
-~~~~
+0;0/
 @BASCET__A1_A4_A8_H11:T:29|location_barcode=read1:0-4 2
 GAAC
 +
-~~~~
+/00:
 @BASCET__A1_A4_A8_H11:G:30|location_barcode=read1:0-4 2
 TTTT
 +
-~~~~
+B/@@
 @BASCET__A1_A4_A8_H11:T:31|location_barcode=read1:0-4 2
 AAAC
 +
-~~~~
+0000
 @BASCET__A1_A4_A8_H11:T:32|location_barcode=read1:0-4 2
 AAAC
 +
-~~~~
+00:0
 @BASCET__A1_A4_A8_H11:T:33|location_barcode=read1:0-4 2
 AAAC
 +
-~~~~
+000;
 @BASCET__A1_A4_A8_H11:T:34|location_barcode=read1:0-4 2
 CAAC
 +
-~~~~
+0;0:
 @BASCET__A1_A4_A8_H11:T:35|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+009/
 @BASCET__A1_A4_A8_H11:T:36|location_barcode=read1:0-4 2
 ACCC
 +
-~~~~
+0009
 @BASCET__A1_A4_B7_H11:T:0|location_barcode=read1:0-4 2
 CCGG
 +
-~~~~
+00.-
 @BASCET__A1_A4_B7_H11:T:1|location_barcode=read1:0-4 2
 GTTG
 +
-~~~~
+:.9.
 @BASCET__A1_A4_B7_H11:T:2|location_barcode=read1:0-4 2
 GTTG
 +
-~~~~
+A.:.
 @BASCET__A1_A4_B7_H11:T:3|location_barcode=read1:0-4 2
 GTTG
 +
-~~~~
+?99.
 @BASCET__A1_A4_B7_H11:T:4|location_barcode=read1:0-4 2
 GTTT
 +
-~~~~
+?.:.
 @BASCET__A1_A4_B7_H11:T:5|location_barcode=read1:0-4 2
 GTTT
 +
-~~~~
+-<<.
 @BASCET__A1_A4_B7_H11:T:6|location_barcode=read1:0-4 2
 GTTT
 +
-~~~~
+-;9.
 @BASCET__A1_A4_B7_H11:T:7|location_barcode=read1:0-4 2
 GTTT
 +
-~~~~
+-.9.
 @BASCET__A1_A4_B7_H11:T:8|location_barcode=read1:0-4 2
 CCTT
 +
-~~~~
+0009
 @BASCET__A1_A4_B7_H11:T:9|location_barcode=read1:0-4 2
 CCTT
 +
-~~~~
+00;F
 @BASCET__A1_A4_B7_H11:T:10|location_barcode=read1:0-4 2
 GCCT
 +
-~~~~
+-;9B
 @BASCET__A1_A4_B7_H11:T:11|location_barcode=read1:0-4 2
 GCTG
 +
-~~~~
+-.;.
 @BASCET__A1_A4_B7_H11:T:12|location_barcode=read1:0-4 2
 CCGG
 +
-~~~~
+00:-
 @BASCET__A1_A4_B7_H11:T:13|location_barcode=read1:0-4 2
 CCGG
 +
-~~~~
+00.-
 @BASCET__A1_A4_B7_H11:T:14|location_barcode=read1:0-4 2
 GCTC
 +
-~~~~
+-...
 @BASCET__A1_A4_B7_H11:T:15|location_barcode=read1:0-4 2
 GCTG
 +
-~~~~
+-..<
 @BASCET__A1_A4_B7_H11:T:16|location_barcode=read1:0-4 2
 GCTG
 +
-~~~~
+-A?A
 @BASCET__A1_A4_C7_H11:T:0|location_barcode=read1:0-4 2
 AGTT
 +
-~~~~
+0000
 @BASCET__A1_A4_C7_H11:T:1|location_barcode=read1:0-4 2
 CATT
 +
-~~~~
+0000
 @BASCET__A1_A4_C7_H11:T:2|location_barcode=read1:0-4 2
 CCTT
 +
-~~~~
+00<0
 @BASCET__A1_A4_C7_H11:T:3|location_barcode=read1:0-4 2
 CTAT
 +
-~~~~
+////
 @BASCET__A1_A4_C7_H11:T:4|location_barcode=read1:0-4 2
 CTTA
 +
-~~~~
+0000
 @BASCET__A1_A4_C7_H11:T:5|location_barcode=read1:0-4 2
 CTTT
 +
-~~~~
+0;09
 @BASCET__A1_A4_C7_H11:T:6|location_barcode=read1:0-4 2
 GAAA
 +
-~~~~
+900;
 @BASCET__A1_A4_C7_H11:T:7|location_barcode=read1:0-4 2
 GAAA
 +
-~~~~
+0:B0
 @BASCET__A1_A4_C7_H11:T:8|location_barcode=read1:0-4 2
 GCTA
 +
-~~~~
+/0<0
 @BASCET__A1_A4_C7_H11:T:9|location_barcode=read1:0-4 2
 GCTA
 +
-~~~~
+/0:0
 @BASCET__A1_A4_C7_H11:T:10|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+;CF.
 @BASCET__A1_A4_C7_H11:T:11|location_barcode=read1:0-4 2
 CGGT
 +
-~~~~
+0.--
 @BASCET__A1_A4_C7_H11:T:12|location_barcode=read1:0-4 2
 CGTT
 +
-~~~~
+0.:0
 @BASCET__A1_A4_C7_H11:T:13|location_barcode=read1:0-4 2
 CGTT
 +
-~~~~
+0.90
 @BASCET__A1_A4_C7_H11:T:14|location_barcode=read1:0-4 2
 CGTT
 +
-~~~~
+B.<0
 @BASCET__A1_A4_C7_H11:T:15|location_barcode=read1:0-4 2
 CTTT
 +
-~~~~
+0009
 @BASCET__A1_A4_C7_H11:T:16|location_barcode=read1:0-4 2
 CTTT
 +
-~~~~
+:090
 @BASCET__A1_A4_C7_H11:T:17|location_barcode=read1:0-4 2
 CTTT
 +
-~~~~
+00<G
 @BASCET__A1_A4_C7_H11:T:18|location_barcode=read1:0-4 2
 CTTT
 +
-~~~~
+000;
 @BASCET__A1_A4_C7_H11:T:19|location_barcode=read1:0-4 2
 GGTC
 +
-~~~~
+--..
 @BASCET__A1_A4_C7_H11:T:20|location_barcode=read1:0-4 2
 AATT
 +
-~~~~
+000;
 @BASCET__A1_A4_C7_H11:T:21|location_barcode=read1:0-4 2
 AATT
 +
-~~~~
+0000
 @BASCET__A1_A4_C7_H11:T:22|location_barcode=read1:0-4 2
 ATTT
 +
-~~~~
+////
 @BASCET__A1_A4_C7_H11:T:23|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+00/.
 @BASCET__A1_A4_C7_H11:T:24|location_barcode=read1:0-4 2
 CTCC
 +
-~~~~
+011/
 @BASCET__A1_A4_C7_H11:T:25|location_barcode=read1:0-4 2
 CTCT
 +
-~~~~
+0000
 @BASCET__A1_A4_C7_H11:T:26|location_barcode=read1:0-4 2
 CTTT
 +
-~~~~
+0000
 @BASCET__A1_A4_C7_H11:T:27|location_barcode=read1:0-4 2
 AGTT
 +
-~~~~
+111<
 @BASCET__A1_A4_C7_H11:T:28|location_barcode=read1:0-4 2
 ATTT
 +
-~~~~
+00;;
 @BASCET__A1_A4_C7_H11:T:29|location_barcode=read1:0-4 2
 GTTT
 +
-~~~~
+/0;0
 @BASCET__A1_A4_C7_H11:T:30|location_barcode=read1:0-4 2
 GCCC
 +
-~~~~
+:/;;
 @BASCET__A1_A4_C7_H11:T:31|location_barcode=read1:0-4 2
 GCCC
 +
-~~~~
+-9C.
 @BASCET__A1_A4_C7_H11:T:32|location_barcode=read1:0-4 2
 GGGT
 +
-~~~~
+CB.B
 @BASCET__A1_A4_C7_H11:T:33|location_barcode=read1:0-4 2
 GGTT
 +
-~~~~
+-.:.
 @BASCET__A1_A4_C7_H11:T:34|location_barcode=read1:0-4 2
 GGTT
 +
-~~~~
+AD.:
 @BASCET__A1_A4_C7_H11:T:35|location_barcode=read1:0-4 2
 GGTT
 +
-~~~~
+:.;:
 @BASCET__A1_A4_C7_H11:T:36|location_barcode=read1:0-4 2
 AAAA
 +
-~~~~
+0;00
 @BASCET__A1_A4_C7_H11:T:37|location_barcode=read1:0-4 2
 CAAA
 +
-~~~~
+0;0;
 @BASCET__A1_A4_C7_H11:T:38|location_barcode=read1:0-4 2
 CAAA
 +
-~~~~
+0000
 @BASCET__A1_A4_C7_H11:T:39|location_barcode=read1:0-4 2
 CAAA
 +
-~~~~
+0<:0
 @BASCET__A1_A4_C7_H11:T:40|location_barcode=read1:0-4 2
 CAAG
 +
-~~~~
+0;;0
 @BASCET__A1_A4_C7_H11:T:41|location_barcode=read1:0-4 2
 ACCA
 +
-~~~~
+.;0/
 @BASCET__A1_A4_C7_H11:T:42|location_barcode=read1:0-4 2
 GAAA
 +
-~~~~
+90;;
 @BASCET__A1_A4_C7_H11:T:43|location_barcode=read1:0-4 2
 AGGC
 +
-~~~~
+;00/
 @BASCET__A1_A4_C7_H11:T:44|location_barcode=read1:0-4 2
 GAAA
 +
-~~~~
+-00:
 @BASCET__A1_A4_C7_H11:T:45|location_barcode=read1:0-4 2
 GAAA
 +
-~~~~
+-/00
 @BASCET__A1_A4_C7_H11:T:46|location_barcode=read1:0-4 2
 GTAA
 +
-~~~~
+-:00
 @BASCET__A1_A4_C7_H11:T:47|location_barcode=read1:0-4 2
 ACCC
 +
-~~~~
+00..
 @BASCET__A1_A4_C7_H11:T:48|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+0:C:
 @BASCET__A1_A4_C7_H11:T:49|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+:0;:
 @BASCET__A1_A4_C7_H11:T:50|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+00;.
 @BASCET__A1_A4_C7_H11:T:51|location_barcode=read1:0-4 2
 CTCT
 +
-~~~~
+0000
 @BASCET__A1_A4_C7_H11:T:52|location_barcode=read1:0-4 2
 CCAC
 +
-~~~~
+/B/.
 @BASCET__A1_A4_C7_H11:T:53|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+:CB.
 @BASCET__A1_A4_C7_H11:T:54|location_barcode=read1:0-4 2
 CCCG
 +
-~~~~
+00/-
 @BASCET__A1_A4_C9_H11:T:0|location_barcode=read1:0-4 2
 AACC
 +
-~~~~
+00:/
 @BASCET__A1_A4_C9_H11:T:1|location_barcode=read1:0-4 2
 AACC
 +
-~~~~
+00</
 @BASCET__A1_A4_C9_H11:T:2|location_barcode=read1:0-4 2
 ACCC
 +
-~~~~
+90;.
 @BASCET__A1_A4_C9_H11:T:3|location_barcode=read1:0-4 2
 AGAC
 +
-~~~~
+;..0
 @BASCET__A1_A4_C9_H11:T:4|location_barcode=read1:0-4 2
 CCCA
 +
-~~~~
+00/0
 @BASCET__A1_A4_C9_H11:T:5|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+00/.
 @BASCET__A1_A4_C9_H11:T:6|location_barcode=read1:0-4 2
 GACC
 +
-~~~~
+/:C0
 @BASCET__A1_A4_C9_H11:T:7|location_barcode=read1:0-4 2
 GACC
 +
-~~~~
+:<GG
 @BASCET__A1_A4_C9_H11:T:8|location_barcode=read1:0-4 2
 GACC
 +
-~~~~
+/;00
 @BASCET__A1_A4_C9_H11:T:9|location_barcode=read1:0-4 2
 GCCC
 +
-~~~~
+/00/
 @BASCET__A1_A4_C9_H11:T:10|location_barcode=read1:0-4 2
 ATGG
 +
-~~~~
+9/9/
 @BASCET__A1_A4_C9_H11:T:11|location_barcode=read1:0-4 2
 AGGT
 +
-~~~~
+0000
 @BASCET__A1_A4_C9_H11:T:12|location_barcode=read1:0-4 2
 CGGT
 +
-~~~~
+0.--
 @BASCET__A1_A4_C9_H11:T:13|location_barcode=read1:0-4 2
 GATT
 +
-~~~~
+0009
 @BASCET__A1_A4_C9_H11:T:14|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+/<..
 @BASCET__A1_A4_D9_H11:T:0|location_barcode=read1:0-4 2
 CCTT
 +
-~~~~
+<000
 @BASCET__A1_A4_D9_H11:T:1|location_barcode=read1:0-4 2
 CCTT
 +
-~~~~
+0000
 @BASCET__A1_A4_D9_H11:T:2|location_barcode=read1:0-4 2
 CTTT
 +
-~~~~
+9///
 @BASCET__A1_A4_D9_H11:T:3|location_barcode=read1:0-4 2
 ACCC
 +
-~~~~
+.9B/
 @BASCET__A1_A4_D9_H11:T:4|location_barcode=read1:0-4 2
 CCCA
 +
-~~~~
+9090
 @BASCET__A1_A4_D9_H11:T:5|location_barcode=read1:0-4 2
 CCCA
 +
-~~~~
+//9/
 @BASCET__A1_A4_D9_H11:T:6|location_barcode=read1:0-4 2
 GGGA
 +
-~~~~
+-9--
 @BASCET__A1_A4_D9_H11:T:7|location_barcode=read1:0-4 2
 GGTA
 +
-~~~~
+-A.0
 @BASCET__A1_A4_D9_H11:T:8|location_barcode=read1:0-4 2
 GGTA
 +
-~~~~
+9DD/
 @BASCET__A1_A4_D9_H11:T:9|location_barcode=read1:0-4 2
 GGTA
 +
-~~~~
+:090
 @BASCET__A1_A4_D9_H11:T:10|location_barcode=read1:0-4 2
 GGTT
 +
-~~~~
+;000
 @BASCET__A1_A4_D9_H11:T:11|location_barcode=read1:0-4 2
 GTAA
 +
-~~~~
+-;00
 @BASCET__A1_A4_D9_H11:T:12|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+00;.
 @BASCET__A1_A4_D9_H11:T:13|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+00;.
 @BASCET__A1_A4_D9_H11:T:14|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+00;9
 @BASCET__A1_A4_D9_H11:T:15|location_barcode=read1:0-4 2
 AGTT
 +
-~~~~
+:FGB
 @BASCET__A1_A4_D9_H11:T:16|location_barcode=read1:0-4 2
 ATTT
 +
-~~~~
+900;
 @BASCET__A1_A4_D9_H11:T:17|location_barcode=read1:0-4 2
 GTTC
 +
-~~~~
+/;0/
 @BASCET__A1_A4_D9_H11:T:18|location_barcode=read1:0-4 2
 ACGT
 +
-~~~~
+//-;
 @BASCET__A1_A4_D9_H11:T:19|location_barcode=read1:0-4 2
 CTTA
 +
-~~~~
+////
 @BASCET__A1_A4_D9_H11:T:20|location_barcode=read1:0-4 2
 CTTT
 +
-~~~~
+////
 @BASCET__A1_A4_D9_H11:T:21|location_barcode=read1:0-4 2
 GGGT
 +
-~~~~
+//:/
 @BASCET__A1_A4_D9_H11:T:22|location_barcode=read1:0-4 2
 GGTT
 +
-~~~~
+-.9;
 @BASCET__A1_A4_D9_H11:T:23|location_barcode=read1:0-4 2
 CGAT
 +
-~~~~
+09..
 @BASCET__A1_A4_D9_H11:T:24|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+000=
 @BASCET__A1_A4_D9_H11:T:25|location_barcode=read1:0-4 2
 CTGG
 +
-~~~~
+/9//
 @BASCET__A1_A4_D9_H11:T:26|location_barcode=read1:0-4 2
 ATAT
 +
-~~~~
+.;/9
 @BASCET__A1_A4_D9_H11:T:27|location_barcode=read1:0-4 2
 GATG
 +
-~~~~
+@/9/
 @BASCET__A1_A4_D9_H11:T:28|location_barcode=read1:0-4 2
 GGTT
 +
-~~~~
+-...
 @BASCET__A1_A4_D9_H11:T:29|location_barcode=read1:0-4 2
 CCCG
 +
-~~~~
+:C/.
 @BASCET__A1_A4_D9_H11:T:30|location_barcode=read1:0-4 2
 CGGG
 +
-~~~~
+0;A-
 @BASCET__A1_A4_D9_H11:T:31|location_barcode=read1:0-4 2
 CCCT
 +
-~~~~
+:0/:
 @BASCET__A1_A4_D9_H11:T:32|location_barcode=read1:0-4 2
 CCTC
 +
-~~~~
+GF0/
 @BASCET__A1_A4_D9_H11:T:33|location_barcode=read1:0-4 2
 CCTC
 +
-~~~~
+C00/
 @BASCET__A1_A4_D9_H11:T:34|location_barcode=read1:0-4 2
 CCTC
 +
-~~~~
+090/
 @BASCET__A1_A4_D9_H11:T:35|location_barcode=read1:0-4 2
 CCTC
 +
-~~~~
+BF0/
 @BASCET__A1_A4_D9_H11:T:36|location_barcode=read1:0-4 2
 CCTT
 +
-~~~~
+0000
 @BASCET__A1_A4_D9_H11:T:37|location_barcode=read1:0-4 2
 CTTT
 +
-~~~~
+000=
 @BASCET__A1_A4_D9_H11:T:38|location_barcode=read1:0-4 2
 GTTT
 +
-~~~~
+-./.
 @BASCET__A1_A4_D9_H11:T:39|location_barcode=read1:0-4 2
 AAAA
 +
-~~~~
+0000
 @BASCET__A1_A4_D9_H11:T:40|location_barcode=read1:0-4 2
 AGGG
 +
-~~~~
+///9
 @BASCET__A1_A4_D9_H11:T:41|location_barcode=read1:0-4 2
 CGTT
 +
-~~~~
+0.;9
 @BASCET__A1_A4_D9_H11:T:42|location_barcode=read1:0-4 2
 CGTT
 +
-~~~~
+0.;/
 @BASCET__A1_A4_D9_H11:T:43|location_barcode=read1:0-4 2
 CCTT
 +
-~~~~
+//9/
 @BASCET__A1_A4_D9_H11:T:44|location_barcode=read1:0-4 2
 CCTC
 +
-~~~~
+::0/
 @BASCET__A1_A4_D9_H11:T:45|location_barcode=read1:0-4 2
 CCCA
 +
-~~~~
+GGFB
 @BASCET__A1_A4_D9_H11:T:46|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+BF9.
 @BASCET__A1_A4_D9_H11:T:47|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+FGF.
 @BASCET__A1_A4_D9_H11:T:48|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+FG/.
 @BASCET__A1_A4_D9_H11:T:49|location_barcode=read1:0-4 2
 AAAC
 +
-~~~~
+0:00
 @BASCET__A1_A4_D9_H11:T:50|location_barcode=read1:0-4 2
 AAAC
 +
-~~~~
+00;0
 @BASCET__A1_A4_D9_H11:T:51|location_barcode=read1:0-4 2
 AACC
 +
-~~~~
+000;
 @BASCET__A1_A4_D9_H11:T:52|location_barcode=read1:0-4 2
 AACC
 +
-~~~~
+090C
 @BASCET__A1_A4_D9_H11:T:53|location_barcode=read1:0-4 2
 CAAC
 +
-~~~~
+0;0;
 @BASCET__A1_A4_D9_H11:T:54|location_barcode=read1:0-4 2
 CAAC
 +
-~~~~
+0000
 @BASCET__A1_A4_D9_H11:T:55|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+000/
 @BASCET__A1_A4_D9_H11:T:56|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+00/9
 @BASCET__A1_A4_D9_H11:T:57|location_barcode=read1:0-4 2
 GGAT
 +
-~~~~
+/000
 @BASCET__A1_A4_D9_H11:T:58|location_barcode=read1:0-4 2
 GTTA
 +
-~~~~
+/000
 @BASCET__A1_A4_D9_H11:T:59|location_barcode=read1:0-4 2
 GTTT
 +
-~~~~
+/000
 @BASCET__A1_A4_D9_H11:T:60|location_barcode=read1:0-4 2
 AGGT
 +
-~~~~
+0000
 @BASCET__A1_A4_D9_H11:T:61|location_barcode=read1:0-4 2
 AGAA
 +
-~~~~
+0000
 @BASCET__A1_A4_D9_H11:T:62|location_barcode=read1:0-4 2
 CCCA
 +
-~~~~
+;0;/
 @BASCET__A1_A4_D9_H11:T:63|location_barcode=read1:0-4 2
 CTCC
 +
-~~~~
+//9/
 @BASCET__A1_A4_D9_H11:T:64|location_barcode=read1:0-4 2
 AAAA
 +
-~~~~
+:;00
 @BASCET__A1_A4_D9_H11:T:65|location_barcode=read1:0-4 2
 AAAC
 +
-~~~~
+:000
 @BASCET__A1_A4_D9_H11:T:66|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+000.
 @BASCET__A1_A4_D9_H11:T:67|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+FDDC
 @BASCET__A1_A4_D9_H11:T:68|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+000.
 @BASCET__A1_A4_E7_H11:A:0|location_barcode=read1:0-4 2
 CGTA
 +
-~~~~
+GEEE
 @BASCET__A1_A4_E7_H11:A:1|location_barcode=read1:0-4 2
 CGTA
 +
-~~~~
+HGEG
 @BASCET__A1_A4_E7_H11:T:2|location_barcode=read1:0-4 2
 CCCT
 +
-~~~~
+;;--
 @BASCET__A1_A4_E7_H11:T:3|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+FFFD
 @BASCET__A1_A4_E7_H11:T:4|location_barcode=read1:0-4 2
 AAGC
 +
-~~~~
+0000
 @BASCET__A1_A4_E7_H11:T:5|location_barcode=read1:0-4 2
 AGCC
 +
-~~~~
+009/
 @BASCET__A1_A4_E7_H11:T:6|location_barcode=read1:0-4 2
 ATTC
 +
-~~~~
+;///
 @BASCET__A1_A4_E7_H11:T:7|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+00;9
 @BASCET__A1_A4_E7_H11:T:8|location_barcode=read1:0-4 2
 CCCT
 +
-~~~~
+00//
 @BASCET__A1_A4_E7_H11:T:9|location_barcode=read1:0-4 2
 CCTG
 +
-~~~~
+0000
 @BASCET__A1_A4_E7_H11:T:10|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+110.
 @BASCET__A1_A4_E7_H11:T:11|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+0::.
 @BASCET__A1_A4_E7_H11:T:12|location_barcode=read1:0-4 2
 CGCC
 +
-~~~~
+0..;
 @BASCET__A1_A4_E7_H11:T:13|location_barcode=read1:0-4 2
 CTCC
 +
-~~~~
+00:/
 @BASCET__A1_A4_E7_H11:T:14|location_barcode=read1:0-4 2
 GCCC
 +
-~~~~
+-...
 @BASCET__A1_A4_E7_H11:T:15|location_barcode=read1:0-4 2
 AAAA
 +
-~~~~
+00:0
 @BASCET__A1_A4_E7_H11:T:16|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+0<0<
 @BASCET__A1_A4_E7_H11:T:17|location_barcode=read1:0-4 2
 AGGT
 +
-~~~~
+0000
 @BASCET__A1_A4_E7_H11:T:18|location_barcode=read1:0-4 2
 AGGT
 +
-~~~~
+0;0;
 @BASCET__A1_A4_E7_H11:T:19|location_barcode=read1:0-4 2
 AGGT
 +
-~~~~
+000;
 @BASCET__A1_A4_E7_H11:T:20|location_barcode=read1:0-4 2
 AGGT
 +
-~~~~
+0009
 @BASCET__A1_A4_E7_H11:T:21|location_barcode=read1:0-4 2
 AGGT
 +
-~~~~
+000;
 @BASCET__A1_A4_E7_H11:T:22|location_barcode=read1:0-4 2
 GGGT
 +
-~~~~
+/0.9
 @BASCET__A1_A4_E7_H11:T:23|location_barcode=read1:0-4 2
 ACCC
 +
-~~~~
+09;.
 @BASCET__A1_A4_E7_H11:T:24|location_barcode=read1:0-4 2
 ACCC
 +
-~~~~
+000.
 @BASCET__A1_A4_E7_H11:T:25|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+00;/
 @BASCET__A1_A4_E7_H11:T:26|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+000/
 @BASCET__A1_A4_E7_H11:T:27|location_barcode=read1:0-4 2
 CCCT
 +
-~~~~
+00/0
 @BASCET__A1_A4_F9_H11:T:0|location_barcode=read1:0-4 2
 CCCA
 +
-~~~~
+:0/9
 @BASCET__A1_A4_F9_H11:T:1|location_barcode=read1:0-4 2
 CCTG
 +
-~~~~
+/:;/
 @BASCET__A1_A4_F9_H11:T:2|location_barcode=read1:0-4 2
 CCTT
 +
-~~~~
+//;/
 @BASCET__A1_A4_F9_H11:T:3|location_barcode=read1:0-4 2
 CTTC
 +
-~~~~
+:000
 @BASCET__A1_A4_F9_H11:T:4|location_barcode=read1:0-4 2
 GCCC
 +
-~~~~
+;.-.
 @BASCET__A1_A4_F9_H11:T:5|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+;FGA
 @BASCET__A1_A4_F9_H11:T:6|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+;BFA
 @BASCET__A1_A4_F9_H11:T:7|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+BB/.
 @BASCET__A1_A4_F9_H11:T:8|location_barcode=read1:0-4 2
 AACC
 +
-~~~~
+000/
 @BASCET__A1_A4_F9_H11:T:9|location_barcode=read1:0-4 2
 CAAC
 +
-~~~~
+0009
 @BASCET__A1_A4_F9_H11:T:10|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+<00:
 @BASCET__A1_A4_F9_H11:T:11|location_barcode=read1:0-4 2
 CAGC
 +
-~~~~
+GF0C
 @BASCET__A1_A4_F9_H11:T:12|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+00/.
 @BASCET__A1_A4_G7_H11:T:0|location_barcode=read1:0-4 2
 ATGC
 +
-~~~~
+FGFH
 @BASCET__A1_A4_G7_H11:T:1|location_barcode=read1:0-4 2
 ATGC
 +
-~~~~
+GHHG
 @BASCET__A1_A4_G7_H11:T:2|location_barcode=read1:0-4 2
 ATGC
 +
-~~~~
+CFHG
 @BASCET__A1_A4_G7_H11:T:3|location_barcode=read1:0-4 2
 ATGC
 +
-~~~~
+GFFF
 @BASCET__A1_A4_G7_H11:T:4|location_barcode=read1:0-4 2
 ATGC
 +
-~~~~
+HFHH
 @BASCET__A1_A4_G7_H11:T:5|location_barcode=read1:0-4 2
 CGCC
 +
-~~~~
+C9.C
 @BASCET__A1_A4_G7_H11:T:6|location_barcode=read1:0-4 2
 CGTC
 +
-~~~~
+:.0:
 @BASCET__A1_A4_G7_H11:T:7|location_barcode=read1:0-4 2
 CGTC
 +
-~~~~
+0;09
 @BASCET__A1_A4_G7_H11:T:8|location_barcode=read1:0-4 2
 CGTC
 +
-~~~~
+0.0;
 @BASCET__A1_A4_G7_H11:T:9|location_barcode=read1:0-4 2
 CGTC
 +
-~~~~
+F.0C
 @BASCET__A1_A4_G7_H11:T:10|location_barcode=read1:0-4 2
 CGTC
 +
-~~~~
+0.0.
 @BASCET__A1_A4_G7_H11:T:11|location_barcode=read1:0-4 2
 CGTC
 +
-~~~~
+;9C.
 @BASCET__A1_A4_G7_H11:T:12|location_barcode=read1:0-4 2
 AAGC
 +
-~~~~
+HHFH
 @BASCET__A1_A4_G7_H11:T:13|location_barcode=read1:0-4 2
 AAGC
 +
-~~~~
+HHHH
 @BASCET__A1_A4_G7_H11:T:15|location_barcode=read1:0-4 2
 GGGG
 +
-~~~~
+9.-9
 @BASCET__A1_A4_G7_H11:T:16|location_barcode=read1:0-4 2
 GGGG
 +
-~~~~
+@A-A
 @BASCET__A1_A4_G7_H11:T:17|location_barcode=read1:0-4 2
 GGGG
 +
-~~~~
+-.;@
 @BASCET__A1_A4_G7_H11:T:18|location_barcode=read1:0-4 2
 GGGG
 +
-~~~~
+:.-A
 @BASCET__A1_A4_G7_H11:T:19|location_barcode=read1:0-4 2
 GGGG
 +
-~~~~
+;DAA
 @BASCET__A1_A4_G7_H11:T:20|location_barcode=read1:0-4 2
 GGGT
 +
-~~~~
+C.B.
 @BASCET__A1_A4_G7_H11:T:21|location_barcode=read1:0-4 2
 GTGG
 +
-~~~~
+-:C?
 @BASCET__A1_A4_G7_H11:T:22|location_barcode=read1:0-4 2
 GGGG
 +
-~~~~
+?.-C
 @BASCET__A1_A4_G7_H11:T:23|location_barcode=read1:0-4 2
 ACCC
 +
-~~~~
+000.
 @BASCET__A1_A4_G7_H11:T:24|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+00;:
 @BASCET__A1_A4_G7_H11:T:25|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+00;C
 @BASCET__A1_A4_G7_H11:T:26|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+00;/
 @BASCET__A1_A4_G7_H11:T:27|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+110?
 @BASCET__A1_A4_G7_H11:T:28|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+00/.
 @BASCET__A1_A4_G7_H11:T:29|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+09/9
 @BASCET__A1_A4_G7_H11:T:30|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+00;A
 @BASCET__A1_A4_G7_H11:T:31|location_barcode=read1:0-4 2
 CCTC
 +
-~~~~
+0000
 @BASCET__A1_A4_G7_H11:T:32|location_barcode=read1:0-4 2
 CGGG
 +
-~~~~
+;.@B
 @BASCET__A1_A4_G7_H11:T:33|location_barcode=read1:0-4 2
 CGGG
 +
-~~~~
+0.-:
 @BASCET__A1_A4_G7_H11:T:34|location_barcode=read1:0-4 2
 GGCG
 +
-~~~~
+-9.-
 @BASCET__A1_A4_G7_H11:T:35|location_barcode=read1:0-4 2
 GGTC
 +
-~~~~
+-..;
 @BASCET__A1_A4_H8_H11:T:0|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+0;B.
 @BASCET__A1_A4_H8_H11:T:1|location_barcode=read1:0-4 2
 GAAG
 +
-~~~~
+GGGG
 @BASCET__A1_A4_H8_H11:T:2|location_barcode=read1:0-4 2
 AAAC
 +
-~~~~
+.<0C
 @BASCET__A1_A4_H8_H11:T:3|location_barcode=read1:0-4 2
 GCGG
 +
-~~~~
+9/--
 @BASCET__A1_A4_H8_H11:T:4|location_barcode=read1:0-4 2
 GCGG
 +
-~~~~
+-09-
 @BASCET__A1_A4_H8_H11:T:5|location_barcode=read1:0-4 2
 GCGG
 +
-~~~~
+?0;-
 @BASCET__A1_A4_H8_H11:T:6|location_barcode=read1:0-4 2
 GCGT
 +
-~~~~
+-0-.
 @BASCET__A1_A4_H8_H11:T:7|location_barcode=read1:0-4 2
 GGGG
 +
-~~~~
+-.--
 @BASCET__A1_A4_H8_H11:T:8|location_barcode=read1:0-4 2
 GGGT
 +
-~~~~
+-.-9
 @BASCET__A1_A4_H8_H11:T:9|location_barcode=read1:0-4 2
 CCCT
 +
-~~~~
+/9..
 @BASCET__A1_A4_H8_H11:T:10|location_barcode=read1:0-4 2
 CCCT
 +
-~~~~
+:0//
 @BASCET__A1_A4_H8_H11:T:11|location_barcode=read1:0-4 2
 CCTT
 +
-~~~~
+9/9:
 @BASCET__A1_A4_H8_H11:T:12|location_barcode=read1:0-4 2
 CCTT
 +
-~~~~
+///;
 @BASCET__A1_A4_H8_H11:T:13|location_barcode=read1:0-4 2
 CTCT
 +
-~~~~
+0000
 @BASCET__A1_A4_H8_H11:T:14|location_barcode=read1:0-4 2
 CTTT
 +
-~~~~
+//;/
 @BASCET__A1_A4_H8_H11:T:15|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+0009
 @BASCET__A1_A4_H8_H11:T:16|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+;:;A
 @BASCET__A1_A4_H8_H11:T:17|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+09;.
 @BASCET__A1_A4_H8_H11:T:18|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+00/.
 @BASCET__A1_A4_H8_H11:T:19|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+;/CF
 @BASCET__A1_A4_H8_H11:T:20|location_barcode=read1:0-4 2
 CTCC
 +
-~~~~
+00;C
 @BASCET__A1_A4_H8_H11:T:21|location_barcode=read1:0-4 2
 AGGT
 +
-~~~~
+000;
 @BASCET__A1_A4_H8_H11:T:22|location_barcode=read1:0-4 2
 GGTA
 +
-~~~~
+-..0
 @BASCET__A1_A4_H8_H11:T:23|location_barcode=read1:0-4 2
 GTTT
 +
-~~~~
+/00:
 @BASCET__A1_A4_H8_H11:T:24|location_barcode=read1:0-4 2
 AGCC
 +
-~~~~
+HHHH
 @BASCET__A1_A4_H8_H11:T:25|location_barcode=read1:0-4 2
 ACCA
 +
-~~~~
+.;0/
 @BASCET__A1_A4_H8_H11:T:26|location_barcode=read1:0-4 2
 GACC
 +
-~~~~
+:.:@
 @BASCET__A1_A4_H8_H11:T:27|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+99/.
 @BASCET__A1_A4_H9_H11:T:0|location_barcode=read1:0-4 2
 CCAC
 +
-~~~~
+000.
 @BASCET__A1_A4_H9_H11:T:1|location_barcode=read1:0-4 2
 CCCT
 +
-~~~~
+00//
 @BASCET__A1_A4_H9_H11:T:2|location_barcode=read1:0-4 2
 CCCT
 +
-~~~~
+00//
 @BASCET__A1_A4_H9_H11:T:3|location_barcode=read1:0-4 2
 CCTC
 +
-~~~~
+G00:
 @BASCET__A1_A4_H9_H11:T:4|location_barcode=read1:0-4 2
 CCTC
 +
-~~~~
+GCBC
 @BASCET__A1_A4_H9_H11:T:5|location_barcode=read1:0-4 2
 CCTC
 +
-~~~~
+CC0/
 @BASCET__A1_A4_H9_H11:T:6|location_barcode=read1:0-4 2
 CCTT
 +
-~~~~
+CC00
 @BASCET__A1_A4_H9_H11:T:7|location_barcode=read1:0-4 2
 CTTT
 +
-~~~~
+:000
 @BASCET__A1_A4_H9_H11:T:8|location_barcode=read1:0-4 2
 CACT
 +
-~~~~
+////
 @BASCET__A1_A4_H9_H11:T:9|location_barcode=read1:0-4 2
 CCAA
 +
-~~~~
+////
 @BASCET__A1_A4_H9_H11:T:10|location_barcode=read1:0-4 2
 CCCA
 +
-~~~~
+C0//
 @BASCET__A1_A4_H9_H11:T:11|location_barcode=read1:0-4 2
 CCCA
 +
-~~~~
+09/:
 @BASCET__A1_A4_H9_H11:T:12|location_barcode=read1:0-4 2
 CCCA
 +
-~~~~
+;0//
 @BASCET__A1_A4_H9_H11:T:13|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+;0/.
 @BASCET__A1_A4_H9_H11:T:14|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+;0/.
 @BASCET__A1_A4_H9_H11:T:15|location_barcode=read1:0-4 2
 AACC
 +
-~~~~
+:/9/
 @BASCET__A1_A4_H9_H11:T:16|location_barcode=read1:0-4 2
 ACCC
 +
-~~~~
+B9/.
 @BASCET__A1_A4_H9_H11:T:17|location_barcode=read1:0-4 2
 ACTT
 +
-~~~~
+////
 @BASCET__A1_A4_H9_H11:T:18|location_barcode=read1:0-4 2
 GTTA
 +
-~~~~
+-;;/
 @BASCET__A1_A4_H9_H11:T:19|location_barcode=read1:0-4 2
 GTTT
 +
-~~~~
+-;..
 @BASCET__A1_A5_A7_H11:A:0|location_barcode=read1:0-4 2
 ATAT
 +
-~~~~
+HHHH
 @BASCET__A1_A5_A7_H11:A:1|location_barcode=read1:0-4 2
 ATAT
 +
-~~~~
+2FDG
 @BASCET__A1_A5_A7_H11:A:2|location_barcode=read1:0-4 2
 ATAT
 +
-~~~~
+HEHF
 @BASCET__A1_A5_A7_H11:A:3|location_barcode=read1:0-4 2
 ATAT
 +
-~~~~
+HGGH
 @BASCET__A1_A5_A7_H11:A:4|location_barcode=read1:0-4 2
 ATAT
 +
-~~~~
+DBED
 @BASCET__A1_A5_A7_H11:A:5|location_barcode=read1:0-4 2
 ATAT
 +
-~~~~
+GHHH
 @BASCET__A1_A5_A7_H11:T:6|location_barcode=read1:0-4 2
 ACAA
 +
-~~~~
+GGHH
 @BASCET__A1_A5_A7_H11:T:7|location_barcode=read1:0-4 2
 ACAA
 +
-~~~~
+FHH3
 @BASCET__A1_A5_A7_H11:T:8|location_barcode=read1:0-4 2
 ACAA
 +
-~~~~
+GHHH
 @BASCET__A1_A5_A7_H11:T:9|location_barcode=read1:0-4 2
 ACAA
 +
-~~~~
+EHHH
 @BASCET__A1_A5_A7_H11:T:10|location_barcode=read1:0-4 2
 ACAA
 +
-~~~~
+GHHH
 @BASCET__A1_A5_A7_H11:T:11|location_barcode=read1:0-4 2
 ACAA
 +
-~~~~
+FHHG
 @BASCET__A1_A5_A7_H11:T:12|location_barcode=read1:0-4 2
 ACAA
 +
-~~~~
+GHHH
 @BASCET__A1_A5_A7_H11:T:13|location_barcode=read1:0-4 2
 ACAA
 +
-~~~~
+FHHH
 @BASCET__A1_A5_A7_H11:T:14|location_barcode=read1:0-4 2
 ACAA
 +
-~~~~
+FHHH
 @BASCET__A1_A5_A7_H11:T:15|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+:0;.
 @BASCET__A1_A5_A7_H11:T:16|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+0;;.
 @BASCET__A1_A5_A7_H11:T:17|location_barcode=read1:0-4 2
 CCCT
 +
-~~~~
+0/;/
 @BASCET__A1_A5_A7_H11:T:18|location_barcode=read1:0-4 2
 CCCT
 +
-~~~~
+0///
 @BASCET__A1_A5_A7_H11:T:19|location_barcode=read1:0-4 2
 GTTA
 +
-~~~~
+;:C.
 @BASCET__A1_A5_A7_H11:T:20|location_barcode=read1:0-4 2
 GTTT
 +
-~~~~
+-<<.
 @BASCET__A1_A5_A7_H11:T:21|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+00;:
 @BASCET__A1_A5_A7_H11:T:22|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+0;/:
 @BASCET__A1_A5_A7_H11:T:23|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+/;9.
 @BASCET__A1_A5_A7_H11:T:24|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+90/.
 @BASCET__A1_A5_A7_H11:C:25|location_barcode=read1:0-4 2
 TTTT
 +
-~~~~
+?F22
 @BASCET__A1_A5_A7_H11:T:26|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+0;CF
 @BASCET__A1_A5_A7_H11:T:27|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+00AE
 @BASCET__A1_A5_A7_H11:T:28|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+;FBF
 @BASCET__A1_A5_A7_H11:T:29|location_barcode=read1:0-4 2
 ATCT
 +
-~~~~
+1100
 @BASCET__A1_A5_A7_H11:T:30|location_barcode=read1:0-4 2
 CAGG
 +
-~~~~
+<00<
 @BASCET__A1_A5_A7_H11:T:31|location_barcode=read1:0-4 2
 CAGG
 +
-~~~~
+9//;
 @BASCET__A1_A5_A7_H11:T:32|location_barcode=read1:0-4 2
 CGGG
 +
-~~~~
+/--;
 @BASCET__A1_A5_A7_H11:T:33|location_barcode=read1:0-4 2
 GCCT
 +
-~~~~
+/0/;
 @BASCET__A1_A5_A7_H11:T:34|location_barcode=read1:0-4 2
 GTCT
 +
-~~~~
+/;0<
 @BASCET__A1_A5_A7_H11:T:35|location_barcode=read1:0-4 2
 GTCT
 +
-~~~~
+/:0;
 @BASCET__A1_A5_A7_H11:T:36|location_barcode=read1:0-4 2
 GTTT
 +
-~~~~
+/000
 @BASCET__A1_A5_A7_H11:T:37|location_barcode=read1:0-4 2
 AACA
 +
-~~~~
+0;00
 @BASCET__A1_A5_A7_H11:T:38|location_barcode=read1:0-4 2
 AACA
 +
-~~~~
+0000
 @BASCET__A1_A5_A7_H11:T:39|location_barcode=read1:0-4 2
 AACA
 +
-~~~~
+0000
 @BASCET__A1_A5_A7_H11:T:40|location_barcode=read1:0-4 2
 ACAG
 +
-~~~~
+.000
 @BASCET__A1_A5_A7_H11:T:41|location_barcode=read1:0-4 2
 GAAG
 +
-~~~~
+/00:
 @BASCET__A1_A5_A7_H11:T:42|location_barcode=read1:0-4 2
 GACG
 +
-~~~~
+/C0.
 @BASCET__A1_A5_A7_H11:T:43|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+000;
 @BASCET__A1_A5_A7_H11:T:44|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+;0:C
 @BASCET__A1_A5_A7_H11:T:45|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+00/.
 @BASCET__A1_A5_A7_H11:T:46|location_barcode=read1:0-4 2
 CTCA
 +
-~~~~
+:090
 @BASCET__A1_A5_A7_H11:T:47|location_barcode=read1:0-4 2
 CTCA
 +
-~~~~
+0000
 @BASCET__A1_A5_A7_H11:T:48|location_barcode=read1:0-4 2
 GTGA
 +
-~~~~
+H4GH
 @BASCET__A1_A5_A7_H11:T:49|location_barcode=read1:0-4 2
 GTGA
 +
-~~~~
+H2FF
 @BASCET__A1_A5_A7_H11:T:50|location_barcode=read1:0-4 2
 AAAG
 +
-~~~~
+00B0
 @BASCET__A1_A5_A7_H11:T:51|location_barcode=read1:0-4 2
 GTGA
 +
-~~~~
+HFGF
 @BASCET__A1_A5_A9_H11:T:0|location_barcode=read1:0-4 2
 CAGG
 +
-~~~~
+B:BB
 @BASCET__A1_A5_A9_H11:T:1|location_barcode=read1:0-4 2
 GGGG
 +
-~~~~
+--;-
 @BASCET__A1_A5_A9_H11:T:2|location_barcode=read1:0-4 2
 GGGT
 +
-~~~~
+-.-.
 @BASCET__A1_A5_A9_H11:T:3|location_barcode=read1:0-4 2
 GTCT
 +
-~~~~
+/90;
 @BASCET__A1_A5_A9_H11:T:4|location_barcode=read1:0-4 2
 GTGT
 +
-~~~~
+-..:
 @BASCET__A1_A5_A9_H11:T:5|location_barcode=read1:0-4 2
 GTTT
 +
-~~~~
+;...
 @BASCET__A1_A5_A9_H11:T:6|location_barcode=read1:0-4 2
 CACG
 +
-~~~~
+000.
 @BASCET__A1_A5_A9_H11:T:7|location_barcode=read1:0-4 2
 CCGA
 +
-~~~~
+00..
 @BASCET__A1_A5_A9_H11:T:8|location_barcode=read1:0-4 2
 AGGG
 +
-~~~~
+090A
 @BASCET__A1_A5_A9_H11:T:9|location_barcode=read1:0-4 2
 ATGA
 +
-~~~~
+0000
 @BASCET__A1_A5_A9_H11:T:10|location_barcode=read1:0-4 2
 ACGA
 +
-~~~~
+9CA.
 @BASCET__A1_A5_A9_H11:T:11|location_barcode=read1:0-4 2
 ACGA
 +
-~~~~
+00..
 @BASCET__A1_A5_A9_H11:T:12|location_barcode=read1:0-4 2
 ACGC
 +
-~~~~
+90..
 @BASCET__A1_A5_A9_H11:T:13|location_barcode=read1:0-4 2
 CCGA
 +
-~~~~
+0;A:
 @BASCET__A1_A5_A9_H11:T:14|location_barcode=read1:0-4 2
 CCGC
 +
-~~~~
+00;-
 @BASCET__A1_A5_A9_H11:T:15|location_barcode=read1:0-4 2
 CGAC
 +
-~~~~
+0...
 @BASCET__A1_A5_A9_H11:T:16|location_barcode=read1:0-4 2
 CGGG
 +
-~~~~
+0.;-
 @BASCET__A1_A5_A9_H11:T:17|location_barcode=read1:0-4 2
 GATC
 +
-~~~~
+-.0.
 @BASCET__A1_A5_A9_H11:T:19|location_barcode=read1:0-4 2
 AAAT
 +
-~~~~
+0000
 @BASCET__A1_A5_A9_H11:T:20|location_barcode=read1:0-4 2
 AATT
 +
-~~~~
+//9B
 @BASCET__A1_A5_A9_H11:T:21|location_barcode=read1:0-4 2
 GGGG
 +
-~~~~
+-.--
 @BASCET__A1_A5_A9_H11:T:22|location_barcode=read1:0-4 2
 GTAA
 +
-~~~~
+-.//
 @BASCET__A1_A5_A9_H11:T:23|location_barcode=read1:0-4 2
 ATTT
 +
-~~~~
+//;/
 @BASCET__A1_A5_A9_H11:T:24|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+/;B.
 @BASCET__A1_A5_A9_H11:T:25|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+0;B?
 @BASCET__A1_A5_A9_H11:T:26|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+;BFA
 @BASCET__A1_A5_A9_H11:T:27|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+9BF.
 @BASCET__A1_A5_A9_H11:T:28|location_barcode=read1:0-4 2
 CCCG
 +
-~~~~
+/BB-
 @BASCET__A1_A5_A9_H11:T:29|location_barcode=read1:0-4 2
 GTTC
 +
-~~~~
+/;00
 @BASCET__A1_A5_A9_H11:T:31|location_barcode=read1:0-4 2
 CGTC
 +
-~~~~
+EDF.
 @BASCET__A1_A5_A9_H11:T:32|location_barcode=read1:0-4 2
 CGTT
 +
-~~~~
+F.;0
 @BASCET__A1_A5_A9_H11:T:33|location_barcode=read1:0-4 2
 CGTT
 +
-~~~~
+0.00
 @BASCET__A1_A5_A9_H11:T:34|location_barcode=read1:0-4 2
 CGTT
 +
-~~~~
+0.90
 @BASCET__A1_A5_A9_H11:T:35|location_barcode=read1:0-4 2
 CGTT
 +
-~~~~
+0.00
 @BASCET__A1_A5_A9_H11:A:36|location_barcode=read1:0-4 2
 TGTA
 +
-~~~~
+3B3?
 @BASCET__A1_A5_A9_H11:A:37|location_barcode=read1:0-4 2
 TGCA
 +
-~~~~
+F111
 @BASCET__A1_A5_C9_H11:T:0|location_barcode=read1:0-4 2
 AGTT
 +
-~~~~
+:00;
 @BASCET__A1_A5_C9_H11:T:1|location_barcode=read1:0-4 2
 AGGT
 +
-~~~~
+0:0;
 @BASCET__A1_A5_C9_H11:T:2|location_barcode=read1:0-4 2
 AGTT
 +
-~~~~
+000;
 @BASCET__A1_A5_C9_H11:T:3|location_barcode=read1:0-4 2
 AGTT
 +
-~~~~
+0;00
 @BASCET__A1_A5_C9_H11:T:4|location_barcode=read1:0-4 2
 AGTT
 +
-~~~~
+0111
 @BASCET__A1_A5_C9_H11:T:5|location_barcode=read1:0-4 2
 GTTT
 +
-~~~~
+-.9.
 @BASCET__A1_A5_C9_H11:T:6|location_barcode=read1:0-4 2
 AACC
 +
-~~~~
+900/
 @BASCET__A1_A5_C9_H11:T:7|location_barcode=read1:0-4 2
 ACCC
 +
-~~~~
+<10.
 @BASCET__A1_A5_C9_H11:T:8|location_barcode=read1:0-4 2
 GGTT
 +
-~~~~
+?.;.
 @BASCET__A1_A5_C9_H11:T:9|location_barcode=read1:0-4 2
 GGTT
 +
-~~~~
+-...
 @BASCET__A1_A5_C9_H11:T:10|location_barcode=read1:0-4 2
 GGTT
 +
-~~~~
+//;;
 @BASCET__A1_A5_C9_H11:T:11|location_barcode=read1:0-4 2
 CCCG
 +
-~~~~
+00/-
 @BASCET__A1_A5_C9_H11:T:12|location_barcode=read1:0-4 2
 CCGG
 +
-~~~~
+00.-
 @BASCET__A1_A5_C9_H11:T:13|location_barcode=read1:0-4 2
 CGGG
 +
-~~~~
+0---
 @BASCET__A1_A5_C9_H11:T:14|location_barcode=read1:0-4 2
 CTCG
 +
-~~~~
+11>.
 @BASCET__A1_A5_C9_H11:T:15|location_barcode=read1:0-4 2
 CTCG
 +
-~~~~
+D00.
 @BASCET__A1_A5_C9_H11:T:16|location_barcode=read1:0-4 2
 CTCG
 +
-~~~~
+009.
 @BASCET__A1_A5_C9_H11:T:17|location_barcode=read1:0-4 2
 CTCG
 +
-~~~~
+000.
 @BASCET__A1_A5_C9_H11:T:18|location_barcode=read1:0-4 2
 GCTG
 +
-~~~~
+...;
 @BASCET__A1_A5_C9_H11:T:19|location_barcode=read1:0-4 2
 GAAA
 +
-~~~~
+00:0
 @BASCET__A1_A5_D7_H11:T:0|location_barcode=read1:0-4 2
 GACC
 +
-~~~~
+-.;-
 @BASCET__A1_A5_D7_H11:T:1|location_barcode=read1:0-4 2
 GACC
 +
-~~~~
+-.;@
 @BASCET__A1_A5_D7_H11:T:2|location_barcode=read1:0-4 2
 GACC
 +
-~~~~
+<<C-
 @BASCET__A1_A5_D7_H11:T:3|location_barcode=read1:0-4 2
 GCCC
 +
-~~~~
+-...
 @BASCET__A1_A5_D7_H11:T:4|location_barcode=read1:0-4 2
 GCCC
 +
-~~~~
+<.<.
 @BASCET__A1_A5_D7_H11:T:5|location_barcode=read1:0-4 2
 GCCC
 +
-~~~~
+:.::
 @BASCET__A1_A5_D7_H11:T:6|location_barcode=read1:0-4 2
 GCCC
 +
-~~~~
+-.<<
 @BASCET__A1_A5_D7_H11:T:7|location_barcode=read1:0-4 2
 GACT
 +
-~~~~
+-//0
 @BASCET__A1_A5_D7_H11:T:8|location_barcode=read1:0-4 2
 GACC
 +
-~~~~
+-..-
 @BASCET__A1_A5_D7_H11:T:9|location_barcode=read1:0-4 2
 GTTC
 +
-~~~~
+/;0;
 @BASCET__A1_A5_D7_H11:T:10|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+B0/.
 @BASCET__A1_A5_D7_H11:T:11|location_barcode=read1:0-4 2
 GTCC
 +
-~~~~
+/;0;
 @BASCET__A1_A5_D7_H11:T:12|location_barcode=read1:0-4 2
 AGTT
 +
-~~~~
+0090
 @BASCET__A1_A5_D7_H11:T:13|location_barcode=read1:0-4 2
 AGTT
 +
-~~~~
+;0CG
 @BASCET__A1_A5_D7_H11:T:14|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+BB:.
 @BASCET__A1_A5_D8_H11:T:0|location_barcode=read1:0-4 2
 AGCC
 +
-~~~~
+;00/
 @BASCET__A1_A5_D8_H11:T:1|location_barcode=read1:0-4 2
 CCGG
 +
-~~~~
+/;--
 @BASCET__A1_A5_D8_H11:T:2|location_barcode=read1:0-4 2
 GGGT
 +
-~~~~
+-.-<
 @BASCET__A1_A5_D8_H11:T:3|location_barcode=read1:0-4 2
 GGTT
 +
-~~~~
+-.;;
 @BASCET__A1_A5_D8_H11:T:4|location_barcode=read1:0-4 2
 GGTT
 +
-~~~~
+F?:.
 @BASCET__A1_A5_D8_H11:T:5|location_barcode=read1:0-4 2
 GGTT
 +
-~~~~
+-.;C
 @BASCET__A1_A5_D8_H11:T:6|location_barcode=read1:0-4 2
 GGTT
 +
-~~~~
+CA..
 @BASCET__A1_A5_D8_H11:T:7|location_barcode=read1:0-4 2
 GGTT
 +
-~~~~
+-...
 @BASCET__A1_A5_D8_H11:T:8|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+;0:C
 @BASCET__A1_A5_D8_H11:T:9|location_barcode=read1:0-4 2
 CCCA
 +
-~~~~
+0:C/
 @BASCET__A1_A5_D8_H11:T:10|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+00<.
 @BASCET__A1_A5_D8_H11:T:11|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+C/AD
 @BASCET__A1_A5_D8_H11:T:12|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+00<<
 @BASCET__A1_A5_D8_H11:T:13|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+;/;:
 @BASCET__A1_A5_D8_H11:T:14|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+00;A
 @BASCET__A1_A5_D8_H11:T:15|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+0/9.
 @BASCET__A1_A5_D8_H11:T:16|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+C/.C
 @BASCET__A1_A5_D8_H11:T:17|location_barcode=read1:0-4 2
 CTCC
 +
-~~~~
+00;:
 @BASCET__A1_A5_D8_H11:T:18|location_barcode=read1:0-4 2
 CCCT
 +
-~~~~
+</./
 @BASCET__A1_A5_D8_H11:T:19|location_barcode=read1:0-4 2
 CCGG
 +
-~~~~
+00.-
 @BASCET__A1_A5_D8_H11:T:20|location_barcode=read1:0-4 2
 CCGG
 +
-~~~~
+00.-
 @BASCET__A1_A5_E9_H11:T:0|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+/;--
 @BASCET__A1_A5_E9_H11:T:1|location_barcode=read1:0-4 2
 GGTC
 +
-~~~~
+--.9
 @BASCET__A1_A5_E9_H11:T:2|location_barcode=read1:0-4 2
 AGGT
 +
-~~~~
+0F0B
 @BASCET__A1_A5_E9_H11:T:3|location_barcode=read1:0-4 2
 AGGT
 +
-~~~~
+9BF9
 @BASCET__A1_A5_E9_H11:T:4|location_barcode=read1:0-4 2
 GGTT
 +
-~~~~
+/00;
 @BASCET__A1_A5_E9_H11:T:5|location_barcode=read1:0-4 2
 GTTT
 +
-~~~~
+/00;
 @BASCET__A1_A5_E9_H11:T:6|location_barcode=read1:0-4 2
 GTTT
 +
-~~~~
+.;..
 @BASCET__A1_A5_E9_H11:T:7|location_barcode=read1:0-4 2
 AGGT
 +
-~~~~
+0<0;
 @BASCET__A1_A5_E9_H11:T:8|location_barcode=read1:0-4 2
 GGGT
 +
-~~~~
+/0.;
 @BASCET__A1_A5_E9_H11:T:9|location_barcode=read1:0-4 2
 GGGT
 +
-~~~~
+/;.:
 @BASCET__A1_A5_E9_H11:T:10|location_barcode=read1:0-4 2
 CCGT
 +
-~~~~
+<<..
 @BASCET__A1_A5_E9_H11:T:11|location_barcode=read1:0-4 2
 GGAG
 +
-~~~~
+.--:
 @BASCET__A1_A5_E9_H11:T:12|location_barcode=read1:0-4 2
 CCGT
 +
-~~~~
+00;.
 @BASCET__A1_A5_E9_H11:T:13|location_barcode=read1:0-4 2
 GCGG
 +
-~~~~
+:0-9
 @BASCET__A1_A5_E9_H11:T:14|location_barcode=read1:0-4 2
 GGGG
 +
-~~~~
+?.;-
 @BASCET__A1_A5_E9_H11:T:15|location_barcode=read1:0-4 2
 GGGG
 +
-~~~~
+?.;@
 @BASCET__A1_A5_F9_H11:T:0|location_barcode=read1:0-4 2
 ACCC
 +
-~~~~
+90;.
 @BASCET__A1_A5_F9_H11:T:1|location_barcode=read1:0-4 2
 ATTC
 +
-~~~~
+0<0;
 @BASCET__A1_A5_F9_H11:T:2|location_barcode=read1:0-4 2
 ATTC
 +
-~~~~
+00:0
 @BASCET__A1_A5_F9_H11:T:3|location_barcode=read1:0-4 2
 ATTC
 +
-~~~~
+0==C
 @BASCET__A1_A5_F9_H11:T:4|location_barcode=read1:0-4 2
 ATTC
 +
-~~~~
+090;
 @BASCET__A1_A5_F9_H11:T:5|location_barcode=read1:0-4 2
 CATT
 +
-~~~~
+0000
 @BASCET__A1_A5_F9_H11:T:6|location_barcode=read1:0-4 2
 CGAT
 +
-~~~~
+0..;
 @BASCET__A1_A5_F9_H11:T:7|location_barcode=read1:0-4 2
 GTTT
 +
-~~~~
+;9/.
 @BASCET__A1_A5_F9_H11:T:8|location_barcode=read1:0-4 2
 AAAC
 +
-~~~~
+0009
 @BASCET__A1_A5_F9_H11:T:9|location_barcode=read1:0-4 2
 CCCG
 +
-~~~~
+C-A-
 @BASCET__A1_A5_F9_H11:T:10|location_barcode=read1:0-4 2
 CGGG
 +
-~~~~
+.-;-
 @BASCET__A1_A5_F9_H11:T:11|location_barcode=read1:0-4 2
 CTTC
 +
-~~~~
+////
 @BASCET__A1_A5_F9_H11:T:12|location_barcode=read1:0-4 2
 GCTT
 +
-~~~~
+---.
 @BASCET__A1_A5_F9_H11:T:13|location_barcode=read1:0-4 2
 GGAC
 +
-~~~~
+-:9-
 @BASCET__A1_A5_F9_H11:T:14|location_barcode=read1:0-4 2
 GGGA
 +
-~~~~
+..-.
 @BASCET__A1_A5_F9_H11:T:15|location_barcode=read1:0-4 2
 GGTA
 +
-~~~~
+.::.
 @BASCET__A1_A5_F9_H11:T:16|location_barcode=read1:0-4 2
 GGTT
 +
-~~~~
+;--.
 @BASCET__A1_A5_F9_H11:T:17|location_barcode=read1:0-4 2
 GTTT
 +
-~~~~
+..;.
 @BASCET__A1_A6_A7_H11:A:0|location_barcode=read1:0-4 2
 AGTG
 +
-~~~~
+-9-;
 @BASCET__A1_A6_A7_H11:A:1|location_barcode=read1:0-4 2
 AACC
 +
-~~~~
+00D<
 @BASCET__A1_A6_A7_H11:T:2|location_barcode=read1:0-4 2
 AGGT
 +
-~~~~
+0000
 @BASCET__A1_A6_A7_H11:T:3|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+;FF?
 @BASCET__A1_A6_A7_H11:T:4|location_barcode=read1:0-4 2
 GTTC
 +
-~~~~
+/;0;
 @BASCET__A1_A6_A7_H11:T:5|location_barcode=read1:0-4 2
 ATCC
 +
-~~~~
+0090
 @BASCET__A1_A6_A7_H11:T:6|location_barcode=read1:0-4 2
 CCTT
 +
-~~~~
+////
 @BASCET__A1_A6_A7_H11:A:7|location_barcode=read1:0-4 2
 AGGT
 +
-~~~~
+FHGE
 @BASCET__A1_A6_A7_H11:A:8|location_barcode=read1:0-4 2
 AGGT
 +
-~~~~
+GHGG
 @BASCET__A1_A6_A7_H11:T:9|location_barcode=read1:0-4 2
 CCCT
 +
-~~~~
+00/:
 @BASCET__A1_A6_A7_H11:T:10|location_barcode=read1:0-4 2
 CTTT
 +
-~~~~
+/9/;
 @BASCET__A1_A6_A7_H11:T:11|location_barcode=read1:0-4 2
 GGGG
 +
-~~~~
+@.99
 @BASCET__A1_A6_A7_H11:T:12|location_barcode=read1:0-4 2
 AACC
 +
-~~~~
+000/
 @BASCET__A1_A6_A7_H11:T:13|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+00<:
 @BASCET__A1_A6_A7_H11:T:14|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+000:
 @BASCET__A1_A6_A7_H11:T:15|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+00<<
 @BASCET__A1_A6_A7_H11:T:16|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+00/:
 @BASCET__A1_A6_A7_H11:T:17|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+09CF
 @BASCET__A1_A6_A7_H11:T:18|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+00;.
 @BASCET__A1_A6_A7_H11:T:19|location_barcode=read1:0-4 2
 CCCT
 +
-~~~~
+00//
 @BASCET__A1_A6_A7_H11:T:20|location_barcode=read1:0-4 2
 CGAC
 +
-~~~~
+0.--
 @BASCET__A1_A6_A7_H11:T:21|location_barcode=read1:0-4 2
 CTCC
 +
-~~~~
+:00/
 @BASCET__A1_A6_A7_H11:T:22|location_barcode=read1:0-4 2
 GCGG
 +
-~~~~
+/0:-
 @BASCET__A1_A6_A7_H11:T:23|location_barcode=read1:0-4 2
 GGGG
 +
-~~~~
+;0;.
 @BASCET__A1_A6_A7_H11:T:24|location_barcode=read1:0-4 2
 AGTT
 +
-~~~~
+0:0;
 @BASCET__A1_A6_A9_H11:T:0|location_barcode=read1:0-4 2
 AGTG
 +
-~~~~
+FGGH
 @BASCET__A1_A6_A9_H11:T:1|location_barcode=read1:0-4 2
 AACC
 +
-~~~~
+009/
 @BASCET__A1_A6_A9_H11:T:2|location_barcode=read1:0-4 2
 ACCC
 +
-~~~~
+;;0.
 @BASCET__A1_A6_A9_H11:T:3|location_barcode=read1:0-4 2
 ATCC
 +
-~~~~
+////
 @BASCET__A1_A6_A9_H11:T:4|location_barcode=read1:0-4 2
 ATCT
 +
-~~~~
+:000
 @BASCET__A1_A6_A9_H11:T:5|location_barcode=read1:0-4 2
 ATTT
 +
-~~~~
+.900
 @BASCET__A1_A6_A9_H11:T:6|location_barcode=read1:0-4 2
 GCCT
 +
-~~~~
+///;
 @BASCET__A1_A6_A9_H11:T:7|location_barcode=read1:0-4 2
 CCTG
 +
-~~~~
+G000
 @BASCET__A1_A6_A9_H11:T:8|location_barcode=read1:0-4 2
 GGTT
 +
-~~~~
+;000
 @BASCET__A1_A6_A9_H11:A:9|location_barcode=read1:0-4 2
 AACC
 +
-~~~~
+HGGE
 @BASCET__A1_A6_A9_H11:A:10|location_barcode=read1:0-4 2
 AACC
 +
-~~~~
+HGHG
 @BASCET__A1_A6_A9_H11:A:11|location_barcode=read1:0-4 2
 AACC
 +
-~~~~
+0D<C
 @BASCET__A1_A6_A9_H11:A:12|location_barcode=read1:0-4 2
 AACC
 +
-~~~~
+GFGG
 @BASCET__A1_A6_A9_H11:A:13|location_barcode=read1:0-4 2
 AACC
 +
-~~~~
+FFFG
 @BASCET__A1_A6_A9_H11:T:14|location_barcode=read1:0-4 2
 ACCC
 +
-~~~~
+000.
 @BASCET__A1_A6_A9_H11:T:15|location_barcode=read1:0-4 2
 ACCC
 +
-~~~~
+0:0.
 @BASCET__A1_A6_A9_H11:T:16|location_barcode=read1:0-4 2
 ACGC
 +
-~~~~
+00.-
 @BASCET__A1_A6_A9_H11:T:17|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+000.
 @BASCET__A1_A6_A9_H11:T:18|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+CB0G
 @BASCET__A1_A6_A9_H11:T:19|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+H0/.
 @BASCET__A1_A6_A9_H11:T:20|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+;0/.
 @BASCET__A1_A6_A9_H11:T:21|location_barcode=read1:0-4 2
 AACC
 +
-~~~~
+000:
 @BASCET__A1_A6_A9_H11:T:22|location_barcode=read1:0-4 2
 AATC
 +
-~~~~
+0000
 @BASCET__A1_A6_A9_H11:T:23|location_barcode=read1:0-4 2
 ATTA
 +
-~~~~
+0000
 @BASCET__A1_A6_A9_H11:T:24|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+00/.
 @BASCET__A1_A6_A9_H11:T:25|location_barcode=read1:0-4 2
 GTTA
 +
-~~~~
+-;::
 @BASCET__A1_A6_A9_H11:T:26|location_barcode=read1:0-4 2
 GTTT
 +
-~~~~
+/;F0
 @BASCET__A1_A6_A9_H11:T:27|location_barcode=read1:0-4 2
 ACTA
 +
-~~~~
+0090
 @BASCET__A1_A6_A9_H11:T:28|location_barcode=read1:0-4 2
 GTTC
 +
-~~~~
+-::0
 @BASCET__A1_A6_A9_H11:T:29|location_barcode=read1:0-4 2
 GTTC
 +
-~~~~
+-:.0
 @BASCET__A1_A6_A9_H11:T:30|location_barcode=read1:0-4 2
 GTTC
 +
-~~~~
+-CG0
 @BASCET__A1_A6_A9_H11:T:31|location_barcode=read1:0-4 2
 GTTC
 +
-~~~~
+-;:0
 @BASCET__A1_A6_A9_H11:A:32|location_barcode=read1:0-4 2
 CGGG
 +
-~~~~
+-::-
 @BASCET__A1_A6_A9_H11:T:33|location_barcode=read1:0-4 2
 CCGG
 +
-~~~~
+:0;@
 @BASCET__A1_A6_A9_H11:T:34|location_barcode=read1:0-4 2
 CCGG
 +
-~~~~
+/;.-
 @BASCET__A1_A6_A9_H11:T:35|location_barcode=read1:0-4 2
 CGGG
 +
-~~~~
+:.-9
 @BASCET__A1_A6_A9_H11:T:36|location_barcode=read1:0-4 2
 CGGG
 +
-~~~~
+0.@F
 @BASCET__A1_A6_A9_H11:T:37|location_barcode=read1:0-4 2
 CGGG
 +
-~~~~
+/.@;
 @BASCET__A1_A6_A9_H11:T:38|location_barcode=read1:0-4 2
 GCCC
 +
-~~~~
+-.:.
 @BASCET__A1_A6_A9_H11:T:39|location_barcode=read1:0-4 2
 AAAC
 +
-~~~~
+0000
 @BASCET__A1_A6_A9_H11:T:40|location_barcode=read1:0-4 2
 AAAA
 +
-~~~~
+;0;:
 @BASCET__A1_A6_A9_H11:T:41|location_barcode=read1:0-4 2
 ATTT
 +
-~~~~
+00:0
 @BASCET__A1_A6_A9_H11:T:42|location_barcode=read1:0-4 2
 CATT
 +
-~~~~
+00CF
 @BASCET__A1_A6_A9_H11:T:43|location_barcode=read1:0-4 2
 CATT
 +
-~~~~
+GBBG
 @BASCET__A1_A6_A9_H11:T:44|location_barcode=read1:0-4 2
 CTTT
 +
-~~~~
+C0;0
 @BASCET__A1_A6_A9_H11:T:45|location_barcode=read1:0-4 2
 GAAC
 +
-~~~~
+-...
 @BASCET__A1_A6_B7_H11:T:0|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+00/.
 @BASCET__A1_A6_B7_H11:T:1|location_barcode=read1:0-4 2
 CCTC
 +
-~~~~
+0000
 @BASCET__A1_A6_B7_H11:T:2|location_barcode=read1:0-4 2
 GCTC
 +
-~~~~
+-..<
 @BASCET__A1_A6_B7_H11:T:3|location_barcode=read1:0-4 2
 GCTC
 +
-~~~~
+-..9
 @BASCET__A1_A6_B7_H11:T:4|location_barcode=read1:0-4 2
 AAAA
 +
-~~~~
+//B/
 @BASCET__A1_A6_B7_H11:T:5|location_barcode=read1:0-4 2
 AAAA
 +
-~~~~
+0//;
 @BASCET__A1_A6_B7_H11:T:6|location_barcode=read1:0-4 2
 AGGT
 +
-~~~~
+0;00
 @BASCET__A1_A6_B7_H11:T:7|location_barcode=read1:0-4 2
 AGGT
 +
-~~~~
+E00:
 @BASCET__A1_A6_B7_H11:T:8|location_barcode=read1:0-4 2
 AGTT
 +
-~~~~
+CG:0
 @BASCET__A1_A6_B7_H11:T:9|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+00:/
 @BASCET__A1_A6_B7_H11:T:10|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+00D/
 @BASCET__A1_A6_B7_H11:T:11|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+;0C.
 @BASCET__A1_A6_B9_H11:T:0|location_barcode=read1:0-4 2
 GGTA
 +
-~~~~
+-.90
 @BASCET__A1_A6_B9_H11:T:1|location_barcode=read1:0-4 2
 GGTT
 +
-~~~~
+-.:.
 @BASCET__A1_A6_B9_H11:T:2|location_barcode=read1:0-4 2
 GTTA
 +
-~~~~
+-9.9
 @BASCET__A1_A6_B9_H11:T:3|location_barcode=read1:0-4 2
 GTTA
 +
-~~~~
+-9.;
 @BASCET__A1_A6_B9_H11:T:4|location_barcode=read1:0-4 2
 GTTT
 +
-~~~~
+-.<.
 @BASCET__A1_A6_B9_H11:T:5|location_barcode=read1:0-4 2
 GCTT
 +
-~~~~
+:..;
 @BASCET__A1_A6_B9_H11:T:6|location_barcode=read1:0-4 2
 GGGA
 +
-~~~~
+:09/
 @BASCET__A1_A6_B9_H11:T:7|location_barcode=read1:0-4 2
 GGGG
 +
-~~~~
+-.-;
 @BASCET__A1_A6_B9_H11:T:8|location_barcode=read1:0-4 2
 GTGG
 +
-~~~~
+-...
 @BASCET__A1_A6_B9_H11:A:9|location_barcode=read1:0-4 2
 AGTG
 +
-~~~~
+@@A-
 @BASCET__A1_A6_B9_H11:A:10|location_barcode=read1:0-4 2
 AGTG
 +
-~~~~
+<@;A
 @BASCET__A1_A6_B9_H11:A:11|location_barcode=read1:0-4 2
 AGGT
 +
-~~~~
+FFF9
 @BASCET__A1_A6_B9_H11:T:12|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+B0/.
 @BASCET__A1_A6_B9_H11:T:13|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+B/..
 @BASCET__A1_A6_B9_H11:T:14|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+0;/.
 @BASCET__A1_A6_B9_H11:T:15|location_barcode=read1:0-4 2
 CCCG
 +
-~~~~
+;0/-
 @BASCET__A1_A6_B9_H11:T:16|location_barcode=read1:0-4 2
 CCCG
 +
-~~~~
+00/-
 @BASCET__A1_A6_B9_H11:T:17|location_barcode=read1:0-4 2
 CCCT
 +
-~~~~
+;;//
 @BASCET__A1_A6_B9_H11:T:18|location_barcode=read1:0-4 2
 CCGC
 +
-~~~~
+CF.-
 @BASCET__A1_A6_B9_H11:T:19|location_barcode=read1:0-4 2
 CCGT
 +
-~~~~
+F0..
 @BASCET__A1_A6_B9_H11:T:20|location_barcode=read1:0-4 2
 CCGT
 +
-~~~~
+;9.9
 @BASCET__A1_A6_B9_H11:T:21|location_barcode=read1:0-4 2
 CCTC
 +
-~~~~
+///9
 @BASCET__A1_A6_B9_H11:T:22|location_barcode=read1:0-4 2
 GTTT
 +
-~~~~
+-;G.
 @BASCET__A1_A6_B9_H11:T:23|location_barcode=read1:0-4 2
 GTTT
 +
-~~~~
+/;;0
 @BASCET__A1_A6_C8_H11:T:0|location_barcode=read1:0-4 2
 CTTT
 +
-~~~~
+GGGH
 @BASCET__A1_A6_C8_H11:T:1|location_barcode=read1:0-4 2
 ATTT
 +
-~~~~
+11<1
 @BASCET__A1_A6_C8_H11:T:2|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+9BF?
 @BASCET__A1_A6_C8_H11:T:3|location_barcode=read1:0-4 2
 GTTC
 +
-~~~~
+/BB0
 @BASCET__A1_A6_C8_H11:T:4|location_barcode=read1:0-4 2
 AGCC
 +
-~~~~
+00:/
 @BASCET__A1_A6_C8_H11:T:5|location_barcode=read1:0-4 2
 CGCC
 +
-~~~~
+0...
 @BASCET__A1_A6_C8_H11:T:6|location_barcode=read1:0-4 2
 GAAG
 +
-~~~~
+-:;/
 @BASCET__A1_A6_C8_H11:T:7|location_barcode=read1:0-4 2
 GAAG
 +
-~~~~
+-/;/
 @BASCET__A1_A6_C8_H11:T:8|location_barcode=read1:0-4 2
 GGAA
 +
-~~~~
+-../
 @BASCET__A1_A6_C8_H11:T:9|location_barcode=read1:0-4 2
 GTTA
 +
-~~~~
+-;.0
 @BASCET__A1_A6_C8_H11:T:10|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+09:.
 @BASCET__A1_A6_C8_H11:T:11|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+00<B
 @BASCET__A1_A6_C8_H11:T:12|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+00BD
 @BASCET__A1_A6_C8_H11:T:13|location_barcode=read1:0-4 2
 ATAA
 +
-~~~~
+.090
 @BASCET__A1_A6_C8_H11:T:14|location_barcode=read1:0-4 2
 GTAT
 +
-~~~~
+:://
 @BASCET__A1_A6_C8_H11:T:15|location_barcode=read1:0-4 2
 GTAT
 +
-~~~~
+-.//
 @BASCET__A1_A6_C8_H11:T:16|location_barcode=read1:0-4 2
 GGGT
 +
-~~~~
+A-.;
 @BASCET__A1_A6_C8_H11:T:17|location_barcode=read1:0-4 2
 GGGT
 +
-~~~~
+9-.:
 @BASCET__A1_A6_C8_H11:T:18|location_barcode=read1:0-4 2
 GGTT
 +
-~~~~
+--.=
 @BASCET__A1_A6_C8_H11:T:19|location_barcode=read1:0-4 2
 GGTT
 +
-~~~~
+-.<9
 @BASCET__A1_A6_C8_H11:T:20|location_barcode=read1:0-4 2
 GGTT
 +
-~~~~
+;-.;
 @BASCET__A1_A6_D9_H11:T:0|location_barcode=read1:0-4 2
 CTTC
 +
-~~~~
+000;
 @BASCET__A1_A6_D9_H11:T:1|location_barcode=read1:0-4 2
 AGCC
 +
-~~~~
+00:.
 @BASCET__A1_A6_D9_H11:T:2|location_barcode=read1:0-4 2
 CAGC
 +
-~~~~
+B90/
 @BASCET__A1_A6_D9_H11:T:3|location_barcode=read1:0-4 2
 CCCT
 +
-~~~~
+/.::
 @BASCET__A1_A6_D9_H11:T:4|location_barcode=read1:0-4 2
 CGCC
 +
-~~~~
+0.;@
 @BASCET__A1_A6_D9_H11:T:5|location_barcode=read1:0-4 2
 GCCT
 +
-~~~~
+//<0
 @BASCET__A1_A6_D9_H11:T:6|location_barcode=read1:0-4 2
 AGGT
 +
-~~~~
+:BFF
 @BASCET__A1_A6_D9_H11:T:7|location_barcode=read1:0-4 2
 AGGT
 +
-~~~~
+000;
 @BASCET__A1_A6_D9_H11:T:8|location_barcode=read1:0-4 2
 AGTA
 +
-~~~~
+/99/
 @BASCET__A1_A6_D9_H11:T:9|location_barcode=read1:0-4 2
 AGTT
 +
-~~~~
+099C
 @BASCET__A1_A6_D9_H11:T:10|location_barcode=read1:0-4 2
 AGTT
 +
-~~~~
+0;0:
 @BASCET__A1_A6_D9_H11:T:11|location_barcode=read1:0-4 2
 GGTT
 +
-~~~~
+/00;
 @BASCET__A1_A6_D9_H11:T:12|location_barcode=read1:0-4 2
 GTTA
 +
-~~~~
+-..9
 @BASCET__A1_A6_D9_H11:T:13|location_barcode=read1:0-4 2
 CACA
 +
-~~~~
+00:0
 @BASCET__A1_A6_D9_H11:T:14|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+900/
 @BASCET__A1_A6_D9_H11:T:15|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+00::
 @BASCET__A1_A6_D9_H11:T:16|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+00;C
 @BASCET__A1_A6_D9_H11:T:17|location_barcode=read1:0-4 2
 CCCT
 +
-~~~~
+0///
 @BASCET__A1_A6_D9_H11:T:18|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+00CB
 @BASCET__A1_A6_D9_H11:T:19|location_barcode=read1:0-4 2
 CACA
 +
-~~~~
+//;/
 @BASCET__A1_A6_D9_H11:T:20|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+000.
 @BASCET__A1_A6_D9_H11:T:21|location_barcode=read1:0-4 2
 CATC
 +
-~~~~
+0000
 @BASCET__A1_A6_D9_H11:T:22|location_barcode=read1:0-4 2
 CTAC
 +
-~~~~
+0000
 @BASCET__A1_A6_D9_H11:T:23|location_barcode=read1:0-4 2
 CTAC
 +
-~~~~
+00;0
 @BASCET__A1_A6_D9_H11:T:24|location_barcode=read1:0-4 2
 AATT
 +
-~~~~
+00;B
 @BASCET__A1_A6_D9_H11:T:25|location_barcode=read1:0-4 2
 AATT
 +
-~~~~
+.0;C
 @BASCET__A1_A6_D9_H11:T:26|location_barcode=read1:0-4 2
 GGGT
 +
-~~~~
+A.-;
 @BASCET__A1_A6_D9_H11:T:27|location_barcode=read1:0-4 2
 GGTT
 +
-~~~~
+GB9E
 @BASCET__A1_A6_D9_H11:T:28|location_barcode=read1:0-4 2
 GGTT
 +
-~~~~
+B..:
 @BASCET__A1_A6_D9_H11:T:29|location_barcode=read1:0-4 2
 GGTT
 +
-~~~~
+?ADG
 @BASCET__A1_A6_D9_H11:T:30|location_barcode=read1:0-4 2
 GGTT
 +
-~~~~
+?...
 @BASCET__A1_A6_D9_H11:T:31|location_barcode=read1:0-4 2
 GGCC
 +
-~~~~
+-...
 @BASCET__A1_A6_D9_H11:T:32|location_barcode=read1:0-4 2
 GGCT
 +
-~~~~
+-;./
 @BASCET__A1_A6_D9_H11:T:33|location_barcode=read1:0-4 2
 GGTC
 +
-~~~~
+-../
 @BASCET__A1_A6_D9_H11:T:34|location_barcode=read1:0-4 2
 CTGC
 +
-~~~~
+////
 @BASCET__A1_A6_D9_H11:T:35|location_barcode=read1:0-4 2
 CTGG
 +
-~~~~
+//;/
 @BASCET__A1_A6_D9_H11:T:36|location_barcode=read1:0-4 2
 CTGG
 +
-~~~~
+//;/
 @BASCET__A1_A6_D9_H11:T:37|location_barcode=read1:0-4 2
 CTGG
 +
-~~~~
+//:/
 @BASCET__A1_A6_D9_H11:T:38|location_barcode=read1:0-4 2
 GCCC
 +
-~~~~
+///.
 @BASCET__A1_A6_D9_H11:T:39|location_barcode=read1:0-4 2
 GCTG
 +
-~~~~
+-.9.
 @BASCET__A1_A6_E7_H11:T:0|location_barcode=read1:0-4 2
 AACC
 +
-~~~~
+?1?<
 @BASCET__A1_A6_E7_H11:T:1|location_barcode=read1:0-4 2
 AACC
 +
-~~~~
+<0;.
 @BASCET__A1_A6_E7_H11:T:2|location_barcode=read1:0-4 2
 AACC
 +
-~~~~
+0==.
 @BASCET__A1_A6_E7_H11:T:3|location_barcode=read1:0-4 2
 AACC
 +
-~~~~
+0G0G
 @BASCET__A1_A6_E7_H11:T:4|location_barcode=read1:0-4 2
 AACC
 +
-~~~~
+CCHF
 @BASCET__A1_A6_E7_H11:T:5|location_barcode=read1:0-4 2
 ACCG
 +
-~~~~
+0;9-
 @BASCET__A1_A6_E7_H11:T:6|location_barcode=read1:0-4 2
 ACCG
 +
-~~~~
+0;CC
 @BASCET__A1_A6_E7_H11:T:7|location_barcode=read1:0-4 2
 ACTT
 +
-~~~~
+/9//
 @BASCET__A1_A6_E7_H11:T:8|location_barcode=read1:0-4 2
 ACCC
 +
-~~~~
+.;C/
 @BASCET__A1_A6_E7_H11:T:9|location_barcode=read1:0-4 2
 CCAC
 +
-~~~~
+;90:
 @BASCET__A1_A6_E7_H11:T:10|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+0;B.
 @BASCET__A1_A6_E7_H11:T:11|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+0;0:
 @BASCET__A1_A6_E7_H11:T:12|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+00.;
 @BASCET__A1_A6_E7_H11:T:13|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+9/B.
 @BASCET__A1_A6_E7_H11:T:14|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+0;:.
 @BASCET__A1_A6_E7_H11:T:15|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+90/C
 @BASCET__A1_A6_E7_H11:T:16|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+;09.
 @BASCET__A1_A6_E7_H11:T:17|location_barcode=read1:0-4 2
 CCGC
 +
-~~~~
+00--
 @BASCET__A1_A6_E7_H11:T:18|location_barcode=read1:0-4 2
 CCTG
 +
-~~~~
+0000
 @BASCET__A1_A6_E7_H11:T:19|location_barcode=read1:0-4 2
 ACCT
 +
-~~~~
+;090
 @BASCET__A1_A6_E7_H11:T:20|location_barcode=read1:0-4 2
 GGTT
 +
-~~~~
+/090
 @BASCET__A1_A6_E8_H11:T:0|location_barcode=read1:0-4 2
 AATA
 +
-~~~~
+:000
 @BASCET__A1_A6_E8_H11:T:1|location_barcode=read1:0-4 2
 AATT
 +
-~~~~
+0000
 @BASCET__A1_A6_E8_H11:T:2|location_barcode=read1:0-4 2
 CAAC
 +
-~~~~
+00;0
 @BASCET__A1_A6_E8_H11:T:3|location_barcode=read1:0-4 2
 CAAC
 +
-~~~~
+9;B0
 @BASCET__A1_A6_E8_H11:T:4|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+;:CA
 @BASCET__A1_A6_E8_H11:T:5|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+;0B.
 @BASCET__A1_A6_E8_H11:T:6|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+90/.
 @BASCET__A1_A6_E8_H11:T:7|location_barcode=read1:0-4 2
 GTTC
 +
-~~~~
+/<:<
 @BASCET__A1_A6_E8_H11:T:8|location_barcode=read1:0-4 2
 GTTC
 +
-~~~~
+/<1<
 @BASCET__A1_A6_E8_H11:T:9|location_barcode=read1:0-4 2
 AAAC
 +
-~~~~
+0900
 @BASCET__A1_A6_E8_H11:T:10|location_barcode=read1:0-4 2
 AAAC
 +
-~~~~
+;000
 @BASCET__A1_A6_E8_H11:T:11|location_barcode=read1:0-4 2
 AATC
 +
-~~~~
+;<00
 @BASCET__A1_A6_E8_H11:T:12|location_barcode=read1:0-4 2
 AATT
 +
-~~~~
+0000
 @BASCET__A1_A6_E8_H11:T:13|location_barcode=read1:0-4 2
 AGCA
 +
-~~~~
+0000
 @BASCET__A1_A6_E8_H11:T:14|location_barcode=read1:0-4 2
 CAAA
 +
-~~~~
+90;0
 @BASCET__A1_A6_E8_H11:T:15|location_barcode=read1:0-4 2
 GCCA
 +
-~~~~
+/0/9
 @BASCET__A1_A6_E8_H11:T:16|location_barcode=read1:0-4 2
 GTAA
 +
-~~~~
+:00;
 @BASCET__A1_A6_E8_H11:T:17|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+CCGF
 @BASCET__A1_A6_E8_H11:T:18|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+111?
 @BASCET__A1_A6_E8_H11:T:19|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+909.
 @BASCET__A1_A6_E8_H11:T:20|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+00;C
 @BASCET__A1_A6_E8_H11:T:21|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+00;A
 @BASCET__A1_A6_E8_H11:T:22|location_barcode=read1:0-4 2
 CTCT
 +
-~~~~
+9000
 @BASCET__A1_A6_F7_H11:T:0|location_barcode=read1:0-4 2
 ATCG
 +
-~~~~
+000.
 @BASCET__A1_A6_F7_H11:T:1|location_barcode=read1:0-4 2
 CCCT
 +
-~~~~
+9/..
 @BASCET__A1_A6_F7_H11:T:2|location_barcode=read1:0-4 2
 CGGC
 +
-~~~~
+0--:
 @BASCET__A1_A6_F7_H11:T:3|location_barcode=read1:0-4 2
 GTTA
 +
-~~~~
+/<00
 @BASCET__A1_A6_F7_H11:T:4|location_barcode=read1:0-4 2
 GTTA
 +
-~~~~
+/;F0
 @BASCET__A1_A6_F7_H11:T:5|location_barcode=read1:0-4 2
 GTTA
 +
-~~~~
+:;00
 @BASCET__A1_A6_F7_H11:T:6|location_barcode=read1:0-4 2
 GTTA
 +
-~~~~
+/090
 @BASCET__A1_A6_F7_H11:T:7|location_barcode=read1:0-4 2
 GTTC
 +
-~~~~
+/<:0
 @BASCET__A1_A6_F7_H11:T:8|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+9/..
 @BASCET__A1_A6_F7_H11:T:9|location_barcode=read1:0-4 2
 AGTT
 +
-~~~~
+00<:
 @BASCET__A1_A6_F7_H11:T:10|location_barcode=read1:0-4 2
 AGTT
 +
-~~~~
+0<<=
 @BASCET__A1_A6_F7_H11:T:11|location_barcode=read1:0-4 2
 AGTT
 +
-~~~~
+9000
 @BASCET__A1_A6_F7_H11:T:12|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+;BFD
 @BASCET__A1_A6_F7_H11:T:13|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+BF/.
 @BASCET__A1_A6_F7_H11:T:14|location_barcode=read1:0-4 2
 CCGG
 +
-~~~~
+;/9-
 @BASCET__A1_A6_F7_H11:T:15|location_barcode=read1:0-4 2
 GTTC
 +
-~~~~
+:;;0
 @BASCET__A1_A6_F7_H11:T:16|location_barcode=read1:0-4 2
 GTTT
 +
-~~~~
+/;C0
 @BASCET__A1_A6_F7_H11:T:17|location_barcode=read1:0-4 2
 AGCG
 +
-~~~~
+000-
 @BASCET__A1_A6_F7_H11:T:18|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+0/.9
 @BASCET__A1_A6_F7_H11:T:19|location_barcode=read1:0-4 2
 GAGC
 +
-~~~~
+0090
 @BASCET__A1_A6_F7_H11:T:20|location_barcode=read1:0-4 2
 GCGC
 +
-~~~~
+;0--
 @BASCET__A1_A6_F7_H11:T:21|location_barcode=read1:0-4 2
 GTAA
 +
-~~~~
+@.00
 @BASCET__A1_A6_F7_H11:T:22|location_barcode=read1:0-4 2
 GTAA
 +
-~~~~
+-.90
 @BASCET__A1_A6_F7_H11:T:23|location_barcode=read1:0-4 2
 GTAA
 +
-~~~~
+?.<C
 @BASCET__A1_A6_F7_H11:T:24|location_barcode=read1:0-4 2
 GTAA
 +
-~~~~
+-91<
 @BASCET__A1_A6_F7_H11:T:25|location_barcode=read1:0-4 2
 GAAG
 +
-~~~~
+-90/
 @BASCET__A1_A6_F7_H11:T:26|location_barcode=read1:0-4 2
 AACC
 +
-~~~~
+0909
 @BASCET__A1_A6_F7_H11:T:27|location_barcode=read1:0-4 2
 CAAC
 +
-~~~~
+:00;
 @BASCET__A1_A6_F7_H11:T:28|location_barcode=read1:0-4 2
 CCAA
 +
-~~~~
+00;0
 @BASCET__A1_A6_F7_H11:T:29|location_barcode=read1:0-4 2
 GACA
 +
-~~~~
+0000
 @BASCET__A1_A6_F7_H11:T:30|location_barcode=read1:0-4 2
 GCAA
 +
-~~~~
+0;00
 @BASCET__A1_A6_F7_H11:T:31|location_barcode=read1:0-4 2
 GCAA
 +
-~~~~
+0009
 @BASCET__A1_A6_F7_H11:T:32|location_barcode=read1:0-4 2
 GCAA
 +
-~~~~
+0:0C
 @BASCET__A1_A6_F7_H11:T:33|location_barcode=read1:0-4 2
 GCAA
 +
-~~~~
+/000
 @BASCET__A1_A6_F7_H11:T:34|location_barcode=read1:0-4 2
 GCAA
 +
-~~~~
+0CFB
 @BASCET__A1_A6_F7_H11:T:35|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+09CA
 @BASCET__A1_A6_F7_H11:T:36|location_barcode=read1:0-4 2
 ACCC
 +
-~~~~
+.;0/
 @BASCET__A1_A6_F7_H11:T:37|location_barcode=read1:0-4 2
 CCAC
 +
-~~~~
+0000
 @BASCET__A1_A6_F7_H11:T:38|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+;F/.
 @BASCET__A1_A6_F7_H11:T:39|location_barcode=read1:0-4 2
 AGGT
 +
-~~~~
+000:
 @BASCET__A1_A6_F7_H11:T:40|location_barcode=read1:0-4 2
 AGGT
 +
-~~~~
+0;B0
 @BASCET__A1_A6_F7_H11:T:41|location_barcode=read1:0-4 2
 CATT
 +
-~~~~
+00=0
 @BASCET__A1_A6_F7_H11:T:42|location_barcode=read1:0-4 2
 CATT
 +
-~~~~
+=00=
 @BASCET__A1_A6_F7_H11:T:43|location_barcode=read1:0-4 2
 CTTT
 +
-~~~~
+<00<
 @BASCET__A1_A6_F9_H11:T:0|location_barcode=read1:0-4 2
 AAAC
 +
-~~~~
+;000
 @BASCET__A1_A6_F9_H11:T:1|location_barcode=read1:0-4 2
 AATA
 +
-~~~~
+0000
 @BASCET__A1_A6_F9_H11:T:2|location_barcode=read1:0-4 2
 ACCC
 +
-~~~~
+/9/.
 @BASCET__A1_A6_F9_H11:T:3|location_barcode=read1:0-4 2
 CAAA
 +
-~~~~
+0;00
 @BASCET__A1_A6_F9_H11:T:4|location_barcode=read1:0-4 2
 CTCC
 +
-~~~~
+0900
 @BASCET__A1_A6_F9_H11:T:5|location_barcode=read1:0-4 2
 GCTA
 +
-~~~~
+....
 @BASCET__A1_A6_F9_H11:T:6|location_barcode=read1:0-4 2
 GTCA
 +
-~~~~
+;.//
 @BASCET__A1_A6_F9_H11:T:7|location_barcode=read1:0-4 2
 GTTG
 +
-~~~~
+-...
 @BASCET__A1_A6_F9_H11:T:8|location_barcode=read1:0-4 2
 GTTT
 +
-~~~~
+-9..
 @BASCET__A1_A6_F9_H11:T:9|location_barcode=read1:0-4 2
 AGGG
 +
-~~~~
+:<FG
 @BASCET__A1_A6_F9_H11:T:10|location_barcode=read1:0-4 2
 AGGG
 +
-~~~~
+00;A
 @BASCET__A1_A6_F9_H11:T:11|location_barcode=read1:0-4 2
 AGGG
 +
-~~~~
+;;CF
 @BASCET__A1_A6_F9_H11:T:12|location_barcode=read1:0-4 2
 GGGG
 +
-~~~~
+<<FD
 @BASCET__A1_A6_F9_H11:T:13|location_barcode=read1:0-4 2
 GGGG
 +
-~~~~
+-AD-
 @BASCET__A1_A6_F9_H11:T:14|location_barcode=read1:0-4 2
 GGGG
 +
-~~~~
+-9.-
 @BASCET__A1_A6_F9_H11:T:15|location_barcode=read1:0-4 2
 GGGT
 +
-~~~~
+-.-;
 @BASCET__A1_A6_F9_H11:T:16|location_barcode=read1:0-4 2
 GGTG
 +
-~~~~
+A-..
 @BASCET__A1_A6_F9_H11:T:24|location_barcode=read1:0-4 2
 ACTT
 +
-~~~~
+///:
 @BASCET__A1_A6_F9_H11:T:25|location_barcode=read1:0-4 2
 CCTC
 +
-~~~~
+////
 @BASCET__A1_A6_F9_H11:T:26|location_barcode=read1:0-4 2
 CCTT
 +
-~~~~
+0000
 @BASCET__A1_A6_F9_H11:T:27|location_barcode=read1:0-4 2
 CCTT
 +
-~~~~
+000:
 @BASCET__A1_A6_F9_H11:T:28|location_barcode=read1:0-4 2
 CTCT
 +
-~~~~
+///9
 @BASCET__A1_A6_F9_H11:T:29|location_barcode=read1:0-4 2
 GTCC
 +
-~~~~
+-.<0
 @BASCET__A1_A6_F9_H11:T:30|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+;0/.
 @BASCET__A1_A6_F9_H11:T:31|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+:0FA
 @BASCET__A1_A6_F9_H11:T:32|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+00:.
 @BASCET__A1_A6_F9_H11:T:33|location_barcode=read1:0-4 2
 CTTT
 +
-~~~~
+0000
 @BASCET__A1_A6_F9_H11:T:34|location_barcode=read1:0-4 2
 CTTT
 +
-~~~~
+0000
 @BASCET__A1_A6_F9_H11:T:35|location_barcode=read1:0-4 2
 CTTT
 +
-~~~~
+0:11
 @BASCET__A1_A6_F9_H11:T:36|location_barcode=read1:0-4 2
 AGGT
 +
-~~~~
+0000
 @BASCET__A1_A6_F9_H11:T:37|location_barcode=read1:0-4 2
 ACCC
 +
-~~~~
+;0C:
 @BASCET__A1_A6_F9_H11:T:38|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+000:
 @BASCET__A1_A6_F9_H11:T:39|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+11G0
 @BASCET__A1_A6_F9_H11:T:40|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+H1FH
 @BASCET__A1_A6_F9_H11:T:41|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+00<<
 @BASCET__A1_A6_F9_H11:T:42|location_barcode=read1:0-4 2
 AAAG
 +
-~~~~
+.;00
 @BASCET__A1_A6_F9_H11:T:43|location_barcode=read1:0-4 2
 AGCC
 +
-~~~~
+000/
 @BASCET__A1_A6_F9_H11:T:44|location_barcode=read1:0-4 2
 AGCG
 +
-~~~~
+9;09
 @BASCET__A1_A6_F9_H11:T:45|location_barcode=read1:0-4 2
 CGCC
 +
-~~~~
+0..:
 @BASCET__A1_A6_F9_H11:T:46|location_barcode=read1:0-4 2
 CGCC
 +
-~~~~
+0..-
 @BASCET__A1_A6_F9_H11:T:47|location_barcode=read1:0-4 2
 CTCC
 +
-~~~~
+////
 @BASCET__A1_A6_F9_H11:T:48|location_barcode=read1:0-4 2
 GAAG
 +
-~~~~
+-/;/
 @BASCET__A1_A6_F9_H11:T:49|location_barcode=read1:0-4 2
 GAAG
 +
-~~~~
+-/0/
 @BASCET__A1_A6_F9_H11:T:50|location_barcode=read1:0-4 2
 GGAA
 +
-~~~~
+-..0
 @BASCET__A1_A6_F9_H11:T:51|location_barcode=read1:0-4 2
 GTAA
 +
-~~~~
+-.0;
 @BASCET__A1_A6_F9_H11:T:52|location_barcode=read1:0-4 2
 GTAA
 +
-~~~~
+-;00
 @BASCET__A1_A6_F9_H11:T:53|location_barcode=read1:0-4 2
 ACTT
 +
-~~~~
+G101
 @BASCET__A1_A6_F9_H11:T:54|location_barcode=read1:0-4 2
 AGGG
 +
-~~~~
+000.
 @BASCET__A1_A6_F9_H11:T:55|location_barcode=read1:0-4 2
 GGTT
 +
-~~~~
+/0:0
 @BASCET__A1_A6_F9_H11:T:56|location_barcode=read1:0-4 2
 ACTA
 +
-~~~~
+00:0
 @BASCET__A1_A6_F9_H11:T:57|location_barcode=read1:0-4 2
 ACTA
 +
-~~~~
+0000
 @BASCET__A1_A6_F9_H11:T:58|location_barcode=read1:0-4 2
 ATTT
 +
-~~~~
+0000
 @BASCET__A1_A6_F9_H11:T:59|location_barcode=read1:0-4 2
 ACCC
 +
-~~~~
+00=9
 @BASCET__A1_A6_F9_H11:T:60|location_barcode=read1:0-4 2
 ACCC
 +
-~~~~
+000.
 @BASCET__A1_A6_F9_H11:T:61|location_barcode=read1:0-4 2
 GGTT
 +
-~~~~
+:.;.
 @BASCET__A1_A6_F9_H11:T:62|location_barcode=read1:0-4 2
 GGTT
 +
-~~~~
+/0;0
 @BASCET__A1_A6_F9_H11:T:63|location_barcode=read1:0-4 2
 GGTT
 +
-~~~~
+-...
 @BASCET__A1_A6_F9_H11:A:64|location_barcode=read1:0-4 2
 TTTT
 +
-~~~~
+GGGG
 @BASCET__A1_A6_F9_H11:T:65|location_barcode=read1:0-4 2
 AACC
 +
-~~~~
+009B
 @BASCET__A1_A6_F9_H11:T:66|location_barcode=read1:0-4 2
 ACCC
 +
-~~~~
+C0<E
 @BASCET__A1_A6_F9_H11:T:67|location_barcode=read1:0-4 2
 AGCC
 +
-~~~~
+C10<
 @BASCET__A1_A6_F9_H11:T:68|location_barcode=read1:0-4 2
 AGCC
 +
-~~~~
+00;B
 @BASCET__A1_A6_F9_H11:T:69|location_barcode=read1:0-4 2
 AGCC
 +
-~~~~
+009/
 @BASCET__A1_A6_F9_H11:T:70|location_barcode=read1:0-4 2
 GCCT
 +
-~~~~
+1CC0
 @BASCET__A1_A6_F9_H11:T:71|location_barcode=read1:0-4 2
 GGTT
 +
-~~~~
+9.9.
 @BASCET__A1_A6_F9_H11:T:72|location_barcode=read1:0-4 2
 ATCC
 +
-~~~~
+000;
 @BASCET__A1_A6_F9_H11:T:73|location_barcode=read1:0-4 2
 ATGC
 +
-~~~~
+0///
 @BASCET__A1_A6_F9_H11:T:74|location_barcode=read1:0-4 2
 GAAG
 +
-~~~~
+-/0/
 @BASCET__A1_A6_F9_H11:T:75|location_barcode=read1:0-4 2
 GAAG
 +
-~~~~
+-/0:
 @BASCET__A1_A6_F9_H11:T:76|location_barcode=read1:0-4 2
 GCCC
 +
-~~~~
+.9/;
 @BASCET__A1_A6_F9_H11:T:77|location_barcode=read1:0-4 2
 AACC
 +
-~~~~
+.10.
 @BASCET__A1_A6_F9_H11:T:78|location_barcode=read1:0-4 2
 CCAG
 +
-~~~~
+0000
 @BASCET__A1_A6_F9_H11:T:79|location_barcode=read1:0-4 2
 GAGG
 +
-~~~~
+-/99
 @BASCET__A1_A6_F9_H11:T:80|location_barcode=read1:0-4 2
 CAGC
 +
-~~~~
+<00/
 @BASCET__A1_A6_F9_H11:T:81|location_barcode=read1:0-4 2
 CTCT
 +
-~~~~
+DDDD
 @BASCET__A1_A6_F9_H11:T:82|location_barcode=read1:0-4 2
 CTTT
 +
-~~~~
+0900
 @BASCET__A1_A6_G7_H11:T:0|location_barcode=read1:0-4 2
 AATT
 +
-~~~~
+0000
 @BASCET__A1_A6_G7_H11:T:1|location_barcode=read1:0-4 2
 CATT
 +
-~~~~
+00:0
 @BASCET__A1_A6_G7_H11:T:2|location_barcode=read1:0-4 2
 CATT
 +
-~~~~
+00CB
 @BASCET__A1_A6_G7_H11:T:3|location_barcode=read1:0-4 2
 CATT
 +
-~~~~
+00;0
 @BASCET__A1_A6_G7_H11:T:4|location_barcode=read1:0-4 2
 CATT
 +
-~~~~
+C0;0
 @BASCET__A1_A6_G7_H11:T:5|location_barcode=read1:0-4 2
 CATT
 +
-~~~~
+00<0
 @BASCET__A1_A6_G7_H11:T:6|location_barcode=read1:0-4 2
 CATT
 +
-~~~~
+00;0
 @BASCET__A1_A6_G7_H11:T:7|location_barcode=read1:0-4 2
 CATT
 +
-~~~~
+00;0
 @BASCET__A1_A6_G7_H11:T:8|location_barcode=read1:0-4 2
 CTTT
 +
-~~~~
+00<C
 @BASCET__A1_A6_G7_H11:T:9|location_barcode=read1:0-4 2
 CCCA
 +
-~~~~
+0000
 @BASCET__A1_A6_G7_H11:T:10|location_barcode=read1:0-4 2
 CCCA
 +
-~~~~
+00/0
 @BASCET__A1_A6_G7_H11:T:11|location_barcode=read1:0-4 2
 CCTA
 +
-~~~~
+0;00
 @BASCET__A1_A6_G7_H11:T:12|location_barcode=read1:0-4 2
 CCTC
 +
-~~~~
+0:00
 @BASCET__A1_A6_G7_H11:T:13|location_barcode=read1:0-4 2
 CCTC
 +
-~~~~
+0;00
 @BASCET__A1_A6_G7_H11:T:14|location_barcode=read1:0-4 2
 CTCA
 +
-~~~~
+0000
 @BASCET__A1_A6_G7_H11:T:15|location_barcode=read1:0-4 2
 CTTA
 +
-~~~~
+0000
 @BASCET__A1_A6_G7_H11:T:16|location_barcode=read1:0-4 2
 GCCC
 +
-~~~~
+/00/
 @BASCET__A1_A6_G7_H11:T:17|location_barcode=read1:0-4 2
 GCCC
 +
-~~~~
+/00/
 @BASCET__A1_A6_G7_H11:T:18|location_barcode=read1:0-4 2
 AATT
 +
-~~~~
+...;
 @BASCET__A1_A6_G7_H11:T:19|location_barcode=read1:0-4 2
 CAAT
 +
-~~~~
+0000
 @BASCET__A1_A6_G7_H11:T:20|location_barcode=read1:0-4 2
 CGAA
 +
-~~~~
+BA?.
 @BASCET__A1_A6_G7_H11:T:21|location_barcode=read1:0-4 2
 CGAA
 +
-~~~~
+0:A.
 @BASCET__A1_A6_G7_H11:T:22|location_barcode=read1:0-4 2
 CGAA
 +
-~~~~
+099.
 @BASCET__A1_A6_G7_H11:T:23|location_barcode=read1:0-4 2
 CGAT
 +
-~~~~
+0.9.
 @BASCET__A1_A6_G7_H11:T:24|location_barcode=read1:0-4 2
 AACA
 +
-~~~~
+<:01
 @BASCET__A1_A6_G7_H11:T:25|location_barcode=read1:0-4 2
 AACC
 +
-~~~~
+000/
 @BASCET__A1_A6_G7_H11:T:26|location_barcode=read1:0-4 2
 ACAC
 +
-~~~~
+G00;
 @BASCET__A1_A6_G7_H11:T:27|location_barcode=read1:0-4 2
 CTTT
 +
-~~~~
+000;
 @BASCET__A1_A6_G7_H11:T:28|location_barcode=read1:0-4 2
 GGGG
 +
-~~~~
+/.--
 @BASCET__A1_A6_G7_H11:T:29|location_barcode=read1:0-4 2
 CGTT
 +
-~~~~
+0.00
 @BASCET__A1_A6_H7_H11:T:0|location_barcode=read1:0-4 2
 ATGT
 +
-~~~~
+GFHG
 @BASCET__A1_A6_H7_H11:T:1|location_barcode=read1:0-4 2
 ATGT
 +
-~~~~
+GHHF
 @BASCET__A1_A6_H7_H11:T:2|location_barcode=read1:0-4 2
 ATGT
 +
-~~~~
+FCGB
 @BASCET__A1_A6_H7_H11:T:3|location_barcode=read1:0-4 2
 ATGT
 +
-~~~~
+?BFE
 @BASCET__A1_A6_H7_H11:T:4|location_barcode=read1:0-4 2
 ATGT
 +
-~~~~
+GHGH
 @BASCET__A1_A6_H7_H11:T:5|location_barcode=read1:0-4 2
 ATGT
 +
-~~~~
+?GHF
 @BASCET__A1_A6_H7_H11:T:6|location_barcode=read1:0-4 2
 ATGT
 +
-~~~~
+GGFE
 @BASCET__A1_A6_H7_H11:T:7|location_barcode=read1:0-4 2
 ATGT
 +
-~~~~
+/0>B
 @BASCET__A1_A6_H7_H11:T:8|location_barcode=read1:0-4 2
 ATGT
 +
-~~~~
+FHHG
 @BASCET__A1_A6_H7_H11:T:9|location_barcode=read1:0-4 2
 ATGT
 +
-~~~~
+DHGH
 @BASCET__A1_A6_H7_H11:T:10|location_barcode=read1:0-4 2
 ATGT
 +
-~~~~
+EEGB
 @BASCET__A1_A6_H7_H11:T:12|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+F1GG
 @BASCET__A1_A6_H7_H11:T:13|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+00;9
 @BASCET__A1_A6_H7_H11:T:14|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+:09.
 @BASCET__A1_A6_H7_H11:T:15|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+00:A
 @BASCET__A1_A6_H7_H11:T:16|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+00/.
 @BASCET__A1_A6_H8_H11:T:0|location_barcode=read1:0-4 2
 CCTG
 +
-~~~~
+0000
 @BASCET__A1_A6_H8_H11:T:1|location_barcode=read1:0-4 2
 CGCG
 +
-~~~~
+0..-
 @BASCET__A1_A6_H8_H11:T:2|location_barcode=read1:0-4 2
 ACCC
 +
-~~~~
+CC0.
 @BASCET__A1_A6_H8_H11:T:3|location_barcode=read1:0-4 2
 ACGC
 +
-~~~~
+B9.-
 @BASCET__A1_A6_H8_H11:T:4|location_barcode=read1:0-4 2
 ACGC
 +
-~~~~
+00.-
 @BASCET__A1_A6_H8_H11:T:5|location_barcode=read1:0-4 2
 ACGC
 +
-~~~~
+90.-
 @BASCET__A1_A6_H8_H11:T:6|location_barcode=read1:0-4 2
 ACTC
 +
-~~~~
+F090
 @BASCET__A1_A6_H8_H11:A:7|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+HHHH
 @BASCET__A1_A6_H8_H11:A:8|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+HHHH
 @BASCET__A1_A6_H8_H11:T:9|location_barcode=read1:0-4 2
 AACC
 +
-~~~~
+111F
 @BASCET__A1_A6_H8_H11:T:10|location_barcode=read1:0-4 2
 ACCT
 +
-~~~~
+111>
 @BASCET__A1_A6_H8_H11:T:11|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+<1>0
 @BASCET__A1_A6_H8_H11:T:12|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+1=<G
 @BASCET__A1_A6_H8_H11:T:13|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+00</
 @BASCET__A1_A6_H8_H11:T:14|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+1=F<
 @BASCET__A1_A6_H8_H11:T:15|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+>2FC
 @BASCET__A1_A6_H8_H11:T:16|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+00/.
 @BASCET__A1_A6_H8_H11:T:17|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+=1><
 @BASCET__A1_A6_H8_H11:T:18|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+11><
 @BASCET__A1_A6_H8_H11:T:19|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+<1<<
 @BASCET__A1_A6_H8_H11:T:20|location_barcode=read1:0-4 2
 CCCG
 +
-~~~~
+00/.
 @BASCET__A1_A6_H8_H11:T:21|location_barcode=read1:0-4 2
 AACC
 +
-~~~~
+00;:
 @BASCET__A1_A6_H8_H11:T:22|location_barcode=read1:0-4 2
 ACCA
 +
-~~~~
+00;0
 @BASCET__A1_A6_H8_H11:T:23|location_barcode=read1:0-4 2
 ACCC
 +
-~~~~
+00;.
 @BASCET__A1_A6_H8_H11:T:24|location_barcode=read1:0-4 2
 ACCC
 +
-~~~~
+0;0.
 @BASCET__A1_A6_H8_H11:T:25|location_barcode=read1:0-4 2
 AGCC
 +
-~~~~
+0009
 @BASCET__A1_A6_H8_H11:T:26|location_barcode=read1:0-4 2
 CACG
 +
-~~~~
+;0=.
 @BASCET__A1_A6_H8_H11:T:27|location_barcode=read1:0-4 2
 CCCG
 +
-~~~~
+00;:
 @BASCET__A1_A6_H8_H11:T:28|location_barcode=read1:0-4 2
 GACC
 +
-~~~~
+/9F0
 @BASCET__A1_A6_H8_H11:A:29|location_barcode=read1:0-4 2
 ATTT
 +
-~~~~
+2222
 @BASCET__A1_A6_H8_H11:T:30|location_barcode=read1:0-4 2
 GAAC
 +
-~~~~
+90;;
 @BASCET__A1_A6_H8_H11:T:31|location_barcode=read1:0-4 2
 GAAG
 +
-~~~~
+?/0/
 @BASCET__A1_A6_H8_H11:T:32|location_barcode=read1:0-4 2
 GAAG
 +
-~~~~
+-<0/
 @BASCET__A1_A6_H8_H11:T:33|location_barcode=read1:0-4 2
 GAAG
 +
-~~~~
+-CB;
 @BASCET__A1_A6_H8_H11:T:34|location_barcode=read1:0-4 2
 GAGG
 +
-~~~~
+9//.
 @BASCET__A1_A6_H8_H11:T:35|location_barcode=read1:0-4 2
 CATT
 +
-~~~~
+0000
 @BASCET__A1_A6_H8_H11:T:36|location_barcode=read1:0-4 2
 GAAA
 +
-~~~~
+-...
 @BASCET__A1_A6_H8_H11:T:37|location_barcode=read1:0-4 2
 GCAG
 +
-~~~~
+-:9.
 @BASCET__A1_A6_H8_H11:T:38|location_barcode=read1:0-4 2
 ACCC
 +
-~~~~
+BGHH
 @BASCET__A1_A6_H8_H11:T:39|location_barcode=read1:0-4 2
 ACCC
 +
-~~~~
+0=GH
 @BASCET__A1_A6_H8_H11:T:40|location_barcode=read1:0-4 2
 ACCC
 +
-~~~~
+0C0G
 @BASCET__A1_A6_H8_H11:T:41|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+0:/.
 @BASCET__A1_A6_H8_H11:T:42|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+1>CF
 @BASCET__A1_A6_H8_H11:T:43|location_barcode=read1:0-4 2
 CCCG
 +
-~~~~
+9/.-
 @BASCET__A1_A6_H8_H11:T:44|location_barcode=read1:0-4 2
 AGTT
 +
-~~~~
+00;9
 @BASCET__A1_A6_H8_H11:T:45|location_barcode=read1:0-4 2
 AGTT
 +
-~~~~
+9;9F
 @BASCET__A1_A6_H9_H11:T:1|location_barcode=read1:0-4 2
 CCTC
 +
-~~~~
+///.
 @BASCET__A1_A6_H9_H11:T:2|location_barcode=read1:0-4 2
 CCTT
 +
-~~~~
+////
 @BASCET__A1_A6_H9_H11:T:4|location_barcode=read1:0-4 2
 CTTT
 +
-~~~~
+0111
 @BASCET__A1_A6_H9_H11:T:5|location_barcode=read1:0-4 2
 ACTT
 +
-~~~~
+0000
 @BASCET__A1_A6_H9_H11:T:6|location_barcode=read1:0-4 2
 CTCT
 +
-~~~~
+<00=
 @BASCET__A1_A6_H9_H11:T:7|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+00;.
 @BASCET__A1_A6_H9_H11:T:8|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+::/;
 @BASCET__A1_A6_H9_H11:T:9|location_barcode=read1:0-4 2
 AACC
 +
-~~~~
+000;
 @BASCET__A1_A6_H9_H11:T:10|location_barcode=read1:0-4 2
 AACC
 +
-~~~~
+0009
 @BASCET__A1_A6_H9_H11:T:11|location_barcode=read1:0-4 2
 CGGG
 +
-~~~~
+0.--
 @BASCET__A1_A6_H9_H11:T:12|location_barcode=read1:0-4 2
 AAAC
 +
-~~~~
+0000
 @BASCET__A1_A6_H9_H11:T:13|location_barcode=read1:0-4 2
 GAAC
 +
-~~~~
+/:0<
 @BASCET__A1_A6_H9_H11:T:14|location_barcode=read1:0-4 2
 GGCC
 +
-~~~~
+99--
 @BASCET__A1_A6_H9_H11:T:15|location_barcode=read1:0-4 2
 AAAC
 +
-~~~~
+////
 @BASCET__A1_A6_H9_H11:T:16|location_barcode=read1:0-4 2
 AAAC
 +
-~~~~
+/://
 @BASCET__A1_A6_H9_H11:T:17|location_barcode=read1:0-4 2
 AGAA
 +
-~~~~
+90;0
 @BASCET__A1_A6_H9_H11:T:18|location_barcode=read1:0-4 2
 AGAA
 +
-~~~~
+9000
 @BASCET__A1_A6_H9_H11:T:19|location_barcode=read1:0-4 2
 GAAC
 +
-~~~~
+/;;F
 @BASCET__A1_A6_H9_H11:T:20|location_barcode=read1:0-4 2
 AACC
 +
-~~~~
+900/
 @BASCET__A1_A6_H9_H11:T:21|location_barcode=read1:0-4 2
 ACGC
 +
-~~~~
+CC.-
 @BASCET__A1_A6_H9_H11:T:22|location_barcode=read1:0-4 2
 ACGC
 +
-~~~~
+00.-
 @BASCET__A1_A6_H9_H11:T:23|location_barcode=read1:0-4 2
 ATTA
 +
-~~~~
+.:0:
 @BASCET__A1_A6_H9_H11:A:24|location_barcode=read1:0-4 2
 AAAA
 +
-~~~~
+GGGG
 @BASCET__A1_A6_H9_H11:T:25|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+00/.
 @BASCET__A1_A6_H9_H11:T:26|location_barcode=read1:0-4 2
 CTCT
 +
-~~~~
+000;
 @BASCET__A1_A6_H9_H11:T:27|location_barcode=read1:0-4 2
 CTCT
 +
-~~~~
+0000
 @BASCET__A1_A6_H9_H11:T:28|location_barcode=read1:0-4 2
 CTCT
 +
-~~~~
+B0:;
 @BASCET__A1_A6_H9_H11:T:29|location_barcode=read1:0-4 2
 CTCT
 +
-~~~~
+C00;
 @BASCET__A1_B4_A7_H11:T:0|location_barcode=read1:0-4 2
 GTGT
 +
-~~~~
+GEGH
 @BASCET__A1_B4_A7_H11:T:1|location_barcode=read1:0-4 2
 AGGT
 +
-~~~~
+9C0;
 @BASCET__A1_B4_A7_H11:T:2|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+00.9
 @BASCET__A1_B4_A7_H11:T:3|location_barcode=read1:0-4 2
 CCCT
 +
-~~~~
+00//
 @BASCET__A1_B4_A7_H11:T:4|location_barcode=read1:0-4 2
 CCTC
 +
-~~~~
+00;0
 @BASCET__A1_B4_A7_H11:T:5|location_barcode=read1:0-4 2
 CCTT
 +
-~~~~
+00<0
 @BASCET__A1_B4_A7_H11:T:6|location_barcode=read1:0-4 2
 CTGC
 +
-~~~~
+000;
 @BASCET__A1_B4_A7_H11:T:8|location_barcode=read1:0-4 2
 GTCG
 +
-~~~~
+-..-
 @BASCET__A1_B4_A7_H11:T:9|location_barcode=read1:0-4 2
 ATTT
 +
-~~~~
+////
 @BASCET__A1_B4_A7_H11:T:10|location_barcode=read1:0-4 2
 GTTG
 +
-~~~~
+.9..
 @BASCET__A1_B4_A7_H11:A:11|location_barcode=read1:0-4 2
 CGTA
 +
-~~~~
+EEEG
 @BASCET__A1_B4_A7_H11:T:12|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+00/.
 @BASCET__A1_B4_A7_H11:T:13|location_barcode=read1:0-4 2
 CTTT
 +
-~~~~
+000:
 @BASCET__A1_B4_A7_H11:T:14|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+00;;
 @BASCET__A1_B4_A7_H11:T:15|location_barcode=read1:0-4 2
 ACCC
 +
-~~~~
+0;9.
 @BASCET__A1_B4_A7_H11:T:16|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+00;/
 @BASCET__A1_B4_A7_H11:T:17|location_barcode=read1:0-4 2
 CACC
 +
-~~~~
+000/
 @BASCET__A1_B4_A7_H11:T:18|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+00;.
 @BASCET__A1_B4_A7_H11:T:19|location_barcode=read1:0-4 2
 CGGC
 +
-~~~~
+0.;-
 @BASCET__A1_B4_A7_H11:T:20|location_barcode=read1:0-4 2
 CGGC
 +
-~~~~
+/.;-
 @BASCET__A1_B4_A7_H11:A:21|location_barcode=read1:0-4 2
 TTTT
 +
-~~~~
+GGGG
 @BASCET__A1_B4_A7_H11:A:22|location_barcode=read1:0-4 2
 TTTT
 +
-~~~~
+C/>/
 @BASCET__A1_B4_A7_H11:A:23|location_barcode=read1:0-4 2
 TTTT
 +
-~~~~
+GGGG
 @BASCET__A1_B4_A7_H11:A:24|location_barcode=read1:0-4 2
 TTTT
 +
-~~~~
+GGGG
 @BASCET__A1_B4_A7_H11:A:25|location_barcode=read1:0-4 2
 TTTT
 +
-~~~~
+GGGG
 @BASCET__A1_B4_A7_H11:A:26|location_barcode=read1:0-4 2
 TTTT
 +
-~~~~
+GGGG
 @BASCET__A1_B4_A7_H11:A:27|location_barcode=read1:0-4 2
 TTTT
 +
-~~~~
+GGGG
 @BASCET__A1_B4_A7_H11:T:28|location_barcode=read1:0-4 2
 ACAT
 +
-~~~~
+<1=0
 @BASCET__A1_B4_A7_H11:T:29|location_barcode=read1:0-4 2
 ACTG
 +
-~~~~
+00;;
 @BASCET__A1_B4_A7_H11:T:30|location_barcode=read1:0-4 2
 CACG
 +
-~~~~
+00C:
 @BASCET__A1_B4_A7_H11:T:31|location_barcode=read1:0-4 2
 CCCG
 +
-~~~~
+00/.
 @BASCET__A1_B4_A7_H11:A:32|location_barcode=read1:0-4 2
 TTAG
 +
-~~~~
+HHHH
 @BASCET__A1_B4_A7_H11:A:33|location_barcode=read1:0-4 2
 TTAG
 +
-~~~~
+BGGH
 @BASCET__A1_B4_A7_H11:A:34|location_barcode=read1:0-4 2
 TTAG
 +
-~~~~
+?GGH
 @BASCET__A1_B4_A7_H11:A:35|location_barcode=read1:0-4 2
 TTAG
 +
-~~~~
+FGGH
 @BASCET__A1_B4_A7_H11:A:36|location_barcode=read1:0-4 2
 TTAG
 +
-~~~~
+HGHH
 @BASCET__A1_B4_A7_H11:A:37|location_barcode=read1:0-4 2
 TTAG
 +
-~~~~
+?FHF
 @BASCET__A1_B4_A7_H11:A:38|location_barcode=read1:0-4 2
 TTAG
 +
-~~~~
+3FFG
 @BASCET__A1_B4_A7_H11:A:39|location_barcode=read1:0-4 2
 TTAG
 +
-~~~~
+BFGH
 @BASCET__A1_B4_A7_H11:T:40|location_barcode=read1:0-4 2
 AGTT
 +
-~~~~
+:0;;
 @BASCET__A1_B4_A7_H11:T:41|location_barcode=read1:0-4 2
 AGTT
 +
-~~~~
+;0;9
 @BASCET__A1_B4_A7_H11:T:42|location_barcode=read1:0-4 2
 CCCC
 +
-~~~~
+FGFA
 @BASCET__A1_B4_A7_H11:T:43|location_barcode=read1:0-4 2
 CTTT
 +
-~~~~
+000;
 @BASCET__A1_B4_A7_H11:G:44|location_barcode=read1:0-4 2
 TTTT
 +
-~~~~
+?CCC
 @BASCET__A1_B4_A7_H11:T:45|location_barcode=read1:0-4 2
 AGAA
 +
-~~~~
+00:0
 @BASCET__A1_B4_A7_H11:T:46|location_barcode=read1:0-4 2
 ATTA
 +
-~~~~
+0;00
 @BASCET__A1_B4_A7_H11:T:47|location_barcode=read1:0-4 2
 CATT
 +
-~~~~
+FFBG
 @BASCET__A1_B4_A7_H11:T:48|location_barcode=read1:0-4 2
 CATT
 +
-~~~~
+:00;
 @BASCET__A1_B4_A7_H11:T:49|location_barcode=read1:0-4 2
 CATT
 +
-~~~~
+00:;
 @BASCET__A1_B4_A7_H11:T:50|location_barcode=read1:0-4 2
 CATT
 +
-~~~~
+DDGF
 @BASCET__A1_B4_A7_H11:T:51|location_barcode=read1:0-4 2
 CATT
 +
-~~~~
+1FGD
 @BASCET__A1_B4_A7_H11:T:52|location_barcode=read1:0-4 2
 CCTT
 +
-~~~~
+B0;0
 @BASCET__A1_B4_A7_H11:T:53|location_barcode=read1:0-4 2
 CTTT
 +
-~~~~
+00C0
