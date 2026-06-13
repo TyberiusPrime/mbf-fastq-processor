@@ -1,0 +1,29 @@
+[input]
+    read1 = 'input_read1.fq'
+    read2 = 'input_read2.fq'
+
+[[step]]
+    action = 'ExtractIUPAC'
+    out_label = 'loc'
+    search = 'GAT'
+    anchor = 'Anywhere'
+    segment = 'read1'
+    max_mismatches = 0
+
+[[step]]
+    action = 'MergeReads'
+    algorithm = 'Fastp'
+    min_overlap = 10
+    max_mismatch_count = 5
+    max_mismatch_rate = 0.2
+    no_overlap_strategy = 'as_is'
+    reverse_complement_segment2 = true
+    segment1 = 'read1'
+    segment2 = 'read2'
+
+[[step]]
+    action = 'StoreTagBackInSequence'
+    in_label = 'loc'
+
+[output]
+    prefix = 'output'

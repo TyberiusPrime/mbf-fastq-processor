@@ -162,12 +162,48 @@ impl VerifyIn<PartialConfig> for PartialMergeReads {
 impl TagUser for PartialTaggedVariant<PartialMergeReads> {
     fn get_tag_usage(
         &mut self,
-        _tags_available: &IndexMap<TagLabel, TagMetadata>,
+        tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> Option<TagUsageInfo<'_>> {
         if let Some(inner) = self.toml_value.value.as_mut() {
+            // Merging rebuilds both segments as fresh pods (new edit-log birth
+            // generation), invalidating every location tag captured against
+            // either. Declare them forgotten: at config-verify a later reference
+            // then fails cleanly, and the pipeline drops them from the block
+            // before `apply` (see `Stage::forgotten_tags`) so no liftover of a
+            // stale tag is ever attempted. Mirrors conditional `Swap`.
+            let removed_tags = {
+                let seg1 = inner
+                    .segment1
+                    .as_ref()
+                    .and_then(|m| m.as_ref_post())
+                    .map(SegmentIndex::as_index);
+                let seg2 = inner
+                    .segment2
+                    .as_ref()
+                    .and_then(|m| m.as_ref_post())
+                    .map(SegmentIndex::as_index);
+                if let (Some(a), Some(b)) = (seg1, seg2) {
+                    let removed: Vec<TagLabel> = tags_available
+                        .iter()
+                        .filter_map(|(label, meta)| {
+                            meta.segment
+                                .filter(|seg| seg.as_index() == a || seg.as_index() == b)
+                                .map(|_| label.clone())
+                        })
+                        .collect();
+                    if removed.is_empty() {
+                        RemovedTags::None
+                    } else {
+                        RemovedTags::SomeOwned(removed)
+                    }
+                } else {
+                    RemovedTags::None // cov:excl-line
+                }
+            };
             Some(TagUsageInfo {
                 declared_tag: inner.out_label.to_declared_tag(TagValueType::Bool),
+                removed_tags,
                 ..Default::default()
             })
         } else {
@@ -201,8 +237,13 @@ impl Step for MergeReads {
                 .map(|_| Vec::with_capacity(block.len())),
         );
 
-        let mut new_merged_reads = DualStringPodBuilder::with_capacity(block.len(), block.len());
-        let mut keep_read2: Vec<bool> = Vec::with_capacity(block.len());
+        // Rebuilt sequences/qualities for both segments. Segment1 receives the
+        // merged/concatenated/original read, segment2 is emptied whenever the
+        // pair was collapsed into segment1 (merge or concatenate) and kept
+        // untouched when the pair is left as is. Both builders always receive
+        // exactly one row per molecule so the lockstep invariant is preserved.
+        let mut new_seg1 = DualStringPodBuilder::with_capacity(block.len(), block.len());
+        let mut new_seg2 = DualStringPodBuilder::with_capacity(block.len(), block.len());
 
         use stringpod::CrossPods;
         for (read1, read2) in block.segments[seg1_idx]
@@ -243,9 +284,9 @@ impl Step for MergeReads {
                     merged_seq,
                     merged_qual,
                 } => {
-                    // Update segment1 with merged sequence
-                    new_merged_reads.push(&merged_seq, &merged_qual);
-                    keep_read2.push(false); // read2 is merged, so we won't keep it as is
+                    // Merged sequence goes into segment1, segment2 is emptied.
+                    new_seg1.push(&merged_seq, &merged_qual);
+                    new_seg2.push(b"", b"");
                     true
                 }
                 MergeResult::NoOverlap => {
@@ -264,14 +305,14 @@ impl Step for MergeReads {
                         concatenated_qual.extend(std::iter::repeat_n(spacer_qual, spacer.len()));
                         concatenated_qual.extend_from_slice(&read2_qual_processed);
 
-                        // Update segment1 with concatenated sequence
-                        new_merged_reads.push(&concatenated_seq, &concatenated_qual);
-                        // Clear segment2
-                        keep_read2.push(false); // read2 is "merged" into read1, so we won't keep
-                        // it as is
+                        // Update segment1 with concatenated sequence, empty segment2.
+                        new_seg1.push(&concatenated_seq, &concatenated_qual);
+                        new_seg2.push(b"", b"");
+                    } else {
+                        // NoOverlapStrategy::AsIs: keep both reads unchanged.
+                        new_seg1.push(read1_seq, read1_qual);
+                        new_seg2.push(read2_seq, read2_qual);
                     }
-                    // Otherwise keep reads as they are (NoOverlapStrategy::AsIs)
-                    keep_read2.push(true); // read2 is not merged, so we keep it as is
                     false
                 }
             };
@@ -281,6 +322,11 @@ impl Step for MergeReads {
                 merge_status.push(was_merged);
             }
         }
+
+        // Swap the rebuilt sequence/quality columns in. Names and '+' lines are
+        // left untouched, and both segments keep the same read count.
+        block.segments[seg1_idx].seq_quals = new_seg1.finish();
+        block.segments[seg2_idx].seq_quals = new_seg2.finish();
 
         // Add merge status tag if label was specified
 

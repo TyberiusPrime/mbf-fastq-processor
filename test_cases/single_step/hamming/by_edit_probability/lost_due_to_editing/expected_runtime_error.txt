@@ -1,3 +1,0 @@
-Error in stage 4: Hamming correction with ByEditProbability impossible.
-The location tag bc_raw has lost it's location data (due to editing), can't retrieve qualities.
-Maybe you can reorder your steps?

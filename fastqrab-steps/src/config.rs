@@ -127,6 +127,12 @@ struct InputFormatsObserved {
 pub struct Stage {
     pub transformation: Transformation,
     pub allowed_tags: Vec<TagLabel>,
+    /// Tags this stage declared (via `RemovedTags`) that it forgets. The
+    /// workpool physically drops these from the block *before* calling
+    /// `apply`, so a forgetting step (`ForgetTag`, `ForgetAllTags`, conditional
+    /// `Swap`, `MergeReads`) never sees them and does not re-add them — the
+    /// forgetting is centralized here instead of repeated in each step.
+    pub forgotten_tags: Vec<TagLabel>,
     pub output_declarations: Vec<OutputDeclaration>,
 }
 
@@ -168,6 +174,9 @@ pub struct Config {
 
     #[tpd(skip)]
     pub allowed_tags_per_transformation: Vec<Vec<TagLabel>>,
+
+    #[tpd(skip)]
+    pub forgotten_tags_per_transformation: Vec<Vec<TagLabel>>,
 
     #[tpd(skip)]
     #[schemars(skip)]
@@ -1149,6 +1158,7 @@ impl PartialConfig {
     pub fn verify_transformation_labels(&mut self) -> std::collections::HashSet<TagLabel> {
         use crate::transformations::TagUser;
         let mut allowed_tags_per_stage: Vec<Vec<TagLabel>> = Vec::new();
+        let mut forgotten_tags_per_stage: Vec<Vec<TagLabel>> = Vec::new();
         let mut tags_available: IndexMap<TagLabel, TagMetadata> = IndexMap::new();
         let mut used_barcode_sections: std::collections::HashSet<TagLabel> =
             std::collections::HashSet::new();
@@ -1177,13 +1187,19 @@ impl PartialConfig {
                 };
                 used_barcode_sections.extend(tag_info.used_barcodes.iter().cloned());
                 let mut tags_used_here: Vec<TagLabel> = Vec::new();
+                // Tags this stage forgets. They are NOT added to `tags_used_here`
+                // (the stage's allowed_tags) — instead the workpool drops them
+                // before `apply`, so the step never sees them and cannot re-add
+                // them. Centralizes what ForgetTag/ForgetAllTags/Swap/MergeReads
+                // each used to do by hand in their `apply`.
+                let mut tags_forgotten_here: Vec<TagLabel> = Vec::new();
                 match tag_info.removed_tags {
                     RemovedTags::None => {}
                     RemovedTags::All => {
                         for metadata in tags_available.values_mut() {
                             metadata.used = true;
                         }
-                        tags_used_here.extend(tags_available.keys().cloned());
+                        tags_forgotten_here.extend(tags_available.keys().cloned());
                         tags_available.clear();
                     }
                     RemovedTags::Some(tags) => {
@@ -1191,7 +1207,7 @@ impl PartialConfig {
                             //no need to check if empty, empty will never be present
                             if let Some(metadata) = tags_available.get_mut(&tag_name) {
                                 metadata.used = true;
-                                tags_used_here.push(tag_name.clone());
+                                tags_forgotten_here.push(tag_name.clone());
                             } else {
                                 any_tag_errors = true;
                                 toml_source.state = TomlValueState::new_validation_failed(format!(
@@ -1207,13 +1223,14 @@ impl PartialConfig {
                         }
                     }
                     RemovedTags::SomeOwned(tags) => {
-                        // Computed set (e.g. conditional Swap forgetting location
-                        // tags on the swapped segments). These were read straight
-                        // out of `tags_available`, so they always exist.
+                        // Computed set (e.g. conditional Swap / MergeReads
+                        // forgetting location tags on the affected segments).
+                        // These were read straight out of `tags_available`, so
+                        // they always exist.
                         for tag_name in tags {
                             if let Some(metadata) = tags_available.get_mut(&tag_name) {
                                 metadata.used = true;
-                                tags_used_here.push(tag_name.clone());
+                                tags_forgotten_here.push(tag_name.clone());
                             }
                             tags_available.shift_remove(&tag_name);
                         }
@@ -1355,6 +1372,7 @@ impl PartialConfig {
                     }
                 }
                 allowed_tags_per_stage.push(tags_used_here);
+                forgotten_tags_per_stage.push(tags_forgotten_here);
 
                 if let Some(dt) = tag_info.declared_tag {
                     if let Some(meta) = tags_available.get(&dt.name) {
@@ -1387,6 +1405,7 @@ impl PartialConfig {
                 }
             }
             self.allowed_tags_per_transformation = Some(allowed_tags_per_stage);
+            self.forgotten_tags_per_transformation = Some(forgotten_tags_per_stage);
 
             //now verify the tags don't overlap barcodes or segments - they must be disjonit
             if let Some(Some(barcodes)) = self.barcodes.as_mut() {
@@ -1702,8 +1721,10 @@ impl PartialConfig {
         let mut seen: IndexMap<String, std::ops::Range<usize>> = IndexMap::new();
         if let Some(transforms) = self.transform.as_mut() {
             for trafo in transforms.iter_mut() {
-                if let Some(PartialTransformation::Demultiplex(demultiplex_config)) = trafo.value.as_mut()
-                    && let Some(demultiplex_config_value) = demultiplex_config.toml_value.value.as_ref()
+                if let Some(PartialTransformation::Demultiplex(demultiplex_config)) =
+                    trafo.value.as_mut()
+                    && let Some(demultiplex_config_value) =
+                        demultiplex_config.toml_value.value.as_ref()
                     && let Some(in_label) = demultiplex_config_value.in_label.as_ref()
                 {
                     let in_label: String = in_label.as_ref().to_string();
@@ -2078,17 +2099,20 @@ impl Config {
 
     fn transforms_to_stages(&mut self) -> Vec<Stage> {
         let allowed_tags_per_stage = self.allowed_tags_per_transformation.clone();
+        let forgotten_tags_per_stage = self.forgotten_tags_per_transformation.clone();
         let output_declarations_per_stage = self.output_declarations_per_transformation.clone();
 
         let stages: Vec<Stage> = self
             .transform
             .drain(..)
             .zip(allowed_tags_per_stage)
+            .zip(forgotten_tags_per_stage)
             .zip(output_declarations_per_stage)
-            .filter(|((t, _), _)| !matches!(t, Transformation::Report { .. }))
-            .map(|((t, tags), decls)| Stage {
+            .filter(|(((t, _), _), _)| !matches!(t, Transformation::Report { .. }))
+            .map(|(((t, tags), forgotten), decls)| Stage {
                 transformation: t,
                 allowed_tags: tags.into_iter().collect(),
+                forgotten_tags: forgotten.into_iter().collect(),
                 output_declarations: decls,
             })
             .collect();

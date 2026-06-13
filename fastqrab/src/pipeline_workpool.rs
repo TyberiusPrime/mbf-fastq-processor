@@ -730,6 +730,16 @@ fn process_work_item(
             }
         }
     }
+    // Drop tags this stage declared it forgets (ForgetTag / ForgetAllTags /
+    // conditional Swap / MergeReads). Removing them here — before the step's
+    // `apply` — means the step never sees them and cannot re-add them, so each
+    // forgetting step no longer has to do this by hand. Done before the
+    // `unused_tags` split so they are neither passed to the step nor restored
+    // afterward.
+    for tag in &stage.forgotten_tags {
+        work_item.block.tags.shift_remove(tag);
+    }
+
     let unused_tags: Vec<_> = work_item
         .block
         .tags

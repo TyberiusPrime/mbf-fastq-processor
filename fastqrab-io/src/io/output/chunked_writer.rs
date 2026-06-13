@@ -542,7 +542,8 @@ where
         let value_opt: Option<Value> = match tag_col {
             TagColumn::Location(col) => {
                 let joined = col.joined_seq(read_index, Some(b","));
-                if joined.is_empty() { // do not write no-region tags.
+                if joined.is_empty() {
+                    // do not write no-region tags.
                     None
                 } else {
                     Some(Value::String((*joined).into()))

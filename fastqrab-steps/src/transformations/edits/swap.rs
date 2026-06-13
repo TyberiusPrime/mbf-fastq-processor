@@ -252,15 +252,10 @@ impl Step for Swap {
             pluses: b_pluses.finish(),
         };
 
-        // Forget location tags that were anchored to either rebuilt segment.
-        block.tags.retain(|_label, col| match col {
-            TagColumn::Location(loc) => {
-                let sid = loc.source_id() as usize;
-                sid != a && sid != b
-            }
-            _ => true,
-        });
-
+        // The location tags anchored to either rebuilt segment are forgotten by
+        // the pipeline: this stage declares them via `removed_tags`, and the
+        // workpool drops them before `apply` runs — so there is nothing to do
+        // here.
         Ok((block, true))
     }
 }

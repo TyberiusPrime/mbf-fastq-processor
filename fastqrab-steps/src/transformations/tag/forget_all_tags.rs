@@ -26,11 +26,13 @@ impl TagUser for PartialTaggedVariant<PartialForgetAllTags> {
 impl Step for ForgetAllTags {
     fn apply(
         &self,
-        mut block: FastQBlocksCombined,
+        block: FastQBlocksCombined,
         _input_info: &InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        block.tags = Default::default();
+        // Removal is hoisted into the pipeline: the stage declares
+        // `RemovedTags::All`, and the workpool drops every tag before this
+        // `apply` runs. Nothing left to do here.
         Ok((block, true))
     }
 }

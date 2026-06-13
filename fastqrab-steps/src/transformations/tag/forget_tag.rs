@@ -6,6 +6,9 @@ use crate::transformations::prelude::*;
 #[tpd(no_verify)]
 #[derive(Debug)]
 pub struct ForgetTag {
+    // Read at config-verify (on the partial, to declare `removed_tags`); the
+    // runtime removal is hoisted into the workpool, so `apply` never reads it.
+    #[expect(dead_code, reason = "consumed at config-verify, not at runtime")]
     in_label: TagLabel,
 }
 
@@ -21,7 +24,6 @@ impl TagUser for PartialTaggedVariant<PartialForgetTag> {
                     inner.in_label.as_ref().expect("parent was ok").clone(),
                     &mut inner.in_label,
                 )]),
-                //must_see_all_tags: true, // otherwise, the removed tag get's readded?,
                 ..Default::default()
             })
         } else {
@@ -33,11 +35,13 @@ impl TagUser for PartialTaggedVariant<PartialForgetTag> {
 impl Step for ForgetTag {
     fn apply(
         &self,
-        mut block: FastQBlocksCombined,
+        block: FastQBlocksCombined,
         _input_info: &InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        block.tags.shift_remove(&self.in_label);
+        // The actual removal of `in_label` is hoisted into the pipeline: the
+        // stage declares it via `removed_tags`, and the workpool drops it before
+        // this `apply` runs. Nothing left to do here.
         Ok((block, true))
     }
 }

@@ -3837,6 +3837,32 @@ fn test_cases_x_single_step_x_edits_x_merge_reads_x_fastp_but_short() {
 
 #[test]
 
+fn test_cases_x_single_step_x_edits_x_merge_reads_x_forgets_location_tag() {
+    println!("Test case is in: test_cases/single_step/edits/merge_reads/forgets_location_tag");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/edits/merge_reads/forgets_location_tag"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_edits_x_merge_reads_x_location_tag_lost_after_merge() {
+    println!(
+        "Test case is in: test_cases/single_step/edits/merge_reads/location_tag_lost_after_merge"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/edits/merge_reads/location_tag_lost_after_merge",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_edits_x_merge_reads_x_no_overlap_concatenate() {
     println!("Test case is in: test_cases/single_step/edits/merge_reads/no_overlap_concatenate");
     run_test(
@@ -10819,21 +10845,6 @@ fn test_cases_x_single_step_x_hamming_x_by_edit_probability_x_from_report_cantre
     run_test(
         std::path::Path::new(
             "../test_cases/single_step/hamming/by_edit_probability/from_report_cantread_file/notjson",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_hamming_x_by_edit_probability_x_lost_due_to_editing() {
-    println!(
-        "Test case is in: test_cases/single_step/hamming/by_edit_probability/lost_due_to_editing"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/hamming/by_edit_probability/lost_due_to_editing",
         ),
         "input.toml",
         1,
