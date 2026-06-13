@@ -36,6 +36,7 @@
 [[step]]
   action = 'StoreTagBackInSequence'
   in_label='regs'
+  on_lost='ignore'
 
 [output]
 	prefix = 'output'

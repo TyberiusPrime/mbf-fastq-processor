@@ -1,2 +1,2 @@
-StoreTagBackInSequence: the captured location of 3 read(s) was lost to edits applied after the tag was captured (rows [1, 2, 3]).
+StoreTagBackInSequence(tag): the captured location of 3 read(s) was lost to edits applied after the tag was captured (rows [1, 2, 3]).
   For example, read 'Read2' had its tag covering 7..10 in a 51bp read, but the edits applied since (cut 10 from the start) removed or split those bases, leaving nowhere to write it back
