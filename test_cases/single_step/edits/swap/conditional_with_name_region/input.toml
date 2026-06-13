@@ -1,0 +1,41 @@
+# A region extracted from a read *name* is a plain String tag (a frozen copy of
+# the name bytes), not a Location bound to a segment. Per the Swap rules, plain
+# Strings carry across a conditional (per-read) swap, so unlike a segment/Location
+# region the name-region tag survives and can still be referenced afterwards.
+
+[input]
+    read1 = ['input_read1.fq']
+    read2 = ['input_read2.fq']
+
+# Length of read1, used to decide the per-read swap.
+[[step]]
+    action = 'CalcLength'
+    out_label = 'length'
+    segment = 'read1'
+
+# Region from the read1 *name* (first 4 chars of the canonical prefix).
+[[step]]
+    action = 'ExtractRegions'
+    out_label = 'name_region'
+    regions = [{ start = 0, length = 4, anchor = "Start" }]
+    segment = 'name:read1'
+
+# Swap if read1 is long (> 6); reads 2 and 4 swap, reads 1 and 3 do not.
+[[step]]
+    action = 'EvalExpression'
+    out_label = 'should_swap'
+    expression = 'length > 6'
+    result_type = 'bool'
+
+[[step]]
+    action = 'Swap'
+    if_tag = 'should_swap'
+    # auto-detected segment_a/segment_b
+
+# The name-region String tag survived the conditional swap, so this succeeds.
+[[step]]
+    action = 'StoreTagInComment'
+    in_label = 'name_region'
+
+[output]
+    prefix = 'output'

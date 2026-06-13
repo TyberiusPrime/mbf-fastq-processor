@@ -3,7 +3,7 @@ use std::{cell::RefCell, collections::HashSet, rc::Rc};
 use super::super::{
     PartialRegionDefinition, RegionAnchor, RegionDefinition, extract_from_sequence,
 };
-use crate::transformations::prelude::*;
+use crate::transformations::{prelude::*, read_name_canonical_prefix};
 use stringpod::{Lifted, RegionLift};
 
 /// Extract regions by coordinates
@@ -266,10 +266,26 @@ impl Step for Regions {
                     ),
                 }
             }
+            // A read name is just bytes with no read to alias into, so each
+            // region is sliced out of the name's canonical prefix (everything
+            // before `split_character`, matching every other `name:` source) and
+            // the output is a String column.
             ResolvedSourceNoAll::Name {
                 segment_index,
                 split_character,
-            } => todo!(),
+            } => {
+                let out: Vec<Option<BString>> = block.segments[segment_index.as_index()]
+                    .names
+                    .iter()
+                    .map(|name| {
+                        let prefix = read_name_canonical_prefix(name, Some(*split_character));
+                        extract_string_regions(prefix, &self.regions)
+                    })
+                    .collect();
+                block
+                    .tags
+                    .insert(self.out_label.clone(), TagColumn::String(out));
+            }
             ResolvedSourceNoAll::Segment(segment_index) => {
                 // Via `location_column_builder` so the column records its source
                 // segment (see `TagColumn::location_segment`).

@@ -4095,6 +4095,17 @@ fn test_cases_x_single_step_x_edits_x_swap_x_conditional_minority() {
 
 #[test]
 
+fn test_cases_x_single_step_x_edits_x_swap_x_conditional_with_name_region() {
+    println!("Test case is in: test_cases/single_step/edits/swap/conditional_with_name_region");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/edits/swap/conditional_with_name_region"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_edits_x_swap_x_conditional_with_regions() {
     println!("Test case is in: test_cases/single_step/edits/swap/conditional_with_regions");
     run_test(
