@@ -25,8 +25,6 @@ use crate::transformations::tag::lifted_writeback::{OnLost, WriteAnchor, store_t
 #[derive(Debug)]
 pub struct StoreTagBackInSequence {
     in_label: TagLabel,
-    #[tpd(default)]
-    ignore_missing: bool,
     /// What to do when the tag's location was lost to a later edit.
     #[tpd(default)]
     #[tpd(alias = "on_loss")]

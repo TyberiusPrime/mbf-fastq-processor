@@ -42,7 +42,7 @@
 [[step]]
 	action = 'StoreTagBackInSequence'
 	in_label ='tag'
-	ignore_missing=true
+	on_lost='ignore'
 
 [output]
 	prefix = 'output'

@@ -75,12 +75,12 @@
 [[step]]
 	action = 'StoreTagBackInSequence'
 	in_label = 'check1'
-	ignore_missing=true
+	on_lost='ignore'
 
 [[step]]
 	action = 'StoreTagBackInSequence'
 	in_label = 'check2'
-	ignore_missing=true
+	on_lost='ignore'
 
 [output]
     prefix = 'output'
