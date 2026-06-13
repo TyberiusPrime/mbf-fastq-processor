@@ -347,9 +347,10 @@ Extract multiple fixed position regions (concatenated).
 ```toml
 [[step]]
     action = 'ExtractRegions'
+    source = 'read1' # a region's parts are always on one source
     regions = [                    # TYPE: array of objects, REQUIRED
-        {source = 'read1', start = 0, length = 8, anchor = 'Start'},
-        {source = 'read1', start = 12, length = 8, anchor = 'Start'},
+        { start = 0, length = 8, anchor = 'Start'},
+        { start = 12, length = 8, anchor = 'Start'},
     ]
     out_label = 'barcode'          # TYPE: string, REQUIRED
 ```
@@ -460,25 +461,28 @@ Extract multiple regions with flexible source and anchoring options. Supports ex
 
 [[step]]
     action = 'ExtractRegions'
+    source = "tag:anchor_tag"
     regions = [
-        { source = "tag:anchor_tag", start = -2, length = 4, anchor = "Start" },
-        { source = "tag:anchor_tag", start = 4, length = 1, anchor = "Start" }
+        { start = -2, length = 4, anchor = "Start" },
+        { start = 4, length = 1, anchor = "Start" }
     ]
     out_label = 'extracted'        # TYPE: string, REQUIRED
 
 # Extract from read names:
 [[step]]
     action = 'ExtractRegions'
+    source = "name:read1"
     regions = [
-        { source = "name:read1", start = 0, length = 10, anchor="Start"}
+        { start = 0, length = 10, anchor="Start"}
     ]
     out_label = 'name_prefix'
 
 # Extract from sequence end:
 [[step]]
     action = 'ExtractRegions'
+    source = "read1"
     regions = [
-        { source = "read1", start = -3, length = 3, anchor = "End" }
+        { start = -3, length = 3, anchor = "End" }
     ]
     out_label = 'tail_bases'
 ```
@@ -1154,7 +1158,6 @@ Replace sequence at tag position with tag content.
 [[step]]
     action = 'StoreTagBackInSequence'
     in_label = 'corrected_barcode' # TYPE: existing tag, REQUIRED
-    ignore_missing = true          # TYPE: bool, REQUIRED
     on_lost = "complain"           # TYPE: string, 'complain' or 'ignore'
 ```
 

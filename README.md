@@ -163,7 +163,8 @@ Here's a brief example:
     action = "ExtractRegions"
     out_label = "region"
     # the umi is the first 8 bases of read1
-    regions = [{source = 'read1', start = 0, length = 8, anchor="Start"}]
+    regions = [{ start = 0, length = 8, anchor="Start"}]
+    source = 'read1' # all parts of a region must come from the same read
 
 [[step]]
     #and place it in the read name

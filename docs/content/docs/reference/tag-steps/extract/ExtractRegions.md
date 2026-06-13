@@ -13,9 +13,10 @@ Extract from fixed positions in sequence data:
 ```toml
 [[step]]
     action = "ExtractRegions"
+    source = "read1" # regions always come from one source
     regions = [
-        {source = "read1", start = 0, length = 8, anchor= "Start"},
-        {source = "read1", start = -12, length = 4, anchor="End"},
+        { start = 0, length = 8, anchor= "Start"},
+        { start = -12, length = 4, anchor="End"},
     ]
     out_label = "barcode"
 ```
@@ -37,9 +38,10 @@ Extract from tag-derived positions:
 # Then extract relative to that anchor
 [[step]]
     action = "ExtractRegions"
+    source = "tag:anchor_tag"
     regions = [
-        { source = "tag:anchor_tag", start = -2, length = 4, anchor = "Start" },
-        { source = "tag:anchor_tag", start = 4, length = 1, anchor = "Start" }
+        {  start = -2, length = 4, anchor = "Start" },
+        {  start = 4, length = 1, anchor = "Start" }
     ]
     out_label = "relative_regions"
 ```
@@ -49,8 +51,9 @@ Extract from read names:
 ```toml
 [[step]]
     action = "ExtractRegions"
+    source = "name:read1"
     regions = [
-        { source = "name:read1", start = 0, length = 10, anchor="Start" }
+        { start = 0, length = 10, anchor="Start" }
     ]
     out_label = "name_prefix"
 ```
