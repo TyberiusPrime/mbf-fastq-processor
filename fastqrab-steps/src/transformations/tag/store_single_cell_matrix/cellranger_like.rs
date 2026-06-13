@@ -179,8 +179,8 @@ fn test_find_umis_with_conflicting_genes() {
 #[test]
 fn test_umi_correction() {
     let counts: FxIndexMap<(GeneIdx, Umi), u32> = vec![
-        ((GeneIdx(772), Umi(10849786)), 2),
-        ((GeneIdx(772), Umi(10849738)), 1),
+        ((GeneIdx(772), Umi(10_849_786)), 2),
+        ((GeneIdx(772), Umi(10_849_738)), 1),
     ]
     .into_iter()
     .collect();

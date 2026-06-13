@@ -35,6 +35,7 @@ use anyhow::{Context, Result};
 use bstr::ByteSlice;
 use fastqrab_config::{CompressionFormat, FileFormat};
 use sha2::Digest;
+use std::fmt::Write as StringWrite;
 use std::io::{self, BufWriter, Write};
 use std::num::{NonZero, NonZeroUsize};
 use std::path::{Path, PathBuf};
@@ -211,6 +212,8 @@ impl<W: Write + Send + 'static> Write for ParallelGzipWriter<W> {
 }
 
 impl<W: Write + Send + 'static> CompressionLayer<W> {
+    /// # Panics
+    /// Never. Well if verification failed to enusre zstd compression level is in range
     pub fn new(
         inner: W,
         format: CompressionFormat,
@@ -233,8 +236,10 @@ impl<W: Write + Send + 'static> CompressionLayer<W> {
             }
             CompressionFormat::Zstd => {
                 let level = i32::from(level.unwrap_or(5)).clamp(1, 22);
-                let enc = zstd::stream::Encoder::new(inner, level)
-                    .expect("Failed to create zstd encoder - happens on invalid compression level, but we verified that");
+                let enc = zstd::stream::Encoder::new(inner, level).expect(
+                    "Failed to create zstd encoder - happens on invalid compression level, \
+                        but we verified that",
+                );
                 CompressionLayer::Zstd(enc)
             }
         }
@@ -281,6 +286,7 @@ pub struct SinkConfig {
 }
 
 impl SinkConfig {
+    #[must_use]
     pub fn new_uncompressed_unhashed() -> Self {
         Self {
             compression: CompressionFormat::Uncompressed,
@@ -314,6 +320,8 @@ impl std::fmt::Debug for TextRecordSink {
 // cov:excl-stop
 
 impl TextRecordSink {
+    /// # Panics
+    /// Doesn't.
     pub fn new(sink: DataSink, config: &SinkConfig) -> Result<Self> {
         let buf = BufWriter::new(sink);
         let compressed_hash = HashLayer::new(buf, config.hash_compressed);
@@ -658,9 +666,12 @@ pub struct FileTarget {
 }
 
 impl FileTarget {
+    #[must_use]
     pub fn infix_parts(&self) -> &[String] {
         &self.infix_parts
     }
+
+    #[must_use]
     pub fn suffix(&self) -> &str {
         &self.suffix
     }
@@ -680,6 +691,7 @@ pub enum WriteTargetConfig {
 impl WriteTargetConfig {
     /// Construct a `WriteTargetConfig`. If `infix_parts == ["--stdout--"]`,
     /// returns [`Stdout`][Self::Stdout]; otherwise returns [`File`][Self::File].
+    #[must_use]
     pub fn new(infix_parts: Vec<String>, suffix: String) -> Self {
         if infix_parts == ["--stdout--"] {
             Self::Stdout
@@ -735,7 +747,7 @@ impl ChunkPaths {
             if !name.is_empty() {
                 name.push('.');
             }
-            name.push_str(&format!("{index:0digit_count$}"));
+            write!(name, "{index:0digit_count$}");
         }
         if !self.suffix.is_empty() {
             if !name.is_empty() {
@@ -748,6 +760,8 @@ impl ChunkPaths {
 
     /// Rename existing chunk files (and their hash sidecars) when the digit
     /// count grows, e.g. on the transition `9 -> 10` chunks.
+    /// # Panics
+    /// digit count > u32. Unlikely.
     #[expect(clippy::string_slice, reason = "ascii filename arithmetic")]
     pub fn widen_existing(&self, old_digits: usize, new_digits: usize) -> Result<()> {
         let max_value = 10usize.pow(u32::try_from(old_digits).expect("digit count fits u32"));
@@ -821,6 +835,7 @@ pub struct ChunkPolicy {
 }
 
 impl ChunkPolicy {
+    #[must_use]
     pub fn no_chunks() -> Self {
         ChunkPolicy {
             records_per_chunk: None,
@@ -872,6 +887,11 @@ impl ChunkedRecordWriter {
         clippy::too_many_arguments,
         reason = "they are all needed at construction time"
     )]
+    #[expect(
+        clippy::items_after_statements,
+        reason = "unix only use statements"
+    )]
+
     pub fn new(
         format: FileFormat,
         target: WriteTarget,
@@ -882,13 +902,8 @@ impl ChunkedRecordWriter {
         allow_overwrite: bool,
     ) -> Result<Self> {
         match (&target, format, chunk_policy.records_per_chunk) {
-            (WriteTarget::Stdout, FileFormat::Bam, _) => {
-                unreachable!("Prevented by config"); //cov:excl-line
-            }
-            (WriteTarget::Stdout, _, Some(_)) => {
-                unreachable!("Prevented by config"); //cov:excl-line
-            }
-            (WriteTarget::Stdout, FileFormat::None, _) => {
+            (WriteTarget::Stdout, FileFormat::Bam | FileFormat::None, _)
+            | (WriteTarget::Stdout, _, Some(_)) => {
                 unreachable!("Prevented by config"); //cov:excl-line
             }
             _ => {}
@@ -896,6 +911,7 @@ impl ChunkedRecordWriter {
         let digit_count = usize::from(chunk_policy.records_per_chunk.is_some());
 
         #[cfg(unix)]
+        use std::os::unix::fs::FileTypeExt;
         if let WriteTarget::Files(paths) = &target {
             {
                 if chunk_policy.records_per_chunk.is_some() {
@@ -906,7 +922,6 @@ impl ChunkedRecordWriter {
                     ];
                     for path in check_paths {
                         let metadata = ensure_output_destination_available(&path, allow_overwrite)?;
-                        use std::os::unix::fs::FileTypeExt;
                         let is_fifo = metadata.as_ref().is_some_and(|m| m.file_type().is_fifo());
                         if is_fifo && chunk_policy.records_per_chunk.is_some() {
                             anyhow::bail!(
@@ -941,6 +956,8 @@ impl ChunkedRecordWriter {
     /// Set bytes that are written at the start of every chunk (including the
     /// current one). Intended for CSV/TSV column headers and similar preambles.
     /// Not supported for BAM writers.
+    /// # Panics
+    /// When used wit ha  bam sink
     pub fn set_header(&mut self, header: Vec<u8>) -> Result<()> {
         match &mut self.active {
             ActiveSink::Text(sink) => {
@@ -962,6 +979,8 @@ impl ChunkedRecordWriter {
         }
     }
 
+    /// # Panics
+    /// when called on a sink of type BAM `ChunkedRecordWriter`
     pub fn write_text_record(&mut self, encoded: &[u8]) -> Result<()> {
         match &mut self.active {
             ActiveSink::Text(sink) => sink
@@ -977,6 +996,8 @@ impl ChunkedRecordWriter {
         Ok(())
     }
 
+    /// # Panics
+    /// When called on a text `ChunkedRecordWriter` sink
     pub fn write_bam_record(
         &mut self,
         read: &crate::blocks::FastQRead,

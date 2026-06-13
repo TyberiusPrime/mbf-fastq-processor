@@ -193,15 +193,15 @@ impl Step for Regions {
                             let segment = &block.segments[input_segment.as_index()];
                             (0..locations.row_count())
                                 .map(|row| {
-                                    let (born_gen, born_len) = locations.row_born(row);
+                                    let (born_generation, born_length) = locations.row_born(row);
                                     let view = segment
                                         .seq_quals
-                                        .ops_since(born_gen, row)
+                                        .ops_since(born_generation, row)
                                         .expect("born generation from this pod; row in range");
                                     let mut positions = Vec::new();
                                     for (start, len) in locations.row_regions(row) {
                                         if let Ok(RegionLift::Kept { start, len }) =
-                                            view.map_region(start as usize, len as usize, born_len)
+                                            view.map_region(start as usize, len as usize, born_length)
                                         {
                                             positions.extend(start as u32..(start + len) as u32);
                                         }

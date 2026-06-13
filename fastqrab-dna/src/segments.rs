@@ -6,6 +6,10 @@ pub struct SegmentIndex(pub u8);
 
 //in DNA because it's used by DNA types. rest of the segment varations are in config
 impl SegmentIndex {
+    /// Create a new `SegmentIndex` between 0..256
+    /// # Panics
+    /// On values outside that range.
+    #[must_use]
     pub fn new(idx: usize) -> Self {
         SegmentIndex(u8::try_from(idx).expect("SegementIndex must be between 0 and 255"))
     }
@@ -19,6 +23,7 @@ impl SegmentIndex {
         self.0 as usize
     }
 
+    #[must_use]
     pub fn first() -> SegmentIndex {
         SegmentIndex(0)
     }

@@ -1412,6 +1412,7 @@ impl FastQBlocksCombined {
         self.row_count()
     }
 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.row_count() == 0
     }
@@ -1491,7 +1492,7 @@ impl FastQBlocksCombined {
             output_tags.truncate(len);
         }
         for tags in self.tags.values_mut() {
-            tags.truncate(len)
+            tags.truncate(len);
         }
     }
 
@@ -1694,7 +1695,7 @@ impl FastQBlocksCombined {
             .enumerate()
         {
             if condition.is_none_or(|c| c[idx]) {
-                f(&mut seq)
+                f(&mut seq);
             }
         }
     }
@@ -1711,7 +1712,7 @@ impl FastQBlocksCombined {
     ) {
         for (idx, mut read) in self.segments[segment.as_index()].iter_mut().enumerate() {
             if condition.is_none_or(|c| c[idx]) {
-                f(&mut read)
+                f(&mut read);
             }
         }
     }
@@ -1727,7 +1728,7 @@ impl FastQBlocksCombined {
         for segment in self.iter_matching_segments_mut(segment) {
             for (idx, mut read) in segment.iter_mut().enumerate() {
                 if condition.is_none_or(|c| c[idx]) {
-                    f(&mut read)
+                    f(&mut read);
                 }
             }
         }
@@ -1773,7 +1774,9 @@ impl FastQBlocksCombined {
         }
     }
 
-    /// Create a  location tag builder referencing the specific FastQChunk
+    /// Create a  location tag builder referencing the specific `FastQChunk`
+    #[must_use]
+    #[expect(clippy::cast_possible_truncation, reason="Segments always <= 255")]
     pub fn location_column_builder(
         &self,
         segment: SegmentIndex,
@@ -1788,8 +1791,9 @@ impl FastQBlocksCombined {
             .with_source_id(segment.as_index() as u32)
     }
 
-    /// Create a  location tag builder referencing the specific FastQChunk
+    /// Create a  location tag builder referencing the specific `FastQChunk`
     /// and return references to other parts, spliting the struct temporarily
+    #[expect(clippy::cast_possible_truncation, reason="Segments always <= 255")]
     pub fn location_column_builder_and_tags_and_segment(
         &mut self,
         segment_index: SegmentIndex,

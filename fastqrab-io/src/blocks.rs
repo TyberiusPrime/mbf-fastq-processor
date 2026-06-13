@@ -20,6 +20,7 @@ pub struct FastQChunk {
 }
 
 impl FastQChunk {
+    #[must_use]
     pub fn new_empty() -> Self {
         FastQChunk {
             names: StringPod::new_all_empty(0),
@@ -28,9 +29,12 @@ impl FastQChunk {
         }
     }
 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.names.is_empty()
     }
+
+    #[must_use]
     pub fn len(&self) -> usize {
         self.names.len()
     }
@@ -163,6 +167,7 @@ impl<'a> From<&FastQRead<'a>> for OwnedFastQRead {
 }
 
 impl FastQRead<'_> {
+    #[must_use]
     pub fn to_owned(&self) -> OwnedFastQRead {
         OwnedFastQRead {
             name: self.name.to_owned(),
@@ -301,6 +306,7 @@ impl FastQChunk {
     /// If exactly one of `target_tag` / `output_tags` is set — supplying a tag to
     /// filter to without the per-read tags (or vice versa) is a contract
     /// violation.
+    #[must_use]
     pub fn iter_filtered_to_tag<'a>(
         &'a self,
         target_tag: Option<crate::io::reads::DemultiplexTag>,
@@ -544,6 +550,7 @@ mod tests {
 }
 
 /// Splits a read 'name' into the actual name/id and the comment
+#[must_use]
 pub fn split_name_and_comment(name: &BStr, read_comment_insert_char: u8) -> (&BStr, &BStr) {
     use bstr::ByteSlice;
     //let pos_of_first_space = name.iter().position(|&x| x == read_comment_insert_char);

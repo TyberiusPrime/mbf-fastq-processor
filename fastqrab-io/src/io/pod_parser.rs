@@ -76,6 +76,10 @@ struct DemuxResult {
 /// `recycle_tx`, when `Some`, receives each drained input `Vec<u8>` after its
 /// payload has been copied into columns, so an upstream producer can reuse the
 /// allocation (pages stay faulted-in). Pass `None` to simply drop the buffers.
+///
+/// # Panics
+/// when the fastq collector thread paniced?
+#[expect(clippy::needless_pass_by_value, reason = "Lifetime issues otherwise")]
 pub fn parse_pods_from_channel(
     bytes_rx: Receiver<Arc<Vec<u8>>>,
     sink: Sender<FastqChunk>,
@@ -84,7 +88,7 @@ pub fn parse_pods_from_channel(
 ) -> Result<()> {
     let demux_threads = if demux_threads == 0 {
         std::thread::available_parallelism()
-            .map(|n| n.get())
+            .map(std::num::NonZero::get)
             .unwrap_or(4)
             .min(4)
     } else {
@@ -121,7 +125,7 @@ pub fn parse_pods_from_channel(
 
     // Collector — serial, in stream order: rotate buckets onto roles + emit.
     let (tail_tx, tail_rx) = channel::bounded::<Vec<u8>>(1);
-    let collector = std::thread::spawn(move || collect(done_rx, tail_rx, &sink));
+    let collector = std::thread::spawn(move || collect(done_rx, &tail_rx, &sink));
 
     // Stage A — serial, cheap: thread the trailing-partial-line carry across
     // boundaries (one backward scan per chunk) and dispatch demux jobs.
@@ -249,9 +253,7 @@ fn demux_chunk(idx: u64, data: &[u8], prev_tail: &[u8]) -> Result<DemuxResult> {
     // appends (≤3 lines completing a straddling record) land in place instead
     // of reallocating these (potentially multi-MB) buffers.
     let buckets = builders.map(|b| {
-        let mut pod = b
-            .map(StringPodBuilder::finish)
-            .unwrap_or_else(StringPod::empty);
+        let mut pod = b.map_or_else(StringPod::empty, StringPodBuilder::finish);
         pod.reserve_for_appends(4);
         pod
     });
@@ -303,6 +305,8 @@ fn emit_records(cols: Cols, emit: &mut impl FnMut(FastqChunk)) -> Result<()> {
 /// copies), and those same lines are front-skipped off this chunk. `held` then
 /// holds only whole records and is emitted; this chunk (record-aligned at its
 /// head) becomes the new `held`.
+#[expect(clippy::cast_possible_wrap, reason="can only be 0..4")]
+#[expect(clippy::cast_possible_truncation, reason="No support for 32bit machines")]
 fn absorb(
     res: DemuxResult,
     held: &mut Option<Cols>,
@@ -390,7 +394,7 @@ fn finish_eof(
 /// input chunk. Runs serially in stream order.
 fn collect(
     done_rx: Receiver<Result<DemuxResult>>,
-    tail_rx: Receiver<Vec<u8>>,
+    tail_rx: &Receiver<Vec<u8>>,
     sink: &Sender<FastqChunk>,
 ) -> Result<()> {
     use std::collections::BTreeMap;
@@ -436,7 +440,7 @@ mod tests {
     fn split(chunks: &[&[u8]]) -> Result<FastqColumns> {
         let (mut names, mut seqs, mut quals) = (Vec::new(), Vec::new(), Vec::new());
         let mut emit = |c: FastqChunk| {
-            for x in c.names.iter() {
+            for x in &c.names {
                 names.extend_from_slice(x);
                 names.push(b'\n');
             }
@@ -548,7 +552,7 @@ mod tests {
         let (mut n, mut s, mut q) = (Vec::new(), Vec::new(), Vec::new());
         for c in chunk_rx {
             assert_eq!(c.names.len(), c.reads.len());
-            for x in c.names.iter() {
+            for x in &c.names {
                 n.extend_from_slice(x);
                 n.push(b'\n');
             }
@@ -646,7 +650,7 @@ mod tests {
             let mut reads = 0usize;
             for c in chunk_rx {
                 assert_eq!(c.names.len(), c.reads.len(), "names vs reads (t={threads})");
-                for name in c.names.iter() {
+                for name in &c.names {
                     assert!(all_base(name), "name (t={threads})");
                 }
                 for seq in c.reads.iter_seq() {
@@ -667,7 +671,7 @@ mod tests {
     }
 
     /// A single read whose sequence line exceeds the u32 per-column byte limit
-    /// must be rejected with a clean error, not a panic in the StringPod `u32`
+    /// must be rejected with a clean error, not a panic in the `StringPod` `u32`
     /// position cast (the original bug this guards).
     ///
     /// Heavy: the parser accumulates >4 GiB of carry before the offending line is
@@ -688,7 +692,7 @@ mod tests {
                 return;
             }
             let block = vec![b'A'; 64 * 1024 * 1024];
-            let target: u64 = u32::MAX as u64 + (1 << 20);
+            let target: u64 = u64::from(u32::MAX) + (1 << 20);
             let mut sent: u64 = 0;
             while sent < target {
                 if tx.send(Arc::new(block.clone())).is_err() {

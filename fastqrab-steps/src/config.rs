@@ -1585,7 +1585,7 @@ impl PartialConfig {
                 let decls = tv_transform
                     .value
                     .as_ref()
-                    .map(|t| t.declare_output_files())
+                    .map(TagUser::declare_output_files)
                     .unwrap_or_default();
                 for decl in &decls {
                     if let WriteTargetConfig::File(ft) = &decl.target {

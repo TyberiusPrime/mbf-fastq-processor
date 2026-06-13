@@ -365,6 +365,7 @@ pub fn spawn_rapidgzip(
 ) -> Result<std::fs::File> {
     #[cfg(unix)]
     {
+        use std::os::unix::io::{FromRawFd, IntoRawFd};
         // Check for index file
         let index_path = format!("{}.rapidgzip_index", filename.display());
         let has_index = std::path::Path::new(&index_path).exists();
@@ -401,7 +402,6 @@ pub fn spawn_rapidgzip(
 
         // Convert the stdout pipe to an ex::fs::File
         // We need to use the file descriptor directly
-        use std::os::unix::io::{FromRawFd, IntoRawFd};
         let raw_fd = stdout.into_raw_fd();
         // SAFETY: We own the file descriptor from the child process stdout
         let file = unsafe { std::fs::File::from_raw_fd(raw_fd) };

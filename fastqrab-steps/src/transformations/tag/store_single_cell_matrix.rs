@@ -42,6 +42,7 @@ impl Umi {
         self.0 == u32::MAX
     }
 
+    #[expect(clippy::unreadable_literal, reason="they're repeating")]
     fn is_homopolymer(&self, umi_length: u16) -> bool {
         assert!(umi_length <= 16, "Max umi length exceeded");
         let x = self.0;

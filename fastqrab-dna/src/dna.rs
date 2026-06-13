@@ -34,6 +34,7 @@ impl TagColumn {
         }
     }
 
+    #[must_use]
     pub fn len(&self) -> usize {
         match self {
             TagColumn::Location(col) => col.row_count(),
@@ -43,6 +44,7 @@ impl TagColumn {
         }
     }
 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
@@ -59,6 +61,7 @@ impl TagColumn {
         }
     }
 
+    #[must_use]
     pub fn into_locations(self) -> Option<DualStringPodMultiLocation> {
         if let TagColumn::Location(col) = self {
             Some(col)
@@ -67,6 +70,7 @@ impl TagColumn {
         }
     }
 
+    #[must_use]
     pub fn as_locations(&self) -> Option<&DualStringPodMultiLocation> {
         if let TagColumn::Location(col) = self {
             Some(col)
@@ -83,6 +87,9 @@ impl TagColumn {
         }
     }
 
+    /// Iterate a numeric column
+    /// # Panics
+    /// When it's not a numeric column
     pub fn iter_numeric(&self) -> impl Iterator<Item = &f64> {
         if let TagColumn::Numeric(items) = self {
             items.iter()
@@ -91,6 +98,7 @@ impl TagColumn {
         }
     }
 
+    #[must_use]
     pub fn iter_stringified<'a>(&'a self) -> Box<dyn Iterator<Item = Option<Cow<'a, BStr>>> + 'a> {
         match self {
             TagColumn::Numeric(_) => unreachable!("Cant stringify numeric values"),
@@ -111,6 +119,7 @@ impl TagColumn {
         }
     }
 
+    #[must_use]
     pub fn iter_truthy(&self) -> Box<dyn Iterator<Item = bool> + '_> {
         match self {
             TagColumn::Numeric(_) => unreachable!("Cant get truthy of numeric values."), //cov:excl-line
@@ -119,15 +128,19 @@ impl TagColumn {
                 Box::new((0..col.row_count()).map(|idx| !col.row_is_empty(idx)))
             }
 
-            TagColumn::String(strings) => Box::new(strings.iter().map(|x| x.is_some())),
+            TagColumn::String(strings) => Box::new(strings.iter().map(Option::is_some)),
         }
     }
 
+    /// Get the regions of an entry for a  Location column
+    /// # Panics
+    /// If used with a non location column
+    #[must_use]
     pub fn get_location(&self, index: usize) -> SmallVec<[(u32, u32); 1]> {
         if let TagColumn::Location(items) = self {
             items.row_regions(index).collect()
         } else {
-            panic!("get_string called on a non-string tag column");
+            panic!("get_location called on a non-location tag column");
         }
     }
 
@@ -139,6 +152,7 @@ impl TagColumn {
     ///
     /// # Panics
     /// If `self` is not a `Location` column.
+    #[must_use]
     pub fn location_segment(&self) -> SegmentIndex {
         if let TagColumn::Location(col) = self {
             SegmentIndex::new(col.source_id() as usize)
@@ -147,6 +161,10 @@ impl TagColumn {
         }
     }
 
+    /// Get the string for one entry for a String column
+    /// # Panics
+    /// when used on a non `TagColumn::String` column
+    #[must_use]
     pub fn get_string(&self, index: usize) -> Option<&BString> {
         if let TagColumn::String(items) = self {
             items[index].as_ref()
@@ -154,7 +172,11 @@ impl TagColumn {
             panic!("get_string called on a non-string tag column");
         }
     }
-
+    
+    /// Get the value for one entry for a Numeric column
+    /// # Panics
+    /// when used on a non `TagColumn::Numeric` column
+    #[must_use]
     pub fn get_numeric(&self, index: usize) -> f64 {
         if let TagColumn::Numeric(items) = self {
             items[index]
@@ -163,6 +185,11 @@ impl TagColumn {
         }
     }
 
+
+    /// Get the value for one entry for a bool column
+    /// # Panics
+    /// when used on a non `TagColumn::bool` column
+    #[must_use]
     pub fn get_bool(&self, index: usize) -> bool {
         if let TagColumn::Bool(items) = self {
             items[index]
@@ -259,7 +286,8 @@ pub enum Anchor {
 #[must_use]
 /// find one hit of the iupac pattern/query.
 ///
-///
+/// # Panics
+/// If the coordinates exceed an u32 
 pub fn find_iupac(
     reference: &[u8],
     pattern: &[u8],
@@ -271,7 +299,8 @@ pub fn find_iupac(
         return None;
     }
     let make_draft =
-        |start: usize| -> std::ops::Range<u32> { start as u32..(start + pattern.len()) as u32 };
+        |start: usize| -> std::ops::Range<u32> { 
+            start.try_into().expect("start would not fit u32")..(start + pattern.len()).try_into().expect("Start+pattern len would not fit into u32")};
     match anchor {
         Anchor::Left => iupac_find_best(
             pattern,
@@ -289,7 +318,9 @@ pub fn find_iupac(
                 Direction::Reverse,
             )
             .map(|start| -> std::ops::Range<u32> {
-                (offset + start) as u32..(offset + start + pattern.len()) as u32
+                (offset + start).try_into().expect("offset would not fit u32")
+                        ..
+                (offset + start + pattern.len()).try_into().expect("offset + start + len would not fit  u32")
             })
         }
         Anchor::Anywhere => iupac_find_best(
@@ -390,9 +421,10 @@ pub fn find_iupac_with_indel(
         "Alignment produced invalid coordinates (end > reference length)"
     );
 
-    Some(start as u32..end as u32)
+    Some(start.try_into().expect("Start would not fit u32")..end.try_into().expect("end would not fit u32"))
 }
 
+#[derive(Clone, Copy)]
 pub enum Direction {
     Forward,
     Reverse,
@@ -770,6 +802,7 @@ pub fn init_hamming_resonator(
     clippy::cast_possible_truncation,
     reason = "Can not be more than usize::BITS, so 32, no truncation possible"
 )]
+#[must_use]
 pub fn bits_needed_to_represent(count: usize) -> u16 {
     if count <= 1 {
         1u16
@@ -914,7 +947,7 @@ mod test {
     }
 
     fn draft_for(start: usize, len: usize) -> Range<u32> {
-        start as u32..(start + len) as u32
+        start.try_into().expect("start would not fit an u32")..(start + len).try_into().expect("start + len would not fit an u32")    
     }
 
     #[test]

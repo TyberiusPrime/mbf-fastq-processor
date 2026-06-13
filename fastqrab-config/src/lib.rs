@@ -173,6 +173,7 @@ pub enum TagValueType {
     Bool,
 }
 impl TagValueType {
+    #[must_use]
     pub fn any() -> &'static [Self] {
         &[
             TagValueType::Location,
@@ -243,7 +244,8 @@ pub struct DeclaredTag<'a> {
     pub segment: Option<crate::segments::SegmentIndex>,
 }
 
-impl<'a> DeclaredTag<'a> {
+impl DeclaredTag<'_> {
+    #[must_use]
     pub fn with_contents(self, contains: StringTagContent) -> Self {
         Self { contains, ..self }
     }

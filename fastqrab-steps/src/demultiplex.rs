@@ -41,6 +41,8 @@ impl StepOutputFiles {
     }
 
     /// Take all writers for a declared output id. Panics if the id is unknown.
+    /// # Panics
+    /// On an unknown output id
     #[must_use]
     pub fn take(&mut self, id: &str) -> DemultiplexedData<ChunkedRecordWriter> {
         self.0
