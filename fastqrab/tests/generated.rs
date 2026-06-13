@@ -8737,13 +8737,13 @@ fn test_cases_x_single_step_x_extraction_x_extract_region_x_read_too_short() {
 
 #[test]
 
-fn test_cases_x_single_step_x_extraction_x_extract_region_x_trim_at_tag_conflict() {
+fn test_cases_x_single_step_x_extraction_x_extract_region_x_trim_at_tag_multi_location_region() {
     println!(
-        "Test case is in: test_cases/single_step/extraction/extract_region/trim_at_tag_conflict"
+        "Test case is in: test_cases/single_step/extraction/extract_region/trim_at_tag_multi_location_region"
     );
     run_test(
         std::path::Path::new(
-            "../test_cases/single_step/extraction/extract_region/trim_at_tag_conflict",
+            "../test_cases/single_step/extraction/extract_region/trim_at_tag_multi_location_region",
         ),
         "input.toml",
         1,

@@ -1,6 +1,5 @@
 [input]
-    read1 = 'sample_data/ERR664392_1250.fq.gz'
-    read2 = 'sample_data/ERR664392_1250.fq.gz'
+    read1 = 'input_read1.fq'
 
 [options]
     accept_duplicate_files = true
@@ -13,8 +12,9 @@
 [[step]]
     action = 'ExtractRegions'
     out_label = 'UMI'
-    regions = [{segment = 'read1', start = 0, length = 6, anchor="Start"},
-			   {segment = 'read2', start = 0, length = 6, anchor="Start"}]
+    segment = 'read1'
+    regions = [{ start = 0, length = 6, anchor="Start"},
+			   {start = 6, length = 6, anchor="Start"}]
 
 [[step]]
     action = 'TrimAtTag'

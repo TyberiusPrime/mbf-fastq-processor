@@ -225,6 +225,11 @@ impl TagUser for PartialTaggedVariant<PartialDemultiplex> {
                             inner.in_label_contains_barcode.state = TomlValueState::Ok;
                         }
                     }
+                } else {
+                    // no such tag. Set in_lable_contains_barcode as no to complain about that either
+                    // way
+                    inner.in_label_contains_barcode.value = Some(true);
+                    inner.in_label_contains_barcode.state = TomlValueState::Ok;
                 }
 
                 Some(TagUsageInfo {

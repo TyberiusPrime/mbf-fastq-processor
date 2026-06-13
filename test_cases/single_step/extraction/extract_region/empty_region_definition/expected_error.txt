@@ -1,5 +1,5 @@
 Error Details ==
-Error 1/1
+Error 1/2
    ╭─config.toml
    ┆
  8 │ [[step]]
@@ -18,4 +18,25 @@ Error 1/1
    ┆ ╰─────┴─ Must contain at least one region definition
 ───╯
 Hint: See https://doc_url.example/version-stripped-from-test/docs/redirects/ExtractRegions
+      Or run: `fastqrab template ExtractRegions` for more information.
+
+Error 2/2
+   ╭─config.toml
+   ┆
+ 8 │ [[step]]
+ 9 │     action = 'ExtractRegions'
+   ┆              ────────┬───────
+   ┆                      │
+   ┆                      ╰──────── In this step
+   ┆
+10 │     out_label='umi'
+11 │     regions = [
+12 │     ]
+   ┆      ┬
+   ┆      │
+   ┆      ╰─ Missing required key: 'source'.
+───╯
+Hint: See https://doc_url.example/version-stripped-from-test/docs/redirects/ExtractRegions
+      Or run: `fastqrab template ExtractRegions` for more information.
+
 

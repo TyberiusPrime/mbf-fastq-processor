@@ -1,3 +1,4 @@
-StoreTagBackInSequence: the captured location of 4 read(s) was lost to edits applied after the tag was captured (rows [0, 1, 2, 3]).
+Error Details ==
+Error in stage 7: StoreTagBackInSequence(tag2): the captured location of 4 read(s) was lost to edits applied after the tag was captured (rows [0, 1, 2, 3]).
   For example, read 'Read1' had its tag covering 4..8 in a 12bp read, but the edits applied since (cut 6 from the start) removed or split those bases, leaving nowhere to write it back
 Set on_lost = 'Ignore' to skip these reads instead.

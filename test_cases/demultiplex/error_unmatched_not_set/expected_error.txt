@@ -1,17 +1,5 @@
 Error Details ==
-Error 1/2
-   ╭─config.toml
-   ┆
-34 │ [barcodes.demultiplex]
-35 │     CT = 'aaaa'
-36 │     TT = 'gggg'
-   ┆                ┬
-   ┆                │
-   ┆                ╰─ Barcode section not referenced by any step
-───╯
-Hint: Add a step that uses this barcode section, use it in `output.bam.references_from_barcodes`, or remove it.
-
-Error 2/2
+Error 1/1
    ╭─config.toml
    ┆
 29 │ [[step]]
