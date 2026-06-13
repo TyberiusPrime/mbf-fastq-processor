@@ -73,7 +73,6 @@ impl VerifyIn<PartialConfig> for PartialInspect {
                 .as_ref()
                 .map(crate::config::PartialInput::get_segment_order)
         {
-            let n = self.n.as_ref().map_or(0, |x| *x);
             let target_name = match segment {
                 SegmentIndexOrAll::All => "interleaved".to_string(),
                 SegmentIndexOrAll::Indexed(idx) => segment_order
@@ -218,7 +217,7 @@ impl Step for Inspect {
     fn apply(
         &self,
         block: FastQBlocksCombined,
-        input_info: &InputInfo,
+        _input_info: &InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let mut collected = self.collected.load(std::sync::atomic::Ordering::Relaxed);
@@ -227,7 +226,7 @@ impl Step for Inspect {
         }
 
         let mut collector = self.collector.lock().expect("collector mutex poisoned");
-        let mut iter: Box<dyn Iterator<Item = (Molecule, DemultiplexTag)>> =
+        let iter: Box<dyn Iterator<Item = (Molecule, DemultiplexTag)>> =
             if let Some(output_tags) = block.output_tags.as_ref() {
                 Box::new(block.molecules().zip(output_tags.iter().copied()))
             } else {
@@ -267,7 +266,6 @@ impl Step for Inspect {
     }
     fn finalize(&self, _demultiplex_info: &OptDemultiplex) -> Result<Option<FinalizeReportResult>> {
         let collector = self.collector.lock().expect("collector mutex poisoned");
-        let collected = self.collected.load(std::sync::atomic::Ordering::Relaxed);
         let mut writer = self
             .writer
             .lock()
@@ -276,7 +274,6 @@ impl Step for Inspect {
             .expect("writer must be set during initialization");
 
         if !collector.is_empty() {
-            let reads_to_write = collected.min(self.n);
             let mut buf = Vec::with_capacity(256);
             match self.format {
                 FileFormat::None | FileFormat::Fastq | FileFormat::Text => {

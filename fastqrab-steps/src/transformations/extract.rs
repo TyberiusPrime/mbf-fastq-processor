@@ -57,15 +57,15 @@ pub(crate) fn extract_region_tags_from_seq(
         .insert(label.clone(), TagColumn::Location(col.finish()));
 }
 
-pub(crate) fn extract_region_tags_from_both(
+pub(crate) fn extract_region_tags_from_qual(
     block: &mut FastQBlocksCombined,
     segment: SegmentIndex,
     label: &TagLabel,
-    f: impl Fn(&BStr, &BStr) -> Option<Range<u32>>,
+    f: impl Fn(&BStr) -> Option<Range<u32>>,
 ) {
     let mut col = block.location_column_builder(segment);
-    for read in block.segments[segment.as_index()].seq_quals.iter() {
-        match f(read.seq, read.qual) {
+    for qual in block.segments[segment.as_index()].seq_quals.iter_qual() {
+        match f(qual) {
             Some(region_range) => col.push_row_from_ranges(&[region_range]),
             None => col.push_row(&[]),
         }
@@ -76,24 +76,6 @@ pub(crate) fn extract_region_tags_from_both(
         .insert(label.clone(), TagColumn::Location(col.finish()));
 }
 
-// pub(crate) fn extract_string_tags(
-//     block: &mut FastQBlocksCombined,
-//     segment: SegmentIndex,
-//     label: &TagLabel,
-//     f: impl Fn(&mut WrappedFastQRead) -> Option<BString>,
-// ) {
-//     let mut out = Vec::new();
-//
-//     let f2 = |read: &mut WrappedFastQRead| {
-//         out.push(match f(read) {
-//             Some(hits) => TagValue::String(hits),
-//             None => TagValue::Missing,
-//         });
-//     };
-//     block.segments[segment.as_index()].apply(f2);
-//
-//     block.tags.insert(label.clone(), out);
-// }
 
 /// What an [`extract_region_or_value_tags_using_tags`] closure produces for one
 /// read: nothing, a live alias window, or owned divergent content.
@@ -150,7 +132,6 @@ pub(crate) fn extract_string_tags_using_tags(
     f: impl Fn(&BStr, usize, &IndexMap<TagLabel, TagColumn>) -> Option<BString>,
 ) {
     let mut out = Vec::new();
-    let read_no = block.first_read_sequential_number;
 
     let read_no = block.first_read_sequential_number;
     for (ii, seq) in block.segments[segment.as_index()]

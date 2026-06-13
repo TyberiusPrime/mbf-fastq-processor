@@ -5,7 +5,7 @@ use smallvec::SmallVec;
 use std::marker::PhantomData;
 use std::num::NonZero;
 use std::ops::Range;
-use stringpod::{CrossPods, DualStringPodMultiLocation};
+use stringpod::CrossPods;
 
 use crate::blocks::{self, FastQChunk, FastQReadMut, Molecules, MoleculesMut};
 use fastqrab_config::{TagLabel, segments::SegmentIndexOrAll};
@@ -1557,7 +1557,7 @@ impl FastQBlocksCombined {
     /// when the tag is missing or not a Location column
     pub fn apply_mut_with_location_tag<F>(&mut self, label: &TagLabel, mut f: F)
     where
-        F: for<'a> FnMut(&mut BStr, &SmallVec<[(u32, u32); 1]>, &DualStringPodMultiLocation),
+        F: for<'a> FnMut(&mut BStr, &SmallVec<[(u32, u32); 1]>),
     {
         let TagColumn::Location(col) = self.tags.get(label).expect("Tag must be present, bug")
         else {
@@ -1571,7 +1571,7 @@ impl FastQBlocksCombined {
             .iter_seq_mut()
             .zip(col.iter_row_regions())
         {
-            f(seq, &row_regions, col);
+            f(seq, &row_regions);
         }
     }
 

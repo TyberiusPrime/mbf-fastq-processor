@@ -1,5 +1,4 @@
 use bstr::ByteSlice;
-use std::borrow::Cow;
 
 use crate::transformations::prelude::*;
 use fastqrab_config::{default_region_separator, tpd_adapt_bstring};
@@ -93,7 +92,7 @@ impl VerifyIn<PartialConfig> for PartialConcatTags {
 impl TagUser for PartialTaggedVariant<PartialConcatTags> {
     fn get_tag_usage(
         &mut self,
-        tags_available: &IndexMap<TagLabel, TagMetadata>,
+        _tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> Option<TagUsageInfo<'_>> {
         if let Some(inner) = self.toml_value.value.as_mut()
@@ -149,7 +148,7 @@ impl Step for ConcatTags {
             let mut output_tags: Vec<Option<BString>> = Vec::with_capacity(num_reads);
             match self.on_missing {
                 OnMissing::MergePresent => {
-                    for read_idx in 0..num_reads {
+                    for _read_idx in 0..num_reads {
                         let parts: Vec<_> = string_iters
                             .iter_mut()
                             .map(|iter| iter.next().expect("tag length != block length!?"))
@@ -171,7 +170,7 @@ impl Step for ConcatTags {
                     }
                 }
                 OnMissing::SetMissing => {
-                    for read_idx in 0..num_reads {
+                    for _read_idx in 0..num_reads {
                         let parts: Vec<_> = string_iters
                             .iter_mut()
                             .map(|iter| iter.next().expect("tag length != block length!?"))

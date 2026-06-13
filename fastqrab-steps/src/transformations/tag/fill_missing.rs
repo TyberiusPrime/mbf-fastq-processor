@@ -88,7 +88,6 @@ impl Step for FillMissing {
         _input_info: &InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let num_reads = block.segments[0].len();
 
         let primary_vec = block
             .tags

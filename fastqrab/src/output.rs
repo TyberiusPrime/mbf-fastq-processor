@@ -6,7 +6,6 @@ use std::io::{BufWriter, Write};
 use std::num::{NonZero, NonZeroUsize};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
-use stringpod::CrossPods;
 
 use crate::config::CheckedConfig;
 use crate::demultiplex::OptDemultiplex;

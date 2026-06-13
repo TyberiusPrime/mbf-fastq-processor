@@ -461,7 +461,6 @@ fn run_match_phase(
     resonator: &HammingResonator,
     input_tags: &TagColumn,
     needs_qualities: bool,
-    block: Option<&FastQBlocksCombined>,
 ) -> Result<Vec<MatchSlot>> {
     let mut results: Vec<MatchSlot> = Vec::with_capacity(input_tags.len());
     match input_tags {
@@ -494,7 +493,7 @@ fn run_match_phase(
             unreachable!("Validation was meant to prevent this situation. Bug?")
         } // cov:excl-line
     }
-    if needs_qualities && let Some(block) = block {
+    if needs_qualities {
         if let TagColumn::Location(col) = input_tags {
             for (hits, slot) in col.iter().zip(results.iter_mut()) {
                 if !hits.1.is_empty() && matches!(&slot.result, Some(MatchResultOwned::Tie(_))) {
@@ -507,39 +506,6 @@ fn run_match_phase(
 }
 
 impl HammingCorrect {
-    fn push_output_location(
-        &self,
-        out_col: &mut Vec<BString>,
-        matched_idx: usize,
-        output_barcode: bool,
-    ) {
-        //todo: optimize by taking instead of cloning?
-        let (matched_seq, matched_name) = self
-            .seq_to_name
-            .get_index(matched_idx)
-            .expect("seq_to_name index out of range");
-        out_col.push(if output_barcode {
-            matched_seq.clone()
-        } else {
-            BString::new(matched_name.as_bytes().to_vec())
-        });
-        //     // Preserve location from the single input hit if available
-        //     // let loc = if input_hits.len() == 1 {
-        //     //     input_col.hit_location(input_hits[0])
-        //     // } else {
-        //     //     None
-        //     // };
-        //     out_col.push_row(&[loc.start, loc.end])
-        // } else {
-        //     // Output the matched name as sequence, no location
-        //     out_col.push_single(None, matched_name.as_bytes());
-        // }
-    }
-
-    fn push_empty_location(out_col: &mut Vec<BString>) {
-        // An "empty" hit: present but no sequence content
-        out_col.push(BString::new(vec![]))
-    }
 
     fn output_string(&self, matched_idx: usize, output_barcode: bool) -> Option<BString> {
         let (matched_seq, matched_name) = self
@@ -644,7 +610,6 @@ impl Step for HammingCorrect {
                 &self.resonator,
                 input_tags,
                 needs_qualities,
-                Some(&block),
             )? //cov:excl-line
         };
 
@@ -935,7 +900,6 @@ impl Step for _HammingPreMatch {
             &self.shared.resonator,
             input_tags,
             self.shared.needs_qualities,
-            Some(&block),
         )?; //cov:excl-line
         let block_no = block.block_no();
         self.shared

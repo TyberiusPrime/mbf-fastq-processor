@@ -782,8 +782,6 @@ pub fn bits_needed_to_represent(count: usize) -> u16 {
 
 #[cfg(test)]
 mod test {
-    use crate::segments::SegmentIndex;
-
     fn check(should: &[u8], input: &[u8]) {
         let s: Vec<u8> = should.to_vec();
         assert_eq!(
@@ -915,7 +913,7 @@ mod test {
         }
     }
 
-    fn draft_for(start: usize, len: usize, seg: u8, seq: &[u8]) -> Range<u32> {
+    fn draft_for(start: usize, len: usize) -> Range<u32> {
         start as u32..(start + len) as u32
     }
 
@@ -923,23 +921,23 @@ mod test {
     fn test_find_iupac() {
         assert_eq!(
             super::find_iupac(b"AGTTC", b"AGT", super::Anchor::Left, 0, 0),
-            Some(draft_for(0, 3, 0, b"AGT"))
+            Some(draft_for(0, 3))
         );
         assert_eq!(
             super::find_iupac(b"AGTTC", b"TTC", super::Anchor::Right, 0, 0),
-            Some(draft_for(2, 3, 1, b"TTC"))
+            Some(draft_for(2, 3))
         );
         assert_eq!(
             super::find_iupac(b"AGTTC", b"GT", super::Anchor::Anywhere, 0, 0),
-            Some(draft_for(1, 2, 2, b"GT"))
+            Some(draft_for(1, 2))
         );
         assert_eq!(
             super::find_iupac(b"AGTTC", b"AGT", super::Anchor::Anywhere, 0, 0),
-            Some(draft_for(0, 3, 2, b"AGT"))
+            Some(draft_for(0, 3))
         );
         assert_eq!(
             super::find_iupac(b"AGTTC", b"TTC", super::Anchor::Anywhere, 0, 0),
-            Some(draft_for(2, 3, 2, b"TTC"))
+            Some(draft_for(2, 3))
         );
         assert_eq!(
             super::find_iupac(b"AGTTC", b"GT", super::Anchor::Left, 0, 0),
@@ -955,15 +953,15 @@ mod test {
         );
         assert_eq!(
             super::find_iupac(b"AGTTC", b"T", super::Anchor::Anywhere, 0, 0),
-            Some(draft_for(2, 1, 1, b"T"))
+            Some(draft_for(2, 1))
         );
         assert_eq!(
             super::find_iupac(b"AGTTC", b"AA", super::Anchor::Left, 1, 0),
-            Some(draft_for(0, 2, 1, b"AG"))
+            Some(draft_for(0, 2))
         );
         assert_eq!(
             super::find_iupac(b"AGTTC", b"AGTTN", super::Anchor::Left, 0, 0),
-            Some(draft_for(0, 5, 1, b"AGTTC"))
+            Some(draft_for(0, 5))
         );
     }
 
@@ -972,22 +970,22 @@ mod test {
     fn test_find_iupac_with_indel() {
         assert_eq!(
             super::find_iupac_with_indel(b"AGTTC", b"AGT", super::Anchor::Anywhere, 0, 0, None,),
-            Some(draft_for(0, 3, 0, b"AGT"))
+            Some(draft_for(0, 3))
         );
 
         assert_eq!(
             super::find_iupac_with_indel(b"AGTTC", b"AAT", super::Anchor::Left, 1, 0, None,),
-            Some(draft_for(0, 3, 2, b"AGT"))
+            Some(draft_for(0, 3))
         );
 
         assert_eq!(
             super::find_iupac_with_indel(b"AGGTC", b"AGTC", super::Anchor::Anywhere, 0, 1, None,),
-            Some(draft_for(0, 5, 3, b"AGGTC"))
+            Some(draft_for(0, 5))
         );
 
         assert_eq!(
             super::find_iupac_with_indel(b"AGTC", b"AGGTC", super::Anchor::Anywhere, 0, 1, None,),
-            Some(draft_for(0, 4, 4, b"AGTC"))
+            Some(draft_for(0, 4))
         );
 
         assert_eq!(
@@ -1002,7 +1000,7 @@ mod test {
 
         assert_eq!(
             super::find_iupac_with_indel(b"CCAGTTC", b"TTC", super::Anchor::Right, 0, 1, None,),
-            Some(draft_for(4, 3, 5, b"TTC"))
+            Some(draft_for(4, 3))
         );
 
         assert_eq!(

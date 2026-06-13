@@ -7,7 +7,7 @@ mod tests {
         BamSinkOptions, ChunkPaths, ChunkPolicy, ChunkedRecordWriter, SinkConfig, WriteTarget,
     };
     use crate::blocks::{FastQChunk, OwnedFastQRead};
-    use crate::io::reads::{FastQBlock, FastQElement, Tags};
+    use crate::io::reads::Tags;
     use fastqrab_config::FileFormat;
     use noodles::bam;
     use noodles::sam::alignment::record::Flags as SamFlags;
