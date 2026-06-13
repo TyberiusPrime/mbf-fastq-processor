@@ -20,7 +20,7 @@
     action = 'Demultiplex'
     in_label = 'an12'
 	barcodes='B123'
-
+    in_label_contains_barcode= false
     output_unmatched = true
 
 [barcodes.B123]

@@ -1702,8 +1702,8 @@ impl PartialConfig {
         let mut seen: IndexMap<String, std::ops::Range<usize>> = IndexMap::new();
         if let Some(transforms) = self.transform.as_mut() {
             for trafo in transforms.iter_mut() {
-                if let Some(PartialTransformation::Demultiplex(demultiplex_config)) = trafo.as_mut()
-                    && let Some(demultiplex_config_value) = demultiplex_config.toml_value.as_ref()
+                if let Some(PartialTransformation::Demultiplex(demultiplex_config)) = trafo.value.as_mut()
+                    && let Some(demultiplex_config_value) = demultiplex_config.toml_value.value.as_ref()
                     && let Some(in_label) = demultiplex_config_value.in_label.as_ref()
                 {
                     let in_label: String = in_label.as_ref().to_string();
