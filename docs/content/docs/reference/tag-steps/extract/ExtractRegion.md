@@ -19,7 +19,7 @@ Extract a fixed position region.
 This transformation extracts a fixed-length region from the specified read at a
 given position and stores it as a tag.
 
-Start positions are 0-based.
+Start positions (anchor = start) are 0-based.
 
 End positions require negative starts (as in python, start=-1, length=1 is the last character).
 
@@ -32,3 +32,8 @@ of varying length).
 
 The `anchor` is necessary since the source must not necessarily be a read, 
 but can also be a previously found tag (e.g find an adapter, then take 6 bp after it).
+
+For multi-region spanning tags as sources, regions outside the original tag will be
+outside the leftmost/rightmost position.
+
+I must still fall within the read though, or it will yield a 'missing' region.

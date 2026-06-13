@@ -1,7 +1,10 @@
 use std::{cell::RefCell, collections::HashSet, rc::Rc};
 
-use super::super::{PartialRegionDefinition, RegionDefinition, extract_from_sequence};
+use super::super::{
+    PartialRegionDefinition, RegionAnchor, RegionDefinition, extract_from_sequence,
+};
 use crate::transformations::prelude::*;
+use stringpod::{Lifted, RegionLift};
 
 /// Extract regions by coordinates
 /// that is by (segment|source, 0-based start, length)
@@ -140,19 +143,107 @@ impl Step for Regions {
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         match &self.source {
             ResolvedSourceNoAll::Tag(tag_label) => {
-                todo!();
-                // let mut out = Vec::with_capacity(block.segments[0].len());
-                // for ii in 0..block.len() {
-                //     let mut h = BString::default();
-                //     let extracted = extract_regions(ii, &block, &self.regions);
-                //     for (seq, _coords) in extracted.into_iter().flatten() {
-                //         h.push_str(&seq);
-                //     }
-                //     out.push(Some(h));
-                // }
-                // block
-                //     .tags
-                //     .insert(self.out_label.clone(), TagColumn::String(out));
+                let input_col = block
+                    .tags
+                    .get(tag_label)
+                    .expect("Input tag missing, validation bug");
+                match input_col {
+                    // A location source still points into a read: extract relative
+                    // to its *joined* sequence and alias the result back into the
+                    // same segment, so the output stays a live location column.
+                    TagColumn::Location(_) => {
+                        let input_segment = input_col.location_segment();
+                        // Each region is extracted relative to the source tag's
+                        // joined sequence (all its spans concatenated, no
+                        // separator): offset 0 is the first covered base, offsets
+                        // walk the covered bases in stored order, and offsets past
+                        // the join continue linearly into the read from the last
+                        // covered base. Snapshot those covered positions up front
+                        // so we can drop the borrow on `block.tags` before
+                        // rebuilding a column against the segment. Each source span
+                        // is lifted from its birth frame into the segment's current
+                        // frame first; a span an intervening edit cut (e.g. a
+                        // `TrimAtTag` that cleared it) lifts away and contributes
+                        // nothing, leaving an empty row.
+                        let covered: Vec<Vec<u32>> = {
+                            let locations = input_col
+                                .as_locations()
+                                .expect("matched Location above");
+                            let segment = &block.segments[input_segment.as_index()];
+                            (0..locations.row_count())
+                                .map(|row| {
+                                    let (born_gen, born_len) = locations.row_born(row);
+                                    let view = segment
+                                        .seq_quals
+                                        .ops_since(born_gen, row)
+                                        .expect("born generation from this pod; row in range");
+                                    let mut positions = Vec::new();
+                                    for (start, len) in locations.row_regions(row) {
+                                        if let Ok(RegionLift::Kept { start, len }) = view
+                                            .map_region(start as usize, len as usize, born_len)
+                                        {
+                                            positions.extend(start as u32..(start + len) as u32);
+                                        }
+                                    }
+                                    positions
+                                })
+                                .collect()
+                        };
+
+                        let mut col = block.location_column_builder(input_segment);
+                        for (seq_len, covered) in block.segments[input_segment.as_index()]
+                            .seq_quals
+                            .iter_seq_lens()
+                            .zip(&covered)
+                        {
+                            // It's all or nothing: a read whose source tag has no
+                            // location, or where any region falls outside the read,
+                            // yields no hit.
+                            let parts: Option<Vec<(u32, u32)>> = (!covered.is_empty())
+                                .then(|| {
+                                    self.regions
+                                        .iter()
+                                        .map(|region| {
+                                            extract_from_joined(
+                                                covered,
+                                                seq_len,
+                                                region.start,
+                                                region.length,
+                                                &region.anchor,
+                                            )
+                                        })
+                                        .collect::<Option<Vec<Vec<(u32, u32)>>>>()
+                                        .map(|per_region| {
+                                            per_region.into_iter().flatten().collect()
+                                        })
+                                })
+                                .flatten();
+                            col.push_row(parts.as_deref().unwrap_or(&[]));
+                        }
+                        let col = col.finish();
+
+                        block
+                            .tags
+                            .insert(self.out_label.clone(), TagColumn::Location(col));
+                    }
+                    // A string source is just bytes with no read to alias, so the
+                    // regions are sliced out of the string value and the output is
+                    // itself a string column.
+                    TagColumn::String(_) => {
+                        let out: Vec<Option<BString>> = input_col
+                            .iter_stringified()
+                            .map(|value| {
+                                value.and_then(|s| extract_string_regions(&s, &self.regions))
+                            })
+                            .collect();
+                        block
+                            .tags
+                            .insert(self.out_label.clone(), TagColumn::String(out));
+                    }
+                    _ => panic!(
+                        "ExtractRegions tag source must be a Location or String tag (validation bug)"
+                    ),
+                }
             }
             ResolvedSourceNoAll::Name {
                 segment_index,
@@ -192,4 +283,77 @@ impl Step for Regions {
 
         Ok((block, true))
     }
+}
+
+/// Slice every region out of a string-tag value and concatenate them. The
+/// regions index into `s` directly (it has no read to anchor against), reusing
+/// the same start/length/anchor maths as a whole-segment extraction. All or
+/// nothing: returns `None` if any region falls outside `s`.
+fn extract_string_regions(s: &[u8], regions: &[RegionDefinition]) -> Option<BString> {
+    let mut out = BString::default();
+    for region in regions {
+        let (start, len) = extract_from_sequence(
+            s.len(),
+            0,
+            s.len(),
+            region.start,
+            region.length,
+            &region.anchor,
+        )?;
+        out.extend_from_slice(&s[start as usize..(start + len) as usize]);
+    }
+    Some(out)
+}
+
+/// Extract one region from a source tag's *joined* sequence, expressed as
+/// read-relative spans.
+///
+/// `covered` is the source tag's covered read positions, in stored (join) order
+/// — so `covered[i]` is the read byte at joined offset `i`. A region is taken in
+/// joined-offset space (`out_start` per `anchor`, `out_length` long), then each
+/// offset is mapped back to a read position: offsets within the join use
+/// `covered`; offsets before it (`< 0`) or past it (`>= covered.len()`) continue
+/// linearly into the read from the first / last covered base. The resulting
+/// positions are coalesced into contiguous spans (a gappy source can split one
+/// region into several). Returns `None` if any offset falls outside the read
+/// (`< 0` or `>= seq_len`), so the caller can drop the whole row.
+fn extract_from_joined(
+    covered: &[u32],
+    seq_len: usize,
+    out_start: isize,
+    out_length: usize,
+    anchor: &RegionAnchor,
+) -> Option<Vec<(u32, u32)>> {
+    debug_assert!(!covered.is_empty(), "caller guards against empty source rows");
+    let joined_len = covered.len() as isize;
+    let first = covered[0] as isize;
+    let last = covered[covered.len() - 1] as isize;
+    let seq_len = seq_len as isize;
+    // The joined-offset of the region's first base.
+    let start = match anchor {
+        RegionAnchor::Start => out_start,
+        RegionAnchor::End => joined_len + out_start,
+    };
+
+    let mut spans: Vec<(u32, u32)> = Vec::new();
+    for offset in start..start + out_length as isize {
+        let read_pos = if offset < 0 {
+            first + offset
+        } else if offset < joined_len {
+            covered[offset as usize] as isize
+        } else {
+            last + 1 + (offset - joined_len)
+        };
+        if read_pos < 0 || read_pos >= seq_len {
+            return None;
+        }
+        let read_pos = read_pos as u32;
+        // Coalesce runs of consecutive read positions into one span, preserving
+        // join order (so a jump back into the read starts a fresh span).
+        match spans.last_mut() {
+            Some(last) if last.0 + last.1 == read_pos => last.1 += 1,
+            _ => spans.push((read_pos, 1)),
+        }
+    }
+    Some(spans)
 }
