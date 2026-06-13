@@ -23,7 +23,7 @@ tags survive — they simply follow their segment.
 
 A **conditional** swap (`if_tag` set) swaps reads one at a time, so after it runs a
 single location tag would point into *two different* segments depending on the read.
-That cannot be represented, so a conditional `Swap` **forgets every location tag on
+Loctations are limted to a single segment, so a conditional `Swap` **forgets every location tag on
 the two swapped segments**. Referring to such a tag (or its `location_…` /
 `initial_location_…` companion) after the swap is a configuration error.
 
