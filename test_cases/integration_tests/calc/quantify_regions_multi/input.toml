@@ -5,17 +5,31 @@
 [[step]]
     action = 'ExtractRegions'
     regions = [
-            { source = 'read1', start = 6, length = 6, anchor='start'},
-            { source = 'read2', start = 10, length = 7, anchor='Start'}
+            {  start = 6, length = 6, anchor='start'},
     ]
+    source = 'read1'
     out_label = 'regs'
 
+[[step]]
+    action = 'ExtractRegions'
+    regions = [
+            {  start = 10, length = 7, anchor='Start'}
+    ]
+    source = 'read2'
+    out_label = 'regs2'
+
+
+[[step]]
+  action = 'ConcatTags'
+  in_labels = ['regs', 'regs2']
+  out_label = 'regs_combo'
+  on_missing = 'setmissing'
+  separator = 'xyz'
 
 [[step]]
     action = 'QuantifyTag'
     infix = 'kmer'
-    in_label = 'regs'
-    region_separator = 'xyz'
+    in_label = 'regs_combo'
 
 [output]
     prefix = 'output'
