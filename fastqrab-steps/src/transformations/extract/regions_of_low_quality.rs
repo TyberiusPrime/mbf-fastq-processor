@@ -48,8 +48,22 @@ impl TagUser for PartialTaggedVariant<PartialRegionsOfLowQuality> {
         _segment_order: &[String],
     ) -> Option<TagUsageInfo<'_>> {
         if let Some(inner) = self.toml_value.value.as_mut() {
+            // Record the segment this location tag lives on, so a conditional
+            // `Swap` on that segment can forget it (a per-read swap would split it
+            // across two segments).
+            let segment = inner
+                .segment
+                .as_ref()
+                .and_then(|m| m.as_ref_post())
+                .copied();
             Some(TagUsageInfo {
-                declared_tag: inner.out_label.to_declared_tag(TagValueType::Location),
+                declared_tag: inner
+                    .out_label
+                    .to_declared_tag(TagValueType::Location)
+                    .map(|dt| match segment {
+                        Some(seg) => dt.with_segment(seg),
+                        None => dt,
+                    }),
                 ..Default::default()
             })
         } else {

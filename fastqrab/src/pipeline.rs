@@ -160,7 +160,7 @@ fn parse_interleaved_and_send(
             expected_read_count = Some(value);
         }
         if !res.fastq_block.is_empty() {
-            let out_blocks = res.fastq_block.split_interleaved(segment_count);
+            let out_blocks = res.fastq_block.split_interleaved(segment_count)?;
             first_read_in_block_no += out_blocks[0].len();
             let out = (
                 io::FastQBlocksCombined::new(
@@ -376,7 +376,7 @@ fn run_benchmark_interleaved_thread(
         "Empty first block in benchmark. Should have been validated before?"
     );
 
-    let out_blocks = first_block.split_interleaved(segment_count);
+    let out_blocks = first_block.split_interleaved(segment_count).unwrap();
 
     while molecules_sent < molecule_count {
         //we don't worry about having a few reads too many here.

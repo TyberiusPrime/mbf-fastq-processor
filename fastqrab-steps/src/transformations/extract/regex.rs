@@ -135,17 +135,32 @@ impl TagUser for PartialTaggedVariant<PartialRegex> {
                     }));
                 }
             }
-            let declared_tag = inner.out_label.to_declared_tag({
-                if let Some(MustAdapt::PostVerify(source)) = inner.source.as_ref() {
-                    match source {
-                        ResolvedSourceNoAll::Segment(_segment_index) => TagValueType::Location,
-                        ResolvedSourceNoAll::Tag(_tag_label) => TagValueType::String,
-                        ResolvedSourceNoAll::Name { .. } => TagValueType::String,
+            // A segment-sourced regex yields a Location tag on that segment;
+            // record it so a conditional `Swap` on that segment can forget it.
+            let segment = if let Some(MustAdapt::PostVerify(ResolvedSourceNoAll::Segment(idx))) =
+                inner.source.as_ref()
+            {
+                Some(*idx)
+            } else {
+                None
+            };
+            let declared_tag = inner
+                .out_label
+                .to_declared_tag({
+                    if let Some(MustAdapt::PostVerify(source)) = inner.source.as_ref() {
+                        match source {
+                            ResolvedSourceNoAll::Segment(_segment_index) => TagValueType::Location,
+                            ResolvedSourceNoAll::Tag(_tag_label) => TagValueType::String,
+                            ResolvedSourceNoAll::Name { .. } => TagValueType::String,
+                        }
+                    } else {
+                        TagValueType::Location
                     }
-                } else {
-                    TagValueType::Location
-                }
-            });
+                })
+                .map(|dt| match segment {
+                    Some(seg) => dt.with_segment(seg),
+                    None => dt,
+                });
             if let Some(MustAdapt::PostVerify(ResolvedSourceNoAll::Tag(tag_name))) =
                 inner.source.as_ref()
             {

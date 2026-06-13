@@ -139,7 +139,7 @@ impl Step for QuantifyTag {
                         .unwrap_or_else(|| BStr::new(b"")),
                 )
             })),
-            _ => unreachable!("Tag validation must prevent numeric/bool tags from reaching here")
+            _ => unreachable!("Tag validation must prevent numeric/bool tags from reaching here"),
         };
 
         if let Some(demultiplex_tags) = &block.output_tags {

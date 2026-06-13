@@ -48,6 +48,10 @@ pub struct TagMetadata {
     pub tag_type: TagValueType,
     pub contents: StringTagContent,
     pub span: std::ops::Range<usize>,
+    /// For `Location` tags, the segment the tag's bytes live on (see
+    /// [`DeclaredTag::segment`](fastqrab_config::DeclaredTag::segment)). Lets a
+    /// conditional `Swap` identify which location tags it must forget.
+    pub segment: Option<SegmentIndex>,
 }
 
 pub fn config_from_string(toml: &str) -> Result<Config, DeserError<PartialConfig>> {
@@ -1202,6 +1206,18 @@ impl PartialConfig {
                             tags_available.shift_remove(&tag_name);
                         }
                     }
+                    RemovedTags::SomeOwned(tags) => {
+                        // Computed set (e.g. conditional Swap forgetting location
+                        // tags on the swapped segments). These were read straight
+                        // out of `tags_available`, so they always exist.
+                        for tag_name in tags {
+                            if let Some(metadata) = tags_available.get_mut(&tag_name) {
+                                metadata.used = true;
+                                tags_used_here.push(tag_name.clone());
+                            }
+                            tags_available.shift_remove(&tag_name);
+                        }
+                    }
                 }
 
                 if tag_info.must_see_all_tags {
@@ -1267,43 +1283,71 @@ impl PartialConfig {
                             }
                         }
                     } else {
-                        if let Some(source_tag) = tag_name.source_tag()
-                            && let Some(entry) =
-                                //todo get rid of the alloc?
+                        if let Some(source_tag) = tag_name.source_tag() {
+                            //todo get rid of the alloc?
+                            if let Some(entry) =
                                 tags_available.get_mut(&TagLabel::Normal(source_tag.clone()))
-                        {
-                            entry.used = true;
-                            match tag_name {
-                                TagLabel::Normal(_) | TagLabel::ReadNo | TagLabel::Length(_, _) => {
-                                    unreachable!() // cov:excl-line
-                                } // cov:excl-line should not have a source_tag
-                                TagLabel::TagLength(_source_tag, _) => {
-                                    if !entry.tag_type.compatible(TagValueType::Location)
-                                        && !entry.tag_type.compatible(TagValueType::String)
-                                    {
-                                        let toml_source = &used_tag_info.toml_source;
-                                        Self::_set_type_error(
-                                            toml_source,
-                                            source_tag,
-                                            &[TagValueType::String, TagValueType::Location],
-                                            &entry.tag_type,
-                                            used_tag_info.further_help.as_ref(),
-                                        );
+                            {
+                                entry.used = true;
+                                match tag_name {
+                                    TagLabel::Normal(_)
+                                    | TagLabel::ReadNo
+                                    | TagLabel::Length(_, _) => {
+                                        unreachable!() // cov:excl-line
+                                    } // cov:excl-line should not have a source_tag
+                                    TagLabel::TagLength(_source_tag, _) => {
+                                        if !entry.tag_type.compatible(TagValueType::Location)
+                                            && !entry.tag_type.compatible(TagValueType::String)
+                                        {
+                                            let toml_source = &used_tag_info.toml_source;
+                                            Self::_set_type_error(
+                                                toml_source,
+                                                source_tag,
+                                                &[TagValueType::String, TagValueType::Location],
+                                                &entry.tag_type,
+                                                used_tag_info.further_help.as_ref(),
+                                            );
+                                        }
+                                    }
+                                    TagLabel::TagInitialLocation { .. }
+                                    | TagLabel::TagLocation { .. } => {
+                                        if !entry.tag_type.compatible(TagValueType::Location) {
+                                            let toml_source = &used_tag_info.toml_source;
+                                            Self::_set_type_error(
+                                                toml_source,
+                                                source_tag,
+                                                &[TagValueType::Location],
+                                                &entry.tag_type,
+                                                used_tag_info.further_help.as_ref(),
+                                            );
+                                        }
                                     }
                                 }
-                                TagLabel::TagInitialLocation { .. }
-                                | TagLabel::TagLocation { .. } => {
-                                    if !entry.tag_type.compatible(TagValueType::Location) {
-                                        let toml_source = &used_tag_info.toml_source;
-                                        Self::_set_type_error(
-                                            toml_source,
-                                            source_tag,
-                                            &[TagValueType::Location],
-                                            &entry.tag_type,
-                                            used_tag_info.further_help.as_ref(),
-                                        );
-                                    }
-                                }
+                            } else {
+                                // The virtual tag's source is gone — typically
+                                // forgotten by an intermediate step (a conditional
+                                // `Swap` forgets location tags on the swapped
+                                // segments). Without this the missing source would
+                                // only surface as a runtime panic when the virtual
+                                // tag is materialized.
+                                any_tag_errors = true;
+                                let toml_source = &used_tag_info.toml_source;
+                                *toml_source.borrow_mut().0 = TomlValueState::new_validation_failed(
+                                    format!("No such tag: '{source_tag}'"),
+                                );
+                                let alternatives = offer_alternatives(
+                                    source_tag.as_str(),
+                                    &tags_available.keys().map(AsRef::as_ref).collect::<Vec<_>>(),
+                                );
+                                let help = if all_tags_ever.contains_key(source_tag.as_str()) {
+                                    format!(
+                                        "Tag '{source_tag}' was generated by a previous step, but it is not available at this point.\n\
+                                        This likely means that it was removed (forgotten) by an intermediate step.\n{alternatives}",
+                                    )
+                                } else {
+                                    alternatives
+                                };
+                                *toml_source.borrow_mut().1 = Some(help);
                             }
                         }
 
@@ -1336,6 +1380,7 @@ impl PartialConfig {
                                 tag_type: dt.tag_type,
                                 contents: dt.contains,
                                 span: dt.toml_source_span,
+                                segment: dt.segment,
                             },
                         );
                     }

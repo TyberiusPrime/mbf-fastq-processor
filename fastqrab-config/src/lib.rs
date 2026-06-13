@@ -235,11 +235,27 @@ pub struct DeclaredTag<'a> {
     pub toml_source_help: &'a mut Option<String>,
     pub toml_source_span: std::ops::Range<usize>,
     pub contains: StringTagContent,
+    /// For `Location` tags, the single segment this tag's bytes live on (its
+    /// runtime `source_id`). Recorded so a step that moves reads between segments
+    /// per-read (conditional `Swap`) can tell, at config-verify, which location
+    /// tags it would split across segments and must forget. `None` for tags with
+    /// no single segment of origin (most non-location tags).
+    pub segment: Option<crate::segments::SegmentIndex>,
 }
 
 impl<'a> DeclaredTag<'a> {
     pub fn with_contents(self, contains: StringTagContent) -> Self {
         Self { contains, ..self }
+    }
+
+    /// Record the segment a `Location` tag's bytes originate on. See
+    /// [`segment`](Self::segment).
+    #[must_use]
+    pub fn with_segment(self, segment: crate::segments::SegmentIndex) -> Self {
+        Self {
+            segment: Some(segment),
+            ..self
+        }
     }
 }
 
@@ -254,6 +270,11 @@ pub enum RemovedTags<'a> {
     None,
     All,
     Some(Vec<(TagLabel, &'a mut TomlValue<TagLabel>)>),
+    /// Like [`Some`](RemovedTags::Some) but for a *computed* set the step doesn't
+    /// have a config field to point at (e.g. conditional `Swap` forgetting every
+    /// location tag on the swapped segments). These tags are known to exist, so
+    /// no per-tag toml source is needed for an error span.
+    SomeOwned(Vec<TagLabel>),
 }
 impl TagValueType {
     #[must_use]
@@ -514,6 +535,7 @@ impl ToDeclaredTag for TomlValue<TagLabel> {
                 toml_source_help: &mut self.help,
                 toml_source_span: span,
                 contains: StringTagContent::Undefined,
+                segment: None,
             })
         } else {
             // Since the virtual tag introduction, we do reach this on invalid TagLabes.
@@ -533,6 +555,7 @@ impl ToDeclaredTag for TomlValue<Option<TagLabel>> {
                 toml_source_help: &mut self.help,
                 toml_source_span: span,
                 contains: StringTagContent::Undefined,
+                segment: None,
             })
         } else {
             None

@@ -123,8 +123,30 @@ impl TagUser for PartialTaggedVariant<PartialRegions> {
                 TagValueType::String
             };
             inner.output_tag_type = Some(output_tag_type);
+            // For a Location output, record the single segment the tag lives on so
+            // a conditional `Swap` on that segment can forget it. A segment/name
+            // source gives it directly; a tag source inherits the source tag's
+            // segment.
+            let segment = inner
+                .source
+                .as_ref()
+                .and_then(|x| x.as_ref_post())
+                .and_then(|resolved| match resolved {
+                    crate::config::ResolvedSourceNoAll::Segment(idx) => Some(*idx),
+                    crate::config::ResolvedSourceNoAll::Name { segment_index, .. } => {
+                        Some(*segment_index)
+                    }
+                    crate::config::ResolvedSourceNoAll::Tag(tag) => {
+                        tags_available.get(tag).and_then(|m| m.segment)
+                    }
+                });
             Some(TagUsageInfo {
-                declared_tag: inner.out_label.to_declared_tag(output_tag_type),
+                declared_tag: inner.out_label.to_declared_tag(output_tag_type).map(|dt| {
+                    match (output_tag_type, segment) {
+                        (TagValueType::Location, Some(seg)) => dt.with_segment(seg),
+                        _ => dt,
+                    }
+                }),
                 used_tags,
                 ..Default::default()
             })
@@ -166,9 +188,8 @@ impl Step for Regions {
                         // `TrimAtTag` that cleared it) lifts away and contributes
                         // nothing, leaving an empty row.
                         let covered: Vec<Vec<u32>> = {
-                            let locations = input_col
-                                .as_locations()
-                                .expect("matched Location above");
+                            let locations =
+                                input_col.as_locations().expect("matched Location above");
                             let segment = &block.segments[input_segment.as_index()];
                             (0..locations.row_count())
                                 .map(|row| {
@@ -179,8 +200,8 @@ impl Step for Regions {
                                         .expect("born generation from this pod; row in range");
                                     let mut positions = Vec::new();
                                     for (start, len) in locations.row_regions(row) {
-                                        if let Ok(RegionLift::Kept { start, len }) = view
-                                            .map_region(start as usize, len as usize, born_len)
+                                        if let Ok(RegionLift::Kept { start, len }) =
+                                            view.map_region(start as usize, len as usize, born_len)
                                         {
                                             positions.extend(start as u32..(start + len) as u32);
                                         }
@@ -324,7 +345,10 @@ fn extract_from_joined(
     out_length: usize,
     anchor: &RegionAnchor,
 ) -> Option<Vec<(u32, u32)>> {
-    debug_assert!(!covered.is_empty(), "caller guards against empty source rows");
+    debug_assert!(
+        !covered.is_empty(),
+        "caller guards against empty source rows"
+    );
     let joined_len = covered.len() as isize;
     let first = covered[0] as isize;
     let last = covered[covered.len() - 1] as isize;

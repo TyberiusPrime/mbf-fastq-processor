@@ -50,7 +50,7 @@ pub struct StoreTagInSequence {
     /// Where to insert relative to the position tag.
     anchor: ReplacementAnchor,
     /// What to do when the position tag's location was lost to a later edit.
-    #[tpd(alias="on_loss")]
+    #[tpd(alias = "on_loss")]
     #[tpd(default)]
     on_lost: OnLost,
 }
@@ -116,7 +116,10 @@ impl Step for StoreTagInSequence {
             value,
             anchor,
             self.on_lost,
-            &format!("StoreTagInSequence({}->{})", self.in_value_label, self.in_position_label)
+            &format!(
+                "StoreTagInSequence({}->{})",
+                self.in_value_label, self.in_position_label
+            ),
         )?;
 
         Ok((block, true))

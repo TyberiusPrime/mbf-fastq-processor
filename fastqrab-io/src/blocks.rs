@@ -1,3 +1,4 @@
+use anyhow::{Result, bail};
 use bstr::{BStr, BString, ByteSlice};
 use smallvec::{SmallVec, smallvec};
 use std::{num::NonZero, ops::Range};
@@ -59,26 +60,57 @@ impl FastQChunk {
         }
     }
 
-    pub fn split_interleaved(self, _n: NonZero<usize>) -> Vec<FastQChunk> {
-        //TODO: what happens if count % n isn't 0?
-        todo!();
-        // let split_names = self.names.split_interleaved(n);
-        // let split_seq_quals = self.seq_quals.split_interleaved(n);
-        // let split_pluses = self.pluses.split_interleaved(n);
-        // let mut result = Vec::with_capacity(split_names.len());
-        // for (n, sq, p) in split_names
-        //     .into_iter()
-        //     .zip(split_seq_quals)
-        //     .zip(split_pluses)
-        // {
-        //     result.push(FastQChunk {
-        //         names: n,
-        //         seq_quals: sq,
-        //         pluses: p,
-        //         first_read_sequential_number: self.first_read_sequential_number,
-        //     })
-        // }
-        //result
+    /// Deinterleave this segment into `n` segments. Read `i` is routed to output
+    /// segment `i % n`, so segment `j` collects reads `j, j+n, j+2n, …`. This is
+    /// the inverse of interleaving `n` lockstep streams round-robin (e.g.
+    /// splitting an interleaved R1/R2 file back into separate mates with `n == 2`).
+    ///
+    /// Each output is freshly built, copying the relevant entries out of `self`'s
+    /// columns; the originals are consumed.
+    ///
+    /// # Panics
+    /// If `self.len()` is not a multiple of `n` — every output segment must end
+    /// up with the same number of reads.
+    pub fn split_interleaved(self, n: NonZero<usize>) -> Result<Vec<FastQChunk>> {
+        let n = n.get();
+        let total = self.len();
+        if total % n != 0 {
+            bail!(
+                "Can't split {total} reads into {n} interleaved segments.\n\
+            Since the config verifies that your input.config.block_size satisfies this,\n\
+            this means that your total read count is not compatible with this split"
+            );
+        }
+        let per_segment = total / n;
+
+        let mut names: Vec<StringPodBuilder> = (0..n)
+            .map(|_| StringPodBuilder::with_capacity(0, per_segment))
+            .collect();
+        let mut seq_quals: Vec<DualStringPodBuilder> = (0..n)
+            .map(|_| DualStringPodBuilder::with_capacity(0, per_segment))
+            .collect();
+        let mut pluses: Vec<StringPodBuilder> = (0..n)
+            .map(|_| StringPodBuilder::with_capacity(0, per_segment))
+            .collect();
+
+        for i in 0..total {
+            let seg = i % n;
+            names[seg].push(self.names.get(i).as_bytes());
+            let (seq, qual) = self.seq_quals.pair(i);
+            seq_quals[seg].push(seq.as_bytes(), qual.as_bytes());
+            pluses[seg].push(self.pluses.get(i).as_bytes());
+        }
+
+        Ok(names
+            .into_iter()
+            .zip(seq_quals)
+            .zip(pluses)
+            .map(|((names, seq_quals), pluses)| FastQChunk {
+                names: names.finish(),
+                seq_quals: seq_quals.finish(),
+                pluses: pluses.finish(),
+            })
+            .collect())
     }
 
     // pub fn push(&mut self, read: &OwnedFastQRead) {
@@ -456,6 +488,60 @@ impl<'a> Iterator for MoleculesMut<'a> {
 }
 
 impl ExactSizeIterator for MoleculesMut<'_> {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn read(i: usize) -> OwnedFastQRead {
+        // seq and qual must share a per-entry length (DualStringPod invariant).
+        OwnedFastQRead {
+            name: BString::from(format!("r{i}")),
+            seq: BString::from(format!("SEQ{i}")),
+            qual: BString::from(format!("QAL{i}")),
+            plus: BString::from(format!("plus{i}")),
+        }
+    }
+
+    #[test]
+    fn split_interleaved_routes_round_robin() {
+        // 6 reads, deinterleave into 2 streams: segment 0 -> r0,r2,r4; seg 1 -> r1,r3,r5.
+        let reads: Vec<_> = (0..6).map(read).collect();
+        let chunk = FastQChunk::from_owned_reads(&reads);
+
+        let segments = chunk.split_interleaved(NonZero::new(2).unwrap()).unwrap();
+        assert_eq!(segments.len(), 2);
+
+        let names =
+            |seg: &FastQChunk| -> Vec<String> { seg.iter().map(|r| r.name.to_string()).collect() };
+        assert_eq!(names(&segments[0]), vec!["r0", "r2", "r4"]);
+        assert_eq!(names(&segments[1]), vec!["r1", "r3", "r5"]);
+
+        // Seq/qual/plus columns travel with their read.
+        let r2 = segments[0].iter().nth(1).unwrap();
+        assert_eq!(r2.seq.to_string(), "SEQ2");
+        assert_eq!(r2.qual.to_string(), "QAL2");
+        assert_eq!(r2.plus.to_string(), "plus2");
+    }
+
+    #[test]
+    fn split_interleaved_n1_is_identity() {
+        let reads: Vec<_> = (0..3).map(read).collect();
+        let chunk = FastQChunk::from_owned_reads(&reads);
+        let segments = chunk.split_interleaved(NonZero::new(1).unwrap()).unwrap();
+        assert_eq!(segments.len(), 1);
+        let got: Vec<String> = segments[0].iter().map(|r| r.name.to_string()).collect();
+        assert_eq!(got, vec!["r0", "r1", "r2"]);
+    }
+
+    #[test]
+    #[should_panic(expected = "Can't split 5 reads into 2 interleaved segments")]
+    fn split_interleaved_uneven_panics() {
+        let reads: Vec<_> = (0..5).map(read).collect();
+        let chunk = FastQChunk::from_owned_reads(&reads);
+        let _ = chunk.split_interleaved(NonZero::new(2).unwrap()).unwrap();
+    }
+}
 
 /// Splits a read 'name' into the actual name/id and the comment
 pub fn split_name_and_comment(name: &BStr, read_comment_insert_char: u8) -> (&BStr, &BStr) {

@@ -1,6 +1,17 @@
 use crate::transformations::prelude::*;
+use bstr::ByteSlice;
+use fastqrab_io::blocks::FastQChunk;
 
-/// Swap two segments
+/// Swap two segments.
+///
+/// With `if_tag` set, the swap is per-read (only reads where the tag is truthy
+/// exchange their mates). A per-read swap moves a read to the *other* segment,
+/// so any location tag captured against either swapped segment is **forgotten**
+/// — a location column may alias only one segment, and a per-read swap would
+/// split it across two. To carry such data across a conditional swap, snapshot
+/// it to a plain String with `ConcatTags` beforehand. An unconditional swap
+/// keeps location tags: their `source_id` is simply re-stamped to the segment
+/// that now holds their bytes.
 #[derive(Clone, JsonSchema)]
 #[tpd]
 #[derive(Debug)]
@@ -92,12 +103,49 @@ impl VerifyIn<PartialConfig> for PartialSwap {
 impl TagUser for PartialTaggedVariant<PartialSwap> {
     fn get_tag_usage(
         &mut self,
-        _tags_available: &IndexMap<TagLabel, TagMetadata>,
+        tags_available: &IndexMap<TagLabel, TagMetadata>,
         _segment_order: &[String],
     ) -> Option<TagUsageInfo<'_>> {
         if let Some(inner) = self.toml_value.value.as_mut() {
+            // A conditional (per-read) swap moves individual reads between the two
+            // segments, which would split any location tag on those segments
+            // across two segments — a representation the model forbids. So forget
+            // those location tags here, at config-verify, by removing them from
+            // the available set; a later reference then fails cleanly (instead of
+            // panicking at runtime when the tag is materialized).
+            let removed_tags = {
+                let is_conditional = inner.if_tag.as_ref().and_then(|o| o.as_ref()).is_some();
+                let seg_a = inner
+                    .segment_a
+                    .as_ref()
+                    .and_then(|m| m.as_ref_post())
+                    .map(SegmentIndex::as_index);
+                let seg_b = inner
+                    .segment_b
+                    .as_ref()
+                    .and_then(|m| m.as_ref_post())
+                    .map(SegmentIndex::as_index);
+                if let (true, Some(a), Some(b)) = (is_conditional, seg_a, seg_b) {
+                    let removed: Vec<TagLabel> = tags_available
+                        .iter()
+                        .filter_map(|(label, meta)| {
+                            meta.segment
+                                .filter(|seg| seg.as_index() == a || seg.as_index() == b)
+                                .map(|_| label.clone())
+                        })
+                        .collect();
+                    if removed.is_empty() {
+                        RemovedTags::None
+                    } else {
+                        RemovedTags::SomeOwned(removed)
+                    }
+                } else {
+                    RemovedTags::None
+                }
+            };
             Some(TagUsageInfo {
                 used_tags: vec![inner.if_tag.to_used_tag(&[])],
+                removed_tags,
                 must_see_all_tags: true,
                 ..Default::default()
             })
@@ -126,61 +174,93 @@ impl Step for Swap {
             }
         };
 
-        // If no condition, do unconditional swap
+        // If no condition, do unconditional swap. The two segments move as
+        // whole units, so any location tag captured against one of them is still
+        // valid — it just lives at the other index now. Re-stamp its source_id so
+        // liftover and write-back keep targeting the segment that holds its bytes.
         if self.if_tag.is_none() {
             block.swap_members(index_a as usize, index_b as usize);
+
+            for col in block.tags.values_mut() {
+                if let TagColumn::Location(loc) = col {
+                    let sid = loc.source_id();
+                    if sid == u32::from(index_a) {
+                        loc.set_source_id(u32::from(index_b));
+                    } else if sid == u32::from(index_b) {
+                        loc.set_source_id(u32::from(index_a));
+                    }
+                }
+            }
 
             return Ok((block, true));
         }
 
-        // Conditional swap logic
+        // Conditional swap: only the reads where `cond_tag` is true exchange
+        // their segment_a/segment_b mates. A single read now moves to the *other*
+        // segment, so a location tag captured against one of these segments would
+        // need to track different segments for different rows — a cross-segment
+        // column, which the design forbids (a Value aliases exactly one read pod).
+        //
+        // So we rebuild both segments as fresh pods (selecting each output row
+        // from whichever source it should now carry) and *forget* every location
+        // tag bound to either swapped segment. A user who wants to keep that data
+        // across a conditional swap can snapshot it to a plain String first with
+        // `ConcatTags` (which detaches it from the live segment).
         let cond_tag = self
             .if_tag
             .as_ref()
             .expect("if_tag must be set when conditional swap is used");
-        let tag_values = get_bool_vec_from_tag(&block, cond_tag);
+        let swap_these = get_bool_vec_from_tag(&block, cond_tag);
 
-        // Count how many swaps are needed
-        let swap_count = tag_values.iter().filter(|&&x| x).count();
-        let total_count = tag_values.len();
+        let (a, b) = (index_a as usize, index_b as usize);
+        let n = block.segments[a].len();
 
-        // Optimization: if more than half need swapping, swap the blocks first
-        // then swap back the minority
-        let (swap_these, did_block_swap) = if swap_count > total_count / 2 {
-            // Swap the entire blocks and entries
-            block.swap_members(index_a as usize, index_b as usize);
-            // Now we need to swap back the reads that should NOT have been swapped
-            (tag_values.iter().map(|&x| !x).collect::<Vec<bool>>(), true)
-        } else {
-            // Keep the original approach - swap the minority
-            (tag_values.clone(), false)
+        let mut a_names = StringPodBuilder::with_capacity(0, n);
+        let mut a_seq_quals = DualStringPodBuilder::with_capacity(0, n);
+        let mut a_pluses = StringPodBuilder::with_capacity(0, n);
+        let mut b_names = StringPodBuilder::with_capacity(0, n);
+        let mut b_seq_quals = DualStringPodBuilder::with_capacity(0, n);
+        let mut b_pluses = StringPodBuilder::with_capacity(0, n);
+
+        {
+            let seg_a = &block.segments[a];
+            let seg_b = &block.segments[b];
+            for (row, &swap) in swap_these.iter().enumerate() {
+                // For a swapped row, new-a takes from old-b and new-b from old-a.
+                let (src_a, src_b) = if swap { (seg_b, seg_a) } else { (seg_a, seg_b) };
+
+                a_names.push(src_a.names.get(row).as_bytes());
+                let (seq, qual) = src_a.seq_quals.pair(row);
+                a_seq_quals.push(seq.as_bytes(), qual.as_bytes());
+                a_pluses.push(src_a.pluses.get(row).as_bytes());
+
+                b_names.push(src_b.names.get(row).as_bytes());
+                let (seq, qual) = src_b.seq_quals.pair(row);
+                b_seq_quals.push(seq.as_bytes(), qual.as_bytes());
+                b_pluses.push(src_b.pluses.get(row).as_bytes());
+            }
+        }
+
+        block.segments[a] = FastQChunk {
+            names: a_names.finish(),
+            seq_quals: a_seq_quals.finish(),
+            pluses: a_pluses.finish(),
         };
-        //make sure that actually worked.
+        block.segments[b] = FastQChunk {
+            names: b_names.finish(),
+            seq_quals: b_seq_quals.finish(),
+            pluses: b_pluses.finish(),
+        };
 
-        todo!();
-        // // Swap individual reads using the optimized swap_with method
-        // let mut actual_swap_count = 0;
-        // for (read_idx, &should_swap) in swap_these.iter().enumerate() {
-        //     if should_swap {
-        //         actual_swap_count += 1;
-        //         // Get mutable references to both blocks for swapping
-        //         let (block_a, block_b) = {
-        //             let (left, right) = block.segments.split_at_mut(index_b as usize);
-        //             (&mut left[index_a as usize], &mut right[0])
-        //         };
-        //
-        //         // Swap the FastQRead entries between the two segments for this read
-        //         block_a.entries[read_idx as usize].swap_with(
-        //             &mut block_b.entries[read_idx as usize],
-        //             &mut block_a.block,
-        //             &mut block_b.block,
-        //         );
-        //     }
-        // }
-        // assert!(actual_swap_count <= total_count / 2); //verify we actually went with the smaller
-        // //one. Makes mutation testing happy.
+        // Forget location tags that were anchored to either rebuilt segment.
+        block.tags.retain(|_label, col| match col {
+            TagColumn::Location(loc) => {
+                let sid = loc.source_id() as usize;
+                sid != a && sid != b
+            }
+            _ => true,
+        });
 
-        // Update tag locations for all reads where swap occurred
         Ok((block, true))
     }
 }

@@ -255,7 +255,8 @@ impl Step for StoreTagInFastQ {
                                     &tag_bytes,
                                     self.comment_separator,
                                     self.comment_insert_char,
-                                )?.into();
+                                )?
+                                .into();
                             }
                             Cow::Owned(name)
                         } else {
