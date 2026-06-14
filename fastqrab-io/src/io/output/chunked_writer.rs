@@ -557,11 +557,9 @@ where
                     Some(Value::String((*joined).into()))
                 }
             }
-            TagColumn::String(col) => col
-                .get_string(read_index)
-                .map(|s| Value::String(s.into())),
+            TagColumn::String(col) => col.get_string(read_index).map(|s| Value::String(s.into())),
             TagColumn::Numeric(items) => items.get(read_index).map(|&n| Value::Float(n as f32)),
-            TagColumn::Bool(items) => items.get(read_index).map(|&b| Value::UInt8(u8::from(b))),
+            TagColumn::Bool(items) => items.get(read_index).map(|b| Value::UInt8(u8::from(*b))),
         };
         if let Some(value) = value_opt {
             data_fields.push((Tag::from(*bam_tag_bytes), value));

@@ -163,7 +163,7 @@ pub(crate) fn extract_bool_tags<F>(
         values.push(extractor(&read, output_tag));
     }
 
-    block.tags.insert(label.clone(), TagColumn::Bool(values));
+    block.tags.insert(label.clone(), TagColumn::Bool(values.into_iter().collect()));
 }
 
 pub(crate) fn extract_bool_tags_plus_all<F, G>(
@@ -192,7 +192,7 @@ pub(crate) fn extract_bool_tags_plus_all<F, G>(
             let value = extractor_all(&molecule, output_tag);
             values.push(value);
         }
-        block.tags.insert(label.clone(), TagColumn::Bool(values));
+        block.tags.insert(label.clone(), TagColumn::Bool(values.into_iter().collect()));
     }
 }
 
@@ -221,5 +221,5 @@ pub(crate) fn extract_bool_tags_from_tag<F>(
 
     block
         .tags
-        .insert(out_label.clone(), TagColumn::Bool(values));
+        .insert(out_label.clone(), TagColumn::Bool(values.into_iter().collect()));
 }

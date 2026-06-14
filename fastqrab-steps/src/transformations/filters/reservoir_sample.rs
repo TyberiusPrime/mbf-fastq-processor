@@ -227,7 +227,7 @@ impl Step for ReservoirSample {
                                 _ => unreachable!("tag kind is consistent across groups"),
                             })
                             .collect();
-                        output.tags.insert(label, TagColumn::Bool(col));
+                        output.tags.insert(label, TagColumn::Bool(col.into_iter().collect()));
                     }
                 }
             }
@@ -247,7 +247,7 @@ impl Step for ReservoirSample {
                     }
                     TagColumn::String(_) => TagColumn::String(StringColumn::empty()),
                     TagColumn::Numeric(_) => TagColumn::Numeric(Vec::new()),
-                    TagColumn::Bool(_) => TagColumn::Bool(Vec::new()),
+                    TagColumn::Bool(_) => TagColumn::Bool(Vec::<bool>::new().into_iter().collect()),
                 };
                 empty.tags.insert(label.clone(), new_col);
             }

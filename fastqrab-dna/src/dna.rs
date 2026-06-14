@@ -25,7 +25,7 @@ pub enum TagColumn {
     Location(DualStringPodMultiLocation),
     String(StringColumn),
     Numeric(Vec<f64>),
-    Bool(Vec<bool>),
+    Bool(bv::BitBox),
 }
 
 impl TagColumn {
@@ -40,7 +40,7 @@ impl TagColumn {
                 //    validity.truncate(len);
             }
             TagColumn::Numeric(items) => items.truncate(len),
-            TagColumn::Bool(items) => items.truncate(len),
+            TagColumn::Bool(items) => *items = items.iter().take(len).collect(),
         }
     }
 
@@ -79,9 +79,10 @@ impl TagColumn {
                 items.retain(|_| *keep_func());
             }
             TagColumn::Bool(items) => {
-                let mut iter = keep.iter();
-                let mut keep_func = || iter.next().expect("Length was checked");
-                items.retain(|_| *keep_func());
+                *items =
+                    bv::BitBox::from_iter(items.iter().zip(keep.iter()).filter_map(
+                        |(is_some, &do_keep)| if do_keep { Some(is_some) } else { None },
+                    ));
             }
         }
     }
@@ -153,7 +154,7 @@ impl TagColumn {
     pub fn iter_truthy(&self) -> Box<dyn Iterator<Item = bool> + '_> {
         match self {
             TagColumn::Numeric(_) => unreachable!("Cant get truthy of numeric values."), //cov:excl-line
-            TagColumn::Bool(bools) => Box::new(bools.iter().copied()),
+            TagColumn::Bool(bools) => Box::new(bools.iter().by_vals()),
             TagColumn::Location(col) => {
                 Box::new((0..col.row_count()).map(|idx| !col.row_is_empty(idx)))
             }
@@ -307,14 +308,20 @@ impl TagColumn {
                 items.drain(range);
             }
             TagColumn::Bool(items) => {
-                items.drain(range);
+                *items =
+                    bv::BitBox::from_iter(items.iter().enumerate().filter_map(|(i, is_valid)| {
+                        if range.contains(&i) {
+                            None
+                        } else {
+                            Some(*is_valid)
+                        }
+                    }));
             }
         }
     }
 }
 
 impl StringColumn {
-
     pub fn empty() -> Self {
         StringColumn(StringPod::empty(), bv::BitVec::new().into_boxed_bitslice())
     }
@@ -336,7 +343,8 @@ impl StringColumn {
     pub fn iter_mut(&mut self) -> impl Iterator<Item = Option<&mut BStr>> {
         self.0.make_exclusive();
         self.0
-            .iter_mut().expect("Just made exclusive")
+            .iter_mut()
+            .expect("Just made exclusive")
             .zip(self.1.iter())
             .map(|(item, valid)| if *valid { Some(item) } else { None })
     }

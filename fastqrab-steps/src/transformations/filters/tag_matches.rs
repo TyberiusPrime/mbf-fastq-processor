@@ -117,7 +117,7 @@ impl Step for TagMatches {
         };
         block
             .tags
-            .insert(self.out_label.clone(), TagColumn::Bool(found));
+            .insert(self.out_label.clone(), TagColumn::Bool(found.into_iter().collect()));
 
         Ok((block, true))
     }
