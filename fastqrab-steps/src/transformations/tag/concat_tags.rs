@@ -145,7 +145,7 @@ impl Step for ConcatTags {
                 .collect();
 
             // Output is String (convert Location to sequence bytes)
-            let mut output_tags= StringColumnBuilder::new();
+            let mut output_tags = StringColumnBuilder::new();
             match self.on_missing {
                 OnMissing::MergePresent => {
                     for _read_idx in 0..num_reads {
@@ -198,9 +198,10 @@ impl Step for ConcatTags {
             }
             output_tags
         };
-        block
-            .tags
-            .insert(self.out_label.clone(), TagColumn::String(output_tags.finish()));
+        block.tags.insert(
+            self.out_label.clone(),
+            TagColumn::String(output_tags.finish()),
+        );
 
         Ok((block, true))
     }

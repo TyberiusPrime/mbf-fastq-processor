@@ -1,5 +1,5 @@
 use anyhow::{Result, bail};
-use bstr::{BStr};
+use bstr::BStr;
 use indexmap::IndexMap;
 use smallvec::SmallVec;
 use std::marker::PhantomData;
@@ -1582,8 +1582,7 @@ impl FastQBlocksCombined {
     where
         F: for<'a> FnMut(&mut SmallVec<[&BStr; 4]>, Option<&BStr>),
     {
-        let TagColumn::String(col) = self.tags.get(label).expect("Tag must be present, bug")
-        else {
+        let TagColumn::String(col) = self.tags.get(label).expect("Tag must be present, bug") else {
             panic!("Tag {label:?} is not a String column");
         };
         for (ii, molecule) in blocks::molecules(&self.segments).enumerate() {
@@ -1771,7 +1770,7 @@ impl FastQBlocksCombined {
 
     /// Create a  location tag builder referencing the specific `FastQChunk`
     #[must_use]
-    #[expect(clippy::cast_possible_truncation, reason="Segments always <= 255")]
+    #[expect(clippy::cast_possible_truncation, reason = "Segments always <= 255")]
     pub fn location_column_builder(
         &self,
         segment: SegmentIndex,
@@ -1788,7 +1787,7 @@ impl FastQBlocksCombined {
 
     /// Create a  location tag builder referencing the specific `FastQChunk`
     /// and return references to other parts, spliting the struct temporarily
-    #[expect(clippy::cast_possible_truncation, reason="Segments always <= 255")]
+    #[expect(clippy::cast_possible_truncation, reason = "Segments always <= 255")]
     pub fn location_column_builder_and_tags_and_segment(
         &mut self,
         segment_index: SegmentIndex,

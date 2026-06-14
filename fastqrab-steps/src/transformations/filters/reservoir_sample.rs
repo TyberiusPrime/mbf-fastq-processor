@@ -1,5 +1,5 @@
-use rand::Rng;
 use bstr::ByteSlice;
+use rand::Rng;
 
 use crate::transformations::{extend_seed, prelude::*};
 use fastqrab_io::blocks::{FastQChunk, OwnedFastQRead};
@@ -227,7 +227,9 @@ impl Step for ReservoirSample {
                                 _ => unreachable!("tag kind is consistent across groups"),
                             })
                             .collect();
-                        output.tags.insert(label, TagColumn::Bool(col.into_iter().collect()));
+                        output
+                            .tags
+                            .insert(label, TagColumn::Bool(col.into_iter().collect()));
                     }
                 }
             }
@@ -312,11 +314,11 @@ impl TagColumnInAssembly {
     fn set_slot_from(&mut self, slot: usize, source: &TagColumn, pos: usize) {
         match self {
             TagColumnInAssembly::Location { rows, .. } => rows[slot] = source.get_location(pos),
-            TagColumnInAssembly::String(items) => items[slot] = source.get_string(pos).map(ToOwned::to_owned),
+            TagColumnInAssembly::String(items) => {
+                items[slot] = source.get_string(pos).map(ToOwned::to_owned)
+            }
             TagColumnInAssembly::Numeric(items) => items[slot] = source.get_numeric(pos),
             TagColumnInAssembly::Bool(items) => items[slot] = source.get_bool(pos),
         }
     }
-
-
 }

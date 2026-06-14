@@ -1,0 +1,154 @@
+use crate::transformations::prelude::*;
+
+use super::{build_report_json, render_html_report};
+
+const JSON_ID: &str = "report_json";
+const HTML_ID: &str = "report_html";
+
+/// Write the combined run report (JSON and/or HTML) as a pipeline step.
+///
+/// Replicates the report-writing behaviour of the legacy `[output]` section
+/// (`report_json` / `report_html`). The report data is handed to the step in
+/// [`Step::post_finalize`], after every other step's `finalize` has populated
+/// the report collector.
+///
+/// At most one `OutputReport` step is allowed per pipeline (enforced in config
+/// validation); multiple would share the same collected report data.
+///
+/// NOTE: the JSON currently keys reports by their numeric index and omits the
+/// raw-config / input-file metadata the legacy renderer embeds; plumbing those
+/// through `post_finalize` is part of the pipeline-wiring follow-up.
+#[derive(JsonSchema, Clone)]
+#[tpd]
+#[derive(Debug)]
+pub struct OutputReport {
+    /// Emit a `{prefix}.json` report.
+    #[tpd(default)]
+    json: bool,
+    /// Emit a `{prefix}.html` report.
+    #[tpd(default)]
+    html: bool,
+
+    #[tpd(skip, default)]
+    #[schemars(skip)]
+    json_writer: Option<Arc<Mutex<Option<ChunkedRecordWriter>>>>,
+    #[tpd(skip, default)]
+    #[schemars(skip)]
+    html_writer: Option<Arc<Mutex<Option<ChunkedRecordWriter>>>>,
+}
+
+impl VerifyIn<PartialConfig> for PartialOutputReport {
+    fn verify(
+        &mut self,
+        _parent: &PartialConfig,
+        _options: &VerifyOptions,
+    ) -> std::result::Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        if !*self.json.unwrap_ref() && !*self.html.unwrap_ref() {
+            return Err(ValidationFailure::new(
+                "OutputReport writes nothing",
+                Some("Set 'json = true' and/or 'html = true'"),
+            ));
+        }
+        Ok(())
+    }
+}
+
+fn report_declaration(id: &str, suffix: &str, span: std::ops::Range<usize>) -> OutputDeclaration {
+    OutputDeclaration {
+        id: id.to_string(),
+        target: WriteTargetConfig::new(Vec::new(), suffix.to_string()),
+        sink_config: SinkConfig::new_uncompressed_unhashed(),
+        format: FileFormat::Text,
+        chunk_policy: ChunkPolicy::default(),
+        bam_options: None,
+        singleton: true,
+        span,
+    }
+}
+
+impl TagUser for PartialTaggedVariant<PartialOutputReport> {
+    fn declare_output_files(&self) -> Vec<OutputDeclaration> {
+        let inner = self
+            .toml_value
+            .value
+            .as_ref()
+            .expect("declare_output_files called without successful verification");
+        let mut decls = Vec::new();
+        if *inner.json.unwrap_ref() {
+            decls.push(report_declaration(JSON_ID, "json", inner.json.span()));
+        }
+        if *inner.html.unwrap_ref() {
+            decls.push(report_declaration(HTML_ID, "html", inner.html.span()));
+        }
+        decls
+    }
+}
+
+/// Take the single (singleton, tag 0) writer for a declared id, if present.
+fn take_singleton(files: &mut StepOutputFiles, id: &str) -> Option<ChunkedRecordWriter> {
+    files.take(id).into_iter().next().map(|(_tag, w)| w)
+}
+
+impl Step for OutputReport {
+    fn needs_serial(&self) -> bool {
+        true
+    }
+    fn transmits_premature_termination(&self) -> bool {
+        false
+    }
+
+    fn init(
+        &mut self,
+        _input_info: &InputInfo,
+        mut output_files: StepOutputFiles,
+        _demultiplex_info: &OptDemultiplex,
+    ) -> Result<Option<DemultiplexBarcodes>> {
+        if self.json {
+            self.json_writer = Some(Arc::new(Mutex::new(take_singleton(
+                &mut output_files,
+                JSON_ID,
+            ))));
+        }
+        if self.html {
+            self.html_writer = Some(Arc::new(Mutex::new(take_singleton(
+                &mut output_files,
+                HTML_ID,
+            ))));
+        }
+        Ok(None)
+    }
+
+    fn apply(
+        &self,
+        block: FastQBlocksCombined,
+        _input_info: &InputInfo,
+        _demultiplex_info: &OptDemultiplex,
+    ) -> Result<(FastQBlocksCombined, bool)> {
+        // Pure sink: reports are written in post_finalize, reads pass through.
+        Ok((block, true))
+    }
+
+    fn post_finalize(&self, reports: &[FinalizeReportResult]) -> Result<()> {
+        // Build the JSON once; HTML embeds the same JSON.
+        let json = build_report_json(reports)?;
+
+        if let Some(writer) = &self.json_writer {
+            if let Some(mut writer) = writer.lock().expect("lock poisoned").take() {
+                writer.write_text_record(json.as_bytes())?;
+                let _ = writer.finish()?;
+            }
+        }
+
+        if let Some(writer) = &self.html_writer {
+            if let Some(mut writer) = writer.lock().expect("lock poisoned").take() {
+                let html = render_html_report(&json)?;
+                writer.write_text_record(html.as_bytes())?;
+                let _ = writer.finish()?;
+            }
+        }
+        Ok(())
+    }
+}

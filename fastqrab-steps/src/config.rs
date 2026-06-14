@@ -38,7 +38,10 @@ pub use input::{Input, PartialInput, StructuredInput};
 
 pub use barcodes::{Barcodes, BarcodesFromFile, PartialBarcodes};
 pub use options::{Options, PartialOptions};
-pub use output::{Output, PartialOutput, validate_compression_level_u8};
+pub use output::{
+    BamOutputOptions, BamTag, Output, PartialBamOutputOptions, PartialOutput, TagToReference,
+    validate_compression_level_u8,
+};
 pub use segments::{DenyName, ValidateSegment};
 pub use tag_labels::ValidateTagLabel;
 
@@ -229,6 +232,7 @@ impl VerifyIn<TPDRoot> for PartialConfig {
         self.verify_no_duplicate_files_no_empty_segments();
         self.transform.or_default();
         self.verify_reports();
+        self.verify_single_output_report();
         self.verify_barcodes_and_segment_names_disjoint();
         self.verify_benchmark_molecule_count();
         self.disable_output_on_benchmark();
@@ -315,6 +319,13 @@ impl PartialConfig {
             .and_then(|x| x.as_ref())
             .and_then(|x| x.enable.as_ref())
             .is_some_and(|o| *o);
+        // An OutputReport step satisfies the "report output" requirement just like
+        // output.report_html / report_json do.
+        let has_output_report = self.transform.value.as_ref().is_some_and(|transforms| {
+            transforms
+                .iter()
+                .any(|t| matches!(t.as_ref(), Some(PartialTransformation::OutputReport { .. })))
+        });
         self.transform.sync_nested_state();
         let transforms_ok = self.transform.is_ok();
         let mut report_transform = self.transform.as_mut().and_then(|x| {
@@ -330,7 +341,7 @@ impl PartialConfig {
         });
 
         if let Some(report_transform) = &mut report_transform
-            && !(report_html || report_json)
+            && !(report_html || report_json || has_output_report)
             && !is_benchmark
         {
             let spans = vec![
@@ -433,6 +444,36 @@ impl PartialConfig {
         }
     }
 
+    /// At most one `OutputReport` step is allowed: multiple would share the same
+    /// collected report data, so we reject the ambiguity.
+    fn verify_single_output_report(&mut self) {
+        let Some(transforms) = self.transform.as_mut() else {
+            return;
+        };
+        let report_spans: Vec<std::ops::Range<usize>> = transforms
+            .iter()
+            .filter(|t| matches!(t.as_ref(), Some(PartialTransformation::OutputReport { .. })))
+            .map(toml_pretty_deser::TomlValue::span)
+            .collect();
+        if report_spans.len() <= 1 {
+            return;
+        }
+        for t in transforms.iter_mut() {
+            if matches!(t.as_ref(), Some(PartialTransformation::OutputReport { .. })) {
+                let spans = report_spans
+                    .iter()
+                    .map(|s| (s.clone(), "Multiple OutputReport steps".to_string()))
+                    .collect();
+                t.state = TomlValueState::Custom { spans };
+                t.help = Some(
+                    "Only one OutputReport step is allowed; they would share the same report data. \
+                     Remove all but one."
+                        .to_string(),
+                );
+            }
+        }
+    }
+
     fn verify_benchmark_molecule_count(&mut self) {
         if let Some(Some(benchmark)) = self.benchmark.as_mut() {
             benchmark.molecule_count.verify(|v| {
@@ -524,6 +565,10 @@ impl PartialConfig {
                         PartialTransformation::StoreTagInFastQ(..)
                             | PartialTransformation::StoreTagsInTable(..)
                             | PartialTransformation::Inspect(..)
+                            | PartialTransformation::OutputFASTQ(..)
+                            | PartialTransformation::OutputFASTA(..)
+                            | PartialTransformation::OutputBAM(..)
+                            | PartialTransformation::OutputReport(..)
                     )
                 )
             })

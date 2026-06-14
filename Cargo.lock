@@ -810,6 +810,7 @@ dependencies = [
  "fastqrab-io",
  "hamming-resonate",
  "indexmap",
+ "json_value_merge",
  "memchr",
  "mutants 0.0.3",
  "rand 0.9.4",

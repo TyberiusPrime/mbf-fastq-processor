@@ -1,0 +1,10 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'OutputBAM'
+    output = ['read1']
+
+[output]
+    prefix = 'output'
+    output = [] # main output writes nothing; the OutputBAM step writes output_read1.bam

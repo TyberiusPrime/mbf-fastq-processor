@@ -88,7 +88,6 @@ impl Step for FillMissing {
         _input_info: &InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-
         let primary_vec = block
             .tags
             .get(&self.in_label_primary)
@@ -134,9 +133,9 @@ impl Step for FillMissing {
                 prim.iter()
                     .zip(sec.iter_seq())
                     .map(|(prim_str, sec_hit)| {
-                        prim_str.map(Cow::Borrowed).or_else(|| {
-                            (!sec_hit.is_empty()).then(|| sec_hit)
-                        })
+                        prim_str
+                            .map(Cow::Borrowed)
+                            .or_else(|| (!sec_hit.is_empty()).then(|| sec_hit))
                     })
                     .collect(),
             ),

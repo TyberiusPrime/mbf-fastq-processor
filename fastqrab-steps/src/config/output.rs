@@ -142,12 +142,8 @@ pub struct Output {
     pub bam: Option<BamOutputOptions>,
 }
 
-impl VerifyIn<PartialOutput> for PartialBamOutputOptions {
-    fn verify(
-        &mut self,
-        _parent: &PartialOutput,
-        _options: &VerifyOptions,
-    ) -> Result<(), ValidationFailure>
+impl<P> VerifyIn<P> for PartialBamOutputOptions {
+    fn verify(&mut self, _parent: &P, _options: &VerifyOptions) -> Result<(), ValidationFailure>
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {

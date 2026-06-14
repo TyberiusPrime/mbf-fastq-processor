@@ -1372,6 +1372,61 @@ Count tag occurrence frequencies.
 
 **OUTPUT**: `{prefix}_{infix}.qr.json`
 
+## Output Steps
+
+Step-based equivalents of the `[output]` section; can be placed/ordered like any
+other step, and multiple are allowed. The output `prefix` still comes from
+`[output]`.
+
+### OutputFASTQ
+
+Write reads to FASTQ file(s).
+
+```toml
+[[step]]
+    action = 'OutputFASTQ'
+    output = ['read1']             # TYPE: list of segments (alias: segments), default all
+```
+
+**OUTPUT**: `{prefix}_{segment}.fq` (and `{prefix}_interleaved.fq` when interleaving)
+
+### OutputFASTA
+
+Write reads to FASTA file(s) (no quality line).
+
+```toml
+[[step]]
+    action = 'OutputFASTA'
+    output = ['read1']             # TYPE: list of segments (alias: segments), default all
+```
+
+**OUTPUT**: `{prefix}_{segment}.fasta`
+
+### OutputBAM
+
+Write reads to BAM file(s).
+
+```toml
+[[step]]
+    action = 'OutputBAM'
+    output = ['read1']             # TYPE: list of segments (alias: segments), default all
+```
+
+**OUTPUT**: `{prefix}_{segment}.bam`
+
+### OutputReport
+
+Write the combined run report. At most one per pipeline.
+
+```toml
+[[step]]
+    action = 'OutputReport'
+    json = true                    # TYPE: bool
+    html = false                   # TYPE: bool
+```
+
+**OUTPUT**: `{prefix}.json` / `{prefix}.html`
+
 ## Barcode Correction & Demultiplexing
 
 

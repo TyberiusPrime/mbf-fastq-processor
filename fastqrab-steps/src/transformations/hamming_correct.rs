@@ -506,7 +506,6 @@ fn run_match_phase(
 }
 
 impl HammingCorrect {
-
     fn output_string(&self, matched_idx: usize, output_barcode: bool) -> Option<BString> {
         let (matched_seq, matched_name) = self
             .seq_to_name
@@ -782,9 +781,10 @@ impl Step for HammingCorrect {
                     },
                 }.map(Cow::Owned));
         }
-        block
-            .tags
-            .insert(self.out_label.clone(), TagColumn::String(output_strings.finish()));
+        block.tags.insert(
+            self.out_label.clone(),
+            TagColumn::String(output_strings.finish()),
+        );
         // Add the corrected tags to the output
 
         Ok((block, true))

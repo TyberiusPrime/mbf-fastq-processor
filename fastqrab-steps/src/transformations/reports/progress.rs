@@ -205,7 +205,7 @@ impl Step for Progress {
         Ok(None)
     }
 
-    fn post_finalize(&self) {
+    fn post_finalize(&self, _reports: &[FinalizeReportResult]) -> Result<()> {
         let elapsed = self
             .finalize_timepoint
             .lock()
@@ -224,6 +224,7 @@ impl Step for Progress {
             let _ = writer.finish().ok(); //we choose to ignore if finishing the progress writer
             //fails (disk full?)
         }
+        Ok(())
     }
 }
 

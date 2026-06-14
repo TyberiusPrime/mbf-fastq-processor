@@ -41,6 +41,7 @@
   scalable_cuckoo_filter = {workspace = true}
   schemars = {workspace = true}
   serde_json = {workspace = true}
+  json_value_merge = {workspace = true}
   serde = {workspace = true}
   smallvec = {workspace = true}
   stringpod = {workspace = true}

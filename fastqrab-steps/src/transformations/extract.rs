@@ -76,7 +76,6 @@ pub(crate) fn extract_region_tags_from_qual(
         .insert(label.clone(), TagColumn::Location(col.finish()));
 }
 
-
 /// What an [`extract_region_or_value_tags_using_tags`] closure produces for one
 /// read: nothing, a live alias window, or owned divergent content.
 pub(crate) enum RegexExtraction {
@@ -142,7 +141,9 @@ pub(crate) fn extract_string_tags_using_tags(
         out.push(f(seq, read_no + ii, &mut block.tags).map(Cow::Owned));
     }
 
-    block.tags.insert(label.clone(), TagColumn::String(out.finish()));
+    block
+        .tags
+        .insert(label.clone(), TagColumn::String(out.finish()));
 }
 
 pub(crate) fn extract_bool_tags<F>(
@@ -163,7 +164,9 @@ pub(crate) fn extract_bool_tags<F>(
         values.push(extractor(&read, output_tag));
     }
 
-    block.tags.insert(label.clone(), TagColumn::Bool(values.into_iter().collect()));
+    block
+        .tags
+        .insert(label.clone(), TagColumn::Bool(values.into_iter().collect()));
 }
 
 pub(crate) fn extract_bool_tags_plus_all<F, G>(
@@ -192,7 +195,9 @@ pub(crate) fn extract_bool_tags_plus_all<F, G>(
             let value = extractor_all(&molecule, output_tag);
             values.push(value);
         }
-        block.tags.insert(label.clone(), TagColumn::Bool(values.into_iter().collect()));
+        block
+            .tags
+            .insert(label.clone(), TagColumn::Bool(values.into_iter().collect()));
     }
 }
 
@@ -219,7 +224,8 @@ pub(crate) fn extract_bool_tags_from_tag<F>(
         values.push(extractor(tag_value, output_tag));
     }
 
-    block
-        .tags
-        .insert(out_label.clone(), TagColumn::Bool(values.into_iter().collect()));
+    block.tags.insert(
+        out_label.clone(),
+        TagColumn::Bool(values.into_iter().collect()),
+    );
 }

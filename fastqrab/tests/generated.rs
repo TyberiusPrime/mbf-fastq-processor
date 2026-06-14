@@ -11551,6 +11551,39 @@ fn test_cases_x_single_step_x_output_x_cut_end_named_pipes_x_output_pipe() {
 
 #[test]
 
+fn test_cases_x_single_step_x_output_x_output_bam_x_basic() {
+    println!("Test case is in: test_cases/single_step/output/output_bam/basic");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/output/output_bam/basic"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_output_x_output_fasta_x_basic() {
+    println!("Test case is in: test_cases/single_step/output/output_fasta/basic");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/output/output_fasta/basic"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_output_x_output_fastq_x_basic() {
+    println!("Test case is in: test_cases/single_step/output/output_fastq/basic");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/output/output_fastq/basic"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_output_x_output_neither_r1_nor_r2_but_index() {
     println!("Test case is in: test_cases/single_step/output/output_neither_r1_nor_r2_but_index");
     run_test(

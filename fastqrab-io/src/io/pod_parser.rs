@@ -305,8 +305,11 @@ fn emit_records(cols: Cols, emit: &mut impl FnMut(FastqChunk)) -> Result<()> {
 /// copies), and those same lines are front-skipped off this chunk. `held` then
 /// holds only whole records and is emitted; this chunk (record-aligned at its
 /// head) becomes the new `held`.
-#[expect(clippy::cast_possible_wrap, reason="can only be 0..4")]
-#[expect(clippy::cast_possible_truncation, reason="No support for 32bit machines")]
+#[expect(clippy::cast_possible_wrap, reason = "can only be 0..4")]
+#[expect(
+    clippy::cast_possible_truncation,
+    reason = "No support for 32bit machines"
+)]
 fn absorb(
     res: DemuxResult,
     held: &mut Option<Cols>,

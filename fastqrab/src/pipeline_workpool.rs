@@ -14,7 +14,10 @@ use crate::{
     transformations::{self, Step},
 };
 use bstr::BString;
-use fastqrab_config::{TagLabel, dna::{TagColumn, StringColumn}};
+use fastqrab_config::{
+    TagLabel,
+    dna::{StringColumn, TagColumn},
+};
 use fastqrab_io::{blocks::FastQChunk, io};
 use stringpod::{Lifted, RegionLift};
 
@@ -498,8 +501,19 @@ impl WorkpoolCoordinator {
             }
         }
 
-        for stage in self.stages.iter() {
-            stage.transformation.post_finalize();
+        {
+            let reports = self
+                .report_collector
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
+            for stage in self.stages.iter() {
+                if let Err(err) = stage.transformation.post_finalize(&reports) {
+                    self.error_collector
+                        .lock()
+                        .expect("error collector poisened")
+                        .push(format!("Error in post_finalize: {err:?}"));
+                }
+            }
         }
     }
 }

@@ -188,11 +188,7 @@ impl Step for HammingExactCounter {
                     for item in items.iter() {
                         let idx = match item {
                             None => continue,
-                            Some(bstr) => self
-                                .majority_data
-                                .seq_to_idx
-                                .get(bstr)
-                                .copied(),
+                            Some(bstr) => self.majority_data.seq_to_idx.get(bstr).copied(),
                         };
                         if let Some(idx) = idx {
                             counts[idx].fetch_add(1, Ordering::Relaxed);

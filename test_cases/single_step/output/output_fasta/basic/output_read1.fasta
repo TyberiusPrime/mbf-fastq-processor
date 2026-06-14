@@ -1,0 +1,8 @@
+>read1_has_barcode
+ATCGTTTTCCCCAAAA
+>read2_has_barcode
+ATCGGGGGTTTTAAAA
+>read3_no_barcode
+TTTTCCCCAAAAGGGG
+>read4_has_barcode
+ATCGAAAAGGGGCCCC

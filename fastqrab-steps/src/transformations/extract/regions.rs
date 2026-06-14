@@ -200,8 +200,8 @@ impl Step for Regions {
                                         .expect("born generation from this pod; row in range");
                                     let mut positions = Vec::new();
                                     for (start, len) in locations.row_regions(row) {
-                                        if let Ok(RegionLift::Kept { start, len }) =
-                                            view.map_region(start as usize, len as usize, born_length)
+                                        if let Ok(RegionLift::Kept { start, len }) = view
+                                            .map_region(start as usize, len as usize, born_length)
                                         {
                                             positions.extend(start as u32..(start + len) as u32);
                                         }

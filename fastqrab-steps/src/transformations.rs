@@ -27,6 +27,7 @@ pub(crate) mod filters;
 pub(crate) mod hamming_correct;
 pub(crate) mod hamming_exact_counter;
 mod internal_steps;
+pub(crate) mod output;
 pub(crate) mod prelude;
 pub(crate) mod reports;
 pub(crate) mod tag;
@@ -215,8 +216,16 @@ pub trait Step {
         Ok(None)
     }
 
-    /// called after all finalize have happpend - for progress to report
-    fn post_finalize(&self) {}
+    /// called after all `finalize` have happened - for progress to report and
+    /// for output steps to emit aggregate artifacts.
+    ///
+    /// `reports` is the full set of reports collected from every step's
+    /// `finalize`; passing it here (rather than sharing the collector `Arc`
+    /// widely) lets steps like `OutputReport` write a combined report without
+    /// needing access to the pipeline-level collector.
+    fn post_finalize(&self, _reports: &[FinalizeReportResult]) -> Result<()> {
+        Ok(())
+    }
 
     /// handle one block
     fn apply(
@@ -373,6 +382,15 @@ pub enum Transformation {
     _ReportTagHistogram(Box<reports::_ReportTagHistogram>),
     //
     Inspect(reports::Inspect),
+    //
+    // Output steps
+    #[tpd(alias = "OutputFastq")]
+    OutputFASTQ(output::OutputFASTQ),
+    #[tpd(alias = "OutputFasta")]
+    OutputFASTA(output::OutputFASTA),
+    #[tpd(alias = "OutputBam")]
+    OutputBAM(output::OutputBAM),
+    OutputReport(output::OutputReport),
     //
     Demultiplex(demultiplex::Demultiplex),
     HammingCorrect(hamming_correct::HammingCorrect),

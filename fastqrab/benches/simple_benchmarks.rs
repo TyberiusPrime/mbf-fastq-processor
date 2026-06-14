@@ -184,6 +184,43 @@ fn benchmark_key_steps(c: &mut Criterion) {
             thread_count,
         ),
         BenchmarkConfig::new(
+            "OutputFASTQ",
+            r#"[[step]]
+    action = "OutputFASTQ"
+    output = ["read1"]"#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "OutputFASTA",
+            r#"[[step]]
+    action = "OutputFASTA"
+    output = ["read1"]"#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "OutputBAM",
+            r#"[[step]]
+    action = "OutputBAM"
+    output = ["read1"]"#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "OutputReport",
+            r#"[[step]]
+    action = "Report"
+    name = "benchmark_report"
+    count = true
+
+[[step]]
+    action = "OutputReport"
+    json = true"#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
             "Report_count",
             r#"[[step]]
     action = "Report"
