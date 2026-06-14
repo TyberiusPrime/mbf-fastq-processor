@@ -2,13 +2,16 @@ Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
-38 │     [output.bam]
-39 │         tag_to_reference.references_from_barcodes = "barcodes"
-40 │         tag_to_reference.tag="refss"
-   ┆                              ───┬───
-   ┆                                 │
-   ┆                                 ╰──── No such tag
+38 │ [[step]]
+39 │     action = "OutputBAM"
+   ┆              ─────┬─────
+   ┆                   │
+   ┆                   ╰────── In this step
+40 │     bam = { tag_to_reference = { references_from_barcodes = "barcodes", tag = "refss" }, merge_demultiplexed = true }
+   ┆                                                                               ───┬───
+   ┆                                                                                  │
+   ┆                                                                                  ╰──────────────────────────────────── No such tag: 'refss'
 ───╯
 Hint: Did you mean: 'refs' or 'barcode'?
-
-
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/OutputBAM
+      Or run: `fastqrab template OutputBAM` for more information.

@@ -32,6 +32,9 @@ pub struct MergeConfig {
     pub reference_label: String,
     pub index_merged: bool,
     pub segment_tails: Vec<String>,
+    /// BAM records written per molecule (1, or the interleaved-segment count for
+    /// interleaved output). Scales the per-tag read counts used to size the BAI.
+    pub records_per_molecule: usize,
 }
 
 /// Pre-opened output file handles for the merged BAM (and optional BAI) files.
@@ -384,10 +387,12 @@ fn write_merged_bai(
     let mut n_no_coor: u64 = 0;
 
     for (i, group_info) in sources.iter().enumerate() {
+        // A configured reference with no reads has no entry in `reads_per_tag`
+        // (nothing was written for it); that is simply zero records.
         let n_reads = reads_per_tag
             .get(&group_info.demultiplex_tag)
             .copied()
-            .expect("No read count found");
+            .unwrap_or(0);
         if let Some(&ref_id) = ref_order.get(group_info.ref_seq.as_str()) {
             let (v_beg, v_end) = spans[i];
             ref_spans[ref_id - 1] = Some((v_beg, v_end, n_reads));

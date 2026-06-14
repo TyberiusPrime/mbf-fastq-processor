@@ -20,7 +20,7 @@ use std::collections::BTreeMap;
 use std::fmt::Write;
 use std::path::Path;
 use std::rc::Rc;
-use toml_pretty_deser::{prelude::*, suggest_alternatives};
+use toml_pretty_deser::prelude::*;
 
 mod barcodes;
 mod input;
@@ -240,6 +240,7 @@ impl VerifyIn<TPDRoot> for PartialConfig {
         self.verify_head_rapidgzip_conflict();
         self.expand_transformations();
         let used_barcode_sections = self.verify_transformation_labels();
+        self.resolve_bam_output_references();
         self.verify_output_filenames_unique();
 
         self.verify_demultiplex_unique();
@@ -1612,6 +1613,51 @@ impl PartialConfig {
         used_barcode_sections
     }
 
+    /// Resolve the BAM header / reference sequences for every `OutputBAM` step.
+    ///
+    /// Runs after tag validation (so referenced tags/barcodes are known) and
+    /// before [`Self::verify_output_filenames_unique`] (which builds the output
+    /// declarations from the resolved options). Reference sequences come either
+    /// from a `[barcodes.*]` section (resolved here from the verified barcode
+    /// data) or from a reference BAM file (read by the step). Validation errors
+    /// (unknown barcode section, unreadable BAM) are reported on the step.
+    fn resolve_bam_output_references(&mut self) {
+        // Build per-section reference (name, length) lists from the verified
+        // barcode sections. Each unique barcode *name* is one reference; its
+        // length is the barcode sequence length (mirrors the legacy resolver).
+        let mut barcode_section_refs: IndexMap<String, Vec<(String, usize)>> = IndexMap::new();
+        if let Some(Some(barcodes)) = self.barcodes.as_ref() {
+            for (label, tv_section) in &barcodes.map {
+                if let Some(section) = tv_section.as_ref()
+                    && let Some(seq_to_name) = &section.seq_to_name
+                {
+                    let mut seen: std::collections::HashSet<&String> =
+                        std::collections::HashSet::new();
+                    let mut refs: Vec<(String, usize)> = Vec::new();
+                    for (seq, name) in seq_to_name.iter() {
+                        if seen.insert(name) {
+                            refs.push((name.clone(), seq.len()));
+                        }
+                    }
+                    barcode_section_refs.insert(label.to_string(), refs);
+                }
+            }
+        }
+
+        if let Some(trafos) = self.transform.value.as_mut() {
+            for tv in trafos.iter_mut() {
+                if let Some(PartialTransformation::OutputBAM(pt)) = tv.value.as_mut()
+                    && let Some(partial) = pt.toml_value.value.as_mut()
+                {
+                    crate::transformations::output::resolve_output_bam(
+                        partial,
+                        &barcode_section_refs,
+                    );
+                }
+            }
+        }
+    }
+
     /// Detect output filename conflicts across all steps.
     ///
     /// Each step's `TagUser::declare_output_files()` carries a `span` pointing
@@ -1621,8 +1667,10 @@ impl PartialConfig {
 
         // First pass (immutable): collect declarations and detect conflicts.
         type ConflictEntry = (usize, std::ops::Range<usize>);
-        let mut key_to_entries: IndexMap<(Vec<String>, Option<String>, String), Vec<ConflictEntry>> =
-            IndexMap::new();
+        let mut key_to_entries: IndexMap<
+            (Vec<String>, Option<String>, String),
+            Vec<ConflictEntry>,
+        > = IndexMap::new();
         let mut all_decls: Vec<Vec<OutputDeclaration>> = Vec::new();
 
         if let Some(transforms) = self.transform.value.as_ref() {
@@ -1635,9 +1683,11 @@ impl PartialConfig {
                 for decl in &decls {
                     if let WriteTargetConfig::File(ft) = &decl.target {
                         key_to_entries
-                            .entry((ft.infix_parts().to_vec(),
+                            .entry((
+                                ft.infix_parts().to_vec(),
                                 ft.second_infix().map(ToOwned::to_owned),
-                                ft.suffix().to_string()))
+                                ft.suffix().to_string(),
+                            ))
                             .or_default()
                             .push((idx, decl.span.clone()));
                     }
@@ -1853,103 +1903,37 @@ impl PartialConfig {
     }
 
     fn verify_merge_demultiplexed(&mut self) {
-        let Some(Some(output)) = self.output.as_mut() else {
-            return;
-        };
-        let Some(Some(bam)) = output.bam.as_mut() else {
-            return;
-        };
-        if let Some(None) = bam.merge_demultiplexed.as_ref() {
-            return;
-        }
-
-        // Must be BAM format
-        if output.format.as_ref() != Some(&FileFormat::Bam) {
-            bam.merge_demultiplexed.state = TomlValueState::new_validation_failed(
-                "merge_demultiplexed requires format = 'bam'",
-            );
-            bam.merge_demultiplexed.help =
-                Some("Set [output] format = 'bam' to use merge_demultiplexed.".to_string());
-            return;
-        }
-        let interleave_empty = match output.interleave.as_ref() {
-            None => false, // cov:excl-line misspecified, we already have an error then.
-            Some(None) => true,
-            Some(Some(x)) => x.is_empty(),
-        };
-
-        if let Some(Some(output_segments)) = output.output.as_ref()
-            && output_segments.is_empty()
-            && interleave_empty
-        {
-            let spans = vec![
-                (
-                    bam.merge_demultiplexed.span(),
-                    "Incompatible with empty outputs".to_string(),
-                ),
-                (
-                    output.output.span(),
-                    "These output segments are empty".to_string(),
-                ),
-            ];
-            bam.merge_demultiplexed.state = TomlValueState::Custom { spans };
-            bam.merge_demultiplexed.help = Some(
-                "Either remove 'merge_demultiplexed' or specify either output segments or interleaved output.".to_string(),
-            );
-        }
-        match bam.tag_to_reference.as_ref() {
-            Some(Some(tag_to_reference)) => {
-                let mut available_demultiplex_labels = Vec::new();
-                if let Some(ref_label) = tag_to_reference.tag.as_ref() {
-                    //None if set to 'no such tag'
-
-                    if let Some(trafos) = self.transform.value.as_ref() {
-                        for trafo in trafos {
-                            if let Some(PartialTransformation::Demultiplex(demultiplex_config_toml)) =
-                                trafo.value.as_ref()
-                                && let Some(demultiplex_config) =
-                                    demultiplex_config_toml.toml_value.value.as_ref()
-                                && let Some(TagLabel::Normal(in_label)) =
-                                    demultiplex_config.in_label.as_ref()
-                                && matches!(
-                                    demultiplex_config.lookup_mode,
-                                    Some(crate::transformations::demultiplex::LookupMode::Label)
-                                        | None
-                                )
-                            {
-                                available_demultiplex_labels.push(in_label.clone());
-                                break;
-                            }
-                        }
-                    } // cov:excl-line
-                    if !available_demultiplex_labels.contains(ref_label) {
-                        bam.merge_demultiplexed.state = TomlValueState::new_validation_failed(
-                            format!("No Demultiplex step found that had in_label = {ref_label}",),
-                        );
-                        if available_demultiplex_labels.is_empty() {
-                            bam.merge_demultiplexed.help = Some(
-                            "No suitable Demultiplex step found. Make sure you have a Demultiplex step with lookup_mode = 'lookup' and an in_label that matches output.bam.tag_to_reference.tag.".to_string(),
-                        );
-                        } else {
-                            bam.merge_demultiplexed.help = Some(format!(
-                                "Either add a Demultiplex step or reuse one of the following: {}",
-                                suggest_alternatives("", &available_demultiplex_labels)
-                            ));
-                        }
-                    }
+        // Collect the in_labels of the (lookup-mode) Demultiplex steps; the
+        // legacy behaviour only considered the first such step.
+        let mut available_demultiplex_labels: Vec<String> = Vec::new();
+        if let Some(trafos) = self.transform.value.as_ref() {
+            for trafo in trafos {
+                if let Some(PartialTransformation::Demultiplex(demultiplex_config_toml)) =
+                    trafo.value.as_ref()
+                    && let Some(demultiplex_config) =
+                        demultiplex_config_toml.toml_value.value.as_ref()
+                    && let Some(TagLabel::Normal(in_label)) = demultiplex_config.in_label.as_ref()
+                    && matches!(
+                        demultiplex_config.lookup_mode,
+                        Some(crate::transformations::demultiplex::LookupMode::Label) | None
+                    )
+                {
+                    available_demultiplex_labels.push(in_label.clone());
+                    break;
                 }
             }
-            Some(None) => {
-                bam.merge_demultiplexed.state = TomlValueState::new_validation_failed(
-                    "merge_demultiplexed requires tag_to_reference to be set.",
-                );
-                bam.merge_demultiplexed.help = Some(
-                        "Either remove 'merge_demultiplexed' or set 'tag_to_reference' to specify how to assign reads to BAM references for merging."
-                            .to_string(),
+        } // cov:excl-line
+
+        if let Some(trafos) = self.transform.value.as_mut() {
+            for trafo in trafos.iter_mut() {
+                if let Some(PartialTransformation::OutputBAM(pt)) = trafo.value.as_mut()
+                    && let Some(partial) = pt.toml_value.value.as_mut()
+                {
+                    crate::transformations::output::verify_output_bam_merge(
+                        partial,
+                        &available_demultiplex_labels,
                     );
-            }
-            None => {
-                unreachable!() // cov:excl-line must be set by previous config either way
+                }
             }
         }
     }

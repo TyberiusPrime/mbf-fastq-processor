@@ -161,7 +161,8 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagInFastQ> {
         return vec![OutputDeclaration {
             id: "tag_fastq".to_string(),
             target: WriteTargetConfig::new(
-                vec![format!("tag.{in_label}")], None,
+                vec![format!("tag.{in_label}")],
+                None,
                 format.get_suffix(compression, None),
             ),
             sink_config: SinkConfig {

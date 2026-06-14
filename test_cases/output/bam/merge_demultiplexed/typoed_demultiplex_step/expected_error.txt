@@ -1,12 +1,17 @@
+Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
-54 │     [output.bam]
-55 │         tag_to_reference.references_from_barcodes = "barcodes"
-56 │         tag_to_reference.tag="refss"
-57 │         merge_demultiplexed = true
-   ┆                               ──┬─
-   ┆                                 │
-   ┆                                 ╰── No Demultiplex step found that had in_label = refss
+53 │ [[step]]
+54 │     action = "OutputBAM"
+   ┆              ─────┬─────
+   ┆                   │
+   ┆                   ╰────── In this step
+55 │     bam = { tag_to_reference = { references_from_barcodes = "barcodes", tag = "refss" }, merge_demultiplexed = true }
+   ┆                                                                                                                ──┬─
+   ┆                                                                                                                  │
+   ┆                                                                                                                  ╰──── No Demultiplex step found that had in_label = refss
 ───╯
 Hint: Either add a Demultiplex step or reuse one of the following: Available are: refs
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/OutputBAM
+      Or run: `fastqrab template OutputBAM` for more information.

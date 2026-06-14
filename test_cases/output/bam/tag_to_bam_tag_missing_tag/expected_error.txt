@@ -1,30 +1,17 @@
-Error 1/2
-  ╭─config.toml
-  ┆
-4 │ [output]
-5 │     prefix = 'output'
-6 │     format = 'bam'
-7 │ 
-8 │     bam.tags = {
-9 │         barcode_not_present = 'BC',
-  ┆         ─────────┬─────────
-  ┆                  │
-  ┆                  ╰────────────────── No such tag
-──╯
-Hint: Did you mean: 'barcode'?
-
-Error 2/2
+Error Details ==
+Error 1/1
    ╭─config.toml
    ┆
-13 │ [[step]]
-14 │     action = 'ExtractRegion'
-15 │     source = 'read1'
-16 │     anchor = 'start'
-17 │     start = 0
-18 │     length = 6
-19 │     out_label = 'barcode'
-   ┆                 ────┬────
-   ┆                     │
-   ┆                     ╰───── Unused tag
+16 │ [[step]]
+17 │     action = "OutputBAM"
+   ┆              ─────┬─────
+   ┆                   │
+   ┆                   ╰────── In this step
+18 │     bam = { tags = { barcode_not_present = "BC" } }
+   ┆                      ─────────┬─────────
+   ┆                               │
+   ┆                               ╰───────────────────── No such tag: 'barcode_not_present'
 ───╯
-Hint: Make sure to either use, or forget (using ForgetTag) all your tags.
+Hint: Did you mean: 'barcode'?
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/OutputBAM
+      Or run: `fastqrab template OutputBAM` for more information.

@@ -121,6 +121,17 @@ impl VerifyIn<PartialConfig> for PartialOutputFASTQ {
             }
             Ok(())
         });
+        self.suffix.verify(|suffix| {
+            if let Some(suffix) = suffix.as_ref() {
+                if suffix.is_empty() {
+                    return Err(ValidationFailure::new(
+                        "Invalid value",
+                        Some("Must not be empty."),
+                    ));
+                }
+            }
+            Ok(())
+        });
         verify_record_targets(
             parent,
             &mut self.output,
@@ -197,7 +208,8 @@ impl Step for OutputFASTQ {
             .expect("output_state should have been set in init")
             .lock()
             .expect("lock poisoned")
-            .write_block(&block, demultiplex_info).context("Error in OutputFASTA stage")?;
+            .write_block(&block, demultiplex_info)
+            .context("Error in OutputFASTA stage")?;
         Ok((block, true))
     }
 

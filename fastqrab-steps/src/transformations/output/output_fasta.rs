@@ -194,7 +194,8 @@ impl Step for OutputFASTA {
             .expect("output_state should have been set in init")
             .lock()
             .expect("lock poisoned")
-            .write_block(&block, demultiplex_info).context("Error in OutputFASTQ stage")?;
+            .write_block(&block, demultiplex_info)
+            .context("Error in OutputFASTQ stage")?;
         Ok((block, true))
     }
 

@@ -634,6 +634,29 @@ where
     Ok(())
 }
 
+/// Read the reference sequences (`@SQ` lines) from a BAM file header.
+///
+/// Returns `(name, length)` pairs in header order. Used by the `OutputBAM`
+/// step to resolve `tag_to_reference.from_bam` at config time.
+pub fn read_bam_reference_sequences(path: &Path) -> Result<Vec<(String, usize)>> {
+    let file = std::fs::File::open(path)
+        .with_context(|| format!("Could not open BAM reference file: {}", path.display()))?;
+    let mut reader = noodles::bam::io::Reader::new(file);
+    let header = reader
+        .read_header()
+        .with_context(|| format!("Could not read BAM header from: {}", path.display()))?;
+    Ok(header
+        .reference_sequences()
+        .iter()
+        .map(|(name, rs)| {
+            (
+                String::from_utf8_lossy(name).into_owned(),
+                usize::from(rs.length()),
+            )
+        })
+        .collect())
+}
+
 fn create_bam_header(reference_sequences: &[(String, usize)]) -> noodles::sam::Header {
     use noodles::sam::header::record::value::{Map, map::ReferenceSequence};
     use std::str::FromStr;

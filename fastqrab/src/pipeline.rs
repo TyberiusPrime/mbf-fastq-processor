@@ -1103,6 +1103,13 @@ impl RunStage3 {
             .transpose()?;
 
         let output_done_tx = self.output_done_tx;
+        let reads_per_tag = self.reads_per_tag.clone();
+        // Only needed to size the BAI of merged demultiplexed BAMs. Each molecule
+        // becomes `records_per_molecule` BAM records (>1 for interleaved output).
+        let records_per_molecule: u64 = merge_config
+            .filter(|_| merge_bam_handles.is_some())
+            .map_or(0, |mc| mc.records_per_molecule as u64);
+        let count_reads_per_tag = records_per_molecule > 0;
 
         let output = {
             thread::Builder::new()
@@ -1116,6 +1123,16 @@ impl RunStage3 {
                     let mut buffer: Vec<(usize, io::FastQBlocksCombined)> = Vec::new();
                     while let Ok((block, _expected_read_count)) = input_channel.recv() {
                         let block_no = block.block_no();
+                        // Count reads per demultiplex tag for the BAM merge (the
+                        // Output* steps no longer feed this back to the binary).
+                        if count_reads_per_tag && let Some(tags) = block.output_tags.as_ref() {
+                            let mut counts = reads_per_tag
+                                .lock()
+                                .unwrap_or_else(std::sync::PoisonError::into_inner);
+                            for &tag in tags {
+                                *counts.entry(tag).or_insert(0) += records_per_molecule;
+                            }
+                        }
                         //resort out of order blocks into the right order.
                         buffer.push((block_no, block));
                         loop {

@@ -155,6 +155,29 @@ impl<P> VerifyIn<P> for PartialBamOutputOptions {
                 keys: vec![],
             });
 
+        // Each BAM auxiliary tag may only be written once: reject two fastqrab
+        // tags mapping to the same two-letter BAM tag.
+        if let Some(map_and_keys) = self.tag_to_bam_tag.as_mut() {
+            let mut seen_bam_tags: IndexMap<[u8; 2], std::ops::Range<usize>> = IndexMap::new();
+            for bam_tag in map_and_keys.map.values_mut() {
+                if let Some(bam_tag_value) = bam_tag.as_mut()
+                    && let Some(other_span) = seen_bam_tags.insert(bam_tag_value.0, bam_tag.span())
+                {
+                    bam_tag.state = TomlValueState::Custom {
+                        spans: vec![
+                            (bam_tag.span(), "Repeated, 2nd use".to_string()),
+                            (other_span, "Repeated, 1st use".to_string()),
+                        ],
+                    };
+                    bam_tag.help = Some(
+                        "BAM tags must be distinct, \
+                            can not write two tags into one BAM tag. Rename either one"
+                            .to_string(),
+                    );
+                }
+            }
+        }
+
         // Validate tag_to_reference: exactly one of barcodes or from_bam must be set.
         //
         if let Some(Some(tag_to_ref)) = self.tag_to_reference.as_mut() {

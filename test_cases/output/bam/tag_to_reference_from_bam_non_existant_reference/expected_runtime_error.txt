@@ -1,4 +1,4 @@
-Error in output thread: Error in Bam tag-to-reference output: 
-the value 'ref_delta' for tag 'ref_name' was not a valid reference sequence.
-Check that your output.bam.tag_to_reference.from_bam|from_barcodes derived values match
-with the actual tag values. Read name involved: 'Read4'
+Error in Bam tag-to-reference output: 
+       the value 'ref_delta' for tag 'ref_name' was not a valid reference sequence.
+       Check that your output.bam.tag_to_reference.from_bam|from_barcodes derived values match
+       with the actual tag values. Read name involved: 'Read4'

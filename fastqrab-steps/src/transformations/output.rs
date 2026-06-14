@@ -14,6 +14,7 @@ mod output_fastq;
 mod output_report;
 
 pub use output_bam::{OutputBAM, PartialOutputBAM};
+pub(crate) use output_bam::{resolve_output_bam, verify_output_bam_merge};
 pub use output_fasta::{OutputFASTA, PartialOutputFASTA};
 pub use output_fastq::{OutputFASTQ, PartialOutputFASTQ};
 pub use output_report::{OutputReport, PartialOutputReport};
@@ -90,7 +91,11 @@ pub(crate) fn build_record_declarations(spec: &RecordOutputDeclSpec) -> Vec<Outp
         sink.hash_compressed = false;
         decls.push(OutputDeclaration {
             id: INTERLEAVED_ID.to_string(),
-            target: WriteTargetConfig::new(vec![STDOUT_INFIX.to_string()], None, spec.suffix.clone()),
+            target: WriteTargetConfig::new(
+                vec![STDOUT_INFIX.to_string()],
+                None,
+                spec.suffix.clone(),
+            ),
             sink_config: sink,
             format: spec.format,
             chunk_policy: ChunkPolicy::default(),
@@ -107,7 +112,11 @@ pub(crate) fn build_record_declarations(spec: &RecordOutputDeclSpec) -> Vec<Outp
         let interleave_count = interleave.len();
         decls.push(OutputDeclaration {
             id: INTERLEAVED_ID.to_string(),
-            target: WriteTargetConfig::new(vec![], Some("interleaved".to_string()), spec.suffix.clone()),
+            target: WriteTargetConfig::new(
+                vec![],
+                Some("interleaved".to_string()),
+                spec.suffix.clone(),
+            ),
             sink_config: spec.sink_config.clone(),
             format: spec.format,
             chunk_policy: ChunkPolicy {

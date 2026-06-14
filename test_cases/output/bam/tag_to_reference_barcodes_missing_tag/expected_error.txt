@@ -1,10 +1,17 @@
+Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
- 9 │     [output.bam.tag_to_reference]
-10 │         tag = 'ref_name_not_present'
-   ┆               ───────────┬──────────
-   ┆                          │
-   ┆                          ╰─────────── No such tag
+28 │ [[step]]
+29 │     action = "OutputBAM"
+   ┆              ─────┬─────
+   ┆                   │
+   ┆                   ╰────── In this step
+30 │     bam = { tag_to_reference = { tag = "ref_name_not_present", references_from_barcodes = "ref_barcodes" } }
+   ┆                                        ───────────┬──────────
+   ┆                                                   │
+   ┆                                                   ╰────────────────────────────────────────────────────────── No such tag: 'ref_name_not_present'
 ───╯
 Hint: Did you mean: 'ref_name' or 'query_seq'?
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/OutputBAM
+      Or run: `fastqrab template OutputBAM` for more information.

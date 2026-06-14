@@ -1861,17 +1861,6 @@ fn test_cases_x_output_x_bam_x_merge_demultiplexed_x_configured_but_no_demultipl
 
 #[test]
 
-fn test_cases_x_output_x_bam_x_merge_demultiplexed_x_fastq_output() {
-    println!("Test case is in: test_cases/output/bam/merge_demultiplexed/fastq_output");
-    run_test(
-        std::path::Path::new("../test_cases/output/bam/merge_demultiplexed/fastq_output"),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
 fn test_cases_x_output_x_bam_x_merge_demultiplexed_x_just_one_barcode() {
     println!("Test case is in: test_cases/output/bam/merge_demultiplexed/just_one_barcode");
     run_test(

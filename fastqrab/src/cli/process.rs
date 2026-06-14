@@ -76,36 +76,32 @@ fn inner_run(
 ) -> Result<()> {
     let start_time = std::time::Instant::now();
     let is_benchmark = parsed.benchmark.as_ref().is_some_and(|b| b.enable);
-    // Extract merge config before parsed is shadowed/moved.
-    let merge_config = if let Some(output_config) = parsed.output.as_ref()
-        && let Some(bam_output_config) = output_config.bam.as_ref()
-        && bam_output_config
-            .merge_demultiplexed
-            .as_ref()
-            .is_some_and(|m| *m)
-        && let Some(reference_tag) = bam_output_config.tag_to_reference.as_ref().map(|x| &x.tag)
-    {
-        let suffix = output_config.get_suffix();
+    // Extract merge config before parsed is shadowed/moved. Merge is configured
+    // on the OutputBAM step now; prefix and ix_separator stay global ([output]).
+    let merge_config = parsed.output.as_ref().and_then(|output_config| {
         let sep = output_config.ix_separator.as_str();
-        let mut tails: Vec<String> = Vec::new();
-        if output_config.interleave.is_some() {
-            tails.push(format!("{sep}interleaved.{suffix}"));
-        } else {
-            let active = output_config.output.as_ref().expect("parent was ok");
-            for seg in active {
-                tails.push(format!("{sep}{seg}.{suffix}"));
-            }
-        }
-        Some(MergeConfig {
-            prefix: output_config.prefix.clone(),
-            ix_separator: sep.to_string(),
-            reference_label: reference_tag.clone(),
-            index_merged: bam_output_config.index_merged,
-            segment_tails: tails,
+        parsed.stages.iter().find_map(|stage| {
+            let fastqrab_steps::transformations::Transformation::OutputBAM(step) =
+                &stage.transformation
+            else {
+                return None;
+            };
+            let info = step.merge_info()?;
+            let tails: Vec<String> = info
+                .segment_names
+                .iter()
+                .map(|name| format!("{sep}{name}.{}", info.suffix))
+                .collect();
+            Some(MergeConfig {
+                prefix: output_config.prefix.clone(),
+                ix_separator: sep.to_string(),
+                reference_label: info.reference_label,
+                index_merged: info.index_merged,
+                segment_tails: tails,
+                records_per_molecule: info.records_per_molecule,
+            })
         })
-    } else {
-        None
-    };
+    });
     {
         let run = pipeline::RunStage0::new(&parsed);
         let run = run.configure_demultiplex_and_init_stages(
