@@ -2,14 +2,7 @@
     read1 = 'input_read1.fq'
 
 [output]
-    prefix = 'output'
-    format = 'bam'
-
-    bam.tags = {
-        barcode_not_present = 'BC',
-      # len_read1 = 'XX' # virtual tags currently unsupported
-}
-
+    prefix = "output"
 [[step]]
     action = 'ExtractRegion'
     source = 'read1'
@@ -18,3 +11,8 @@
     length = 6
     out_label = 'barcode'
 
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputBAM"
+    bam = { tags = { barcode_not_present = "BC" } }

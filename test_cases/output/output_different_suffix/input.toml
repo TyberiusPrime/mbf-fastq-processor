@@ -7,7 +7,11 @@
     n = 5
 
 [output]
-    prefix = 'output'
-    compression = 'gzip'
-	suffix = "fq.gzip"
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    suffix = "fq.gzip"
+    compression = "gzip"
     compression_level = 9

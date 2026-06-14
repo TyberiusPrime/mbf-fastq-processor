@@ -4,5 +4,9 @@
 	sanger = 'input_longreads_original_sanger.fastq'
 
 [output]
-	prefix = 'output_longreads_original_'
-	suffix = '.fastq'
+    prefix = "output_longreads_original_"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    suffix = ".fastq"

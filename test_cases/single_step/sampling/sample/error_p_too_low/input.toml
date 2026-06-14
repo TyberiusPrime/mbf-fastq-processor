@@ -9,4 +9,8 @@
 
 
 [output]
-    prefix = 'output'
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

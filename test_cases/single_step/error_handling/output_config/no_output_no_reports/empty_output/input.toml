@@ -3,7 +3,9 @@
 
 
 [output]
-	prefix='toml'
-	output = []
-	report_html = false
-	report_json = false
+    prefix = "toml"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    output = []

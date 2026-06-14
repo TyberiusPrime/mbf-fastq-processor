@@ -5,8 +5,12 @@
     index2 = 'input_i2.fq'
 
 [output]
-    prefix = 'output'
-    compression = 'Gzip'
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    output = ["read1", "read2", "index1", "index2"]
+    compression = "Gzip"
     output_hash_uncompressed = false
     output_hash_compressed = true
-    output = ["read1", "read2", "index1", "index2"]

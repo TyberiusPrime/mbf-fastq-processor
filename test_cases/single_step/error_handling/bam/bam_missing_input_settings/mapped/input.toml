@@ -2,4 +2,8 @@
 	read1 = ["input_read1.bam"]
 
 [output]
-  prefix = 'hello'
+    prefix = "hello"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

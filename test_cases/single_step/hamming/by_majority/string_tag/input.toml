@@ -2,10 +2,7 @@
     read1 = 'input_read1.fq.gz'
 
 [output]
-    prefix = 'output'
-    format = 'fastq'
-	compression = 'raw'
-
+    prefix = "output"
 [[step]]
     action = 'ExtractRegex'
 	source = "name:read1"
@@ -36,3 +33,8 @@
     CGA = 'label2'
     CGC = 'label2'
     AGT = 'label2'
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    compression = "raw"

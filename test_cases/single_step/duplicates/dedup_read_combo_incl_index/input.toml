@@ -22,6 +22,10 @@
 
 
 [output]
-    prefix = 'output'
-	compression = 'zst'
-	output = ['read1','read2']
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    output = ["read1", "read2"]
+    compression = "zst"

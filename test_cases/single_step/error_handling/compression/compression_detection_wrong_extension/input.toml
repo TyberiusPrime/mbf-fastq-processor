@@ -8,11 +8,7 @@ read1 = 'input_gzipped_wrong_extension.txt'
 read2 = 'input_zstd_wrong_extension.fq'
 
 [output]
-prefix = 'output'
-compression = 'Raw'
-report_json = true
-
-
+    prefix = "output"
 [[step]]
 	action = "ReverseComplement"
 	segment = "read2"
@@ -22,3 +18,13 @@ report_json = true
 action = 'Report'
 name = 'files_processed'
 count = true
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    compression = "Raw"
+
+[[step]]
+    action = "OutputReport"
+    json = true
+    html = false

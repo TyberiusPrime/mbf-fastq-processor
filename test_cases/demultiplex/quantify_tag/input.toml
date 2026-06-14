@@ -34,6 +34,5 @@
 	infix = "quantify"
 
 [output]
-    prefix = 'output'
-    format = 'None'
-    ix_separator = '-'
+    prefix = "output"
+    ix_separator = "-"

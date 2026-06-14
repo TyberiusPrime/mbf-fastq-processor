@@ -257,4 +257,8 @@
   read256 = 'input_read257.fq'
   read257 = 'input_read257.fq'
 [output]
-prefix = 'output'
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

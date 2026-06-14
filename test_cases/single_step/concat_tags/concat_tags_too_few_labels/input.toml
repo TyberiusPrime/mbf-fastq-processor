@@ -20,5 +20,4 @@
 [[step]]
   action = 'StoreTagsInTable'
 [output]
-    prefix = 'output'
-    format = 'none'
+    prefix = "output"

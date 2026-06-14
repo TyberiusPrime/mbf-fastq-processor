@@ -19,5 +19,4 @@
 	comment_separator = ','
 
 [output]
-    prefix = 'output'
-    format = 'None'
+    prefix = "output"

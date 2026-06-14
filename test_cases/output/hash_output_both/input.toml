@@ -2,7 +2,11 @@
     read1 = 'input_read1.fq'
 
 [output]
-    prefix = 'output'
-    compression = 'Zstd'
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    compression = "Zstd"
     output_hash_uncompressed = true
     output_hash_compressed = true

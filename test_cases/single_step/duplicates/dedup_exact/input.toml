@@ -15,5 +15,9 @@
     keep_or_remove='remove'
 
 [output]
-    prefix = 'output'
-	compression = 'zstd'
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    compression = "zstd"

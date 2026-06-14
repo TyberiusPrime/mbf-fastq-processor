@@ -1,5 +1,8 @@
 [output]
-	prefix = 'output'
-
+    prefix = "output"
 [input]
     error_read = "input_error_trunc_at_plus.fastq"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

@@ -7,5 +7,8 @@
   in_labels = 'len_read1'
 
 [output]
-    prefix = 'output'
-	chunk_size=3
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

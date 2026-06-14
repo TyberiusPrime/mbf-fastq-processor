@@ -13,5 +13,4 @@
     segment = 'all'
 
 [output]
-    prefix = 'output'
-    format = 'None'
+    prefix = "output"

@@ -16,5 +16,9 @@
   comment-tags = 'location_barcode'
 
 [output]
-    prefix = 'output' # for the tag
-	output = [] # no read1 file.
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    output = []

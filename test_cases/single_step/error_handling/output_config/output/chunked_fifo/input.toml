@@ -2,6 +2,8 @@
     read1 = 'input_read1.fq'
 
 [output]
-    prefix = 'output'
-	chunk_size = 5000
+    prefix = "output"
 
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

@@ -7,5 +7,9 @@
 	to = 'solexa'
 
 [output]
-	prefix = "output_misc_dna_as"
-	suffix = "fastq"
+    prefix = "output_misc_dna_as"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    suffix = "fastq"

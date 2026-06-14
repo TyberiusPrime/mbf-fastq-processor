@@ -2,8 +2,7 @@
     read1 = 'input_read1.fq'
 
 [output]
-    prefix = 'output'
-
+    prefix = "output"
 [[step]]
     action = 'TagOtherFile'
     source = 'name:'
@@ -16,3 +15,7 @@
     action = 'Demultiplex'
     in_label = 'in_other_file'
     output_unmatched = 123
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

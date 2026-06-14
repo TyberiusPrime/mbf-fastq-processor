@@ -9,5 +9,9 @@ buffer_size=1024
 block_size=12
 
 [output]
-    prefix = 'output'
-	compression = 'zst'
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    compression = "zst"

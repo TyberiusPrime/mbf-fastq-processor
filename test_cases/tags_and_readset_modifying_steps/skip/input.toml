@@ -24,4 +24,8 @@ source = 'read1'
   action = "StoreTagsInTable"
 
 [output]
-  prefix = "out"
+    prefix = "out"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

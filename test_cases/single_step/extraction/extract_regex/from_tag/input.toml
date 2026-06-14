@@ -2,10 +2,7 @@
     read1 = 'input_read1.fq'
 
 [output]
-    prefix = 'output'
-    format = 'none'
-    compression = 'raw'
-
+    prefix = "output"
 [[step]]
     action = 'ExtractRegion'
     source = "read1"

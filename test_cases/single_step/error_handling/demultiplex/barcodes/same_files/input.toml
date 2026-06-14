@@ -2,8 +2,7 @@
     read1 = 'input_r1.fq'
 
 [output]
-    prefix = 'output'
-
+    prefix = "output"
 [[step]]
     action = 'ExtractRegion'
     anchor = "Left"
@@ -21,3 +20,7 @@
 [barcodes.test_barcodes]
     'ATCG' = 'specific'
     'ATCR' = 'specific'
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

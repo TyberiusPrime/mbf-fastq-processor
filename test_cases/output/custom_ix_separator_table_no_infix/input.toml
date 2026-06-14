@@ -2,10 +2,8 @@
     read1 = 'input_read1.fq'
 
 [output]
-    prefix = 'output'
-    ix_separator = '_---_'
-    output = ['read1']
-
+    prefix = "output"
+    ix_separator = "_---_"
 [[step]]
     action = 'ExtractRegion'
     out_label = 'barcode'
@@ -42,3 +40,8 @@
 
 [[step]]
     action = 'StoreTagsInTable'
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    output = ["read1"]

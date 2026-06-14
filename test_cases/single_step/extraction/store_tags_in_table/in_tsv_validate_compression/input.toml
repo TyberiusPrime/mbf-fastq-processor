@@ -26,5 +26,4 @@
 	compression = 'shu'
 
 [output]
-    prefix = 'output'
-	format = 'None'
+    prefix = "output"

@@ -6,4 +6,8 @@
     spot_check_read_pairing = false
 
 [output]
-    prefix = 'output'
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

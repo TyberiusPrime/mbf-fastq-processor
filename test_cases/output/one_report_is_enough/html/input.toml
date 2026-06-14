@@ -11,6 +11,14 @@
     length_distribution = true
 
 [output]
-    prefix = 'output'
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
     output = []
-    report_html=true
+
+[[step]]
+    action = "OutputReport"
+    json = false
+    html = true

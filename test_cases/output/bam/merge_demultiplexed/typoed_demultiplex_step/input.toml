@@ -47,11 +47,14 @@
   name = 'rep'
 
 [output]
-    prefix = 'output'
-    report_html=true
-    format = 'bam'
+    prefix = "output"
 
-    [output.bam]
-        tag_to_reference.references_from_barcodes = "barcodes"
-        tag_to_reference.tag="refss"
-        merge_demultiplexed = true
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputBAM"
+    bam = { tag_to_reference = { references_from_barcodes = "barcodes", tag = "refss" }, merge_demultiplexed = true }
+
+[[step]]
+    action = "OutputReport"
+    json = false
+    html = true

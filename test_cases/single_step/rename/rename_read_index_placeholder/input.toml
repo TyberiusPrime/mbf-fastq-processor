@@ -15,5 +15,9 @@
     replacement = 'LIB-{{READ_INDEX}}/$2'
 
 [output]
-    prefix = 'output'
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
     output = ["read1", "read2"]

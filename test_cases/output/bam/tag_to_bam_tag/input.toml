@@ -2,15 +2,7 @@
     read1 = 'input_read1.fq'
 
 [output]
-    prefix = 'output'
-    format = 'bam'
-
-    bam.tags = {
-        barcode = 'BC',
-        reg = 'XY'
-      # len_read1 = 'XX' # virtual tags currently unsupported
-}
-
+    prefix = "output"
 [[step]]
     action = 'ExtractRegion'
     source = 'read1'
@@ -26,3 +18,8 @@
     query = "A..C"
     out_label = 'reg'
 
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputBAM"
+    bam = { tags = { barcode = "BC", reg = "XY" } }

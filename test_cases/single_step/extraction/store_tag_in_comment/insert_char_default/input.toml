@@ -31,4 +31,8 @@ options.read_comment_character = 'R'
     in_label = 'pos_tag'
 
 [output]
-    prefix = 'output'
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

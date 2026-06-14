@@ -2,8 +2,7 @@
     read1 = 'input_read1.fq.gz'
 
 [output]
-    prefix = 'output'
-
+    prefix = "output"
 [[step]]
     action = 'ExtractRegion'
 	source = "name:read1"
@@ -27,3 +26,7 @@
     CT = 'ct'
     TT = 't'
 
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

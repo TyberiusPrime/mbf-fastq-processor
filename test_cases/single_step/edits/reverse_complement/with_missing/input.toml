@@ -25,5 +25,4 @@
   action = 'StoreTagsInTable'
 
 [output]
-    prefix = 'output'
-    format = 'None'
+    prefix = "output"

@@ -2,5 +2,9 @@
     read1 = 'input_read1.fq'
 
 [output]
-    prefix = 'output'
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
     compression_level = 5

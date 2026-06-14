@@ -8,4 +8,8 @@
     # Should fail - 3 segments but no explicit specification
 
 [output]
-    prefix = 'output'
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

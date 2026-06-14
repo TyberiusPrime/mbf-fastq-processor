@@ -6,8 +6,11 @@
 	block_size=4
 
 [output]
-    prefix = 'output'
-	compression='gzip'
-    chunk_size = 0
-	output_hash_uncompressed=true
-	output_hash_compressed=true
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    compression = "gzip"
+    output_hash_uncompressed = true
+    output_hash_compressed = true

@@ -15,5 +15,4 @@
     in_label = 'regs'
 
 [output]
-    prefix = 'output'
-	format = 'None'
+    prefix = "output"

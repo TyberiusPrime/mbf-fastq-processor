@@ -26,4 +26,8 @@
     in_label = ['tag_a', 'tag_b', 'cmp']
 
 [output]
-    prefix = 'output'
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

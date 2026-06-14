@@ -2,8 +2,7 @@
 read1 = "input_read1.fq"
 
 [output]
-prefix = "output"
-
+    prefix = "output"
 [[step]]
 action = "ExtractLongestPolyX"
 base = "A"
@@ -17,3 +16,7 @@ segment = "read1"
 action = "StoreTagInComment"
 in_label = "location_poly_a"
 segment = "read1"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

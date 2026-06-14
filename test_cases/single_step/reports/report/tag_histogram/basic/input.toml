@@ -55,6 +55,13 @@
     tag_histograms = ['prefix_5', 'gc_content', 'gc_content_absolute', 'read_length', 'regex', 'read_no_lt_4', 'string_value']
 
 [output]
-    prefix = 'output'
-    report_json = true
-    report_html = true
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+
+[[step]]
+    action = "OutputReport"
+    json = true
+    html = true

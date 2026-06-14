@@ -23,5 +23,4 @@ infix = 'tags'
 compression = 'Raw'
 
 [output]
-prefix = 'output'
-format = 'None'  # No sequence output, just the table
+    prefix = "output"

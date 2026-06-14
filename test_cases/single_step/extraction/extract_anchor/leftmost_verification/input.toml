@@ -38,4 +38,8 @@
     in_label = 'test'
 
 [output]
-    prefix = 'expected_output'
+    prefix = "expected_output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

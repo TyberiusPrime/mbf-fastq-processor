@@ -55,8 +55,11 @@
   in_label = "ee"
   
 [output]
-    prefix = 'output'
-    format = 'bam'
-    interleave = ["read1","read2"]
-    output_hash_compressed = true
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputBAM"
     output = ["index1", "index2"]
+    interleave = ["read1", "read2"]
+    output_hash_compressed = true

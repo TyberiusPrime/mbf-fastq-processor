@@ -2,9 +2,7 @@
     read1 = 'input_read1.fq'
 
 [output]
-    prefix = 'output'
-    output = []  # no read1 output
-
+    prefix = "output"
 [[step]]
     action = 'ExtractRegion'
     anchor = "Start"
@@ -36,3 +34,8 @@
     action = 'StoreTagInFastQ'
     in_label = 'sequence'
     commentLabels = 'location_sequence'
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    output = []

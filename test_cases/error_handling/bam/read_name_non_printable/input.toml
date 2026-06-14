@@ -3,5 +3,8 @@
 
 
 [output]
-  prefix ='output'
-  format = 'bam'
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputBAM"

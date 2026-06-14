@@ -2,10 +2,7 @@
     read1 = 'input_read1.fq.gz'
 
 [output]
-    prefix = 'output'
-    compression = 'Raw'
-    report_json = true
-
+    prefix = "output"
 [[step]]
     action = 'Head'
     n = 10
@@ -41,3 +38,13 @@
 [[step]] # to trigger iter_tags
     action = 'Report'
     name = 'report'
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    compression = "Raw"
+
+[[step]]
+    action = "OutputReport"
+    json = true
+    html = false

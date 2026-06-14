@@ -2,4 +2,8 @@
 
 
 [output]
-	prefix='toml'
+    prefix = "toml"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

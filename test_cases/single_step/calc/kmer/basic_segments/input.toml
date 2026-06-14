@@ -6,8 +6,7 @@
   accept_duplicate_files = true
 
 [output]
-    prefix = 'output'
-
+    prefix = "output"
 [[step]]
     action = 'CalcKmers'
     out_label = 'kmer_count'
@@ -20,3 +19,7 @@
 [[step]]
     action = 'StoreTagInComment'
     in_label = 'kmer_count'
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

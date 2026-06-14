@@ -2,9 +2,7 @@
     read1 = 'input_read1.fq.zst'
 
 [output]
-	prefix = 'output'
-	format = 'None'
-
+    prefix = "output"
 [[step]]
     action = 'CalcKmers'
     out_label = 'kmer_count_canonical'

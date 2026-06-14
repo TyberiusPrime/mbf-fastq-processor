@@ -4,9 +4,7 @@
 
 
 [output]
-  prefix = 'output'
-  format = 'None'
-  
+    prefix = "output"
 [[step]]
   action  = 'TagMatches'
   out_label = 'trname1'

@@ -14,5 +14,4 @@
     segment = 'read1'
 
 [output]
-    prefix = 'output'
-    format = 'None'
+    prefix = "output"

@@ -2,11 +2,7 @@
     read1 = 'input_read1.fq.gz'
 
 [output]
-    prefix = 'output'
-    compression = 'Raw'
-	format = 'FASTQ'
-
-
+    prefix = "output"
 [[step]]
     action = 'Head'
     n = 10
@@ -30,3 +26,8 @@
 [barcodes.demult]
     ATGA = 'label1'
     CTCC = 'label2'
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    compression = "Raw"

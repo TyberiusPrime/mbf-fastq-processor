@@ -29,4 +29,8 @@
     # No segment_a/segment_b specified - should auto-detect
 
 [output]
-    prefix = 'output'
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

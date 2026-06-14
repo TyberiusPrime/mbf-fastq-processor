@@ -2,10 +2,7 @@
 read1 = ["input_read1.fq"]
 
 [output]
-prefix = "output"
-
-# Extract pattern "ATGC" - creates a Location tag
-# Location tags are truthy when they contain a match, falsy otherwise
+    prefix = "output"
 [[step]]
 action = "ExtractRegex"
 out_label = "has_atgc"
@@ -21,3 +18,7 @@ segment = "read1"
 if_tag = "has_atgc"
 
 
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

@@ -20,5 +20,4 @@
 	comment_insert_char= 'G'
 
 [output]
-    prefix = 'output'
-    format = 'None'
+    prefix = "output"

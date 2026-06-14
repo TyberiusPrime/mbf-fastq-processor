@@ -43,7 +43,10 @@
     output_infix = 'pp'
 
 [output]
-    prefix = 'output'
-    chunk_size=3333
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    compression = "Zst"
     output_hash_uncompressed = false
-	compression='Zst'

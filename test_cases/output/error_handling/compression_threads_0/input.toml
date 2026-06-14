@@ -5,7 +5,10 @@
     accept_duplicate_files = true
 
 [output]
-    prefix = 'output'
-  compression_threads = 0
-  compression = 'gzip'
+    prefix = "output"
 
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    compression = "gzip"
+    compression_threads = 0

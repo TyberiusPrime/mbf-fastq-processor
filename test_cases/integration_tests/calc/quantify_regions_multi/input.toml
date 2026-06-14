@@ -32,5 +32,9 @@
     in_label = 'regs_combo'
 
 [output]
-    prefix = 'output'
-	compression = 'Zst'
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    compression = "Zst"

@@ -2,8 +2,7 @@
     read1 = 'sample_data/ERR664392_1250.fq.gz'
 
 [output]
-    prefix = 'output'
-
+    prefix = "output"
 [[step]]
     action = 'ExtractRegion'
     anchor = "Left"
@@ -19,3 +18,7 @@
     output_unmatched = false
 
 [barcodes.test_barcodes]
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

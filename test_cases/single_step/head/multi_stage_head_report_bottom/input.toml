@@ -30,5 +30,13 @@
 
 
 [output]
-    prefix = 'output'
-    report_json = true
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+
+[[step]]
+    action = "OutputReport"
+    json = true
+    html = false

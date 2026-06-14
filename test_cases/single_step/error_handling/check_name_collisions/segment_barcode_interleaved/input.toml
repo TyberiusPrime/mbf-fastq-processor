@@ -15,10 +15,13 @@
   out_label = 'bc1'
 
 [output]
-    prefix = 'output'
-
+    prefix = "output"
 [[step]]
   action = 'demultiplex'
   barcodes = 'read1'
   in_label = 'bc1'
   output_unmatched=false
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

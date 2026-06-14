@@ -2,4 +2,8 @@
 	illumina = "input_illumina_full_range_original_illumina.fastq"
 
 [output]
-	prefix = "output_illumina_full_range_as"
+    prefix = "output_illumina_full_range_as"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

@@ -2,8 +2,7 @@
     read1 = 'input_read1.fq'
 
 [output]
-    prefix = 'output'
-
+    prefix = "output"
 [[step]]
     action = 'Progress'
     n = 100000
@@ -19,3 +18,7 @@
   action = "FilterByTag"
   in_label = "nope"
   keep_or_remove = "keep"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

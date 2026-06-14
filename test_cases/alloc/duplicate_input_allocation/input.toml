@@ -7,5 +7,4 @@
 	threads = 1
 
 [output]
-    prefix = 'output_single'
-    format = 'None'
+    prefix = "output_single"

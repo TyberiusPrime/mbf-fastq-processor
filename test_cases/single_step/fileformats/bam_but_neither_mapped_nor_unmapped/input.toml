@@ -4,5 +4,8 @@
 	options.bam_include_mapped=false
 
 [output]
-    prefix = 'output'
-    format = 'fastq'
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

@@ -38,11 +38,10 @@
     GG = 'sample2'
 
 [output]
-    prefix = 'output'
-    interleave = ['read1','read2','read3','read4']
-    format = 'bam'
+    prefix = "output"
 
-    [output.bam]
-        tag_to_reference.references_from_barcodes = "barcodes"
-        tag_to_reference.tag="refs"
-        merge_demultiplexed = true
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputBAM"
+    interleave = ["read1", "read2", "read3", "read4"]
+    bam = { tag_to_reference = { references_from_barcodes = "barcodes", tag = "refs" }, merge_demultiplexed = true }

@@ -19,5 +19,9 @@ read2 = "input_ERR777676_2.fastq.gz"
     segment2 = 'read2'
 
 [output]
-	prefix = "output"
-	compression = "gzip"
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    compression = "gzip"

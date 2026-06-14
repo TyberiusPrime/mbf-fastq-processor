@@ -5,11 +5,14 @@
 }
 
 [output]
-  prefix = 'output'
-
+    prefix = "output"
 [[step]]
 action = 'ExtractRegex'
 source = 'tag:bc'
 out_label = 'gene'
 search = '^[^|]+'
 
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

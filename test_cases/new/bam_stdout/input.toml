@@ -2,6 +2,8 @@
     read1 = 'input_read1.fq'
 
 [output]
-    prefix = 'output'
-    format = 'bam'
-    stdout = true
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputBAM"

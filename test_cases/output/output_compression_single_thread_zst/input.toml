@@ -7,9 +7,12 @@
     n = 5
 
 [output]
-    prefix = 'output'
-    compression = 'zst'
-#compression_level = 5
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    compression = "zst"
     compression_threads = 1
-    output_hash_compressed = true
     output_hash_uncompressed = true
+    output_hash_compressed = true

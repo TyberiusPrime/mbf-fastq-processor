@@ -17,6 +17,4 @@
 	infix = "tbl"
 
 [output]
-	format = "None"
-	prefix = "out"
-
+    prefix = "out"

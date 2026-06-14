@@ -18,5 +18,4 @@
     segment = 'index2'
 
 [output]
-    prefix = 'output'
-    format = 'None'
+    prefix = "output"

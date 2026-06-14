@@ -34,4 +34,8 @@
   in_label = ['worst_q_start', 'worst_q_end']
 
 [output]
-    prefix = 'output'
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

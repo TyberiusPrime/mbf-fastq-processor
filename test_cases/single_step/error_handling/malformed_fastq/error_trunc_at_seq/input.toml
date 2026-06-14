@@ -2,4 +2,8 @@
     error_read = "input_error_trunc_at_seq.fastq"
 
 [output]
-	prefix='output'
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

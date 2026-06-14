@@ -20,5 +20,9 @@
 	keep_or_remove = 'keep'
 
 [output]
-    prefix = 'output'
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
     output = ["read1", "read2", "index1", "index2"]

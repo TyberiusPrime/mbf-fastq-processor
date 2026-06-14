@@ -8,5 +8,8 @@
 	accept_duplicate_files = true # not what we're testing
 
 [output]
-prefix = 'output'
+    prefix = "output"
 
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

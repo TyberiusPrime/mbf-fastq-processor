@@ -2,5 +2,9 @@
 	sanger = "input_misc_rna_original_sanger.fastq"
 
 [output]
-	prefix = "output_misc_rna_as"
-	suffix = 'fastq'
+    prefix = "output_misc_rna_as"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    suffix = "fastq"

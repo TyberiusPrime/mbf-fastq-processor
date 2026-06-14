@@ -2,12 +2,7 @@
     read1 = 'input_read1.fq'
 
 [output]
-    format = 'None'
-    prefix = 'output'
-    report_json = true
-    report_html = true
-
-# Third report - should appear third
+    prefix = "output"
 [[step]]
     action = 'Report'
     name = 'charlie_report'
@@ -27,3 +22,9 @@
     name = 'beta_report'
     count = true
     duplicate_count_per_read = true
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputReport"
+    json = true
+    html = true

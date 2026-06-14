@@ -14,5 +14,9 @@ source = 'read1'
     keep_or_remove = 'Remove'
 
 [output]
-    prefix = 'output'
-	compression = 'zst'
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    compression = "zst"

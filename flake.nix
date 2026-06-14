@@ -1,6 +1,6 @@
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/release-25.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/release-26.05";
     utils.url = "github:numtide/flake-utils";
     #naersk.url = "github:nmattia/naersk";
     naersk.url = "github:nix-community/naersk/pull/391/head";
@@ -362,12 +362,12 @@
             pkgs.openssl
             pkgs.pkg-config
             pkgs.samply
-            (pkgs.python3.withPackages (
+            (pkgs.python315.withPackages (
               ps: with ps; [
-                scipy
-                anndata
-                pysam
-                pandas
+                #scipy
+                #anndata
+                #pysam
+                #pandas
                 toml
               ]
             ))

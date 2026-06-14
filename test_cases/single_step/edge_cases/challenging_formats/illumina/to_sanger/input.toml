@@ -6,4 +6,8 @@
 	to = 'sanger'
 
 [output]
-	prefix = "output_illumina_full_range_as"
+    prefix = "output_illumina_full_range_as"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

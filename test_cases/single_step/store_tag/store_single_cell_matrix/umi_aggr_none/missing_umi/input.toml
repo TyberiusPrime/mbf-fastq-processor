@@ -42,5 +42,3 @@
 
 [output]
     prefix = "output"
-    format = "None"
-    compression = "raw"

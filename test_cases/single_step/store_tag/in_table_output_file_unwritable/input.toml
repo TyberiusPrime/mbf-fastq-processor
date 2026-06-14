@@ -19,5 +19,4 @@
     infix = 'tags'
 
 [output]
-    prefix = 'output'
-    format = 'None'
+    prefix = "output"

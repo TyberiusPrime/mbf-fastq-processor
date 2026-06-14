@@ -13,5 +13,4 @@
   in_labels = ['polyA', 'location_polyA']
 
 [output]
-  format = 'None'
-  prefix = 'output'
+    prefix = "output"

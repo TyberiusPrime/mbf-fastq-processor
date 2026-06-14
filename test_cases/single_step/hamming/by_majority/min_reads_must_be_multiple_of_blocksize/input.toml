@@ -6,9 +6,7 @@
   options.fasta_fake_quality ='C'
 
 [output]
-  prefix = 'output'
-  format = 'None'
-
+    prefix = "output"
 [[step]]
   action = 'ExtractRegion'
   source = 'r1'

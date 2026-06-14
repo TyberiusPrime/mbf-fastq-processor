@@ -25,5 +25,9 @@ read2 = "reads_2.fq.gz"
     segment2 = 'read2'
 
 [output]
-	prefix = "output"
-	compression = "gzip"
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    compression = "gzip"

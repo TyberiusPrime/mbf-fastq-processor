@@ -5,5 +5,9 @@
     index2 = 'input_i2.fq'
 
 [output]
-    prefix = 'output'
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
     output = ["index2"]

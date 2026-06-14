@@ -2,8 +2,7 @@
     read1 = 'input_read1.fq'
 
 [output]
-    prefix = 'output'
-
+    prefix = "output"
 [[step]]
     action = 'CalcKmers'
     out_label = 'kmer_count'
@@ -18,3 +17,7 @@
     in_label = 'kmer_count'
     min_value = 2
     keep_or_remove = 'keep'
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

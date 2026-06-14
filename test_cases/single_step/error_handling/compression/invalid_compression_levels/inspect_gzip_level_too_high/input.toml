@@ -13,5 +13,4 @@
     compression_level = 10
 
 [output]
-    prefix = 'output'
-    format = 'None'
+    prefix = "output"

@@ -12,4 +12,8 @@ options.fasta_fake_quality = '~'
 
 
 [output]
-  prefix = "output"
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

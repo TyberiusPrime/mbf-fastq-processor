@@ -2,6 +2,8 @@
     read_1 = 'input_read_1.fq'
 
 [output]
-	prefix = 'input'
+    prefix = "input"
 
-
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

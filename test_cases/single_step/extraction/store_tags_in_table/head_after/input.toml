@@ -28,4 +28,8 @@
   n = 3
 
 [output]
-    prefix = 'output' # for the tag
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

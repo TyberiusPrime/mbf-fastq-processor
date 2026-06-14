@@ -5,6 +5,9 @@
     accept_duplicate_files = true
 
 [output]
-    prefix = 'output'
-    format = 'bam'
-    compression_level=10
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputBAM"
+    compression_level = 10

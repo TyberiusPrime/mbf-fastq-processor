@@ -2,11 +2,7 @@
     read1 = 'input_read1.fq.gz'
 
 [output]
-    prefix = 'output'
-    format = 'fastq'
-	compression = 'raw'
-
-# First test without shared barcodes - use inline for HammingCorrect
+    prefix = "output"
 [[step]]
     action = 'Head'
     n = 10
@@ -46,3 +42,8 @@
 [barcodes.barcodes]
     ATA = 'label1'
     ATT = 'label1'
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    compression = "raw"

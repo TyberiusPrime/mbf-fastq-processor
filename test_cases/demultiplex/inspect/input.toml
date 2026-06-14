@@ -2,9 +2,7 @@
     read1 = 'input_read1.fq.gz'
 
 [output]
-    prefix = 'output'
-    report_json=true
-
+    prefix = "output"
 [[step]]
     action = 'Report'
     name = 'start'
@@ -50,3 +48,12 @@
 [[step]]
     action = 'Report' # max 10 output reads
     name = 'post_multiplex'
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+
+[[step]]
+    action = "OutputReport"
+    json = true
+    html = false

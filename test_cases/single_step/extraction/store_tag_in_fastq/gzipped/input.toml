@@ -16,6 +16,10 @@
     comment-tags = "location_mytagname"
 
 [output]
-    prefix = 'output'
-	output = []
-	ix_separator = '.'
+    prefix = "output"
+    ix_separator = "."
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    output = []

@@ -2,9 +2,7 @@
 read1 = "input_read1.fq"
 
 [output]
-compression = "zst"
-prefix = "output"
-
+    prefix = "output"
 [[step]]
 action = "TagOtherFile"
 source = "name:read1"
@@ -17,3 +15,8 @@ seed = 42
 action = "FilterByTag"
 in_label = "tag"
 keep_or_remove = "Remove"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    compression = "zst"

@@ -32,6 +32,13 @@
     duplicate_count_per_fragment = true
 
 [output]
-    prefix = 'output'
-    report_json = true
-    report_html = true
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+
+[[step]]
+    action = "OutputReport"
+    json = true
+    html = true

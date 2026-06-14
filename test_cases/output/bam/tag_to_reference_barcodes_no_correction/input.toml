@@ -2,14 +2,7 @@
     read1 = 'input_read1.fq'
 
 [output]
-    prefix = 'output'
-    format = 'bam'
-
-[output.bam]
-    [output.bam.tag_to_reference]
-        tag = 'query_seq'
-        references_from_barcodes = 'ref_barcodes'
-
+    prefix = "output"
 [[step]]
     action = 'ExtractRegion'
     source = 'read1'
@@ -20,3 +13,8 @@
 
 [barcodes.ref_barcodes]
     from_file.filename = 'input_reference.fa'
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputBAM"
+    bam = { tag_to_reference = { tag = "query_seq", references_from_barcodes = "ref_barcodes" } }

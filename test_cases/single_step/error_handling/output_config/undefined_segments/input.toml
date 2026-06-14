@@ -2,6 +2,10 @@
 	read1 = 'input_uncompressed.fq'
 
 [output]
-	prefix = 'output'
-	compression = 'gz'
-    output = ['no-such-segment', 'read1']
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    output = ["no-such-segment", "read1"]
+    compression = "gz"

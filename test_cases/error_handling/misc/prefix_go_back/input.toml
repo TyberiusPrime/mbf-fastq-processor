@@ -4,3 +4,7 @@
 
 [output]
     prefix = "output/../somewhere_else"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

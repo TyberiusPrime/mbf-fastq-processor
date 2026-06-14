@@ -9,4 +9,7 @@
 
 [output]
     prefix = "output"
-    format = "bam"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputBAM"

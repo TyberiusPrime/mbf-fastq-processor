@@ -6,7 +6,10 @@
     n = 2
 
 [output]
-    prefix = 'output'
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTA"
     stdout = true
-    format = 'fasta'
-    compression = 'zstd'
+    compression = "zstd"

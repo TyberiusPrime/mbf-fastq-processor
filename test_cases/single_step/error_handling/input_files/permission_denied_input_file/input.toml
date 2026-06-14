@@ -2,9 +2,12 @@
     read1 = 'input_read1.fq'
 
 [output]
-    prefix = 'output'
-    compression = 'Raw'
-
+    prefix = "output"
 [[step]]
     action = 'Report'
     name = 'start'
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    compression = "Raw"

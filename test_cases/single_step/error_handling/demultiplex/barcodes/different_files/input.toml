@@ -2,8 +2,7 @@
     read1 = 'sample_data/ERR664392_1250.fq.gz'
 
 [output]
-    prefix = 'output'
-
+    prefix = "output"
 [[step]]
     action = 'ExtractRegion'
     anchor = "Start"
@@ -22,3 +21,7 @@
     NNNN = 'universal'
     ATCG = 'specific'
     RYRN = 'ambiguous'
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

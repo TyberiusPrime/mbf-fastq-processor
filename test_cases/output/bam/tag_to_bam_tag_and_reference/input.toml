@@ -2,10 +2,7 @@
     read1 = 'input_read1.fq'
 
 [output]
-    prefix = 'output'
-    format = 'bam'
-
-
+    prefix = "output"
 [[step]]
     action = 'ExtractRegion'
     source = 'read1'
@@ -70,3 +67,8 @@
 
 [[step]]
   action = 'StoreTagsInTable'
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputBAM"
+    bam = { tag_to_bam_tag = { barcode = "BC", acontent = "XC", many_a = "XB", number_from_name = "RR" }, tag_to_reference = { tag = "ref_name", references_from_barcodes = "ref_barcodes" } }

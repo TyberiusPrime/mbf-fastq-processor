@@ -6,5 +6,9 @@
     output = ['read1']
 
 [output]
-    prefix = 'output'
-    output = [] # main output writes nothing; the OutputFASTQ step writes output_read1.fq
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    output = []

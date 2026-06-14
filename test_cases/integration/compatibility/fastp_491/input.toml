@@ -8,6 +8,9 @@
 	spot_check_read_pairing = false
 
 [output]
-	prefix = 'output'
-	compression = 'gz'
+    prefix = "output"
 
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    compression = "gz"

@@ -2,8 +2,7 @@
     read1 = 'input_read1.fq'
 
 [output]
-    prefix = 'output'
-
+    prefix = "output"
 [[step]]
     action = 'CalcKmers'
     out_label = 'kmer_count'
@@ -16,3 +15,7 @@
 [[step]]
     action = 'StoreTagInComment'
     in_label = 'kmer_count'
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

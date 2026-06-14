@@ -5,9 +5,7 @@
   read_comment_character = '|'
 
 [output]
-    prefix = 'output'
-
-# First demultiplex by barcode
+    prefix = "output"
 [[step]]
     action = 'ExtractRegion'
 	source = "read1"
@@ -48,3 +46,7 @@
     action = 'Demultiplex'
     in_label = 'in_other'
     output_unmatched = false
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

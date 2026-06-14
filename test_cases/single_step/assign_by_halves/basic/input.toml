@@ -2,10 +2,7 @@
     read1 = 'input_read1.fq'
 
 [output]
-    prefix = 'output'
-    format = 'fastq'
-    compression = 'raw'
-
+    prefix = "output"
 [[step]]
     action = 'ExtractRegion'
     source = "read1"
@@ -27,3 +24,8 @@
 [barcodes.probes]
     AAAAAAAAAAAAAAAAAAAACCCCCGGGGGTTTTTTTTTTTTTTTTTTTT = 'probe1'
     TTTTTTTTTTTTTTTTTTTTGGGGGCCCCCAAAAAAAAAAAAAAAAAAAA = 'probe2'
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    compression = "raw"

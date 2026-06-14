@@ -7,5 +7,9 @@
  	to = "illumina_1_3"
 
 [output]
-	prefix = "output_solexa_full_range_as"
-	suffix = "fastq"
+    prefix = "output_solexa_full_range_as"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    suffix = "fastq"

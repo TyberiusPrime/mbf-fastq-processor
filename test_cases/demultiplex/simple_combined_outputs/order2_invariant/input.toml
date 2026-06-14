@@ -2,11 +2,7 @@
     read1 = 'input_read1.fq.gz'
 
 [output]
-    prefix = 'output'
-    format = 'fastq'
-	compression = 'raw'
-
-
+    prefix = "output"
 [[step]]
     action = 'Head'
     n = 10
@@ -28,3 +24,8 @@
 [barcodes.demult]
     CTNN = 'label1' # this order does not change the output order
     GNAA = 'label1'
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    compression = "raw"

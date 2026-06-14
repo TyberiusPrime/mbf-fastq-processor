@@ -5,4 +5,8 @@
 	bam_include_mapped=false
 
 [output]
-  prefix = "never"
+    prefix = "never"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

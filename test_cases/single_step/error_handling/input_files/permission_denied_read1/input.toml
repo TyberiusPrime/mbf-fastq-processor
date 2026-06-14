@@ -2,9 +2,16 @@
     read1 = 'input_read1.fq'
 
 [output]
-    prefix = 'output'
-    report_json = true
-
+    prefix = "output"
 [[step]]
     action = 'Report'
     name = 'start'
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+
+[[step]]
+    action = "OutputReport"
+    json = true
+    html = false

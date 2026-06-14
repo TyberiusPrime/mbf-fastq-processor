@@ -6,5 +6,8 @@
     n = 2
 
 [output]
-    prefix = 'output'
-    format = 'BAM'
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputBAM"

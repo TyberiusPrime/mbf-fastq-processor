@@ -62,10 +62,9 @@
     TC = 'lane2'
 
 [output]
-    prefix = 'output'
-    format = 'bam'
+    prefix = "output"
 
-    [output.bam]
-        tag_to_reference = {'tag'= 'ref_lane', from_barcodes = "lanes"}
-        merge_demultiplexed = true
-        index_merged = false
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputBAM"
+    bam = { tag_to_reference = { tag = "ref_lane", from_barcodes = "lanes" }, merge_demultiplexed = true, index_merged = false }

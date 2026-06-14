@@ -47,9 +47,14 @@
   name = 'rep'
 
 [output]
-    prefix = 'output'
-    report_html=true
-    format = 'bam'
+    prefix = "output"
 
-    [output.bam]
-        merge_demultiplexed = true
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputBAM"
+    bam = { merge_demultiplexed = true }
+
+[[step]]
+    action = "OutputReport"
+    json = false
+    html = true

@@ -2,6 +2,13 @@
     read1 = 'sample_data/ten_reads.fq'
 
 [output]
-    prefix = 'output'
-    report_html = true
+    prefix = "output"
 
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+
+[[step]]
+    action = "OutputReport"
+    json = false
+    html = true

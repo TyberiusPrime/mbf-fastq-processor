@@ -6,4 +6,8 @@
   action= 'ValidateReadPairing'
 
 [output]
-  prefix = 'se'
+    prefix = "se"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

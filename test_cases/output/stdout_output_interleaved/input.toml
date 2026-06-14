@@ -8,6 +8,9 @@
 
 
 [output]
-    prefix = 'output'
-    stdout = true
+    prefix = "output"
 
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    stdout = true

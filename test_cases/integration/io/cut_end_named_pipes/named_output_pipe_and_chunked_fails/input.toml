@@ -4,5 +4,8 @@
     action = 'CutEnd'
     n = 2
 [output]
-    prefix = 'output'
-  chunk_size = 100
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

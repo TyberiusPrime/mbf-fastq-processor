@@ -10,5 +10,4 @@
 	out_label = "len_read1"
 
 [output]
-    prefix = 'output'
-    format = 'None'
+    prefix = "output"

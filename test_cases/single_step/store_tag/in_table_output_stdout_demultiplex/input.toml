@@ -2,11 +2,7 @@
     read1 = 'input_read1.fq.gz'
 
 [output]
-    prefix = 'output'
-    format = 'None'
-	compression = 'raw'
-
-# First test without shared barcodes - use inline for HammingCorrect
+    prefix = "output"
 [[step]]
     action = 'Head'
     n = 10

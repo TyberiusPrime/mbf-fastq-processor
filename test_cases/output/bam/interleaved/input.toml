@@ -3,6 +3,9 @@
     read2 = ["input_read2.fq"]
 
 [output]
-    prefix = 'output'
-    format = 'bam'
-    interleave = ['read1','read2']
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputBAM"
+    interleave = ["read1", "read2"]

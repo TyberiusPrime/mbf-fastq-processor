@@ -2,8 +2,7 @@
     read1 = 'sample_data/ERR664392_1250.fq.gz'
 
 [output]
-    prefix = 'output'
-
+    prefix = "output"
 [[step]]
     action = 'ExtractRegion'
     anchor = "Left"
@@ -21,3 +20,7 @@
 [barcodes.'I have spaces']
     ATCG = 'specific'
     ATCC = 'other_specific'
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

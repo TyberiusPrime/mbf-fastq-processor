@@ -5,5 +5,8 @@
     accept_duplicate_files = true
 
 [output]
-    prefix = ''
+    prefix = ""
 
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

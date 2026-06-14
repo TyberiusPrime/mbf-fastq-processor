@@ -25,5 +25,9 @@ options.accept_duplicate_files = true
     action = 'StoreTagsInTable'
 
 [output]
-    prefix = 'output'
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
     output = []

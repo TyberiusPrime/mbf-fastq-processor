@@ -2,5 +2,9 @@
 	sanger = "input_sanger_full_range_original_sanger.fastq"
 
 [output]
-	prefix ="output_sanger_full_range_original"
-	suffix = "fastq"
+    prefix = "output_sanger_full_range_original"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    suffix = "fastq"

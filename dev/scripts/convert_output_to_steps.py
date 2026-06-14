@@ -175,7 +175,11 @@ def main(argv: list[str]) -> int:
     args = parser.parse_args(argv)
 
     raw = args.input.read_text()
-    converted = convert(raw)
+    try:
+        converted = convert(raw)
+    except:
+        print(args)
+        raise
 
     if args.in_place:
         args.input.write_text(converted)

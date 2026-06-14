@@ -2,9 +2,7 @@
     read1 = 'input_read1.fq'
 
 [output]
-    prefix = 'output'
-    format = 'none'
-
+    prefix = "output"
 [[step]]
     action = 'ExtractRegex'
     source = "name:read1"

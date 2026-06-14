@@ -18,5 +18,9 @@
 
 
 [output]
-    prefix = 'output'
-    compression = 'raw'
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    compression = "raw"

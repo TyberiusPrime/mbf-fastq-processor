@@ -21,5 +21,9 @@
     keep_tag = false
 
 [output]
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
     output_hash_uncompressed = true
-    prefix = 'output'

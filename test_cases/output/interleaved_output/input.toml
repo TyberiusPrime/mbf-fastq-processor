@@ -8,5 +8,9 @@
 
 
 [output]
-    prefix = 'output'
-    interleave = ['read1','read2']
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    interleave = ["read1", "read2"]

@@ -51,5 +51,9 @@
     in_label = 'index2_length'
 
 [output]
-    prefix = 'output'
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
     output = ["read1"]

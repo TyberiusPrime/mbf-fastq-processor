@@ -25,5 +25,4 @@
     include_read_name = false
 
 [output]
-    prefix = 'output'
-    format = 'None'
+    prefix = "output"

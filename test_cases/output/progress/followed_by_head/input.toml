@@ -2,9 +2,7 @@
     read1 = 'input_read1.fq'
 
 [output]
-    prefix = 'output'
-  compression = 'gz'
-
+    prefix = "output"
 [options]
   block_size = 10000
 
@@ -17,3 +15,8 @@
 [[step]]
   action=  "Head"
   n = 10000
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    compression = "gz"

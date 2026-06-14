@@ -15,5 +15,9 @@
 
 
 [output]
-    prefix = 'output'
-	output = ["read2","read1"]
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    output = ["read2", "read1"]

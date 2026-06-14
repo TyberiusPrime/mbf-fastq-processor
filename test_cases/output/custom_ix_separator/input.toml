@@ -2,10 +2,8 @@
     read1 = 'input_read1.fq'
 
 [output]
-    prefix = 'output'
-    ix_separator = '_---_'
-    output = ['read1']
-
+    prefix = "output"
+    ix_separator = "_---_"
 [[step]]
     action = 'ExtractRegion'
     anchor = "Start"
@@ -43,3 +41,8 @@
 [[step]]
     action = 'StoreTagsInTable'
     infix = 'tags'
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    output = ["read1"]

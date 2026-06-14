@@ -68,4 +68,8 @@
   in_labels = ['rr', 'location_goodpos','location_badpos', 'location_goneaftertrunc']
 
 [output]
-  prefix = 'output'
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

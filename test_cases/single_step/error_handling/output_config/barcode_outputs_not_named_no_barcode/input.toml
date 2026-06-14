@@ -3,9 +3,7 @@
     read1 = 'sample_data/ERR664392_1250.fq.gz'
 
 [output]
-    prefix = 'output'
-    compression = 'Raw'
-
+    prefix = "output"
 [[step]]
     action = 'ExtractRegion'
     source = "read1"
@@ -24,3 +22,8 @@
     CT = 'aaaa'
     TT = 'nobarcode'
 
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    compression = "Raw"

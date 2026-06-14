@@ -35,5 +35,9 @@ options.read_comment_character = 'R'
     segment = 'read1'
 
 [output]
-    prefix = 'output'
-  output = ['read2']
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    output = ["read2"]

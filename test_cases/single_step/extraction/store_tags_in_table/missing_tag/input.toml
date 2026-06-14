@@ -25,5 +25,4 @@
     tags=['barcode1', 'barcode2', 'barcode3']
 
 [output]
-    prefix = 'output'
-	format = 'None'
+    prefix = "output"

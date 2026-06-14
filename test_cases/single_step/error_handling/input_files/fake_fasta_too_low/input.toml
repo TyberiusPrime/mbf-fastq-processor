@@ -5,4 +5,8 @@
   fasta_fake_quality = 12
 
 [output]
-  prefix = "shu"
+    prefix = "shu"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

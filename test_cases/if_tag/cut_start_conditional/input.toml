@@ -2,9 +2,7 @@
 read1 = "input_read1.fq"
 
 [output]
-prefix = "output"
-
-# Extract a tag based on read name containing "adapter"
+    prefix = "output"
 [[step]]
 action = "ExtractRegex"
 out_label = "has_adapter"
@@ -17,3 +15,7 @@ action = "CutStart"
 n = 5
 segment = "read1"
 if_tag = "has_adapter"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

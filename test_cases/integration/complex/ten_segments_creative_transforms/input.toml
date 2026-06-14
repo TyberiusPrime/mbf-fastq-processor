@@ -12,11 +12,7 @@ seg9 = ['input_seg9.fq']
 seg10 = ['input_seg10.fq']
 
 [output]
-prefix = "output"
-format = "fastq"
-report_json = true
-
-# Extract UMI from segment 1
+    prefix = "output"
 [[step]]
 action = "ExtractRegion"
 start = 0
@@ -130,3 +126,12 @@ name = "final_report"
 count = true
 base_statistics = true
 length_distribution = true
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+
+[[step]]
+    action = "OutputReport"
+    json = true
+    html = false

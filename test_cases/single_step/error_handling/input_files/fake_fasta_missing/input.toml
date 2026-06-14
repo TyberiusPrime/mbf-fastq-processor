@@ -2,4 +2,8 @@
 	read1 = ["input_read1.fasta"]
 
 [output]
-  prefix = "shu"
+    prefix = "shu"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

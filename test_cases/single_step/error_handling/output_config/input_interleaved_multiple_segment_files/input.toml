@@ -4,5 +4,9 @@
     interleaved = ['read1','read2']
 
 [output]
-    prefix = 'output'
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
     stdout = true
