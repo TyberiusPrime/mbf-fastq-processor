@@ -90,7 +90,7 @@ pub(crate) fn build_record_declarations(spec: &RecordOutputDeclSpec) -> Vec<Outp
         sink.hash_compressed = false;
         decls.push(OutputDeclaration {
             id: INTERLEAVED_ID.to_string(),
-            target: WriteTargetConfig::new(vec![STDOUT_INFIX.to_string()], spec.suffix.clone()),
+            target: WriteTargetConfig::new(vec![STDOUT_INFIX.to_string()], None, spec.suffix.clone()),
             sink_config: sink,
             format: spec.format,
             chunk_policy: ChunkPolicy::default(),
@@ -107,7 +107,7 @@ pub(crate) fn build_record_declarations(spec: &RecordOutputDeclSpec) -> Vec<Outp
         let interleave_count = interleave.len();
         decls.push(OutputDeclaration {
             id: INTERLEAVED_ID.to_string(),
-            target: WriteTargetConfig::new(vec!["interleaved".to_string()], spec.suffix.clone()),
+            target: WriteTargetConfig::new(vec![], Some("interleaved".to_string()), spec.suffix.clone()),
             sink_config: spec.sink_config.clone(),
             format: spec.format,
             chunk_policy: ChunkPolicy {
@@ -122,7 +122,7 @@ pub(crate) fn build_record_declarations(spec: &RecordOutputDeclSpec) -> Vec<Outp
     for name in spec.segments {
         decls.push(OutputDeclaration {
             id: segment_id(name),
-            target: WriteTargetConfig::new(vec![name.clone()], spec.suffix.clone()),
+            target: WriteTargetConfig::new(vec![], Some(name.clone()), spec.suffix.clone()),
             sink_config: spec.sink_config.clone(),
             format: spec.format,
             chunk_policy: ChunkPolicy {

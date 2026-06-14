@@ -74,7 +74,8 @@ fn build_step_output_files(
                     let basename = join_nonempty(
                         std::iter::once(output_prefix)
                             .chain(ft.infix_parts().iter().map(String::as_str))
-                            .chain(demux_name),
+                            .chain(demux_name)
+                            .chain(ft.second_infix().map(|x| x.as_str())),
                         output_ix_separator,
                     );
                     WriteTarget::Files(ChunkPaths {

@@ -659,7 +659,8 @@ fn create_bam_header(reference_sequences: &[(String, usize)]) -> noodles::sam::H
 /// Fields are private to force construction through [`WriteTargetConfig::new`].
 #[derive(Clone, Debug)]
 pub struct FileTarget {
-    infix_parts: Vec<String>,
+    infix_parts: Vec<String>, // before demultiplex
+    second_infix: Option<String>, // just before the Suffix
     suffix: String,
 }
 
@@ -667,6 +668,11 @@ impl FileTarget {
     #[must_use]
     pub fn infix_parts(&self) -> &[String] {
         &self.infix_parts
+    }
+
+    #[must_use]
+    pub fn second_infix(&self) -> Option<&String> {
+        self.second_infix.as_ref()
     }
 
     #[must_use]
@@ -690,12 +696,13 @@ impl WriteTargetConfig {
     /// Construct a `WriteTargetConfig`. If `infix_parts == ["--stdout--"]`,
     /// returns [`Stdout`][Self::Stdout]; otherwise returns [`File`][Self::File].
     #[must_use]
-    pub fn new(infix_parts: Vec<String>, suffix: String) -> Self {
+    pub fn new(infix_parts: Vec<String>, second_infix: Option<String>, suffix: String) -> Self {
         if infix_parts == ["--stdout--"] {
             Self::Stdout
         } else {
             Self::File(FileTarget {
                 infix_parts,
+                second_infix,
                 suffix,
             })
         }

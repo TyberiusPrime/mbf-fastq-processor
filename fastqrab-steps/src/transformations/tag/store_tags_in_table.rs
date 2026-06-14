@@ -78,7 +78,7 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagsInTable> {
         let suffix = compression.apply_suffix("tsv");
         return vec![OutputDeclaration {
             id: "tsv".to_string(),
-            target: WriteTargetConfig::new(vec![infix], suffix),
+            target: WriteTargetConfig::new(vec![infix], None, suffix),
             sink_config: SinkConfig {
                 compression,
                 compression_level: inner

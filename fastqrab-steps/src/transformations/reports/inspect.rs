@@ -139,7 +139,7 @@ impl TagUser for PartialTaggedVariant<PartialInspect> {
         let suffix = format.get_suffix(compression, custom_suffix);
         vec![OutputDeclaration {
             id: "inspect".to_string(),
-            target: WriteTargetConfig::new(infix_parts, suffix),
+            target: WriteTargetConfig::new(infix_parts, None, suffix),
             sink_config: SinkConfig {
                 compression,
                 compression_level,

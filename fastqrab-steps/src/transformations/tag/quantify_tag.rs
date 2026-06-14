@@ -71,7 +71,7 @@ impl TagUser for PartialTaggedVariant<PartialQuantifyTag> {
         let infix = inner.infix.as_ref().expect("Verification had passed");
         return vec![OutputDeclaration {
             id: "qr".to_string(),
-            target: WriteTargetConfig::new(vec![infix.clone()], "qr.json".to_string()),
+            target: WriteTargetConfig::new(vec![infix.clone()], None, "qr.json".to_string()),
             sink_config: SinkConfig::default(),
             format: fastqrab_io::FileFormat::Text,
             chunk_policy: ChunkPolicy::default(),

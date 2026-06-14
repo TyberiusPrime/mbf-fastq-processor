@@ -1621,7 +1621,7 @@ impl PartialConfig {
 
         // First pass (immutable): collect declarations and detect conflicts.
         type ConflictEntry = (usize, std::ops::Range<usize>);
-        let mut key_to_entries: IndexMap<(Vec<String>, String), Vec<ConflictEntry>> =
+        let mut key_to_entries: IndexMap<(Vec<String>, Option<String>, String), Vec<ConflictEntry>> =
             IndexMap::new();
         let mut all_decls: Vec<Vec<OutputDeclaration>> = Vec::new();
 
@@ -1635,7 +1635,9 @@ impl PartialConfig {
                 for decl in &decls {
                     if let WriteTargetConfig::File(ft) = &decl.target {
                         key_to_entries
-                            .entry((ft.infix_parts().to_vec(), ft.suffix().to_string()))
+                            .entry((ft.infix_parts().to_vec(),
+                                ft.second_infix().map(ToOwned::to_owned),
+                                ft.suffix().to_string()))
                             .or_default()
                             .push((idx, decl.span.clone()));
                     }
@@ -1673,7 +1675,7 @@ impl PartialConfig {
         self.output_declarations_per_transformation = Some(all_decls);
 
         // Second pass (mutable): report conflicts.
-        for ((infix_parts, suffix), entries) in key_to_entries {
+        for ((infix_parts, _second_suffix, suffix), entries) in key_to_entries {
             if entries.len() > 1 {
                 if let Some(transforms) = self.transform.value.as_mut() {
                     let spans: Vec<_> = entries

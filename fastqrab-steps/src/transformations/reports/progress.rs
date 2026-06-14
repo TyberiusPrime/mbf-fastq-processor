@@ -81,7 +81,7 @@ impl TagUser for PartialTaggedVariant<PartialProgress> {
             .expect("output_infix must be set in config");
         vec![OutputDeclaration {
             id: "progress".to_string(),
-            target: WriteTargetConfig::new(vec![infix.clone()], "progress".to_string()),
+            target: WriteTargetConfig::new(vec![infix.clone()], None, "progress".to_string()),
             sink_config: SinkConfig::default(),
             format: fastqrab_io::FileFormat::Text,
             chunk_policy: ChunkPolicy::default(),

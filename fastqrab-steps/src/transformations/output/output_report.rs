@@ -59,7 +59,7 @@ impl VerifyIn<PartialConfig> for PartialOutputReport {
 fn report_declaration(id: &str, suffix: &str, span: std::ops::Range<usize>) -> OutputDeclaration {
     OutputDeclaration {
         id: id.to_string(),
-        target: WriteTargetConfig::new(Vec::new(), suffix.to_string()),
+        target: WriteTargetConfig::new(Vec::new(), None, suffix.to_string()),
         sink_config: SinkConfig::new_uncompressed_unhashed(),
         format: FileFormat::Text,
         chunk_policy: ChunkPolicy::default(),

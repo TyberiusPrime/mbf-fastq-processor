@@ -355,6 +355,7 @@ impl TagUser for PartialTaggedVariant<PartialHammingCorrect> {
                     id: "counts".to_string(),
                     target: WriteTargetConfig::new(
                         vec![format!("{}.counts", in_label)],
+                        None,
                         "tsv".to_string(),
                     ),
                     sink_config: SinkConfig::new_uncompressed_unhashed(),

@@ -55,8 +55,12 @@
   in_label = "ee"
   
 [output]
-    prefix = 'output'
-    interleave = ["read1","read2"]
-    output_hash_uncompressed = true
-	compression='Zst'
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
     output = ["index1", "index2"]
+    interleave = ["read1", "read2"]
+    compression = "Zst"
+    output_hash_uncompressed = true

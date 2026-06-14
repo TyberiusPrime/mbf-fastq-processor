@@ -277,7 +277,11 @@ impl TagUser for PartialTaggedVariant<PartialStoreSingleCellMatrix> {
         vec![
             OutputDeclaration {
                 id: "data".to_string(),
-                target: WriteTargetConfig::new(vec![infix.clone(), "scd".to_string()], data_suffix),
+                target: WriteTargetConfig::new(
+                    vec![infix.clone(), "scd".to_string()],
+                    None,
+                    data_suffix,
+                ),
                 sink_config: data_sink.clone(),
                 format: FileFormat::Text,
                 chunk_policy: ChunkPolicy::default(),
@@ -289,6 +293,7 @@ impl TagUser for PartialTaggedVariant<PartialStoreSingleCellMatrix> {
                 id: "stats".to_string(),
                 target: WriteTargetConfig::new(
                     vec![infix.clone(), "scd".to_string()],
+                    None,
                     compression.apply_suffix("matrix.mtx.stats.txt"),
                 ),
                 sink_config: data_sink.clone(),
@@ -302,6 +307,7 @@ impl TagUser for PartialTaggedVariant<PartialStoreSingleCellMatrix> {
                 id: "cell_barcodes".to_string(),
                 target: WriteTargetConfig::new(
                     vec![infix.clone(), "scd".to_string()],
+                    None,
                     compression.apply_suffix("barcodes.txt"),
                 ),
                 sink_config: data_sink.clone(),
@@ -315,6 +321,7 @@ impl TagUser for PartialTaggedVariant<PartialStoreSingleCellMatrix> {
                 id: "genes".to_string(),
                 target: WriteTargetConfig::new(
                     vec![infix.clone(), "scd".to_string()],
+                    None,
                     compression.apply_suffix("features.txt"),
                 ),
                 sink_config: data_sink,
