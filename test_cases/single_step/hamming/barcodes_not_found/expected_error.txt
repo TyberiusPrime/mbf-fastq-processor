@@ -1,17 +1,22 @@
+Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
-27 │ [[step]]
-28 │     action = 'HammingCorrect'
+23 │ [[step]]
+24 │     action = 'HammingCorrect'
    ┆              ────────┬───────
    ┆                      │
    ┆                      ╰──────── In this step
    ┆
-29 │ 	in_label = 'barcode_extracted'
-30 │ 	out_label = 'corrected'
-31 │     barcodes = 'barcodes'
+25 │ 	in_label = 'barcode_extracted'
+26 │ 	out_label = 'corrected'
+27 │     barcodes = 'barcodes'
    ┆                ─────┬────
    ┆                     │
    ┆                     ╰───── Barcodes section not found
 ───╯
 Hint: Did you mean: 'barcodez'?
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/HammingCorrect
+      Or run: `fastqrab template HammingCorrect` for more information.
+
+

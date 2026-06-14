@@ -2,8 +2,8 @@ Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
-27 │ [barcodes.bc]
-28 │     from_file.filename =  'input_reference.fa'
+24 │ [barcodes.bc]
+25 │     from_file.filename =  'input_reference.fa'
    ┆              ┬
    ┆              │
    ┆              ╰───────────────────────────────── Error reading from input_reference.fa

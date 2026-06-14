@@ -2,19 +2,21 @@ Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
- 7 │ [[step]]
- 8 │     action = 'CalcKmers'
+ 6 │ [[step]]
+ 7 │     action = 'CalcKmers'
    ┆              ─────┬─────
    ┆                   │
    ┆                   ╰────── In this step
    ┆
- 9 │     out_label = 'kmer_count'
-10 │     segment = 'read1'
-11 │     files = 23
+ 8 │     out_label = 'kmer_count'
+ 9 │     segment = 'read1'
+10 │     files = 23
    ┆             ─┬
    ┆              │
    ┆              ╰─ Wrong type: expected string, found integer.
 ───╯
 Hint: This value has the wrong type.
       See https://doc_url.example/version-stripped-from-test/docs/redirects/CalcKmers
+      Or run: `fastqrab template CalcKmers` for more information.
+
 

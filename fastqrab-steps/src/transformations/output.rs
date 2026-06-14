@@ -446,7 +446,8 @@ pub(crate) fn verify_record_targets(
                 "Must contain at least two segments to interleave.",
             );
             interleave.help = Some(
-                "Either add another segment to interleave, or remove interleave, or output to stdout"
+                "Either add another segment to interleave, \
+                    or remove interleave."
                     .to_string(),
             );
         } else if let Some(Some(output_segments)) = output.as_ref() {

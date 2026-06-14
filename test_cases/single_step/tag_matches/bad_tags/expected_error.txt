@@ -2,15 +2,15 @@ Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
-10 │ [[step]]
-11 │   action  = 'TagMatches'
+ 8 │ [[step]]
+ 9 │   action  = 'TagMatches'
    ┆             ──────┬─────
    ┆                   │
    ┆                   ╰────── In this step
    ┆
-12 │   out_label = 'trname1'
-13 │   source = 'name:read1'
-14 │   accepted = ['alpha1', 'beta1', 'nosuch', 34]
+10 │   out_label = 'trname1'
+11 │   source = 'name:read1'
+12 │   accepted = ['alpha1', 'beta1', 'nosuch', 34]
    ┆                                            ─┬
    ┆                                             │
    ┆                                             ╰── Wrong type: expected string, found integer.

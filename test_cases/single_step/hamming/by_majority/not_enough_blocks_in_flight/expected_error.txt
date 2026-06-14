@@ -2,20 +2,20 @@ Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
-22 │ [[step]]
-23 │   action = 'HammingCorrect'
+20 │ [[step]]
+21 │   action = 'HammingCorrect'
    ┆            ────────┬───────
    ┆                    │
    ┆                    ╰──────── In this step
    ┆
-24 │   in_label = 'bc_raw'
-25 │   out_label = 'bc_corr'
-26 │   max_hamming_distance=1
-27 │   on_tie = 'ByMajority'
-28 │   on_no_match = 'Remove'
-29 │   barcodes = 'barcodes'
-30 │   by_majority_threshold = 0.47
-31 │   by_majority_min_molecules_to_start = 8
+22 │   in_label = 'bc_raw'
+23 │   out_label = 'bc_corr'
+24 │   max_hamming_distance=1
+25 │   on_tie = 'ByMajority'
+26 │   on_no_match = 'Remove'
+27 │   barcodes = 'barcodes'
+28 │   by_majority_threshold = 0.47
+29 │   by_majority_min_molecules_to_start = 8
    ┆                                         ┬
    ┆                                         │
    ┆                                         ╰─ Not enough reads 'in flight' for ByMajority|ByEditProbability

@@ -17,8 +17,7 @@ use crate::{
     bam_merge::DemultiplexStepInfo,
     config::{CheckedConfig, StructuredInput},
     demultiplex::{DemultiplexBarcodes, DemultiplexInfo, DemultiplexedData, OptDemultiplex},
-    output::{open_output_files, output_block, output_html_report, output_json_report},
-    transformations::{self, FinalizeReportResult, Step, Transformation},
+    transformations::{self, Step, Transformation},
 };
 use fastqrab_io::{
     blocks::FastQChunk,
@@ -425,17 +424,11 @@ fn run_benchmark_interleaved_thread(
     let _ = combiner_output_tx.send((final_block, Some(molecule_count)));
 }
 
-pub struct RunStage0 {
-    report_html: bool,
-    report_json: bool,
-}
+pub struct RunStage0 {}
 
 impl RunStage0 {
-    pub fn new(parsed: &CheckedConfig) -> Self {
-        RunStage0 {
-            report_html: parsed.output.as_ref().is_some_and(|o| o.report_html),
-            report_json: parsed.output.as_ref().is_some_and(|o| o.report_json),
-        }
+    pub fn new(_parsed: &CheckedConfig) -> Self {
+        RunStage0 {}
     }
 
     #[expect(clippy::too_many_lines, reason = "needed")]
@@ -643,8 +636,6 @@ impl RunStage0 {
 
         Ok(RunStage1 {
             input_info,
-            report_html: self.report_html,
-            report_json: self.report_json,
             output_directory: output_directory.to_owned(),
             demultiplex_infos,
             demultiplex_step_infos,
@@ -658,8 +649,6 @@ pub struct RunStage1 {
     output_directory: PathBuf,
     demultiplex_infos: Vec<(usize, OptDemultiplex)>,
     demultiplex_step_infos: Vec<DemultiplexStepInfo>,
-    report_html: bool,
-    report_json: bool,
     allow_overwrite: bool,
 }
 
@@ -919,8 +908,6 @@ impl RunStage1 {
         Ok(RunStage2 {
             input_info: self.input_info,
             output_directory: self.output_directory,
-            report_html: self.report_html,
-            report_json: self.report_json,
             demultiplex_infos: self.demultiplex_infos,
             demultiplex_step_infos: self.demultiplex_step_infos,
             input_threads,
@@ -935,8 +922,6 @@ impl RunStage1 {
 pub struct RunStage2 {
     input_info: transformations::InputInfo,
     output_directory: PathBuf,
-    report_html: bool,
-    report_json: bool,
     demultiplex_infos: Vec<(usize, OptDemultiplex)>,
     demultiplex_step_infos: Vec<DemultiplexStepInfo>,
 
@@ -979,7 +964,6 @@ impl RunStage2 {
         let report_collector = Arc::new(Mutex::new(
             Vec::<transformations::FinalizeReportResult>::new(),
         ));
-        let coordinator_report_collector = report_collector.clone();
         let coordinator_demultiplex_infos = demultiplex_infos.clone();
 
         let (coordinator, shared_stages) = WorkpoolCoordinator::new(
@@ -990,7 +974,7 @@ impl RunStage2 {
             done_rx,
             output_tx,
             output_done_rx,
-            coordinator_report_collector,
+            report_collector,
             self.error_collector.clone(),
         );
 
@@ -1034,15 +1018,12 @@ impl RunStage2 {
 
         RunStage3 {
             output_directory: self.output_directory,
-            report_html: self.report_html,
-            report_json: self.report_json,
             demultiplex_infos: self.demultiplex_infos,
             demultiplex_step_infos: self.demultiplex_step_infos,
             input_threads: self.input_threads,
             combiner_thread: self.combiner_thread,
             stage_threads: all_threads,
             stage_to_output_channel: output_rx,
-            report_collector,
             error_collector: self.error_collector,
             allow_overwrite: self.allow_overwrite,
             output_done_tx,
@@ -1055,15 +1036,12 @@ pub struct RunStage3 {
     output_directory: PathBuf,
     demultiplex_infos: Vec<(usize, OptDemultiplex)>,
     demultiplex_step_infos: Vec<DemultiplexStepInfo>,
-    report_html: bool,
-    report_json: bool,
     allow_overwrite: bool,
 
     input_threads: Vec<thread::JoinHandle<()>>,
     combiner_thread: thread::JoinHandle<()>,
     stage_threads: Vec<thread::JoinHandle<()>>,
     stage_to_output_channel: crossbeam::channel::Receiver<(io::FastQBlocksCombined, Option<usize>)>,
-    report_collector: Arc<Mutex<Vec<FinalizeReportResult>>>,
     error_collector: Arc<Mutex<Vec<String>>>,
     output_done_tx: crossbeam::channel::Sender<usize>,
     reads_per_tag: Arc<Mutex<BTreeMap<crate::demultiplex::Tag, u64>>>,
@@ -1106,31 +1084,11 @@ fn collect_thread_failures(
 }
 
 impl RunStage3 {
-    #[expect(clippy::too_many_lines, reason = "needed")]
     pub fn create_output_threads(
         self,
-        parsed: &CheckedConfig,
-        raw_config: String,
         merge_config: Option<&crate::bam_merge::MergeConfig>,
     ) -> Result<RunStage4> {
         let input_channel = self.stage_to_output_channel;
-        let output_buffer_size = parsed.options.output_buffer_size;
-        let cloned_input_config = parsed.input.clone();
-
-        let demultiplex_info = self
-            .demultiplex_infos
-            .iter()
-            .last()
-            .map_or(OptDemultiplex::No, |x| x.1.clone()); // we pass int onto the thread later on.
-
-        let output_files = open_output_files(
-            parsed,
-            &self.output_directory,
-            &demultiplex_info,
-            self.report_html,
-            self.report_json,
-            self.allow_overwrite,
-        )?;
 
         let merge_bam_handles = merge_config
             .map(|mc| {
@@ -1144,45 +1102,18 @@ impl RunStage3 {
             })
             .transpose()?;
 
-        let output_directory = self.output_directory.clone();
-        let report_collector = self.report_collector.clone();
-
-        let mut interleave_order = Vec::new();
-        if let Some(output) = &parsed.output
-            && let Some(interleave) = &output.interleave
-        {
-            for name in interleave {
-                let idx = parsed
-                    .input
-                    .get_segment_order()
-                    .iter()
-                    .position(|x| x == name)
-                    .expect("segment name must exist in segment_order");
-                interleave_order.push(idx);
-            }
-        }
         let output_done_tx = self.output_done_tx;
-        let report_labels = parsed.report_labels.clone();
-        let reads_per_tag = self.reads_per_tag.clone();
 
         let output = {
-            let error_collector = self.error_collector.clone();
             thread::Builder::new()
                 .name("output".into())
                 .spawn(move || {
+                    // Output files and reports are now produced by the Output* steps
+                    // inside the work pool. This thread only drains the final channel
+                    // (preserving block order so the coordinator's backpressure via
+                    // `output_done_tx` stays correct) and joins the stage threads.
                     let mut last_block_outputted = 0;
-                    let mut buffer = Vec::new();
-                    let output_files = output_files.into_writer();
-                    if let Err(e) = output_files {
-                        // cov:excl-start
-                        error_collector
-                            .lock()
-                            .unwrap_or_else(std::sync::PoisonError::into_inner)
-                            .push(format!("Error in output thread: {e:?}"));
-                        // cov:excl-stop
-                        return;
-                    }
-                    let mut output_files = output_files.expect("Output_file was error?");
+                    let mut buffer: Vec<(usize, io::FastQBlocksCombined)> = Vec::new();
                     while let Ok((block, _expected_read_count)) = input_channel.recv() {
                         let block_no = block.block_no();
                         //resort out of order blocks into the right order.
@@ -1197,100 +1128,19 @@ impl RunStage3 {
                                 }
                             }
                             if let Some(send_idx) = send {
-                                let to_output = buffer.remove(send_idx);
-                                let _ = output_done_tx.send(block_no); // this can happen when the coordinator exited because
-                                // an error
-                                if let Err(e) = output_block(
-                                    &to_output.1,
-                                    &mut output_files.output_segments,
-                                    &interleave_order,
-                                    &demultiplex_info,
-                                    output_buffer_size,
-                                ) {
-                                    error_collector
-                                        .lock()
-                                        .unwrap_or_else(std::sync::PoisonError::into_inner)
-                                        .push(format!("Error in output thread: {e:?}"));
-                                    return;
-                                }
+                                let (block_no, _block) = buffer.remove(send_idx);
+                                let _ = output_done_tx.send(block_no); // can fail if the coordinator exited on error
                             } else {
                                 break;
                             }
                         }
                     }
                     //all blocks are done, the stage output channel has been closed.
-                    //but that doesn't mean the threads are done and have pushed the reports.
-                    //so we join em here
-                    /* let stage_errors =
-                    collect_thread_failures(self.stage_threads, "stage error", &error_collector); */
+                    //join the stage threads so their finalize / post_finalize
+                    //(including OutputReport) has completed.
                     for thread in self.stage_threads {
                         thread.join().expect("thread join failure");
                     }
-                    /* assert!(
-                        stage_errors.is_empty(),
-                        "Error in stage threads occured: {stage_errors:?}"
-                    ); */
-
-                    {
-                        let mut counts = reads_per_tag
-                            .lock()
-                            .unwrap_or_else(std::sync::PoisonError::into_inner);
-                        for (tag, fastqs) in &output_files.output_segments {
-                            counts.insert(*tag, fastqs.total_fragment_written());
-                        }
-                    }
-                    for set_of_output_files in &mut output_files.output_segments {
-                        if let Err(e) = set_of_output_files.1.finish() {
-                            error_collector
-                                .lock()
-                                .unwrap_or_else(std::sync::PoisonError::into_inner)
-                                .push(format!("Error finishing output files: {e:?}"));
-                            return;
-                        }
-                    }
-                    let json_report = {
-                        let need_json = output_files.output_reports.json.is_some()
-                            | output_files.output_reports.html.is_some();
-                        if need_json {
-                            match output_json_report(
-                                output_files.output_reports.json.as_mut(), // None if no .json file
-                                // generated
-                                &report_collector,
-                                &report_labels,
-                                &output_directory.to_string_lossy(),
-                                &cloned_input_config,
-                                &raw_config,
-                            ) {
-                                Ok(res) => Some(res),
-                                // cov:excl-start
-                                Err(e) => {
-                                    error_collector
-                                        .lock()
-                                        .unwrap_or_else(std::sync::PoisonError::into_inner)
-                                        .push(format!("Error writing json report: {e:?}"));
-                                    return;
-                                    // cov:excl-stop
-                                }
-                            }
-                        } else {
-                            None
-                        }
-                    };
-
-                    if let Some(output_html) = output_files.output_reports.html.as_mut()
-                        && let Err(e) = output_html_report(
-                            output_html,
-                            &json_report
-                                .expect("json_report must be Some when html output is enabled"),
-                        )
-                    // cov:excl-start
-                    {
-                        error_collector
-                            .lock()
-                            .unwrap_or_else(std::sync::PoisonError::into_inner)
-                            .push(format!("Error writing html report: {e:?}"));
-                    }
-                    // cov:excl-stop
                 })
                 .expect("Thread spawning failed. OS resource exhaustion?")
         };

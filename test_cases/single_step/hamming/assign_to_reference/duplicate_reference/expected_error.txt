@@ -2,11 +2,11 @@ Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
-27 │ [barcodes.ref_barcodes]
-28 │     from_file = {
-29 │ 	    filename = 'input_reference.fa',
-30 │ 	    read_comment_character = ' '
-31 │   }
+24 │ [barcodes.ref_barcodes]
+25 │     from_file = {
+26 │ 	    filename = 'input_reference.fa',
+27 │ 	    read_comment_character = ' '
+28 │   }
    ┆    ┬
    ┆    │
    ┆    ╰─ Error reading from input_reference.fa

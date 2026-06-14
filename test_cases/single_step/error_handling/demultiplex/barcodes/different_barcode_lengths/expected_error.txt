@@ -2,12 +2,13 @@ Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
-21 │ [barcodes.test_barcodes]
-22 │     ATCG = 'specific'
-23 │     RYRNY = 'ambiguous'
+20 │ [barcodes.test_barcodes]
+21 │     ATCG = 'specific'
+22 │     RYRNY = 'ambiguous'
    ┆                        ┬
    ┆                        │
    ┆                        ╰─ Barcodes of different lengths
 ───╯
 Hint: All barcodes in one section must have the same length. Observed lengths: [4, 5]
+
 

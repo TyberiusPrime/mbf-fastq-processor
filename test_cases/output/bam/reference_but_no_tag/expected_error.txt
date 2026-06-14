@@ -1,11 +1,18 @@
+Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
- 9 │     [output.bam.tag_to_reference]
-10 │         from_bam = 'input_reference.bam'
-   ┆                                         ┬
-   ┆                                         │
-   ┆                                         ╰─ Missing required key: 'tag'.
+ 8 │ [[step]]
+ 9 │     action = "OutputBAM"
+   ┆              ─────┬─────
+   ┆                   │
+   ┆                   ╰────── In this step
+10 │     bam = { tag_to_reference = { from_bam = "input_reference.bam" } }
+   ┆                                ──────────────────┬─────────────────
+   ┆                                                  │
+   ┆                                                  ╰──────────────────── Missing required key: 'tag'.
 ───╯
+Hint: See https://doc_url.example/version-stripped-from-test/docs/redirects/OutputBAM
+      Or run: `fastqrab template OutputBAM` for more information.
 
 

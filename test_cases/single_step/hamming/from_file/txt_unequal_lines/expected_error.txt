@@ -1,8 +1,9 @@
+Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
-46 │ [barcodes.barcodes]
-47 │   from_file = {filename = "input_barcodes.txt"}
+42 │ [barcodes.barcodes]
+43 │   from_file = {filename = "input_barcodes.txt"}
    ┆                                                ┬
    ┆                                                │
    ┆                                                ╰─ Error reading from input_barcodes.txt
@@ -15,3 +16,5 @@ Hint: Tried as sequence file:
       
       Tried as text file of one barcode-per-line:
       	Unequal line lengths detected in input_barcodes.txt
+
+

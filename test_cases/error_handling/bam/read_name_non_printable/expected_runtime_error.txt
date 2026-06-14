@@ -1,4 +1,12 @@
-Error in output thread: The read name contains characters that are not allowed in the SAM/BAM spec.
-Remove or replace these characters, or set output.bam.comment_separation_char
-to split your read name into a name and a 'CO' tag (which may contain these characters).
-Read name: 'Rea	d1'
+Error Details ==
+Error in stage 0: Error in OutputBAM stage
+
+Caused by:
+    0: During write to file: /home/finkernagel/upstream/fastqrab/main/test_cases/error_handling/bam/read_name_non_printable/actual/output_read1
+    1: The read name contains characters that are not allowed in the SAM/BAM spec.
+       Remove or replace these characters, or set output.bam.comment_separation_char
+       to split your read name into a name and a 'CO' tag (which may contain these characters).
+       Read name: 'Rea	d1'
+    2: Failed to write BAM record
+    3: invalid name
+    4: invalid name: Rea	d1

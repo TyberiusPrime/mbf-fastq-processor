@@ -2,12 +2,12 @@ Error Details ==
 Error 1/2
    ╭─config.toml
    ┆
-21 │ [barcodes.test_barcodes]
-22 │     NNNN = 'universal'
+20 │ [barcodes.test_barcodes]
+21 │     NNNN = 'universal'
    ┆     ──┬─
    ┆       │
    ┆       ╰──────────────── Overlaps with ATCG
-23 │     ATCG = 'specific'
+22 │     ATCG = 'specific'
    ┆     ──┬─
    ┆       │
    ┆       ╰─────────────── Overlaps with NNNN
@@ -17,17 +17,18 @@ Hint: IUPAC patterns overlap, but lead to different barcodes.
 Error 2/2
    ╭─config.toml
    ┆
-21 │ [barcodes.test_barcodes]
-22 │     NNNN = 'universal'
+20 │ [barcodes.test_barcodes]
+21 │     NNNN = 'universal'
    ┆     ──┬─
    ┆       │
    ┆       ╰──────────────── Overlaps with RYRN
    ┆
-23 │     ATCG = 'specific'
-24 │     RYRN = 'ambiguous'
+22 │     ATCG = 'specific'
+23 │     RYRN = 'ambiguous'
    ┆     ──┬─
    ┆       │
    ┆       ╰──────────────── Overlaps with NNNN
 ───╯
 Hint: IUPAC patterns overlap, but lead to different barcodes.
+
 

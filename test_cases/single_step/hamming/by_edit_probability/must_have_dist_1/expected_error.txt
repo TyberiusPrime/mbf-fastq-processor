@@ -1,19 +1,24 @@
+Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
-29 │ [[step]]
-30 │     action = 'HammingCorrect'
+14 │ [[step]]
+15 │     action = 'HammingCorrect'
    ┆              ────────┬───────
    ┆                      │
    ┆                      ╰──────── In this step
    ┆
-31 │     in_label = 'bc_raw'
-32 │     out_label = 'corrected'
-33 │     barcodes = 'barcodes'
-34 │     output = 'label'
-35 │     max_hamming_distance = 2
+16 │     in_label = 'bc_raw'
+17 │     out_label = 'corrected'
+18 │     barcodes = 'barcodes'
+19 │     output = 'label'
+20 │     max_hamming_distance = 2
    ┆                            ┬
    ┆                            │
    ┆                            ╰─ ByEditProbability requires max_hamming_distance == 1
 ───╯
 Hint: Set max_hamming_distance to 1
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/HammingCorrect
+      Or run: `fastqrab template HammingCorrect` for more information.
+
+

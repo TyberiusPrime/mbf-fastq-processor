@@ -2,12 +2,12 @@ Error Details ==
 Error 1/1
   ╭─config.toml
   ┆
-7 │ [[step]]
-8 │     action = 'Demultiplex'
+6 │ [[step]]
+7 │     action = 'Demultiplex'
   ┆              ──────┬──────
   ┆                    │
   ┆                    ╰─────── In this step
-9 │     in_label = 'in_other_file'
+8 │     in_label = 'in_other_file'
   ┆                ───────┬───────
   ┆                       │
   ┆                       ╰──────── No such tag: 'in_other_file'

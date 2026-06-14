@@ -2,14 +2,14 @@ Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
-29 │ [[step]]
-30 │     action = 'Demultiplex'
+27 │ [[step]]
+28 │     action = 'Demultiplex'
    ┆              ──────┬──────
    ┆                    │
    ┆                    ╰─────── In this step
    ┆
-31 │     in_label = 'demult'
-32 │     barcodes = 'demultiplex'
+29 │     in_label = 'demult'
+30 │     barcodes = 'demultiplex'
    ┆                             ┬
    ┆                             │
    ┆                             ╰─ Missing required key: 'output_unmatched'.

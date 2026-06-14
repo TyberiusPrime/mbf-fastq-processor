@@ -6,7 +6,7 @@
 
 [output]
     prefix = "output"
-    ix_separator = "\\\\"
+    ix_separator = "\\"
 
 # --- Output steps (migrated from [output]) ---
 [[step]]

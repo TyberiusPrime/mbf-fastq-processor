@@ -1,14 +1,21 @@
 Error Details ==
 Error 1/1
-  ╭─config.toml
-  ┆
-7 │ [output]
-8 │     prefix = 'output'
-9 │   compression_threads = 0
-  ┆                         ┬
-  ┆                         │
-  ┆                         ╰─ Must not be 0.
-──╯
-Hint: 'compression_threads' must be greater than zero when specified. Increase or remove setting
+   ╭─config.toml
+   ┆
+11 │ [[step]]
+12 │     action = "OutputFASTQ"
+   ┆              ──────┬──────
+   ┆                    │
+   ┆                    ╰─────── In this step
+   ┆
+13 │     compression = "gzip"
+14 │     compression_threads = 0
+   ┆                           ┬
+   ┆                           │
+   ┆                           ╰─ Must not be 0.
+───╯
+Hint: 'compression_threads' must be greater than zero.
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/OutputFASTQ
+      Or run: `fastqrab template OutputFASTQ` for more information.
 
 

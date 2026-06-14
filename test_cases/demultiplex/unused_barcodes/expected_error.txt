@@ -2,9 +2,9 @@ Error Details ==
 Error 1/2
    ╭─config.toml
    ┆
-19 │ [barcodes.bc123]
-20 │     CT = 'ct'
-21 │     TT = 'tt'
+18 │ [barcodes.bc123]
+19 │     CT = 'ct'
+20 │     TT = 'tt'
    ┆              ┬
    ┆              │
    ┆              ╰─ Barcode section not referenced by any step
@@ -14,9 +14,9 @@ Hint: Add a step that uses this barcode section, use it in `output.bam.reference
 Error 2/2
    ╭─config.toml
    ┆
-23 │ [barcodes.bc46]
-24 │     AG = 'ag'
-25 │     AT = 'at'
+22 │ [barcodes.bc46]
+23 │     AG = 'ag'
+24 │     AT = 'at'
    ┆              ┬
    ┆              │
    ┆              ╰─ Barcode section not referenced by any step

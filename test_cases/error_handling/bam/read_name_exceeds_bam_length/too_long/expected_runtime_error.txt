@@ -1,10 +1,12 @@
 Error Details ==
-Error in output thread: The read name exceeded the 254 byte limited of the SAM/BAM spec.
-Shorten your read name, or set output.bam.comment_separation_char
-to split your read name into a name and a 'CO' tag (which may exceed 254 bytes).
-Read name (length: 273): '12345678912345678912345678912345678912345678912345678912345678912345678912345678912345678912345678912345678912345678912345678912345678912345678912345678912345678912345678912345678123456789123456789123456789123456789123456789123456789123456789123456789123456789123456_274end'
+Error in stage 0: Error in OutputBAM stage
 
 Caused by:
-    0: Failed to write BAM record
-    1: invalid name
-    2: invalid length: expected 1 <= n <= 254, got 274
+    0: During write to file: /home/finkernagel/upstream/fastqrab/main/test_cases/error_handling/bam/read_name_exceeds_bam_length/too_long/actual/output_read1
+    1: The read name exceeded the 254 byte limited of the SAM/BAM spec.
+       Shorten your read name, or set output.bam.comment_separation_char
+       to split your read name into a name and a 'CO' tag (which may exceed 254 bytes).
+       Read name (length: 273): '12345678912345678912345678912345678912345678912345678912345678912345678912345678912345678912345678912345678912345678912345678912345678912345678912345678912345678912345678912345678123456789123456789123456789123456789123456789123456789123456789123456789123456789123456_274end'
+    2: Failed to write BAM record
+    3: invalid name
+    4: invalid length: expected 1 <= n <= 254, got 274

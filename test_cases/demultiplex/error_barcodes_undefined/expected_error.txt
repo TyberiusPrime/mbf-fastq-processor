@@ -1,31 +1,31 @@
 Error Details ==
 Error 1/2
-   ╭─config.toml
-   ┆
- 7 │ [[step]]
- 8 │     action = 'Demultiplex'
-   ┆              ──────┬──────
-   ┆                    │
-   ┆                    ╰─────── In this step
-   ┆
- 9 │     barcodes = "no_such_barcodes"
-10 │     output_unmatched = false
-   ┆                             ┬
-   ┆                             │
-   ┆                             ╰─ Missing required key: 'in_label'.
-───╯
+  ╭─config.toml
+  ┆
+6 │ [[step]]
+7 │     action = 'Demultiplex'
+  ┆              ──────┬──────
+  ┆                    │
+  ┆                    ╰─────── In this step
+  ┆
+8 │     barcodes = "no_such_barcodes"
+9 │     output_unmatched = false
+  ┆                             ┬
+  ┆                             │
+  ┆                             ╰─ Missing required key: 'in_label'.
+──╯
 Hint: See https://doc_url.example/version-stripped-from-test/docs/redirects/Demultiplex
       Or run: `fastqrab template Demultiplex` for more information.
 
 Error 2/2
   ╭─config.toml
   ┆
-7 │ [[step]]
-8 │     action = 'Demultiplex'
+6 │ [[step]]
+7 │     action = 'Demultiplex'
   ┆              ──────┬──────
   ┆                    │
   ┆                    ╰─────── In this step
-9 │     barcodes = "no_such_barcodes"
+8 │     barcodes = "no_such_barcodes"
   ┆                ─────────┬────────
   ┆                         │
   ┆                         ╰───────── Unknown barcode section

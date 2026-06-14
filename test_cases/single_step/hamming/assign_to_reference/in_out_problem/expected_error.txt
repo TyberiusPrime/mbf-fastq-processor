@@ -2,20 +2,20 @@ Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
-20 │ [[step]]
-21 │     action = 'HammingCorrect'
+17 │ [[step]]
+18 │     action = 'HammingCorrect'
    ┆              ────────┬───────
    ┆                      │
    ┆                      ╰──────── In this step
    ┆
-22 │     output = 'label'
-23 │     on_tie = 'fail'
-24 │     on_no_match = 'remove'
-25 │     in_label = 'query_seq'
+19 │     output = 'label'
+20 │     on_tie = 'fail'
+21 │     on_no_match = 'remove'
+22 │     in_label = 'query_seq'
    ┆                ─────┬─────
    ┆                     │
    ┆                     ╰────── The same as out_label
-26 │     out_label = 'query_seq'
+23 │     out_label = 'query_seq'
    ┆                 ─────┬─────
    ┆                      │
    ┆                      ╰────── The same as in_label

@@ -1,14 +1,21 @@
 Error Details ==
 Error 1/1
-  ╭─config.toml
-  ┆
-4 │ [output]
-5 │     prefix = 'output'
-6 │     compression = 'gzip'
-7 │     compression_level = 15
-  ┆                         ─┬
-  ┆                          │
-  ┆                          ╰─ Invalid Value
-──╯
+   ╭─config.toml
+   ┆
+ 8 │ [[step]]
+ 9 │     action = "OutputFASTQ"
+   ┆              ──────┬──────
+   ┆                    │
+   ┆                    ╰─────── In this step
+   ┆
+10 │     compression = "gzip"
+11 │     compression_level = 15
+   ┆                         ─┬
+   ┆                          │
+   ┆                          ╰─ Invalid Value
+───╯
 Hint: Valid range is 0-9 for gzip.
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/OutputFASTQ
+      Or run: `fastqrab template OutputFASTQ` for more information.
+
 

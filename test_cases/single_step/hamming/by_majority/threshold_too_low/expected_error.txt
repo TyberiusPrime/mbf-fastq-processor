@@ -2,19 +2,19 @@ Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
-18 │ [[step]]
-19 │   action = 'HammingCorrect'
+16 │ [[step]]
+17 │   action = 'HammingCorrect'
    ┆            ────────┬───────
    ┆                    │
    ┆                    ╰──────── In this step
    ┆
-20 │   in_label = 'bc_raw'
-21 │   out_label = 'bc_corr'
-22 │   max_hamming_distance=1
-23 │   on_tie = 'ByMajority'
-24 │   on_no_match = 'Remove'
-25 │   barcodes = 'barcodes'
-26 │   by_majority_threshold = -1
+18 │   in_label = 'bc_raw'
+19 │   out_label = 'bc_corr'
+20 │   max_hamming_distance=1
+21 │   on_tie = 'ByMajority'
+22 │   on_no_match = 'Remove'
+23 │   barcodes = 'barcodes'
+24 │   by_majority_threshold = -1
    ┆                           ─┬
    ┆                            │
    ┆                            ╰─ Must be >= 0 <= 1

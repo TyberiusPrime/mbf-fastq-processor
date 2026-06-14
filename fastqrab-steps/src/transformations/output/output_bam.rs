@@ -241,7 +241,7 @@ impl Step for OutputBAM {
             .expect("output_state should have been set in init")
             .lock()
             .expect("lock poisoned")
-            .write_block(&block, demultiplex_info)?;
+            .write_block(&block, demultiplex_info).context("Error in OutputBAM stage")?;
         Ok((block, true))
     }
 

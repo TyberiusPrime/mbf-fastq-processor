@@ -2,9 +2,9 @@ Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
-46 │ [barcodes.barcodes]
-47 │     ATGA = 'label1'
-48 │     ATGAA = 'label2'
+42 │ [barcodes.barcodes]
+43 │     ATGA = 'label1'
+44 │     ATGAA = 'label2'
    ┆                     ┬
    ┆                     │
    ┆                     ╰─ Barcodes of different lengths

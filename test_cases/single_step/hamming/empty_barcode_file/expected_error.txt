@@ -1,8 +1,9 @@
+Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
-46 │ [barcodes.barcodes]
-47 │   from_file = {filename = 'input_barcodes.fasta'}
+42 │ [barcodes.barcodes]
+43 │   from_file = {filename = 'input_barcodes.fasta'}
    ┆                                                  ┬
    ┆                                                  │
    ┆                                                  ╰─ Error reading from input_barcodes.fasta
@@ -12,3 +13,5 @@ Hint: open_input_file
       Caused by:
           0: Problem detecting file format
           1: File is too short, less than five bytes
+
+

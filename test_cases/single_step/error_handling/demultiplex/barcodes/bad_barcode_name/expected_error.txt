@@ -1,7 +1,7 @@
 Error Details ==
 Error 1/2
    ╭─config.toml
-21 │ [barcodes.'I have spaces']
+20 │ [barcodes.'I have spaces']
    ┆           ───────┬───────
    ┆                  │
    ┆                  ╰───────── Must contain only letters, numbers, and underscores (a-zA-Z0-9_), found ' '.
@@ -10,18 +10,20 @@ Error 1/2
 Error 2/2
    ╭─config.toml
    ┆
-15 │ [[step]]
-16 │     action = 'Demultiplex'
+14 │ [[step]]
+15 │     action = 'Demultiplex'
    ┆              ──────┬──────
    ┆                    │
    ┆                    ╰─────── In this step
    ┆
-17 │     in_label = 'barcode'
-18 │     barcodes = 'I have spaces'
+16 │     in_label = 'barcode'
+17 │     barcodes = 'I have spaces'
    ┆                ───────┬───────
    ┆                       │
    ┆                       ╰──────── Invalid label
 ───╯
 Hint: Must contain only letters, numbers, and underscores (a-zA-Z0-9_), found ' '.
       See https://doc_url.example/version-stripped-from-test/docs/redirects/Demultiplex
+      Or run: `fastqrab template Demultiplex` for more information.
+
 

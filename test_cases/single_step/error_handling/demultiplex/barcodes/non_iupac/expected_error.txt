@@ -2,13 +2,14 @@ Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
-21 │ [barcodes.test_barcodes]
-22 │     ATCG = 'specific'
-23 │     RYRN = 'ambiguous'
-24 │     XYRN = 'noniupac'
+20 │ [barcodes.test_barcodes]
+21 │     ATCG = 'specific'
+22 │     RYRN = 'ambiguous'
+23 │     XYRN = 'noniupac'
    ┆     ──┬─
    ┆       │
    ┆       ╰─────────────── Invalid IUPAC (uppercase only)
 ───╯
 Hint: See https://en.wikipedia.org/wiki/International_Union_of_Pure_and_Applied_Chemistry#Amino_acid_and_nucleotide_base_codes
+
 

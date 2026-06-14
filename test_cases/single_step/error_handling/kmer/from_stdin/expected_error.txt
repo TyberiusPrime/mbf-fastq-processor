@@ -2,15 +2,15 @@ Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
- 7 │ [[step]]
- 8 │     action = 'CalcKmers'
+ 6 │ [[step]]
+ 7 │     action = 'CalcKmers'
    ┆              ─────┬─────
    ┆                   │
    ┆                   ╰────── In this step
    ┆
- 9 │     out_label = 'kmer_count'
-10 │     segment = 'read1'
-11 │     files = '--stdin--'
+ 8 │     out_label = 'kmer_count'
+ 9 │     segment = 'read1'
+10 │     files = '--stdin--'
    ┆             ─────┬─────
    ┆                  │
    ┆                  ╰────── QuantifyKmers: K-mer database cannot be read from stdin

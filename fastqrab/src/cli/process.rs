@@ -51,12 +51,7 @@ pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> 
     let marker = OutputRunMarker::create(&output_directory, &marker_prefix)?;
     let allow_overwrite = allow_overwrite || marker.was_preexisting();
 
-    let res = inner_run(
-        checked,
-        output_directory.as_ref(),
-        allow_overwrite,
-        raw_config,
-    );
+    let res = inner_run(checked, output_directory.as_ref(), allow_overwrite);
 
     match res {
         Ok(()) => {
@@ -78,7 +73,6 @@ fn inner_run(
     mut parsed: CheckedConfig,
     output_directory: &Path,
     allow_overwrite: bool,
-    raw_config: String,
 ) -> Result<()> {
     let start_time = std::time::Instant::now();
     let is_benchmark = parsed.benchmark.as_ref().is_some_and(|b| b.enable);
@@ -122,7 +116,7 @@ fn inner_run(
         let run = run.create_input_threads(&parsed)?;
         let run = run.create_stage_threads(&mut parsed);
         let parsed = parsed;
-        let run = run.create_output_threads(&parsed, raw_config, merge_config.as_ref())?;
+        let run = run.create_output_threads(merge_config.as_ref())?;
         let run = run.join_threads();
 
         let errors = run.errors;

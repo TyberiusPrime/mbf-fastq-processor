@@ -2,8 +2,8 @@ Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
-27 │ [barcodes.b]
-28 │   from_file.filename = 'input_reference.fa'
+24 │ [barcodes.b]
+25 │   from_file.filename = 'input_reference.fa'
    ┆            ┬
    ┆            │
    ┆            ╰──────────────────────────────── Barcodes of different lengths

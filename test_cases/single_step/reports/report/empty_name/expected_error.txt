@@ -1,17 +1,17 @@
 Error Details ==
 Error 1/1
-   ╭─config.toml
-   ┆
- 9 │ [[step]]
-10 │     action = 'Report'
-   ┆              ────┬───
-   ┆                  │
-   ┆                  ╰──── In this step
-11 │     name = ''
-   ┆            ─┬
-   ┆             │
-   ┆             ╰─ Name must not be empty
-───╯
+  ╭─config.toml
+  ┆
+6 │ [[step]]
+7 │     action = 'Report'
+  ┆              ────┬───
+  ┆                  │
+  ┆                  ╰──── In this step
+8 │     name = ''
+  ┆            ─┬
+  ┆             │
+  ┆             ╰─ Name must not be empty
+──╯
 Hint: See https://doc_url.example/version-stripped-from-test/docs/redirects/Report
       Or run: `fastqrab template Report` for more information.
 

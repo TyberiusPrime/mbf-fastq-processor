@@ -2,19 +2,19 @@ Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
-36 │ [[step]]
-37 │     action = "StoreTagsInTable"
+32 │ [[step]]
+33 │     action = "StoreTagsInTable"
    ┆              ─────────┬────────
    ┆                       │
    ┆                       ╰───────── In this step
-38 │     infix = '--stdout--'
+34 │     infix = '--stdout--'
    ┆             ──────┬─────
    ┆                   │
    ┆                   ╰────── 1st step writing to stdout
    ┆
-40 │ [[step]]
-41 │ 	action = "StoreTagsInTable"
-42 │     infix = '--stdout--'
+36 │ [[step]]
+37 │ 	action = "StoreTagsInTable"
+38 │     infix = '--stdout--'
    ┆             ──────┬─────
    ┆                   │
    ┆                   ╰────── 2nd step writing to stdout

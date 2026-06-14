@@ -4,19 +4,23 @@ Error 1/1
    ┆
  4 │ [[step]]
  5 │     action = 'Progress'
+   ┆              ─────┬────
+   ┆                   │
+   ┆                   ╰───── In this step
  6 │     n = 10000
    ┆              ┬
    ┆              │
-   ┆              ╰─ This step also writes to stdout.
+   ┆              ╰─ 1st step writing to stdout
    ┆
- 8 │ [output]
- 9 │     prefix = 'output'
-10 │     stdout = true
-   ┆             ──┬─
-   ┆               │
-   ┆               ╰── Stdout output conflict.
+12 │ [[step]]
+13 │     action = "OutputFASTQ"
+14 │     stdout = true
+   ┆                 ┬
+   ┆                 │
+   ┆                 ╰─ 2nd step writing to stdout
 ───╯
-Hint: Stdout output from [output] conflicts with step(s) writing to stdout.
-      Either change the [output] to write to files (or not at all), or change the step(s) to write to a file instead.
+Hint: Multiple steps write to stdout. Only one step may write to stdout at a time.
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/Progress
+      Or run: `fastqrab template Progress` for more information.
 
 

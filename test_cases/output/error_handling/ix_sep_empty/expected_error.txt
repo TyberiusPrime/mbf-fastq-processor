@@ -3,8 +3,8 @@ Error 1/1
   ╭─config.toml
   ┆
 7 │ [output]
-8 │     prefix = 'output'
-9 │     ix_separator = ''
+8 │     prefix = "output"
+9 │     ix_separator = ""
   ┆                    ─┬
   ┆                     │
   ┆                     ╰─ Invalid value

@@ -1,9 +1,12 @@
+Error Details ==
 Error 1/1
    ╭─config.toml
-21 │ [barcodes.test_barcodes]
+20 │ [barcodes.test_barcodes]
    ┆                         ┬
    ┆                         │
    ┆                         ╰─ Empty barcode section
 ───╯
 Hint: Add at least one barcode mapping (IUPAC='name') under this section,
       or read them from a file using from_file={filename='...'}
+
+

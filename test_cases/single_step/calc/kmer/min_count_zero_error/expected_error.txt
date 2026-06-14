@@ -2,17 +2,17 @@ Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
- 7 │ [[step]]
- 8 │     action = 'CalcKmers'
+ 6 │ [[step]]
+ 7 │     action = 'CalcKmers'
    ┆              ─────┬─────
    ┆                   │
    ┆                   ╰────── In this step
    ┆
- 9 │     out_label = 'kmer_count'
-10 │     segment = 'read1'
-11 │     files = 'input_kmers.fa'
-12 │     k = 4
-13 │     min_count = 0
+ 8 │     out_label = 'kmer_count'
+ 9 │     segment = 'read1'
+10 │     files = 'input_kmers.fa'
+11 │     k = 4
+12 │     min_count = 0
    ┆                 ┬
    ┆                 │
    ┆                 ╰─ 'min_count' must be greater than 0.

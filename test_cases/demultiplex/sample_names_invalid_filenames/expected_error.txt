@@ -1,17 +1,23 @@
+Error Details ==
+Error 1/1
    ╭─config.toml
    ┆
-39 │ [[step]]
-40 │     action = 'Demultiplex'
+36 │ [[step]]
+37 │     action = 'Demultiplex'
    ┆              ──────┬──────
    ┆                    │
    ┆                    ╰─────── In this step
    ┆
-41 │     in_label = 'demult'
-42 │     output_unmatched = true
-43 │     barcodes = 'demultiplex'
+38 │     in_label = 'demult'
+39 │     output_unmatched = true
+40 │     barcodes = 'demultiplex'
    ┆                             ┬
    ┆                             │
    ┆                             ╰─ Invalid barcode name found
 ───╯
 Hint: Barcode names that lead to filenames cannot contain '..', '/', ':' or '\'
       Found: '/usr/bin/passwd'
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/Demultiplex
+      Or run: `fastqrab template Demultiplex` for more information.
+
+

@@ -2,14 +2,18 @@ Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
- 7 │ [output]
- 8 │     prefix = 'output'
- 9 │     format = 'bam'
-10 │     compression_level=10
-   ┆                       ─┬
-   ┆                        │
-   ┆                        ╰─ Invalid compression level specified for BAM output
+11 │ [[step]]
+12 │     action = "OutputBAM"
+   ┆              ─────┬─────
+   ┆                   │
+   ┆                   ╰────── In this step
+13 │     compression_level = 10
+   ┆                         ─┬
+   ┆                          │
+   ┆                          ╰─ Invalid compression level specified for BAM output
 ───╯
 Hint: Valid range is 0-9 for BAM (and our compressor)
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/OutputBAM
+      Or run: `fastqrab template OutputBAM` for more information.
 
 

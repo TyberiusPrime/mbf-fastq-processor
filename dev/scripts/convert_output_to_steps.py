@@ -148,7 +148,25 @@ def replace_output_section(raw: str, slim_output: str) -> str:
     return "\n".join(new_lines) + ("\n" if raw.endswith("\n") else "")
 
 
+_ALREADY_CONVERTED_RE = re.compile(
+    r'action\s*=\s*["\'](OutputFASTQ|OutputFASTA|OutputBAM|OutputReport)["\']'
+)
+
+
+def is_already_converted(raw: str) -> bool:
+    """True if the config already contains Output* steps / a migration marker.
+
+    The conversion is destructive (it drops ``format`` from ``[output]``), so a
+    second pass would mis-default to FASTQ. Detect prior conversions and make the
+    script a no-op on them (idempotent)."""
+    return "migrated from [output]" in raw or _ALREADY_CONVERTED_RE.search(raw) is not None
+
+
 def convert(raw: str) -> str:
+    if is_already_converted(raw):
+        # Idempotent: a config that already has Output* steps is left untouched.
+        return raw
+
     data = tomllib.loads(raw)
     output = data.get("output")
     if output is None:

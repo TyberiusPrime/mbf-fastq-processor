@@ -659,7 +659,7 @@ fn create_bam_header(reference_sequences: &[(String, usize)]) -> noodles::sam::H
 /// Fields are private to force construction through [`WriteTargetConfig::new`].
 #[derive(Clone, Debug)]
 pub struct FileTarget {
-    infix_parts: Vec<String>, // before demultiplex
+    infix_parts: Vec<String>,     // before demultiplex
     second_infix: Option<String>, // just before the Suffix
     suffix: String,
 }
@@ -733,6 +733,17 @@ pub struct OutputDeclaration {
 pub enum WriteTarget {
     Files(ChunkPaths),
     Stdout,
+}
+
+impl std::fmt::Display for WriteTarget {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            WriteTarget::Files(paths) => {
+                write!(f, "{}", paths.directory.join(&paths.basename).display())
+            }
+            WriteTarget::Stdout => write!(f, "stdout"),
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -1010,7 +1021,8 @@ impl ChunkedRecordWriter {
     ) -> Result<()> {
         match &mut self.active {
             ActiveSink::Bam(sink) => {
-                sink.write_record(read, read_index, segment_index, segment_count, tags)?;
+                sink.write_record(read, read_index, segment_index, segment_count, tags)
+                    .with_context(|| format!("During write to file: {}", self.target))?;
             }
             ActiveSink::Text(_) => {
                 panic!("write_bam_record called on a text ChunkedRecordWriter") //cov:excl-line

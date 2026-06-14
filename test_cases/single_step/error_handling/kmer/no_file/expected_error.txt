@@ -2,19 +2,21 @@ Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
- 7 │ [[step]]
- 8 │     action = 'CalcKmers'
+ 6 │ [[step]]
+ 7 │     action = 'CalcKmers'
    ┆              ─────┬─────
    ┆                   │
    ┆                   ╰────── In this step
    ┆
- 9 │     out_label = 'kmer_count'
-10 │     segment = 'read1'
-11 │     files = []
+ 8 │     out_label = 'kmer_count'
+ 9 │     segment = 'read1'
+10 │     files = []
    ┆             ─┬
    ┆              │
    ┆              ╰─ At least one filename must be provided for the k-mer database.
 ───╯
 Hint: Please specify the path to your k-mer database file.
       See https://doc_url.example/version-stripped-from-test/docs/redirects/CalcKmers
+      Or run: `fastqrab template CalcKmers` for more information.
+
 

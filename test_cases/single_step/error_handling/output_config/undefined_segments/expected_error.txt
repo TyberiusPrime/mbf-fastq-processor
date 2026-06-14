@@ -1,14 +1,19 @@
 Error Details ==
 Error 1/1
-  ╭─config.toml
-  ┆
-4 │ [output]
-5 │ 	prefix = 'output'
-6 │ 	compression = 'gz'
-7 │     output = ['no-such-segment', 'read1']
-  ┆               ────────┬────────
-  ┆                       │
-  ┆                       ╰─────────────────── Not found in input segments
-──╯
+   ╭─config.toml
+   ┆
+ 8 │ [[step]]
+ 9 │     action = "OutputFASTQ"
+   ┆              ──────┬──────
+   ┆                    │
+   ┆                    ╰─────── In this step
+10 │     output = ["no-such-segment", "read1"]
+   ┆               ────────┬────────
+   ┆                       │
+   ┆                       ╰─────────────────── Not found in input segments
+───╯
 Hint: All known accepted values have been used.
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/OutputFASTQ
+      Or run: `fastqrab template OutputFASTQ` for more information.
+
 
