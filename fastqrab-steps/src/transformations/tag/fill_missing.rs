@@ -134,8 +134,8 @@ impl Step for FillMissing {
                 prim.iter()
                     .zip(sec.iter_seq())
                     .map(|(prim_str, sec_hit)| {
-                        prim_str.clone().or_else(|| {
-                            (!sec_hit.is_empty()).then(|| BString::new(sec_hit.to_vec()))
+                        prim_str.map(Cow::Borrowed).or_else(|| {
+                            (!sec_hit.is_empty()).then(|| sec_hit)
                         })
                     })
                     .collect(),

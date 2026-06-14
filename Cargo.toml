@@ -34,6 +34,7 @@
 [workspace.dependencies]
 	anyhow = { version = "1.0.89", default-features = false }
 	bio = "3.0"
+    bitvec = "1.0.1"
 	bstr = { version = "1.12.0", default-features = false, features=["alloc"] }
     bytes= { version = "1.11.1" }  # https://github.com/advisories/GHSA-434x-w66g-qw3r
 	clap_complete = "4.5"

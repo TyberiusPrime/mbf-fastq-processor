@@ -14,7 +14,7 @@ use crate::{
     transformations::{self, Step},
 };
 use bstr::BString;
-use fastqrab_config::{TagLabel, dna::TagColumn};
+use fastqrab_config::{TagLabel, dna::{TagColumn, StringColumn}};
 use fastqrab_io::{blocks::FastQChunk, io};
 use stringpod::{Lifted, RegionLift};
 
@@ -619,7 +619,7 @@ fn process_work_item(
                 // region that was cut away (or split) by an intervening edit has
                 // no contiguous image and is reported as lost (an empty cell);
                 // `initial_location_<tag>` still shows where it started.
-                let tag_locations: Vec<Option<BString>> = {
+                let tag_locations: StringColumn = {
                     let col = work_item
                         .block
                         .tags
@@ -679,7 +679,7 @@ fn process_work_item(
                 source,
                 definition: _,
             } => {
-                let tag_locations: Vec<Option<BString>> = {
+                let tag_locations: StringColumn = {
                     let col = work_item
                         .block
                         .tags

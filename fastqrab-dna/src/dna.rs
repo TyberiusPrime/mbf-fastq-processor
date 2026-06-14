@@ -9,17 +9,21 @@ use indexmap::IndexMap;
 use schemars::JsonSchema;
 use smallvec::SmallVec;
 use std::{borrow::Cow, ops::Range};
-use stringpod::DualStringPodMultiLocation;
+use stringpod::{DualStringPodMultiLocation, StringPod};
 use toml_pretty_deser::prelude::*;
 
 use crate::segments::SegmentIndex;
 
+use bitvec::prelude as bv;
 pub use triple_accel::hamming; //todo: do we need this. Profile.
+
+#[derive(Debug, Clone)]
+pub struct StringColumn(StringPod, bv::BitBox);
 
 #[derive(Debug, Clone)]
 pub enum TagColumn {
     Location(DualStringPodMultiLocation),
-    String(Vec<Option<BString>>),
+    String(StringColumn),
     Numeric(Vec<f64>),
     Bool(Vec<bool>),
 }
@@ -28,7 +32,13 @@ impl TagColumn {
     pub fn truncate(&mut self, len: usize) {
         match self {
             TagColumn::Location(col) => col.truncate(len),
-            TagColumn::String(items) => items.truncate(len),
+            TagColumn::String(StringColumn(items, _validity)) => {
+                items.truncate(len);
+                // we ignore the size change, in exchange of not using a BitVec
+                // here. Only the string pod is the source
+                // of truth for how-many-elements are there
+                //    validity.truncate(len);
+            }
             TagColumn::Numeric(items) => items.truncate(len),
             TagColumn::Bool(items) => items.truncate(len),
         }
@@ -38,7 +48,7 @@ impl TagColumn {
     pub fn len(&self) -> usize {
         match self {
             TagColumn::Location(col) => col.row_count(),
-            TagColumn::String(items) => items.len(),
+            TagColumn::String(StringColumn(items, _validity)) => items.len(), //counts missing
             TagColumn::Numeric(items) => items.len(),
             TagColumn::Bool(items) => items.len(),
         }
@@ -49,15 +59,30 @@ impl TagColumn {
         self.len() == 0
     }
 
-    pub fn retain<F>(&mut self, mut f: F)
-    where
-        F: FnMut() -> bool,
-    {
+    pub fn retain_by_bool(&mut self, keep: &[bool]) {
+        assert!(keep.len() == self.len());
         match self {
-            TagColumn::Location(col) => col.retain(|| f()),
-            TagColumn::String(items) => items.retain(|_| f()),
-            TagColumn::Numeric(items) => items.retain(|_| f()),
-            TagColumn::Bool(items) => items.retain(|_| f()),
+            TagColumn::String(StringColumn(items, validity)) => {
+                items.retain_by_bools(keep);
+                let new_valid =
+                    bv::BitBox::from_iter(validity.iter().zip(keep.iter()).filter_map(
+                        |(is_some, &do_keep)| if do_keep { Some(is_some) } else { None },
+                    ));
+                *validity = new_valid;
+            }
+            TagColumn::Location(col) => {
+                col.retain_by_bools(keep);
+            }
+            TagColumn::Numeric(items) => {
+                let mut iter = keep.iter();
+                let mut keep_func = || iter.next().expect("Length was checked");
+                items.retain(|_| *keep_func());
+            }
+            TagColumn::Bool(items) => {
+                let mut iter = keep.iter();
+                let mut keep_func = || iter.next().expect("Length was checked");
+                items.retain(|_| *keep_func());
+            }
         }
     }
 
@@ -112,10 +137,15 @@ impl TagColumn {
             TagColumn::Location(col) => {
                 Box::new(col.iter_seq().map(|x| (!x.is_empty()).then(|| x)))
             }
-            TagColumn::String(strings) => Box::new(strings.iter().map(|x| {
-                x.as_ref()
-                    .map(|bstring| Cow::Borrowed(BStr::new(&bstring[..])))
-            })),
+            TagColumn::String(StringColumn(items, validity)) => {
+                Box::new(items.iter().zip(validity.iter()).map(|(value, valid)| {
+                    if *valid {
+                        Some(Cow::Borrowed(BStr::new(&value[..])))
+                    } else {
+                        None
+                    }
+                }))
+            }
         }
     }
 
@@ -128,7 +158,7 @@ impl TagColumn {
                 Box::new((0..col.row_count()).map(|idx| !col.row_is_empty(idx)))
             }
 
-            TagColumn::String(strings) => Box::new(strings.iter().map(Option::is_some)),
+            TagColumn::String(StringColumn(_items, valid)) => Box::new(valid.iter().map(|x| *x)),
         }
     }
 
@@ -165,14 +195,18 @@ impl TagColumn {
     /// # Panics
     /// when used on a non `TagColumn::String` column
     #[must_use]
-    pub fn get_string(&self, index: usize) -> Option<&BString> {
-        if let TagColumn::String(items) = self {
-            items[index].as_ref()
+    pub fn get_string(&self, index: usize) -> Option<&BStr> {
+        if let TagColumn::String(StringColumn(items, valid)) = self {
+            if valid[index] {
+                Some(items.get(index))
+            } else {
+                None
+            }
         } else {
             panic!("get_string called on a non-string tag column");
         }
     }
-    
+
     /// Get the value for one entry for a Numeric column
     /// # Panics
     /// when used on a non `TagColumn::Numeric` column
@@ -184,7 +218,6 @@ impl TagColumn {
             panic!("get_numeric called on a non-numeric tag column");
         }
     }
-
 
     /// Get the value for one entry for a bool column
     /// # Panics
@@ -211,10 +244,13 @@ impl TagColumn {
     {
         match &self {
             TagColumn::Location(col) => col.joined_seq(index, region_seperator),
-            TagColumn::String(items) => match &items[index] {
-                Some(bstring) => Cow::Borrowed(BStr::new(&bstring[..])),
-                None => Cow::Borrowed(BStr::new(b"")),
-            },
+            TagColumn::String(StringColumn(items, valid)) => {
+                if valid[index] {
+                    Cow::Borrowed(items.get(index))
+                } else {
+                    Cow::Borrowed(BStr::new(b""))
+                }
+            }
             TagColumn::Numeric(items) => Cow::Owned(number_formatter(items[index]).into()),
             TagColumn::Bool(items) => Cow::Borrowed(if items[index] {
                 BStr::new(b"1")
@@ -256,8 +292,16 @@ impl TagColumn {
     pub fn drain(&mut self, range: std::ops::Range<usize>) {
         match self {
             TagColumn::Location(col) => col.drain(range),
-            TagColumn::String(items) => {
-                items.drain(range);
+            TagColumn::String(StringColumn(items, valid)) => {
+                items.drain(range.clone());
+                *valid =
+                    bv::BitBox::from_iter(valid.iter().enumerate().filter_map(|(i, is_valid)| {
+                        if range.contains(&i) {
+                            None
+                        } else {
+                            Some(*is_valid)
+                        }
+                    }));
             }
             TagColumn::Numeric(items) => {
                 items.drain(range);
@@ -266,6 +310,96 @@ impl TagColumn {
                 items.drain(range);
             }
         }
+    }
+}
+
+impl StringColumn {
+
+    pub fn empty() -> Self {
+        StringColumn(StringPod::empty(), bv::BitVec::new().into_boxed_bitslice())
+    }
+    pub fn get_string(&self, index: usize) -> Option<&BStr> {
+        if self.1[index] {
+            Some(self.0.get(index))
+        } else {
+            None
+        }
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = Option<&BStr>> {
+        self.0
+            .iter()
+            .zip(self.1.iter())
+            .map(|(item, valid)| if *valid { Some(item) } else { None })
+    }
+
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = Option<&mut BStr>> {
+        self.0.make_exclusive();
+        self.0
+            .iter_mut().expect("Just made exclusive")
+            .zip(self.1.iter())
+            .map(|(item, valid)| if *valid { Some(item) } else { None })
+    }
+}
+
+pub struct StringColumnBuilder {
+    pod_builder: stringpod::StringPodBuilder,
+    valid: Vec<bool>,
+}
+
+impl StringColumnBuilder {
+    pub fn new() -> Self {
+        StringColumnBuilder {
+            pod_builder: stringpod::StringPodBuilder::new(),
+            valid: Vec::new(),
+        }
+    }
+
+    pub fn push(&mut self, value: Option<Cow<BStr>>) {
+        match value {
+            Some(value) => {
+                self.pod_builder.push(&value);
+                self.valid.push(true);
+            }
+            None => {
+                self.pod_builder.push(b"");
+                self.valid.push(false)
+            }
+        }
+    }
+
+    pub fn finish(self) -> StringColumn {
+        StringColumn(self.pod_builder.finish(), self.valid.into_iter().collect())
+    }
+}
+
+impl FromIterator<Option<BString>> for StringColumn {
+    fn from_iter<T: IntoIterator<Item = Option<BString>>>(iter: T) -> Self {
+        let mut builder = StringColumnBuilder::new();
+        for item in iter {
+            builder.push(item.map(Cow::Owned))
+        }
+        builder.finish()
+    }
+}
+
+impl<'a> FromIterator<Option<&'a BStr>> for StringColumn {
+    fn from_iter<T: IntoIterator<Item = Option<&'a BStr>>>(iter: T) -> Self {
+        let mut builder = StringColumnBuilder::new();
+        for item in iter {
+            builder.push(item.map(Cow::Borrowed))
+        }
+        builder.finish()
+    }
+}
+
+impl<'a> FromIterator<Option<Cow<'a, BStr>>> for StringColumn {
+    fn from_iter<T: IntoIterator<Item = Option<Cow<'a, BStr>>>>(iter: T) -> Self {
+        let mut builder = StringColumnBuilder::new();
+        for item in iter {
+            builder.push(item)
+        }
+        builder.finish()
     }
 }
 
@@ -287,7 +421,7 @@ pub enum Anchor {
 /// find one hit of the iupac pattern/query.
 ///
 /// # Panics
-/// If the coordinates exceed an u32 
+/// If the coordinates exceed an u32
 pub fn find_iupac(
     reference: &[u8],
     pattern: &[u8],
@@ -298,9 +432,12 @@ pub fn find_iupac(
     if reference.len() < pattern.len() {
         return None;
     }
-    let make_draft =
-        |start: usize| -> std::ops::Range<u32> { 
-            start.try_into().expect("start would not fit u32")..(start + pattern.len()).try_into().expect("Start+pattern len would not fit into u32")};
+    let make_draft = |start: usize| -> std::ops::Range<u32> {
+        start.try_into().expect("start would not fit u32")
+            ..(start + pattern.len())
+                .try_into()
+                .expect("Start+pattern len would not fit into u32")
+    };
     match anchor {
         Anchor::Left => iupac_find_best(
             pattern,
@@ -318,9 +455,12 @@ pub fn find_iupac(
                 Direction::Reverse,
             )
             .map(|start| -> std::ops::Range<u32> {
-                (offset + start).try_into().expect("offset would not fit u32")
-                        ..
-                (offset + start + pattern.len()).try_into().expect("offset + start + len would not fit  u32")
+                (offset + start)
+                    .try_into()
+                    .expect("offset would not fit u32")
+                    ..(offset + start + pattern.len())
+                        .try_into()
+                        .expect("offset + start + len would not fit  u32")
             })
         }
         Anchor::Anywhere => iupac_find_best(
@@ -421,7 +561,10 @@ pub fn find_iupac_with_indel(
         "Alignment produced invalid coordinates (end > reference length)"
     );
 
-    Some(start.try_into().expect("Start would not fit u32")..end.try_into().expect("end would not fit u32"))
+    Some(
+        start.try_into().expect("Start would not fit u32")
+            ..end.try_into().expect("end would not fit u32"),
+    )
 }
 
 #[derive(Clone, Copy)]
@@ -947,7 +1090,10 @@ mod test {
     }
 
     fn draft_for(start: usize, len: usize) -> Range<u32> {
-        start.try_into().expect("start would not fit an u32")..(start + len).try_into().expect("start + len would not fit an u32")    
+        start.try_into().expect("start would not fit an u32")
+            ..(start + len)
+                .try_into()
+                .expect("start + len would not fit an u32")
     }
 
     #[test]

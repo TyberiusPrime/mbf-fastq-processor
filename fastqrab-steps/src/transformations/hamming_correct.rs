@@ -478,7 +478,7 @@ fn run_match_phase(
             }
         }
         TagColumn::String(items) => {
-            for item in items {
+            for item in items.iter() {
                 let result = match item {
                     Some(bstring) => Some(match_sequence(seq_to_idx, resonator, bstring.as_ref())?),
                     None => None,
@@ -626,7 +626,7 @@ impl Step for HammingCorrect {
         //     _ => unreachable!("Validation should have prevented non-String, non-Location tags"), //cov:excl-line
         // };
         let input_strings = input_tags.iter_stringified();
-        let mut output_strings: Vec<Option<BString>> = Vec::with_capacity(input_tags.len());
+        let mut output_strings = StringColumnBuilder::new();
 
         for (read_idx, (input_tag, slot)) in input_strings.zip(results.into_iter()).enumerate() {
             let MatchSlot { result, .. } = slot;
@@ -780,11 +780,11 @@ impl Step for HammingCorrect {
                             }
                         },
                     },
-                });
+                }.map(Cow::Owned));
         }
         block
             .tags
-            .insert(self.out_label.clone(), TagColumn::String(output_strings));
+            .insert(self.out_label.clone(), TagColumn::String(output_strings.finish()));
         // Add the corrected tags to the output
 
         Ok((block, true))

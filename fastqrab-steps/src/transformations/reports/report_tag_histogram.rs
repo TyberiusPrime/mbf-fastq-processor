@@ -62,7 +62,7 @@ impl HistogramData {
             }
             TagColumn::String(items) => {
                 if let HistogramData::String(map) = self {
-                    let s = match &items[idx] {
+                    let s = match items.get_string(idx) {
                         None => String::new(),
                         Some(s) => s.to_string(),
                     };

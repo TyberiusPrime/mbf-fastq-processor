@@ -479,7 +479,7 @@ impl Step for StoreSingleCellMatrix {
 
         for ii in 0..cell_tags.len() {
             let cell_idx = match cell_tags {
-                TagColumn::String(items) => match &items[ii] {
+                TagColumn::String(items) => match items.get_string(ii) {
                     Some(s) => seq_to_idx(s, cell_map),
                     None => 0,
                 },
@@ -495,7 +495,7 @@ impl Step for StoreSingleCellMatrix {
             };
 
             let gene_idx = match gene_tags {
-                TagColumn::String(items) => match &items[ii] {
+                TagColumn::String(items) => match items.get_string(ii) {
                     Some(s) => seq_to_idx(s, gene_map),
                     None => 0,
                 },
@@ -511,7 +511,7 @@ impl Step for StoreSingleCellMatrix {
             };
 
             let (umi_enc, umi_len) = match umi_tags {
-                TagColumn::String(items) => match &items[ii] {
+                TagColumn::String(items) => match items.get_string(ii) {
                     Some(s) => {
                         if s.len() > 16 {
                             anyhow::bail!("UMI is {}bp, maximum supported length is 16bp", s.len());

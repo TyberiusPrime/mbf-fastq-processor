@@ -131,7 +131,7 @@ impl Step for AssignByHalves {
         let engine = &self.engine;
         let input_tags = block.tags.get(&self.in_label).expect("Input tag not found");
 
-        let mut output_strings: Vec<Option<BString>> = Vec::with_capacity(input_tags.len());
+        let mut output_strings = StringColumnBuilder::new();
 
         match input_tags {
             TagColumn::Location(col) => {
@@ -144,26 +144,27 @@ impl Step for AssignByHalves {
                             //BStr::new(&col.joined_sequence(slot_hits, None)))
                             .map_err(|e| anyhow::anyhow!("AssignToProbe query failed: {e}"))?
                     };
-                    output_strings.push(hit.map(|name| name.as_bytes().into()));
+                    output_strings.push(hit.map(|name| Cow::Owned(name.as_bytes().into())));
                 }
             }
             TagColumn::String(items) => {
-                for item in items {
+                for item in items.iter() {
                     let hit = match item {
                         None => None,
                         Some(s) => engine
-                            .query(s.as_ref())
+                            .query(s)
                             .map_err(|e| anyhow::anyhow!("AssignToProbe query failed: {e}"))?,
                     };
-                    output_strings.push(hit.map(|name| name.as_bytes().into()));
+                    output_strings.push(hit.map(|name| Cow::Owned(name.as_bytes().into())));
                 }
             }
             TagColumn::Bool(_) | TagColumn::Numeric(_) => unreachable!(), // cov:excl-line
         }
 
-        block
-            .tags
-            .insert(self.out_label.clone(), TagColumn::String(output_strings));
+        block.tags.insert(
+            self.out_label.clone(),
+            TagColumn::String(output_strings.finish()),
+        );
         Ok((block, true))
     }
 }

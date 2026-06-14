@@ -145,7 +145,7 @@ impl Step for ConcatTags {
                 .collect();
 
             // Output is String (convert Location to sequence bytes)
-            let mut output_tags: Vec<Option<BString>> = Vec::with_capacity(num_reads);
+            let mut output_tags= StringColumnBuilder::new();
             match self.on_missing {
                 OnMissing::MergePresent => {
                     for _read_idx in 0..num_reads {
@@ -166,7 +166,7 @@ impl Step for ConcatTags {
                             }
                             new_value.extend_from_slice(&p);
                         }
-                        output_tags.push(Some(new_value));
+                        output_tags.push(Some(Cow::Owned(new_value)));
                     }
                 }
                 OnMissing::SetMissing => {
@@ -191,7 +191,7 @@ impl Step for ConcatTags {
                                 }
                                 new_value.extend_from_slice(&p);
                             }
-                            output_tags.push(Some(new_value));
+                            output_tags.push(Some(Cow::Owned(new_value)));
                         }
                     }
                 }
@@ -200,7 +200,7 @@ impl Step for ConcatTags {
         };
         block
             .tags
-            .insert(self.out_label.clone(), TagColumn::String(output_tags));
+            .insert(self.out_label.clone(), TagColumn::String(output_tags.finish()));
 
         Ok((block, true))
     }

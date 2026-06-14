@@ -100,7 +100,7 @@ pub(crate) fn store_tag_into_segment(
                     vcol.joined_qual(row, None).to_vec(),
                 )
             }),
-            TagColumn::String(items) => items[row].as_ref().map(|v| {
+            TagColumn::String(items) => items.get_string(row).map(|v| {
                 let seq = v.to_vec();
                 let qual = vec![b'~'; seq.len()];
                 (seq, qual)

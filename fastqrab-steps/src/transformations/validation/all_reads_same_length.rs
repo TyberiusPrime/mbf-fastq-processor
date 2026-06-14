@@ -101,7 +101,7 @@ impl Step for ValidateAllReadsSameLength {
                             }
                         }
                         TagColumn::String(items) => {
-                            for opt_str in items {
+                            for opt_str in items.iter() {
                                 if let Some(bstring) = opt_str {
                                     self.check(bstring.len())?;
                                 }

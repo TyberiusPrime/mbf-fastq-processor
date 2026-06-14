@@ -244,7 +244,7 @@ impl Step for Regex {
             ResolvedSourceNoAll::Name { segment_index, .. } => {
                 let block_tags = &block.tags;
                 let read_no = block.first_read_sequential_number;
-                let mut out = Vec::with_capacity(block.row_count());
+                let mut out = StringColumnBuilder::new();
                 for (ii, read_name) in block
                     .member(segment_index.as_index())
                     .names
@@ -261,12 +261,12 @@ impl Step for Regex {
                             read_no + ii,
                             block_tags,
                         )
-                        .map(|x| x.into()),
+                        .map(|x| Cow::Owned(BString::new(x))),
                     );
                 }
                 block
                     .tags
-                    .insert(self.out_label.clone(), TagColumn::String(out));
+                    .insert(self.out_label.clone(), TagColumn::String(out.finish()));
             }
             ResolvedSourceNoAll::Segment(segment_index) => {
                 extract_region_or_value_tags_using_tags(

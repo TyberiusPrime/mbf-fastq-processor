@@ -6,7 +6,7 @@ use fastqrab_io::blocks::Molecule;
 use indexmap::IndexMap;
 use stringpod::CrossPods;
 
-use super::prelude::DemultiplexTag;
+use super::prelude::{DemultiplexTag, StringColumnBuilder};
 use fastqrab_config::{
     TagLabel,
     segments::{SegmentIndex, SegmentIndexOrAll},
@@ -131,7 +131,7 @@ pub(crate) fn extract_string_tags_using_tags(
     label: &TagLabel,
     f: impl Fn(&BStr, usize, &IndexMap<TagLabel, TagColumn>) -> Option<BString>,
 ) {
-    let mut out = Vec::new();
+    let mut out = StringColumnBuilder::new();
 
     let read_no = block.first_read_sequential_number;
     for (ii, seq) in block.segments[segment.as_index()]
@@ -139,13 +139,10 @@ pub(crate) fn extract_string_tags_using_tags(
         .iter_seq()
         .enumerate()
     {
-        out.push(match f(seq, read_no + ii, &mut block.tags) {
-            Some(str) => Some(str),
-            None => None,
-        });
+        out.push(f(seq, read_no + ii, &mut block.tags).map(Cow::Owned));
     }
 
-    block.tags.insert(label.clone(), TagColumn::String(out));
+    block.tags.insert(label.clone(), TagColumn::String(out.finish()));
 }
 
 pub(crate) fn extract_bool_tags<F>(

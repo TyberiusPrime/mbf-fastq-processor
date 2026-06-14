@@ -1,5 +1,5 @@
 use anyhow::{Result, bail};
-use bstr::{BStr, BString};
+use bstr::{BStr};
 use indexmap::IndexMap;
 use smallvec::SmallVec;
 use std::marker::PhantomData;
@@ -1580,16 +1580,16 @@ impl FastQBlocksCombined {
     /// when the tag is missing or not a String column
     pub fn apply_mut_with_string_tag<F>(&mut self, label: &TagLabel, mut f: F)
     where
-        F: for<'a> FnMut(&mut SmallVec<[&BStr; 4]>, Option<&BString>),
+        F: for<'a> FnMut(&mut SmallVec<[&BStr; 4]>, Option<&BStr>),
     {
-        let TagColumn::String(tags) = self.tags.get(label).expect("Tag must be present, bug")
+        let TagColumn::String(col) = self.tags.get(label).expect("Tag must be present, bug")
         else {
             panic!("Tag {label:?} is not a String column");
         };
         for (ii, molecule) in blocks::molecules(&self.segments).enumerate() {
             let mut reads: SmallVec<[&BStr; 4]> =
                 molecule.into_iter().map(|read| read.seq).collect();
-            f(&mut reads, tags[ii].as_ref());
+            f(&mut reads, col.get_string(ii));
         }
     }
 
@@ -1755,12 +1755,7 @@ impl FastQBlocksCombined {
         }
         assert_eq!(self.row_count(), should);
         for tag_entries in self.tags.values_mut() {
-            let mut iter = keep.iter();
-            tag_entries.retain(|| {
-                *iter
-                    .next()
-                    .expect("iterator has exact number of elements matching filter")
-            });
+            tag_entries.retain_by_bool(keep);
             assert_eq!(tag_entries.len(), should);
         }
         if let Some(output_tags) = self.output_tags.as_mut() {

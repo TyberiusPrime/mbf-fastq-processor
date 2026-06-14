@@ -112,7 +112,11 @@ impl Step for ReverseComplement {
                                     continue;
                                 }
                                 if let Some(value) = slot {
-                                    *value = reverse_complement_iupac(value).into();
+                                    //todo: is there a prettier way to say this?
+                                    let rev_comp = reverse_complement_iupac(value);
+                                    for (target, new) in value.iter_mut().zip(rev_comp) {
+                                        *target = new;
+                                    }
                                 }
                             }
                         }

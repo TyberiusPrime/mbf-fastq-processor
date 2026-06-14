@@ -185,13 +185,13 @@ impl Step for HammingExactCounter {
                     }
                 }
                 TagColumn::String(items) => {
-                    for item in items {
+                    for item in items.iter() {
                         let idx = match item {
                             None => continue,
-                            Some(bstring) => self
+                            Some(bstr) => self
                                 .majority_data
                                 .seq_to_idx
-                                .get(BStr::new(bstring.as_slice()))
+                                .get(bstr)
                                 .copied(),
                         };
                         if let Some(idx) = idx {

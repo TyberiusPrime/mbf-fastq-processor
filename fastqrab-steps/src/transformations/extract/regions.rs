@@ -251,7 +251,7 @@ impl Step for Regions {
                     // regions are sliced out of the string value and the output is
                     // itself a string column.
                     TagColumn::String(_) => {
-                        let out: Vec<Option<BString>> = input_col
+                        let out: StringColumn = input_col
                             .iter_stringified()
                             .map(|value| {
                                 value.and_then(|s| extract_string_regions(&s, &self.regions))
@@ -274,7 +274,7 @@ impl Step for Regions {
                 segment_index,
                 split_character,
             } => {
-                let out: Vec<Option<BString>> = block.segments[segment_index.as_index()]
+                let out: StringColumn = block.segments[segment_index.as_index()]
                     .names
                     .iter()
                     .map(|name| {

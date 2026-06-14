@@ -253,7 +253,7 @@ impl Step for Box<EvalExpression> {
                         }
                     }
                     TagColumn::String(items) => {
-                        if items[read_idx].is_some() {
+                        if items.get_string(read_idx).is_some() {
                             1.0
                         } else {
                             0.0

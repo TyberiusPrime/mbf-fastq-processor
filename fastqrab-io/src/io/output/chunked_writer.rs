@@ -557,9 +557,9 @@ where
                     Some(Value::String((*joined).into()))
                 }
             }
-            TagColumn::String(items) => items
-                .get(read_index)
-                .and_then(|opt_s| opt_s.as_ref().map(|s| Value::String(s.clone()))),
+            TagColumn::String(col) => col
+                .get_string(read_index)
+                .map(|s| Value::String(s.into())),
             TagColumn::Numeric(items) => items.get(read_index).map(|&n| Value::Float(n as f32)),
             TagColumn::Bool(items) => items.get(read_index).map(|&b| Value::UInt8(u8::from(b))),
         };
@@ -747,7 +747,7 @@ impl ChunkPaths {
             if !name.is_empty() {
                 name.push('.');
             }
-            write!(name, "{index:0digit_count$}");
+            let _ = write!(name, "{index:0digit_count$}");
         }
         if !self.suffix.is_empty() {
             if !name.is_empty() {
@@ -887,10 +887,7 @@ impl ChunkedRecordWriter {
         clippy::too_many_arguments,
         reason = "they are all needed at construction time"
     )]
-    #[expect(
-        clippy::items_after_statements,
-        reason = "unix only use statements"
-    )]
+    #[expect(clippy::items_after_statements, reason = "unix only use statements")]
 
     pub fn new(
         format: FileFormat,

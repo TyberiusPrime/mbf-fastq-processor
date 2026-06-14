@@ -10,7 +10,7 @@ pub(crate) use crate::config::{
 pub use fastqrab_config::{
     ConditionalTagLabel, FileFormat, RemovedTags, StringTagContent, TagLabel, TagValueType,
     ToDeclaredTag, ToUsedTag, ToUsedTags, UsedTag,
-    dna::TagColumn,
+    dna::{TagColumn, StringColumnBuilder, StringColumn},
     offer_alternatives,
     segments::{
         ResolvedSourceAll,

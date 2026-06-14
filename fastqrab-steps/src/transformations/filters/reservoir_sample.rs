@@ -1,4 +1,5 @@
 use rand::Rng;
+use bstr::ByteSlice;
 
 use crate::transformations::{extend_seed, prelude::*};
 use fastqrab_io::blocks::{FastQChunk, OwnedFastQRead};
@@ -194,16 +195,39 @@ impl Step for ReservoirSample {
                         };
                         output.tags.insert(label, TagColumn::Location(col));
                     }
-                    _ => {
-                        for (_, buf) in &groups {
-                            if let Some(col) = buf.tags.get(&label) {
-                                let target = output
-                                    .tags
-                                    .entry(label.clone())
-                                    .or_insert_with(|| col.new_scalar_tag_column());
-                                col.extend_scalar_into(target);
-                            }
-                        }
+                    TagColumnInAssembly::String(_) => {
+                        let col: StringColumn = groups
+                            .iter()
+                            .filter_map(|(_, buf)| buf.tags.get(&label))
+                            .flat_map(|c| match c {
+                                TagColumnInAssembly::String(items) => items.iter(),
+                                _ => unreachable!("tag kind is consistent across groups"),
+                            })
+                            .map(|x| x.as_ref().map(|x| x.as_bstr()))
+                            .collect();
+                        output.tags.insert(label, TagColumn::String(col));
+                    }
+                    TagColumnInAssembly::Numeric(_) => {
+                        let col: Vec<f64> = groups
+                            .iter()
+                            .filter_map(|(_, buf)| buf.tags.get(&label))
+                            .flat_map(|c| match c {
+                                TagColumnInAssembly::Numeric(items) => items.iter().copied(),
+                                _ => unreachable!("tag kind is consistent across groups"),
+                            })
+                            .collect();
+                        output.tags.insert(label, TagColumn::Numeric(col));
+                    }
+                    TagColumnInAssembly::Bool(_) => {
+                        let col: Vec<bool> = groups
+                            .iter()
+                            .filter_map(|(_, buf)| buf.tags.get(&label))
+                            .flat_map(|c| match c {
+                                TagColumnInAssembly::Bool(items) => items.iter().copied(),
+                                _ => unreachable!("tag kind is consistent across groups"),
+                            })
+                            .collect();
+                        output.tags.insert(label, TagColumn::Bool(col));
                     }
                 }
             }
@@ -221,7 +245,7 @@ impl Step for ReservoirSample {
                         let segment = column.location_segment();
                         TagColumn::Location(empty.location_column_builder(segment).finish())
                     }
-                    TagColumn::String(_) => TagColumn::String(Vec::new()),
+                    TagColumn::String(_) => TagColumn::String(StringColumn::empty()),
                     TagColumn::Numeric(_) => TagColumn::Numeric(Vec::new()),
                     TagColumn::Bool(_) => TagColumn::Bool(Vec::new()),
                 };
@@ -275,7 +299,9 @@ impl TagColumnInAssembly {
     fn push_from(&mut self, source: &TagColumn, pos: usize) {
         match self {
             TagColumnInAssembly::Location { rows, .. } => rows.push(source.get_location(pos)),
-            TagColumnInAssembly::String(items) => items.push(source.get_string(pos).cloned()),
+            TagColumnInAssembly::String(items) => {
+                items.push(source.get_string(pos).map(|x| x.to_owned()))
+            }
             TagColumnInAssembly::Numeric(items) => items.push(source.get_numeric(pos)),
             TagColumnInAssembly::Bool(items) => items.push(source.get_bool(pos)),
         }
@@ -286,42 +312,11 @@ impl TagColumnInAssembly {
     fn set_slot_from(&mut self, slot: usize, source: &TagColumn, pos: usize) {
         match self {
             TagColumnInAssembly::Location { rows, .. } => rows[slot] = source.get_location(pos),
-            TagColumnInAssembly::String(items) => items[slot] = source.get_string(pos).cloned(),
+            TagColumnInAssembly::String(items) => items[slot] = source.get_string(pos).map(ToOwned::to_owned),
             TagColumnInAssembly::Numeric(items) => items[slot] = source.get_numeric(pos),
             TagColumnInAssembly::Bool(items) => items[slot] = source.get_bool(pos),
         }
     }
 
-    /// An empty scalar `TagColumn` of the same kind. `Location` columns are
-    /// rebuilt via the alias builder, never through here.
-    fn new_scalar_tag_column(&self) -> TagColumn {
-        match self {
-            TagColumnInAssembly::Location { .. } => {
-                unreachable!("Location columns are rebuilt via the alias builder")
-            }
-            TagColumnInAssembly::String(_) => TagColumn::String(Vec::new()),
-            TagColumnInAssembly::Numeric(_) => TagColumn::Numeric(Vec::new()),
-            TagColumnInAssembly::Bool(_) => TagColumn::Bool(Vec::new()),
-        }
-    }
 
-    /// Append this scalar column's values onto `target` (same kind). `Location`
-    /// columns are rebuilt via the alias builder, never through here.
-    fn extend_scalar_into(&self, target: &mut TagColumn) {
-        match (self, target) {
-            (TagColumnInAssembly::String(src), TagColumn::String(dst)) => {
-                dst.extend(src.iter().cloned());
-            }
-            (TagColumnInAssembly::Numeric(src), TagColumn::Numeric(dst)) => {
-                dst.extend(src.iter().copied());
-            }
-            (TagColumnInAssembly::Bool(src), TagColumn::Bool(dst)) => {
-                dst.extend(src.iter().copied());
-            }
-            (TagColumnInAssembly::Location { .. }, _) => {
-                unreachable!("Location columns are rebuilt via the alias builder")
-            }
-            _ => panic!("mismatched tag column types"),
-        }
-    }
 }

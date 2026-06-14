@@ -16,6 +16,7 @@ exclude.workspace = true
 [dependencies]
     anyhow = {workspace = true}
 	bio = {workspace = true}
+    bitvec = {workspace = true}
 	bstr = {workspace = true}
     hamming-resonate = {workspace = true}
     indexmap = {workspace = true}
