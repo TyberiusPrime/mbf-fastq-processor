@@ -92,7 +92,7 @@ def compose_base_url(base: Optional[str], folder: str) -> str:
 
 
 def generate_versions_content(entries: Iterable[VersionEntry], current: VersionEntry) -> str:
-    lines = ["+++\n", 'title = "(Older) Documentation Versions"\n', 'description = "Snapshots built from releases and main."\n', "+++\n\n"]
+    lines = ["+++\n", 'title = "Other Documentation Versions"\n', 'description = "Snapshots built from releases and main."\n', "+++\n\n"]
     lines.append("Available builds:\n\n")
     for entry in entries:
         if entry is current:
@@ -237,7 +237,7 @@ def main() -> int:
                 temp_base=temp_base,
             )
 
-    redirect_target = main_entry.folder if main_entry in all_entries else (all_entries[0].folder if all_entries else None)
+    redirect_target = releases[-1].folder if releases else main_entry.folder
     if redirect_target:
         write_redirect(output_root, redirect_target)
 
