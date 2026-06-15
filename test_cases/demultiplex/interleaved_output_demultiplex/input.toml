@@ -56,13 +56,10 @@
   
 [output]
     prefix = "output"
+
 [[step]]
     action = "OutputFASTQ"
     output = ["index1", "index2"]
     interleave = ["read1", "read2"]
     compression = "Zst"
     output_hash_uncompressed = true
-
-# --- Output steps (migrated from [output]) ---
-[[step]]
-    action = "OutputFASTQ"

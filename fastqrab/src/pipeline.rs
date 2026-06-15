@@ -182,7 +182,7 @@ fn parse_interleaved_and_send(
         if res.was_final {
             // Send final empty block
             let final_block = io::FastQBlocksCombined::new(
-                vec![FastQChunk::new_empty()],
+                vec![FastQChunk::new_empty(); segment_count.into()],
                 None,
                 IndexMap::default(),
                 true,
