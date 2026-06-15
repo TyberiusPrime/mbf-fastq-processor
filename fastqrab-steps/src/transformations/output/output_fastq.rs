@@ -110,8 +110,10 @@ impl VerifyIn<PartialConfig> for PartialOutputFASTQ {
                 if *chunk_size == 0 {
                     return Err(ValidationFailure::new(
                         "Must not be 0.",
-                        Some("'Chunksize' must be greater than zero when specified. \
-                            Increase or remove setting."),
+                        Some(
+                            "'Chunksize' must be greater than zero when specified. \
+                            Increase or remove setting.",
+                        ),
                     ));
                 } else if let Some(true) = self.stdout.as_ref() {
                     return Err(ValidationFailure::new(
@@ -146,29 +148,29 @@ impl VerifyIn<PartialConfig> for PartialOutputFASTQ {
 
 impl TagUser for PartialTaggedVariant<PartialOutputFASTQ> {
     fn declare_output_files(&self) -> Vec<OutputDeclaration> {
-        let inner = self
-            .toml_value
-            .value
-            .as_ref()
-            .expect("declare_output_files called without successful verification");
-        declare_text_output(
-            FORMAT,
-            inner.suffix.as_ref().and_then(|x| x.as_ref()),
-            inner.compression.as_ref().copied().unwrap_or_default(),
-            inner
-                .compression_level
-                .as_ref()
-                .and_then(|x| x.as_ref())
-                .copied(),
-            inner.compression_threads.as_ref().copied().unwrap_or(1),
-            *inner.output_hash_uncompressed.unwrap_ref(),
-            *inner.output_hash_compressed.unwrap_ref(),
-            &collect_segment_list(&inner.output),
-            interleave_present(&inner.interleave).then(|| collect_segment_list(&inner.interleave)),
-            *inner.stdout.unwrap_ref(),
-            inner.chunksize.as_ref().and_then(|x| x.as_ref()).copied(),
-            self.toml_value.span(),
-        )
+        if let Some(inner) = self.toml_value.as_ref() {
+            declare_text_output(
+                FORMAT,
+                inner.suffix.as_ref().and_then(|x| x.as_ref()),
+                inner.compression.as_ref().copied().unwrap_or_default(),
+                inner
+                    .compression_level
+                    .as_ref()
+                    .and_then(|x| x.as_ref())
+                    .copied(),
+                inner.compression_threads.as_ref().copied().unwrap_or(1),
+                *inner.output_hash_uncompressed.as_ref().expect("parent was ok"),
+                *inner.output_hash_compressed.as_ref().expect("parent was ok"),
+                &collect_segment_list(&inner.output),
+                interleave_present(&inner.interleave)
+                    .then(|| collect_segment_list(&inner.interleave)),
+                *inner.stdout.as_ref().expect("parent was ok"),
+                inner.chunksize.as_ref().and_then(|x| x.as_ref()).copied(),
+                self.toml_value.span(),
+            )
+        } else {
+            Vec::new()
+        }
     }
 }
 

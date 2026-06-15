@@ -1,12 +1,14 @@
 [input]
     read1 = 'input_read1.fq' # so 'copy_input' works
 
+[output]
+    prefix = 'output'
+
 
 [[step]]
     action = 'FilterSample'
     p = 0.25
     seed  = 42
 
-
-[output]
-    prefix = 'output'
+[[step]]
+  action = 'OutputFastQ'

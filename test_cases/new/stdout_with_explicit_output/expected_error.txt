@@ -1,18 +1,23 @@
 Error Details ==
 Error 1/1
-  ╭─config.toml
-  ┆
-4 │ [output]
-5 │     prefix = 'output'
-6 │     stdout = true
-  ┆              ──┬─
-  ┆                │
-  ┆                ╰── Conflict with 'output' option
-7 │     output = ['read1']
-  ┆              ────┬────
-  ┆                  │
-  ┆                  ╰───── Conflict with 'stdout' option
-──╯
-Hint: Remove either `output` or `stdout` 
+   ╭─config.toml
+   ┆
+ 8 │ [[step]]
+ 9 │     action = "OutputFASTQ"
+   ┆              ──────┬──────
+   ┆                    │
+   ┆                    ╰─────── In this step
+10 │     output = ["read1"]
+   ┆              ────┬────
+   ┆                  │
+   ┆                  ╰───── Conflict with 'stdout' option
+11 │     stdout = true
+   ┆              ──┬─
+   ┆                │
+   ┆                ╰── Conflict with 'output' option
+───╯
+Hint: Remove either `output` or `stdout`
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/OutputFASTQ
+      Or run: `fastqrab template OutputFASTQ` for more information.
 
 
