@@ -50,3 +50,4 @@
     action = "OutputFASTQ"
     compression = "Zst"
     output_hash_uncompressed = false
+    chunk_size=3333

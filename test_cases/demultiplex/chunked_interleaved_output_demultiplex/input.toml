@@ -52,3 +52,4 @@
     interleave = ["read1", "read2"]
     compression = "Zst"
     output_hash_uncompressed = true
+    chunk_size=1001

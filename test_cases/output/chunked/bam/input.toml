@@ -11,3 +11,4 @@
 [[step]]
     action = "OutputBAM"
     output_hash_compressed = true
+    chunk_size=6

@@ -10,3 +10,4 @@
 # --- Output steps (migrated from [output]) ---
 [[step]]
     action = "OutputFASTQ"
+    chunk_size = 3

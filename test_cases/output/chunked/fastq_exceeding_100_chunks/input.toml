@@ -13,3 +13,4 @@
     compression = "zstd"
     output_hash_uncompressed = true
     output_hash_compressed = true
+    chunk_size=2

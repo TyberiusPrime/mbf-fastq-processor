@@ -2,14 +2,22 @@ Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
- 8 │ [output]
- 9 │     prefix = 'output'
-10 │ 	compression='gzip'
-11 │     chunk_size = 0
-   ┆                  ┬
-   ┆                  │
-   ┆                  ╰─ Must not be 0.
+12 │ [[step]]
+13 │     action = "OutputFASTQ"
+   ┆              ──────┬──────
+   ┆                    │
+   ┆                    ╰─────── In this step
+   ┆
+14 │     compression = "gzip"
+15 │     output_hash_uncompressed = true
+16 │     output_hash_compressed = true
+17 │     chunk_size=0
+   ┆                ┬
+   ┆                │
+   ┆                ╰─ Must not be 0.
 ───╯
-Hint: 'Chunksize' must be greater than zero when specified. Increase or remove setting
+Hint: 'Chunksize' must be greater than zero when specified. Increase or remove setting.
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/OutputFASTQ
+      Or run: `fastqrab template OutputFASTQ` for more information.
 
 

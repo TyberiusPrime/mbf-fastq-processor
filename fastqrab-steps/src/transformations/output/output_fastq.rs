@@ -110,7 +110,8 @@ impl VerifyIn<PartialConfig> for PartialOutputFASTQ {
                 if *chunk_size == 0 {
                     return Err(ValidationFailure::new(
                         "Must not be 0.",
-                        Some("'chunksize' must be greater than zero when specified."),
+                        Some("'Chunksize' must be greater than zero when specified. \
+                            Increase or remove setting."),
                     ));
                 } else if let Some(true) = self.stdout.as_ref() {
                     return Err(ValidationFailure::new(

@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 set -euo pipefail 2>/dev/null || set -eu
-tOdo
 
 : "${PROCESSOR_CMD:?PROCESSOR_CMD must be set by the test harness}"
 : "${CONFIG_FILE:?CONFIG_FILE must be set by the test harness}"

@@ -10,3 +10,4 @@
     action = "OutputFASTQ"
     interleave = ["read1", "read2"]
     stdout = true
+    chunk_size=5000
