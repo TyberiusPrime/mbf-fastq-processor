@@ -15,9 +15,9 @@ const HTML_ID: &str = "report_html";
 /// At most one `OutputReport` step is allowed per pipeline (enforced in config
 /// validation); multiple would share the same collected report data.
 ///
-/// NOTE: the JSON currently keys reports by their numeric index and omits the
-/// raw-config / input-file metadata the legacy renderer embeds; plumbing those
-/// through `post_finalize` is part of the pipeline-wiring follow-up.
+/// Reports are keyed by their config label (from [`ReportMetadata::report_labels`],
+/// indexed by `report_no`); the run/input metadata the legacy `[output]` renderer
+/// embedded is taken from the [`ReportMetadata`] handed to the step at `init`.
 #[derive(JsonSchema, Clone)]
 #[tpd]
 #[derive(Debug)]
@@ -35,6 +35,9 @@ pub struct OutputReport {
     #[tpd(skip, default)]
     #[schemars(skip)]
     html_writer: Option<Arc<Mutex<Option<ChunkedRecordWriter>>>>,
+    #[tpd(skip, default)]
+    #[schemars(skip)]
+    report_metadata: Option<Arc<ReportMetadata>>,
 }
 
 impl VerifyIn<PartialConfig> for PartialOutputReport {
@@ -102,10 +105,11 @@ impl Step for OutputReport {
 
     fn init(
         &mut self,
-        _input_info: &InputInfo,
+        input_info: &InputInfo,
         mut output_files: StepOutputFiles,
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<DemultiplexBarcodes>> {
+        self.report_metadata = Some(input_info.report_metadata.clone());
         if self.json {
             self.json_writer = Some(Arc::new(Mutex::new(take_singleton(
                 &mut output_files,
@@ -133,7 +137,11 @@ impl Step for OutputReport {
 
     fn post_finalize(&self, reports: &[FinalizeReportResult]) -> Result<()> {
         // Build the JSON once; HTML embeds the same JSON.
-        let json = build_report_json(reports)?;
+        let metadata = self
+            .report_metadata
+            .as_ref()
+            .expect("report_metadata is set in init");
+        let json = build_report_json(reports, metadata)?;
 
         if let Some(writer) = &self.json_writer {
             if let Some(mut writer) = writer.lock().expect("lock poisoned").take() {

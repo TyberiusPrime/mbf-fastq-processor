@@ -56,6 +56,13 @@
     base_statistics = true
 
 [output]
-    prefix = 'reference_output/output'
-    format = "FASTQ"
-    report_html = true
+    prefix = "reference_output/output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+
+[[step]]
+    action = "OutputReport"
+    json = false
+    html = true

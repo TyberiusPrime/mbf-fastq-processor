@@ -38,12 +38,13 @@
 
 
 [output]
-    # Output prefix for all files
-    prefix = 'reference_output/output'
+    prefix = "reference_output/output"
 
-    # Generate both HTML and JSON reports
-    report_html = true
-    report_json = true
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
 
-    # Output format (FASTQ = uncompressed FASTQ format)
-    format = "FASTQ"
+[[step]]
+    action = "OutputReport"
+    json = true
+    html = true

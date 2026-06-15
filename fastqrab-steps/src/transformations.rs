@@ -17,6 +17,7 @@ use fastqrab_config::{DeclaredTag, RemovedTags, TagLabel, UsedTag, segments::Seg
 use fastqrab_io::io::FastQBlocksCombined;
 use fastqrab_io::io::output::chunked_writer::OutputDeclaration;
 use std::collections::HashSet;
+use std::sync::Arc;
 
 pub(crate) mod calc;
 pub(crate) mod convert;
@@ -151,6 +152,28 @@ pub struct InputInfo {
     pub initial_filter_capacity: Option<usize>,
     pub use_rapidgzip: bool,
     pub threading_configuration: ThreadingConfiguration,
+    /// Report metadata, used by the `OutputReport` step to build the combined
+    /// report (label-per-`report_no`, input-file config and the raw config TOML
+    /// the legacy `[output]` renderer embedded). Shared so cloning `InputInfo`
+    /// into every worker stays cheap.
+    pub report_metadata: Arc<ReportMetadata>,
+}
+
+/// Pipeline-level data the combined run report embeds. Collected once during
+/// config check and handed to the `OutputReport` step via [`InputInfo`].
+#[derive(Debug, Default)]
+pub struct ReportMetadata {
+    /// Maps a report's `report_no` to the label it should be keyed under, and
+    /// defines the `report_order` array. Indexed by `report_no`.
+    pub report_labels: Vec<String>,
+    /// The input-file configuration as a compact JSON string, embedded as the
+    /// report's `__.input_files`. Kept as a single small allocation (rather than
+    /// a `serde_json::Value` tree) so it does not duplicate per-input-file data
+    /// in memory during processing; parsed back to a value at report time.
+    pub input_files: Arc<str>,
+    /// The raw config TOML, embedded as `run_info.input_toml`. Shared (rather
+    /// than cloned) so it is not duplicated in memory during processing.
+    pub raw_config: Arc<str>,
 }
 
 #[derive(Default, Debug)]

@@ -196,6 +196,10 @@ pub struct CheckedConfig {
     pub benchmark: Option<Benchmark>,
     pub report_labels: Vec<String>,
     pub threading_configuration: ThreadingConfiguration,
+    /// The raw config TOML, embedded in the run report (`run_info.input_toml`).
+    /// Populated by the caller after `check()`; empty when unavailable. Shared
+    /// (`Arc`) so the report metadata does not duplicate it in memory.
+    pub raw_config: std::sync::Arc<str>,
 }
 
 impl VerifyIn<TPDRoot> for PartialConfig {
@@ -1986,6 +1990,7 @@ impl Config {
             benchmark: self.benchmark,
             report_labels: self.report_labels,
             threading_configuration,
+            raw_config: std::sync::Arc::from(""),
         })
     }
 

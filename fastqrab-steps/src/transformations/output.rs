@@ -537,24 +537,46 @@ pub(crate) fn collect_segment_list(list: &SegmentList) -> Vec<String> {
 
 /// Assemble the JSON report object from the collected per-step reports.
 ///
-/// NOTE: this is a reduced port of the legacy `output_json_report`. The legacy
-/// version also embeds the report ordering (`report_labels`), the raw config
-/// TOML, the input file configuration and the working directory. Those live at
-/// the pipeline level and are not yet plumbed to `post_finalize`; wiring them is
-/// part of the follow-up that removes the legacy output path. Until then this
-/// keys reports by their numeric `report_no`.
-pub(crate) fn build_report_json(reports: &[FinalizeReportResult]) -> Result<String> {
+/// Build the combined run report JSON, a port of the legacy `output_json_report`.
+///
+/// Reports are keyed by their config label (`metadata.report_labels[report_no]`)
+/// and emitted in declaration order, alongside the `__` run/input metadata, the
+/// `run_info` block and the `report_order` array the HTML template consumes.
+pub(crate) fn build_report_json(
+    reports: &[FinalizeReportResult],
+    metadata: &ReportMetadata,
+) -> Result<String> {
     use json_value_merge::Merge;
     let mut output: serde_json::Map<String, serde_json::Value> = serde_json::Map::new();
+    let input_files: serde_json::Value = serde_json::from_str(&metadata.input_files)
+        .expect("input_files was serialized from a valid value");
+    // Store run info such as version in "__".
     output.insert(
         "__".to_string(),
         serde_json::json!({
             "version": env!("CARGO_PKG_VERSION"),
+            "cwd": std::env::current_dir().expect("Failed to retrieve current working directory"),
+            "input_files": input_files,
+            "repository": env!("CARGO_PKG_HOMEPAGE"),
         }),
     );
+
+    let report_order: Vec<serde_json::Value> = metadata
+        .report_labels
+        .iter()
+        .map(|label| serde_json::Value::String(label.clone()))
+        .collect();
+
+    // Collect reports by label, merging any that share a label (e.g. a report
+    // split into multiple `report_no`s).
+    let mut report_output: serde_json::Map<String, serde_json::Value> = serde_json::Map::new();
     for report in reports {
-        let key = report.report_no.to_string();
-        match output.entry(key) {
+        let key = metadata
+            .report_labels
+            .get(report.report_no)
+            .expect("report_no must have a corresponding label")
+            .clone();
+        match report_output.entry(key) {
             serde_json::map::Entry::Vacant(entry) => {
                 entry.insert(report.contents.clone());
             }
@@ -563,6 +585,40 @@ pub(crate) fn build_report_json(reports: &[FinalizeReportResult]) -> Result<Stri
             }
         }
     }
+
+    // Emit reports in declaration order.
+    for key in &metadata.report_labels {
+        if let Some(contents) = report_output.remove(key) {
+            output.insert(key.clone(), contents);
+        }
+    }
+
+    let mut run_info = serde_json::Map::new();
+    run_info.insert(
+        "program_version".to_string(),
+        serde_json::Value::String(env!("CARGO_PKG_VERSION").to_string()),
+    );
+    run_info.insert(
+        "input_toml".to_string(),
+        serde_json::Value::String(metadata.raw_config.to_string()),
+    );
+    run_info.insert(
+        "working_directory".to_string(),
+        serde_json::Value::String(
+            std::env::current_dir()
+                .expect("Failed to retrieve current working directory")
+                .to_string_lossy()
+                .into_owned(),
+        ),
+    );
+    output.insert("run_info".to_string(), serde_json::Value::Object(run_info));
+
+    // Maintain the report order as defined in the config.
+    output.insert(
+        "report_order".to_string(),
+        serde_json::Value::Array(report_order),
+    );
+
     Ok(serde_json::to_string_pretty(&serde_json::Value::Object(
         output,
     ))?)

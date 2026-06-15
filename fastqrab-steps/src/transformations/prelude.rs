@@ -1,7 +1,7 @@
 pub(crate) use super::{
     FinalizeReportResult, FragmentEntry, FragmentEntryForCuckooFilter, InputInfo, OurCuckCooFilter,
-    PartialTransformation, Step, TagUsageInfo, TagUser, edits::get_bool_vec_from_tag,
-    reproducible_cuckoofilter,
+    PartialTransformation, ReportMetadata, Step, TagUsageInfo, TagUser,
+    edits::get_bool_vec_from_tag, reproducible_cuckoofilter,
 };
 pub(crate) use crate::config::{
     DenyName, PartialConfig, TagMetadata, ValidateSegment, ValidateTagLabel,

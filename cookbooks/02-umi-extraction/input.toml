@@ -22,5 +22,8 @@
     n = 8
 
 [output]
-    prefix = 'reference_output/cookbook-02'
-    format = "FASTQ"
+    prefix = "reference_output/cookbook-02"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

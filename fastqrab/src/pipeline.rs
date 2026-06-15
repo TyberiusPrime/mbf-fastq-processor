@@ -445,6 +445,13 @@ impl RunStage0 {
             .to_string();
         let output_ix_separator = parsed.get_ix_separator();
 
+        let report_metadata = std::sync::Arc::new(transformations::ReportMetadata {
+            report_labels: parsed.report_labels.clone(),
+            input_files: serde_json::to_string(&parsed.input)
+                .expect("input config should serialize to JSON")
+                .into(),
+            raw_config: parsed.raw_config.clone(),
+        });
         let input_info = transformations::InputInfo {
             segment_order: parsed.input.get_segment_order().clone(),
             barcodes_data: parsed.barcodes.clone(),
@@ -452,6 +459,7 @@ impl RunStage0 {
             initial_filter_capacity: None, // Filled after the first block.
             use_rapidgzip: parsed.input.options.use_rapidgzip,
             threading_configuration: parsed.threading_configuration.clone(),
+            report_metadata,
         };
         let mut demultiplex_infos: Vec<(usize, OptDemultiplex)> = Vec::new();
         let mut demultiplex_step_infos: Vec<DemultiplexStepInfo> = Vec::new();

@@ -50,5 +50,8 @@
     keep_or_remove = 'keep'
 
 [output]
-    prefix = 'reference_output/output'
-    format = "FASTQ"
+    prefix = "reference_output/output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

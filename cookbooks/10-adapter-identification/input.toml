@@ -23,6 +23,9 @@
 
 [output]
     prefix = 'reference_output/output'
-    report_html = true
-    report_json = true
-    format = 'None'
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputReport"
+    json = true
+    html = true

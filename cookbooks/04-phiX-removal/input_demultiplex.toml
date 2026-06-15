@@ -36,5 +36,8 @@
     output_unmatched = false
 
 [output]
-    prefix = 'reference_output_demultiplex/output'
-    format = "Fastq"
+    prefix = "reference_output_demultiplex/output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

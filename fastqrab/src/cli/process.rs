@@ -33,7 +33,8 @@ pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> 
             bail!("{pretty}");
         }
     };
-    let checked = parsed.check()?;
+    let mut checked = parsed.check()?;
+    checked.raw_config = std::sync::Arc::from(raw_config.as_str());
     if toml_file == Path::new("-") && crate::cli::config_uses_stdin_fastq(&checked.input.structured)
     {
         bail!(
