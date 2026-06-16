@@ -1,9 +1,10 @@
 use crate::transformations::prelude::*;
 use fastqrab_config::tpd_adapt_u8_from_byte_or_char;
 use fastqrab_io::CompressionFormat;
-use fastqrab_io::io::output::chunked_writer::{BamSinkOptions, read_bam_reference_sequences};
+use fastqrab_io::io::output::chunked_writer::{BamSinkOptions, SharedBamHeader};
 use std::cell::RefCell;
 use std::collections::HashSet;
+use std::path::PathBuf;
 use std::rc::Rc;
 use toml_pretty_deser::prelude::*;
 
@@ -235,7 +236,7 @@ pub struct OutputBAM {
     output_hash_compressed: bool,
 
     /// BAM-specific options (comment separator, tag exports, reference assignment).
-    #[tpd(nested)]
+    #[tpd(nested, alias = "options")]
     bam: Option<BamOutputOptions>, //todo: inline into main struct
 
     #[tpd(skip, default)]
@@ -341,15 +342,12 @@ impl VerifyIn<PartialConfig> for PartialOutputBAM {
 /// Only `comment_separation_char` is applied today; tag export / reference
 /// resolution are deferred (see the type-level note).
 fn declare_bam_options(comment_separation_char: u8) -> BamSinkOptions {
-    let mut opts = BamSinkOptions {
+    BamSinkOptions {
         comment_separation_char,
         tag_to_bam_tags: Vec::new(),
         tag_to_reference: None,
-        reference_sequences: Arc::new(Vec::new()),
-        shared_header: None,
-    };
-    opts.build_shared_header();
-    opts
+        header: SharedBamHeader::default(),
+    }
 }
 
 /// Resolve the full [`BamSinkOptions`] for an `OutputBAM` step at config-verify
@@ -370,6 +368,7 @@ pub(crate) fn resolve_output_bam(
     let mut tag_to_bam_tags: Vec<([u8; 2], String)> = Vec::new();
     let mut tag_to_reference: Option<String> = None;
     let mut reference_sequences: Vec<(String, usize)> = Vec::new();
+    let mut references_from_bam: Option<PathBuf> = None;
 
     if let Some(bam) = partial.bam.value.as_mut().and_then(|x| x.as_mut()) {
         if let Some(sep) = bam.comment_separation_char.as_ref() {
@@ -412,28 +411,27 @@ pub(crate) fn resolve_output_bam(
                 .and_then(|o| o.as_ref())
                 .cloned()
             {
-                match read_bam_reference_sequences(Path::new(&path)) {
-                    Ok(refs) => reference_sequences = refs,
-                    Err(e) => {
-                        tag_to_ref.references_from_bam.help = Some(format!("{e:#}"));
-                        tag_to_ref.references_from_bam.state =
-                            TomlValueState::new_validation_failed(
-                                "Could not read reference sequences from BAM file",
-                            );
-                    }
-                }
+                // Carry the path; the file is read lazily when the BAM writer is
+                // opened (see `BamSinkOptions::resolve_header`). Deferring the IO
+                // keeps `validate` filesystem-free.
+                references_from_bam = Some(PathBuf::from(path));
             }
         }
     }
 
-    let mut opts = BamSinkOptions {
+    // For the `from_bam` case the references are read (and the header built) on
+    // first writer creation; the barcodes case already has the references in
+    // hand. Either way the header is resolved once and shared across all sinks.
+    let header = match references_from_bam {
+        Some(path) => SharedBamHeader::from_bam(path),
+        None => SharedBamHeader::from_reference_sequences(Arc::new(reference_sequences)),
+    };
+    let opts = BamSinkOptions {
         comment_separation_char,
         tag_to_bam_tags,
         tag_to_reference,
-        reference_sequences: Arc::new(reference_sequences),
-        shared_header: None,
+        header,
     };
-    opts.build_shared_header();
     partial.resolved_bam_options = Some(Some(opts));
 }
 
@@ -552,15 +550,20 @@ impl TagUser for PartialTaggedVariant<PartialOutputBAM> {
                 }
                 if let Some(tag_name) = tag_to_ref.tag.as_ref() {
                     let name = TagLabel::Normal(tag_name.clone());
-                    used_tags.push(Some(UsedTag {
-                        name,
-                        accepted_tag_types: ANY_TAG_TYPE,
-                        toml_source: Rc::new(RefCell::new((
-                            &mut tag_to_ref.tag.state,
-                            &mut tag_to_ref.tag.help,
-                        ))),
-                        further_help: None,
-                    }));
+                    if !used_tags
+                        .iter()
+                        .any(|other| other.as_ref().map(|x| x.name == name).unwrap_or(false))
+                    {
+                        used_tags.push(Some(UsedTag {
+                            name,
+                            accepted_tag_types: ANY_TAG_TYPE,
+                            toml_source: Rc::new(RefCell::new((
+                                &mut tag_to_ref.tag.state,
+                                &mut tag_to_ref.tag.help,
+                            ))),
+                            further_help: None,
+                        }));
+                    }
                 }
             }
         }

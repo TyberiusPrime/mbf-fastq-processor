@@ -178,7 +178,7 @@ pub struct ReportMetadata {
 
 #[derive(Default, Debug)]
 pub struct TagUsageInfo<'a> {
-    pub used_tags: Vec<Option<UsedTag<'a>>>,
+    pub used_tags: Vec<Option<UsedTag<'a>>>, //an option as convenience to the declaring steps
     pub used_barcodes: HashSet<TagLabel>,
     pub removed_tags: RemovedTags<'a>,
     pub declared_tag: Option<DeclaredTag<'a>>,

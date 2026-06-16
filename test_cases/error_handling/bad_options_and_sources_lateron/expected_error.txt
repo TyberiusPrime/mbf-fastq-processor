@@ -8,5 +8,8 @@ Error 1/1
   ┆                │
   ┆                ╰────────────────── Unknown key.
 ──╯
-Hint: Did you mean: 'fasta_fake_quality', 'threads_per_segment', or 'read_comment_character'?
+Hint: Did you mean: 'read_comment_char' (='read_comment_character'), 'fasta_fake_quality', or 'threads_per_segment'?
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/input-section
+      Or run: `fastqrab template input-section` for more information.
+
 

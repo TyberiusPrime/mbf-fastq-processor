@@ -39,7 +39,7 @@ use std::fmt::Write as StringWrite;
 use std::io::{self, BufWriter, Write};
 use std::num::{NonZero, NonZeroUsize};
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use super::simulated_failure::{FailForTestWriter, SimulatedWriteFailure};
 use crate::ensure_output_destination_available;
@@ -371,20 +371,92 @@ pub struct BamSinkOptions {
     pub comment_separation_char: u8,
     pub tag_to_bam_tags: Vec<([u8; 2], String)>,
     pub tag_to_reference: Option<String>,
-    pub reference_sequences: Arc<Vec<(String, usize)>>,
-    /// Pre-built and shared across all demultiplexed sinks so that the O(N)
-    /// header construction happens exactly once, not once per output file.
-    pub shared_header: Option<Arc<noodles::sam::Header>>,
+    /// The BAM `@SQ` header, resolved once on first access and shared across all
+    /// sinks cloned from these options (see [`SharedBamHeader`]).
+    pub header: SharedBamHeader,
 }
 
-impl BamSinkOptions {
-    /// Build the SAM/BAM header from `reference_sequences` and cache it in
-    /// `shared_header`. Call this once before cloning the options for each
-    /// demultiplexed output so all sinks share the same Arc.
-    pub fn build_shared_header(&mut self) {
-        if self.shared_header.is_none() {
-            self.shared_header = Some(Arc::new(create_bam_header(&self.reference_sequences)));
+/// Where a [`SharedBamHeader`]'s reference sequences come from.
+#[derive(Debug)]
+enum BamHeaderSource {
+    /// References already known at config time (the `from_barcodes` case, or no
+    /// references at all).
+    Resolved(Arc<Vec<(String, usize)>>),
+    /// Read the `@SQ` lines from this BAM file on first access (the `from_bam`
+    /// case). Deferred so config validation stays filesystem-free: an unreadable
+    /// reference file surfaces when the pipeline runs, not when it validates.
+    FromBam(PathBuf),
+}
+
+/// A BAM `@SQ` header resolved lazily and shared across every demultiplexed
+/// sink of one `OutputBAM` step.
+///
+/// All those sinks clone the same `BamSinkOptions`, hence the same
+/// `SharedBamHeader` (a cheap `Arc` clone). The header — including any `from_bam`
+/// reference-file read — is computed on first access and cached, so the work
+/// (and the file read) happens exactly once no matter how many writers open.
+#[derive(Clone, Debug)]
+pub struct SharedBamHeader {
+    inner: Arc<SharedBamHeaderInner>,
+}
+
+#[derive(Debug)]
+struct SharedBamHeaderInner {
+    source: BamHeaderSource,
+    cached: Mutex<Option<Arc<noodles::sam::Header>>>,
+}
+
+impl Default for SharedBamHeader {
+    fn default() -> Self {
+        Self::from_reference_sequences(Arc::new(Vec::new()))
+    }
+}
+
+impl SharedBamHeader {
+    /// References already in hand; the header is built (once) from them.
+    #[must_use]
+    pub fn from_reference_sequences(reference_sequences: Arc<Vec<(String, usize)>>) -> Self {
+        Self::new(BamHeaderSource::Resolved(reference_sequences))
+    }
+
+    /// Reference sequences are read from the given BAM file's `@SQ` header on
+    /// first access.
+    #[must_use]
+    pub fn from_bam(path: PathBuf) -> Self {
+        Self::new(BamHeaderSource::FromBam(path))
+    }
+
+    fn new(source: BamHeaderSource) -> Self {
+        Self {
+            inner: Arc::new(SharedBamHeaderInner {
+                source,
+                cached: Mutex::new(None),
+            }),
         }
+    }
+
+    /// Return the shared header, building it (and reading the `from_bam` file)
+    /// on first access and caching the result for every later caller.
+    fn resolve(&self) -> Result<Arc<noodles::sam::Header>> {
+        let mut cached = self.inner.cached.lock().expect("BAM header mutex poisoned");
+        if let Some(header) = cached.as_ref() {
+            return Ok(header.clone());
+        }
+        let reference_sequences = match &self.inner.source {
+            BamHeaderSource::Resolved(refs) => refs.clone(),
+            BamHeaderSource::FromBam(path) => {
+                let refs = read_bam_reference_sequences(path).with_context(|| {
+                    format!(
+                        "Could not read reference sequences from BAM file: {}",
+                        path.display()
+                    )
+                })?;
+                Arc::new(refs)
+            }
+        };
+        let header = Arc::new(create_bam_header(&reference_sequences));
+        *cached = Some(header.clone());
+        Ok(header)
     }
 }
 
@@ -420,10 +492,7 @@ impl BamRecordSink {
             .build_from_writer(fail);
 
         let mut writer = noodles::bam::io::Writer::from(bgzf);
-        let header = options
-            .shared_header
-            .clone()
-            .unwrap_or_else(|| Arc::new(create_bam_header(&options.reference_sequences)));
+        let header = options.header.resolve()?;
         writer
             .write_header(&header)
             .context("Failed to write BAM header")?;
@@ -637,8 +706,9 @@ where
 
 /// Read the reference sequences (`@SQ` lines) from a BAM file header.
 ///
-/// Returns `(name, length)` pairs in header order. Used by the `OutputBAM`
-/// step to resolve `tag_to_reference.from_bam` at config time.
+/// Returns `(name, length)` pairs in header order. Used to resolve the
+/// `OutputBAM` step's `tag_to_reference.from_bam` lazily, when its writer is
+/// opened (see [`BamSinkOptions::resolve_header`]).
 pub fn read_bam_reference_sequences(path: &Path) -> Result<Vec<(String, usize)>> {
     let file = std::fs::File::open(path)
         .with_context(|| format!("Could not open BAM reference file: {}", path.display()))?;

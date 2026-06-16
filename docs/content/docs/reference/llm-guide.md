@@ -301,10 +301,10 @@ Alternative to separate read1/read2 files:
 ```toml
 # fragment - input format options
 [input.options]
-    fasta_fake_quality = 30           # TYPE: u8 (0-93), REQUIRED for FASTA input
+    fasta_fake_quality = 33           # TYPE: u8 (phred, 33-122), REQUIRED for FASTA input
     bam_include_mapped = true         # TYPE: bool, REQUIRED for BAM input
     bam_include_unmapped = true       # TYPE: bool, REQUIRED for BAM input
-    read_comment_char = ' '           # TYPE: char, DEFAULT: ' '
+    read_comment_character = ' '           # TYPE: char, DEFAULT: ' '
 ```
 
 ## Processing Steps

@@ -1040,7 +1040,7 @@
 ##   compression_level = 6   # (optional) BGZF level 0-9
 ##   chunksize = 1000000     # (optional) split into chunks of N molecules
 #    output_hash_compressed = false
-#    # [step.bam]            # BAM options: comment_separation_char, tags, tag_to_reference, merge_demultiplexed
+#    bam.tag_to_bam_tag  = { 'mytag' = 'XX'} # optional
 
 
 # ==== OutputReport ====

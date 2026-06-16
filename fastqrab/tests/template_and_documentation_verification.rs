@@ -191,6 +191,7 @@ const ACTIONS_REQUIRING_GENERIC_TAG: &[&str] = &[
     "Demultiplex",
     "ConvertRegionsToLength",
     "ConcatTags",
+    "OutputBAM",
 ];
 
 const ACTIONS_REQUIRING_TWO_TAGS: &[&str] = &["ConcatTags", "StoreTagInSequence"];
@@ -215,16 +216,28 @@ fn prep_config_to_parse(extracted_section: &str) -> String {
     // (see below) so they sit after every transformation in the pipeline.
     let request_report = has_report_step;
 
-    let mut config = r#"
+    // Only synthesize the sections the fragment doesn't already provide. A fragment
+    // that shows just `[input]` or just `[output]` would otherwise get a duplicate
+    // table when we prepend the scaffold.
+    let mut config = String::new();
+    if !has_input_section {
+        config.push_str(
+            r#"
 [input]
 read1 = "test_r1.fastq"
 read2 = "test_r2.fastq"
-
+"#,
+        );
+    }
+    if !has_output_section {
+        config.push_str(
+            r#"
 [output]
 prefix = "output"
-
-"#
-    .to_string();
+"#,
+        );
+    }
+    config.push('\n');
 
     let actions = collect_actions(extracted_section);
     let needs_numeric_tag = actions
@@ -1048,11 +1061,12 @@ fn extract_transformation_from_filename(file_path: &Path) -> Option<String> {
 #[expect(clippy::type_complexity, reason = "don't care")]
 fn extract_toml_from_markdown(
     file_path: &Path,
-) -> Result<Option<Vec<(String, usize)>>, Box<dyn std::error::Error>> {
+) -> Result<Vec<(String, usize)>, Box<dyn std::error::Error>> {
+    // Note: `not-a-transformation: true` only opts out of the transformation-specific
+    // checks (action matching, target patterns, schema field presence) in the caller.
+    // TOML blocks are still extracted and validated so e.g. `[output]` examples can't
+    // drift away from the schema unnoticed.
     let content = fs::read_to_string(file_path)?;
-    if content.contains("not-a-transformation: true") {
-        return Ok(None);
-    }
 
     let mut toml_blocks = Vec::new();
     let mut in_toml_block = false;
@@ -1080,7 +1094,7 @@ fn extract_toml_from_markdown(
         }
     }
 
-    Ok(Some(toml_blocks))
+    Ok(toml_blocks)
 }
 
 #[test]
@@ -1155,9 +1169,15 @@ fn test_documentation_toml_examples_parse() {
             }
         };
 
+        // `not-a-transformation: true` marks reference pages that document a config
+        // table (e.g. `[output]`) rather than a transformation step. It only opts out
+        // of the transformation-specific checks below; TOML blocks are still parsed and
+        // validated.
+        let is_not_a_transformation = markdown_content.contains("not-a-transformation: true");
+
         // Check that all struct fields are documented in the markdown
         if let Some(transformation) = &transformation
-            && !markdown_content.contains("not-a-transformation: true")
+            && !is_not_a_transformation
         {
             let fields_with_aliases = extract_schema_fields_with_aliases(transformation);
             for (field, aliases) in &fields_with_aliases {
@@ -1176,8 +1196,12 @@ fn test_documentation_toml_examples_parse() {
         }
 
         match extract_toml_from_markdown(doc_file) {
-            Ok(Some(toml_blocks)) => {
+            Ok(toml_blocks) => {
+                // Transformation reference pages must ship at least one example.
+                // Non-transformation pages (prose-only reference like threading.md) need
+                // not, but any blocks they do contain are still validated below.
                 if toml_blocks.is_empty()
+                    && !is_not_a_transformation
                     && !ignored.contains(&doc_file.file_name().and_then(|o| o.to_str()).unwrap())
                     && !doc_file.components().any(|c| c.as_os_str() == "concepts")
                 {
@@ -1197,8 +1221,12 @@ fn test_documentation_toml_examples_parse() {
                         doc_file.components().any(|c| c.as_os_str() == "concepts");
 
                     // For concept files, skip the specific transformation matching since they contain examples
-                    // using multiple transformations, but still validate TOML parsing
-                    if let Some(transformation) = &transformation {
+                    // using multiple transformations, but still validate TOML parsing.
+                    // Likewise skip it for `not-a-transformation` pages, whose blocks
+                    // configure a table rather than a step.
+                    if let Some(transformation) = &transformation
+                        && !is_not_a_transformation
+                    {
                         if !is_concept_file
                             && !toml_block.contains(&format!("action = \"{transformation}\""))
                             && !toml_block.contains("[barcodes.")
@@ -1262,9 +1290,6 @@ fn test_documentation_toml_examples_parse() {
                         }
                     }
                 }
-            }
-            Ok(None) => {
-                // had not-a-transformation: true
             }
             Err(e) => {
                 failed_files.push(format!(

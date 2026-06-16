@@ -11,8 +11,10 @@ At least one segment must be declared.
 ```toml
 [input]
     read1 = ['fileA_1.fastq', 'fileB_1.fastq.gz', 'fileC_1.fastq.zst'] # required: one or more paths
-    read2 = "fileA_2.fastq.gz"                                      # optional
-    index1 = ['index1_A.fastq.gz']                                   # optional
+    # read2 = "fileA_2.fastq.gz"                                      # optional
+    # index1 = ['index1_A.fastq.gz']                                   # optional
+    # note that if using multiple files per segment, 
+    # all segments must have the same number of files
     # interleaved = [...]                                            # optional, see below
 ```
 
@@ -136,7 +138,7 @@ These knobs are required when the corresponding file types are present and ignor
     fasta_fake_quality = 'a'      # required for FASTA inputs: synthetic Phred score to apply to every base. Used verbatim without further shifting.
     bam_include_mapped = true     # required for BAM inputs: include reads with a reference assignment
     bam_include_unmapped = true   # required for BAM inputs: include reads without a reference assignment
-	read_comment_char = ' '       # defaults to ' '. The character seperating read name from the 'read comment'.
+	read_comment_character = ' '       # defaults to ' '. The character seperating read name from the 'read comment'.
 ```
 
 - `use use_rapidgzip` - whether to decompress gzip with [rapidgzip](https://github.com/mxmlnkn/rapidgzip). 
