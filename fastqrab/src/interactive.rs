@@ -305,7 +305,6 @@ fn modify_output_for_interactive(doc: &mut DocumentMut) {
     // Create a minimal output configuration
     let mut output_table = Table::new();
     output_table.insert("prefix", value("interactive_output"));
-    output_table.insert("format", value("none"));
 
     // If there are Report steps, enable report_json
     if has_report_step {
@@ -456,7 +455,6 @@ action = "Report"
 
 [output]
 prefix = "out"
-format = "None"
 "#;
         let mut doc = parse_doc(toml);
         let config = make_config(5);
@@ -495,7 +493,6 @@ read1 = ["a.fq"]
 
 [output]
 prefix = "out"
-format = "None"
 "#;
         let mut doc = parse_doc(toml);
         let config = make_config(10);
@@ -528,15 +525,15 @@ n = 10
 
 [output]
 prefix = "original"
-format = "Fastq"
-compression = "Gzip"
+[[step]]
+    action = 'outputfastq'
+    compression = "Gzip"
 "#;
         let mut doc = parse_doc(toml);
         modify_output_for_interactive(&mut doc);
 
         let output = doc["output"].as_table().expect("output table");
         assert_eq!(output["prefix"].as_str(), Some("interactive_output"));
-        assert_eq!(output["format"].as_str(), Some("none"));
         // report_json should NOT be set when there's no Report step
         assert!(output.get("report_json").is_none());
     }
@@ -552,7 +549,6 @@ action = "Report"
 
 [output]
 prefix = "out"
-format = "None"
 "#;
         let mut doc = parse_doc(toml);
         modify_output_for_interactive(&mut doc);
@@ -646,8 +642,9 @@ action = "Report"
 
 [output]
 prefix = "original"
-format = "Fastq"
-compression = "Gzip"
+[[step]]
+    action = 'outputfastq'
+    compression = "Gzip"
 "#;
         let mut doc = parse_doc(toml);
         let toml_dir = PathBuf::from("/some/dir");
@@ -664,13 +661,12 @@ compression = "Gzip"
             .expect("steps")
             .iter()
             .collect();
-        assert_eq!(steps.len(), 4);
+        assert_eq!(steps.len(), 5);
         assert_eq!(steps[0]["action"].as_str(), Some("Head"));
-        assert_eq!(steps[3]["action"].as_str(), Some("Inspect"));
+        assert_eq!(steps[4]["action"].as_str(), Some("Inspect"));
 
         // Output overridden, report_json set because of Report step
         assert_eq!(doc["output"]["prefix"].as_str(), Some("interactive_output"));
-        assert_eq!(doc["output"]["format"].as_str(), Some("none"));
         assert_eq!(doc["output"]["report_json"].as_bool(), Some(true));
     }
 

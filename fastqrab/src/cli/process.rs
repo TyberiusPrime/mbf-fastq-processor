@@ -43,28 +43,35 @@ pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> 
             fastqrab_io::STDIN_MAGIC_PATH
         );
     }
-    let marker_prefix = checked
-        .output
-        .as_ref()
-        .expect("config.check() ensures output is present")
-        .prefix
-        .clone();
-    let marker = OutputRunMarker::create(&output_directory, &marker_prefix)?;
-    let allow_overwrite = allow_overwrite || marker.was_preexisting();
+    let (allow_overwrite, marker) = if let Some(output) = checked.output.as_ref() {
+        let marker_prefix = output.prefix.clone();
+        let marker = OutputRunMarker::create(&output_directory, &marker_prefix)?;
+        (allow_overwrite || marker.was_preexisting(), Some(marker))
+    } else {
+        assert!(
+            checked.benchmark.is_some(),
+            "No output -> expected benchmark"
+        );
+        (false, None)
+    };
 
     let res = inner_run(checked, output_directory.as_ref(), allow_overwrite);
 
-    match res {
-        Ok(()) => {
-            marker.mark_complete()?;
-            Ok(())
-        }
-        Err(e) => {
-            if format!("{e:?}").contains("already exists") {
+    if let Some(marker) = marker {
+        match res {
+            Ok(()) => {
                 marker.mark_complete()?;
+                Ok(())
             }
-            Err(e)
+            Err(e) => {
+                if format!("{e:?}").contains("already exists") {
+                    marker.mark_complete()?;
+                }
+                Err(e)
+            }
         }
+    } else {
+        res
     }
 }
 

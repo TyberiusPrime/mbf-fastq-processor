@@ -374,7 +374,7 @@ fn test_interactive_processes_file_on_first_run() {
     .unwrap();
     std::fs::write(
         dir.path().join("config.toml"),
-        "[input]\nread1 = \"input.fq\"\n\n[output]\nprefix = \"out\"\nformat = \"None\"\n",
+        "[input]\nread1 = \"input.fq\"\n\n[output]\nprefix = \"out\"\n",
     )
     .unwrap();
 
@@ -433,7 +433,7 @@ fn test_interactive_ctrl_c_removes_temp_dir() {
     .unwrap();
     std::fs::write(
         dir.path().join("config.toml"),
-        "[input]\nread1 = \"input.fq\"\n\n[output]\nprefix = \"out\"\nformat = \"None\"\n",
+        "[input]\nread1 = \"input.fq\"\n\n[output]\nprefix = \"out\"\n",
     )
     .unwrap();
 
@@ -734,7 +734,12 @@ count = true
 
 [output]
 prefix = 'output'
-report_html = true
+
+[[step]]
+    action ='OutputFastQ'
+[[step]]
+    action = 'OutputReport'
+    html = true
 "
     )
     .unwrap();
@@ -780,13 +785,17 @@ read_1 = 'nonexistent1.fq'
 read_2 = 'nonexistent2.fq'
 
 [[step]]
-action = 'Report'
-name = 'my_report'
-count = true
+    action = 'Report'
+    name = 'my_report'
+    count = true
 
 [output]
-prefix = 'output'
-report_html = true
+    prefix = 'output'
+[[step]]
+    action = 'outputfastq'
+[[step]]
+    action = 'outputreport'
+    html = true
 "
     )
     .unwrap();
@@ -838,6 +847,9 @@ n = 2
 
 [output]
 prefix = 'output'
+
+[[step]]
+    action = 'outputfastq'
 "
     )
     .unwrap();
@@ -853,7 +865,7 @@ prefix = 'output'
 
     assert!(
         stdout.contains("✓ Configuration is valid (with warnings)"),
-        "Expected success with warnings, got: {stdout}"
+        "Expected success with warnings, got: {stdout} stderr: {stderr}"
     );
     assert!(
         stderr.contains("Warning: Input file not found: nonexistent_interleaved.fq"),
@@ -884,6 +896,9 @@ n = 2
 
 [output]
 prefix = 'output'
+
+[[step]]
+    action = 'output-fastq'
 "
     )
     .unwrap();
@@ -934,6 +949,9 @@ n = 2
 
 [output]
 prefix = 'output'
+
+[[step]]
+    action = 'outputFASTQ'
 "
     )
     .unwrap();
@@ -980,6 +998,9 @@ n = 2
 
 [output]
 prefix = 'output'
+
+[[step]]
+    action = 'output-fastq'
 "
     )
     .unwrap();
@@ -1023,6 +1044,8 @@ n = 2
 
 [output]
 prefix = 'output'
+[[step]]
+    action = 'output-fastq'
 ";
 
     let mut child = std::process::Command::new(get_bin_path())
@@ -1074,6 +1097,8 @@ name = 'test'
 
 [output]
 prefix = 'output'
+[[step]]
+    action = 'outputfastq'
 "
     )
     .unwrap();
@@ -1122,6 +1147,8 @@ block_size = 3
 
 [output]
 prefix = 'output'
+[[step]]
+    action = 'outputfastq'
 "
     )
     .unwrap();
@@ -1201,6 +1228,8 @@ fn test_validate_command_two_autodetect_toml() {
 seq = 'test.fq'
 [output]
     prefix = 'out'
+    [[step]]
+        action = 'output_fastq'
 "
     )
     .unwrap();
@@ -1212,6 +1241,8 @@ seq = 'test.fq'
 seq = 'test.fq'
 [output]
     prefix = 'out'
+[[step]]
+    action ='outputfastq'
 "
     )
     .unwrap();
@@ -1365,6 +1396,8 @@ interleaved  = ['read1','read2']
 
 [output]
     prefix = 'output'
+[[step]] 
+    action = 'outputfastq'
 "
     )
     .unwrap();
@@ -1479,10 +1512,16 @@ name = 'test_report'
 count = true
 
 [output]
-prefix = 'output'
-report_json = true
-report_html = true
-report_timing = true
+    prefix = 'output'
+    # report_timing = true
+
+[[step]]
+    action = 'outputreport'
+    json = true
+    html = true
+
+[[step]]
+    action ='OutputFastQ'
 "
     )
     .unwrap();
@@ -1560,6 +1599,8 @@ n = 1
 
 [output]
 prefix = 'output'
+[[step]]
+    action = 'OutputFASTQ'
 "
     )
     .unwrap();
@@ -1612,6 +1653,8 @@ n = 1
 
 [output]
 prefix = 'output'
+[[step]]
+    action = 'OutputFASTQ'
 "
     )
     .unwrap();
@@ -1661,6 +1704,8 @@ n = 1
 
 [output]
 prefix = 'another_output/output'
+[[step]]
+    action = 'OutputFASTQ'
 "
     )
     .unwrap();
@@ -1711,6 +1756,8 @@ n = 1
 
 [output]
 prefix = 'output'
+[[step]]
+    action = 'OutputFASTQ'
 "
     )
     .unwrap();
@@ -1771,6 +1818,8 @@ read1 = 'input.fq'
 
 [output]
 prefix = 'output1'
+[[step]]
+    action = 'OutputFASTQ'
 "
     )
     .unwrap();
@@ -1784,6 +1833,8 @@ read1 = 'input.fq'
 
 [output]
 prefix = 'output2'
+[[step]]
+    action = 'OutputFASTQ'
 "
     )
     .unwrap();
@@ -2303,7 +2354,11 @@ fn test_verify_command_expected_error_regex() {
 read1 = 23
 
 [output]
-prefix = 'output'"
+prefix = 'output'
+
+[[step]]
+    action = 'OutputFASTQ'
+"
     )
     .unwrap();
 
@@ -2349,7 +2404,11 @@ action = 'Head'
 n = 1
 
 [output]
-prefix = 'output'"
+prefix = 'output'
+
+[[step]]
+    action = 'OutputFASTQ'
+"
     )
     .unwrap();
 
@@ -2391,7 +2450,10 @@ fn test_verify_command_wrong_error_message() {
 read1 = 23
 
 [output]
-prefix = 'output'"
+prefix = 'output'
+[[step]]
+    action = 'OutputFASTQ'
+    "
     )
     .unwrap();
 
@@ -2433,7 +2495,10 @@ fn test_verify_command_runtime_failure_but_validation_expected() {
 read1 = 'missing.txt'
 
 [output]
-prefix = 'output'"
+prefix = 'output'
+[[step]]
+    action = 'OutputFASTQ'
+    "
     )
     .unwrap();
 
@@ -2475,7 +2540,10 @@ fn test_verify_command_validation_failure_but_runtime_expected() {
 read1 = 23
 
 [output]
-prefix = 'output'"
+prefix = 'output'
+[[step]]
+    action = 'OutputFASTQ'
+"
     )
     .unwrap();
 
@@ -2517,7 +2585,10 @@ fn test_verify_command_expected_runtime_error_exact() {
 read1 = 'missing_file.fq'
 
 [output]
-prefix = 'output'"
+prefix = 'output'
+[[step]]
+    action = 'OutputFASTQ'
+    "
     )
     .unwrap();
 
@@ -2560,7 +2631,10 @@ fn test_verify_command_expected_runtime_error_regex() {
 read1 = 'nonexistent_file.fq'
 
 [output]
-prefix = 'output'"
+prefix = 'output'
+[[step]]
+    action = 'OutputFASTQ'
+"
     )
     .unwrap();
 
@@ -2610,7 +2684,10 @@ action = 'Head'
 n = 1
 
 [output]
-prefix = 'output'"
+prefix = 'output'
+[[step]]
+    action = 'OutputFASTQ'
+"
     )
     .unwrap();
 
@@ -2656,7 +2733,10 @@ fn test_verify_command_wrong_runtime_error_message() {
 read1 = 'missing_file.fq'
 
 [output]
-prefix = 'output'"
+prefix = 'output'
+[[step]]
+    action = 'OutputFASTQ'
+"
     )
     .unwrap();
 
@@ -2702,7 +2782,10 @@ fn test_verify_command_both_error_and_runtime_error() {
 read1 = 'missing_file.fq'
 
 [output]
-prefix = 'output'"
+prefix = 'output'
+[[step]]
+    action = 'OutputFASTQ'
+"
     )
     .unwrap();
 
@@ -2769,8 +2852,13 @@ n = 1
 
 [output]
     prefix = 'output'
-    report_json = true
-    report_html = true
+[[step]]
+    action = 'OutputFASTQ'
+
+[[step]]
+    action = 'OutputReport'
+    json = true
+    html = true
 "
     )
     .unwrap();
@@ -2945,6 +3033,8 @@ fn test_only_list_one_case_variant_on_error() {
 
 [output]
     prefix = 'output'
+[[step]]
+    action = 'OutputFastQ'
 "
     )
     .unwrap();
@@ -2977,8 +3067,8 @@ fn test_output_already_exists() {
         r"[input]
     read1 = 'test1.fq'
 
-[output]
-    prefix = 'output'
+    [output]
+        prefix = 'output'
 
     [[step]]
         action ='OutputFastQ'
@@ -3065,6 +3155,10 @@ n = 1
 
 [output]
 prefix = 'output'
+
+[[step]]
+    action ='OutputFastQ'
+
 ",
     )
     .unwrap();
@@ -3124,6 +3218,9 @@ n = 1
 
 [output]
 prefix = 'output'
+
+[[step]]
+    action ='OutputFastQ'
 ",
     )
     .unwrap();
@@ -3218,6 +3315,8 @@ n = 1
 
 [output]
 prefix = 'output'
+[[step]]
+    action = 'OutputFASTQ'
 ",
     )
     .unwrap();
@@ -3271,6 +3370,8 @@ n = 1
 
 [output]
 prefix = 'output'
+[[step]]
+    action = 'outputfastq'
 ",
     )
     .unwrap();
@@ -3374,6 +3475,9 @@ n = 1
 
 [output]
 prefix = 'output'
+
+[[step]]
+    action ='OutputFastQ'
 ",
     )
     .unwrap();
@@ -3692,7 +3796,9 @@ n = 1
 
 [output]
 prefix = 'output'
-stdout = true
+[[step]]
+    action = 'OutputFastQ'
+    stdout = true
 ",
     )
     .unwrap();
@@ -3734,7 +3840,10 @@ n = 1
 
 [output]
 prefix = 'output'
-stdout = true
+
+[[step]]
+    action ='OutputFastQ'
+    stdout = true
 ",
     )
     .unwrap();
@@ -3776,6 +3885,8 @@ read1 = 'input.fq'
 
 [output]
 prefix = 'output'
+[[step]]
+    action = 'outputfastq'
 ",
     )
     .unwrap();
@@ -3820,6 +3931,9 @@ fn test_verify_compressed_size_difference_too_large() {
     n = 5
 [output]
     prefix = 'output'
+
+[[step]]
+    action = 'outputfastq'
     compression = 'gzip'
     compression_level = 9
 ",
@@ -3845,6 +3959,9 @@ fn test_verify_compressed_size_difference_too_large() {
     n = 5
 [output]
     prefix = 'output'
+
+[[step]]
+    action = 'outputfastq'
     compression = 'gzip'
     compression_level = 1
 ",
@@ -3902,6 +4019,9 @@ fn test_interactive() {
             read1 = 'input_read1.fq'
         [output]
             prefix = 'output'
+
+        [[step]]
+            action = 'outputfastq'
 ",
     )
     .unwrap();
@@ -3938,6 +4058,9 @@ fn test_interactive() {
                 qual = 'BB'
         [output]
             prefix = 'output'
+
+        [[step]]
+            action = 'outputfastq'
 ",
     )
     .unwrap();
@@ -3954,6 +4077,9 @@ fn test_interactive() {
                 # qual = 'BB'
         [output]
             prefix = 'output'
+
+        [[step]]
+            action = 'outputfastq'
 ",
     )
     .unwrap();
@@ -3968,9 +4094,19 @@ fn test_interactive() {
     fs::write(
         &config,
         format!(
-            "[input]\n    read1 = '{abs_input}'\n    interleaved = ['read1', 'read2']\n\
-             [[step]]\n    action = 'Report'\n    name = 'my_report'\n    count = true\n\
-             [output]\n    prefix = 'output'\n"
+            "[input]
+     read1 = '{abs_input}'
+     interleaved = ['read1', 'read2']
+
+     [[step]]
+        action = 'Report'
+        name = 'my_report'
+        count = true
+     [output]
+        prefix = 'output'
+     [[step]]
+           action = 'outputfastq'
+"
         ),
     )
     .unwrap();
@@ -4120,6 +4256,9 @@ n = 1
 
 [output]
 prefix = 'output'
+
+[[step]]
+    action = 'outputfastq'
 ";
 
 const MINIMAL_FASTQ: &str = "@read1\nACGT\n+\nIIII\n@read2\nTTTT\n+\nHHHH\n";
@@ -4218,7 +4357,7 @@ fn test_validate_config_from_stdin_invalid() {
 
 #[test]
 fn test_process_stdin_config_incompatible_with_stdin_fastq() {
-    let stdin_config = "[input]\nread1 = '--stdin--'\n\n[[step]]\naction = 'Head'\nn = 1\n\n[output]\nprefix = 'output'\n";
+    let stdin_config = "[input]\nread1 = '--stdin--'\n\n[[step]]\naction = 'Head'\nn = 1\n\n[output]\nprefix = 'output'\n[[step]]\naction=\"outputfastq\"\n";
 
     let mut cmd = std::process::Command::new(get_bin_path())
         .arg("process")

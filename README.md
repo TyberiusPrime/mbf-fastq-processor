@@ -185,12 +185,14 @@ Here's a brief example:
 [output]
     #generates output_1.fq and output_2.fq. For index reads see below.
     prefix = "output"
+[[step]]
+    action = 'OutputFASTQ' 
     # uncompressed. Suffix is determined from format
-    format = "FASTQ"
     compression = "Raw"
-
-    report_json = true
-    report_html = true
+[[step]]
+    action = 'OutputReport'
+    json = true
+    html = true
 ```
 
 ### Canonical template
