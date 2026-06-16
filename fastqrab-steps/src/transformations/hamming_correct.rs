@@ -346,12 +346,12 @@ impl TagUser for PartialTaggedVariant<PartialHammingCorrect> {
         }
     }
 
-    fn declare_output_files(&self) -> Vec<OutputDeclaration> {
+    fn declare_output_files(&self) -> Option<Vec<OutputDeclaration>> {
         if let Some(inner) = self.toml_value.as_ref() {
             if inner.on_tie_dump_counts.as_ref().is_some_and(|x| *x)
                 && let Some(in_label) = inner.in_label.as_ref()
             {
-                return vec![OutputDeclaration {
+                return Some(vec![OutputDeclaration {
                     id: "counts".to_string(),
                     target: WriteTargetConfig::new(
                         vec![format!("{}.counts", in_label)],
@@ -364,10 +364,10 @@ impl TagUser for PartialTaggedVariant<PartialHammingCorrect> {
                     bam_options: None,
                     singleton: true,
                     span: inner.on_tie_dump_counts.span(),
-                }];
+                }]);
             }
-        }
-        return vec![];
+        } 
+        None //doesn't count as an output job if unconfigured
     }
 }
 

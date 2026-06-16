@@ -12,7 +12,5 @@
 [output]
     prefix = "output"
 
-# --- Output steps (migrated from [output]) ---
-[[step]]
-    action = "OutputFASTQ"
-    output = []
+
+# no outputfastq step!

@@ -3,7 +3,8 @@ use fastqrab_io::CompressionFormat;
 
 use super::{
     RecordOutputDeclSpec, RecordOutputState, build_record_declarations, collect_segment_list,
-    sink_config, verify_record_targets,
+    sink_config, verify_chunk_size, verify_record_targets, verify_suffix,
+    validate_compression_level_u8,
 };
 
 /// Write reads to FASTQ file(s) as a pipeline step.
@@ -27,7 +28,7 @@ pub struct OutputFASTQ {
         dead_code,
         reason = "read in declare_output_files via the partial config"
     )]
-    compression: CompressionFormat,
+    pub compression: CompressionFormat,
     #[tpd(default)]
     #[expect(
         dead_code,
@@ -99,42 +100,14 @@ impl VerifyIn<PartialConfig> for PartialOutputFASTQ {
             }
         });
         if let Some(Some(_)) = self.compression_level.value {
-            crate::config::validate_compression_level_u8(
+            validate_compression_level_u8(
                 &self.compression,
                 &mut self.compression_level,
-                &FORMAT,
             );
         }
-        self.chunksize.verify(|chunk_size| {
-            if let Some(chunk_size) = chunk_size.as_ref() {
-                if *chunk_size == 0 {
-                    return Err(ValidationFailure::new(
-                        "Must not be 0.",
-                        Some(
-                            "'Chunksize' must be greater than zero when specified. \
-                            Increase or remove setting.",
-                        ),
-                    ));
-                } else if let Some(true) = self.stdout.as_ref() {
-                    return Err(ValidationFailure::new(
-                        "Invalid when stdout = true",
-                        Some("Either remove 'chunksize' or set 'stdout' to false"),
-                    ));
-                }
-            }
-            Ok(())
-        });
-        self.suffix.verify(|suffix| {
-            if let Some(suffix) = suffix.as_ref() {
-                if suffix.is_empty() {
-                    return Err(ValidationFailure::new(
-                        "Invalid value",
-                        Some("Must not be empty."),
-                    ));
-                }
-            }
-            Ok(())
-        });
+        self.chunksize
+            .verify(|chunk_size| verify_chunk_size(chunk_size, &self.stdout));
+        self.suffix.verify(verify_suffix);
         verify_record_targets(
             parent,
             &mut self.output,
@@ -147,9 +120,9 @@ impl VerifyIn<PartialConfig> for PartialOutputFASTQ {
 }
 
 impl TagUser for PartialTaggedVariant<PartialOutputFASTQ> {
-    fn declare_output_files(&self) -> Vec<OutputDeclaration> {
+    fn declare_output_files(&self) -> Option<Vec<OutputDeclaration>> {
         if let Some(inner) = self.toml_value.as_ref() {
-            declare_text_output(
+            Some(declare_text_output(
                 FORMAT,
                 inner.suffix.as_ref().and_then(|x| x.as_ref()),
                 inner.compression.as_ref().copied().unwrap_or_default(),
@@ -158,18 +131,23 @@ impl TagUser for PartialTaggedVariant<PartialOutputFASTQ> {
                     .as_ref()
                     .and_then(|x| x.as_ref())
                     .copied(),
-                inner.compression_threads.as_ref().copied().unwrap_or(1),
-                *inner.output_hash_uncompressed.as_ref().expect("parent was ok"),
-                *inner.output_hash_compressed.as_ref().expect("parent was ok"),
+                *inner
+                    .output_hash_uncompressed
+                    .as_ref()
+                    .expect("parent was ok"),
+                *inner
+                    .output_hash_compressed
+                    .as_ref()
+                    .expect("parent was ok"),
                 &collect_segment_list(&inner.output),
                 interleave_present(&inner.interleave)
                     .then(|| collect_segment_list(&inner.interleave)),
                 *inner.stdout.as_ref().expect("parent was ok"),
                 inner.chunksize.as_ref().and_then(|x| x.as_ref()).copied(),
                 self.toml_value.span(),
-            )
+            ))
         } else {
-            Vec::new()
+            Some(vec![]) //there should be output files, but we can't name them.
         }
     }
 }
@@ -239,7 +217,6 @@ pub(super) fn declare_text_output(
     suffix_override: Option<&String>,
     compression: CompressionFormat,
     compression_level: Option<u8>,
-    compression_threads: usize,
     hash_uncompressed: bool,
     hash_compressed: bool,
     segments: &[String],
@@ -257,7 +234,6 @@ pub(super) fn declare_text_output(
         sink_config: sink_config(
             compression,
             compression_level,
-            compression_threads,
             hash_uncompressed,
             hash_compressed,
         ),

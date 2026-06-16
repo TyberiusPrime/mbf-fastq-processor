@@ -279,7 +279,6 @@ impl<W: Write + Send + 'static> Write for CompressionLayer<W> {
 pub struct SinkConfig {
     pub compression: CompressionFormat,
     pub compression_level: Option<u8>,
-    pub compression_threads: Option<NonZeroUsize>,
     pub hash_uncompressed: bool,
     pub hash_compressed: bool,
     pub simulated_failure: Option<SimulatedWriteFailure>,
@@ -291,7 +290,7 @@ impl SinkConfig {
         Self {
             compression: CompressionFormat::Uncompressed,
             compression_level: None,
-            compression_threads: None,
+            //compression_threads: None,
             hash_uncompressed: false,
             hash_compressed: false,
             simulated_failure: None,
@@ -322,16 +321,16 @@ impl std::fmt::Debug for TextRecordSink {
 impl TextRecordSink {
     /// # Panics
     /// Doesn't.
-    pub fn new(sink: DataSink, config: &SinkConfig) -> Result<Self> {
+    pub fn new(sink: DataSink, config: &SinkConfig, 
+        compression_threads: NonZero<usize>
+    ) -> Result<Self> {
         let buf = BufWriter::new(sink);
         let compressed_hash = HashLayer::new(buf, config.hash_compressed);
         let compress = CompressionLayer::new(
             compressed_hash,
             config.compression,
             config.compression_level,
-            config
-                .compression_threads
-                .unwrap_or(NonZeroUsize::new(1).expect("can not fail")),
+            compression_threads,
         );
         let fail = FailForTestLayer::new(compress, config.simulated_failure.clone());
         let plain_hash = HashLayer::new(fail, config.hash_uncompressed);
@@ -730,6 +729,11 @@ impl WriteTargetConfig {
             })
         }
     }
+
+    #[must_use]
+    pub fn is_stdout(&self) -> bool {
+        matches!(self, WriteTargetConfig::Stdout)
+    }
 }
 
 /// Everything a step needs to tell the pipeline about one output file it wants.
@@ -901,7 +905,7 @@ pub struct ChunkedRecordWriter {
     sink_config: SinkConfig,
     chunk_policy: ChunkPolicy,
     bam_options: Option<BamSinkOptions>,
-    bam_thread_count: NonZero<usize>,
+    output_thread_count: NonZero<usize>,
     allow_overwrite: bool,
 
     /// Bytes written at the top of every chunk. Set via [`Self::set_header`].
@@ -976,7 +980,7 @@ impl ChunkedRecordWriter {
             sink_config,
             chunk_policy,
             bam_options,
-            bam_thread_count,
+            output_thread_count: bam_thread_count,
             allow_overwrite,
             header: None,
             active: ActiveSink::Idle,
@@ -1116,7 +1120,7 @@ impl ChunkedRecordWriter {
         };
         self.active = match self.format {
             FileFormat::Fastq | FileFormat::Fasta | FileFormat::Text => {
-                ActiveSink::Text(TextRecordSink::new(sink, &self.sink_config)?)
+                ActiveSink::Text(TextRecordSink::new(sink, &self.sink_config, self.output_thread_count)?)
             }
             FileFormat::Bam => {
                 let opts = self
@@ -1127,7 +1131,7 @@ impl ChunkedRecordWriter {
                     sink,
                     &self.sink_config,
                     opts,
-                    self.bam_thread_count,
+                    self.output_thread_count,
                 )?) //cov:excl-line
             }
             FileFormat::None => unreachable!("Cannot open ChunkedRecordWriter with format None"), //cov:excl-line

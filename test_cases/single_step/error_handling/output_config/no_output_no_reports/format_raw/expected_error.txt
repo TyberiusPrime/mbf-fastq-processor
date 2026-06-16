@@ -1,1 +1,19 @@
-No output files and no reports requested. Nothing to do.
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+ 9 │ [[step]]
+10 │     action = "OutputFASTQ"
+   ┆              ──────┬──────
+   ┆                    │
+   ┆                    ╰─────── In this step
+11 │     output = []
+   ┆              ─┬
+   ┆               │
+   ┆               ╰─ Add segments here (or at `interleave =`) or remove 'output = ...`
+───╯
+Hint: Either add segments to `output` or to `interleave`, or remove both options to get the default behaviour
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/OutputFASTQ
+      Or run: `fastqrab template OutputFASTQ` for more information.
+
+

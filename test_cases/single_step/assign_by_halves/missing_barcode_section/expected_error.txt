@@ -1,16 +1,34 @@
+Error Details ==
+Error 1/2
    ╭─config.toml
    ┆
-17 │ [[step]]
-18 │     action = 'AssignByHalves'
+24 │ [barcodes.probez]
+25 │     AAAAAAAAAAAAAAAAAAAACCCCCGGGGGTTTTTTTTTTTTTTTTTTTT = 'probe1'
+26 │     TTTTTTTTTTTTTTTTTTTTGGGGGCCCCCAAAAAAAAAAAAAAAAAAAA = 'probe2'
+   ┆                                                                  ┬
+   ┆                                                                  │
+   ┆                                                                  ╰─ Barcode section not referenced by any step
+───╯
+Hint: Add a step that uses this barcode section, use it in `output.bam.references_from_barcodes`, or remove it.
+
+Error 2/2
+   ╭─config.toml
+   ┆
+14 │ [[step]]
+15 │     action = 'AssignByHalves'
    ┆              ────────┬───────
    ┆                      │
    ┆                      ╰──────── In this step
    ┆
-19 │     in_label = 'query_seq'
-20 │     out_label = 'query_seq_fixed'
-21 │     barcodes = 'probes'
+16 │     in_label = 'query_seq'
+17 │     out_label = 'query_seq_fixed'
+18 │     barcodes = 'probes'
    ┆                ────┬───
    ┆                    │
    ┆                    ╰──── Barcodes section not found
 ───╯
 Hint: Did you mean: 'probez'?
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/AssignByHalves
+      Or run: `fastqrab template AssignByHalves` for more information.
+
+

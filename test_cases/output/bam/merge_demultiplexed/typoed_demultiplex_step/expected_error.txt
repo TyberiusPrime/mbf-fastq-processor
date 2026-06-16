@@ -12,6 +12,8 @@ Error 1/1
    ┆                                                                                                                  │
    ┆                                                                                                                  ╰──── No Demultiplex step found that had in_label = refss
 ───╯
-Hint: Either add a Demultiplex step or reuse one of the following: Available are: refs
+Hint: Either add a Demultiplex step or reuse one of the following: Available are: 'refs'
       See https://doc_url.example/version-stripped-from-test/docs/redirects/OutputBAM
       Or run: `fastqrab template OutputBAM` for more information.
+
+

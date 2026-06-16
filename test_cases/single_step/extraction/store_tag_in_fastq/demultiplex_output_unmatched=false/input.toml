@@ -35,7 +35,3 @@
     in_label = 'sequence'
     commentLabels = 'location_sequence'
 
-# --- Output steps (migrated from [output]) ---
-[[step]]
-    action = "OutputFASTQ"
-    output = []

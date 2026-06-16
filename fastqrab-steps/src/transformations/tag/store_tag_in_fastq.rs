@@ -1,7 +1,7 @@
 use std::num::NonZeroUsize;
 
 use super::{format_numeric_for_comment, store_tag_in_comment};
-use crate::transformations::prelude::*;
+use crate::transformations::{output::validate_compression_level_u8, prelude::*};
 use fastqrab_config::{
     default_comment_insert_char, default_comment_separator, default_region_separator,
     tpd_adapt_bstring, tpd_adapt_u8_from_byte_or_char,
@@ -78,11 +78,10 @@ impl VerifyIn<PartialConfig> for PartialStoreTagInFastQ {
             Ok(())
         });
 
-        crate::config::validate_compression_level_u8(
+        validate_compression_level_u8(
             &self.compression,
             &mut self.compression_level,
-            self.format.as_ref().unwrap_or(&FileFormat::Fastq), // Default to Fastq for validation
-                                                                // purposes
+            // purposes
         );
 
         if parent.output.is_ok()
@@ -144,45 +143,43 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagInFastQ> {
         }
     }
 
-    fn declare_output_files(&self) -> Vec<OutputDeclaration> {
-        let inner = self
-            .toml_value
-            .value
-            .as_ref()
-            .expect("declare_output_files called without successsful verification");
-        let in_label = inner
-            .in_label
-            .as_ref()
-            .and_then(|v| v.as_ref_post())
-            .expect("declare_output_files called without successsful verification");
+    fn declare_output_files(&self) -> Option<Vec<OutputDeclaration>> {
+        if let Some(inner) = self.toml_value.as_ref() {
+            let in_label = inner
+                .in_label
+                .as_ref()
+                .and_then(|v| v.as_ref_post())
+                .expect("declare_output_files called without successsful verification");
 
-        let format = inner.format.as_ref().copied().unwrap_or_default();
-        let compression = inner.compression.as_ref().copied().unwrap_or_default();
-        return vec![OutputDeclaration {
-            id: "tag_fastq".to_string(),
-            target: WriteTargetConfig::new(
-                vec![format!("tag.{in_label}")],
-                None,
-                format.get_suffix(compression, None),
-            ),
-            sink_config: SinkConfig {
-                compression,
-                compression_level: inner
-                    .compression_level
-                    .as_ref()
-                    .and_then(|x| x.as_ref())
-                    .copied(),
-                compression_threads: Some(NonZeroUsize::new(1).expect("Can't fail")),
-                hash_uncompressed: false,
-                hash_compressed: false,
-                simulated_failure: None,
-            },
-            format,
-            chunk_policy: ChunkPolicy::default(),
-            bam_options: None,
-            singleton: false,
-            span: inner.in_label.span(),
-        }];
+            let format = inner.format.as_ref().copied().unwrap_or_default();
+            let compression = inner.compression.as_ref().copied().unwrap_or_default();
+            Some(vec![OutputDeclaration {
+                id: "tag_fastq".to_string(),
+                target: WriteTargetConfig::new(
+                    vec![format!("tag.{in_label}")],
+                    None,
+                    format.get_suffix(compression, None),
+                ),
+                sink_config: SinkConfig {
+                    compression,
+                    compression_level: inner
+                        .compression_level
+                        .as_ref()
+                        .and_then(|x| x.as_ref())
+                        .copied(),
+                    hash_uncompressed: false,
+                    hash_compressed: false,
+                    simulated_failure: None,
+                },
+                format,
+                chunk_policy: ChunkPolicy::default(),
+                bam_options: None,
+                singleton: false,
+                span: inner.in_label.span(),
+            }])
+        } else {
+            Some(vec![]) //there should be output files, but we can't name them.
+        }
     }
 }
 

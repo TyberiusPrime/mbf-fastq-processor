@@ -24,10 +24,10 @@ const HTML_ID: &str = "report_html";
 pub struct OutputReport {
     /// Emit a `{prefix}.json` report.
     #[tpd(default)]
-    json: bool,
+    pub json: bool,
     /// Emit a `{prefix}.html` report.
     #[tpd(default)]
-    html: bool,
+    pub html: bool,
 
     #[tpd(skip, default)]
     #[schemars(skip)]
@@ -49,7 +49,7 @@ impl VerifyIn<PartialConfig> for PartialOutputReport {
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {
-        if !*self.json.unwrap_ref() && !*self.html.unwrap_ref() {
+        if !*self.json.as_ref().unwrap_or(&false) && !*self.html.as_ref().unwrap_or(&false) {
             return Err(ValidationFailure::new(
                 "OutputReport writes nothing",
                 Some("Set 'json = true' and/or 'html = true'"),
@@ -73,20 +73,19 @@ fn report_declaration(id: &str, suffix: &str, span: std::ops::Range<usize>) -> O
 }
 
 impl TagUser for PartialTaggedVariant<PartialOutputReport> {
-    fn declare_output_files(&self) -> Vec<OutputDeclaration> {
-        let inner = self
-            .toml_value
-            .value
-            .as_ref()
-            .expect("declare_output_files called without successful verification");
-        let mut decls = Vec::new();
-        if *inner.json.unwrap_ref() {
-            decls.push(report_declaration(JSON_ID, "json", inner.json.span()));
+    fn declare_output_files(&self) -> Option<Vec<OutputDeclaration>> {
+        if let Some(inner) = self.toml_value.as_ref() {
+            let mut decls = Vec::new();
+            if *inner.json.unwrap_ref() {
+                decls.push(report_declaration(JSON_ID, "json", inner.json.span()));
+            }
+            if *inner.html.unwrap_ref() {
+                decls.push(report_declaration(HTML_ID, "html", inner.html.span()));
+            }
+            Some(decls)
+        } else {
+            Some(vec![]) //there should be output files, but we can't name them.
         }
-        if *inner.html.unwrap_ref() {
-            decls.push(report_declaration(HTML_ID, "html", inner.html.span()));
-        }
-        decls
     }
 }
 

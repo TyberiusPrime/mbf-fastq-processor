@@ -19,7 +19,7 @@
 
 [[step]]
     action = 'StoreTagInComment'
-    in_label = 'probe_name'
+    in_label = 'query_seq_fixed'
 
 [barcodes.probez]
     AAAAAAAAAAAAAAAAAAAACCCCCGGGGGTTTTTTTTTTTTTTTTTTTT = 'probe1'

@@ -1,10 +1,11 @@
     [input]
         read1 = 'input_read1.fq'
         read2 = 'input_read2.fq'
+
     [output]
         prefix = 'output'
-        format = 'raw'
-        # equivalent to -g | --trim_poly_g
+
+      # equivalent to -g | --trim_poly_g
     # first we must find out where they are
     [[step]]
         action = "ExtractPolyTail"
@@ -76,3 +77,7 @@
       min_value = 15
       keep_or_remove='keep'
       in_label = 'length_r1'
+
+
+    [[step]]
+      action = 'OutputFASTQ'

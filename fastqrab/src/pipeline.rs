@@ -31,7 +31,7 @@ use fastqrab_io::{
 use fastqrab_steps::{demultiplex::StepOutputFiles, join_nonempty};
 
 fn build_step_output_files(
-    declarations: Vec<fastqrab_io::io::output::chunked_writer::OutputDeclaration>,
+    declarations: Option<Vec<fastqrab_io::io::output::chunked_writer::OutputDeclaration>>,
     demultiplex_info: &OptDemultiplex,
     output_directory: &Path,
     output_prefix: &str,
@@ -39,63 +39,65 @@ fn build_step_output_files(
     allow_overwrite: bool,
 ) -> Result<StepOutputFiles> {
     let mut result = StepOutputFiles::empty();
-    for decl in declarations {
-        let mut per_tag: DemultiplexedData<ChunkedRecordWriter> = DemultiplexedData::new();
+    if let Some(declarations) = declarations {
+        for decl in declarations {
+            let mut per_tag: DemultiplexedData<ChunkedRecordWriter> = DemultiplexedData::new();
 
-        // Singleton steps (Inspect, Progress) always get exactly one writer (tag 0).
-        let tags_to_create: Vec<_> = if decl.singleton {
-            vec![0u64]
-        } else {
-            demultiplex_info.iter_tags()
-        };
-
-        for tag in tags_to_create {
-            // Singletons never get a demux suffix. For demultiplexed non-singleton
-            // outputs, skip tags with no name (the no-match bucket).
-            let demux_name: Option<&str> = if decl.singleton {
-                None
+            // Singleton steps (Inspect, Progress) always get exactly one writer (tag 0).
+            let tags_to_create: Vec<_> = if decl.singleton {
+                vec![0u64]
             } else {
-                match demultiplex_info {
-                    OptDemultiplex::No => None,
-                    OptDemultiplex::Yes(info) => {
-                        let name_opt = info.tag_to_name.get(&tag).and_then(|n| n.as_deref());
-                        if name_opt.is_none() {
-                            continue; // skip no-match demultiplex tag
-                        }
-                        name_opt
-                    }
-                }
+                demultiplex_info.iter_tags()
             };
 
-            let target = match &decl.target {
-                WriteTargetConfig::Stdout => WriteTarget::Stdout,
-                WriteTargetConfig::File(ft) => {
-                    let basename = join_nonempty(
-                        std::iter::once(output_prefix)
-                            .chain(ft.infix_parts().iter().map(String::as_str))
-                            .chain(demux_name)
-                            .chain(ft.second_infix().map(|x| x.as_str())),
-                        output_ix_separator,
-                    );
-                    WriteTarget::Files(ChunkPaths {
-                        directory: output_directory.to_path_buf(),
-                        basename,
-                        suffix: ft.suffix().to_string(),
-                    })
-                }
-            };
-            let writer = ChunkedRecordWriter::new(
-                decl.format,
-                target,
-                decl.sink_config.clone(),
-                decl.chunk_policy,
-                decl.bam_options.clone(),
-                NonZero::new(1).expect("1 is nonzero"),
-                allow_overwrite,
-            )?;
-            per_tag.insert(tag, writer);
+            for tag in tags_to_create {
+                // Singletons never get a demux suffix. For demultiplexed non-singleton
+                // outputs, skip tags with no name (the no-match bucket).
+                let demux_name: Option<&str> = if decl.singleton {
+                    None
+                } else {
+                    match demultiplex_info {
+                        OptDemultiplex::No => None,
+                        OptDemultiplex::Yes(info) => {
+                            let name_opt = info.tag_to_name.get(&tag).and_then(|n| n.as_deref());
+                            if name_opt.is_none() {
+                                continue; // skip no-match demultiplex tag
+                            }
+                            name_opt
+                        }
+                    }
+                };
+
+                let target = match &decl.target {
+                    WriteTargetConfig::Stdout => WriteTarget::Stdout,
+                    WriteTargetConfig::File(ft) => {
+                        let basename = join_nonempty(
+                            std::iter::once(output_prefix)
+                                .chain(ft.infix_parts().iter().map(String::as_str))
+                                .chain(demux_name)
+                                .chain(ft.second_infix().map(|x| x.as_str())),
+                            output_ix_separator,
+                        );
+                        WriteTarget::Files(ChunkPaths {
+                            directory: output_directory.to_path_buf(),
+                            basename,
+                            suffix: ft.suffix().to_string(),
+                        })
+                    }
+                };
+                let writer = ChunkedRecordWriter::new(
+                    decl.format,
+                    target,
+                    decl.sink_config.clone(),
+                    decl.chunk_policy,
+                    decl.bam_options.clone(),
+                    NonZero::new(1).expect("1 is nonzero"),
+                    allow_overwrite,
+                )?;
+                per_tag.insert(tag, writer);
+            }
+            result.insert(decl.id, per_tag);
         }
-        result.insert(decl.id, per_tag);
     }
     Ok(result)
 }

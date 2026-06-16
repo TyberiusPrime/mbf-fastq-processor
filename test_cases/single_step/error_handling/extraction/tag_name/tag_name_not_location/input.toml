@@ -21,3 +21,6 @@
 
 [output]
     prefix = "output"
+
+[[step]]
+  action = 'outputfastq'

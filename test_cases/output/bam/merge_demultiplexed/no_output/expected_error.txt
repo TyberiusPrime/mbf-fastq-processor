@@ -10,12 +10,10 @@ Error 1/1
 44 │     output = []
    ┆              ─┬
    ┆               │
-   ┆               ╰─ These output segments are empty
-45 │     bam = { tag_to_reference = { references_from_barcodes = "barcodes", tag = "refs" }, merge_demultiplexed = true }
-   ┆                                                                                                               ──┬─
-   ┆                                                                                                                 │
-   ┆                                                                                                                 ╰──── Incompatible with empty outputs
+   ┆               ╰─ Add segments here (or at `interleave =`) or remove 'output = ...`
 ───╯
-Hint: Either remove 'merge_demultiplexed' or specify either output segments or interleaved output.
+Hint: Either add segments to `output` or to `interleave`, or remove both options to get the default behaviour
       See https://doc_url.example/version-stripped-from-test/docs/redirects/OutputBAM
       Or run: `fastqrab template OutputBAM` for more information.
+
+

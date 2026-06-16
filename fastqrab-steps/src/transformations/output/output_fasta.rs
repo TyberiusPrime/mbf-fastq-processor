@@ -2,7 +2,10 @@ use crate::transformations::prelude::*;
 use fastqrab_io::CompressionFormat;
 
 use super::output_fastq::{declare_text_output, interleave_present};
-use super::{RecordOutputState, collect_segment_list, verify_record_targets};
+use super::{
+    RecordOutputState, collect_segment_list, validate_compression_level_u8, verify_chunk_size,
+     verify_record_targets, verify_suffix,
+};
 
 /// Write reads to FASTA file(s) as a pipeline step.
 ///
@@ -24,7 +27,7 @@ pub struct OutputFASTA {
         dead_code,
         reason = "read in declare_output_files via the partial config"
     )]
-    compression: CompressionFormat,
+    pub compression: CompressionFormat,
     #[tpd(default)]
     #[expect(
         dead_code,
@@ -96,28 +99,11 @@ impl VerifyIn<PartialConfig> for PartialOutputFASTA {
             }
         });
         if let Some(Some(_)) = self.compression_level.value {
-            crate::config::validate_compression_level_u8(
-                &self.compression,
-                &mut self.compression_level,
-                &FORMAT,
-            );
+            validate_compression_level_u8(&self.compression, &mut self.compression_level);
         }
-        self.chunksize.verify(|chunk_size| {
-            if let Some(chunk_size) = chunk_size.as_ref() {
-                if *chunk_size == 0 {
-                    return Err(ValidationFailure::new(
-                        "Must not be 0.",
-                        Some("'chunksize' must be greater than zero when specified."),
-                    ));
-                } else if let Some(true) = self.stdout.as_ref() {
-                    return Err(ValidationFailure::new(
-                        "Invalid when stdout = true",
-                        Some("Either remove 'chunksize' or set 'stdout' to false"),
-                    ));
-                }
-            }
-            Ok(())
-        });
+        self.chunksize
+            .verify(|chunk_size| verify_chunk_size(chunk_size, &self.stdout));
+        self.suffix.verify(verify_suffix);
         verify_record_targets(
             parent,
             &mut self.output,
@@ -130,30 +116,29 @@ impl VerifyIn<PartialConfig> for PartialOutputFASTA {
 }
 
 impl TagUser for PartialTaggedVariant<PartialOutputFASTA> {
-    fn declare_output_files(&self) -> Vec<OutputDeclaration> {
-        let inner = self
-            .toml_value
-            .value
-            .as_ref()
-            .expect("declare_output_files called without successful verification");
-        declare_text_output(
-            FORMAT,
-            inner.suffix.as_ref().and_then(|x| x.as_ref()),
-            inner.compression.as_ref().copied().unwrap_or_default(),
-            inner
-                .compression_level
-                .as_ref()
-                .and_then(|x| x.as_ref())
-                .copied(),
-            inner.compression_threads.as_ref().copied().unwrap_or(1),
-            *inner.output_hash_uncompressed.unwrap_ref(),
-            *inner.output_hash_compressed.unwrap_ref(),
-            &collect_segment_list(&inner.output),
-            interleave_present(&inner.interleave).then(|| collect_segment_list(&inner.interleave)),
-            *inner.stdout.unwrap_ref(),
-            inner.chunksize.as_ref().and_then(|x| x.as_ref()).copied(),
-            self.toml_value.span(),
-        )
+    fn declare_output_files(&self) -> Option<Vec<OutputDeclaration>> {
+        if let Some(inner) = self.toml_value.as_ref() {
+            Some(declare_text_output(
+                FORMAT,
+                inner.suffix.as_ref().and_then(|x| x.as_ref()),
+                inner.compression.as_ref().copied().unwrap_or_default(),
+                inner
+                    .compression_level
+                    .as_ref()
+                    .and_then(|x| x.as_ref())
+                    .copied(),
+                *inner.output_hash_uncompressed.unwrap_ref(),
+                *inner.output_hash_compressed.unwrap_ref(),
+                &collect_segment_list(&inner.output),
+                interleave_present(&inner.interleave)
+                    .then(|| collect_segment_list(&inner.interleave)),
+                *inner.stdout.unwrap_ref(),
+                inner.chunksize.as_ref().and_then(|x| x.as_ref()).copied(),
+                self.toml_value.span(),
+            ))
+        } else {
+            None
+        }
     }
 }
 

@@ -1,3 +1,4 @@
+Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
@@ -12,4 +13,8 @@ Error 1/1
    ┆                              ╰─────── Unknown length tag label
 ───╯
 Hint: 'polyX' is neither a segment nor a tag name. Choose an existing name.
-      Did you mean: polyA, len_all, or len_read1?
+      Did you mean: 'polyA', 'len_all', or 'len_read1'?
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/StoreTagsInTable
+      Or run: `fastqrab template StoreTagsInTable` for more information.
+
+

@@ -1,11 +1,19 @@
+Error Details ==
 Error 1/1
-  ╭─config.toml
-  ┆
-7 │ [output]
-8 │     prefix = 'output'
-9 │     suffix = '/'
-  ┆              ─┬─
-  ┆               │
-  ┆               ╰── Invalid value
-──╯
+   ╭─config.toml
+   ┆
+11 │ [[step]]
+12 │     action = "OutputFASTQ"
+   ┆              ──────┬──────
+   ┆                    │
+   ┆                    ╰─────── In this step
+13 │     suffix = "/"
+   ┆              ─┬─
+   ┆               │
+   ┆               ╰── Invalid value
+───╯
 Hint: Must not contain '/', '\' or ':'.
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/OutputFASTQ
+      Or run: `fastqrab template OutputFASTQ` for more information.
+
+

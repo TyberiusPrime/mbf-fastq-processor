@@ -69,26 +69,25 @@ impl Progress {
 }
 
 impl TagUser for PartialTaggedVariant<PartialProgress> {
-    fn declare_output_files(&self) -> Vec<OutputDeclaration> {
-        let inner = self
-            .toml_value
-            .value
-            .as_ref()
-            .expect("can't call declare_output_files when validation failed");
-        let infix = inner
-            .output_infix
-            .as_ref()
-            .expect("output_infix must be set in config");
-        vec![OutputDeclaration {
-            id: "progress".to_string(),
-            target: WriteTargetConfig::new(vec![infix.clone()], None, "progress".to_string()),
-            sink_config: SinkConfig::default(),
-            format: fastqrab_io::FileFormat::Text,
-            chunk_policy: ChunkPolicy::default(),
-            bam_options: None,
-            singleton: true,
-            span: inner.output_infix.span(),
-        }]
+    fn declare_output_files(&self) -> Option<Vec<OutputDeclaration>> {
+        if let Some(inner) = self.toml_value.as_ref() {
+            let infix = inner
+                .output_infix
+                .as_ref()
+                .expect("output_infix must be set in config");
+            Some(vec![OutputDeclaration {
+                id: "progress".to_string(),
+                target: WriteTargetConfig::new(vec![infix.clone()], None, "progress".to_string()),
+                sink_config: SinkConfig::default(),
+                format: fastqrab_io::FileFormat::Text,
+                chunk_policy: ChunkPolicy::default(),
+                bam_options: None,
+                singleton: true,
+                span: inner.output_infix.span(),
+            }])
+        } else {
+            Some(vec![]) //there should be output files, but we can't name them.
+        }
     }
 }
 

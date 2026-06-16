@@ -6,7 +6,7 @@ Error 1/3
   ┆ │
   ┆ ╰─────── No output files and no reports requested. Nothing to do.
 ──╯
-Hint: Add an [output] section with output files or reports, or use a benchmark configuration.
+Hint: Add an Output* step, such as OutputFASTQ or an OutputReport, or use a benchmark configuration.
 
 Error 2/3
   ╭─config.toml

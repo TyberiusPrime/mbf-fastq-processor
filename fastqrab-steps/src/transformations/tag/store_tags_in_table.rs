@@ -1,6 +1,7 @@
 use std::rc::Rc;
 use std::{cell::RefCell, num::NonZeroUsize};
 
+use crate::transformations::output::validate_compression_level_u8;
 use crate::transformations::prelude::*;
 use fastqrab_config::{default_include_read_name, default_region_separator, tpd_adapt_bstring};
 use fastqrab_io::{CompressionFormat, FileFormat};
@@ -56,47 +57,41 @@ impl VerifyIn<PartialConfig> for PartialStoreTagsInTable {
         self.region_separator.or_with(default_region_separator);
         self.include_read_name.or_with(default_include_read_name);
 
-        crate::config::validate_compression_level_u8(
-            &self.compression,
-            &mut self.compression_level,
-            &FileFormat::Fastq, // Default to Fastq for validation purposes
-        );
+        validate_compression_level_u8(&self.compression, &mut self.compression_level);
 
         Ok(())
     }
 }
 
 impl TagUser for PartialTaggedVariant<PartialStoreTagsInTable> {
-    fn declare_output_files(&self) -> Vec<OutputDeclaration> {
-        let inner = self
-            .toml_value
-            .value
-            .as_ref()
-            .expect("declare_output_files called without successsful verification");
-        let infix = inner.infix.as_ref().cloned().unwrap_or_default();
-        let compression = inner.compression.as_ref().copied().unwrap_or_default();
-        let suffix = compression.apply_suffix("tsv");
-        return vec![OutputDeclaration {
-            id: "tsv".to_string(),
-            target: WriteTargetConfig::new(vec![infix], None, suffix),
-            sink_config: SinkConfig {
-                compression,
-                compression_level: inner
-                    .compression_level
-                    .as_ref()
-                    .and_then(|x| x.as_ref())
-                    .copied(),
-                compression_threads: Some(NonZeroUsize::new(1).expect("Can't fail")),
-                hash_uncompressed: false,
-                hash_compressed: false,
-                simulated_failure: None,
-            },
-            format: fastqrab_io::FileFormat::Text,
-            chunk_policy: ChunkPolicy::default(),
-            bam_options: None,
-            singleton: false,
-            span: inner.infix.span(),
-        }];
+    fn declare_output_files(&self) -> Option<Vec<OutputDeclaration>> {
+        if let Some(inner) = self.toml_value.as_ref() {
+            let infix = inner.infix.as_ref().cloned().unwrap_or_default();
+            let compression = inner.compression.as_ref().copied().unwrap_or_default();
+            let suffix = compression.apply_suffix("tsv");
+            Some(vec![OutputDeclaration {
+                id: "tsv".to_string(),
+                target: WriteTargetConfig::new(vec![infix], None, suffix),
+                sink_config: SinkConfig {
+                    compression,
+                    compression_level: inner
+                        .compression_level
+                        .as_ref()
+                        .and_then(|x| x.as_ref())
+                        .copied(),
+                    hash_uncompressed: false,
+                    hash_compressed: false,
+                    simulated_failure: None,
+                },
+                format: fastqrab_io::FileFormat::Text,
+                chunk_policy: ChunkPolicy::default(),
+                bam_options: None,
+                singleton: false,
+                span: inner.infix.span(),
+            }])
+        } else {
+            Some(vec![]) //there should be output files, but we can't name them.
+        }
     }
 
     fn get_tag_usage(

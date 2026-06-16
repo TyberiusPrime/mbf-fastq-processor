@@ -1,3 +1,4 @@
+Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
@@ -16,3 +17,5 @@ Error 1/1
 Hint: The same tag cannot be used as both the in_label and a comment tag. Remove from comment_tags?
       See https://doc_url.example/version-stripped-from-test/docs/redirects/StoreTagInFastQ
       Or run: `fastqrab template StoreTagInFastQ` for more information.
+
+

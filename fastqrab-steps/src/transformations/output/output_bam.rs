@@ -1,18 +1,184 @@
 use crate::transformations::prelude::*;
+use fastqrab_config::tpd_adapt_u8_from_byte_or_char;
 use fastqrab_io::CompressionFormat;
 use fastqrab_io::io::output::chunked_writer::{BamSinkOptions, read_bam_reference_sequences};
 use std::cell::RefCell;
 use std::collections::HashSet;
 use std::rc::Rc;
-use toml_pretty_deser::suggest_alternatives;
+use toml_pretty_deser::prelude::*;
 
 use super::output_fastq::interleave_present;
 use super::{
     RecordOutputDeclSpec, RecordOutputState, build_record_declarations, collect_segment_list,
-    sink_config, verify_record_targets,
+    sink_config, validate_compression_level_u8, verify_chunk_size, 
+    verify_record_targets, verify_suffix,
 };
-use crate::config::{BamOutputOptions, PartialBamOutputOptions};
 
+#[must_use]
+pub fn default_bam_comment_separation_char() -> u8 {
+    b' '
+}
+
+/// A validated two-character BAM auxiliary tag name (e.g. `"BC"`).
+///
+/// Only ASCII alphanumeric characters are accepted.
+#[derive(Clone, Debug, JsonSchema)]
+#[schemars(with = "String")]
+pub struct BamTag(pub [u8; 2]);
+
+impl TryFrom<&str> for BamTag {
+    type Error = String;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        let bytes = s.as_bytes();
+        if bytes.len() != 2 {
+            return Err(format!(
+                "BAM tag must be exactly 2 characters; got '{s}' ({} chars). \
+                 BAM auxiliary tag names are exactly 2 ASCII alphanumeric characters.",
+                bytes.len()
+            ));
+        }
+        if !bytes.iter().all(|&b| b.is_ascii_alphanumeric()) {
+            return Err(format!(
+                "BAM tag must be 2 alphanumeric ASCII characters; got '{s}'. \
+                 Only [A-Za-z0-9] are allowed.",
+            ));
+        }
+        Ok(BamTag([bytes[0], bytes[1]]))
+    }
+}
+
+toml_pretty_deser::impl_visitor_for_try_from_str!(BamTag, "Invalid BAM tag");
+
+/// Source for reference sequences used by `tag_to_reference` (Feature B).
+///
+/// Exactly one of `barcodes` or `from_bam` must be set.
+#[tpd(no_verify)]
+#[derive(Clone, Debug, JsonSchema)]
+pub struct TagToReference {
+    /// The fastqrab tag label whose value selects the reference sequence name.
+    pub tag: String,
+
+    /// Name of a `[barcodes.<name>]` section whose keys become reference names.
+    #[tpd(default, alias = "from_barcodes")]
+    pub references_from_barcodes: Option<String>,
+
+    /// Path to a BAM file whose `@SQ` header lines define the reference sequences.
+    #[tpd(default, alias = "from_bam", alias = "template")]
+    pub references_from_bam: Option<String>,
+}
+
+/// Alias so the `#[tpd]` macro can find the "partial" type for `BamTag`
+/// (which is its own visitor – no separate Partial struct is generated).
+pub type PartialBamTag = BamTag;
+/// BAM-specific output options.
+#[derive(Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
+pub struct BamOutputOptions {
+    /// Character used to split read names into a BAM name field and a `CO` auxiliary tag.
+    /// Defaults to `' '` (space).  Reads whose names contain this character are split; the
+    /// part after the character is placed in a `CO` tag so it can exceed the 254-byte limit.
+    #[tpd(with = "tpd_adapt_u8_from_byte_or_char")]
+    pub comment_separation_char: u8,
+
+    /// Map of fastqrab tag labels to BAM auxiliary tag names
+    ///
+    /// Each key is a fastqrab tag label; each value is the two-character BAM
+    /// auxiliary tag name to write (e.g. `BC`).
+    #[tpd(nested, alias = "tags")]
+    #[schemars(skip)]
+    pub tag_to_bam_tag: IndexMap<TagLabel, BamTag>,
+
+    /// Export a fastqrab tag value as the BAM reference name
+    #[tpd(nested)]
+    pub tag_to_reference: Option<TagToReference>,
+
+    #[tpd(default)]
+    pub merge_demultiplexed: Option<bool>,
+
+    /// Write a BAI index alongside each merged BAM file (default: true).
+    pub index_merged: bool,
+}
+impl<P> VerifyIn<P> for PartialBamOutputOptions {
+    fn verify(&mut self, _parent: &P, _options: &VerifyOptions) -> Result<(), ValidationFailure>
+    where
+        Self: Sized + toml_pretty_deser::Visitor,
+    {
+        self.comment_separation_char
+            .or_with(default_bam_comment_separation_char);
+        self.tag_to_bam_tag
+            .or_with(|| toml_pretty_deser::MapAndKeys {
+                map: indexmap::IndexMap::new(),
+                keys: vec![],
+            });
+
+        // Each BAM auxiliary tag may only be written once: reject two fastqrab
+        // tags mapping to the same two-letter BAM tag.
+        if let Some(map_and_keys) = self.tag_to_bam_tag.as_mut() {
+            let mut seen_bam_tags: IndexMap<[u8; 2], std::ops::Range<usize>> = IndexMap::new();
+            for bam_tag in map_and_keys.map.values_mut() {
+                if let Some(bam_tag_value) = bam_tag.as_mut()
+                    && let Some(other_span) = seen_bam_tags.insert(bam_tag_value.0, bam_tag.span())
+                {
+                    bam_tag.state = TomlValueState::Custom {
+                        spans: vec![
+                            (bam_tag.span(), "Repeated, 2nd use".to_string()),
+                            (other_span, "Repeated, 1st use".to_string()),
+                        ],
+                    };
+                    bam_tag.help = Some(
+                        "BAM tags must be distinct, \
+                            can not write two tags into one BAM tag. Rename either one"
+                            .to_string(),
+                    );
+                }
+            }
+        }
+
+        // Validate tag_to_reference: exactly one of barcodes or from_bam must be set.
+        //
+        if let Some(Some(tag_to_ref)) = self.tag_to_reference.as_mut() {
+            let has_barcodes = tag_to_ref
+                .references_from_barcodes
+                .as_ref()
+                .and_then(|x| x.as_ref())
+                .is_some();
+            let has_from_bam = tag_to_ref
+                .references_from_bam
+                .as_ref()
+                .and_then(|x| x.as_ref())
+                .is_some();
+            if !has_barcodes && !has_from_bam {
+                tag_to_ref.references_from_barcodes.state = TomlValueState::new_validation_failed(
+                    "Either 'reference_from_barcodes' or 'reference_from_bam' must be specified",
+                );
+                tag_to_ref.references_from_barcodes.help = Some(
+                    "Set 'reference_from_barcodes' to a barcode section name, or 'references_from_bam' to a BAM file path."
+                        .to_string(),
+                );
+            } else if has_barcodes && has_from_bam {
+                tag_to_ref.references_from_bam.state = TomlValueState::Custom {
+                    spans: vec![
+                        (
+                            tag_to_ref.references_from_barcodes.span(),
+                            "Conflicts with from_bam".to_string(),
+                        ),
+                        (
+                            tag_to_ref.references_from_bam.span(),
+                            "Conflicts with barcodes".to_string(),
+                        ),
+                    ],
+                };
+                tag_to_ref.references_from_bam.help =
+                    Some("Set only one of 'barcodes' or 'from_bam'.".to_string());
+            }
+        }
+        self.index_merged.or(true);
+
+        Ok(())
+    }
+}
 /// Write reads to BAM file(s) as a pipeline step.
 ///
 /// Replicates the BAM behaviour of the legacy `[output]` section: per-segment
@@ -45,11 +211,6 @@ pub struct OutputBAM {
         reason = "read in declare_output_files via the partial config"
     )]
     compression_level: Option<u8>,
-    #[expect(
-        dead_code,
-        reason = "read in declare_output_files via the partial config"
-    )]
-    compression_threads: usize,
 
     /// Segments to write to individual files. Defaults to all input segments.
     #[tpd(default, alias = "segments")]
@@ -75,7 +236,7 @@ pub struct OutputBAM {
 
     /// BAM-specific options (comment separator, tag exports, reference assignment).
     #[tpd(nested)]
-    bam: Option<BamOutputOptions>,
+    bam: Option<BamOutputOptions>, //todo: inline into main struct
 
     #[tpd(skip, default)]
     #[schemars(skip)]
@@ -147,36 +308,21 @@ impl VerifyIn<PartialConfig> for PartialOutputBAM {
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {
-        self.compression_threads.or(1);
-        self.compression_threads.verify(|threads| {
-            if *threads == 0 {
+        self.compression_level.verify(|level| {
+            if let Some(&level) = level.as_ref()
+                && level > 9
+            {
                 Err(ValidationFailure::new(
-                    "Must not be 0.",
-                    Some("'compression_threads' must be greater than zero."),
+                    "Invalid compression level specified for BAM output",
+                    Some("Valid range is 0-9 for BAM (and our compressor)"),
                 ))
             } else {
                 Ok(())
             }
         });
-        if let Some(Some(_)) = self.compression_level.value {
-            let compression = TomlValue::new_ok(CompressionFormat::Uncompressed, 0..0);
-            crate::config::validate_compression_level_u8(
-                &compression,
-                &mut self.compression_level,
-                &FORMAT,
-            );
-        }
-        self.chunksize.verify(|chunk_size| {
-            if let Some(chunk_size) = chunk_size.as_ref()
-                && *chunk_size == 0
-            {
-                return Err(ValidationFailure::new(
-                    "Must not be 0.",
-                    Some("'chunksize' must be greater than zero when specified."),
-                ));
-            }
-            Ok(())
-        });
+        self.chunksize
+            .verify(|chunk_size| verify_chunk_size(chunk_size, &TomlValue::new_ok(false, 0..0)));
+        self.suffix.verify(verify_suffix);
         // BAM cannot be written to stdout; pass a throwaway stdout flag.
         let mut stdout = TomlValue::new_ok(false, 0..0);
         verify_record_targets(
@@ -346,7 +492,7 @@ pub(crate) fn verify_output_bam_merge(
                 } else {
                     bam.merge_demultiplexed.help = Some(format!(
                         "Either add a Demultiplex step or reuse one of the following: {}",
-                        suggest_alternatives("", available_demultiplex_labels)
+                        offer_alternatives("", available_demultiplex_labels)
                     ));
                 }
             }
@@ -426,57 +572,54 @@ impl TagUser for PartialTaggedVariant<PartialOutputBAM> {
         })
     }
 
-    fn declare_output_files(&self) -> Vec<OutputDeclaration> {
-        let inner = self
-            .toml_value
-            .value
-            .as_ref()
-            .expect("declare_output_files called without successful verification");
+    fn declare_output_files(&self) -> Option<Vec<OutputDeclaration>> {
+        if let Some(inner) = self.toml_value.as_ref() {
+            let comment_separation_char = inner
+                .bam
+                .as_ref()
+                .and_then(|b| b.as_ref())
+                .and_then(|b| b.comment_separation_char.as_ref().copied())
+                .unwrap_or(b' ');
 
-        let comment_separation_char = inner
-            .bam
-            .as_ref()
-            .and_then(|b| b.as_ref())
-            .and_then(|b| b.comment_separation_char.as_ref().copied())
-            .unwrap_or(b' ');
+            // Reference sequences / header / tag exports are resolved earlier by
+            // `resolve_output_bam`; fall back to a minimal header if (somehow) absent.
+            let bam_options = inner
+                .resolved_bam_options
+                .clone()
+                .flatten()
+                .unwrap_or_else(|| declare_bam_options(comment_separation_char));
 
-        // Reference sequences / header / tag exports are resolved earlier by
-        // `resolve_output_bam`; fall back to a minimal header if (somehow) absent.
-        let bam_options = inner
-            .resolved_bam_options
-            .clone()
-            .flatten()
-            .unwrap_or_else(|| declare_bam_options(comment_separation_char));
-
-        let segments = collect_segment_list(&inner.output);
-        let interleave =
-            interleave_present(&inner.interleave).then(|| collect_segment_list(&inner.interleave));
-        let suffix = FORMAT.get_suffix(
-            CompressionFormat::Uncompressed,
-            inner.suffix.as_ref().and_then(|x| x.as_ref()),
-        );
-        let spec = RecordOutputDeclSpec {
-            format: FORMAT,
-            suffix,
-            segments: &segments,
-            interleave: interleave.as_deref(),
-            stdout: false,
-            sink_config: sink_config(
+            let segments = collect_segment_list(&inner.output);
+            let interleave = interleave_present(&inner.interleave)
+                .then(|| collect_segment_list(&inner.interleave));
+            let suffix = FORMAT.get_suffix(
                 CompressionFormat::Uncompressed,
-                inner
-                    .compression_level
-                    .as_ref()
-                    .and_then(|x| x.as_ref())
-                    .copied(),
-                inner.compression_threads.as_ref().copied().unwrap_or(1),
-                false,
-                *inner.output_hash_compressed.unwrap_ref(),
-            ),
-            chunksize: inner.chunksize.as_ref().and_then(|x| x.as_ref()).copied(),
-            bam_options: Some(bam_options),
-            span: self.toml_value.span(),
-        };
-        build_record_declarations(&spec)
+                inner.suffix.as_ref().and_then(|x| x.as_ref()),
+            );
+            let spec = RecordOutputDeclSpec {
+                format: FORMAT,
+                suffix,
+                segments: &segments,
+                interleave: interleave.as_deref(),
+                stdout: false,
+                sink_config: sink_config(
+                    CompressionFormat::Uncompressed,
+                    inner
+                        .compression_level
+                        .as_ref()
+                        .and_then(|x| x.as_ref())
+                        .copied(),
+                    false,
+                    *inner.output_hash_compressed.unwrap_ref(),
+                ),
+                chunksize: inner.chunksize.as_ref().and_then(|x| x.as_ref()).copied(),
+                bam_options: Some(bam_options),
+                span: self.toml_value.span(),
+            };
+            Some(build_record_declarations(&spec))
+        } else {
+            Some(vec![]) //there should be output files, but we can't name them.
+        }
     }
 }
 

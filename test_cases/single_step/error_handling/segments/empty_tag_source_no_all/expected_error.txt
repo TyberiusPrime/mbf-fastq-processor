@@ -14,7 +14,7 @@ Error 1/1
 9 │      source = 'tag:'
   ┆               ───┬──
   ┆                  │
-  ┆                  ╰─── Must not be empty
+  ┆                  ╰─── Must not be empty.
 ──╯
 Hint: Please provide a name after 'tag:'.
       See https://doc_url.example/version-stripped-from-test/docs/redirects/ExtractRegion

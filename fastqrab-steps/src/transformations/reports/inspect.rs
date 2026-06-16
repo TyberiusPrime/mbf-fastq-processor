@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::transformations::prelude::*;
+use crate::transformations::{output::validate_compression_level_u8, prelude::*};
 use fastqrab_io::{CompressionFormat, FileFormat};
 
 /// Inspect reads within the workflow
@@ -62,11 +62,7 @@ impl VerifyIn<PartialConfig> for PartialInspect {
             }
             Ok(())
         });
-        crate::config::validate_compression_level_u8(
-            &self.compression,
-            &mut self.compression_level,
-            self.format.as_ref().unwrap_or(&FileFormat::Fastq),
-        );
+        validate_compression_level_u8(&self.compression, &mut self.compression_level);
         if let Some(MustAdapt::PostVerify(segment)) = self.segment.as_ref()
             && let Some(segment_order) = parent
                 .input
@@ -112,48 +108,46 @@ impl std::fmt::Debug for Inspect {
 // cov:excl-stop
 
 impl TagUser for PartialTaggedVariant<PartialInspect> {
-    fn declare_output_files(&self) -> Vec<OutputDeclaration> {
-        let inner = self
-            .toml_value
-            .value
-            .as_ref()
-            .expect("can't call declare_output_files when validation failed");
-        let infix = inner.infix.as_ref().cloned().unwrap_or_default();
-        let segment_name = inner
-            .resolved_segment_name
-            .as_deref()
-            .unwrap_or_default()
-            .to_string();
-        let mut infix_parts = vec![infix];
-        if !segment_name.is_empty() {
-            infix_parts.push(segment_name);
+    fn declare_output_files(&self) -> Option<Vec<OutputDeclaration>> {
+        if let Some(inner) = self.toml_value.as_ref() {
+            let infix = inner.infix.as_ref().cloned().unwrap_or_default();
+            let segment_name = inner
+                .resolved_segment_name
+                .as_deref()
+                .unwrap_or_default()
+                .to_string();
+            let mut infix_parts = vec![infix];
+            if !segment_name.is_empty() {
+                infix_parts.push(segment_name);
+            }
+            let compression = inner.compression.as_ref().copied().unwrap_or_default();
+            let compression_level = inner
+                .compression_level
+                .as_ref()
+                .and_then(|x| x.as_ref())
+                .copied();
+            let format = inner.format.as_ref().copied().unwrap_or_default();
+            let custom_suffix = inner.suffix.as_ref().and_then(|opt| opt.as_ref());
+            let suffix = format.get_suffix(compression, custom_suffix);
+            Some(vec![OutputDeclaration {
+                id: "inspect".to_string(),
+                target: WriteTargetConfig::new(infix_parts, None, suffix),
+                sink_config: SinkConfig {
+                    compression,
+                    compression_level,
+                    hash_uncompressed: false,
+                    hash_compressed: false,
+                    simulated_failure: None,
+                },
+                format,
+                chunk_policy: ChunkPolicy::default(),
+                bam_options: None,
+                singleton: true,
+                span: inner.infix.span(),
+            }])
+        } else {
+            Some(vec![]) //there should be output files, but we can't name them.
         }
-        let compression = inner.compression.as_ref().copied().unwrap_or_default();
-        let compression_level = inner
-            .compression_level
-            .as_ref()
-            .and_then(|x| x.as_ref())
-            .copied();
-        let format = inner.format.as_ref().copied().unwrap_or_default();
-        let custom_suffix = inner.suffix.as_ref().and_then(|opt| opt.as_ref());
-        let suffix = format.get_suffix(compression, custom_suffix);
-        vec![OutputDeclaration {
-            id: "inspect".to_string(),
-            target: WriteTargetConfig::new(infix_parts, None, suffix),
-            sink_config: SinkConfig {
-                compression,
-                compression_level,
-                compression_threads: None,
-                hash_uncompressed: false,
-                hash_compressed: false,
-                simulated_failure: None,
-            },
-            format,
-            chunk_policy: ChunkPolicy::default(),
-            bam_options: None,
-            singleton: true,
-            span: inner.infix.span(),
-        }]
     }
 
     fn get_tag_usage(

@@ -18,9 +18,10 @@ use schemars::JsonSchema;
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::fmt::Write;
+use std::num::NonZero;
 use std::path::Path;
 use std::rc::Rc;
-use toml_pretty_deser::prelude::*;
+use toml_pretty_deser::{Visitor, prelude::*};
 
 mod barcodes;
 mod input;
@@ -38,10 +39,7 @@ pub use input::{Input, PartialInput, StructuredInput};
 
 pub use barcodes::{Barcodes, BarcodesFromFile, PartialBarcodes};
 pub use options::{Options, PartialOptions};
-pub use output::{
-    BamOutputOptions, BamTag, Output, PartialBamOutputOptions, PartialOutput, TagToReference,
-    validate_compression_level_u8,
-};
+pub use output::{Output, PartialOutput};
 pub use segments::{DenyName, ValidateSegment};
 pub use tag_labels::ValidateTagLabel;
 
@@ -136,7 +134,7 @@ pub struct Stage {
     /// `Swap`, `MergeReads`) never sees them and does not re-add them — the
     /// forgetting is centralized here instead of repeated in each step.
     pub forgotten_tags: Vec<TagLabel>,
-    pub output_declarations: Vec<OutputDeclaration>,
+    pub output_declarations: Option<Vec<OutputDeclaration>>,
 }
 
 #[derive(Debug, Clone)]
@@ -183,7 +181,7 @@ pub struct Config {
 
     #[tpd(skip)]
     #[schemars(skip)]
-    pub output_declarations_per_transformation: Vec<Vec<OutputDeclaration>>,
+    pub output_declarations_per_transformation: Vec<Option<Vec<OutputDeclaration>>>,
 }
 
 #[derive(Debug)]
@@ -240,12 +238,12 @@ impl VerifyIn<TPDRoot> for PartialConfig {
         self.verify_barcodes_and_segment_names_disjoint();
         self.verify_benchmark_molecule_count();
         self.disable_output_on_benchmark();
-        self.verify_for_any_output();
         self.verify_head_rapidgzip_conflict();
         self.expand_transformations();
         let used_barcode_sections = self.verify_transformation_labels();
         self.resolve_bam_output_references();
         self.verify_output_filenames_unique();
+        self.verify_for_any_output();
 
         self.verify_demultiplex_unique();
         self.verify_barcodes_used(&used_barcode_sections);
@@ -305,19 +303,6 @@ impl PartialConfig {
     }
 
     fn verify_reports(&mut self) {
-        let report_html = self
-            .output
-            .value
-            .as_ref()
-            .and_then(|x| x.as_ref())
-            .and_then(|x| x.report_html.as_ref())
-            .is_some_and(|o| *o);
-        let report_json = self
-            .output
-            .as_ref()
-            .and_then(|x| x.as_ref())
-            .and_then(|x| x.report_json.as_ref())
-            .is_some_and(|o| *o);
         let is_benchmark = self
             .benchmark
             .as_ref()
@@ -326,15 +311,17 @@ impl PartialConfig {
             .is_some_and(|o| *o);
         // An OutputReport step satisfies the "report output" requirement just like
         // output.report_html / report_json do.
-        let has_output_report = self.transform.value.as_ref().is_some_and(|transforms| {
-            transforms
-                .iter()
-                .any(|t| matches!(t.as_ref(), Some(PartialTransformation::OutputReport { .. })))
-        });
         self.transform.sync_nested_state();
         let transforms_ok = self.transform.is_ok();
-        let mut report_transform = self.transform.as_mut().and_then(|x| {
-            x.iter_mut().find(|t| {
+
+        let report_output_transform_idx = self.transform.as_mut().and_then(|x| {
+            x.iter_mut().position(|t| {
+                matches!(t.as_ref(), Some(PartialTransformation::OutputReport { .. }))
+            })
+        });
+
+        let mut report_transform_idx = self.transform.as_mut().and_then(|x| {
+            x.iter_mut().position(|t| {
                 matches!(
                     t.as_ref(),
                     Some(
@@ -344,57 +331,42 @@ impl PartialConfig {
                 )
             })
         });
+        let (mut report_output_transform, mut report_transform) =
+            if let Some(transform) = self.transform.as_mut() {
+                match (report_output_transform_idx, report_transform_idx) {
+                    (None, None) => (None, None),
+                    (None, Some(rti)) => (None, Some(&mut transform[rti])),
+                    (Some(roti), None) => (Some(&mut transform[roti]), None),
+                    (Some(roti), Some(rti)) => {
+                        let [a, b] = transform
+                            .get_disjoint_mut([roti, rti])
+                            .expect("coordinates verified before hand");
+                        (Some(a), Some(b))
+                    }
+                }
+            } else {
+                (None, None)
+            };
 
-        if let Some(report_transform) = &mut report_transform
-            && !(report_html || report_json || has_output_report)
+        if let Some(report_transform) = report_transform.as_mut()
+            && report_output_transform.is_none()
             && !is_benchmark
         {
-            let spans = vec![
-                (
-                    self.output.span(),
-                    "Add report_json | report_html here?".to_string(),
-                ),
-                (
-                    report_transform.span(),
-                    "Report but no output.report_html | report_json".to_string(),
-                ),
-            ];
-
-            report_transform.state = TomlValueState::Custom { spans };
+            report_transform.state = TomlValueState::ValidationFailed {
+                message: "Report but no `OutputReport` step present".to_string(),
+            };
             report_transform.help =
-                Some("Either remove the report, or enable it's output.".to_string());
-        } else if (report_html || report_json) && report_transform.is_none() && transforms_ok {
-            let mut spans = Vec::new();
-            if let Some(tv_report_html) = self
-                .output
-                .as_ref()
-                .and_then(|x| x.as_ref())
-                .map(|x| &x.report_html)
-                && let Some(true) = tv_report_html.as_ref()
-            {
-                spans.push((tv_report_html.span(), "Set to true?".to_string()));
-            }
-            if let Some(tv_report_json) = self
-                .output
-                .as_ref()
-                .and_then(|x| x.as_ref())
-                .map(|x| &x.report_json)
-                && let Some(true) = tv_report_json.as_ref()
-            {
-                spans.push((tv_report_json.span(), "Set to true?".to_string()));
-            }
-            if spans.is_empty() {
-                // cov:excl-start
-                unreachable!("report_html or report_json was true")
-                // cov:excl-stop
-                // spans.push((
-                //     self.output.span(),
-                //     "Missing report_html | report_json = true?".to_string(),
-                // ));
-            }
-            self.output.state = TomlValueState::Custom { spans };
-            self.output.help =
-                Some("No report step, but report output requested.\nRemove/disable report_html & report_json, or add in a report step.".to_string());
+                Some("Either remove the Report step, or add an OutputReport".to_string());
+        } else if let Some(PartialTransformation::OutputReport(tv_rep_output)) =
+            report_output_transform.as_mut().and_then(|x| x.as_mut())
+            && report_transform.is_none()
+            && transforms_ok
+        {
+            tv_rep_output.toml_value.state = TomlValueState::ValidationFailed {
+                message: "Report output defined here".to_string(),
+            };
+            tv_rep_output.toml_value.help =
+                Some("No report step, but report output requested.\nRemove the `OutputReport` step, or add in a `Report` step.".to_string());
         } else {
             let mut report_names_to_spans: IndexMap<
                 String,
@@ -535,49 +507,12 @@ impl PartialConfig {
     }
 
     fn verify_for_any_output(&mut self) {
-        let has_fastq_output = {
-            if let Some(Some(o)) = self.output.as_ref() {
-                let has_stdout = o.stdout.as_ref().copied().unwrap_or(false);
-                let has_outputs = o
-                    .output
-                    .as_ref()
-                    .and_then(|x| x.as_ref())
-                    .map_or(1, Vec::len)
-                    != 0;
-                let has_interleave = o
-                    .interleave
-                    .as_ref()
-                    .and_then(|inner| inner.as_ref())
-                    .is_some_and(|v| !v.is_empty());
-                has_stdout | has_outputs | has_interleave
-            } else {
-                false
-            }
-        };
-        let has_report_output = self
-            .output
+        let has_any_output = self
+            .output_declarations_per_transformation
             .as_ref()
-            .and_then(|x| x.as_ref())
-            .is_some_and(|o| {
-                o.report_html.as_ref().copied().unwrap_or(false)
-                    || o.report_json.as_ref().copied().unwrap_or(false)
-            });
-        let has_tag_output = self.transform.value.as_ref().is_some_and(|transforms| {
-            transforms.iter().any(|t| {
-                matches!(
-                    t.value.as_ref(),
-                    Some(
-                        PartialTransformation::StoreTagInFastQ(..)
-                            | PartialTransformation::StoreTagsInTable(..)
-                            | PartialTransformation::Inspect(..)
-                            | PartialTransformation::OutputFASTQ(..)
-                            | PartialTransformation::OutputFASTA(..)
-                            | PartialTransformation::OutputBAM(..)
-                            | PartialTransformation::OutputReport(..)
-                    )
-                )
-            })
-        });
+            .map(|x| x.iter().any(|x| x.is_some()))
+            .unwrap_or(false);
+
         let is_benchmark = self
             .benchmark
             .as_ref()
@@ -586,13 +521,13 @@ impl PartialConfig {
             .copied()
             .unwrap_or(false);
         let output_ok = self.output.is_ok();
-        if !has_fastq_output && !has_report_output && !has_tag_output && !is_benchmark && output_ok
-        {
+        let input_ok = self.input.is_ok();
+        if !has_any_output && !is_benchmark && output_ok && input_ok {
             self.output.state = TomlValueState::ValidationFailed {
                 message: "No output files and no reports requested. Nothing to do.".to_string(),
             };
             self.output.help = Some(
-                "Add an [output] section with output files or reports, or use a benchmark configuration.".to_string(),
+                "Add an Output* step, such as OutputFASTQ or an OutputReport, or use a benchmark configuration.".to_string(),
             );
         }
     }
@@ -600,30 +535,23 @@ impl PartialConfig {
     fn disable_output_on_benchmark(&mut self) {
         if let Some(Some(benchmark)) = &self.benchmark.as_ref()
             && let Some(true) = benchmark.enable.as_ref()
+            && let Some(transforms) = self.transform.as_mut()
         {
-            // Disable output when benchmark mode is enabled
-            self.output = TomlValue::new_ok(
-                Some(PartialOutput {
-                    prefix: TomlValue::new_ok(String::from("benchmark"), 0..0),
-                    suffix: TomlValue::new_ok(None, 0..0),
-                    format: TomlValue::new_ok(FileFormat::default(), 0..0),
-                    compression: TomlValue::new_ok(CompressionFormat::default(), 0..0),
-                    compression_level: TomlValue::new_ok(None, 0..0),
-                    compression_threads: TomlValue::new_ok(1, 0..0),
-                    report_html: TomlValue::new_ok(false, 0..0),
-                    report_json: TomlValue::new_ok(false, 0..0),
-                    report_timing: TomlValue::new_ok(false, 0..0),
-                    stdout: TomlValue::new_ok(false, 0..0),
-                    interleave: TomlValue::new_ok(None, 0..0),
-                    output: TomlValue::new_ok(Some(Vec::new()), 0..0),
-                    output_hash_uncompressed: TomlValue::new_ok(false, 0..0),
-                    output_hash_compressed: TomlValue::new_ok(false, 0..0),
-                    ix_separator: TomlValue::new_ok(output::default_ix_separator(), 0..0),
-                    chunksize: TomlValue::new_ok(None, 0..0),
-                    bam: TomlValue::new_ok(None, 0..0),
-                }),
-                0..0,
-            );
+            transforms.retain(|t| {
+                !matches!(
+                    t.as_ref(),
+                    Some(
+                        PartialTransformation::StoreTagInFastQ { .. }
+                            | PartialTransformation::StoreTagsInTable { .. }
+                            | PartialTransformation::Inspect { .. }
+                            | PartialTransformation::QuantifyTag { .. }
+                            | PartialTransformation::OutputFASTQ { .. }
+                            | PartialTransformation::OutputFASTA { .. }
+                            | PartialTransformation::OutputBAM { .. }
+                            | PartialTransformation::OutputReport { .. }
+                    )
+                )
+            });
         }
     }
 
@@ -1524,63 +1452,6 @@ impl PartialConfig {
                 }
             } // cov:excl-line
 
-            // Mark tags consumed by output.bam as used so they don't trigger "Unused tag"
-            if let Some(Some(output)) = self.output.as_mut()
-                && let Some(Some(bam_opts)) = output.bam.as_mut()
-            {
-                if let Some(map_and_keys) = bam_opts.tag_to_bam_tag.as_mut() {
-                    for (toml_tag_label, tag_label) in
-                        map_and_keys.keys.iter_mut().zip(map_and_keys.map.keys())
-                    {
-                        if let Some(meta) = tags_available.get_mut(tag_label.as_ref()) {
-                            meta.used = true;
-                        } else {
-                            toml_tag_label.state =
-                                TomlValueState::new_validation_failed("No such tag".to_string());
-                            toml_tag_label.help = Some(offer_alternatives(
-                                tag_label.as_ref(),
-                                &tags_available.keys().map(AsRef::as_ref).collect::<Vec<_>>(),
-                            ));
-                        }
-                    }
-                    //now verify we're using every bam tag only once, and they're upper case.
-                    let mut seen_bam_tags = IndexMap::new();
-                    for bam_tag in map_and_keys.map.values_mut() {
-                        if let Some(bam_tag_value) = bam_tag.as_mut()
-                            && let Some(other_span) =
-                                seen_bam_tags.insert(bam_tag_value.0, bam_tag.span())
-                        {
-                            bam_tag.state = TomlValueState::Custom {
-                                spans: vec![
-                                    (bam_tag.span(), "Repeated, 2nd use".to_string()),
-                                    (other_span, "Repeated, 1st use".to_string()),
-                                ],
-                            };
-                            bam_tag.help = Some(
-                                "BAM tags must be distinct, \
-                                    can not write two tags into one BAM tag. Rename either one"
-                                    .to_string(),
-                            );
-                        }
-                        // cov:excl-line
-                    }
-                } // cov:excl-line
-                if let Some(Some(tag_to_ref)) = bam_opts.tag_to_reference.as_mut()
-                    && let Some(tag_name) = tag_to_ref.tag.as_mut()
-                {
-                    if let Some(meta) = tags_available.get_mut(tag_name.as_str()) {
-                        meta.used = true;
-                    } else {
-                        tag_to_ref.tag.help = Some(offer_alternatives(
-                            tag_name.as_ref(),
-                            &tags_available.keys().map(AsRef::as_ref).collect::<Vec<_>>(),
-                        ));
-                        tag_to_ref.tag.state =
-                            TomlValueState::new_validation_failed("No such tag".to_string());
-                    }
-                }
-            }
-
             //complain about unused tags if there were no tag errors
             //otherwise, mistyping a tag will give you two errors
             //one for 'no such tag' and one for 'you did not use the real one'
@@ -1675,28 +1546,33 @@ impl PartialConfig {
             (Vec<String>, Option<String>, String),
             Vec<ConflictEntry>,
         > = IndexMap::new();
-        let mut all_decls: Vec<Vec<OutputDeclaration>> = Vec::new();
+        let mut all_decls: Vec<Option<Vec<OutputDeclaration>>> = Vec::new();
 
+        self.transform.sync_nested_state();
         if let Some(transforms) = self.transform.value.as_ref() {
             for (idx, tv_transform) in transforms.iter().enumerate() {
-                let decls = tv_transform
+                if let Some(decls) = tv_transform
                     .value
                     .as_ref()
                     .map(TagUser::declare_output_files)
-                    .unwrap_or_default();
-                for decl in &decls {
-                    if let WriteTargetConfig::File(ft) = &decl.target {
-                        key_to_entries
-                            .entry((
-                                ft.infix_parts().to_vec(),
-                                ft.second_infix().map(ToOwned::to_owned),
-                                ft.suffix().to_string(),
-                            ))
-                            .or_default()
-                            .push((idx, decl.span.clone()));
+                    .unwrap_or_default()
+                {
+                    for decl in &decls {
+                        if let WriteTargetConfig::File(ft) = &decl.target {
+                            key_to_entries
+                                .entry((
+                                    ft.infix_parts().to_vec(),
+                                    ft.second_infix().map(ToOwned::to_owned),
+                                    ft.suffix().to_string(),
+                                ))
+                                .or_default()
+                                .push((idx, decl.span.clone()));
+                        }
                     }
+                    all_decls.push(Some(decls));
+                } else {
+                    all_decls.push(None);
                 }
-                all_decls.push(decls);
             }
         } //cov:excl-line
         // Collect stdout-related errors before moving all_decls.
@@ -1716,7 +1592,7 @@ impl PartialConfig {
                     ) {
                         seen_demux = true;
                     }
-                    for decl in all_decls.get(idx).into_iter().flatten() {
+                    for decl in all_decls.get(idx).into_iter().flatten().flatten() {
                         if matches!(decl.target, WriteTargetConfig::Stdout) {
                             stdout_entries.push((idx, decl.span.clone()));
                             stdout_has_demux_before.push(has_demux_before);
@@ -1774,7 +1650,7 @@ impl PartialConfig {
                     );
                 }
             }
-            // Multiple non-singleton stdout outputs are invalid.
+            // Multiple stdout outputs are invalid (independent of demultiplex).
             if stdout_entries.len() > 1 {
                 let spans: Vec<_> = stdout_entries
                     .iter()
@@ -1795,27 +1671,7 @@ impl PartialConfig {
                         .to_string(),
                 );
             }
-
-            //fourth step: report conflicts with stdout output from output
-            if let Some(Some(output_config)) = self.output.as_mut()
-                && output_config.stdout.as_ref().is_some_and(|x| *x)
-                && !stdout_entries.is_empty()
-            {
-                let mut spans = vec![(
-                    output_config.stdout.span(),
-                    "Stdout output conflict.".to_string(),
-                )];
-                for (_transform_idx, span) in stdout_entries {
-                    spans.push((span.clone(), "This step also writes to stdout.".to_string()));
-                }
-                output_config.stdout.state = TomlValueState::Custom { spans };
-                output_config.stdout.help = Some(
-                    "Stdout output from [output] conflicts with step(s) writing to stdout.\n\
-                    Either change the [output] to write to files (or not at all), or change the step(s) to write to a file instead."
-                        .to_string(),
-                );
-            }
-        } //cov:excl-line
+        }
     }
 
     pub fn verify_demultiplex_unique(&mut self) {
@@ -1864,17 +1720,6 @@ impl PartialConfig {
                     let mut found_barcode_using_step =
                         used_barcode_sections.contains(barcode_section_name);
                     // Also check wether the  output's tag_to_reference uses this barcode section
-                    if !found_barcode_using_step
-                        && let Some(Some(output)) = self.output.as_ref()
-                        && let Some(Some(bam_opts)) = output.bam.as_ref()
-                        && let Some(Some(tag_to_ref)) = bam_opts.tag_to_reference.as_ref()
-                        && let Some(Some(barcodes_name)) =
-                            tag_to_ref.references_from_barcodes.as_ref()
-                        && barcode_section_name.as_ref() == barcodes_name.as_str()
-                    {
-                        found_barcode_using_step = true;
-                    }
-
                     if !found_barcode_using_step {
                         tv_barcodes.state = TomlValueState::new_validation_failed(
                             "Barcode section not referenced by any step",
@@ -1883,24 +1728,6 @@ impl PartialConfig {
                             "Add a step that uses this barcode section, use it in `output.bam.references_from_barcodes`, or remove it.".to_string(),
                         );
                     }
-                }
-
-                if let Some(Some(output)) = self.output.as_mut()
-                    && output.format.as_ref() == Some(&FileFormat::Bam)
-                    && let Some(Some(bam)) = output.bam.as_mut()
-                    && let Some(Some(tag_to_reference)) = bam.tag_to_reference.as_mut()
-                    && let Some(Some(from_barcode)) =
-                        tag_to_reference.references_from_barcodes.as_ref()
-                    && !barcodes.map.contains_key(from_barcode.as_str())
-                {
-                    tag_to_reference.references_from_barcodes.help = Some(offer_alternatives(
-                        from_barcode,
-                        &barcodes.map.keys().map(AsRef::as_ref).collect::<Vec<_>>(),
-                    ));
-                    tag_to_reference.references_from_barcodes.state =
-                        TomlValueState::new_validation_failed(
-                            "Barcode section not found for output.bam.tag_to_reference",
-                        );
                 }
             }
         }
@@ -2156,6 +1983,34 @@ impl Config {
         stages
     }
 
+    fn any_bam_or_gzip_output(&self) -> bool {
+        for transform in self.transform.iter() {
+            if let Transformation::OutputBAM(_) = transform {
+                return true;
+            }
+            if let Transformation::OutputFASTA(crate::transformations::output::OutputFASTA {
+                compression,
+                ..
+            }) = transform
+            {
+                if matches!(compression, CompressionFormat::Gzip) {
+                    return true;
+                }
+            }
+
+            if let Transformation::OutputFASTQ(crate::transformations::output::OutputFASTQ {
+                compression,
+                ..
+            }) = transform
+            {
+                if matches!(compression, CompressionFormat::Gzip) {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
     #[mutants::skip] // yeah, no rapidgzip doesn't change the result
     fn configure_multithreading(
         &mut self,
@@ -2167,18 +2022,11 @@ impl Config {
         // mean the user can enable it by setting threads_per_segment > 1, but by default we
         // choose one core
 
-        let can_multicore_compression = self
-            .output
-            .as_ref()
-            .is_some_and(|o| matches!(o.compression, CompressionFormat::Gzip))
-            | self
-                .output
-                .as_ref()
-                .is_some_and(|o| matches!(o.format, FileFormat::Bam));
+        let can_multicore_compression = self.any_bam_or_gzip_output();
         let (thread_count, input_threads_per_segment, output_threads) = calculate_thread_counts(
             self.options.threads,
             self.input.options.threads_per_segment,
-            self.output.as_ref().map(|x| x.compression_threads),
+            self.output.as_ref().map(|x| x.compression_threads.into()),
             segment_count,
             get_number_of_cores(),
             can_multicore_input,
@@ -2187,7 +2035,8 @@ impl Config {
         self.options.threads = Some(thread_count);
         self.input.options.threads_per_segment = Some(input_threads_per_segment);
         if let Some(output) = &mut self.output {
-            output.compression_threads = output_threads;
+            output.compression_threads = NonZero::new(output_threads)
+                .expect("Calculated output threads should never be zero");
         }
 
         //rapidgzip single core is slower than regular gzip

@@ -1,18 +1,22 @@
-Error 1/2
+Error Details ==
+Error 1/1
    ╭─config.toml
    ┆
-17 │ [[step]]
-18 │     action = 'AssignByHalves'
+14 │ [[step]]
+15 │     action = 'AssignByHalves'
    ┆              ────────┬───────
    ┆                      │
    ┆                      ╰──────── In this step
    ┆
-19 │     in_label = 'query_seq'
-20 │     out_label = 'query_seq23'
-21 │     barcodes = 'probes'
+16 │     in_label = 'query_seq'
+17 │     out_label = 'query_seq23'
+18 │     barcodes = 'probes'
    ┆                ────┬───
    ┆                    │
    ┆                    ╰──── No barcodes sections defined
 ───╯
 Hint: Add a [barcodes.<name>] section in your TOML to define the barcodes.
       See https://doc_url.example/version-stripped-from-test/docs/redirects/AssignByHalves
+      Or run: `fastqrab template AssignByHalves` for more information.
+
+

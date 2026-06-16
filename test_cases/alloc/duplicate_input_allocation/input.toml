@@ -8,3 +8,6 @@
 
 [output]
     prefix = "output_single"
+
+[[step]]
+  action = 'OutputFASTQ'

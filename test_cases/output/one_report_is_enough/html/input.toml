@@ -13,11 +13,6 @@
 [output]
     prefix = "output"
 
-# --- Output steps (migrated from [output]) ---
-[[step]]
-    action = "OutputFASTQ"
-    output = []
-
 [[step]]
     action = "OutputReport"
     json = false

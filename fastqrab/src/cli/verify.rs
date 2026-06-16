@@ -180,18 +180,28 @@ fn load_expected_failures(
 fn extract_output_config(raw_config: &str) -> Result<(String, bool)> {
     let result = crate::config::config_from_string(raw_config);
 
-    if let Ok(parsed) = &result
-        && let Some(benchmark) = &parsed.benchmark
-        && benchmark.enable
-    {
-        bail!(
-            "This is a benchmarking configuration, which can't be verified for it's output (it has none). Maybe turn off benchmark.enable in your TOML, or use another configuration?"
-        )
+    let mut stdout = false;
+    if let Ok(parsed) = result.as_ref() {
+        if let Some(benchmark) = &parsed.benchmark
+            && benchmark.enable
+        {
+            bail!(
+                "This is a benchmarking configuration, which can't be verified for it's output (it has none). Maybe turn off benchmark.enable in your TOML, or use another configuration?"
+            )
+        }
+        for output_declarations in &parsed.output_declarations_per_transformation {
+            if let Some(output_declarations) = output_declarations {
+                for declaration in output_declarations {
+                        if declaration.target.is_stdout() {
+                            stdout = true;
+                        }
+                    }
+            }
+        }
     }
-
     Ok(result
         .ok()
-        .and_then(|parsed| parsed.output.as_ref().map(|o| (o.prefix.clone(), o.stdout)))
+        .and_then(|parsed| parsed.output.as_ref().map(|o| (o.prefix.clone(), stdout)))
         .unwrap_or_else(|| ("missing_output_config".to_string(), false)))
 }
 

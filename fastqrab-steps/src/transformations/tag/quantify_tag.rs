@@ -62,23 +62,22 @@ impl TagUser for PartialTaggedVariant<PartialQuantifyTag> {
         }
     }
 
-    fn declare_output_files(&self) -> Vec<OutputDeclaration> {
-        let inner = self
-            .toml_value
-            .value
-            .as_ref()
-            .expect("declared_output_files called on failed verification");
-        let infix = inner.infix.as_ref().expect("Verification had passed");
-        return vec![OutputDeclaration {
-            id: "qr".to_string(),
-            target: WriteTargetConfig::new(vec![infix.clone()], None, "qr.json".to_string()),
-            sink_config: SinkConfig::default(),
-            format: fastqrab_io::FileFormat::Text,
-            chunk_policy: ChunkPolicy::default(),
-            bam_options: None,
-            singleton: false,
-            span: inner.infix.span(),
-        }];
+    fn declare_output_files(&self) -> Option<Vec<OutputDeclaration>> {
+        if let Some(inner) = self.toml_value.as_ref() {
+            let infix = inner.infix.as_ref().expect("Verification had passed");
+            Some(vec![OutputDeclaration {
+                id: "qr".to_string(),
+                target: WriteTargetConfig::new(vec![infix.clone()], None, "qr.json".to_string()),
+                sink_config: SinkConfig::default(),
+                format: fastqrab_io::FileFormat::Text,
+                chunk_policy: ChunkPolicy::default(),
+                bam_options: None,
+                singleton: false,
+                span: inner.infix.span(),
+            }])
+        } else {
+            Some(vec![]) //there should be output files, but we can't name them.
+        }
     }
 }
 

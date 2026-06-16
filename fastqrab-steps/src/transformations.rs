@@ -214,8 +214,8 @@ pub trait TagUser {
     /// back to the step's own top-level span when no better field exists.
     /// Steps that produce side-output files override this; the default
     /// returns an empty vec.
-    fn declare_output_files(&self) -> Vec<OutputDeclaration> {
-        vec![]
+    fn declare_output_files(&self) -> Option<Vec<OutputDeclaration>> {
+        None
     }
 }
 

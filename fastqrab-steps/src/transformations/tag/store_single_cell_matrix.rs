@@ -251,87 +251,85 @@ fn determine_lookup_mode(
 }
 
 impl TagUser for PartialTaggedVariant<PartialStoreSingleCellMatrix> {
-    fn declare_output_files(&self) -> Vec<OutputDeclaration> {
-        let inner = self
-            .toml_value
-            .value
-            .as_ref()
-            .expect("Decalre output files called on invalid config");
-        let infix = inner.infix.as_ref().cloned().unwrap_or_default();
-        let compression = inner.compression.as_ref().copied().unwrap_or_default();
-        let compression_level = inner
-            .compression_level
-            .as_ref()
-            .and_then(|x| x.as_ref())
-            .copied();
-        let data_suffix = compression.apply_suffix("matrix.mtx");
-        let data_sink = SinkConfig {
-            compression,
-            compression_level,
-            compression_threads: Some(NonZeroUsize::new(1).expect("Can't fail")),
-            hash_uncompressed: false,
-            hash_compressed: false,
-            simulated_failure: None,
-        };
-        let span = inner.infix.span();
-        vec![
-            OutputDeclaration {
-                id: "data".to_string(),
-                target: WriteTargetConfig::new(
-                    vec![infix.clone(), "scd".to_string()],
-                    None,
-                    data_suffix,
-                ),
-                sink_config: data_sink.clone(),
-                format: FileFormat::Text,
-                chunk_policy: ChunkPolicy::default(),
-                bam_options: None,
-                singleton: false,
-                span: span.clone(),
-            },
-            OutputDeclaration {
-                id: "stats".to_string(),
-                target: WriteTargetConfig::new(
-                    vec![infix.clone(), "scd".to_string()],
-                    None,
-                    compression.apply_suffix("matrix.mtx.stats.txt"),
-                ),
-                sink_config: data_sink.clone(),
-                format: FileFormat::Text,
-                chunk_policy: ChunkPolicy::default(),
-                bam_options: None,
-                singleton: false,
-                span: span.clone(),
-            },
-            OutputDeclaration {
-                id: "cell_barcodes".to_string(),
-                target: WriteTargetConfig::new(
-                    vec![infix.clone(), "scd".to_string()],
-                    None,
-                    compression.apply_suffix("barcodes.txt"),
-                ),
-                sink_config: data_sink.clone(),
-                format: FileFormat::Text,
-                chunk_policy: ChunkPolicy::default(),
-                bam_options: None,
-                singleton: true,
-                span: span.clone(),
-            },
-            OutputDeclaration {
-                id: "genes".to_string(),
-                target: WriteTargetConfig::new(
-                    vec![infix.clone(), "scd".to_string()],
-                    None,
-                    compression.apply_suffix("features.txt"),
-                ),
-                sink_config: data_sink,
-                format: FileFormat::Text,
-                chunk_policy: ChunkPolicy::default(),
-                bam_options: None,
-                singleton: true,
-                span,
-            },
-        ]
+    fn declare_output_files(&self) -> Option<Vec<OutputDeclaration>> {
+        if let Some(inner) = self.toml_value.as_ref() {
+            let infix = inner.infix.as_ref().cloned().unwrap_or_default();
+            let compression = inner.compression.as_ref().copied().unwrap_or_default();
+            let compression_level = inner
+                .compression_level
+                .as_ref()
+                .and_then(|x| x.as_ref())
+                .copied();
+            let data_suffix = compression.apply_suffix("matrix.mtx");
+            let data_sink = SinkConfig {
+                compression,
+                compression_level,
+                hash_uncompressed: false,
+                hash_compressed: false,
+                simulated_failure: None,
+            };
+            let span = inner.infix.span();
+            Some(vec![
+                OutputDeclaration {
+                    id: "data".to_string(),
+                    target: WriteTargetConfig::new(
+                        vec![infix.clone(), "scd".to_string()],
+                        None,
+                        data_suffix,
+                    ),
+                    sink_config: data_sink.clone(),
+                    format: FileFormat::Text,
+                    chunk_policy: ChunkPolicy::default(),
+                    bam_options: None,
+                    singleton: false,
+                    span: span.clone(),
+                },
+                OutputDeclaration {
+                    id: "stats".to_string(),
+                    target: WriteTargetConfig::new(
+                        vec![infix.clone(), "scd".to_string()],
+                        None,
+                        compression.apply_suffix("matrix.mtx.stats.txt"),
+                    ),
+                    sink_config: data_sink.clone(),
+                    format: FileFormat::Text,
+                    chunk_policy: ChunkPolicy::default(),
+                    bam_options: None,
+                    singleton: false,
+                    span: span.clone(),
+                },
+                OutputDeclaration {
+                    id: "cell_barcodes".to_string(),
+                    target: WriteTargetConfig::new(
+                        vec![infix.clone(), "scd".to_string()],
+                        None,
+                        compression.apply_suffix("barcodes.txt"),
+                    ),
+                    sink_config: data_sink.clone(),
+                    format: FileFormat::Text,
+                    chunk_policy: ChunkPolicy::default(),
+                    bam_options: None,
+                    singleton: true,
+                    span: span.clone(),
+                },
+                OutputDeclaration {
+                    id: "genes".to_string(),
+                    target: WriteTargetConfig::new(
+                        vec![infix.clone(), "scd".to_string()],
+                        None,
+                        compression.apply_suffix("features.txt"),
+                    ),
+                    sink_config: data_sink,
+                    format: FileFormat::Text,
+                    chunk_policy: ChunkPolicy::default(),
+                    bam_options: None,
+                    singleton: true,
+                    span,
+                },
+            ])
+        } else {
+            Some(vec![]) //there should be output files, but we can't name them.
+        }
     }
 
     fn get_tag_usage(

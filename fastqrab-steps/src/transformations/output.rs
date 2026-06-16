@@ -18,11 +18,12 @@ pub(crate) use output_bam::{resolve_output_bam, verify_output_bam_merge};
 pub use output_fasta::{OutputFASTA, PartialOutputFASTA};
 pub use output_fastq::{OutputFASTQ, PartialOutputFASTQ};
 pub use output_report::{OutputReport, PartialOutputReport};
+use rayon::iter::Interleave;
 
 use crate::transformations::prelude::*;
 use fastqrab_io::CompressionFormat;
 use fastqrab_io::io::output::chunked_writer::BamSinkOptions;
-use std::num::NonZeroUsize;
+use std::collections::HashSet;
 
 use crate::demultiplex::OptDemultiplex;
 use crate::transformations::FinalizeReportResult;
@@ -39,19 +40,16 @@ pub(crate) fn segment_id(segment_name: &str) -> String {
 }
 
 /// Build a [`SinkConfig`] from the common record-output options.
+// TOdo: this should be a SinkConfig Constructor!
 pub(crate) fn sink_config(
     compression: CompressionFormat,
     compression_level: Option<u8>,
-    compression_threads: usize,
     hash_uncompressed: bool,
     hash_compressed: bool,
 ) -> SinkConfig {
     SinkConfig {
         compression,
         compression_level,
-        compression_threads: Some(
-            NonZeroUsize::new(compression_threads.max(1)).expect("max(1) is nonzero"),
-        ),
         hash_uncompressed,
         hash_compressed,
         simulated_failure: None,
@@ -416,6 +414,7 @@ pub(crate) fn verify_record_targets(
             );
         }
     } else if let Some(None) = output.as_ref() {
+        //default unset output to all segments if no interleave is set.
         if let Some(Some(_)) = interleave.as_ref() {
             *output = TomlValue::new_ok(Some(Vec::new()), 0..0);
         } else if let Some(seg_order) = segment_order(parent) {
@@ -478,9 +477,40 @@ pub(crate) fn verify_record_targets(
             }
         }
     }
+    //we still need to check if output is set to empty & interleave is set to empty
+    let interleave_is_empty = if let Some(Some(interleaved_segments)) = interleave.as_ref()
+        && interleaved_segments.is_empty()
+    {
+        true
+    } else if let Some(None) = interleave.as_ref() {
+        true
+    } else {
+        false
+    };
+    if let Some(Some(output_segments)) = output.as_ref()
+        && output_segments.is_empty()
+        && interleave_is_empty
+    {
+        let mut spans = vec![(
+            output.span(),
+            "Add segments here (or at `interleave =`) or remove 'output = ...`".to_string(),
+        )];
+        if let Some(Some(_)) = interleave.as_ref() {
+            spans.push((
+                interleave.span(),
+                "Add segments here / remove `interleave = ..` (and fill `output =`) =".to_string(),
+            ));
+        }
+        output.state = TomlValueState::Custom { spans };
+        output.help = Some(
+            "Either add segments to `output` or to `interleave`, or remove both options to get the default behaviour"
+                .to_string(),
+        );
+    }
 }
 
 fn segment_order(parent: &PartialConfig) -> Option<&Vec<String>> {
+    //todo: turn into a mothed on PartialConfig!
     parent.input.as_ref().map(|input| input.get_segment_order())
 }
 
@@ -641,4 +671,85 @@ pub(crate) fn render_html_report(json_report_string: &str) -> Result<String> {
         .replace("\"%DATA%\"", json_report_string)
         .replace("/*%CHART%*/", chartjs);
     Ok(html)
+}
+
+fn verify_suffix(suffix: &Option<String>) -> Result<(), ValidationFailure> {
+    if let Some(suffix) = suffix.as_ref() {
+        if suffix.contains('/') || suffix.contains('\\') || suffix.contains(':') {
+            Err(ValidationFailure::new(
+                "Invalid value",
+                Some("Must not contain '/', '\\' or ':'."),
+            ))
+        } else if suffix.is_empty() {
+            Err(ValidationFailure::new(
+                "Invalid value",
+                Some("Must not be empty."),
+            ))
+        } else {
+            Ok(())
+        }
+    } else {
+        Ok(())
+    }
+}
+
+fn verify_chunk_size(
+    chunk_size: &Option<usize>,
+    stdout: &TomlValue<bool>,
+) -> Result<(), ValidationFailure> {
+    if let Some(chunk_size) = chunk_size.as_ref() {
+        if *chunk_size == 0 {
+            return Err(ValidationFailure::new(
+                "Must not be 0.",
+                Some(
+                    "'Chunksize' must be greater than zero when specified. Increase or remove setting.",
+                ),
+            ));
+        } else if let Some(true) = stdout.as_ref() {
+            return Err(ValidationFailure::new(
+                "Invalid when stdout = true",
+                Some("Either remove 'chunksize' or set 'stdout' to false"),
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// Validates that the compression level is within the expected range for the given compression format
+pub fn validate_compression_level_u8(
+    compression: &TomlValue<CompressionFormat>,
+    compression_level: &mut TomlValue<Option<u8>>,
+) {
+    if let Some(Some(level)) = compression_level.as_ref() {
+        match compression.as_ref() {
+            None | Some(CompressionFormat::Uncompressed) => {
+                if *level != 0 {
+                    compression_level.state = TomlValueState::ValidationFailed {
+                        message: "Compression level specified for uncompressed output".to_string(),
+                    };
+                    compression_level.help = Some(
+                        "Remove compression_level, or set compressed='gzip' or 'zstd'".to_string(),
+                    );
+                }
+            }
+            Some(CompressionFormat::Gzip) => {
+                if *level > 9 {
+                    compression_level.state = TomlValueState::ValidationFailed {
+                        message: "Invalid Value".to_string(),
+                    };
+                    compression_level.help = Some("Valid range is 0-9 for gzip.".to_string());
+                }
+            }
+            Some(CompressionFormat::Zstd) => {
+                if *level == 0 || *level > 22 {
+                    compression_level.state = TomlValueState::ValidationFailed {
+                        message: ("Invalid Value".to_string()),
+                    };
+                    compression_level.help = Some("Valid range is 1-22 for zstd.".to_string());
+                }
+            }
+        }
+    } else {
+        // No compression level specified - rapidgzip is still invalid for output
+    }
 }

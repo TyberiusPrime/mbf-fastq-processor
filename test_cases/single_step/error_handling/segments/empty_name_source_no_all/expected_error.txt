@@ -14,7 +14,7 @@ Error 1/1
 10 │      source = 'name:'
    ┆               ───┬───
    ┆                  │
-   ┆                  ╰──── Must not be empty
+   ┆                  ╰──── Must not be empty.
 ───╯
 Hint: Please provide a segment name after 'name:', for there were multiple segments to choose from.
       See https://doc_url.example/version-stripped-from-test/docs/redirects/ExtractRegion

@@ -1,26 +1,28 @@
 Error Details ==
-Error 1/1
+Error 1/2
    ╭─config.toml
    ┆
- 4 │ [[step]]
- 5 │     action = 'Report'
-   ┆              ────┬───
-   ┆                  │
-   ┆                  ╰──── In this step
-   ┆
- 6 │     name = 'report'
- 7 │     count = true
-   ┆                 ┬
-   ┆                 │
-   ┆                 ╰─ Report but no output.report_html | report_json
-   ┆
  9 │ [output]
-10 │     prefix = 'output'
-11 │     format = 'None'
-   ┆                   ┬
-   ┆                   │
-   ┆                   ╰─ Add report_json | report_html here?
+10 │     prefix = "output"
+   ┆                      ┬
+   ┆                      │
+   ┆                      ╰─ No output files and no reports requested. Nothing to do.
 ───╯
-Hint: Either remove the report, or enable it's output.
+Hint: Add an Output* step, such as OutputFASTQ or an OutputReport, or use a benchmark configuration.
+
+Error 2/2
+  ╭─config.toml
+  ┆
+4 │ [[step]]
+5 │     action = 'Report'
+6 │     name = 'report'
+7 │     count = true
+  ┆                 ┬
+  ┆                 │
+  ┆                 ╰─ Report but no `OutputReport` step present
+──╯
+Hint: Either remove the Report step, or add an OutputReport
       See https://doc_url.example/version-stripped-from-test/docs/redirects/Report
+      Or run: `fastqrab template Report` for more information.
+
 

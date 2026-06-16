@@ -60,3 +60,4 @@ pub use stringpod::{CrossPods, DualStringPod, DualStringPodBuilder, StringPodBui
 
 pub use smallvec::SmallVec;
 pub use std::borrow::Cow;
+pub use std::num::NonZero;

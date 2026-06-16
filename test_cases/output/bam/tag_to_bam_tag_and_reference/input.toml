@@ -3,6 +3,7 @@
 
 [output]
     prefix = "output"
+
 [[step]]
     action = 'ExtractRegion'
     source = 'read1'
@@ -51,19 +52,6 @@
   query = 'acontent > 0.25'
   out_label='many_a'
   result_type='bool'
-
-[output.bam]
-    [output.bam.tag_to_bam_tag]
-        barcode = 'BC'
-        acontent = 'XC'
-        many_a = 'XB'
-        number_from_name = 'RR'
-        
-
-    [output.bam.tag_to_reference]
-        tag = 'ref_name'
-        references_from_barcodes = 'ref_barcodes'
-
 
 [[step]]
   action = 'StoreTagsInTable'

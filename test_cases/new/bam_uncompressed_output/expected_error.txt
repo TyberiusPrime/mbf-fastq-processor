@@ -12,7 +12,7 @@ Error 1/1
    ┆          │
    ┆          ╰─────────────────────── Unknown key.
 ───╯
-Hint: Did you mean: 'compression_level', 'suffix', or 'compression_threads'?
+Hint: Did you mean: 'compression_level', 'suffix', or 'output'?
       See https://doc_url.example/version-stripped-from-test/docs/redirects/OutputBAM
       Or run: `fastqrab template OutputBAM` for more information.
 

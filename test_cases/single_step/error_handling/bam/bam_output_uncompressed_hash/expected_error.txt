@@ -1,1 +1,19 @@
-Uncompressed hashing is not supported when format = 'bam'
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+ 8 │ [[step]]
+ 9 │     action = "OutputBAM"
+   ┆              ─────┬─────
+   ┆                   │
+   ┆                   ╰────── In this step
+10 │     uncompressed_hash = true
+   ┆     ────────┬────────
+   ┆             │
+   ┆             ╰──────────────── Unknown key.
+───╯
+Hint: Did you mean: 'compression_level', 'segments' (='output'), or 'interleaved' (='interleave')?
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/OutputBAM
+      Or run: `fastqrab template OutputBAM` for more information.
+
+

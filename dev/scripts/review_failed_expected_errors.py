@@ -57,7 +57,7 @@ def remove_actual_folders(base_dir: Path) -> int:
 def run_cargo_test() -> int:
     """Run cargo test; output goes straight to the terminal."""
     print(f"\n{BOLD}Running cargo test...{RESET}\n")
-    result = subprocess.run(["cargo", "test"])
+    result = subprocess.run(["cargo", "test"] + sys.argv[1:])
     return result.returncode
 
 

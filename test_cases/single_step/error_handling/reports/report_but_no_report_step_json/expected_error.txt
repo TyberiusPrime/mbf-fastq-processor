@@ -1,14 +1,22 @@
 Error Details ==
 Error 1/1
-  ╭─config.toml
-  ┆
-4 │ [output]
-5 │     prefix = 'output'
-6 │     report_json = true
-  ┆                   ──┬─
-  ┆                     │
-  ┆                     ╰── Set to true?
-──╯
+   ╭─config.toml
+   ┆
+11 │ [[step]]
+12 │     action = "OutputReport"
+   ┆              ───────┬──────
+   ┆                     │
+   ┆                     ╰─────── In this step
+   ┆
+13 │     json = true
+14 │     html = false
+   ┆                 ┬
+   ┆                 │
+   ┆                 ╰─ Report output defined here
+───╯
 Hint: No report step, but report output requested.
-      Remove/disable report_html & report_json, or add in a report step.
+      Remove the `OutputReport` step, or add in a `Report` step.
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/OutputReport
+      Or run: `fastqrab template OutputReport` for more information.
+
 

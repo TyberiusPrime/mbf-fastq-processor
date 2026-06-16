@@ -1,3 +1,4 @@
+Error Details ==
 Error 1/1
    ╭─config.toml
    ┆
@@ -12,4 +13,8 @@ Error 1/1
    ┆                                 ╰───────── Unknown location tag label
 ───╯
 Hint: 'polyX' is not a tag name. Choose an existing name.
-      Did you mean: polyA?
+      Did you mean: 'polyA'?
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/StoreTagsInTable
+      Or run: `fastqrab template StoreTagsInTable` for more information.
+
+

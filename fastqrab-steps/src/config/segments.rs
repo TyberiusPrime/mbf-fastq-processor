@@ -229,7 +229,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceNoAll>> {
                             let trimmed = tag_name.trim();
                             if trimmed.is_empty() {
                                 Err(ValidationFailure::new(
-                                    "Must not be empty",
+                                    "Must not be empty.",
                                     Some("Please provide a name after 'tag:'."),
                                 ))
                             } else {
@@ -250,7 +250,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceNoAll>> {
                                     })
                                 } else {
                                     Err(ValidationFailure::new(
-                                        "Must not be empty",
+                                        "Must not be empty.",
                                         Some(
                                             "Please provide a segment name after 'name:', for there were multiple segments to choose from.",
                                         ),
@@ -340,7 +340,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceAll>> {
                             let trimmed = tag_name.trim();
                             if trimmed.is_empty() {
                                 Err(ValidationFailure::new(
-                                    "Must not be empty",
+                                    "Must not be empty.",
                                     Some("Please provide a name after 'tag:'."),
                                 ))
                             } else {
@@ -363,7 +363,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceAll>> {
                                     })
                                 } else {
                                     Err(ValidationFailure::new(
-                                        "Must not be empty",
+                                        "Must not be empty.",
                                         Some(
                                             "Please provide a segment name after 'name:', for there were multiple segments to choose from.",
                                         ),

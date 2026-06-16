@@ -1,8 +1,8 @@
-use fastqrab_config::{TagLabel, segments::SegmentIndexOrAll, validate_tag_name};
+use fastqrab_config::{TagLabel, offer_alternatives, segments::SegmentIndexOrAll, validate_tag_name};
 use fastqrab_dna::segments::SegmentIndex;
 use indexmap::IndexMap;
 use toml_pretty_deser::{
-    MustAdapt, TomlValue, TomlValueState, ValidationFailure, suggest_alternatives,
+    MustAdapt, TomlValue, TomlValueState, ValidationFailure,
 };
 
 use crate::config::TagMetadata;
@@ -61,7 +61,7 @@ impl ValidateTagLabel for TomlValue<MustAdapt<String, TagLabel>> {
                                 "Unknown length tag label".to_string(),
                                 Some(format!(
                                     "'{segment_name}' is neither a segment nor a tag name. Choose an existing name.\n{}",
-                                    suggest_alternatives(segment_name, &available)
+                                    offer_alternatives(segment_name, &available)
                                 )),
                             ))
                         }
@@ -89,7 +89,7 @@ impl ValidateTagLabel for TomlValue<MustAdapt<String, TagLabel>> {
                                 "Unknown location tag label".to_string(),
                                 Some(format!(
                                     "'{incoming_tag_name}' is not a tag name. Choose an existing name.\n{}",
-                                    suggest_alternatives(incoming_tag_name, &available)
+                                    offer_alternatives(incoming_tag_name, &available)
                                 )),
                             ))
                         }
@@ -118,7 +118,7 @@ impl ValidateTagLabel for TomlValue<MustAdapt<String, TagLabel>> {
                                 "Unknown location tag label".to_string(),
                                 Some(format!(
                                     "'{incoming_tag_name}' is not a tag name. Choose an existing name.\n{}",
-                                    suggest_alternatives(incoming_tag_name, &available)
+                                    offer_alternatives(incoming_tag_name, &available)
                                 )),
                             ))
                         }
