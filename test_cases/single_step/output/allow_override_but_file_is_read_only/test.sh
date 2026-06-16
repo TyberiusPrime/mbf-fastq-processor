@@ -26,7 +26,7 @@ fi
 # check if the string should is in stderr
 if ! grep -c "$should" stderr; then
     echo "Expected error message not found in stderr"
-    echo 'actual' $(cat stderr)
+    echo 'actual' "$(cat stderr)"
     exit 1
 else
     echo "Expected error message found in stderr"

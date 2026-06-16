@@ -3,8 +3,8 @@ use fastqrab_io::CompressionFormat;
 
 use super::{
     RecordOutputDeclSpec, RecordOutputState, build_record_declarations, collect_segment_list,
-    sink_config, verify_chunk_size, verify_record_targets, verify_suffix,
-    validate_compression_level_u8,
+    sink_config, validate_compression_level_u8, verify_chunk_size, verify_record_targets,
+    verify_suffix,
 };
 
 /// Write reads to FASTQ file(s) as a pipeline step.
@@ -100,10 +100,7 @@ impl VerifyIn<PartialConfig> for PartialOutputFASTQ {
             }
         });
         if let Some(Some(_)) = self.compression_level.value {
-            validate_compression_level_u8(
-                &self.compression,
-                &mut self.compression_level,
-            );
+            validate_compression_level_u8(&self.compression, &mut self.compression_level);
         }
         self.chunksize
             .verify(|chunk_size| verify_chunk_size(chunk_size, &self.stdout));

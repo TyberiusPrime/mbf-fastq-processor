@@ -586,6 +586,17 @@ fn test_cases_x_error_handling_x_misc_x_disk_full_fastq() {
 
 #[test]
 
+fn test_cases_x_error_handling_x_misc_x_disk_full_store_in_table() {
+    println!("Test case is in: test_cases/error_handling/misc/disk_full_store_in_table");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/misc/disk_full_store_in_table"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_error_handling_x_misc_x_missing_output_dir_will_be_created() {
     println!("Test case is in: test_cases/error_handling/misc/missing_output_dir_will_be_created");
     run_test(

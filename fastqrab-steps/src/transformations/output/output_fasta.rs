@@ -4,7 +4,7 @@ use fastqrab_io::CompressionFormat;
 use super::output_fastq::{declare_text_output, interleave_present};
 use super::{
     RecordOutputState, collect_segment_list, validate_compression_level_u8, verify_chunk_size,
-     verify_record_targets, verify_suffix,
+    verify_record_targets, verify_suffix,
 };
 
 /// Write reads to FASTA file(s) as a pipeline step.

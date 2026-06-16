@@ -1,9 +1,9 @@
-use fastqrab_config::{TagLabel, offer_alternatives, segments::SegmentIndexOrAll, validate_tag_name};
+use fastqrab_config::{
+    TagLabel, offer_alternatives, segments::SegmentIndexOrAll, validate_tag_name,
+};
 use fastqrab_dna::segments::SegmentIndex;
 use indexmap::IndexMap;
-use toml_pretty_deser::{
-    MustAdapt, TomlValue, TomlValueState, ValidationFailure,
-};
+use toml_pretty_deser::{MustAdapt, TomlValue, TomlValueState, ValidationFailure};
 
 use crate::config::TagMetadata;
 

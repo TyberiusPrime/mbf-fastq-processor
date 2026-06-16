@@ -610,8 +610,9 @@ prefix = "output"
         extracted_section.contains(&format!("action = \"{name}\""))
             || extracted_section.contains(&format!("action = '{name}'"))
     };
-    let declares_record_output =
-        declares_action("OutputFASTQ") || declares_action("OutputFASTA") || declares_action("OutputBAM");
+    let declares_record_output = declares_action("OutputFASTQ")
+        || declares_action("OutputFASTA")
+        || declares_action("OutputBAM");
     let declares_report_output = declares_action("OutputReport");
     if !declares_record_output {
         config.push_str(

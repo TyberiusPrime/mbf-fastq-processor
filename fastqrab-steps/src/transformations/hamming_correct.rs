@@ -366,7 +366,7 @@ impl TagUser for PartialTaggedVariant<PartialHammingCorrect> {
                     span: inner.on_tie_dump_counts.span(),
                 }]);
             }
-        } 
+        }
         None //doesn't count as an output job if unconfigured
     }
 }

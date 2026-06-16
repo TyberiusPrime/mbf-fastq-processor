@@ -10,8 +10,8 @@ use toml_pretty_deser::prelude::*;
 use super::output_fastq::interleave_present;
 use super::{
     RecordOutputDeclSpec, RecordOutputState, build_record_declarations, collect_segment_list,
-    sink_config, validate_compression_level_u8, verify_chunk_size, 
-    verify_record_targets, verify_suffix,
+    sink_config, validate_compression_level_u8, verify_chunk_size, verify_record_targets,
+    verify_suffix,
 };
 
 #[must_use]

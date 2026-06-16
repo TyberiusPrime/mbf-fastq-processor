@@ -95,15 +95,16 @@ This is typically the first step in any sequencing data analysis to understand d
 
 
 [output]
-    # Output prefix for all files
-    prefix = 'reference_output/output'
+    prefix = "reference_output/output"
 
-    # Generate both HTML and JSON reports
-    report_html = true
-    report_json = true
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
 
-    # Output format (FASTQ = uncompressed FASTQ format)
-    format = "FASTQ"
+[[step]]
+    action = "OutputReport"
+    json = true
+    html = true
 "#,
     },
     Cookbook {
@@ -207,8 +208,11 @@ The UMI `ATCGATCG` is now in the comment and removed from the sequence.
     n = 8
 
 [output]
-    prefix = 'reference_output/cookbook-02'
-    format = "FASTQ"
+    prefix = "reference_output/cookbook-02"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
 "#,
     },
     Cookbook {
@@ -318,8 +322,11 @@ After processing with this cookbook:
     n = 10
 
 [output]
-    prefix = 'reference_output/output'
-    format = "FASTQ"
+    prefix = "reference_output/output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
 "#,
     },
     Cookbook {
@@ -490,8 +497,11 @@ Adjust these parameters based on your data:
     keep_or_remove = 'Remove'
 
 [output]
-    prefix = 'reference_output_without_phix/output'
-    format = "Fastq"
+    prefix = "reference_output_without_phix/output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
 "#,
     },
     Cookbook {
@@ -592,9 +602,16 @@ After quality filtering:
     base_statistics = true
 
 [output]
-    prefix = 'reference_output/output'
-    format = "Fastq"
-    report_html = true # when you have reports, you need to set at least one of  report_html or report_json
+    prefix = "reference_output/output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+
+[[step]]
+    action = "OutputReport"
+    json = false
+    html = true
 "#,
     },
     Cookbook {
@@ -760,8 +777,11 @@ After trimming:
     keep_or_remove = 'keep'
 
 [output]
-    prefix = 'reference_output/output'
-    format = "FASTQ"
+    prefix = "reference_output/output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
 "#,
     },
     Cookbook {
@@ -973,8 +993,11 @@ Check demultiplexing quality by examining:
     TGACCA = 'sample4'
 
 [output]
-    prefix = 'reference_output/output'
-    format = "FASTQ"
+    prefix = "reference_output/output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
 "#,
     },
     Cookbook {
@@ -1219,9 +1242,16 @@ Monitor these metrics after length filtering:
     base_statistics = true
 
 [output]
-    prefix = 'reference_output/output'
-    format = "FASTQ"
-    report_html = true
+    prefix = "reference_output/output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+
+[[step]]
+    action = "OutputReport"
+    json = false
+    html = true
 "#,
     },
     Cookbook {
@@ -1392,8 +1422,11 @@ After preprocessing:
 
 
 [output]
-  prefix = 'output'
+    prefix = "output"
 
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
 "#,
     },
     Cookbook {
@@ -1484,9 +1517,12 @@ Once you have identified the adapter, add an `ExtractIUPAC` + `TrimAtTag` step t
 
 [output]
     prefix = 'reference_output/output'
-    report_html = true
-    report_json = true
-    format = 'None'
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputReport"
+    json = true
+    html = true
 "#,
     },
 ];

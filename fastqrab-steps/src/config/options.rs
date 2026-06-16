@@ -137,6 +137,8 @@ mod tests {
                 read1 = "test.fq"
             [output]
                 prefix = 'out'
+            [[step]]
+                action = 'OutputFASTQ'
         "#;
 
         // Config with empty [options] section
@@ -146,6 +148,9 @@ mod tests {
             [options]
             [output]
                 prefix = 'out'
+
+            [[step]]
+                action = 'OutputFASTQ'
         "#;
 
         let config_no_options =

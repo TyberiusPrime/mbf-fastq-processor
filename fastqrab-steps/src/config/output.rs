@@ -18,7 +18,6 @@ pub struct Output {
     pub ix_separator: String,
 
     pub compression_threads: NonZero<usize>,
-
 }
 
 impl VerifyIn<super::PartialConfig> for PartialOutput {
@@ -73,9 +72,10 @@ impl VerifyIn<super::PartialConfig> for PartialOutput {
                 Ok(())
             }
         });
-        
+
         self.ix_separator.or_with(default_ix_separator);
-        self.compression_threads.or_with(|| NonZero::new(1).unwrap());
+        self.compression_threads
+            .or_with(|| NonZero::new(1).unwrap());
 
         Ok(())
     }

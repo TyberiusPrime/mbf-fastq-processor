@@ -192,10 +192,10 @@ fn extract_output_config(raw_config: &str) -> Result<(String, bool)> {
         for output_declarations in &parsed.output_declarations_per_transformation {
             if let Some(output_declarations) = output_declarations {
                 for declaration in output_declarations {
-                        if declaration.target.is_stdout() {
-                            stdout = true;
-                        }
+                    if declaration.target.is_stdout() {
+                        stdout = true;
                     }
+                }
             }
         }
     }

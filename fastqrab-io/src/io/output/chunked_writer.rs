@@ -321,8 +321,10 @@ impl std::fmt::Debug for TextRecordSink {
 impl TextRecordSink {
     /// # Panics
     /// Doesn't.
-    pub fn new(sink: DataSink, config: &SinkConfig, 
-        compression_threads: NonZero<usize>
+    pub fn new(
+        sink: DataSink,
+        config: &SinkConfig,
+        compression_threads: NonZero<usize>,
     ) -> Result<Self> {
         let buf = BufWriter::new(sink);
         let compressed_hash = HashLayer::new(buf, config.hash_compressed);
@@ -1120,9 +1122,9 @@ impl ChunkedRecordWriter {
             WriteTarget::Stdout => DataSink::stdout(),
         };
         self.active = match self.format {
-            FileFormat::Fastq | FileFormat::Fasta | FileFormat::Text => {
-                ActiveSink::Text(TextRecordSink::new(sink, &self.sink_config, self.output_thread_count)?)
-            }
+            FileFormat::Fastq | FileFormat::Fasta | FileFormat::Text => ActiveSink::Text(
+                TextRecordSink::new(sink, &self.sink_config, self.output_thread_count)?,
+            ),
             FileFormat::Bam => {
                 let opts = self
                     .bam_options
