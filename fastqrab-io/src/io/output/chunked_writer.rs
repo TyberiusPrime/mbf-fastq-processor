@@ -953,23 +953,24 @@ impl ChunkedRecordWriter {
         #[cfg(unix)]
         use std::os::unix::fs::FileTypeExt;
         if let WriteTarget::Files(paths) = &target {
-            {
-                if chunk_policy.records_per_chunk.is_some() {
-                    let check_paths = &[
-                        // 0 digit so we actually use the user provided file, not the .0
-                        paths.nth(0, 0),
-                        paths.nth(0, digit_count),
-                    ];
-                    for path in check_paths {
-                        let metadata = ensure_output_destination_available(&path, allow_overwrite)?;
-                        let is_fifo = metadata.as_ref().is_some_and(|m| m.file_type().is_fifo());
-                        if is_fifo && chunk_policy.records_per_chunk.is_some() {
-                            anyhow::bail!(
-                                "Chunked output is not supported when writing to named pipes: {}",
-                                path.display()
-                            );
-                        }
-                    }
+            // Check the initial output file(s) for overwrite protection. This must
+            // run for both chunked and non-chunked output: open_active_sink() only
+            // re-checks rotated chunks (chunk_index > 0), so the first file is our
+            // responsibility here.
+            let check_paths = if chunk_policy.records_per_chunk.is_some() {
+                // 0 digit so we also check the user-provided file, not just the .0
+                vec![paths.nth(0, 0), paths.nth(0, digit_count)]
+            } else {
+                vec![paths.nth(0, 0)]
+            };
+            for path in &check_paths {
+                let metadata = ensure_output_destination_available(path, allow_overwrite)?;
+                let is_fifo = metadata.as_ref().is_some_and(|m| m.file_type().is_fifo());
+                if is_fifo && chunk_policy.records_per_chunk.is_some() {
+                    anyhow::bail!(
+                        "Chunked output is not supported when writing to named pipes: {}",
+                        path.display()
+                    );
                 }
             }
         }

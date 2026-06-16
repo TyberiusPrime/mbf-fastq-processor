@@ -2979,6 +2979,9 @@ fn test_output_already_exists() {
 
 [output]
     prefix = 'output'
+
+    [[step]]
+        action ='OutputFastQ'
 "
     )
     .unwrap();
