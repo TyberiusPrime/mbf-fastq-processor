@@ -17,7 +17,6 @@ of the legacy `[output]` section with `format = "bam"`.
     output = ["read1"]            # segments to write to individual files (alias: segments). Defaults to all input segments.
     suffix = "bam"                # (optional) override the file suffix
     compression_level = 6         # (optional) BGZF compression level 0-9
-    compression_threads = 1       # compression worker threads
     # interleave = ["read1","read2"]  # segments to interleave into one file (alias: interleaved)
     # chunksize = 1000000         # (optional) split into chunks of N molecules
     output_hash_compressed = false    # write a compressed-content hash sidecar
@@ -25,7 +24,7 @@ of the legacy `[output]` section with `format = "bam"`.
 
 [output]
     prefix = "output"
-    output = []   # the OutputBAM step produces the read files
+    compression_threads = 1       # output worker threads (per bam file)
 ```
 
 The `bam` table accepts the same options as `[output.bam]`

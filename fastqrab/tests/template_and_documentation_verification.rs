@@ -210,23 +210,20 @@ fn prep_config_to_parse(extracted_section: &str) -> String {
 
     let has_report_step = extracted_section.contains("action = \"Report\"")
         || extracted_section.contains("action = 'Report'");
-    let request_report = if has_report_step { "true" } else { "false" };
+    // Output is expressed as Output* steps now; the [output] section only keeps
+    // `prefix`. The OutputFASTQ / OutputReport steps are appended at the very end
+    // (see below) so they sit after every transformation in the pipeline.
+    let request_report = has_report_step;
 
-    let mut config = format!(
-        r#"
+    let mut config = r#"
 [input]
 read1 = "test_r1.fastq"
 read2 = "test_r2.fastq"
 
 [output]
 prefix = "output"
-format = "fastq"
-compression = "raw"
-report_json = {request_report}
-report_html = false
 
 "#
-    )
     .to_string();
 
     let actions = collect_actions(extracted_section);
@@ -555,6 +552,21 @@ report_html = false
         }
     }
 
+    // An OutputReport step is only valid when a Report step feeds it. A fragment
+    // that only shows the OutputReport step needs one synthesized before it.
+    let fragment_has_output_report = extracted_section.contains("action = \"OutputReport\"")
+        || extracted_section.contains("action = 'OutputReport'");
+    if fragment_has_output_report && !has_report_step {
+        config.push_str(
+            r#"
+[[step]]
+    action = "Report"
+    name = "report"
+    count = true
+"#,
+        );
+    }
+
     config.push_str(extracted_section);
 
     let declares_tag = actions.iter().any(|a| {
@@ -585,6 +597,39 @@ report_html = false
                     infix = "tags"
                     compression = "Raw"
             "#,
+        );
+    }
+
+    // Output steps go last so they sit after every transformation (mirrors the
+    // legacy `[output]` behaviour, expressed via Output* steps). Skip a kind of
+    // output the fragment already declares itself, so we don't create a second
+    // writer to the same file.
+    // Match both quote styles (fragments use single quotes, collect_actions only
+    // sees double-quoted actions).
+    let declares_action = |name: &str| {
+        extracted_section.contains(&format!("action = \"{name}\""))
+            || extracted_section.contains(&format!("action = '{name}'"))
+    };
+    let declares_record_output =
+        declares_action("OutputFASTQ") || declares_action("OutputFASTA") || declares_action("OutputBAM");
+    let declares_report_output = declares_action("OutputReport");
+    if !declares_record_output {
+        config.push_str(
+            r#"
+[[step]]
+    action = "OutputFASTQ"
+    compression = "raw"
+"#,
+        );
+    }
+    if request_report && !declares_report_output {
+        config.push_str(
+            r#"
+[[step]]
+    action = "OutputReport"
+    json = true
+    html = false
+"#,
         );
     }
     config

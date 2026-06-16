@@ -41,9 +41,12 @@ Generate reports without modifying sequences.
 
 [output]
     prefix = 'output'
-    format = 'None'  # No sequence output, just reports
-    report_html = true
-    report_json = true
+
+# No sequence output, just reports
+[[step]]
+    action = 'OutputReport'
+    json = true
+    html = true
 ```
 
 ### Pattern 2: UMI Extraction and Preservation
@@ -75,7 +78,9 @@ Extract UMI from read1, store in comment, remove from sequence.
 
 [output]
     prefix = 'output'
-    format = 'Fastq'
+
+[[step]]
+    action = 'OutputFASTQ'
     compression = 'Gzip'
 ```
 
@@ -103,7 +108,9 @@ Find and trim 3' adapters using partial matching.
 
 [output]
     prefix = 'output'
-    format = 'Fastq'
+
+[[step]]
+    action = 'OutputFASTQ'
     compression = 'Gzip'
 ```
 
@@ -131,7 +138,9 @@ Keep reads with at least 100 high-quality bases.
 
 [output]
     prefix = 'output'
-    format = 'Fastq'
+
+[[step]]
+    action = 'OutputFASTQ'
     compression = 'Gzip'
 ```
 
@@ -175,7 +184,9 @@ Extract barcode from index1, correct errors, split into separate files.
 
 [output]
     prefix = 'output'
-    format = 'Fastq'
+
+[[step]]
+    action = 'OutputFASTQ'
     compression = 'Gzip'
 ```
 
@@ -204,7 +215,9 @@ Remove polyA tails from RNA-seq reads.
 
 [output]
     prefix = 'output'
-    format = 'Fastq'
+
+[[step]]
+    action = 'OutputFASTQ'
     compression = 'Gzip'
 ```
 
@@ -240,7 +253,9 @@ Filter based on multiple conditions: GC content and length.
 
 [output]
     prefix = 'output'
-    format = 'Fastq'
+
+[[step]]
+    action = 'OutputFASTQ'
     compression = 'Gzip'
 ```
 
@@ -1616,7 +1631,7 @@ Report processing progress to stdout or file.
 ```
 
 **output_infix**: If set, writes to `{prefix}_{infix}.progress` instead of stdout
-**CONSTRAINT**: Progress to stdout incompatible with `output.stdout = true`
+**CONSTRAINT**: Progress to stdout incompatible with an `OutputFASTQ`/`OutputFASTA` step using `stdout = true`
 
 ### Inspect
 
@@ -1748,61 +1763,36 @@ Remove all tags from memory.
 
 ## Output Section
 
-### Required Fields
+The `[output]` section now only holds settings shared by every output file. The
+actual files and reports are produced by **Output Steps** (`OutputFASTQ`,
+`OutputFASTA`, `OutputBAM`, `OutputReport`) — see the [Output Steps](#output-steps)
+section. Format, compression, suffix, segment selection, interleaving, stdout,
+chunking and hashing are all configured per Output* step.
+
+### Fields
 
 ```toml
-# fragment - minimum required output configuration
+# fragment - [output] settings
 [output]
     prefix = 'output'              # TYPE: string, REQUIRED
-```
-
-### Common Options
-
-```toml
-# fragment - common output options
-[output]
-    prefix = 'output'              # TYPE: string, REQUIRED
-    format = 'Fastq'               # TYPE: string, DEFAULT: 'Fastq'
-    compression = 'Gzip'           # TYPE: string, DEFAULT: 'Raw'
-    suffix = '.fq.gz'              # TYPE: string, OPTIONAL (auto-determined)
-    compression_level = 6          # TYPE: usize, OPTIONAL
-```
-
-**format VALUES**: `'Fastq'`, `'Fasta'`, `'BAM'`, `'None'`
-**compression VALUES**: `'Raw'`, `'Gzip'`, `'Zstd'`
-**compression_level**: gzip: 0-9 (default 6), zstd: 1-22 (default 5)
-
-### Report Generation
-
-```toml
-# fragment - report generation options
-[output]
-    report_json = true             # TYPE: bool, DEFAULT: false
-    report_html = true             # TYPE: bool, DEFAULT: false
-```
-
-**OUTPUT FILES**: `{prefix}.json`, `{prefix}.html`
-
-### Advanced Options
-
-```toml
-# fragment - advanced output options
-[output]
-    stdout = false                 # TYPE: bool, DEFAULT: false
-    interleave = false             # TYPE: bool, DEFAULT: false
-    keep_index = false             # TYPE: bool, DEFAULT: false
-    output = ['read1', 'read2']    # TYPE: array, OPTIONAL
     ix_separator = '_'             # TYPE: string, DEFAULT: '_'
-    Chunksize = 1000000            # TYPE: usize, OPTIONAL
-    output_hash_uncompressed = false # TYPE: bool, DEFAULT: false
-    output_hash_compressed = false # TYPE: bool, DEFAULT: false
+    compression_threads = 1        # TYPE: usize >= 1, DEFAULT: 1
 ```
 
-**stdout**: Write read1 to stdout (sets format='Raw', interleave=true if read2 exists)
-**interleave**: Write R1/R2 interleaved in single file (`{prefix}_interleaved.{suffix}`)
-**keep_index**: Also write index1/index2 files
-**output**: Which segments to write (defaults to all)
-**Chunksize**: Split output into chunks with index suffix
+**prefix**: Filename prefix shared by all output steps (`{prefix}_{infix}_{segment}.{suffix}`).
+**ix_separator**: Separator between prefix, infix and segment in output filenames. Must not contain `/`, `\` or `:`.
+**compression_threads**: Threads used for output compression.
+
+### Producing output
+
+| Want                       | Use step                                    |
+| -------------------------- | ------------------------------------------- |
+| FASTQ / FASTA / BAM files  | `OutputFASTQ` / `OutputFASTA` / `OutputBAM` |
+| JSON / HTML run report     | `OutputReport` (needs a `Report` step)      |
+| No sequence output         | omit the `Output*` record steps             |
+
+See [Output Steps](#output-steps) for each step's fields (compression, suffix,
+`output` segment selection, `interleave`, `stdout`, `chunksize`, hashing).
 
 ## Options Section
 
@@ -1895,7 +1885,8 @@ MergeReads
 
 ```
 Report
-(Set output.format = 'None')
+OutputReport
+(no Output* record step → no sequence output)
 ```
 
 ### Task: Complex filtering logic
@@ -1924,8 +1915,8 @@ Create multiple tags → EvalExpression → FilterByTag/FilterByNumericTag
 ❌ Using `FilterByNumericTag` on location tags (use `FilterByTag`)
 ❌ Using `FilterByTag` on numeric tags (use `FilterByNumericTag`)
 ❌ Forgetting to `TrimAtTag` after `ExtractIUPACSuffix`
-❌ Using `output.stdout = true` with `Progress` (incompatible)
-❌ Setting `format='None'` with compression (no sequence output)
+❌ Using `stdout = true` on an `Output*` step together with `Progress` (incompatible)
+❌ Adding an `OutputReport` step without a `Report` step to feed it
 ❌ Mismatched file list lengths in [input]
 ❌ Using reserved names or special characters in tag names
 ❌ Applying segment-specific operations to non-existent segments

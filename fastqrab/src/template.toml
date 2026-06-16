@@ -1038,7 +1038,6 @@
 ##   interleave = ["read1","read2"]  # segments to interleave into one file (alias: interleaved)
 #    suffix = "bam"          # (optional) override the file suffix
 ##   compression_level = 6   # (optional) BGZF level 0-9
-#    compression_threads = 1
 ##   chunksize = 1000000     # (optional) split into chunks of N molecules
 #    output_hash_compressed = false
 #    # [step.bam]            # BAM options: comment_separation_char, tags, tag_to_reference, merge_demultiplexed

@@ -29,7 +29,6 @@ same collected report data.
 
 [output]
     prefix = "output"
-    output = []
 ```
 
 `{prefix}.json` and `{prefix}.html` are written next to the other outputs.

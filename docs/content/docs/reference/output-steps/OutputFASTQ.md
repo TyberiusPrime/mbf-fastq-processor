@@ -28,7 +28,6 @@ placed and ordered like any other step. Multiple output steps are allowed.
 
 [output]
     prefix = "output"
-    output = []   # the OutputFASTQ step produces the read files
 ```
 
 Per-segment files are named `{prefix}_{segment}.{suffix}`; with demultiplexing,

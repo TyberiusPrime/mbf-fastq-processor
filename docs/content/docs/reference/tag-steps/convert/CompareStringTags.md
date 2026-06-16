@@ -63,6 +63,9 @@ If either input is `Missing`, the output is `NaN`.
 
 [output]
     prefix = "output"
+
+[[step]]
+    action = "OutputFASTQ" 
 ```
 
 ## Combining with EvalExpression
@@ -117,4 +120,7 @@ The numeric -1/0/1 output integrates directly with
 
 [output]
     prefix = "output"
+
+[[step]]
+    action = "OutputFASTQ" 
 ```

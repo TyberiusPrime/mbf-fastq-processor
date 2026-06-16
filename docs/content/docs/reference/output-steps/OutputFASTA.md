@@ -29,7 +29,6 @@ the step-based equivalent of the legacy `[output]` section with
 
 [output]
     prefix = "output"
-    output = []   # the OutputFASTA step produces the read files
 ```
 
 Files are named like [OutputFASTQ](../outputfastq/), but with the FASTA suffix.
