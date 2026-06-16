@@ -37,6 +37,7 @@ fn build_step_output_files(
     output_prefix: &str,
     output_ix_separator: &str,
     allow_overwrite: bool,
+    simulated_failure: Option<&fastqrab_io::io::output::simulated_failure::SimulatedWriteFailure>,
 ) -> Result<StepOutputFiles> {
     let mut result = StepOutputFiles::empty();
     if let Some(declarations) = declarations {
@@ -85,10 +86,17 @@ fn build_step_output_files(
                         })
                     }
                 };
+                // The output-failure simulation comes from [options.debug_failures];
+                // the declaration itself can't see the global options, so inject it
+                // here (mirrors the legacy build_sink_config behaviour).
+                let mut sink_config = decl.sink_config.clone();
+                if let Some(failure) = simulated_failure {
+                    sink_config.simulated_failure = Some(failure.clone());
+                }
                 let writer = ChunkedRecordWriter::new(
                     decl.format,
                     target,
-                    decl.sink_config.clone(),
+                    sink_config,
                     decl.chunk_policy,
                     decl.bam_options.clone(),
                     NonZero::new(1).expect("1 is nonzero"),
@@ -446,6 +454,7 @@ impl RunStage0 {
             .map_or("mbf_fastq_preprocessor_output", |x| &x.prefix)
             .to_string();
         let output_ix_separator = parsed.get_ix_separator();
+        let simulated_failure = parsed.options.debug_failures.simulated_output_failure()?;
 
         let report_metadata = std::sync::Arc::new(transformations::ReportMetadata {
             report_labels: parsed.report_labels.clone(),
@@ -479,6 +488,7 @@ impl RunStage0 {
                         &output_prefix,
                         &output_ix_separator,
                         allow_overwrite,
+                        simulated_failure.as_ref(),
                     )?; // cov:excl-line
                     inner.init(&input_info, output_files, &OptDemultiplex::No)?; // cov:excl-line
                     res = Some(inner.clone());
@@ -513,6 +523,7 @@ impl RunStage0 {
                         &output_prefix,
                         &output_ix_separator,
                         allow_overwrite,
+                        simulated_failure.as_ref(),
                     )
                     .with_context(|| {
                         format!(

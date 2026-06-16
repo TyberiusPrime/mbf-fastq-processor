@@ -1,0 +1,21 @@
+[input]
+    read1 = "input_read1.fq"
+
+[options.debug_failures]
+    fail_output_after_bytes = 10
+
+[[step]]
+    action = "Head"
+    n = 2
+
+[output]
+    prefix = "output"
+
+[[step]]
+  action = 'CalcLength'
+  segment = 'read1'
+  out_label = 'lll'
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "StoreTagsInTable"
