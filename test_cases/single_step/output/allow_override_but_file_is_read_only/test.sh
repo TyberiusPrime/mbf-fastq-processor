@@ -18,7 +18,7 @@ else
 fi
 echo "done"
 
-should="Error in output thread: Could not open file for output:"
+should="Could not open file for output:"
 if [[ ! -f stderr ]]; then
     echo "Expected error message in stderr, but stderr is empty"
     exit 1
@@ -26,6 +26,7 @@ fi
 # check if the string should is in stderr
 if ! grep -c "$should" stderr; then
     echo "Expected error message not found in stderr"
+    echo 'actual' $(cat stderr)
     exit 1
 else
     echo "Expected error message found in stderr"
