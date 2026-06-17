@@ -35,3 +35,10 @@ Per-segment files are named `{prefix}_{segment}.{suffix}`; with demultiplexing,
 `{prefix}_interleaved.{suffix}`.
 
 The output `prefix` is still taken from the `[output]` section.
+
+
+## Chunking
+
+When `chunksize` is set, start a new file every N molecules.
+File names will end on .<number>, left padded with zeros to 
+the actual needed number of digits.

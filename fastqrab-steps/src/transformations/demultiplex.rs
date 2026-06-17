@@ -263,6 +263,20 @@ impl TagUser for PartialTaggedVariant<PartialDemultiplex> {
     }
 }
 
+impl Demultiplex {
+    /// The barcodes this step contributes to the demultiplex tag space,
+    /// derived purely from the (already validated) config — no side effects.
+    /// Used both by `init` at runtime and by the `output-files` command, which
+    /// needs the demultiplex mapping without opening any writers.
+    #[must_use]
+    pub fn declared_barcodes(&self) -> DemultiplexBarcodes {
+        DemultiplexBarcodes {
+            barcode_to_name: self.resolved_barcodes.clone(),
+            include_no_barcode: self.output_unmatched,
+        }
+    }
+}
+
 impl Step for Demultiplex {
     // fn needs_serial(&self) -> bool {
     //     true
@@ -281,10 +295,7 @@ impl Step for Demultiplex {
                 .load(std::sync::atomic::Ordering::Relaxed)
         );
 
-        Ok(Some(DemultiplexBarcodes {
-            barcode_to_name: self.resolved_barcodes.clone(),
-            include_no_barcode: self.output_unmatched,
-        }))
+        Ok(Some(self.declared_barcodes()))
     }
 
     fn apply(

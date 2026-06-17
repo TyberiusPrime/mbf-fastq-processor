@@ -51,6 +51,74 @@ fn build_step_input_files(declarations: Option<Vec<InputDeclaration>>) -> Result
     Ok(files)
 }
 
+/// The directory- and chunk-free name of one output file a declaration would
+/// produce for a given demultiplex tag. The runtime turns this into a
+/// [`WriteTarget`] (adding the output directory) while the `output-files`
+/// command renders it as a plain `basename.suffix` string. Shared so both paths
+/// agree on the prefix / infix / demux-name / second-infix layout.
+pub(crate) enum ResolvedOutputName {
+    File { basename: String, suffix: String },
+    Stdout,
+}
+
+/// Enumerate the `(tag, name)` pairs one output declaration produces under the
+/// given demultiplex info. This is the single source of truth for output
+/// filenames; [`build_step_output_files`] (runtime) and
+/// `list_config_output_files` (the `output-files` command) both go through it.
+pub(crate) fn enumerate_declaration_outputs(
+    singleton: bool,
+    target: &WriteTargetConfig,
+    demultiplex_info: &OptDemultiplex,
+    output_prefix: &str,
+    output_ix_separator: &str,
+) -> Vec<(crate::demultiplex::Tag, ResolvedOutputName)> {
+    let mut out = Vec::new();
+    // Singleton steps (Inspect, Progress) always get exactly one output (tag 0).
+    let tags_to_create: Vec<_> = if singleton {
+        vec![0u64]
+    } else {
+        demultiplex_info.iter_tags()
+    };
+
+    for tag in tags_to_create {
+        // Singletons never get a demux suffix. For demultiplexed non-singleton
+        // outputs, skip tags with no name (the no-match bucket).
+        let demux_name: Option<&str> = if singleton {
+            None
+        } else {
+            match demultiplex_info {
+                OptDemultiplex::No => None,
+                OptDemultiplex::Yes(info) => {
+                    let name_opt = info.tag_to_name.get(&tag).and_then(|n| n.as_deref());
+                    if name_opt.is_none() {
+                        continue; // skip no-match demultiplex tag
+                    }
+                    name_opt
+                }
+            }
+        };
+
+        let resolved = match target {
+            WriteTargetConfig::Stdout => ResolvedOutputName::Stdout,
+            WriteTargetConfig::File(ft) => {
+                let basename = join_nonempty(
+                    std::iter::once(output_prefix)
+                        .chain(ft.infix_parts().iter().map(String::as_str))
+                        .chain(demux_name)
+                        .chain(ft.second_infix().map(|x| x.as_str())),
+                    output_ix_separator,
+                );
+                ResolvedOutputName::File {
+                    basename,
+                    suffix: ft.suffix().to_string(),
+                }
+            }
+        };
+        out.push((tag, resolved));
+    }
+    out
+}
+
 fn build_step_output_files(
     declarations: Option<Vec<fastqrab_io::io::output::chunked_writer::OutputDeclaration>>,
     demultiplex_info: &OptDemultiplex,
@@ -65,45 +133,20 @@ fn build_step_output_files(
         for decl in declarations {
             let mut per_tag: DemultiplexedData<ChunkedRecordWriter> = DemultiplexedData::new();
 
-            // Singleton steps (Inspect, Progress) always get exactly one writer (tag 0).
-            let tags_to_create: Vec<_> = if decl.singleton {
-                vec![0u64]
-            } else {
-                demultiplex_info.iter_tags()
-            };
-
-            for tag in tags_to_create {
-                // Singletons never get a demux suffix. For demultiplexed non-singleton
-                // outputs, skip tags with no name (the no-match bucket).
-                let demux_name: Option<&str> = if decl.singleton {
-                    None
-                } else {
-                    match demultiplex_info {
-                        OptDemultiplex::No => None,
-                        OptDemultiplex::Yes(info) => {
-                            let name_opt = info.tag_to_name.get(&tag).and_then(|n| n.as_deref());
-                            if name_opt.is_none() {
-                                continue; // skip no-match demultiplex tag
-                            }
-                            name_opt
-                        }
-                    }
-                };
-
-                let target = match &decl.target {
-                    WriteTargetConfig::Stdout => WriteTarget::Stdout,
-                    WriteTargetConfig::File(ft) => {
-                        let basename = join_nonempty(
-                            std::iter::once(output_prefix)
-                                .chain(ft.infix_parts().iter().map(String::as_str))
-                                .chain(demux_name)
-                                .chain(ft.second_infix().map(|x| x.as_str())),
-                            output_ix_separator,
-                        );
+            for (tag, resolved) in enumerate_declaration_outputs(
+                decl.singleton,
+                &decl.target,
+                demultiplex_info,
+                output_prefix,
+                output_ix_separator,
+            ) {
+                let target = match resolved {
+                    ResolvedOutputName::Stdout => WriteTarget::Stdout,
+                    ResolvedOutputName::File { basename, suffix } => {
                         WriteTarget::Files(ChunkPaths {
                             directory: output_directory.to_path_buf(),
                             basename,
-                            suffix: ft.suffix().to_string(),
+                            suffix,
                         })
                     }
                 };
@@ -129,6 +172,138 @@ fn build_step_output_files(
         }
     }
     Ok(result)
+}
+
+/// Accumulates the demultiplex tag→name mapping as the pipeline walks its
+/// stages. Each `Demultiplex` step contributes a new set of barcodes; the chain
+/// combinatorially combines them with everything seen so far, allocating a fresh
+/// range of tag bits per step. Shared between the runtime
+/// ([`RunStage0::configure_demultiplex_and_init_stages`]) and the `output-files`
+/// command, so both derive identical demux-aware filenames.
+pub(crate) struct DemultiplexChain {
+    infos: Vec<(usize, OptDemultiplex)>,
+    step_infos: Vec<DemultiplexStepInfo>,
+    current_bit_start: u16,
+}
+
+impl DemultiplexChain {
+    pub(crate) fn new() -> Self {
+        Self {
+            infos: Vec::new(),
+            step_infos: Vec::new(),
+            current_bit_start: 0,
+        }
+    }
+
+    /// The demultiplex info a step sees: the combination of every `Demultiplex`
+    /// step pushed *before* it. `OptDemultiplex::No` until the first push.
+    pub(crate) fn current_info(&self) -> &OptDemultiplex {
+        self.infos.iter().last().map_or(&OptDemultiplex::No, |x| &x.1)
+    }
+
+    /// Fold one more `Demultiplex` step (at stage `index`) into the chain.
+    pub(crate) fn push(
+        &mut self,
+        index: usize,
+        new_demultiplex_barcodes: DemultiplexBarcodes,
+        in_label: String,
+        output_ix_separator: &str,
+    ) -> Result<()> {
+        let barcode_count = new_demultiplex_barcodes.barcode_to_name.len()
+            + usize::from(new_demultiplex_barcodes.include_no_barcode);
+        let bits_needed = bits_needed_to_represent(barcode_count);
+        let mut tag_to_name = BTreeMap::new();
+        if new_demultiplex_barcodes.include_no_barcode {
+            tag_to_name.insert(0, Some(no_barcode_infix().to_string()));
+        } else {
+            tag_to_name.insert(0, None);
+        }
+
+        let unique_names = new_demultiplex_barcodes
+            .barcode_to_name
+            .values()
+            .collect::<std::collections::BTreeSet<_>>();
+        let unique_names = unique_names.into_iter().cloned().collect::<Vec<_>>();
+        let mut local_name_to_tag = BTreeMap::new();
+        let mut tag_value: crate::demultiplex::Tag = 1;
+        for name in unique_names {
+            let bitpattern = tag_value << self.current_bit_start;
+            tag_to_name.insert(bitpattern, Some(name.clone()));
+            local_name_to_tag.insert(name.clone(), bitpattern);
+            tag_value += 1;
+        }
+        let local_barcode_to_tag = new_demultiplex_barcodes
+            .barcode_to_name
+            .into_iter()
+            .map(|(k, v)| {
+                let tag = local_name_to_tag
+                    .get(&v)
+                    .expect("tag must exist in local_name_to_tag map");
+                (k, *tag)
+            })
+            .collect();
+
+        self.step_infos.push(DemultiplexStepInfo { in_label });
+
+        if self.infos.is_empty() {
+            self.infos.push((
+                index,
+                OptDemultiplex::Yes(DemultiplexInfo::new(
+                    tag_to_name,
+                    local_barcode_to_tag,
+                    local_name_to_tag,
+                )),
+            ));
+        } else {
+            let mut next = BTreeMap::new();
+            {
+                let last_demultiplex_info = self
+                    .infos
+                    .iter()
+                    .last()
+                    .map_or(&OptDemultiplex::No, |x| &x.1);
+
+                for (old_tag, old_name) in &last_demultiplex_info.expect("last_demultiplex_info must be Some when iterating over tag_to_name").tag_to_name {
+                    for (new_tag, new_name) in &tag_to_name {
+                        let combined_tag = old_tag | new_tag;
+                        let out_name: Option<String> = {
+                            if let Some(old_name) = old_name {
+                                new_name.as_ref().map(|new_name| {
+                                    format!("{}{}{}", old_name, &output_ix_separator, new_name)
+                                })
+                            } else {
+                                None
+                            }
+                        };
+                        next.insert(combined_tag, out_name);
+                    }
+                }
+            }
+            self.infos.push((
+                index,
+                OptDemultiplex::Yes(DemultiplexInfo::new(
+                    next,
+                    local_barcode_to_tag,
+                    local_name_to_tag,
+                )),
+            ));
+        }
+        self.current_bit_start += bits_needed;
+        if self.current_bit_start > 64 {
+            // not covered in tests, will alert in mutation testing.
+            // There's an O(2^n) runtime above, and anything beyond 16 will slow.
+            // our tests down significantly (tests happen in debug mode)
+            // We could limit this to like 18 bits, maybe?
+            // cov:excl-start
+            bail!("Too many demultiplexed outputs defined - exceeds 64 bits");
+            // cov:excl-stop
+        }
+        Ok(())
+    }
+
+    pub(crate) fn into_parts(self) -> (Vec<(usize, OptDemultiplex)>, Vec<DemultiplexStepInfo>) {
+        (self.infos, self.step_infos)
+    }
 }
 
 #[expect(clippy::collapsible_if, reason = "obscures")]
@@ -493,8 +668,6 @@ impl RunStage0 {
             threading_configuration: parsed.threading_configuration.clone(),
             report_metadata,
         };
-        let mut demultiplex_infos: Vec<(usize, OptDemultiplex)> = Vec::new();
-        let mut demultiplex_step_infos: Vec<DemultiplexStepInfo> = Vec::new();
         // we need to initialize the progress_output first
         // so we can store it on each stage before the stages' init
         let progress_output = {
@@ -528,9 +701,9 @@ impl RunStage0 {
 
         // we combinatorially combine demultiplex stages
         // and at each stage, it get's to see the tag->output names up to the latest defined
-        // demultiplexing step
-        // We then have two
-        let mut current_bit_start = 0;
+        // demultiplexing step. [`DemultiplexChain`] owns that accumulation (shared
+        // with the `output-files` command).
+        let mut chain = DemultiplexChain::new();
 
         for (index, stage) in (parsed.stages).iter_mut().enumerate() {
             if !matches!(stage.transformation, Transformation::Progress(_)) {
@@ -540,10 +713,7 @@ impl RunStage0 {
                     stage.transformation.store_progress_output(progress_output);
                 }
                 let new_demultiplex_barcodes: Option<DemultiplexBarcodes> = {
-                    let last_demultiplex_info = demultiplex_infos
-                        .iter()
-                        .last()
-                        .map_or(&OptDemultiplex::No, |x| &x.1);
+                    let last_demultiplex_info = chain.current_info();
                     let decls = std::mem::take(&mut stage.output_declarations);
                     let output_files = build_step_output_files(
                         decls,
@@ -585,45 +755,7 @@ impl RunStage0 {
                     input_files.assert_consumed();
                     new_demultiplex_barcodes
                 };
-                //#[expect(clippy::cast_precision_loss)]
                 if let Some(new_demultiplex_barcodes) = new_demultiplex_barcodes {
-                    let barcode_count = new_demultiplex_barcodes.barcode_to_name.len()
-                        + usize::from(new_demultiplex_barcodes.include_no_barcode);
-                    let bits_needed = bits_needed_to_represent(barcode_count);
-                    let mut tag_to_name = BTreeMap::new();
-                    if new_demultiplex_barcodes.include_no_barcode {
-                        tag_to_name.insert(0, Some(no_barcode_infix().to_string()));
-                    } else {
-                        tag_to_name.insert(0, None);
-                    }
-
-                    let unique_names = new_demultiplex_barcodes
-                        .barcode_to_name
-                        .values()
-                        .collect::<std::collections::BTreeSet<_>>();
-                    let unique_names = unique_names.into_iter().cloned().collect::<Vec<_>>();
-                    let mut local_name_to_tag = BTreeMap::new();
-                    let mut local_tag_to_name: BTreeMap<crate::demultiplex::Tag, String> =
-                        BTreeMap::new();
-                    let mut tag_value: crate::demultiplex::Tag = 1;
-                    for name in unique_names {
-                        let bitpattern = tag_value << current_bit_start;
-                        tag_to_name.insert(bitpattern, Some(name.clone()));
-                        local_name_to_tag.insert(name.clone(), bitpattern);
-                        local_tag_to_name.insert(bitpattern, name);
-                        tag_value += 1;
-                    }
-                    let local_barcode_to_tag = new_demultiplex_barcodes
-                        .barcode_to_name
-                        .into_iter()
-                        .map(|(k, v)| {
-                            let tag = local_name_to_tag
-                                .get(&v)
-                                .expect("tag must exist in local_name_to_tag map");
-                            (k, *tag)
-                        })
-                        .collect();
-
                     // Capture the in_label for this step if it is a Demultiplex transformation.
                     let step_in_label = if let Transformation::Demultiplex(ref d) =
                         stage.transformation
@@ -636,68 +768,17 @@ impl RunStage0 {
                         );
                         // cov:excl-stop
                     };
-                    demultiplex_step_infos.push(DemultiplexStepInfo {
-                        in_label: step_in_label,
-                    });
-
-                    if demultiplex_infos.is_empty() {
-                        demultiplex_infos.push((
-                            index,
-                            OptDemultiplex::Yes(DemultiplexInfo::new(
-                                tag_to_name,
-                                local_barcode_to_tag,
-                                local_name_to_tag,
-                            )),
-                        ));
-                    } else {
-                        let mut next = BTreeMap::new();
-                        {
-                            let last_demultiplex_info = demultiplex_infos
-                                .iter()
-                                .last()
-                                .map_or(&OptDemultiplex::No, |x| &x.1);
-
-                            for (old_tag, old_name) in &last_demultiplex_info.expect("last_demultiplex_info must be Some when iterating over tag_to_name").tag_to_name {
-                                for (new_tag, new_name) in &tag_to_name {
-                                    let combined_tag = old_tag | new_tag;
-                                    let out_name: Option<String> = {
-                                        if let Some(old_name) = old_name {
-                                            new_name.as_ref().map(|new_name| {
-                                                format!(
-                                                    "{}{}{}",
-                                                    old_name, &output_ix_separator, new_name
-                                                )
-                                            })
-                                        } else {
-                                            None
-                                        }
-                                    };
-                                    next.insert(combined_tag, out_name);
-                                }
-                            }
-                        }
-                        demultiplex_infos.push((
-                            index,
-                            OptDemultiplex::Yes(DemultiplexInfo::new(
-                                next,
-                                local_barcode_to_tag,
-                                local_name_to_tag,
-                            )),
-                        ));
-                    }
-                    current_bit_start += bits_needed;
-                    if current_bit_start > 64 {
-                        // not covered in tests, will alert in mutation testing.
-                        // There's an O(2^n) runtime above, and anything beyond 16 will slow.
-                        // our tests down significantly (tests happen in debug mode)
-                        // We could limit this to like 18 bits, maybe?
-                        // cov:excl-start
-                        bail!("Too many demultiplexed outputs defined - exceeds 64 bits");
-                        // cov:excl-stop
-                    }
+                    chain.push(
+                        index,
+                        new_demultiplex_barcodes,
+                        step_in_label,
+                        &output_ix_separator,
+                    )?;
                 }
             }
         }
+
+        let (demultiplex_infos, demultiplex_step_infos) = chain.into_parts();
 
         Ok(RunStage1 {
             input_info,

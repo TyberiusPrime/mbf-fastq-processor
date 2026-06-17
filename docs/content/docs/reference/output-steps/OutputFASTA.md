@@ -33,3 +33,10 @@ the step-based equivalent of the legacy `[output]` section with
 
 Files are named like [OutputFASTQ](../outputfastq/), but with the FASTA suffix.
 The output `prefix` is still taken from the `[output]` section.
+
+
+## Chunking
+
+When `chunksize` is set, start a new file every N molecules.
+File names will end on .<number>, left padded with zeros to 
+the actual needed number of digits.

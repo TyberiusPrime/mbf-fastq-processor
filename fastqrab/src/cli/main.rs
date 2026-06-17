@@ -479,13 +479,21 @@ fn validate_config_file(toml_path: &Path) {
 
 fn output_files(toml_path: &Path) {
     match crate::list_config_output_files(toml_path) {
-        Ok(output_files) => {
-            if output_files.is_empty() {
+        Ok(listing) => {
+            if listing.files.is_empty() {
                 println!("No output files would be produced by this configuration.");
             } else {
                 println!("This configuration would produce the following output files:");
-                for file in output_files {
+                for file in &listing.files {
                     println!("  {file}");
+                }
+                if listing.any_chunked {
+                    eprintln!(
+                        "\nNote: chunked outputs are listed by their first chunk ('.0' suffix). \
+                         The run may emit further numbered chunks ('.1', '.2', ...) depending on \
+                         how many reads are written. If more digits are needed .1 is renamed .01 so \
+                        the number of digits remains constant." 
+                    );
                 }
             }
         }

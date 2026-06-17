@@ -97,3 +97,8 @@ To do so, you need to
 
 See the cookbook (todo) for more details.
 
+## Chunking
+
+When `chunksize` is set, start a new file every N molecules.
+File names will end on .<number>, left padded with zeros to 
+the actual needed number of digits.

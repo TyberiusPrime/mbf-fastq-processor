@@ -4398,3 +4398,312 @@ fn test_interactive_rejects_stdin_config() {
         "got: {stderr}"
     );
 }
+
+// ---------------------------------------------------------------------------
+// `output-files` command
+// ---------------------------------------------------------------------------
+
+/// Run `fastqrab output-files <config>` against `config` (written to a temp
+/// file) and return the listed output files as a sorted Vec. Asserts success.
+/// Input files need not exist — the command validates with missing-file
+/// tolerance, like `validate`.
+fn output_files_lines(config: &str) -> Vec<String> {
+    let dir = tempfile::tempdir().unwrap();
+    let config_path = dir.path().join("config.toml");
+    fs::write(&config_path, config).unwrap();
+
+    let cmd = std::process::Command::new(get_bin_path())
+        .arg("output-files")
+        .arg(&config_path)
+        .output()
+        .unwrap();
+
+    let stdout = std::str::from_utf8(&cmd.stdout).unwrap();
+    let stderr = std::str::from_utf8(&cmd.stderr).unwrap();
+    assert!(
+        cmd.status.success(),
+        "output-files failed.\nstdout: {stdout}\nstderr: {stderr}"
+    );
+
+    let mut files: Vec<String> = stdout
+        .lines()
+        .filter_map(|line| line.strip_prefix("  "))
+        .map(str::to_string)
+        .collect();
+    files.sort();
+    files
+}
+
+#[test]
+fn test_output_files_simple() {
+    let files = output_files_lines(
+        r"[input]
+read1 = 'in.fq'
+read2 = 'in2.fq'
+
+[output]
+prefix = 'output'
+
+[[step]]
+action = 'OutputFASTQ'
+",
+    );
+    assert_eq!(files, vec!["output_read1.fq", "output_read2.fq"]);
+}
+
+#[test]
+fn test_output_files_demultiplex() {
+    // OutputFASTQ after a Demultiplex must list one file per barcode tag
+    // (plus the no-barcode bucket because output_unmatched = true), not a
+    // single un-demultiplexed file.
+    let files = output_files_lines(
+        r"[input]
+read1 = 'in.fq'
+
+[output]
+prefix = 'output'
+
+[[step]]
+action = 'ExtractRegion'
+anchor = 'Left'
+segment = 'read1'
+start = 0
+length = 2
+out_label = 'bc'
+
+[[step]]
+action = 'Demultiplex'
+in_label = 'bc'
+output_unmatched = true
+barcodes = 'd'
+tag_contains_barcode = true
+
+[barcodes.d]
+AA = 'samplea'
+CC = 'samplec'
+
+[[step]]
+action = 'OutputFASTQ'
+",
+    );
+    assert_eq!(
+        files,
+        vec![
+            "output_nobarcode_read1.fq",
+            "output_samplea_read1.fq",
+            "output_samplec_read1.fq",
+        ]
+    );
+}
+
+#[test]
+fn test_output_files_multiple_output_steps() {
+    // Several output-producing steps in one pipeline; all their files appear.
+    let files = output_files_lines(
+        r"[input]
+read1 = 'in.fq'
+
+[output]
+prefix = 'output'
+
+[[step]]
+action = 'Report'
+name = 'r'
+count = true
+
+[[step]]
+action = 'OutputFASTQ'
+
+[[step]]
+action = 'OutputReport'
+json = true
+html = true
+",
+    );
+    assert_eq!(
+        files,
+        vec!["output.html", "output.json", "output_read1.fq"]
+    );
+}
+
+#[test]
+fn test_output_files_store_tags_in_table_demultiplexed() {
+    // StoreTagsInTable uses DemultiplexedData, so after a Demultiplex it must
+    // produce one table per tag. output_unmatched = false -> no nobarcode file.
+    let files = output_files_lines(
+        r"[input]
+read1 = 'in.fq'
+
+[output]
+prefix = 'output'
+
+[[step]]
+action = 'ExtractRegion'
+anchor = 'Left'
+segment = 'read1'
+start = 0
+length = 2
+out_label = 'bc'
+
+[[step]]
+action = 'Demultiplex'
+in_label = 'bc'
+output_unmatched = false
+barcodes = 'd'
+tag_contains_barcode = true
+
+[barcodes.d]
+AA = 'samplea'
+CC = 'samplec'
+
+[[step]]
+action = 'StoreTagsInTable'
+
+[[step]]
+action = 'OutputFASTQ'
+",
+    );
+    assert_eq!(
+        files,
+        vec![
+            "output_samplea.tsv",
+            "output_samplea_read1.fq",
+            "output_samplec.tsv",
+            "output_samplec_read1.fq",
+        ]
+    );
+}
+
+#[test]
+fn test_output_files_progress_is_singleton_after_demultiplex() {
+    // Progress is a singleton: exactly one .progress file even downstream of a
+    // Demultiplex (it does not split per tag, unlike OutputFASTQ).
+    let files = output_files_lines(
+        r"[input]
+read1 = 'in.fq'
+
+[output]
+prefix = 'output'
+
+[[step]]
+action = 'ExtractRegion'
+anchor = 'Left'
+segment = 'read1'
+start = 0
+length = 2
+out_label = 'bc'
+
+[[step]]
+action = 'Demultiplex'
+in_label = 'bc'
+output_unmatched = true
+barcodes = 'd'
+tag_contains_barcode = true
+
+[barcodes.d]
+AA = 'samplea'
+
+[[step]]
+action = 'Progress'
+output_infix = 'pp'
+
+[[step]]
+action = 'OutputFASTQ'
+",
+    );
+    assert_eq!(
+        files,
+        vec![
+            "output_nobarcode_read1.fq",
+            "output_pp.progress",
+            "output_samplea_read1.fq",
+        ]
+    );
+}
+
+#[test]
+fn test_output_files_inspect_is_singleton_after_demultiplex() {
+    // Inspect is also a singleton: one inspect file, no per-tag fan-out.
+    let files = output_files_lines(
+        r"[input]
+read1 = 'in.fq'
+
+[output]
+prefix = 'output'
+
+[[step]]
+action = 'ExtractRegion'
+anchor = 'Left'
+segment = 'read1'
+start = 0
+length = 2
+out_label = 'bc'
+
+[[step]]
+action = 'Demultiplex'
+in_label = 'bc'
+output_unmatched = true
+barcodes = 'd'
+tag_contains_barcode = true
+
+[barcodes.d]
+AA = 'samplea'
+
+[[step]]
+action = 'Inspect'
+n = 5
+infix = 'insp'
+
+[[step]]
+action = 'OutputFASTQ'
+",
+    );
+    assert_eq!(
+        files,
+        vec![
+            "output_insp_read1.fq",
+            "output_nobarcode_read1.fq",
+            "output_samplea_read1.fq",
+        ]
+    );
+}
+
+#[test]
+fn test_output_files_chunked_lists_first_chunk_and_warns() {
+    // Chunked outputs must be listed with their first-chunk ('.0') infix, and
+    // the command must warn (on stderr) that further chunks may follow.
+    let dir = tempfile::tempdir().unwrap();
+    let config_path = dir.path().join("config.toml");
+    fs::write(
+        &config_path,
+        r"[input]
+read1 = 'in.fq'
+
+[output]
+prefix = 'output'
+
+[[step]]
+action = 'OutputFASTQ'
+chunk_size = 1000
+",
+    )
+    .unwrap();
+
+    let cmd = std::process::Command::new(get_bin_path())
+        .arg("output-files")
+        .arg(&config_path)
+        .output()
+        .unwrap();
+
+    let stdout = std::str::from_utf8(&cmd.stdout).unwrap();
+    let stderr = std::str::from_utf8(&cmd.stderr).unwrap();
+    assert!(cmd.status.success(), "stderr: {stderr}");
+    assert!(
+        stdout.contains("output_read1.0.fq"),
+        "expected first-chunk name, got: {stdout}"
+    );
+    assert!(
+        stderr.contains("first chunk") && stderr.contains("'.0'"),
+        "expected chunk warning on stderr, got: {stderr}"
+    );
+}
