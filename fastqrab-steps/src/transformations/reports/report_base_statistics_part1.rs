@@ -49,6 +49,7 @@ impl Step for Box<_ReportBaseStatisticsPart1> {
         input_info: &InputInfo,
         _output_files: StepOutputFiles,
         demultiplex_info: &OptDemultiplex,
+        _input_files: &mut StepInputFiles,
     ) -> Result<Option<DemultiplexBarcodes>> {
         for valid_tag in demultiplex_info.iter_tags() {
             self.data

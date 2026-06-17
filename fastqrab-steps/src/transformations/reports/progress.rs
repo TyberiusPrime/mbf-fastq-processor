@@ -97,6 +97,7 @@ impl Step for Progress {
         input_info: &InputInfo,
         mut output_files: StepOutputFiles,
         _demultiplex_info: &OptDemultiplex,
+        _input_files: &mut StepInputFiles,
     ) -> Result<Option<DemultiplexBarcodes>> {
         // Get the single (tag-0) writer for this non-demultiplexed output
         let mut per_tag = output_files.take("progress");

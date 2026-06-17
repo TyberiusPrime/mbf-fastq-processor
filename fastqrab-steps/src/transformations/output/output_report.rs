@@ -107,6 +107,7 @@ impl Step for OutputReport {
         input_info: &InputInfo,
         mut output_files: StepOutputFiles,
         _demultiplex_info: &OptDemultiplex,
+        _input_files: &mut StepInputFiles,
     ) -> Result<Option<DemultiplexBarcodes>> {
         self.report_metadata = Some(input_info.report_metadata.clone());
         if self.json {

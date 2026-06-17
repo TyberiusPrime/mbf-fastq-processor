@@ -61,18 +61,12 @@ pub struct TagToReference {
 
     /// Name of a `[barcodes.<name>]` section whose keys become reference names.
     #[tpd(default, alias = "from_barcodes")]
-    #[expect(
-        dead_code,
-        reason = "Extracted in validation"
-    )]
+    #[expect(dead_code, reason = "Extracted in validation")]
     pub references_from_barcodes: Option<String>,
 
     /// Path to a BAM file whose `@SQ` header lines define the reference sequences.
     #[tpd(default, alias = "from_bam", alias = "template")]
-    #[expect(
-        dead_code,
-        reason = "Extracted in validation"
-    )]
+    #[expect(dead_code, reason = "Extracted in validation")]
     pub references_from_bam: Option<String>,
 }
 
@@ -88,10 +82,7 @@ pub struct BamOutputOptions {
     /// Defaults to `' '` (space).  Reads whose names contain this character are split; the
     /// part after the character is placed in a `CO` tag so it can exceed the 254-byte limit.
     #[tpd(with = "tpd_adapt_u8_from_byte_or_char")]
-    #[expect(
-        dead_code,
-        reason = "Extracted in validation"
-    )]
+    #[expect(dead_code, reason = "Extracted in validation")]
     pub comment_separation_char: u8,
 
     /// Map of fastqrab tag labels to BAM auxiliary tag names
@@ -100,10 +91,7 @@ pub struct BamOutputOptions {
     /// auxiliary tag name to write (e.g. `BC`).
     #[tpd(nested, alias = "tags")]
     #[schemars(skip)]
-    #[expect(
-        dead_code,
-        reason = "Extracted in validation"
-    )]
+    #[expect(dead_code, reason = "Extracted in validation")]
     pub tag_to_bam_tag: IndexMap<TagLabel, BamTag>,
 
     /// Export a fastqrab tag value as the BAM reference name
@@ -654,6 +642,7 @@ impl Step for OutputBAM {
         input_info: &InputInfo,
         mut output_files: StepOutputFiles,
         _demultiplex_info: &OptDemultiplex,
+        _input_files: &mut StepInputFiles,
     ) -> Result<Option<DemultiplexBarcodes>> {
         let segments = self.output.clone().unwrap_or_default();
         let state = RecordOutputState::from_step_output_files(

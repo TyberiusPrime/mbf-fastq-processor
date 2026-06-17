@@ -25,6 +25,8 @@ pub(crate) use crate::demultiplex::{
     DemultiplexBarcodes, DemultiplexedData, OptDemultiplex, StepOutputFiles,
 };
 
+pub(crate) use crate::input_files::{InputDeclaration, StepInputFiles};
+
 pub(crate) use anyhow::{Context, Result, bail};
 pub(crate) use fastqrab_io::io::{
     FastQBlocksCombined,

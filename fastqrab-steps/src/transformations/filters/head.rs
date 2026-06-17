@@ -32,6 +32,7 @@ impl Step for Head {
         _input_info: &InputInfo,
         _output_files: StepOutputFiles,
         demultiplex_info: &OptDemultiplex,
+        _input_files: &mut StepInputFiles,
     ) -> Result<Option<DemultiplexBarcodes>> {
         let mut so_far = DemultiplexedData::new();
         for tag in demultiplex_info.iter_tags() {

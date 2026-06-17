@@ -30,6 +30,7 @@ impl Step for Box<_ReportLengthDistribution> {
         input_info: &InputInfo,
         _output_files: StepOutputFiles,
         demultiplex_info: &OptDemultiplex,
+        _input_files: &mut StepInputFiles,
     ) -> Result<Option<DemultiplexBarcodes>> {
         let mut data_lock = self.data.lock().expect("lock poisened");
         for valid_tag in demultiplex_info.iter_tags() {

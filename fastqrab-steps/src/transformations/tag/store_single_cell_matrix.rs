@@ -405,6 +405,7 @@ impl Step for StoreSingleCellMatrix {
         input_info: &InputInfo,
         mut output_files: StepOutputFiles,
         _demultiplex_info: &OptDemultiplex,
+        _input_files: &mut StepInputFiles,
     ) -> Result<Option<DemultiplexBarcodes>> {
         let cell_bc = input_info
             .barcodes_data

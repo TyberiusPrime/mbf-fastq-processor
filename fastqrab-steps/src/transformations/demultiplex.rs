@@ -273,6 +273,7 @@ impl Step for Demultiplex {
         _input_info: &InputInfo,
         _output_files: StepOutputFiles,
         _demultiplex_info: &OptDemultiplex,
+        _input_files: &mut StepInputFiles,
     ) -> Result<Option<DemultiplexBarcodes>> {
         assert!(
             !self

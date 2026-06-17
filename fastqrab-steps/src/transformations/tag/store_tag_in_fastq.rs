@@ -194,6 +194,7 @@ impl Step for StoreTagInFastQ {
         _input_info: &InputInfo,
         mut output_files: StepOutputFiles,
         _demultiplex_info: &OptDemultiplex,
+        _input_files: &mut StepInputFiles,
     ) -> Result<Option<DemultiplexBarcodes>> {
         let per_tag = output_files.take("tag_fastq");
         let mut handles = DemultiplexedData::new();

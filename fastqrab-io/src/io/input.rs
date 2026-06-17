@@ -41,7 +41,7 @@ pub struct InputOptions {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub bam_include_unmapped: Option<bool>,
 
-    #[tpd(with = "tpd_adapt_u8_from_byte_or_char", alias="read_comment_char")]
+    #[tpd(with = "tpd_adapt_u8_from_byte_or_char", alias = "read_comment_char")]
     pub read_comment_character: u8,
 
     #[serde(skip_serializing)]

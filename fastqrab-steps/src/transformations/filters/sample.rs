@@ -58,6 +58,7 @@ impl Step for Sample {
         _input_info: &InputInfo,
         _output_files: StepOutputFiles,
         _demultiplex_info: &OptDemultiplex,
+        _input_files: &mut StepInputFiles,
     ) -> anyhow::Result<Option<DemultiplexBarcodes>> {
         use rand_chacha::rand_core::SeedableRng;
         let extended_seed = extend_seed(self.seed);

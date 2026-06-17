@@ -1,5 +1,5 @@
 use schemars::JsonSchema;
-use std::{num::NonZero};
+use std::num::NonZero;
 use toml_pretty_deser::prelude::*;
 
 #[must_use]

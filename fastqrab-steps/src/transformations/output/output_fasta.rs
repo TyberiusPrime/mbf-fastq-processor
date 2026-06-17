@@ -151,6 +151,7 @@ impl Step for OutputFASTA {
         input_info: &InputInfo,
         mut output_files: StepOutputFiles,
         _demultiplex_info: &OptDemultiplex,
+        _input_files: &mut StepInputFiles,
     ) -> Result<Option<DemultiplexBarcodes>> {
         let segments = self.output.clone().unwrap_or_default();
         let state = RecordOutputState::from_step_output_files(

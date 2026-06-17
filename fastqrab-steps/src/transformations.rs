@@ -12,6 +12,7 @@ use toml_pretty_deser::prelude::*;
 use crate::{
     config::ThreadingConfiguration,
     demultiplex::{DemultiplexBarcodes, OptDemultiplex, StepOutputFiles},
+    input_files::{InputDeclaration, StepInputFiles},
 };
 use fastqrab_config::{DeclaredTag, RemovedTags, TagLabel, UsedTag, segments::SegmentIndex};
 use fastqrab_io::io::FastQBlocksCombined;
@@ -217,6 +218,17 @@ pub trait TagUser {
     fn declare_output_files(&self) -> Option<Vec<OutputDeclaration>> {
         None
     }
+
+    /// Return declarations for each auxiliary input file this step reads,
+    /// besides the pipeline `[input]` reads. Called at config-verification
+    /// time so the full set of out-of-tree reads is known before processing;
+    /// the runtime opens each declared path and hands the handles to
+    /// `Step::init` via [`StepInputFiles`]. Mirrors `declare_output_files`.
+    /// Steps that read side-input files override this; the default returns
+    /// `None`.
+    fn declare_input_files(&self) -> Option<Vec<InputDeclaration>> {
+        None
+    }
 }
 
 #[enum_dispatch(Transformation)]
@@ -230,6 +242,7 @@ pub trait Step {
         _input_info: &InputInfo,
         _output_files: StepOutputFiles,
         _demultiplex_info: &OptDemultiplex,
+        _input_files: &mut StepInputFiles,
     ) -> Result<Option<DemultiplexBarcodes>> {
         Ok(None)
     }

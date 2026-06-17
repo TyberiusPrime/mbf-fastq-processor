@@ -21,6 +21,11 @@ pub struct CountsFromReport {
     pub tag_name: String,
 }
 
+/// `StepInputFiles` id linking `declare_input_files` to the handle taken in
+/// `init`. It is the config field path so an open failure names what the user
+/// actually wrote.
+const COUNTS_FROM_REPORT_ID: &str = "on_tie_use_counts_from_report.filename";
+
 #[derive(JsonSchema)]
 #[tpd]
 pub struct HammingCorrect {
@@ -369,6 +374,19 @@ impl TagUser for PartialTaggedVariant<PartialHammingCorrect> {
         }
         None //doesn't count as an output job if unconfigured
     }
+
+    fn declare_input_files(&self) -> Option<Vec<InputDeclaration>> {
+        let inner = self.toml_value.as_ref()?;
+        if let Some(Some(cfr)) = inner.on_tie_use_counts_from_report.as_ref()
+            && let Some(filename) = cfr.filename.as_ref()
+        {
+            return Some(vec![InputDeclaration {
+                id: COUNTS_FROM_REPORT_ID.to_string(),
+                path: filename.clone().into(),
+            }]);
+        }
+        None
+    }
 }
 
 #[derive(Debug)]
@@ -530,6 +548,7 @@ impl Step for HammingCorrect {
         _input_info: &InputInfo,
         mut output_files: StepOutputFiles,
         _demultiplex_info: &OptDemultiplex,
+        input_files: &mut StepInputFiles,
     ) -> Result<Option<DemultiplexBarcodes>> {
         if self.on_tie_dump_counts {
             let mut count_dump_file = output_files.take("counts");
@@ -539,11 +558,12 @@ impl Step for HammingCorrect {
             *self.count_writer.lock().expect("poisoned") = Some(writer);
         }
         if let Some(counts_from_report) = self.on_tie_use_counts_from_report.as_ref() {
+            let file = input_files.take(COUNTS_FROM_REPORT_ID);
             let mj = self
                 .majority_data
                 .as_ref()
                 .expect("ByMajority / counts_from_report means we have .majority");
-            mj.load_from_report(counts_from_report)?;
+            mj.load_from_report(file, counts_from_report)?;
         }
 
         Ok(None)

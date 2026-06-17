@@ -56,6 +56,7 @@ impl Step for Box<_ReportDuplicateFragmentCount> {
         _input_info: &InputInfo,
         _output_files: StepOutputFiles,
         demultiplex_info: &OptDemultiplex,
+        _input_files: &mut StepInputFiles,
     ) -> Result<Option<DemultiplexBarcodes>> {
         // Initialize data structures but not the filters (those are initialized in apply)
         let mut data_lock = self.data.lock().expect("lock poisened");

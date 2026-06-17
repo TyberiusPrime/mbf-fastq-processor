@@ -190,6 +190,7 @@ impl Step for Inspect {
         _input_info: &InputInfo,
         mut output_files: StepOutputFiles,
         demultiplex_info: &OptDemultiplex,
+        _input_files: &mut StepInputFiles,
     ) -> Result<Option<DemultiplexBarcodes>> {
         let mut per_tag = output_files.take("inspect");
         let writer = per_tag

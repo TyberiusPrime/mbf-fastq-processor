@@ -37,6 +37,7 @@ impl Step for Box<_ReportCount> {
         _input_info: &InputInfo,
         _output_files: StepOutputFiles,
         demultiplex_info: &OptDemultiplex,
+        _input_files: &mut StepInputFiles,
     ) -> Result<Option<DemultiplexBarcodes>> {
         //if there's a demultiplex step *before* this report,
         //

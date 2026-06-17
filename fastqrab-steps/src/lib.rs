@@ -1,5 +1,6 @@
 pub mod config;
 pub mod demultiplex;
+pub mod input_files;
 pub mod transformations;
 
 #[must_use]

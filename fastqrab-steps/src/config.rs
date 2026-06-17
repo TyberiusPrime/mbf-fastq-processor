@@ -1,3 +1,4 @@
+use crate::input_files::InputDeclaration;
 use crate::transformations::hamming_correct::{OnTie, Partial_HammingPreMatch, PreMatchData};
 use crate::transformations::hamming_exact_counter::PartialHammingExactCounter;
 use crate::transformations::{PartialTransformation, TagUser, Transformation};
@@ -10,9 +11,9 @@ use fastqrab_config::{
     default_block_size, default_buffer_size, default_output_buffer_size,
     default_spot_check_read_pairing,
 };
+use fastqrab_io::CompressionFormat;
 use fastqrab_io::io::output::chunked_writer::OutputDeclaration;
 use fastqrab_io::io::{self, DetectedInputFormat};
-use fastqrab_io::{CompressionFormat};
 use indexmap::IndexMap;
 use schemars::JsonSchema;
 use std::cell::RefCell;
@@ -21,7 +22,7 @@ use std::fmt::Write;
 use std::num::NonZero;
 use std::path::Path;
 use std::rc::Rc;
-use toml_pretty_deser::{prelude::*};
+use toml_pretty_deser::prelude::*;
 
 mod barcodes;
 mod input;
@@ -135,6 +136,10 @@ pub struct Stage {
     /// forgetting is centralized here instead of repeated in each step.
     pub forgotten_tags: Vec<TagLabel>,
     pub output_declarations: Option<Vec<OutputDeclaration>>,
+    /// Auxiliary input files this stage declared via
+    /// `TagUser::declare_input_files`; opened by the runtime and handed to
+    /// `Step::init`.
+    pub input_declarations: Option<Vec<InputDeclaration>>,
 }
 
 #[derive(Debug, Clone)]
@@ -182,6 +187,10 @@ pub struct Config {
     #[tpd(skip)]
     #[schemars(skip)]
     pub output_declarations_per_transformation: Vec<Option<Vec<OutputDeclaration>>>,
+
+    #[tpd(skip)]
+    #[schemars(skip)]
+    pub input_declarations_per_transformation: Vec<Option<Vec<InputDeclaration>>>,
 }
 
 #[derive(Debug)]
@@ -243,6 +252,7 @@ impl VerifyIn<TPDRoot> for PartialConfig {
         let used_barcode_sections = self.verify_transformation_labels();
         self.resolve_bam_output_references();
         self.verify_output_filenames_unique();
+        self.collect_input_file_declarations();
         self.verify_for_any_output();
 
         self.verify_demultiplex_unique();
@@ -1537,6 +1547,27 @@ impl PartialConfig {
     ///
     /// Each step's `TagUser::declare_output_files()` carries a `span` pointing
     /// at the config field most responsible for the filename (e.g. `infix`).
+    /// Collect each step's declared auxiliary input files (via
+    /// `TagUser::declare_input_files`) so the runtime can open them and hand the
+    /// handles to `Step::init`. Mirrors the declaration collection in
+    /// [`Self::verify_output_filenames_unique`]; kept separate as inputs need no
+    /// cross-step conflict detection.
+    fn collect_input_file_declarations(&mut self) {
+        let mut all_decls: Vec<Option<Vec<InputDeclaration>>> = Vec::new();
+        self.transform.sync_nested_state();
+        if let Some(transforms) = self.transform.value.as_ref() {
+            for tv_transform in transforms.iter() {
+                let decls = tv_transform
+                    .value
+                    .as_ref()
+                    .map(TagUser::declare_input_files)
+                    .unwrap_or_default();
+                all_decls.push(decls);
+            }
+        } //cov:excl-line
+        self.input_declarations_per_transformation = Some(all_decls);
+    }
+
     pub fn verify_output_filenames_unique(&mut self) {
         use fastqrab_io::io::output::chunked_writer::WriteTargetConfig;
 
@@ -1964,6 +1995,7 @@ impl Config {
         let allowed_tags_per_stage = self.allowed_tags_per_transformation.clone();
         let forgotten_tags_per_stage = self.forgotten_tags_per_transformation.clone();
         let output_declarations_per_stage = self.output_declarations_per_transformation.clone();
+        let input_declarations_per_stage = self.input_declarations_per_transformation.clone();
 
         let stages: Vec<Stage> = self
             .transform
@@ -1971,12 +2003,14 @@ impl Config {
             .zip(allowed_tags_per_stage)
             .zip(forgotten_tags_per_stage)
             .zip(output_declarations_per_stage)
-            .filter(|(((t, _), _), _)| !matches!(t, Transformation::Report { .. }))
-            .map(|(((t, tags), forgotten), decls)| Stage {
+            .zip(input_declarations_per_stage)
+            .filter(|((((t, _), _), _), _)| !matches!(t, Transformation::Report { .. }))
+            .map(|((((t, tags), forgotten), decls), input_decls)| Stage {
                 transformation: t,
                 allowed_tags: tags.into_iter().collect(),
                 forgotten_tags: forgotten.into_iter().collect(),
                 output_declarations: decls,
+                input_declarations: input_decls,
             })
             .collect();
 

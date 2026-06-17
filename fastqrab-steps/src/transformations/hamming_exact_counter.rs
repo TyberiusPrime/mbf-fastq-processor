@@ -41,9 +41,15 @@ pub struct MajorityData {
 }
 
 impl MajorityData {
-    pub fn load_from_report(&self, cfr: &CountsFromReport) -> Result<()> {
-        //report json from cfr.filename, get the cfr.report_name, then get 'tag_histogram',then the cfr.tag_name
-        let raw = std::fs::read_to_string(&cfr.filename).map_err(|err| {
+    pub fn load_from_report(
+        &self,
+        mut report_file: impl std::io::Read,
+        cfr: &CountsFromReport,
+    ) -> Result<()> {
+        //report json from the handle opened for cfr.filename, get the cfr.report_name,
+        //then get 'tag_histogram',then the cfr.tag_name
+        let mut raw = String::new();
+        report_file.read_to_string(&mut raw).map_err(|err| {
             anyhow!(
                 "Failed to read counts from report file {}: {err}",
                 cfr.filename

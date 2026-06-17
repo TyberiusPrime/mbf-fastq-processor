@@ -28,7 +28,28 @@ use fastqrab_io::{
         parsers::{ChainedParser, ThreadCount},
     },
 };
-use fastqrab_steps::{demultiplex::StepOutputFiles, join_nonempty};
+use fastqrab_steps::{
+    demultiplex::StepOutputFiles,
+    input_files::{InputDeclaration, StepInputFiles},
+    join_nonempty,
+};
+
+/// Open every file a step declared via `TagUser::declare_input_files`, keyed by
+/// the declaration's `id`, and hand them to `Step::init` as [`StepInputFiles`].
+/// Opening up front (here, not lazily inside the step) keeps all out-of-tree
+/// reads in one place — the seam a future filesystem sandbox hooks into.
+fn build_step_input_files(declarations: Option<Vec<InputDeclaration>>) -> Result<StepInputFiles> {
+    let mut files = StepInputFiles::empty();
+    for decl in declarations.into_iter().flatten() {
+        // `ex::fs` names the path; we add the declaration id (the config field)
+        // so the user knows which setting points at the file; the call site adds
+        // the step.
+        let file = ex::fs::File::open(&decl.path)
+            .with_context(|| format!("Failed to open input file declared by '{}'", decl.id))?;
+        files.0.insert(decl.id, file);
+    }
+    Ok(files)
+}
 
 fn build_step_output_files(
     declarations: Option<Vec<fastqrab_io::io::output::chunked_writer::OutputDeclaration>>,
@@ -490,7 +511,15 @@ impl RunStage0 {
                         allow_overwrite,
                         simulated_failure.as_ref(),
                     )?; // cov:excl-line
-                    inner.init(&input_info, output_files, &OptDemultiplex::No)?; // cov:excl-line
+                    let mut input_files =
+                        build_step_input_files(std::mem::take(&mut step.input_declarations))?;
+                    inner.init(
+                        &input_info,
+                        output_files,
+                        &OptDemultiplex::No,
+                        &mut input_files,
+                    )?; // cov:excl-line
+                    input_files.assert_consumed();
                     res = Some(inner.clone());
                 }
             }
@@ -531,15 +560,30 @@ impl RunStage0 {
                             stage.transformation
                         )
                     })?;
-                    stage
+                    let mut input_files =
+                        build_step_input_files(std::mem::take(&mut stage.input_declarations))
+                            .with_context(|| {
+                                format!(
+                                    "Error opening declared input files. Index {index}: {:?}",
+                                    stage.transformation
+                                )
+                            })?;
+                    let new_demultiplex_barcodes = stage
                         .transformation
-                        .init(&input_info, output_files, last_demultiplex_info)
+                        .init(
+                            &input_info,
+                            output_files,
+                            last_demultiplex_info,
+                            &mut input_files,
+                        )
                         .with_context(|| {
                             format!(
                                 "Error in transform initalization. Index {index}: {:?}",
                                 stage.transformation
                             )
-                        })?
+                        })?;
+                    input_files.assert_consumed();
+                    new_demultiplex_barcodes
                 };
                 //#[expect(clippy::cast_precision_loss)]
                 if let Some(new_demultiplex_barcodes) = new_demultiplex_barcodes {
