@@ -1,7 +1,5 @@
-use fastqrab_config::offer_alternatives;
-use fastqrab_io::{CompressionFormat, FileFormat};
 use schemars::JsonSchema;
-use std::{collections::HashSet, num::NonZero};
+use std::{num::NonZero};
 use toml_pretty_deser::prelude::*;
 
 #[must_use]

@@ -5,7 +5,6 @@ use bstr::{BStr, BString};
 use fastqrab_io::{CompressionFormat, FileFormat};
 use rayon::prelude::*;
 use rustc_hash::FxHashSet;
-use std::num::NonZeroUsize;
 
 type WriterHandle = Arc<Mutex<Option<ChunkedRecordWriter>>>;
 type DataHandles = Arc<Mutex<DemultiplexedData<Option<ChunkedRecordWriter>>>>;

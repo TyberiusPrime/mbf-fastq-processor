@@ -1,5 +1,3 @@
-use std::num::NonZeroUsize;
-
 use super::{format_numeric_for_comment, store_tag_in_comment};
 use crate::transformations::{output::validate_compression_level_u8, prelude::*};
 use fastqrab_config::{

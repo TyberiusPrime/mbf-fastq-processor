@@ -24,10 +24,6 @@ pub struct OutputFASTQ {
     suffix: Option<String>,
 
     #[tpd(default)]
-    #[expect(
-        dead_code,
-        reason = "read in declare_output_files via the partial config"
-    )]
     pub compression: CompressionFormat,
     #[tpd(default)]
     #[expect(

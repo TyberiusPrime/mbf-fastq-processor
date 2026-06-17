@@ -1,10 +1,10 @@
 use std::rc::Rc;
-use std::{cell::RefCell, num::NonZeroUsize};
+use std::{cell::RefCell};
 
 use crate::transformations::output::validate_compression_level_u8;
 use crate::transformations::prelude::*;
 use fastqrab_config::{default_include_read_name, default_region_separator, tpd_adapt_bstring};
-use fastqrab_io::{CompressionFormat, FileFormat};
+use fastqrab_io::{CompressionFormat};
 
 type OutputHandles = Arc<Mutex<DemultiplexedData<Option<ChunkedRecordWriter>>>>;
 type InLabels = Vec<TagLabel>;

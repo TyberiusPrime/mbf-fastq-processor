@@ -344,7 +344,6 @@ impl StringColumn {
         self.0.make_exclusive();
         self.0
             .iter_mut()
-            .expect("Just made exclusive")
             .zip(self.1.iter())
             .map(|(item, valid)| if *valid { Some(item) } else { None })
     }

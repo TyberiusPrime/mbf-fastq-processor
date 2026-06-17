@@ -12,7 +12,7 @@ use fastqrab_config::{
 };
 use fastqrab_io::io::output::chunked_writer::OutputDeclaration;
 use fastqrab_io::io::{self, DetectedInputFormat};
-use fastqrab_io::{CompressionFormat, FileFormat};
+use fastqrab_io::{CompressionFormat};
 use indexmap::IndexMap;
 use schemars::JsonSchema;
 use std::cell::RefCell;
@@ -21,7 +21,7 @@ use std::fmt::Write;
 use std::num::NonZero;
 use std::path::Path;
 use std::rc::Rc;
-use toml_pretty_deser::{Visitor, prelude::*};
+use toml_pretty_deser::{prelude::*};
 
 mod barcodes;
 mod input;
@@ -320,7 +320,7 @@ impl PartialConfig {
             })
         });
 
-        let mut report_transform_idx = self.transform.as_mut().and_then(|x| {
+        let report_transform_idx = self.transform.as_mut().and_then(|x| {
             x.iter_mut().position(|t| {
                 matches!(
                     t.as_ref(),
@@ -1717,7 +1717,7 @@ impl PartialConfig {
 
             if let Some(Some(barcodes)) = self.barcodes.as_mut() {
                 for (barcode_section_name, tv_barcodes) in &mut barcodes.map {
-                    let mut found_barcode_using_step =
+                    let found_barcode_using_step =
                         used_barcode_sections.contains(barcode_section_name);
                     // Also check wether the  output's tag_to_reference uses this barcode section
                     if !found_barcode_using_step {

@@ -18,12 +18,10 @@ pub(crate) use output_bam::{resolve_output_bam, verify_output_bam_merge};
 pub use output_fasta::{OutputFASTA, PartialOutputFASTA};
 pub use output_fastq::{OutputFASTQ, PartialOutputFASTQ};
 pub use output_report::{OutputReport, PartialOutputReport};
-use rayon::iter::Interleave;
 
 use crate::transformations::prelude::*;
 use fastqrab_io::CompressionFormat;
 use fastqrab_io::io::output::chunked_writer::BamSinkOptions;
-use std::collections::HashSet;
 
 use crate::demultiplex::OptDemultiplex;
 use crate::transformations::FinalizeReportResult;
