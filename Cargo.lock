@@ -680,7 +680,7 @@ checksum = "4f4cdac9e4065d7c48e30770f8665b8cef9a3a73a63a4056a33a5f395bc7cf75"
 
 [[package]]
 name = "fastqrab"
-version = "0.9.0"
+version = "0.9.1"
 dependencies = [
  "allocation-counter",
  "anyhow",
@@ -717,7 +717,7 @@ dependencies = [
 
 [[package]]
 name = "fastqrab-config"
-version = "0.9.0"
+version = "0.9.1"
 dependencies = [
  "anyhow",
  "bstr",
@@ -734,7 +734,7 @@ dependencies = [
 
 [[package]]
 name = "fastqrab-dna"
-version = "0.9.0"
+version = "0.9.1"
 dependencies = [
  "anyhow",
  "bio",
@@ -749,7 +749,7 @@ dependencies = [
 
 [[package]]
 name = "fastqrab-io"
-version = "0.9.0"
+version = "0.9.1"
 dependencies = [
  "anyhow",
  "bio",
@@ -777,7 +777,7 @@ dependencies = [
 
 [[package]]
 name = "fastqrab-steps"
-version = "0.9.0"
+version = "0.9.1"
 dependencies = [
  "anyhow",
  "bio",
