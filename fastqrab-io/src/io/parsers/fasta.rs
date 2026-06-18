@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use bio::io::fasta::{self, FastaRead, Record as FastaRecord};
 use ex::fs::File;
 use niffler;
@@ -8,11 +8,10 @@ use std::{
     path::PathBuf,
 };
 
+use crate::blocks::FastQChunk;
+use crate::io::input::{DecompressionOptions, spawn_rapidgzip};
 use crate::io::parsers::{ParseResult, Parser, ParserOutput};
-use crate::io::{
-    FastQBlock, FastQRead,
-    input::{DecompressionOptions, spawn_rapidgzip},
-};
+use stringpod::{DualStringPodBuilder, StringPod, StringPodBuilder};
 
 type BoxedFastaReader = fasta::Reader<BufReader<Box<dyn Read + Send>>>;
 
@@ -75,75 +74,66 @@ impl Parser for FastaParser {
         }
     }
     fn parse(&mut self) -> Result<ParseResult> {
-        let mut block = FastQBlock {
-            block: Vec::new(),
-            entries: Vec::new(),
-            first_read_sequential_number: 0,
-        };
+        let target: usize = self.target_reads_per_block.into();
+        let mut names = StringPodBuilder::with_capacity(0, target);
+        let mut seq_quals = DualStringPodBuilder::with_capacity(0, target);
         let mut qual = vec![self.fake_quality_char; 100];
+        let mut count = 0usize;
+        let mut was_final = false;
 
-        loop {
-            if block.entries.len() >= self.target_reads_per_block.into() {
-                return Ok(ParseResult {
-                    output: ParserOutput::Block(block),
-                    was_final: false,
-                });
-            }
-
-            let reader = &mut self.reader;
-
+        while count < target {
             let mut record = FastaRecord::new();
-            reader.read(&mut record)?;
+            self.reader.read(&mut record)?;
             if record.is_empty() {
-                return Ok(ParseResult {
-                    output: ParserOutput::Block(block),
-                    was_final: true,
-                });
+                was_final = true;
+                break;
             }
 
-            let (combined_iter, combined_len): (Box<dyn Iterator<Item = u8>>, usize) =
-                match record.desc() {
-                    Some(desc) => {
-                        let desc_bytes = desc.as_bytes();
-                        let name_bytes = record.id().as_bytes();
-                        let name_len = name_bytes.len();
-                        let desc_iter = b" ".iter().chain(desc_bytes.iter());
-                        (
-                            Box::new(name_bytes.iter().chain(desc_iter).copied()),
-                            name_len + 1 + desc_bytes.len(),
-                        )
-                    }
-                    _ => (
-                        Box::new(record.id().as_bytes().iter().copied()),
-                        record.id().len(),
-                    ),
-                };
             let seq = record.seq();
             if qual.len() < seq.len() {
                 //mutant false positive, <= isn't harmful, just tad slower
                 qual.resize(seq.len(), self.fake_quality_char);
             }
-            let read = FastQRead::new(
-                block.append_element_from_iter(combined_iter, combined_len),
-                block.append_element(record.seq()),
-                block.append_element(&qual[..seq.len()]),
-            )
-            .with_context(|| "Failed to convert FASTA record into synthetic FASTQ read")?;
-            block.entries.push(read);
+
+            // FASTA carries no '+'/quality, so qualities are faked and the plus
+            // column is left empty (filled in one shot below).
+            match record.desc() {
+                Some(desc) => {
+                    let id = record.id().as_bytes();
+                    let desc = desc.as_bytes();
+                    let mut name = Vec::with_capacity(id.len() + 1 + desc.len());
+                    name.extend_from_slice(id);
+                    name.push(b' ');
+                    name.extend_from_slice(desc);
+                    names.push(name.as_slice());
+                }
+                _ => names.push(record.id().as_bytes()),
+            }
+            seq_quals.push(seq, &qual[..seq.len()]);
+            count += 1;
         }
+
+        Ok(ParseResult {
+            output: ParserOutput::Chunk(FastQChunk {
+                names: names.finish(),
+                seq_quals: seq_quals.finish(),
+                pluses: StringPod::new_all_empty(
+                    u32::try_from(count).expect("too many reads in a block for u32"),
+                ),
+            }),
+            was_final,
+        })
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::io::FastQElement;
-
     use super::*;
     use anyhow::Result;
+    use bstr::ByteSlice;
     use std::io::Write;
     use tempfile::NamedTempFile;
 
-    //#[allow(clippy::match_wildcard_for_single_variants)]
     #[test]
     fn parses_fasta_records_into_fastq_reads() -> Result<()> {
         let mut temp = NamedTempFile::new()?;
@@ -160,88 +150,30 @@ mod tests {
         )?; // cov:excl-line
 
         let ParseResult { output, was_final } = parser.parse()?;
-        let block = output.expect_block();
+        let chunk = output.into_chunk();
         assert!(was_final);
-        assert_eq!(block.entries.len(), 2);
+        assert_eq!(chunk.len(), 2);
 
-        let mut reads = block.entries.into_iter();
-        let first = reads
-            .next()
-            .expect("test should have expected number of reads");
-        #[expect(
-            clippy::match_wildcard_for_single_variants,
-            reason = "thats what I want"
-        )]
-        match first.name {
-            FastQElement::Local(_) => assert_eq!(first.name.get(&block.block), b"read1".to_vec()),
-            // cov:excl-start
-            _ => panic!("expected Local name"),
-            // cov:excl-stop
-        }
-        #[expect(
-            clippy::match_wildcard_for_single_variants,
-            reason = "thats what I want"
-        )]
-        match first.seq {
-            FastQElement::Local(_) => assert_eq!(first.seq.get(&block.block), b"ACGT".to_vec()),
-            // cov:excl-start
-            _ => panic!("expected Local sequence"),
-            // cov:excl-stop
-        }
-        #[expect(
-            clippy::match_wildcard_for_single_variants,
-            reason = "thats what I want"
-        )]
-        match first.qual {
-            FastQElement::Local(_) => assert_eq!(first.qual.get(&block.block), vec![30; 4]),
-            // cov:excl-start
-            _ => panic!("expected Local qualities"),
-            // cov:excl-stop
-        }
+        assert_eq!(chunk.names.get(0).as_bytes(), b"read1");
+        let (seq0, qual0) = chunk.seq_quals.pair(0);
+        assert_eq!(seq0.as_bytes(), b"ACGT");
+        assert_eq!(qual0.as_bytes(), [30u8; 4].as_slice());
+        // FASTA has no '+' line — the plus column is empty for every read.
+        assert_eq!(chunk.pluses.get(0).as_bytes(), b"");
 
-        let second = reads
-            .next()
-            .expect("test should have expected number of reads");
-        #[expect(
-            clippy::match_wildcard_for_single_variants,
-            reason = "thats what I want"
-        )]
-        match second.name {
-            FastQElement::Local(_) => {
-                assert_eq!(second.name.get(&block.block), b"read2 description".to_vec());
-            }
-            // cov:excl-start
-            _ => panic!("expected Local name"),
-            // cov:excl-stop
-        }
-        #[expect(
-            clippy::match_wildcard_for_single_variants,
-            reason = "thats what I want"
-        )]
-        match second.seq {
-            FastQElement::Local(_) => assert_eq!(second.seq.get(&block.block), b"TGCA".to_vec()),
-            // cov:excl-start
-            _ => panic!("expected Local sequence"),
-            // cov:excl-stop
-        }
-        #[expect(
-            clippy::match_wildcard_for_single_variants,
-            reason = "thats what I want"
-        )]
-        match second.qual {
-            FastQElement::Local(_) => assert_eq!(second.qual.get(&block.block), vec![30; 4]),
-            // cov:excl-start
-            _ => panic!("expected Local qualities"),
-            // cov:excl-stop
-        }
+        assert_eq!(chunk.names.get(1).as_bytes(), b"read2 description");
+        let (seq1, qual1) = chunk.seq_quals.pair(1);
+        assert_eq!(seq1.as_bytes(), b"TGCA");
+        assert_eq!(qual1.as_bytes(), [30u8; 4].as_slice());
+
         let ParseResult {
             output: second_output,
             was_final: is_final,
         } = parser.parse()?;
-        let second_block = second_output.expect_block();
+        let second_chunk = second_output.into_chunk();
 
         assert!(is_final);
-        assert!(second_block.entries.is_empty());
+        assert!(second_chunk.is_empty());
 
         Ok(())
     }

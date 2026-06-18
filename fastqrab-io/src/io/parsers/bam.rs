@@ -8,8 +8,9 @@ use noodles::csi::binning_index::{BinningIndex, ReferenceSequence};
 use std::num::NonZero;
 use std::path::{Path, PathBuf};
 
+use crate::blocks::FastQChunk;
 use crate::io::parsers::{ParseResult, Parser, ParserOutput};
-use crate::io::{FastQBlock, FastQRead};
+use stringpod::{DualStringPodBuilder, StringPod, StringPodBuilder};
 
 type BamReader = bam::io::Reader<bgzf::io::MultithreadedReader<File>>;
 
@@ -141,27 +142,21 @@ impl Parser for BamParser {
     // cov:excl-stop
 
     fn parse(&mut self) -> Result<ParseResult> {
-        let mut block = FastQBlock {
-            block: Vec::new(),
-            entries: Vec::new(),
-            first_read_sequential_number: 0,
-        };
+        let target: usize = self.target_reads_per_block.into();
+        let mut names = StringPodBuilder::with_capacity(0, target);
+        let mut seq_quals = DualStringPodBuilder::with_capacity(0, target);
+        let mut count = 0usize;
+        let mut was_final = false;
+        // Reused per record so seq/qual can be materialized into contiguous,
+        // equal-length slices for the DualStringPod.
+        let mut seq_buf: Vec<u8> = Vec::new();
+        let mut qual_buf: Vec<u8> = Vec::new();
 
-        loop {
-            if block.entries.len() >= self.target_reads_per_block.into() {
-                self.any_seen = true;
-                return Ok(ParseResult {
-                    output: ParserOutput::Block(block),
-                    was_final: false,
-                });
-            }
-
-            let state = &mut self.reader;
-
+        while count < target {
             self.record = Record::default();
-            if state.read_record(&mut self.record)? == 0 {
+            if self.reader.read_record(&mut self.record)? == 0 {
                 //nothing read.
-                if block.entries.is_empty() && !self.any_seen {
+                if count == 0 && !self.any_seen {
                     match &self.filename {
                         Some(filename) => bail!(
                             "An input file ({}) provided no reads. Please check your inputs.",
@@ -170,47 +165,46 @@ impl Parser for BamParser {
                         None => bail!("An input file provided no reads. Please check your inputs."),
                     }
                 }
-                return Ok(ParseResult {
-                    output: ParserOutput::Block(block),
-                    was_final: true,
-                });
-            } else {
-                if !self.should_yield_record(&self.record) {
-                    continue;
-                }
-                // let name = self
-                //     .record
-                //     .name()
-                //     .map(|n| n.as_bytes().to_vec())
-                //     .unwrap_or_default();
-                // let seq: Vec<u8> = self.record.sequence().iter().collect();
-                // let qual: Vec<u8> = if self.record.quality_scores().is_empty() {
-                //     vec![b'!'; seq.len()]
-                // } else {
-                //     self.record
-                //         .quality_scores()
-                //         .iter()
-                //         .map(|q| q + 33)
-                //         .collect()
-                // };
-                // let read = FastQRead::new(
-                //     FastQElement::Owned(name),
-                //     FastQElement::Owned(seq),
-                //     FastQElement::Owned(qual),
-                // )
-                // .with_context(|| "Failed to convert BAM record into FastQ-like read")?;
-                let seq = self.record.sequence();
-                let qual = self.record.quality_scores();
-                let read = FastQRead::new(
-                    block.append_element(
-                        self.record.name().map(|n| n.as_bytes()).unwrap_or_default(),
-                    ),
-                    block.append_element_from_iter(seq.iter(), seq.len()),
-                    block.append_element_from_iter(qual.iter().map(|q| q + 33), qual.len()),
-                )?; // cov:excl-line
-                block.entries.push(read);
+                was_final = true;
+                break;
             }
+
+            if !self.should_yield_record(&self.record) {
+                continue;
+            }
+
+            names.push(self.record.name().map(|n| n.as_bytes()).unwrap_or_default());
+
+            let seq = self.record.sequence();
+            seq_buf.clear();
+            seq_buf.extend(seq.iter());
+            let qual = self.record.quality_scores();
+            qual_buf.clear();
+            if qual.is_empty() {
+                // BAM records may omit quality ('*'); synthesize phred-0 so the
+                // seq/qual columns stay the same length.
+                qual_buf.resize(seq_buf.len(), b'!');
+            } else {
+                qual_buf.extend(qual.iter().map(|q| q + 33));
+            }
+            seq_quals.push(seq_buf.as_slice(), qual_buf.as_slice());
+            count += 1;
         }
+
+        if count >= target {
+            self.any_seen = true;
+        }
+
+        Ok(ParseResult {
+            output: ParserOutput::Chunk(FastQChunk {
+                names: names.finish(),
+                seq_quals: seq_quals.finish(),
+                pluses: StringPod::new_all_empty(
+                    u32::try_from(count).expect("too many reads in a block for u32"),
+                ),
+            }),
+            was_final,
+        })
     }
 }
 
@@ -260,7 +254,7 @@ mod tests {
 
     #[test]
     fn respects_mapped_and_unmapped_filters() -> Result<()> {
-        use crate::io::FastQElement;
+        use bstr::ByteSlice;
         let temp = NamedTempFile::new()?;
         write_test_bam(temp.path())?;
 
@@ -279,16 +273,10 @@ mod tests {
             output,
             was_final: finished,
         } = parser.parse()?;
-        let block = output.expect_block();
+        let chunk = output.into_chunk();
         assert!(finished);
-        assert_eq!(block.entries.len(), 1);
-        if let FastQElement::Local(_) = &block.entries[0].name {
-            assert_eq!(block.entries[0].name.get(&block.block), b"mapped");
-        } else {
-            // cov:excl-start
-            panic!("expected local name");
-            // cov:excl-stop
-        }
+        assert_eq!(chunk.len(), 1);
+        assert_eq!(chunk.names.get(0).as_bytes(), b"mapped");
 
         let file = open(temp.path())?;
         let mut parser = BamParser::new(
@@ -303,16 +291,10 @@ mod tests {
             output,
             was_final: finished,
         } = parser.parse()?;
-        let block = output.expect_block();
+        let chunk = output.into_chunk();
         assert!(finished);
-        assert_eq!(block.entries.len(), 1);
-        if let FastQElement::Local(_) = &block.entries[0].name {
-            assert_eq!(block.entries[0].name.get(&block.block), b"unmapped");
-        } else {
-            // cov:excl-start
-            panic!("expected Local name");
-            // cov:excl-stop
-        }
+        assert_eq!(chunk.len(), 1);
+        assert_eq!(chunk.names.get(0).as_bytes(), b"unmapped");
 
         let file = open(temp.path())?;
         let mut parser = BamParser::new(
@@ -327,9 +309,9 @@ mod tests {
             output,
             was_final: finished,
         } = parser.parse()?;
-        let block = output.expect_block();
+        let chunk = output.into_chunk();
         assert!(finished);
-        assert_eq!(block.entries.len(), 2);
+        assert_eq!(chunk.len(), 2);
 
         Ok(())
     }
