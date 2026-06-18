@@ -40,3 +40,6 @@ impl From<u32> for SegmentIndex {
         SegmentIndex::new(value as usize)
     }
 }
+
+// `SegmentIndex` is a scalar wrapper with no aliases; let TpdAliasTree recurse past it.
+toml_pretty_deser::tpd_alias_leaf!(SegmentIndex);

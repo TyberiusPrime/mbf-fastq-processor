@@ -35,6 +35,7 @@ pub struct Input {
 
     #[tpd(nested)]
     #[serde(skip_serializing_if = "is_default")]
+    #[schemars(default)]
     pub options: InputOptions,
 
     #[tpd(skip)]

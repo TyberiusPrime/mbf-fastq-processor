@@ -159,6 +159,7 @@ pub const fn default_include_read_name() -> bool {
 }
 // Schema helper for string or list of strings
 #[derive(JsonSchema)]
+#[serde(untagged)]
 pub enum StringOrVecString {
     String(String),
     Vec(Vec<String>),
@@ -761,6 +762,10 @@ impl TryFrom<&str> for NonAmbigousDNA {
 }
 
 toml_pretty_deser::impl_visitor_for_try_from_str!(NonAmbigousDNA, "Invalid DNA sequence");
+
+// Custom scalar types (hand-written visitors) carry no `#[tpd(alias)]`s; give
+// them no-op alias-tree impls so `TpdAliasTree` recursion can pass through them.
+toml_pretty_deser::tpd_alias_leaf!(TagLabel, ConditionalTagLabel, NonAmbigousDNA, SegmentLabel);
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq, serde::Serialize, PartialOrd, Ord)]
 pub struct SegmentLabel(pub String);

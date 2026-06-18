@@ -149,6 +149,224 @@ pub struct ThreadingConfiguration {
     pub n_processing: std::num::NonZeroUsize,
 }
 
+/// The JSON schema for [`Config`], with fixups the `JsonSchema` derive can't
+/// express applied. Always build the schema through this — `schema_for!(Config)`
+/// alone is incomplete. (Fields that are merely optional use
+/// `#[schemars(with = "Option<...>")]` and need nothing here.)
+#[must_use]
+pub fn config_schema() -> schemars::Schema {
+    let mut schema = schemars::schema_for!(Config);
+    // The fixups below need the assembled `$defs`, which only exist on the
+    // finished root schema — not when a `#[schemars(transform)]` hook would run.
+    if let Some(root) = schema.as_object_mut() {
+        inline_transformation_variants(root);
+        inject_tpd_aliases(root);
+        drop_transform_from_required(root);
+        for value in root.values_mut() {
+            add_lowercase_enum_aliases(value);
+        }
+    }
+    schema
+}
+
+/// `Transformation` is internally tagged on `action`, which schemars emits as
+/// `{ properties: { action }, $ref: <step> }`. A strict TOML validator treats
+/// the referenced step schema as closed and rejects the sibling `action` key,
+/// because `$ref` and the inline `action` aren't merged. Inline each step's
+/// schema into its variant so `action` lives alongside the step's own fields in
+/// one self-contained object.
+fn inline_transformation_variants(root: &mut serde_json::Map<String, serde_json::Value>) {
+    let Some(defs) = root.get("$defs").and_then(|d| d.as_object()).cloned() else {
+        return;
+    };
+    let Some(variants) = root
+        .get_mut("$defs")
+        .and_then(|d| d.get_mut("Transformation"))
+        .and_then(|t| t.get_mut("oneOf"))
+        .and_then(serde_json::Value::as_array_mut)
+    else {
+        return;
+    };
+
+    for variant in variants {
+        let Some(obj) = variant.as_object_mut() else {
+            continue;
+        };
+        let Some(name) = obj
+            .get("$ref")
+            .and_then(|r| r.as_str())
+            .and_then(|r| r.strip_prefix("#/$defs/"))
+            .map(str::to_owned)
+        else {
+            continue;
+        };
+        let Some(target) = defs.get(&name).and_then(|t| t.as_object()) else {
+            continue;
+        };
+
+        let action = obj.get("properties").and_then(|p| p.get("action")).cloned();
+
+        let mut merged = target.clone();
+        let has_action = action.is_some();
+        if let Some(action) = action {
+            merged
+                .entry("properties")
+                .or_insert_with(|| serde_json::json!({}))
+                .as_object_mut()
+                .expect("properties is an object")
+                .insert("action".to_owned(), action);
+        }
+        // The step structs use plain (non-`Option`) fields that tpd fills with
+        // defaults — or validates — in `verify()`, so schemars over-reports them
+        // all as `required`. A strict editor then fails *every* `oneOf` branch
+        // when any defaulted field is omitted and floods the user with each
+        // branch's discriminator mismatch. The parser is the source of truth for
+        // which fields are mandatory, so the schema only requires `action` (the
+        // discriminator that selects the branch).
+        if has_action {
+            merged.insert("required".to_owned(), serde_json::json!(["action"]));
+        } else {
+            merged.remove("required");
+        }
+        *obj = merged;
+    }
+}
+
+/// Mirror every `#[tpd(alias = ...)]` declaration into the schema so a strict
+/// editor accepts the same spellings tpd does. The aliases are gathered by
+/// walking the `Config` type tree via [`TpdAliasTree`], keyed by type name
+/// (which matches the schemars `$def` name) — no hand-maintained list, so it
+/// can't drift from the parser. Each group is injected by schema shape:
+/// - `enum` (string enums): aliases appended to the `enum` array;
+/// - `properties` (structs, and the root `Config`): the canonical field's
+///   subschema is cloned under each alias name (this is what adds the
+///   `transform` field's `step`/`steps`/`transforms` aliases);
+/// - `oneOf` (the tagged `Transformation` and unit-enums rendered as `oneOf`):
+///   the matching branch's `const` discriminator becomes an `enum` of the
+///   canonical value plus its aliases.
+fn inject_tpd_aliases(root: &mut serde_json::Map<String, serde_json::Value>) {
+    for (def_name, entries) in toml_pretty_deser::collect_alias_tree::<Config>() {
+        if entries.is_empty() {
+            continue;
+        }
+        let target = if def_name == "Config" {
+            Some(&mut *root)
+        } else {
+            root.get_mut("$defs")
+                .and_then(serde_json::Value::as_object_mut)
+                .and_then(|defs| defs.get_mut(def_name))
+                .and_then(serde_json::Value::as_object_mut)
+        };
+        if let Some(target) = target {
+            inject_alias_group(target, entries);
+        }
+    }
+}
+
+fn inject_alias_group(target: &mut serde_json::Map<String, serde_json::Value>, entries: AliasEntries) {
+    if let Some(values) = target.get_mut("enum").and_then(serde_json::Value::as_array_mut) {
+        let mut seen: std::collections::HashSet<String> = values
+            .iter()
+            .filter_map(|v| v.as_str().map(str::to_owned))
+            .collect();
+        for &(_canonical, aliases) in entries {
+            for alias in aliases {
+                if seen.insert((*alias).to_owned()) {
+                    values.push((*alias).into());
+                }
+            }
+        }
+    } else if let Some(branches) = target.get_mut("oneOf").and_then(serde_json::Value::as_array_mut) {
+        for branch in branches {
+            // `Transformation` carries the discriminator at `properties.action`;
+            // a plain unit-enum rendered as `oneOf` carries it on the branch itself.
+            let has_action = branch.get("properties").and_then(|p| p.get("action")).is_some();
+            for &(canonical, aliases) in entries {
+                let discriminator = if has_action {
+                    branch
+                        .get_mut("properties")
+                        .and_then(|p| p.get_mut("action"))
+                        .expect("checked has_action")
+                } else {
+                    &mut *branch
+                };
+                widen_const_to_enum(discriminator, canonical, aliases);
+            }
+        }
+    } else if let Some(properties) = target.get_mut("properties").and_then(serde_json::Value::as_object_mut) {
+        for &(canonical, aliases) in entries {
+            if let Some(canonical_schema) = properties.get(canonical).cloned() {
+                for alias in aliases {
+                    properties.insert((*alias).to_owned(), canonical_schema.clone());
+                }
+            }
+        }
+    }
+}
+
+/// If `node` is `{ "const": canonical }`, rewrite it to
+/// `{ "type": "string", "enum": [canonical, ..aliases] }`.
+fn widen_const_to_enum(node: &mut serde_json::Value, canonical: &str, aliases: &[&str]) {
+    if node.get("const").and_then(serde_json::Value::as_str) != Some(canonical) {
+        return;
+    }
+    let Some(obj) = node.as_object_mut() else {
+        return;
+    };
+    obj.remove("const");
+    let mut values = vec![serde_json::Value::from(canonical)];
+    values.extend(aliases.iter().map(|a| serde_json::Value::from(*a)));
+    obj.insert("type".to_owned(), "string".into());
+    obj.insert("enum".to_owned(), serde_json::Value::Array(values));
+}
+
+/// `transform` is non-`Option`, so the derive marks it required, but it defaults
+/// to an empty list when omitted.
+fn drop_transform_from_required(root: &mut serde_json::Map<String, serde_json::Value>) {
+    if let Some(required) = root
+        .get_mut("required")
+        .and_then(serde_json::Value::as_array_mut)
+    {
+        required.retain(|v| v != "transform");
+    }
+}
+
+/// schemars emits enum values as the canonical (PascalCase) variant names, but
+/// configs are parsed case-insensitively (`FieldMatchMode::AnyCase`). Append the
+/// lowercase spelling of each value next to the canonical one, so the common
+/// lowercase form validates while the editor still offers completion for both.
+fn add_lowercase_enum_aliases(value: &mut serde_json::Value) {
+    match value {
+        serde_json::Value::Object(map) => {
+            if let Some(serde_json::Value::Array(variants)) = map.get_mut("enum") {
+                let mut seen: std::collections::HashSet<String> = variants
+                    .iter()
+                    .filter_map(|v| v.as_str().map(str::to_owned))
+                    .collect();
+                let mut additions = Vec::new();
+                for variant in variants.iter() {
+                    if let Some(s) = variant.as_str() {
+                        let lower = s.to_lowercase();
+                        if seen.insert(lower.clone()) {
+                            additions.push(serde_json::Value::from(lower));
+                        }
+                    }
+                }
+                variants.extend(additions);
+            }
+            for child in map.values_mut() {
+                add_lowercase_enum_aliases(child);
+            }
+        }
+        serde_json::Value::Array(items) => {
+            for item in items {
+                add_lowercase_enum_aliases(item);
+            }
+        }
+        _ => {}
+    }
+}
+
 #[derive(JsonSchema)]
 #[tpd(root)]
 #[derive(Debug)]
@@ -160,10 +378,11 @@ pub struct Config {
     pub output: Option<Output>,
 
     //barcodes must happen before transforms
-    #[schemars(with = "BTreeMap<String, Barcodes>")]
+    #[schemars(with = "Option<BTreeMap<String, Barcodes>>")]
     #[tpd(nested)]
     pub barcodes: Option<IndexMap<TagLabel, Barcodes>>,
 
+    #[schemars(with = "Option<Options>")]
     #[tpd(nested)]
     pub options: Options,
 
@@ -176,12 +395,15 @@ pub struct Config {
     pub benchmark: Option<Benchmark>,
 
     #[tpd(skip)]
+    #[schemars(skip)]
     pub report_labels: Vec<String>,
 
     #[tpd(skip)]
+    #[schemars(skip)]
     pub allowed_tags_per_transformation: Vec<Vec<TagLabel>>,
 
     #[tpd(skip)]
+    #[schemars(skip)]
     pub forgotten_tags_per_transformation: Vec<Vec<TagLabel>>,
 
     #[tpd(skip)]

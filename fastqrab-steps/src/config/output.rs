@@ -13,8 +13,10 @@ pub fn default_ix_separator() -> String {
 pub struct Output {
     pub prefix: String,
 
+    #[schemars(default)]
     pub ix_separator: String,
 
+    #[schemars(with = "Option<usize>")]
     pub compression_threads: NonZero<usize>,
 }
 

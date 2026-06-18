@@ -168,3 +168,6 @@ impl ToUsedTags for TomlValue<MustAdapt<String, ResolvedSourceAll>> {
         }
     }
 }
+
+// No-op alias-tree impls for the segment scalar types (no aliases of their own).
+toml_pretty_deser::tpd_alias_leaf!(SegmentIndexOrAll, ResolvedSourceNoAll, ResolvedSourceAll);

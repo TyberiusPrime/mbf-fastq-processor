@@ -294,6 +294,10 @@ pub trait Step {
 #[enum_dispatch]
 #[tpd(tag = "action", further_attr = "enum_dispatch")]
 #[derive(Debug, JsonSchema)]
+// tpd deserializes this enum internally tagged on `action`; mirror that in the
+// schema so steps validate as `{ action = "...", ... }` rather than the
+// externally-tagged `{ VariantName = { ... } }` schemars emits by default.
+#[schemars(tag = "action")]
 pub enum Transformation {
     //Edits
     CutStart(edits::CutStart),

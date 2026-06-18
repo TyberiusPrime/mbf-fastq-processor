@@ -1,7 +1,6 @@
 use anyhow::{Context, Result, bail};
 use clap::{Arg, ArgAction, Command, ValueHint, value_parser};
 use clap_complete::{Generator, Shell, generate};
-use fastqrab_steps::config::Config;
 use human_panic::{Metadata, setup_panic};
 use std::path::{Path, PathBuf};
 
@@ -240,7 +239,7 @@ fn print_completions<G: Generator>(generator: G, cmd: &mut Command) {
 }
 
 fn print_schema() {
-    let schema = schemars::schema_for!(Config);
+    let schema = fastqrab_steps::config::config_schema();
     println!("{}", serde_json::to_string_pretty(&schema).unwrap());
 }
 
