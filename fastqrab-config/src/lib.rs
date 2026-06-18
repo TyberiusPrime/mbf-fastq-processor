@@ -5,7 +5,7 @@ use schemars::JsonSchema;
 use std::fmt;
 use std::rc::Rc;
 use std::{cell::RefCell, num::NonZero};
-use toml_pretty_deser::{MustAdapt, TomlValue, TomlValueState, ValidationFailure};
+use toml_pretty_deser::{MustAdapt, TomlValue, TomlValueState, ValidationFailure, tpd_alias_leaf};
 use typed_floats::tf64::NonNaN;
 
 pub use fastqrab_dna::dna;
@@ -765,7 +765,6 @@ toml_pretty_deser::impl_visitor_for_try_from_str!(NonAmbigousDNA, "Invalid DNA s
 
 // Custom scalar types (hand-written visitors) carry no `#[tpd(alias)]`s; give
 // them no-op alias-tree impls so `TpdAliasTree` recursion can pass through them.
-toml_pretty_deser::tpd_alias_leaf!(TagLabel, ConditionalTagLabel, NonAmbigousDNA, SegmentLabel);
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq, serde::Serialize, PartialOrd, Ord)]
 pub struct SegmentLabel(pub String);
@@ -780,6 +779,8 @@ impl TryFrom<&str> for SegmentLabel {
         }
     }
 }
+
+toml_pretty_deser::impl_visitor_for_try_from_str!(SegmentLabel, "Invalid segment label");
 /// Validates that a segment label conforms to the pattern [a-zA-Z0-9_]+
 /// (one or more alphanumeric characters or underscores)
 ///

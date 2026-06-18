@@ -51,7 +51,6 @@ impl TryFrom<&str> for BamTag {
 toml_pretty_deser::impl_visitor_for_try_from_str!(BamTag, "Invalid BAM tag");
 // Custom scalar (its own visitor); appears behind a `#[tpd(nested)]` map, so it
 // needs a no-op alias-tree impl. It declares no aliases of its own.
-toml_pretty_deser::tpd_alias_leaf!(BamTag);
 
 /// Source for reference sequences used by `tag_to_reference` (Feature B).
 ///

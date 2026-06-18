@@ -74,7 +74,7 @@
     stringpod = { version="0.2.0"}
 	tempfile = { version = "3.13.0", default-features = false }
 	toml_edit = "0.24"
-    toml-pretty-deser = {version="0.3.8"}
+    toml-pretty-deser = {version="0.4.0"}
 	toml = { version = "0.9.5", features = ["parse"], default-features = false }
     triple_accel = "0.4.0"
     typed_floats = "1.0.7"
