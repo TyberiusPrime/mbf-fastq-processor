@@ -88,11 +88,6 @@
     fastqrab-steps   = { path = "fastqrab-steps",   version = "0.9.0" }
 
 
-# Use the local toml-pretty-deser checkout (for the `tpd_aliases()` introspection
-# the schema-alias test relies on) until those changes are published to crates.io.
-[patch.crates-io]
-    toml-pretty-deser = { path = "../toml-pretty-deser/toml-pretty-deser" }
-
 
 [profile.release]
 	debug = 1
