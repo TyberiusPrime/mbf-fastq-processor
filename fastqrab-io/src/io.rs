@@ -27,11 +27,14 @@ pub mod reads;
 /// every read. The shared core behind the `apply_to_read_*` helpers.
 fn drive_reads(
     input_file: InputFile,
-    func: &mut impl FnMut(&Vec<u8>, &FastQRead) -> Result<()>,
+    func: &mut impl FnMut(&[u8], &[u8], &[u8]) -> Result<()>,
     include_mapped: bool,
     include_unmapped: bool,
     use_rapidgzip: bool,
 ) -> Result<()> {
+    use crate::io::parsers::ParserOutput;
+    use bstr::ByteSlice;
+
     let options = InputOptions {
         fasta_fake_quality: Some(33),
         bam_include_mapped: Some(include_mapped),
@@ -52,8 +55,24 @@ fn drive_reads(
         .context("Getting parser")?; // cov:excl-line
     loop {
         let res = parser.parse()?;
-        for read in res.fastq_block.entries {
-            func(&res.fastq_block.block, &read)?;
+        // The parser may hand us either the legacy row-oriented block (FASTA /
+        // BAM) or columnar chunks (FASTQ); iterate reads out of whichever.
+        match &res.output {
+            ParserOutput::Block(block) => {
+                for read in &block.entries {
+                    func(
+                        read.name.get(&block.block),
+                        read.seq.get(&block.block),
+                        read.qual.get(&block.block),
+                    )?;
+                }
+            }
+            ParserOutput::Chunk(chunk) => {
+                for i in 0..chunk.len() {
+                    let (seq, qual) = chunk.seq_quals.pair(i);
+                    func(chunk.names.get(i).as_bytes(), seq.as_bytes(), qual.as_bytes())?;
+                }
+            }
         }
         if res.was_final {
             break;
@@ -75,7 +94,7 @@ pub fn apply_to_read_names(
 ) -> Result<()> {
     drive_reads(
         InputFile::from_handle(file)?,
-        &mut |block: &Vec<u8>, read: &FastQRead| func(read.name.get(block)),
+        &mut |name: &[u8], _seq: &[u8], _qual: &[u8]| func(name),
         include_mapped,
         include_unmapped,
         false,
@@ -91,7 +110,7 @@ pub fn apply_to_read_sequences(
 ) -> Result<()> {
     drive_reads(
         InputFile::from_handle(file)?,
-        &mut |block: &Vec<u8>, read: &FastQRead| func(read.seq.get(block)),
+        &mut |_name: &[u8], seq: &[u8], _qual: &[u8]| func(seq),
         include_mapped,
         include_unmapped,
         false,
@@ -110,7 +129,7 @@ pub fn apply_to_read_names_and_sequences(
     let input_file = open_input_file(filename.as_ref()).context("open_input_file")?;
     drive_reads(
         input_file,
-        &mut |block: &Vec<u8>, read: &FastQRead| func(read.name.get(block), read.seq.get(block)),
+        &mut |name: &[u8], seq: &[u8], _qual: &[u8]| func(name, seq),
         true,
         true,
         use_rapidgzip,

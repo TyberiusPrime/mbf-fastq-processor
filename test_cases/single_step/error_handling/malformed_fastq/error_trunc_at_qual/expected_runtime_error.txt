@@ -1,1 +1,2 @@
-Sequence and quality must have the same length. Check your input fastq.
+Error Details ==
+Error in reading thread for segment error_read: truncated FASTQ: incomplete record at end of stream

@@ -181,11 +181,12 @@ impl InputFile {
             DecompressionOptions::Default
         };
         match self {
-            InputFile::Fastq(file, filename) => Ok(Box::new(parsers::FastqParser::new(
+            InputFile::Fastq(file, filename) => Ok(Box::new(parsers::PodFastqParser::new(
                 file.into_inner(),
                 filename.as_ref(),
                 target_reads_per_block,
                 buffer_size,
+                thread_count.0.get(),
                 decompression_options,
             )?)), // cov:excl-line
             InputFile::Fasta(file, filename) => {
@@ -407,6 +408,45 @@ pub fn find_rapidgzip_in_path() -> Option<PathBuf> {
         if path.exists() { Some(path) } else { None }
     })
     // cov:excl-stop
+}
+
+/// Open a (possibly compressed) byte stream for a FASTQ/FASTA input, applying
+/// rapidgzip when requested (and the detected format is gzip), otherwise letting
+/// niffler pick the decompressor. Returns the decompressed reader together with
+/// the detected compression format (used downstream for the read-count
+/// estimation heuristics).
+///
+/// This is the shared core behind both the legacy [`FastqParser`] and the
+/// columnar pod parser.
+///
+/// [`FastqParser`]: crate::io::parsers::FastqParser
+///
+/// # Errors
+/// On io errors or when spawning rapidgzip fails.
+///
+/// # Panics
+/// If rapidgzip is requested for a path-less (stdin) input — validation prevents
+/// this combination upstream.
+pub fn open_decompressed_reader(
+    file: std::fs::File,
+    filename: Option<&PathBuf>,
+    decompression_options: DecompressionOptions,
+) -> Result<(Box<dyn Read + Send>, niffler::send::compression::Format)> {
+    let (mut reader, format) = niffler::send::get_reader(Box::new(file))?;
+    if let DecompressionOptions::Rapidgzip {
+        thread_count,
+        index_gzip,
+    } = decompression_options
+        && format == niffler::send::compression::Format::Gzip
+    {
+        let file = spawn_rapidgzip(
+            filename.expect("rapid gzip and stdin not supported"),
+            thread_count,
+            index_gzip,
+        )?; // cov:excl-line
+        reader = Box::new(file);
+    }
+    Ok((reader, format))
 }
 
 /// Spawns a rapidgzip process to decompress a gzipped file

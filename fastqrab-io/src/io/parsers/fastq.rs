@@ -1,13 +1,21 @@
 use anyhow::{Context, Result, bail};
-use bstr::BString;
+use bstr::{BString, ByteSlice};
 use niffler;
+use std::collections::VecDeque;
 use std::num::NonZero;
+use std::sync::Arc;
+use std::thread::JoinHandle;
 use std::{io::Read, path::PathBuf};
 
-use crate::io::parsers::{ParseResult, Parser};
+use crossbeam::channel::{self, Receiver};
+use stringpod::{DualStringPodBuilder, StringPod, StringPodBuilder};
+
+use crate::blocks::FastQChunk;
+use crate::io::parsers::{ParseResult, Parser, ParserOutput};
+use crate::io::pod_parser::{FastqChunk as PodFastqChunk, parse_pods_from_channel};
 use crate::io::{
     FastQBlock, FastQElement, FastQRead, Position,
-    input::{DecompressionOptions, spawn_rapidgzip},
+    input::{DecompressionOptions, open_decompressed_reader},
 };
 
 pub struct FastqParser {
@@ -31,27 +39,7 @@ impl FastqParser {
         buf_size: usize,
         decompression_options: DecompressionOptions,
     ) -> Result<FastqParser> {
-        let (mut reader, format) = niffler::send::get_reader(Box::new(file))?;
-        // enable rapidgzip.
-        if let DecompressionOptions::Rapidgzip {
-            thread_count,
-            index_gzip,
-        } = decompression_options
-        {
-            // only do rapidgzip if we have more than 2 threads..
-            // otherwise, plain gzip decompression is going to be faster
-            // since it's optimized better
-            if format == niffler::send::compression::Format::Gzip {
-                let file = spawn_rapidgzip(
-                    filename
-                        .as_ref()
-                        .expect("rapid gzip and stdin not supported"),
-                    thread_count,
-                    index_gzip,
-                )?; // cov:excl-line
-                reader = Box::new(file);
-            } // cov:excl-line
-        }
+        let (reader, format) = open_decompressed_reader(file, filename, decompression_options)?;
 
         Ok(FastqParser {
             current_reader: reader,
@@ -197,7 +185,204 @@ impl Parser for FastqParser {
     fn parse(&mut self) -> Result<ParseResult> {
         let (block, was_final) = self.next_block()?;
         Ok(ParseResult {
-            fastq_block: block,
+            output: ParserOutput::Block(block),
+            was_final,
+        })
+    }
+
+    fn bytes_per_base(&self) -> f64 {
+        match self.compression_format {
+            niffler::send::compression::Format::Gzip
+            | niffler::send::compression::Format::Bzip
+            | niffler::send::compression::Format::Lzma
+            | niffler::send::compression::Format::Zstd => 0.5,
+            niffler::send::compression::Format::No => 2.25,
+        }
+    }
+}
+
+/// Columnar FASTQ parser backed by [`parse_pods_from_channel`].
+///
+/// It owns two background threads: a *reader* thread that pulls (already
+/// rapidgzip/niffler-decompressed) bytes off the input in `buffer_size` chunks
+/// and feeds them into the pod parser's byte channel, and the *pod parser*
+/// thread itself, which emits record-aligned [`PodFastqChunk`]s into
+/// `chunk_rx`.
+///
+/// The pod parser emits one chunk per arbitrary input byte-chunk, so its chunk
+/// sizes bear no relation to the requested block size. [`parse_chunk`] therefore
+/// re-groups the emitted columns into blocks of exactly `target` reads (the
+/// final block may be short), which is what keeps the per-segment input streams
+/// in lockstep for the combiner.
+///
+/// [`parse_chunk`]: PodFastqParser::parse_chunk
+pub struct PodFastqParser {
+    /// Record-aligned columnar chunks emitted by the pod parser thread.
+    chunk_rx: Receiver<PodFastqChunk>,
+    /// The pod parser thread; joined at EOF to surface a parse error.
+    parser_handle: Option<JoinHandle<Result<()>>>,
+    /// The byte-reader thread; joined at EOF to surface an io error.
+    reader_handle: Option<JoinHandle<Result<()>>>,
+    /// Emitted-but-not-yet-consumed chunks, with `front_consumed` reads already
+    /// drained off the front one.
+    pending: VecDeque<PodFastqChunk>,
+    /// Reads already consumed from `pending.front()`.
+    front_consumed: usize,
+    /// Reads per emitted block (the molecule-count target).
+    target: usize,
+    /// Set once `chunk_rx` is closed and drained.
+    eof: bool,
+    compression_format: niffler::send::compression::Format,
+}
+
+impl PodFastqParser {
+    /// # Errors
+    /// On io errors opening/decompressing the input.
+    pub fn new(
+        file: std::fs::File,
+        filename: Option<&PathBuf>,
+        target_reads_per_block: NonZero<usize>,
+        buffer_size: usize,
+        demux_threads: usize,
+        decompression_options: DecompressionOptions,
+    ) -> Result<PodFastqParser> {
+        let (reader, format) = open_decompressed_reader(file, filename, decompression_options)?;
+        let demux_threads = demux_threads.max(1);
+        let buffer_size = buffer_size.max(1);
+
+        let (bytes_tx, bytes_rx) = channel::bounded::<Arc<Vec<u8>>>(demux_threads * 4);
+        let (chunk_tx, chunk_rx) = channel::bounded::<PodFastqChunk>(demux_threads * 4);
+
+        // Reader thread — fill `buffer_size` chunks and feed the byte channel.
+        let reader_handle = std::thread::spawn(move || -> Result<()> {
+            let mut reader = reader;
+            loop {
+                let mut buf = vec![0u8; buffer_size];
+                let mut filled = 0;
+                while filled < buffer_size {
+                    let n = reader.read(&mut buf[filled..])?; // cov:excl-line
+                    if n == 0 {
+                        break;
+                    }
+                    filled += n;
+                }
+                if filled == 0 {
+                    break;
+                }
+                buf.truncate(filled);
+                if bytes_tx.send(Arc::new(buf)).is_err() {
+                    // Pod parser hung up (an error downstream); stop feeding it.
+                    break; // cov:excl-line
+                }
+                if filled < buffer_size {
+                    break; // short read ⇒ EOF
+                }
+            }
+            Ok(())
+        });
+
+        let parser_handle =
+            std::thread::spawn(move || parse_pods_from_channel(bytes_rx, chunk_tx, demux_threads, None));
+
+        Ok(PodFastqParser {
+            chunk_rx,
+            parser_handle: Some(parser_handle),
+            reader_handle: Some(reader_handle),
+            pending: VecDeque::new(),
+            front_consumed: 0,
+            target: target_reads_per_block.get(),
+            eof: false,
+            compression_format: format,
+        })
+    }
+
+    /// Join the background threads, surfacing the first error. Called once the
+    /// chunk channel has closed (`eof`), at which point both threads have run to
+    /// completion: the pod parser dropped `chunk_tx`, and the reader stops as
+    /// soon as the pod parser drops `bytes_rx`.
+    fn finish_threads(&mut self) -> Result<()> {
+        if let Some(handle) = self.parser_handle.take() {
+            handle
+                .join()
+                .map_err(|_| anyhow::anyhow!("pod fastq parser thread panicked"))??;
+        }
+        if let Some(handle) = self.reader_handle.take() {
+            handle
+                .join()
+                .map_err(|_| anyhow::anyhow!("pod fastq reader thread panicked"))??;
+        }
+        Ok(())
+    }
+
+    /// Produce the next block of up to `target` reads as a [`FastQChunk`],
+    /// together with `was_final`. Re-groups the pod parser's arbitrarily-sized
+    /// emissions into exact block sizes by copying reads through fresh column
+    /// builders; the leftover tail of a straddling emission is carried in
+    /// `pending` / `front_consumed` for the next call.
+    fn next_chunk(&mut self) -> Result<(FastQChunk, bool)> {
+        let mut names = StringPodBuilder::with_capacity(0, self.target);
+        let mut seq_quals = DualStringPodBuilder::with_capacity(0, self.target);
+        let mut count = 0usize;
+
+        while count < self.target {
+            let Some(chunk) = self.pending.front() else {
+                match self.chunk_rx.recv() {
+                    Ok(chunk) => {
+                        // The pod parser never emits empty chunks, but guard anyway.
+                        if chunk.names.len() > 0 {
+                            self.pending.push_back(chunk);
+                        }
+                    }
+                    Err(_) => {
+                        self.eof = true;
+                        break;
+                    }
+                }
+                continue;
+            };
+
+            let available = chunk.names.len() - self.front_consumed;
+            let take = available.min(self.target - count);
+            let start = self.front_consumed;
+            for i in start..start + take {
+                names.push(chunk.names.get(i).as_bytes());
+                let (seq, qual) = chunk.reads.pair(i);
+                seq_quals.push(seq.as_bytes(), qual.as_bytes());
+            }
+            self.front_consumed += take;
+            count += take;
+            if self.front_consumed >= chunk.names.len() {
+                self.pending.pop_front();
+                self.front_consumed = 0;
+            }
+        }
+
+        if self.eof {
+            self.finish_threads()?;
+        }
+
+        let pluses =
+            StringPod::new_all_empty(u32::try_from(count).expect("too many reads in a block for u32"));
+        let chunk = FastQChunk {
+            names: names.finish(),
+            seq_quals: seq_quals.finish(),
+            pluses,
+        };
+        let was_final = self.eof && self.pending.is_empty();
+        Ok((chunk, was_final))
+    }
+}
+
+impl Parser for PodFastqParser {
+    /// Emits columnar [`FastQChunk`] blocks of exactly `target` reads (the final
+    /// block may be short).
+    ///
+    /// # Panics
+    /// If a single block would exceed `u32::MAX` reads.
+    fn parse(&mut self) -> Result<ParseResult> {
+        let (chunk, was_final) = self.next_chunk()?;
+        Ok(ParseResult {
+            output: ParserOutput::Chunk(chunk),
             was_final,
         })
     }

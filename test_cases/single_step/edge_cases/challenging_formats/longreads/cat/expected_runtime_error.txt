@@ -1,1 +1,2 @@
-If your Fastq is line-wrapped, sorry that's not supported.
+Error Details ==
+Error in reading thread for segment sanger: header line does not start with '@'

@@ -8,7 +8,7 @@ use std::{
     path::PathBuf,
 };
 
-use crate::io::parsers::{ParseResult, Parser};
+use crate::io::parsers::{ParseResult, Parser, ParserOutput};
 use crate::io::{
     FastQBlock, FastQRead,
     input::{DecompressionOptions, spawn_rapidgzip},
@@ -85,7 +85,7 @@ impl Parser for FastaParser {
         loop {
             if block.entries.len() >= self.target_reads_per_block.into() {
                 return Ok(ParseResult {
-                    fastq_block: block,
+                    output: ParserOutput::Block(block),
                     was_final: false,
                 });
             }
@@ -96,7 +96,7 @@ impl Parser for FastaParser {
             reader.read(&mut record)?;
             if record.is_empty() {
                 return Ok(ParseResult {
-                    fastq_block: block,
+                    output: ParserOutput::Block(block),
                     was_final: true,
                 });
             }
@@ -159,10 +159,8 @@ mod tests {
             DecompressionOptions::Default,
         )?; // cov:excl-line
 
-        let ParseResult {
-            fastq_block: block,
-            was_final,
-        } = parser.parse()?;
+        let ParseResult { output, was_final } = parser.parse()?;
+        let block = output.expect_block();
         assert!(was_final);
         assert_eq!(block.entries.len(), 2);
 
@@ -237,9 +235,10 @@ mod tests {
             // cov:excl-stop
         }
         let ParseResult {
-            fastq_block: second_block,
+            output: second_output,
             was_final: is_final,
         } = parser.parse()?;
+        let second_block = second_output.expect_block();
 
         assert!(is_final);
         assert!(second_block.entries.is_empty());

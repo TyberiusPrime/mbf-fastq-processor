@@ -1,1 +1,2 @@
-Unexpected symbol where @ was expected
+Error Details ==
+Error in reading thread for segment read1: header line does not start with '@'

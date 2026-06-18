@@ -1,1 +1,2 @@
-Incomplete final read.
+Error Details ==
+Error in reading thread for segment error_read: truncated FASTQ: incomplete record at end of stream

@@ -62,6 +62,10 @@ struct DemuxResult {
     idx: u64,
     buckets: [StringPod; 4],
     lines: u64,
+    /// At least one line in this chunk ended with `\r` (CRLF).
+    saw_crlf: bool,
+    /// At least one line in this chunk ended without `\r` (bare LF).
+    saw_lf: bool,
 }
 
 /// Parse a channel of arbitrary already-decompressed byte chunks into columnar
@@ -226,10 +230,32 @@ fn demux_chunk(idx: u64, data: &[u8], prev_tail: &[u8]) -> Result<DemuxResult> {
 
     let first_nl = data.iter().position(|&c| c == b'\n').expect("≥1 newline");
 
+    // Track, per chunk, whether lines end with `\r` (CRLF) or bare LF, so the
+    // collector can reject a file that mixes the two. `last()` is O(1), so this
+    // is free for the common single-style file.
+    let mut saw_crlf = false;
+    let mut saw_lf = false;
+    let mut observe = |line: &[u8], fallback: &[u8]| {
+        // A line that ends right at the chunk start (empty `line`) inherits its
+        // last byte from the stitched-on `fallback` (the previous chunk's tail).
+        let ends_cr = match line.last() {
+            Some(&b'\r') => true,
+            Some(_) => false,
+            None => fallback.last() == Some(&b'\r'),
+        };
+        if ends_cr {
+            saw_crlf = true;
+        } else {
+            saw_lf = true;
+        }
+    };
+
     // Reassemble the boundary-straddling line and push it into bucket 3. Guard
     // its assembled length up front so an adversarial multi-GiB line is rejected
     // before we materialise the (equally multi-GiB) `split` buffer.
-    let head = strip_cr(&data[..first_nl]);
+    let raw_head = &data[..first_nl];
+    observe(raw_head, prev_tail);
+    let head = strip_cr(raw_head);
     fastq_len_guard(0, prev_tail.len() + head.len())?;
     let mut split = Vec::with_capacity(prev_tail.len() + head.len());
     split.extend_from_slice(prev_tail);
@@ -242,7 +268,9 @@ fn demux_chunk(idx: u64, data: &[u8], prev_tail: &[u8]) -> Result<DemuxResult> {
     let mut start = first_nl + 1;
     while let Some(rel) = data[start..].iter().position(|&c| c == b'\n') {
         let nl = start + rel;
-        push_line(&mut builders[local & 3], est, strip_cr(&data[start..nl]))?;
+        let line = &data[start..nl];
+        observe(line, b"");
+        push_line(&mut builders[local & 3], est, strip_cr(line))?;
         lines += 1;
         local += 1;
         start = nl + 1;
@@ -261,6 +289,8 @@ fn demux_chunk(idx: u64, data: &[u8], prev_tail: &[u8]) -> Result<DemuxResult> {
         idx,
         buckets,
         lines,
+        saw_crlf,
+        saw_lf,
     })
 }
 
@@ -280,8 +310,15 @@ fn emit_records(cols: Cols, emit: &mut impl FnMut(FastqChunk)) -> Result<()> {
     if names.is_empty() {
         return Ok(()); // nothing to emit
     }
-    if !names.iter().all(|name| name.first() == Some(&b'@')) {
-        bail!("header line does not start with '@'");
+    for name in &names {
+        if name.first() != Some(&b'@') {
+            bail!("header line does not start with '@'");
+        }
+        // A bare '@' line (no characters after the marker) is an empty read name.
+        // Cheap to check here at parse time, before the O(1) '@' strip below.
+        if name.len() < 2 {
+            bail!("Empty name in input FASTQ. Verify your input files are proper FASTQ.");
+        }
     }
     if !plus.is_empty() && !plus.iter().all(|p| p.first() == Some(&b'+')) {
         bail!("separator line does not start with '+'");
@@ -291,7 +328,12 @@ fn emit_records(cols: Cols, emit: &mut impl FnMut(FastqChunk)) -> Result<()> {
     // as-is). `try_from_columns` verifies seq.len() == qual.len() for every
     // record and that the two layouts are a constant translation, surfacing any
     // mismatch as an error rather than emitting a malformed chunk.
-    let reads = DualStringPod::try_from_columns(seqs, quals).map_err(|m| anyhow!("{m}"))?;
+    let reads = DualStringPod::try_from_columns(seqs, quals).map_err(|_| {
+        anyhow!(
+            "Sequence and quality must have the same length. Check your input fastq. \
+             Wrapped FASTQ is not supported."
+        )
+    })?;
     names.cut_start(1, None); // drop the leading '@' from every header, O(1)
     emit(FastqChunk { names, reads });
     Ok(())
@@ -375,7 +417,17 @@ fn finish_eof(
 ) -> Result<()> {
     let Some(mut h) = held else {
         if !carry.is_empty() {
-            bail!("truncated FASTQ: incomplete record at end of stream");
+            // A non-empty carry with no completed lines at all means the stream
+            // never contained a single newline — almost certainly not FASTQ.
+            if global_lines == 0 {
+                bail!(
+                    "Parsing error: read all of file, but found no newlines. Check your input FASTQ file."
+                );
+            }
+            bail!(
+                "truncated FASTQ: incomplete record at end of stream (read {} complete reads before truncation)",
+                global_lines / 4
+            );
         }
         return Ok(());
     };
@@ -386,8 +438,24 @@ fn finish_eof(
         h[role].push(line);
     }
     let complete = h[0].len().min(h[1].len()).min(h[3].len());
+    // Tolerate a single trailing blank line: a file that ends with an extra
+    // newline (`…qual\n\n`) leaves one extra, *empty* name line beyond the last
+    // whole record. The legacy parser ignored exactly this, so drop it rather
+    // than reporting a truncated record.
+    if h[0].len() == complete + 1
+        && h[1].len() == complete
+        && h[3].len() == complete
+        && h[0].get(complete).is_empty()
+    {
+        for col in &mut h {
+            col.truncate(complete);
+        }
+    }
     if h[0].len() != complete || h[1].len() != complete || h[3].len() != complete {
-        bail!("truncated FASTQ: incomplete record at end of stream");
+        bail!(
+            "truncated FASTQ: incomplete record at end of stream (read {} complete reads before truncation)",
+            global_lines / 4
+        );
     }
     emit_records(h, emit)
 }
@@ -405,25 +473,60 @@ fn collect(
     let mut next: u64 = 0;
     let mut global_lines: u64 = 0;
     let mut held: Option<Cols> = None;
+    // A well-formed FASTQ uses a single newline style throughout. Track whether
+    // we've seen CRLF and/or bare-LF line endings and reject a file that mixes
+    // them (e.g. a half-converted Windows file).
+    let mut saw_crlf = false;
+    let mut saw_lf = false;
     let mut emit = |chunk: FastqChunk| {
         let _ = sink.send(chunk);
+    };
+
+    // Fold one chunk's line-ending observations into the running state and
+    // reject the first chunk that tips the file into mixed endings.
+    let check_endings = |res: &DemuxResult, saw_crlf: &mut bool, saw_lf: &mut bool| -> Result<()> {
+        *saw_crlf |= res.saw_crlf;
+        *saw_lf |= res.saw_lf;
+        if *saw_crlf && *saw_lf {
+            bail!(
+                "FASTQ uses inconsistent line endings (a mix of LF and CR+LF). \
+                 Convert the file to a single newline style."
+            );
+        }
+        Ok(())
     };
 
     for res in done_rx {
         let res = res?; // a worker hit invalid/oversized input — surface it
         reorder.insert(res.idx, res);
         while let Some(res) = reorder.remove(&next) {
+            check_endings(&res, &mut saw_crlf, &mut saw_lf)?;
             absorb(res, &mut held, &mut global_lines, &mut emit)?;
             next += 1;
         }
     }
     // Any stragglers (shouldn't happen once done_rx is closed, but be safe).
     while let Some(res) = reorder.remove(&next) {
+        check_endings(&res, &mut saw_crlf, &mut saw_lf)?;
         absorb(res, &mut held, &mut global_lines, &mut emit)?;
         next += 1;
     }
 
     let carry = tail_rx.recv().unwrap_or_default();
+    // The final unterminated line counts toward the newline-style check too.
+    if !carry.is_empty() {
+        if carry.last() == Some(&b'\r') {
+            saw_crlf = true;
+        } else {
+            saw_lf = true;
+        }
+        if saw_crlf && saw_lf {
+            bail!(
+                "FASTQ uses inconsistent line endings (a mix of LF and CR+LF). \
+                 Convert the file to a single newline style."
+            );
+        }
+    }
     finish_eof(held, &carry, global_lines, &mut emit)
 }
 

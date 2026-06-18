@@ -8,7 +8,7 @@ use noodles::csi::binning_index::{BinningIndex, ReferenceSequence};
 use std::num::NonZero;
 use std::path::{Path, PathBuf};
 
-use crate::io::parsers::{ParseResult, Parser};
+use crate::io::parsers::{ParseResult, Parser, ParserOutput};
 use crate::io::{FastQBlock, FastQRead};
 
 type BamReader = bam::io::Reader<bgzf::io::MultithreadedReader<File>>;
@@ -151,7 +151,7 @@ impl Parser for BamParser {
             if block.entries.len() >= self.target_reads_per_block.into() {
                 self.any_seen = true;
                 return Ok(ParseResult {
-                    fastq_block: block,
+                    output: ParserOutput::Block(block),
                     was_final: false,
                 });
             }
@@ -171,7 +171,7 @@ impl Parser for BamParser {
                     }
                 }
                 return Ok(ParseResult {
-                    fastq_block: block,
+                    output: ParserOutput::Block(block),
                     was_final: true,
                 });
             } else {
@@ -276,9 +276,10 @@ mod tests {
             std::num::NonZero::new(1usize).expect("1 is not zero"),
         )?; // cov:excl-line
         let ParseResult {
-            fastq_block: block,
+            output,
             was_final: finished,
         } = parser.parse()?;
+        let block = output.expect_block();
         assert!(finished);
         assert_eq!(block.entries.len(), 1);
         if let FastQElement::Local(_) = &block.entries[0].name {
@@ -299,9 +300,10 @@ mod tests {
             std::num::NonZero::new(1usize).expect("1 is not zero"),
         )?; // cov:excl-line
         let ParseResult {
-            fastq_block: block,
+            output,
             was_final: finished,
         } = parser.parse()?;
+        let block = output.expect_block();
         assert!(finished);
         assert_eq!(block.entries.len(), 1);
         if let FastQElement::Local(_) = &block.entries[0].name {
@@ -322,9 +324,10 @@ mod tests {
             std::num::NonZero::new(1usize).expect("1 is not zero"),
         )?; // cov:excl-line
         let ParseResult {
-            fastq_block: block,
+            output,
             was_final: finished,
         } = parser.parse()?;
+        let block = output.expect_block();
         assert!(finished);
         assert_eq!(block.entries.len(), 2);
 

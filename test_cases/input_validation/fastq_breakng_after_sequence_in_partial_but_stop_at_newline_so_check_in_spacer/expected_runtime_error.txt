@@ -1,1 +1,2 @@
-(spacer) Expected + after sequence in input.
+Error Details ==
+Error in reading thread for segment read1: separator line does not start with '+'

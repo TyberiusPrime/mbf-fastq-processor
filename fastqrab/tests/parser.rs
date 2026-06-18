@@ -3,7 +3,10 @@ use bstr::ByteSlice;
 use std::num::NonZero;
 use std::path::{Path, PathBuf};
 
-use fastqrab_io::io::{FastQBlock, parsers::ThreadCount};
+use fastqrab_io::io::parsers::{ParserOutput, ThreadCount};
+
+/// One read's owned `(name, seq, qual)`, for buffer-size-invariance comparison.
+type OwnedRead = (Vec<u8>, Vec<u8>, Vec<u8>);
 
 #[test]
 fn test_fastq_bufsize_variations_windows_file() {
@@ -22,7 +25,7 @@ fn test_fastq_bufsize_variations_windows_file() {
 fn test_bufsize_variations(input_fastq_filename: &str, bufsize_range: &[usize]) {
     let filename = input_fastq_filename;
 
-    let mut last: Option<Vec<FastQBlock>> = None;
+    let mut last: Option<Vec<OwnedRead>> = None;
 
     for bufsize in bufsize_range {
         let file = ex::fs::File::open(filename).unwrap();
@@ -45,25 +48,39 @@ fn test_bufsize_variations(input_fastq_filename: &str, bufsize_range: &[usize]) 
                 },
             )
             .unwrap();
-        let mut here = Vec::new();
+        let mut here: Vec<OwnedRead> = Vec::new();
         loop {
             let pr = p.parse().unwrap();
-            here.push(pr.fastq_block);
+            // get_parser yields either the legacy row block or columnar chunks;
+            // flatten both into owned (name, seq, qual) reads for comparison.
+            match pr.output {
+                ParserOutput::Block(b) => {
+                    for read in &b.entries {
+                        here.push((
+                            read.name.get(&b.block).to_vec(),
+                            read.seq.get(&b.block).to_vec(),
+                            read.qual.get(&b.block).to_vec(),
+                        ));
+                    }
+                }
+                ParserOutput::Chunk(c) => {
+                    for i in 0..c.len() {
+                        let (seq, qual) = c.seq_quals.pair(i);
+                        here.push((
+                            c.names.get(i).as_bytes().to_vec(),
+                            seq.as_bytes().to_vec(),
+                            qual.as_bytes().to_vec(),
+                        ));
+                    }
+                }
+            }
             if pr.was_final {
                 break;
             }
         }
 
         if let Some(last) = last {
-            assert_eq!(last.len(), here.len());
-            for (b1, b2) in last.iter().zip(here.iter()) {
-                assert_eq!(b1.len(), b2.len());
-                for (r1, r2) in b1.entries.iter().zip(b2.entries.iter()) {
-                    assert_eq!(r1.name.get(&b1.block), r2.name.get(&b2.block));
-                    assert_eq!(r1.seq.get(&b1.block), r2.seq.get(&b2.block));
-                    assert_eq!(r1.qual.get(&b1.block), r2.qual.get(&b2.block));
-                }
-            }
+            assert_eq!(last, here, "read stream differs at bufsize {bufsize}");
         }
 
         last = Some(here);

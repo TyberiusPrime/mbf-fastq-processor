@@ -1,1 +1,1 @@
-Error in reading thread for segment read1: Expected \n after \r in windows mode. Failed around position 
+FASTQ uses inconsistent line endings (a mix of LF and CR+LF).

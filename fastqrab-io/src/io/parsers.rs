@@ -12,10 +12,66 @@ mod fastq;
 
 pub use bam::{BamParser, bam_read_count_from_index};
 pub use fasta::FastaParser;
-pub use fastq::FastqParser;
+pub use fastq::{FastqParser, PodFastqParser};
+
+/// One parser's per-block output. Parsers are being migrated from the legacy
+/// row-oriented [`FastQBlock`] to the columnar [`FastQChunk`] one at a time, so
+/// the [`Parser`] trait carries whichever representation a given parser already
+/// produces. Consumers convert to columns via [`into_chunk`](Self::into_chunk).
+pub enum ParserOutput {
+    /// Legacy row-oriented block (FASTA, BAM, and the legacy FASTQ parser).
+    Block(FastQBlock),
+    /// Columnar block (the channel-driven pod FASTQ parser).
+    Chunk(FastQChunk),
+}
+
+impl ParserOutput {
+    /// Convert to columnar form. `Block` pays the transitional row→column copy
+    /// (see `Into<FastQChunk> for FastQBlock`); `Chunk` is already columnar.
+    #[must_use]
+    pub fn into_chunk(self) -> FastQChunk {
+        match self {
+            ParserOutput::Block(b) => b.into(),
+            ParserOutput::Chunk(c) => c,
+        }
+    }
+
+    /// Number of reads in this block.
+    #[must_use]
+    pub fn row_count(&self) -> usize {
+        match self {
+            ParserOutput::Block(b) => b.entries.len(),
+            ParserOutput::Chunk(c) => c.row_count(),
+        }
+    }
+
+    /// Total sequence length across all reads — used for read-count estimation.
+    #[must_use]
+    pub fn total_seq_len(&self) -> usize {
+        match self {
+            ParserOutput::Block(b) => b.entries.iter().map(|e| e.seq.len()).sum(),
+            ParserOutput::Chunk(c) => c.seq_quals.iter_seq_lens().sum(),
+        }
+    }
+
+    /// Extract the legacy block, panicking if this is already columnar. For
+    /// callers (and tests) that still operate on [`FastQBlock`] directly.
+    ///
+    /// # Panics
+    /// If this is a [`ParserOutput::Chunk`].
+    #[must_use]
+    pub fn expect_block(self) -> FastQBlock {
+        match self {
+            ParserOutput::Block(b) => b,
+            // cov:excl-start
+            ParserOutput::Chunk(_) => panic!("expected a row-oriented FastQBlock, got a FastQChunk"),
+            // cov:excl-stop
+        }
+    }
+}
 
 pub struct ParseResult {
-    pub fastq_block: FastQBlock,
+    pub output: ParserOutput,
     pub was_final: bool,
 }
 
@@ -128,23 +184,20 @@ impl ChainedParser {
             // but since this is a lower level, we still handle it
             // even though it doesn't happen in fastqrab
             return Ok(ChainParseResult {
-                fastq_block: FastQBlock {
-                    block: Vec::new(),
-                    entries: Vec::new(),
-                    first_read_sequential_number: self.reads_so_far,
-                }
-                .into(),
+                fastq_block: FastQChunk::new_empty(),
                 was_final: true,
                 expected_read_count: self.expected_read_count_power_of_two,
             });
             // cov:excl-stop
         }
 
-        let mut res = self
+        let res = self
             .current
             .as_mut()
             .expect("parser must exist after ensure_parser")
             .parse()?;
+        let mut was_final = res.was_final;
+        let output = res.output;
 
         if !self.first_block_done {
             //this is where we need to implement the exact expected read count.
@@ -171,7 +224,7 @@ impl ChainedParser {
                 self.expected_read_count_power_of_two = next_power_of_two;
             } else {
                 //this happens for non-bam files!
-                let reads_so_far = res.fastq_block.entries.len();
+                let reads_so_far = output.row_count();
                 assert!(reads_so_far > 0, "First block done, but no reads read???");
                 if reads_so_far > 0 {
                     //sheer paranoia, but downstream has to cope with this being
@@ -182,13 +235,8 @@ impl ChainedParser {
                         reason = "entries is going to be smaller than 2**52"
                     )]
                     if let Some(total_input_file_size) = self.total_input_file_size {
-                        let avg_read_length = res
-                            .fastq_block
-                            .entries
-                            .iter()
-                            .map(|e| e.seq.len())
-                            .sum::<usize>() as f64
-                            / reads_so_far as f64;
+                        let avg_read_length =
+                            output.total_seq_len() as f64 / reads_so_far as f64;
                         let bytes_per_base = self
                             .current
                             .as_ref()
@@ -210,25 +258,18 @@ impl ChainedParser {
             }
         }
 
-        if res.was_final {
+        if was_final {
             self.current = None; //so the next entry will load a new parser from pending.
             if !self.pending.is_empty() {
-                res.was_final = false;
+                was_final = false;
             }
         }
 
-        // if res.fastq_block.entries.is_empty() && !res.was_final {
-        //     // This happens when there's an empty file (which must have been  BAM)
-        //     // in the sequence (other file formats would be truly empty files
-        //     // and then niffler would complain because they are less than 5 bytes long
-        //     // or if for some reason (zst?)
-        //     // we check the empty bam file thing in the bam parser
-        // }
-        res.fastq_block.first_read_sequential_number = self.reads_so_far;
-        self.reads_so_far += res.fastq_block.entries.len();
+        let fastq_block = output.into_chunk();
+        self.reads_so_far += fastq_block.row_count();
         Ok(ChainParseResult {
-            fastq_block: res.fastq_block.into(),
-            was_final: res.was_final,
+            fastq_block,
+            was_final,
             expected_read_count: self.expected_read_count_power_of_two,
         })
     }

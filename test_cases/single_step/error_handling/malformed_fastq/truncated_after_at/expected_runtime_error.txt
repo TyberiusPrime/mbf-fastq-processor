@@ -1,1 +1,2 @@
-Empty name in input FASTQ. Verify your input files are proper FASTQ
+Error Details ==
+Error in reading thread for segment read1: truncated FASTQ: incomplete record at end of stream
