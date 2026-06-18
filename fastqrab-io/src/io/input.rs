@@ -15,7 +15,7 @@ use fastqrab_config::{default_comment_insert_char, tpd_adapt_u8_from_byte_or_cha
 pub enum InputFile {
     Fastq(ex::fs::File, Option<PathBuf>),
     Fasta(ex::fs::File, Option<PathBuf>),
-    Bam(ex::fs::File, PathBuf),
+    Bam(ex::fs::File, Option<PathBuf>),
 }
 
 #[derive(Copy, Clone)]
@@ -136,12 +136,30 @@ impl Default for InputOptions {
     }
 }
 impl InputFile {
+    /// Build an [`InputFile`] from an already-open, seekable handle that has no
+    /// associated path — used for a step's declared auxiliary input files, which
+    /// the runtime opens up front (see `StepInputFiles`). The read format is
+    /// sniffed from the handle's (possibly compressed) magic bytes. rapidgzip
+    /// needs a path, so these inputs always use the default decompression.
+    ///
+    /// # Errors
+    /// On io errors or an undecidable file format.
+    pub fn from_handle(mut file: ex::fs::File) -> Result<InputFile> {
+        let format = detect_input_format_from_handle(&mut file)?;
+        Ok(match format {
+            DetectedInputFormat::Fastq => InputFile::Fastq(file, None),
+            DetectedInputFormat::Fasta => InputFile::Fasta(file, None),
+            DetectedInputFormat::Bam => InputFile::Bam(file, None),
+        })
+    }
+
     #[mutants::skip] // will just fall back to default decompression options, which obvs. works
     #[must_use]
     pub fn get_filename(&self) -> Option<&PathBuf> {
         match self {
-            InputFile::Fastq(_, filename) | InputFile::Fasta(_, filename) => filename.as_ref(),
-            InputFile::Bam(_, filename) => Some(filename),
+            InputFile::Fastq(_, filename)
+            | InputFile::Fasta(_, filename)
+            | InputFile::Bam(_, filename) => filename.as_ref(),
         }
     }
 
@@ -287,6 +305,40 @@ pub fn detect_input_format(path: &Path) -> Result<(DetectedInputFormat, Compress
     }
 }
 
+/// Detect the read format of a seekable input handle by sniffing its (possibly
+/// compressed) magic bytes, then rewind it so the caller reads from the start.
+/// The handle-based twin of [`detect_input_format`], for declared auxiliary
+/// inputs that carry no path. Compression is auto-detected by the parser later,
+/// so only the read format is returned.
+///
+/// # Errors
+/// On io errors or an undecidable file format.
+fn detect_input_format_from_handle(file: &mut ex::fs::File) -> Result<DetectedInputFormat> {
+    use std::io::{Seek, SeekFrom};
+    // Sniff through a clone so niffler can consume bytes; `try_clone` shares the
+    // OS file offset on unix, so we rewind the original afterwards regardless.
+    let clone = file.try_clone()?;
+    let (mut reader, _format) =
+        niffler::send::get_reader(Box::new(clone)).context("Problem detecting file format")?;
+    let mut buf = [0u8; 4];
+    let bytes_read = reader.read(&mut buf)?;
+    drop(reader);
+    file.seek(SeekFrom::Start(0))?;
+    if bytes_read >= 4 && &buf[..4] == b"BAM\x01" {
+        return Ok(DetectedInputFormat::Bam);
+    }
+    if bytes_read >= 1 {
+        match buf[0] {
+            b'>' => Ok(DetectedInputFormat::Fasta),
+            b'@' => Ok(DetectedInputFormat::Fastq),
+            _ => bail!("Could not detect input format from handle. Expected FASTA, FASTQ, or BAM."),
+        }
+    } else {
+        // an empty file: treat as a no-read fastq, matching `detect_input_format`.
+        Ok(DetectedInputFormat::Fastq)
+    }
+}
+
 pub fn open_text_file(maybe_compressed_filename: impl AsRef<Path>) -> Result<Box<dyn Read + Send>> {
     let in_stream = open_file(maybe_compressed_filename)?;
     let (reader, _format) =
@@ -318,7 +370,7 @@ pub fn open_input_file(filename: impl AsRef<Path>) -> Result<InputFile> {
     let input_file = match format {
         DetectedInputFormat::Fastq => InputFile::Fastq(file, Some(path.to_owned())),
         DetectedInputFormat::Fasta => InputFile::Fasta(file, Some(path.to_owned())),
-        DetectedInputFormat::Bam => InputFile::Bam(file, path.to_owned()),
+        DetectedInputFormat::Bam => InputFile::Bam(file, Some(path.to_owned())),
     };
     Ok(input_file)
 }

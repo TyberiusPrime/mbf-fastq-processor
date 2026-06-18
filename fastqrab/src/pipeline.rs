@@ -198,7 +198,10 @@ impl DemultiplexChain {
     /// The demultiplex info a step sees: the combination of every `Demultiplex`
     /// step pushed *before* it. `OptDemultiplex::No` until the first push.
     pub(crate) fn current_info(&self) -> &OptDemultiplex {
-        self.infos.iter().last().map_or(&OptDemultiplex::No, |x| &x.1)
+        self.infos
+            .iter()
+            .last()
+            .map_or(&OptDemultiplex::No, |x| &x.1)
     }
 
     /// Fold one more `Demultiplex` step (at stage `index`) into the chain.
@@ -263,7 +266,10 @@ impl DemultiplexChain {
                     .last()
                     .map_or(&OptDemultiplex::No, |x| &x.1);
 
-                for (old_tag, old_name) in &last_demultiplex_info.expect("last_demultiplex_info must be Some when iterating over tag_to_name").tag_to_name {
+                for (old_tag, old_name) in &last_demultiplex_info
+                    .expect("last_demultiplex_info must be Some when iterating over tag_to_name")
+                    .tag_to_name
+                {
                     for (new_tag, new_name) in &tag_to_name {
                         let combined_tag = old_tag | new_tag;
                         let out_name: Option<String> = {

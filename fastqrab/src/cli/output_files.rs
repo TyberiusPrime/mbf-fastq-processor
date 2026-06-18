@@ -99,7 +99,12 @@ pub fn list_config_output_files(toml_file: &Path) -> Result<OutputFilesListing> 
         // Advance the chain *after* this step's own outputs are enumerated, so a
         // Demultiplex step's split only affects steps downstream of it.
         if let Transformation::Demultiplex(d) = &stage.transformation {
-            chain.push(index, d.declared_barcodes(), d.in_label.to_string(), &ix_sep)?;
+            chain.push(
+                index,
+                d.declared_barcodes(),
+                d.in_label.to_string(),
+                &ix_sep,
+            )?;
         }
     }
 

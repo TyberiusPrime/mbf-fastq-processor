@@ -6,8 +6,8 @@ use toml_pretty_deser::TomlValue;
 use crate::config::PartialConfig;
 
 pub mod main;
-pub mod process;
 pub mod output_files;
+pub mod process;
 pub mod validate;
 pub mod verify;
 

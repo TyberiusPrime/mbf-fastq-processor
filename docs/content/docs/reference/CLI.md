@@ -179,7 +179,7 @@ The schema is also published alongside each version of the documentation at
 
 [input]
     read1 = "file_1.fq"
-...
+    # ...
 ```
 
 Replace `v0.9.1` with the version of fastqrab you are using, or with `main` to track the development branch. You can also reference a locally generated copy:

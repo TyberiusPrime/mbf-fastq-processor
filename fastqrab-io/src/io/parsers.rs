@@ -64,7 +64,9 @@ impl ChainedParser {
             .iter()
             .filter_map(|file| {
                 if let InputFile::Bam(_, index_path) = file {
-                    Some(index_path.clone())
+                    // `None` for handle-only BAM inputs that carry no path; those
+                    // simply contribute no index path.
+                    index_path.clone()
                 } else {
                     None
                 }

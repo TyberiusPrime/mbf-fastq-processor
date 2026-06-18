@@ -4520,10 +4520,7 @@ json = true
 html = true
 ",
     );
-    assert_eq!(
-        files,
-        vec!["output.html", "output.json", "output_read1.fq"]
-    );
+    assert_eq!(files, vec!["output.html", "output.json", "output_read1.fq"]);
 }
 
 #[test]

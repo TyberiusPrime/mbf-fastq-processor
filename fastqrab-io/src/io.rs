@@ -23,16 +23,15 @@ pub mod parsers;
 pub mod pod_parser;
 pub mod reads;
 
-/// Given a fastq or bam file, run a call back on all reads
-fn apply_to_read(
-    filename: impl AsRef<Path>,
+/// Drive a parser over an already-resolved [`InputFile`], invoking `func` on
+/// every read. The shared core behind the `apply_to_read_*` helpers.
+fn drive_reads(
+    input_file: InputFile,
     func: &mut impl FnMut(&Vec<u8>, &FastQRead) -> Result<()>,
     include_mapped: bool,
     include_unmapped: bool,
     use_rapidgzip: bool,
 ) -> Result<()> {
-    let filename = filename.as_ref();
-    let input_file = open_input_file(filename).context("open_input_file")?;
     let options = InputOptions {
         fasta_fake_quality: Some(33),
         bam_include_mapped: Some(include_mapped),
@@ -64,48 +63,53 @@ fn apply_to_read(
     Ok(())
 }
 
+/// Run `func` over the name of every read in an already-open input handle
+/// (FASTQ/FASTA/BAM, transparently decompressed). The whole handle is read;
+/// declared step inputs hand the runtime-opened handle straight in. rapidgzip
+/// needs a path and so is unavailable here.
 pub fn apply_to_read_names(
-    filename: impl AsRef<Path>,
+    file: ex::fs::File,
     func: &mut impl FnMut(&[u8]) -> Result<()>,
     include_mapped: bool,
     include_unmapped: bool,
-    use_rapidgzip: bool,
 ) -> Result<()> {
-    apply_to_read(
-        filename,
+    drive_reads(
+        InputFile::from_handle(file)?,
         &mut |block: &Vec<u8>, read: &FastQRead| func(read.name.get(block)),
         include_mapped,
         include_unmapped,
-        use_rapidgzip,
+        false,
     )
 }
 
-/// Given a fastq or bam file, run a call back on all read sequences
+/// As [`apply_to_read_names`], but `func` receives each read's sequence.
 pub fn apply_to_read_sequences(
-    filename: impl AsRef<Path>,
+    file: ex::fs::File,
     func: &mut impl FnMut(&[u8]) -> Result<()>,
     include_mapped: bool,
     include_unmapped: bool,
-    use_rapidgzip: bool,
 ) -> Result<()> {
-    apply_to_read(
-        filename,
+    drive_reads(
+        InputFile::from_handle(file)?,
         &mut |block: &Vec<u8>, read: &FastQRead| func(read.seq.get(block)),
         include_mapped,
         include_unmapped,
-        use_rapidgzip,
+        false,
     )
 }
 
-/// Given a FASTA or FASTQ file or BAM file, run a callback on each read's (name, sequence) pair.
-/// For FASTA, the name is the record id (and description if present), without the leading `>`.
+/// Given a FASTA or FASTQ or BAM file *by path*, run a callback on each read's
+/// (name, sequence) pair. For FASTA, the name is the record id (and description
+/// if present), without the leading `>`. Still path-based because the
+/// `[barcodes]` loader uses it and is not yet on the declared-input path.
 pub fn apply_to_read_names_and_sequences(
     filename: impl AsRef<Path>,
     func: &mut impl FnMut(&[u8], &[u8]) -> Result<()>,
     use_rapidgzip: bool,
 ) -> Result<()> {
-    apply_to_read(
-        filename,
+    let input_file = open_input_file(filename.as_ref()).context("open_input_file")?;
+    drive_reads(
+        input_file,
         &mut |block: &Vec<u8>, read: &FastQRead| func(read.name.get(block), read.seq.get(block)),
         true,
         true,

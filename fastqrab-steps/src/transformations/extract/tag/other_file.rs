@@ -9,6 +9,10 @@ use crate::transformations::{prelude::*, read_name_canonical_prefix};
 use fastqrab_config::tpd_adapt_u8_from_byte_or_char;
 use fastqrab_io::io::{apply_to_read_names, apply_to_read_sequences};
 
+/// `StepInputFiles` id linking `declare_input_files` to the handle taken in
+/// `init` for the file we test reads against.
+const FILENAME_ID: &str = "filename";
+
 /// Tag whether reads are in another file (by sequence)
 #[derive(Clone, JsonSchema)]
 #[tpd]
@@ -170,6 +174,15 @@ impl TagUser for PartialTaggedVariant<PartialOtherFile> {
             }
         }
     }
+
+    fn declare_input_files(&self) -> Option<Vec<InputDeclaration>> {
+        let inner = self.toml_value.as_ref()?;
+        let filename = inner.filename.as_ref()?;
+        Some(vec![InputDeclaration {
+            id: FILENAME_ID.to_string(),
+            path: filename.clone().into(),
+        }])
+    }
 }
 
 impl Step for OtherFile {
@@ -179,11 +192,14 @@ impl Step for OtherFile {
 
     fn init(
         &mut self,
-        input_info: &InputInfo,
+        _input_info: &InputInfo,
         _output_files: StepOutputFiles,
         _demultiplex_info: &OptDemultiplex,
-        _input_files: &mut StepInputFiles,
+        input_files: &mut StepInputFiles,
     ) -> Result<Option<DemultiplexBarcodes>> {
+        // The runtime opened the file we declared in `declare_input_files`; read
+        // through that handle rather than re-opening `self.filename` ourselves.
+        let file = input_files.take(FILENAME_ID);
         let mut filter: ApproxOrExactFilter = if self.false_positive_rate == 0.0 {
             ApproxOrExactFilter::Exact(HashSet::new())
         } else {
@@ -205,7 +221,7 @@ impl Step for OtherFile {
         match self.source {
             ResolvedSourceNoAll::Segment(_) | ResolvedSourceNoAll::Tag(_) => {
                 apply_to_read_sequences(
-                    &self.filename,
+                    file,
                     &mut |read_seq| {
                         if !filter.contains(&FragmentEntry(&[read_seq])) {
                             filter.insert(&FragmentEntry(&[read_seq]));
@@ -215,12 +231,11 @@ impl Step for OtherFile {
                     },
                     self.include_mapped,
                     self.include_unmapped,
-                    input_info.use_rapidgzip,
                 )?; // cov:excl-line
             }
             ResolvedSourceNoAll::Name { .. } => {
                 apply_to_read_names(
-                    &self.filename,
+                    file,
                     &mut |read_name| {
                         let trimmed = read_name_canonical_prefix(
                             read_name,
@@ -235,7 +250,6 @@ impl Step for OtherFile {
                     },
                     self.include_mapped,
                     self.include_unmapped,
-                    input_info.use_rapidgzip,
                 )?; // cov:excl-line
             }
         }

@@ -19,7 +19,9 @@ pub struct BamParser {
     include_mapped: bool,
     include_unmapped: bool,
     record: Record,
-    filename: PathBuf,
+    /// Only used for error messages. `None` when the BAM is read from a
+    /// pre-opened handle (e.g. a step's declared input file) that has no path.
+    filename: Option<PathBuf>,
     any_seen: bool,
 }
 
@@ -102,7 +104,7 @@ pub fn bam_read_count_from_index(
 impl BamParser {
     pub fn new(
         file: File,
-        filename: PathBuf,
+        filename: Option<PathBuf>,
         target_reads_per_block: NonZero<usize>,
         include_mapped: bool,
         include_unmapped: bool,
@@ -160,10 +162,13 @@ impl Parser for BamParser {
             if state.read_record(&mut self.record)? == 0 {
                 //nothing read.
                 if block.entries.is_empty() && !self.any_seen {
-                    bail!(
-                        "An input file ({}) provided no reads. Please check your inputs.",
-                        self.filename.display()
-                    );
+                    match &self.filename {
+                        Some(filename) => bail!(
+                            "An input file ({}) provided no reads. Please check your inputs.",
+                            filename.display()
+                        ),
+                        None => bail!("An input file provided no reads. Please check your inputs."),
+                    }
                 }
                 return Ok(ParseResult {
                     fastq_block: block,
@@ -264,7 +269,7 @@ mod tests {
         let file = open(temp.path())?;
         let mut parser = BamParser::new(
             file,
-            temp.path().to_owned(),
+            Some(temp.path().to_owned()),
             NonZero::new(10).unwrap(),
             true,
             false,
@@ -287,7 +292,7 @@ mod tests {
         let file = open(temp.path())?;
         let mut parser = BamParser::new(
             file,
-            temp.path().to_owned(),
+            Some(temp.path().to_owned()),
             NonZero::new(10).unwrap(),
             false,
             true,
@@ -310,7 +315,7 @@ mod tests {
         let file = open(temp.path())?;
         let mut parser = BamParser::new(
             file,
-            temp.path().to_owned(),
+            Some(temp.path().to_owned()),
             NonZero::new(10).unwrap(),
             true,
             true,

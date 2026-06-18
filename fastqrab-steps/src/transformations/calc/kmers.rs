@@ -84,6 +84,12 @@ impl VerifyIn<PartialConfig> for PartialKmers {
     }
 }
 
+/// `StepInputFiles` id for the `i`th k-mer database file, linking
+/// `declare_input_files` to the handle taken in `init`.
+fn kmer_db_id(i: usize) -> String {
+    format!("filename[{i}]")
+}
+
 impl TagUser for PartialTaggedVariant<PartialKmers> {
     fn get_tag_usage(
         &mut self,
@@ -102,23 +108,41 @@ impl TagUser for PartialTaggedVariant<PartialKmers> {
             None // cov:excl-line
         }
     }
+
+    fn declare_input_files(&self) -> Option<Vec<InputDeclaration>> {
+        let inner = self.toml_value.as_ref()?;
+        let filenames = inner.filename.as_ref()?;
+        // `enumerate` before filtering keeps each id's index aligned with the
+        // `init`-side `take` order. Post-verify every entry is present.
+        Some(
+            filenames
+                .iter()
+                .enumerate()
+                .filter_map(|(i, filename)| {
+                    filename.as_ref().map(|filename| InputDeclaration {
+                        id: kmer_db_id(i),
+                        path: filename.clone().into(),
+                    })
+                })
+                .collect(),
+        )
+    }
 }
 
 impl Step for Kmers {
     fn init(
         &mut self,
-        input_info: &InputInfo,
+        _input_info: &InputInfo,
         _output_files: StepOutputFiles,
         _demultiplex_info: &OptDemultiplex,
-        _input_files: &mut StepInputFiles,
+        input_files: &mut StepInputFiles,
     ) -> Result<Option<DemultiplexBarcodes>> {
-        let db = build_kmer_database(
-            &self.filename,
-            self.k,
-            self.min_count,
-            self.count_reverse_complement,
-            input_info.use_rapidgzip,
-        )?; // cov:excl-line
+        // The runtime opened each database file we declared in
+        // `declare_input_files`; read through those handles in declared order.
+        let files: Vec<ex::fs::File> = (0..self.filename.len())
+            .map(|i| input_files.take(&kmer_db_id(i)))
+            .collect();
+        let db = build_kmer_database(files, self.k, self.min_count, self.count_reverse_complement)?; // cov:excl-line
         self.resolved_kmer_db = Some(db);
 
         Ok(None)
@@ -166,17 +190,16 @@ impl Step for Kmers {
 }
 
 pub fn build_kmer_database(
-    files: &[String],
+    files: Vec<ex::fs::File>,
     k: usize,
     min_count: usize,
     canonical: bool,
-    use_rapidgzip: bool,
 ) -> Result<IndexMap<Vec<u8>, usize>> {
     let mut kmer_counts: IndexMap<Vec<u8>, usize> = IndexMap::new();
 
-    for file_path in files {
+    for file in files {
         apply_to_read_sequences(
-            file_path,
+            file,
             &mut |seq: &[u8]| {
                 // Extract all kmers from this sequence
                 if seq.len() >= k {
@@ -200,9 +223,8 @@ pub fn build_kmer_database(
             },
             true,
             true, //all reads in BAM.
-            use_rapidgzip,
         )
-        .with_context(|| format!("Failed to parse kmer database file: {file_path}"))?;
+        .context("Failed to parse kmer database file")?;
     }
 
     // Filter by minimum count
