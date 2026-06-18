@@ -15,6 +15,7 @@ fastqrab verify [config.toml] [--output-dir <OUTPUT_DIR>]
 fastqrab validate [config.toml] 
 fastqrab output-files [config.toml] 
 fastqrab interactive [config.toml]
+fastqrab json-schema
 fastqrab completions <SHELL>
 ```
 
@@ -157,6 +158,35 @@ and shows you the [Inspect]({{< relref "docs/reference/report-steps/Inspect.md" 
 Every time you save, the results refresh.
 
 This way you can quickly tune and work on your configuration.
+
+### json-schema
+
+Print the [JSON Schema](https://json-schema.org/) for fastqrab's TOML configuration format to stdout.
+
+```bash
+fastqrab json-schema > schema.json
+```
+
+The schema is also published alongside each version of the documentation at
+[schema.json](../../../schema.json).
+
+#### Editor integration via Tombi
+
+[Tombi](https://tombi-toml.github.io/tombi/) is a TOML language server that provides validation, completion, and hover documentation. Point it at the schema by adding a comment to the top of your configuration file:
+
+```toml
+#:schema https://tyberiusprime.github.io/fastqrab/v0.9.1/schema.json
+
+[input]
+    read1 = "file_1.fq"
+...
+```
+
+Replace `v0.9.1` with the version of fastqrab you are using, or with `main` to track the development branch. You can also reference a locally generated copy:
+
+```toml
+#:schema ./schema.json
+```
 
 ### Completions
 

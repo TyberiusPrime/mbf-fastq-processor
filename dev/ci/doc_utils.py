@@ -162,6 +162,32 @@ def copy_template_toml(src_dir: Path, docs_dir: Path) -> None:
     print(f"Copied template.toml to {template_dst}")
 
 
+def generate_json_schema(src_dir: Path, docs_dir: Path) -> None:
+    """
+    Generate schema.json from the fastqrab binary and save it to docs/static/.
+
+    Args:
+        src_dir: Repo root (used to locate a pre-built binary in target/release/)
+        docs_dir: Path to the docs directory
+    """
+    binary = src_dir / "target" / "release" / "fastqrab"
+    if not binary.exists():
+        print(f"Skipping schema.json generation: binary not found at {binary}")
+        return
+
+    schema_dst = docs_dir / "static" / "schema.json"
+    schema_dst.parent.mkdir(parents=True, exist_ok=True)
+
+    result = subprocess.run(
+        [str(binary), "json-schema"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    schema_dst.write_text(result.stdout, encoding="utf-8")
+    print(f"Generated schema.json at {schema_dst}")
+
+
 def copy_sample_report(cookbooks_src: Path, docs_dir: Path) -> None:
     """
     Copy sample report from cookbook

@@ -1,6 +1,7 @@
 use anyhow::{Context, Result, bail};
 use clap::{Arg, ArgAction, Command, ValueHint, value_parser};
 use clap_complete::{Generator, Shell, generate};
+use fastqrab_steps::config::Config;
 use human_panic::{Metadata, setup_panic};
 use std::path::{Path, PathBuf};
 
@@ -217,6 +218,15 @@ This command is used by the test runner but can also be run manually to verify t
                         .value_name("SHELL"),
                 ),
         )
+        .subcommand(
+            Command::new("json-schema")
+                .about("Generate a json schema for the configuration files")
+                .long_about(
+                    "Generate a json schema for your configuration files.\n\n\
+                    Add #:schema <filepath.json> to your TOML\n\
+                    to enable Tombi LSP based validation."
+                )
+        )
 }
 
 /// Generate shell completions and print to stdout
@@ -227,6 +237,11 @@ fn print_completions<G: Generator>(generator: G, cmd: &mut Command) {
         cmd.get_name().to_string(),
         &mut std::io::stdout(),
     );
+}
+
+fn print_schema() {
+    let schema = schemars::schema_for!(Config);
+    println!("{}", serde_json::to_string_pretty(&schema).unwrap());
 }
 
 fn print_template(step: Option<&String>) {
@@ -404,6 +419,10 @@ pub fn entry_point() -> Result<()> {
                 std::process::exit(0);
             } // cov:excl-line
         }
+        Some(("json-schema", _sub_matches)) => {
+            print_schema();
+            std::process::exit(0);
+        }
         _ => {
             // This shouldn't happen due to arg_required_else_help, but just in case
             build_cli().print_help()?;
@@ -492,7 +511,7 @@ fn output_files(toml_path: &Path) {
                         "\nNote: chunked outputs are listed by their first chunk ('.0' suffix). \
                          The run may emit further numbered chunks ('.1', '.2', ...) depending on \
                          how many reads are written. If more digits are needed .1 is renamed .01 so \
-                        the number of digits remains constant." 
+                        the number of digits remains constant."
                     );
                 }
             }

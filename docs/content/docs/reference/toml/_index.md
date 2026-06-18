@@ -5,15 +5,16 @@ title: TOML format
 
 # TOML file format
 
-fastqrab pipelines are defined in a single [TOML](https://toml.io/en/) 1.0 formatted document.
-The format favours explicitness: every field is named, order is preserved, and unknown keys are rejected with a descriptive error.
+fastqrab pipelines are defined in a single [TOML](https://toml.io/en/) 1.1 formatted document.
+
+The format favours explicitness: every field is named, order is preserved, and
+unknown keys are rejected with a descriptive error.
 
 ## Canonical template
 
-The repository maintains an [authoritative configuration scaffold](template.toml) (the same
+The repository maintains an [authoritative configuration scaffold / maximal example](template.toml) / (the same
 content emitted by `fastqrab template`).
 
-The contents are included [below](#maximal-example-template) for reference easy consumption in an LLM.
 
 ## Structure overview
 
@@ -61,28 +62,40 @@ Some steps require additional tables outside the main `[[step]]` list—for exam
 
 TOML supports `#` comments. Leverage them to annotate why a step exists or to document barcode provenance. The parser enforces strict validation: spelling mistakes such as `actionn = "CutStart"` will cause an immediate error instead of being silently ignored.
 
+### Editor validation with JSON Schema
+
+fastqrab publishes a [JSON Schema](https://json-schema.org/) for its
+configuration format. Editors and language servers that understand the
+`#:schema` directive (e.g. [Tombi](https://tombi-toml.github.io/tombi/)) will
+validate your file and offer completions when you add this comment at the top:
+
+```toml
+#:schema https://tyberiusprime.github.io/fastqrab/v0.9.1/schema.json
+```
+
+Replace `v0.9.1` with your installed version. You can also generate the schema
+locally with `fastqrab json-schema > schema.json` and reference it as `#:schema
+./schema.json`.
+
+See the [json-schema command]({{< relref "docs/reference/CLI.md#json-schema" >}}) for details.
+
 ## Why TOML?
 
 We deliberately avoided deep CLI flag hierarchies and configuration formats without comments. TOML offers ordered arrays for sequencing steps, nested tables for barcode definitions, and human-friendly syntax that is widely adopted in both Python and Rust ecosystems.
 
 Curious about complex structures? The [Demultiplex reference]({{< relref "docs/reference/Demultiplex.md" >}}) showcases nested tables and arrays combined with the TOML array-of-tables syntax.
 
-## Maximal example (template)
-
-```toml
-{{% include "template.toml" %}}
-```
 
 ## Isn't this awfully verbose?
 
-Configuration being understandable is much more important than being terse,
+Configuration being understandable is more important than being terse,
 and that's what we strife for.
 
-It is usually written (or is copy/pasted) with the documentation at hand, so typing is
-not a limting factor..
+It is usually written (or copy/pasted) with the documentation at hand, so typing is
+not a limting factor.
 
 Our anti-example are tools that end up being called like this
-(no shade on fastp - bioinformatic tools are overwhelmingly like this):
+(no particular shade on fastp - bioinformatic tools are overwhelmingly like this):
 
 ```bash
 fastp \
@@ -95,8 +108,10 @@ fastp \
     -A -G -Q -L
 ```
 
-Which is reasonably clear, until you get to the one-letter-options. In this case, they
-turn on 'merge mode' ('-m', which you might have guessed) and disable some default processing steps ('-A -G -Q -L').
+Which is reasonably clear, until you get to the one-letter-options. In this
+case, they turn on 'merge mode' ('-m', which you might have guessed) and
+disable some default processing steps ('-A -G -Q -L'). 
+Which ones? Read the documentation!
 
 Here's the fastqrab equivalent, which we think as being more maintainable:
 
