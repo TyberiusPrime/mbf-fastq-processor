@@ -2,7 +2,7 @@ Error Details ==
 Error in stage 0: Error in OutputBAM stage
 
 Caused by:
-    0: During write to file: /home/finkernagel/upstream/fastqrab/main/test_cases/error_handling/bam/read_name_exceeds_bam_length/too_long/actual/output_read1
+    0: During write to file: /home/user/error_handling
     1: The read name exceeded the 254 byte limited of the SAM/BAM spec.
        Shorten your read name, or set output.bam.comment_separation_char
        to split your read name into a name and a 'CO' tag (which may exceed 254 bytes).

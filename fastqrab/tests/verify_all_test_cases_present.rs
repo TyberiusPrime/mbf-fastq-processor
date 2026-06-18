@@ -139,11 +139,15 @@ fn verify_coobooks_censored() {
             .into_iter()
             .filter_map(Result::ok)
             .filter(|e| {
-                e.file_name().to_string_lossy().ends_with(".json")
-                    || e.file_name().to_string_lossy().ends_with(".html")
+                let name = e.file_name().to_string_lossy();
+                name.ends_with(".json") || name.ends_with(".html") || name.ends_with(".txt")
             })
         {
-            let content = std::fs::read_to_string(entry.path()).expect("Failed to read file");
+            // Some fixtures carry a text extension but hold binary data (e.g.
+            // gzipped output saved as .txt); there's nothing to censor there.
+            let Ok(content) = std::fs::read_to_string(entry.path()) else {
+                continue;
+            };
             if let Some(hit) = homes_re.captures(&content)
                 && hit
                     .get(1)

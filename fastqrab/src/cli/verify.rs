@@ -1040,10 +1040,11 @@ impl ExpectedFailure {
         .context("Failed to write actual stderr to file")?;
 
         // Normalize after writing so the debug file retains the raw actual output
-        let stderr = normalize_os_errors(&stderr);
+        let normed_stderr = normalize_os_errors(&stderr);
 
         match self {
             ExpectedFailure::ExactText(expected_text) => {
+                let stderr = censor_case_paths(&normed_stderr);
                 let expected_text = normalize_os_errors(expected_text);
                 if !stderr.contains(expected_text.as_str()) {
                     bail!(
@@ -1060,6 +1061,7 @@ impl ExpectedFailure {
                 }
             }
             ExpectedFailure::Regex(expected_regex) => {
+                let stderr = normed_stderr;
                 if !expected_regex.is_match(&stderr) {
                     bail!(
                         "fastqrab did not fail in the way that was expected.\nExpected message (regex): {}\nActual stderr: {}",
@@ -1085,6 +1087,24 @@ fn normalize_os_errors(s: &str) -> String {
             "The system cannot find the file specified. (os error 2)",
             "No such file or directory (os error 2)",
         )
+}
+
+/// Collapse machine-specific absolute paths into a test case (or cookbook) to
+/// the censored form used by the committed fixtures (see
+/// `dev/scripts/censor_cookbooks.py`), so exact-text stderr comparisons don't
+/// depend on where the repo is checked out.
+///
+/// Only used for `ExactText` expectations: those are matched verbatim against a
+/// committed fixture whose path was censored to `/home/user/<top>`, so the
+/// actual output must be reduced the same way. `Regex` expectations express
+/// their own path tolerance (e.g. `.+/foo.fq`) and must see the raw path, so
+/// this is deliberately not applied there. Idempotent on already-censored text.
+fn censor_case_paths(s: &str) -> Cow<'_, str> {
+    static CASE_PATH: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| {
+        regex::Regex::new(r"/\S*?/(?:test_cases|cookbooks)/([^/\s]+)\S*")
+            .expect("valid case-path regex")
+    });
+    CASE_PATH.replace_all(s, "/home/user/$1")
 }
 
 fn strip_backtrace(stderr: &str) -> Cow<'_, str> {
