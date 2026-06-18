@@ -32,13 +32,17 @@ fn get_all_transformations() -> Vec<String> {
         .as_array()
         .expect("oneOf field in schema must be an array")
     {
+        // `Transformation` is internally tagged on `action`, so each oneOf
+        // branch carries the variant name in `properties.action.const`.
         let action_const = entry
-            .get("required")
+            .get("properties")
             .expect("Could not decode schema")
-            .get(0)
-            .expect("Could not decode schema - 2")
+            .get("action")
+            .expect("Could not decode schema - no action discriminator")
+            .get("const")
+            .expect("Could not decode schema - action is not a const")
             .as_str()
-            .expect("required field must be an array of strings");
+            .expect("action const must be a string");
 
         if !action_const.starts_with('_') {
             transformations.push(action_const.to_string());

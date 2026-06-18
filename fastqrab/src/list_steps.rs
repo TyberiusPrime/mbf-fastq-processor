@@ -22,18 +22,19 @@ pub fn list_steps() -> Vec<(String, String)> {
         .as_array()
         .expect("oneOf field in schema must be an array")
     {
+        // `Transformation` is internally tagged on `action`, so each oneOf
+        // branch carries the variant name in `properties.action.const` and a
+        // sibling `$ref` pointing at the step's own `$def`.
         let action_kind = entry
-            .get("required")
-            .expect("Could not decode schema")
-            .get(0)
-            .expect("Could not decode schema - 2")
-            .as_str()
-            .expect("required field must be an array of strings");
-        let inner_kind = entry
             .get("properties")
             .expect("No props")
-            .get(action_kind)
-            .expect("No action_kind")
+            .get("action")
+            .expect("No action discriminator")
+            .get("const")
+            .expect("action is not a const")
+            .as_str()
+            .expect("action const must be a string");
+        let inner_kind = entry
             .get("$ref")
             .expect("no $ref")
             .as_str()

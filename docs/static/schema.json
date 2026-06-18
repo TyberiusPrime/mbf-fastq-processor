@@ -18,13 +18,23 @@
       ]
     },
     "barcodes": {
-      "type": "object",
+      "type": [
+        "object",
+        "null"
+      ],
       "additionalProperties": {
         "$ref": "#/$defs/Barcodes"
       }
     },
     "options": {
-      "$ref": "#/$defs/Options"
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Options"
+        },
+        {
+          "type": "null"
+        }
+      ]
     },
     "transform": {
       "type": "array",
@@ -42,39 +52,27 @@
         }
       ]
     },
-    "report_labels": {
+    "step": {
       "type": "array",
       "items": {
-        "type": "string"
+        "$ref": "#/$defs/Transformation"
       }
     },
-    "allowed_tags_per_transformation": {
+    "steps": {
       "type": "array",
       "items": {
-        "type": "array",
-        "items": {
-          "type": "string"
-        }
+        "$ref": "#/$defs/Transformation"
       }
     },
-    "forgotten_tags_per_transformation": {
+    "transforms": {
       "type": "array",
       "items": {
-        "type": "array",
-        "items": {
-          "type": "string"
-        }
+        "$ref": "#/$defs/Transformation"
       }
     }
   },
   "required": [
-    "input",
-    "barcodes",
-    "options",
-    "transform",
-    "report_labels",
-    "allowed_tags_per_transformation",
-    "forgotten_tags_per_transformation"
+    "input"
   ],
   "$defs": {
     "Input": {
@@ -97,39 +95,18 @@
       },
       "additionalProperties": {
         "$ref": "#/$defs/StringOrVecString"
-      },
-      "required": [
-        "options"
-      ]
+      }
     },
     "StringOrVecString": {
-      "oneOf": [
+      "anyOf": [
         {
-          "type": "object",
-          "properties": {
-            "String": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "String"
-          ],
-          "additionalProperties": false
+          "type": "string"
         },
         {
-          "type": "object",
-          "properties": {
-            "Vec": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          },
-          "required": [
-            "Vec"
-          ],
-          "additionalProperties": false
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       ]
     },
@@ -181,6 +158,12 @@
           ],
           "format": "uint",
           "minimum": 0
+        },
+        "read_comment_char": {
+          "type": "integer",
+          "format": "uint8",
+          "minimum": 0,
+          "maximum": 255
         }
       },
       "required": [
@@ -195,18 +178,20 @@
           "type": "string"
         },
         "ix_separator": {
-          "type": "string"
+          "type": "string",
+          "default": ""
         },
         "compression_threads": {
-          "type": "integer",
+          "type": [
+            "integer",
+            "null"
+          ],
           "format": "uint",
-          "minimum": 1
+          "minimum": 0
         }
       },
       "required": [
-        "prefix",
-        "ix_separator",
-        "compression_threads"
+        "prefix"
       ]
     },
     "Barcodes": {
@@ -240,6 +225,15 @@
           "type": "string"
         },
         "read_comment_character": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint8",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "read_comment_char": {
           "type": [
             "integer",
             "null"
@@ -292,6 +286,14 @@
         },
         "debug_failures": {
           "$ref": "#/$defs/FailureOptions"
+        },
+        "thread_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint",
+          "minimum": 0
         }
       },
       "required": [
@@ -338,922 +340,2397 @@
       "type": "string",
       "enum": [
         "DiskFull",
-        "RawOs"
+        "RawOs",
+        "diskfull",
+        "rawos"
       ]
     },
     "Transformation": {
       "oneOf": [
         {
-          "type": "object",
-          "properties": {
-            "CutStart": {
-              "$ref": "#/$defs/CutStart"
-            }
-          },
-          "required": [
-            "CutStart"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "CutEnd": {
-              "$ref": "#/$defs/CutEnd"
-            }
-          },
-          "required": [
-            "CutEnd"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "Truncate": {
-              "$ref": "#/$defs/Truncate"
-            }
-          },
-          "required": [
-            "Truncate"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "Prefix": {
-              "$ref": "#/$defs/Prefix"
-            }
-          },
-          "required": [
-            "Prefix"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "Postfix": {
-              "$ref": "#/$defs/Postfix"
-            }
-          },
-          "required": [
-            "Postfix"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "ConvertQuality": {
-              "$ref": "#/$defs/ConvertQuality"
-            }
-          },
-          "required": [
-            "ConvertQuality"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "ReverseComplement": {
-              "$ref": "#/$defs/ReverseComplement"
-            }
-          },
-          "required": [
-            "ReverseComplement"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "Rename": {
-              "$ref": "#/$defs/Rename"
-            }
-          },
-          "required": [
-            "Rename"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "Swap": {
-              "$ref": "#/$defs/Swap"
-            }
-          },
-          "required": [
-            "Swap"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "Lowercase": {
-              "$ref": "#/$defs/Lowercase"
-            }
-          },
-          "required": [
-            "Lowercase"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "Uppercase": {
-              "$ref": "#/$defs/Uppercase"
-            }
-          },
-          "required": [
-            "Uppercase"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "TrimAtTag": {
-              "$ref": "#/$defs/TrimAtTag"
-            }
-          },
-          "required": [
-            "TrimAtTag"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "MergeReads": {
-              "$ref": "#/$defs/MergeReads"
-            }
-          },
-          "required": [
-            "MergeReads"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "Matches": {
-              "$ref": "#/$defs/TagMatches"
+          "description": "Cut a fixed number of bases from the start of reads",
+          "type": "object",
+          "properties": {
+            "n": {
+              "type": "integer",
+              "format": "uint",
+              "minimum": 0
+            },
+            "segment": {
+              "type": "string"
+            },
+            "if_tag": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "action": {
+              "type": "string",
+              "const": "CutStart"
             }
-          },
-          "required": [
-            "Matches"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "FilterByTag": {
-              "$ref": "#/$defs/ByTag"
-            }
-          },
-          "required": [
-            "FilterByTag"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "FilterByNumericTag": {
-              "$ref": "#/$defs/ByNumericTag"
-            }
-          },
-          "required": [
-            "FilterByNumericTag"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "Head": {
-              "$ref": "#/$defs/Head"
+          },
+          "required": [
+            "action"
+          ]
+        },
+        {
+          "description": "Cut a fixed number of bases from the end of reads",
+          "type": "object",
+          "properties": {
+            "n": {
+              "type": "integer",
+              "format": "uint",
+              "minimum": 0
+            },
+            "segment": {
+              "type": "string"
+            },
+            "if_tag": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "action": {
+              "type": "string",
+              "const": "CutEnd"
             }
           },
-          "required": [
-            "Head"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "Skip": {
-              "$ref": "#/$defs/Skip"
+          "required": [
+            "action"
+          ]
+        },
+        {
+          "description": "Truncate reads to a fixed length",
+          "type": "object",
+          "properties": {
+            "n": {
+              "type": "integer",
+              "format": "uint",
+              "minimum": 0
+            },
+            "segment": {
+              "type": "string"
+            },
+            "if_tag": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "action": {
+              "type": "string",
+              "const": "Truncate"
             }
           },
           "required": [
-            "Skip"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "add a fixed prefix to the start of reads",
           "type": "object",
           "properties": {
-            "FilterEmpty": {
-              "$ref": "#/$defs/Empty"
+            "segment": {
+              "type": "string"
+            },
+            "seq": {
+              "type": "string"
+            },
+            "qual": {
+              "type": "string"
+            },
+            "encoding": {
+              "$ref": "#/$defs/PhredEncoding"
+            },
+            "if_tag": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "action": {
+              "type": "string",
+              "const": "Prefix"
             }
           },
           "required": [
-            "FilterEmpty"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Add a fixed sequence to the end of reads",
           "type": "object",
           "properties": {
-            "FilterSample": {
-              "$ref": "#/$defs/Sample"
+            "segment": {
+              "type": "string"
+            },
+            "seq": {
+              "type": "string"
+            },
+            "qual": {
+              "type": "string"
+            },
+            "encoding": {
+              "$ref": "#/$defs/PhredEncoding"
+            },
+            "if_tag": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "action": {
+              "type": "string",
+              "const": "Postfix"
             }
           },
           "required": [
-            "FilterSample"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Convert PHRED scores between encodings",
           "type": "object",
           "properties": {
-            "FilterReservoirSample": {
-              "$ref": "#/$defs/ReservoirSample"
+            "from": {
+              "$ref": "#/$defs/PhredEncoding"
+            },
+            "to": {
+              "$ref": "#/$defs/PhredEncoding"
+            },
+            "action": {
+              "type": "string",
+              "const": "ConvertQuality"
             }
           },
           "required": [
-            "FilterReservoirSample"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Reverse complement a read",
           "type": "object",
           "properties": {
-            "ValidateReadPairing": {
-              "$ref": "#/$defs/ValidateReadPairing"
+            "target": {
+              "type": "string"
+            },
+            "if_tag": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "action": {
+              "type": "string",
+              "const": "ReverseComplement"
             }
           },
           "required": [
-            "ValidateReadPairing"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Rename (and/or renumber) reads by applying a regex",
           "type": "object",
           "properties": {
-            "ValidateSeq": {
-              "$ref": "#/$defs/ValidateSeq"
+            "search": {
+              "type": "string"
+            },
+            "replacement": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string",
+              "const": "Rename"
             }
           },
           "required": [
-            "ValidateSeq"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Swap two segments.\n\nWith `if_tag` set, the swap is per-read (only reads where the tag is truthy\nexchange their mates). A per-read swap moves a read to the *other* segment,\nso any location tag captured against either swapped segment is **forgotten**\n— a location column may alias only one segment, and a per-read swap would\nsplit it across two. To carry such data across a conditional swap, snapshot\nit to a plain String with `ConcatTags` beforehand. An unconditional swap\nkeeps location tags: their `source_id` is simply re-stamped to the segment\nthat now holds their bytes.",
           "type": "object",
           "properties": {
-            "ValidateQuality": {
-              "$ref": "#/$defs/ValidateQuality"
+            "if_tag": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "segment_a": {
+              "type": "string"
+            },
+            "segment_b": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string",
+              "const": "Swap"
             }
           },
           "required": [
-            "ValidateQuality"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Convert a read, name, tag into lower case",
           "type": "object",
           "properties": {
-            "ValidateName": {
-              "$ref": "#/$defs/ValidateName"
+            "target": {
+              "type": "string"
+            },
+            "if_tag": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "action": {
+              "type": "string",
+              "const": "Lowercase"
             }
           },
           "required": [
-            "ValidateName"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Convert a read, name, tag into upper case",
           "type": "object",
           "properties": {
-            "ValidateAllReadsSameLength": {
-              "$ref": "#/$defs/ValidateAllReadsSameLength"
+            "target": {
+              "type": "string"
+            },
+            "if_tag": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "action": {
+              "type": "string",
+              "const": "Uppercase"
             }
           },
           "required": [
-            "ValidateAllReadsSameLength"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Trim reads at a tag's position",
           "type": "object",
           "properties": {
-            "ValidateReadNamesPrintable": {
-              "$ref": "#/$defs/ValidateReadNamesPrintable"
-            }
-          },
-          "required": [
-            "ValidateReadNamesPrintable"
-          ],
-          "additionalProperties": false
+            "in_label": {
+              "type": "string"
+            },
+            "direction": {
+              "$ref": "#/$defs/Direction"
+            },
+            "keep_tag": {
+              "type": "boolean"
+            },
+            "action": {
+              "type": "string",
+              "const": "TrimAtTag"
+            }
+          },
+          "required": [
+            "action"
+          ]
         },
-        {
+        {
+          "description": "Merge paired end reads if they're overlapping",
           "type": "object",
           "properties": {
-            "ExtractIUPAC": {
-              "$ref": "#/$defs/IUPAC"
+            "algorithm": {
+              "description": "Algorithm to use for overlap scoring and mismatch resolution",
+              "$ref": "#/$defs/Algorithm"
+            },
+            "min_overlap": {
+              "description": "Minimum overlap length required for merging (suggested: 30, minimum: 5)",
+              "type": "integer",
+              "format": "uint",
+              "minimum": 0
+            },
+            "max_mismatch_rate": {
+              "description": "Maximum allowed mismatch rate (0.0 to 1.0, suggested: 0.2)",
+              "type": "number",
+              "format": "double"
+            },
+            "max_mismatch_count": {
+              "description": "Maximum allowed absolute number of mismatches (suggested: 5)",
+              "type": "integer",
+              "format": "uint",
+              "minimum": 0
+            },
+            "no_overlap_strategy": {
+              "description": "Strategy when no overlap is found",
+              "$ref": "#/$defs/NoOverlapStrategy"
+            },
+            "out_label": {
+              "description": "Tag label to store merge status (suggested: \"merged\")\nTag will be true if reads were merged, false otherwise",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "concatenate_spacer": {
+              "description": "Spacer sequence to use when concatenating (required if `no_overlap_strategy` = 'concatenate')",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "spacer_quality_char": {
+              "description": "Quality score to use for spacer bases (suggested: 33, which is Phred quality 0)",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint8",
+              "minimum": 0,
+              "maximum": 255
+            },
+            "reverse_complement_segment2": {
+              "description": "Whether to reverse complement segment2 before merging",
+              "type": "boolean"
+            },
+            "segment1": {
+              "type": "string"
+            },
+            "segment2": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string",
+              "const": "MergeReads"
             }
           },
           "required": [
-            "ExtractIUPAC"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
           "type": "object",
           "properties": {
-            "ExtractIUPACWithIndel": {
-              "$ref": "#/$defs/IUPACWithIndel"
+            "source": {
+              "type": "string"
+            },
+            "out_label": {
+              "type": "string"
+            },
+            "accepted": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "Matches",
+                "TagMatches",
+                "matches",
+                "tagmatches"
+              ]
             }
           },
           "required": [
-            "ExtractIUPACWithIndel"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Filter reads by presence/value of a (non-numeric) tag",
           "type": "object",
           "properties": {
-            "ExtractRegex": {
-              "$ref": "#/$defs/Regex"
+            "in_label": {
+              "type": "string"
+            },
+            "keep_or_remove": {
+              "$ref": "#/$defs/KeepOrRemove"
+            },
+            "action": {
+              "type": "string",
+              "const": "FilterByTag"
             }
           },
           "required": [
-            "ExtractRegex"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Filter reads by threshold on a (numeric) tag",
           "type": "object",
           "properties": {
-            "ExtractRegion": {
-              "$ref": "#/$defs/Region"
+            "in_label": {
+              "type": "string"
+            },
+            "min_value": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "format": "double"
+            },
+            "max_value": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "format": "double"
+            },
+            "keep_or_remove": {
+              "$ref": "#/$defs/KeepOrRemove"
+            },
+            "action": {
+              "type": "string",
+              "const": "FilterByNumericTag"
             }
           },
           "required": [
-            "ExtractRegion"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Filter all reads after the first n",
           "type": "object",
           "properties": {
-            "ExtractRegions": {
-              "$ref": "#/$defs/Regions"
+            "n": {
+              "type": "integer",
+              "format": "uint",
+              "minimum": 0
+            },
+            "action": {
+              "type": "string",
+              "const": "Head"
             }
           },
           "required": [
-            "ExtractRegions"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Skip the first n reads",
           "type": "object",
           "properties": {
-            "CalcLength": {
-              "$ref": "#/$defs/Length"
+            "n": {
+              "type": "integer",
+              "format": "uint",
+              "minimum": 0
+            },
+            "action": {
+              "type": "string",
+              "const": "Skip"
             }
           },
           "required": [
-            "CalcLength"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Filter empty reads (without sequence, length == 0)",
           "type": "object",
           "properties": {
-            "CalcBaseContent": {
-              "$ref": "#/$defs/BaseContent"
+            "segment": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string",
+              "const": "FilterEmpty"
             }
           },
           "required": [
-            "CalcBaseContent"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Sample reads by probability. Cheap.",
           "type": "object",
           "properties": {
-            "CalcGCContent": {
-              "$ref": "#/$defs/GCContent"
+            "p": {
+              "type": "number",
+              "format": "double"
+            },
+            "seed": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "FilterSample",
+                "sample",
+                "filtersample"
+              ]
             }
           },
           "required": [
-            "CalcGCContent"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Fairly sample reads (expensive!)",
           "type": "object",
           "properties": {
-            "CalcNContent": {
-              "$ref": "#/$defs/NContent"
+            "n": {
+              "type": "integer",
+              "format": "uint",
+              "minimum": 0
+            },
+            "seed": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "FilterReservoirSample",
+                "reservoirsample",
+                "filterreservoirsample"
+              ]
             }
           },
           "required": [
-            "CalcNContent"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Spot check the read names matching across segments",
           "type": "object",
           "properties": {
-            "CalcComplexity": {
-              "$ref": "#/$defs/Complexity"
+            "sample_stride": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "ValidateReadPairing",
+                "SpotCheckReadNames",
+                "validatereadpairing",
+                "spotcheckreadnames"
+              ]
             }
           },
           "required": [
-            "CalcComplexity"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Validate that the sequence is only consisting of the specified bases",
           "type": "object",
           "properties": {
-            "CalcQualifiedBases": {
-              "$ref": "#/$defs/QualifiedBases"
+            "allowed": {
+              "type": "string"
+            },
+            "segment": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "ValidateSeq",
+                "ValidateSequence",
+                "validateseq",
+                "validatesequence"
+              ]
             }
           },
           "required": [
-            "CalcQualifiedBases"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Validate that quality scores are within Sanger (PHRED 33) range.",
           "type": "object",
           "properties": {
-            "CalcExpectedError": {
-              "$ref": "#/$defs/ExpectedError"
+            "encoding": {
+              "$ref": "#/$defs/PhredEncoding"
+            },
+            "segment": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "ValidateQuality",
+                "ValidateQual",
+                "validatequality",
+                "validatequal"
+              ]
             }
           },
           "required": [
-            "CalcExpectedError"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Validate that read names between segments match",
           "type": "object",
           "properties": {
-            "CalcWorstQuality": {
-              "$ref": "#/$defs/WorstQuality"
+            "readname_end_char": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint8",
+              "minimum": 0,
+              "maximum": 255
+            },
+            "sample_stride": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0
+            },
+            "action": {
+              "type": "string",
+              "const": "ValidateName"
             }
           },
           "required": [
-            "CalcWorstQuality"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Verify that all reads have the same length",
           "type": "object",
           "properties": {
-            "CalcKmers": {
-              "$ref": "#/$defs/Kmers"
+            "source": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string",
+              "const": "ValidateAllReadsSameLength"
             }
           },
           "required": [
-            "CalcKmers"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Validate that read names conform to the SAM/BAM specification.\n\nValid read names match `[!-?A-~]{1,254}` — printable ASCII excluding `@` and\nspace, with a maximum length of 254 characters.",
           "type": "object",
           "properties": {
-            "ConvertToRate": {
-              "$ref": "#/$defs/ConvertToRate"
+            "action": {
+              "type": "string",
+              "const": "ValidateReadNamesPrintable"
             }
           },
           "required": [
-            "ConvertToRate"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Extract a IUPAC described sequence from the read. E.g. an adapter.\nCan be at the start (anchor = Left, the end (anchor = Right),\nor anywhere (anchor = Anywhere) within the read.\nThe search parameter can be either a single IUPAC string or a list of IUPAC strings.\nIf multiple strings are provided, the first hit wins.",
           "type": "object",
           "properties": {
-            "ConvertRegionsToLength": {
-              "$ref": "#/$defs/RegionsToLength"
+            "search": {
+              "$ref": "#/$defs/StringOrVecString"
+            },
+            "segment": {
+              "type": "string"
+            },
+            "anchor": {
+              "$ref": "#/$defs/Anchor"
+            },
+            "max_anchor_distance": {
+              "type": "integer",
+              "format": "uint",
+              "minimum": 0
+            },
+            "out_label": {
+              "type": "string"
+            },
+            "max_mismatches": {
+              "type": "integer",
+              "format": "uint8",
+              "minimum": 0,
+              "maximum": 255
+            },
+            "on_tie": {
+              "$ref": "#/$defs/TieBreak"
+            },
+            "action": {
+              "type": "string",
+              "const": "ExtractIUPAC"
             }
           },
           "required": [
-            "ConvertRegionsToLength"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Extract an IUPAC-described sequence while tolerating insertions and deletions.\nUseful for adapters where small indels are expected.",
           "type": "object",
           "properties": {
-            "EvalExpression": {
-              "$ref": "#/$defs/EvalExpression"
+            "search": {
+              "type": "string"
+            },
+            "segment": {
+              "type": "string"
+            },
+            "anchor": {
+              "$ref": "#/$defs/Anchor"
+            },
+            "out_label": {
+              "type": "string"
+            },
+            "max_mismatches": {
+              "type": "integer",
+              "format": "uint",
+              "minimum": 0
+            },
+            "max_indel_bases": {
+              "type": "integer",
+              "format": "uint",
+              "minimum": 0
+            },
+            "max_total_edits": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint",
+              "minimum": 0
+            },
+            "action": {
+              "type": "string",
+              "const": "ExtractIUPACWithIndel"
             }
           },
           "required": [
-            "EvalExpression"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Region by regular expression",
           "type": "object",
           "properties": {
-            "CompareStringTags": {
-              "$ref": "#/$defs/CompareStringTags"
+            "search": {
+              "type": "string"
+            },
+            "replacement": {
+              "type": "string"
+            },
+            "out_label": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string",
+              "const": "ExtractRegex"
             }
           },
           "required": [
-            "CompareStringTags"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Define a region by coordinates",
           "type": "object",
           "properties": {
-            "ExtractRegionsOfLowQuality": {
-              "$ref": "#/$defs/RegionsOfLowQuality"
+            "start": {
+              "type": "integer",
+              "format": "int"
+            },
+            "len": {
+              "type": "integer",
+              "format": "uint",
+              "minimum": 0
+            },
+            "source": {
+              "description": "Source for extraction - segment name, \"tag:name\" for tag source, or \"name:segment\" for read name source",
+              "type": "string"
+            },
+            "anchor": {
+              "description": "Is the region from the `Start` or the `End` of the source?",
+              "$ref": "#/$defs/RegionAnchor"
+            },
+            "out_label": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string",
+              "const": "ExtractRegion"
             }
           },
           "required": [
-            "ExtractRegionsOfLowQuality"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Extract regions by coordinates\nthat is by (segment|source, 0-based start, length)\ndefined triplets, joined with (possibly empty) separator.",
           "type": "object",
           "properties": {
-            "ExtractLongestPolyX": {
-              "$ref": "#/$defs/LongestPolyX"
+            "regions": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/RegionDefinition"
+              }
+            },
+            "source": {
+              "description": "Source for extraction - segment name, \"tag:name\" for tag source, or \"name:segment\" for read name source",
+              "type": "string"
+            },
+            "out_label": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string",
+              "const": "ExtractRegions"
             }
           },
           "required": [
-            "ExtractLongestPolyX"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Convert read length into a tag",
           "type": "object",
           "properties": {
-            "ExtractPolyTail": {
-              "$ref": "#/$defs/PolyTail"
+            "out_label": {
+              "type": "string"
+            },
+            "segment": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string",
+              "const": "CalcLength"
             }
           },
           "required": [
-            "ExtractPolyTail"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Quantify base occurrence rate or count",
           "type": "object",
           "properties": {
-            "ExtractIUPACSuffix": {
-              "$ref": "#/$defs/IUPACSuffix"
+            "out_label": {
+              "type": "string"
+            },
+            "segment": {
+              "type": "string"
+            },
+            "relative": {
+              "type": "boolean"
+            },
+            "bases_to_count": {
+              "type": "string"
+            },
+            "bases_to_ignore": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string",
+              "const": "CalcBaseContent"
             }
           },
           "required": [
-            "ExtractIUPACSuffix"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Calculate (relative) GC content. See `CalcBaseContent`",
           "type": "object",
           "properties": {
-            "ExtractLowQualityStart": {
-              "$ref": "#/$defs/LowQualityStart"
+            "out_label": {
+              "type": "string"
+            },
+            "segment": {
+              "type": "string"
+            },
+            "relative": {
+              "type": "boolean"
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "CalcGCContent",
+                "CalcGCCount",
+                "calcgccontent",
+                "calcgccount"
+              ]
             }
           },
           "required": [
-            "ExtractLowQualityStart"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Count the number of N. See `CalcBaseContent` for general case",
           "type": "object",
           "properties": {
-            "ExtractLowQualityEnd": {
-              "$ref": "#/$defs/LowQualityEnd"
+            "out_label": {
+              "type": "string"
+            },
+            "segment": {
+              "type": "string"
+            },
+            "relative": {
+              "type": "boolean"
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "CalcNContent",
+                "CalcNCount",
+                "calcncontent",
+                "calcncount"
+              ]
             }
           },
           "required": [
-            "ExtractLowQualityEnd"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Calculate complexity score (# transitions / (len -1))",
           "type": "object",
           "properties": {
-            "TagDuplicates": {
-              "$ref": "#/$defs/Duplicates"
+            "out_label": {
+              "type": "string"
+            },
+            "segment": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string",
+              "const": "CalcComplexity"
             }
           },
           "required": [
-            "TagDuplicates"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Calculate bases passing quality threshold (in any direction)",
           "type": "object",
           "properties": {
-            "TagOtherFile": {
-              "$ref": "#/$defs/OtherFile"
+            "out_label": {
+              "type": "string"
+            },
+            "threshold": {
+              "type": "integer",
+              "format": "uint8",
+              "minimum": 0,
+              "maximum": 255
+            },
+            "operator": {
+              "$ref": "#/$defs/Operator"
+            },
+            "relative": {
+              "type": "boolean"
+            },
+            "segment": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string",
+              "const": "CalcQualifiedBases"
             }
           },
           "required": [
-            "TagOtherFile"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Calculate expected error from (sanger, 33 based) PHRED",
           "type": "object",
           "properties": {
-            "StoreTagBackInSequence": {
-              "$ref": "#/$defs/StoreTagBackInSequence"
+            "out_label": {
+              "type": "string"
+            },
+            "segment": {
+              "type": "string"
+            },
+            "aggregate": {
+              "$ref": "#/$defs/ExpectedErrorAggregate"
+            },
+            "action": {
+              "type": "string",
+              "const": "CalcExpectedError"
             }
           },
           "required": [
-            "StoreTagBackInSequence"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Calculate minimum quality byte value across a segment or a tagged region",
           "type": "object",
           "properties": {
-            "StoreTagInSequence": {
-              "$ref": "#/$defs/StoreTagInSequence"
+            "out_label": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "offset": {
+              "type": "integer",
+              "format": "int8",
+              "minimum": -128,
+              "maximum": 127
+            },
+            "action": {
+              "type": "string",
+              "const": "CalcWorstQuality"
             }
           },
           "required": [
-            "StoreTagInSequence"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Quantify Kmer occurance vs database",
           "type": "object",
           "properties": {
-            "ReplaceTagWithLetter": {
-              "$ref": "#/$defs/ReplaceTagWithLetter"
+            "out_label": {
+              "type": "string"
+            },
+            "segment": {
+              "type": "string"
+            },
+            "filename": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "k": {
+              "type": "integer",
+              "format": "uint",
+              "minimum": 0
+            },
+            "count_reverse_complement": {
+              "type": "boolean"
+            },
+            "min_count": {
+              "type": "integer",
+              "format": "uint",
+              "minimum": 0
+            },
+            "action": {
+              "type": "string",
+              "const": "CalcKmers"
             }
           },
           "required": [
-            "ReplaceTagWithLetter"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Divide a numeric tag value by the read length to produce a rate (0..=1)",
           "type": "object",
           "properties": {
-            "ConcatTags": {
-              "$ref": "#/$defs/ConcatTags"
+            "in_label": {
+              "type": "string"
+            },
+            "out_label": {
+              "type": "string"
+            },
+            "segment": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string",
+              "const": "ConvertToRate"
             }
           },
           "required": [
-            "ConcatTags"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Convert region tag to a length tag",
           "type": "object",
           "properties": {
-            "FillMissing": {
-              "$ref": "#/$defs/FillMissing"
+            "out_label": {
+              "type": "string"
+            },
+            "in_label": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string",
+              "const": "ConvertRegionsToLength"
             }
           },
           "required": [
-            "FillMissing"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Evaluate an equation on tags",
           "type": "object",
           "properties": {
-            "ForgetAllTags": {
-              "$ref": "#/$defs/ForgetAllTags"
+            "out_label": {
+              "description": "The tag label to store the result",
+              "type": "string"
+            },
+            "expression": {
+              "description": "The arithmetic expression to evaluate\nVariables in the expression should match existing numeric tag names",
+              "type": "string"
+            },
+            "result_type": {
+              "$ref": "#/$defs/ResultType"
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "EvalExpression",
+                "EvaluateExpression",
+                "evalexpression",
+                "evaluateexpression"
+              ]
             }
           },
           "required": [
-            "ForgetAllTags"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Compare two string- or location-valued tags lexicographically (byte-by-byte).\n\nReturns -1.0 if tag_a < tag_b, 0.0 if equal, 1.0 if tag_a > tag_b,\nlike Rust's `PartialOrd` on byte slices. Missing on either input → Missing output.\nRaises a runtime error if the two byte sequences for a read have different lengths.",
           "type": "object",
           "properties": {
-            "ForgetTag": {
-              "$ref": "#/$defs/ForgetTag"
+            "in_label_a": {
+              "type": "string"
+            },
+            "in_label_b": {
+              "type": "string"
+            },
+            "out_label": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string",
+              "const": "CompareStringTags"
             }
           },
           "required": [
-            "ForgetTag"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Extract regions of low quality (configurable)",
           "type": "object",
           "properties": {
-            "StoreTagInComment": {
-              "$ref": "#/$defs/StoreTagInComment"
+            "segment": {
+              "type": "string"
+            },
+            "min_quality": {
+              "type": "integer",
+              "format": "uint8",
+              "minimum": 0,
+              "maximum": 255
+            },
+            "min_length": {
+              "type": "integer",
+              "format": "uint",
+              "minimum": 0
+            },
+            "out_label": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string",
+              "const": "ExtractRegionsOfLowQuality"
             }
           },
           "required": [
-            "StoreTagInComment"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Find the longest polyX",
           "type": "object",
           "properties": {
-            "StoreTagInFastQ": {
-              "$ref": "#/$defs/StoreTagInFastQ"
+            "segment": {
+              "type": "string"
+            },
+            "out_label": {
+              "type": "string"
+            },
+            "min_length": {
+              "type": "integer",
+              "format": "uint",
+              "minimum": 0
+            },
+            "base": {
+              "type": "integer",
+              "format": "uint8",
+              "minimum": 0,
+              "maximum": 255
+            },
+            "max_mismatch_rate": {
+              "type": "number",
+              "format": "double"
+            },
+            "max_consecutive_mismatches": {
+              "type": "integer",
+              "format": "uint",
+              "minimum": 0
+            },
+            "action": {
+              "type": "string",
+              "const": "ExtractLongestPolyX"
             }
           },
           "required": [
-            "StoreTagInFastQ"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Extract ends that are homo-polymers into a tag",
           "type": "object",
           "properties": {
-            "StoreTagsInTable": {
-              "$ref": "#/$defs/StoreTagsInTable"
+            "segment": {
+              "type": "string"
+            },
+            "out_label": {
+              "type": "string"
+            },
+            "min_length": {
+              "type": "integer",
+              "format": "uint",
+              "minimum": 0
+            },
+            "base": {
+              "type": "integer",
+              "format": "uint8",
+              "minimum": 0,
+              "maximum": 255
+            },
+            "max_mismatch_rate": {
+              "type": "number",
+              "format": "double"
+            },
+            "max_consecutive_mismatches": {
+              "type": "integer",
+              "format": "uint",
+              "minimum": 0
+            },
+            "fastp_mode": {
+              "description": "Use fastp's polyG trimming algorithm (requires base = 'G').\nApplies fastp's fixed constants: 1 mismatch allowed per 8 bases, max 5 total mismatches.",
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "action": {
+              "type": "string",
+              "const": "ExtractPolyTail"
             }
           },
           "required": [
-            "StoreTagsInTable"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Extract a IUPAC sequence (or a prefix of it) at the end of a read into a tag.",
           "type": "object",
           "properties": {
-            "StoreSingleCellMatrix": {
-              "$ref": "#/$defs/StoreSingleCellMatrix"
+            "segment": {
+              "type": "string"
+            },
+            "out_label": {
+              "type": "string"
+            },
+            "min_length": {
+              "type": "integer",
+              "format": "uint",
+              "minimum": 0
+            },
+            "max_mismatches": {
+              "type": "integer",
+              "format": "uint",
+              "minimum": 0
+            },
+            "search": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string",
+              "const": "ExtractIUPACSuffix"
             }
           },
           "required": [
-            "StoreSingleCellMatrix"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Turn low quality start's of reads into a tag",
           "type": "object",
           "properties": {
-            "QuantifyTag": {
-              "$ref": "#/$defs/QuantifyTag"
+            "segment": {
+              "type": "string"
+            },
+            "out_label": {
+              "type": "string"
+            },
+            "min_qual": {
+              "type": "integer",
+              "format": "uint8",
+              "minimum": 0,
+              "maximum": 255
+            },
+            "action": {
+              "type": "string",
+              "const": "ExtractLowQualityStart"
             }
           },
           "required": [
-            "QuantifyTag"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Turn low quality end's of reads into a tag",
           "type": "object",
           "properties": {
-            "Progress": {
-              "$ref": "#/$defs/Progress"
+            "segment": {
+              "type": "string"
+            },
+            "out_label": {
+              "type": "string"
+            },
+            "min_qual": {
+              "type": "integer",
+              "format": "uint8",
+              "minimum": 0,
+              "maximum": 255
+            },
+            "action": {
+              "type": "string",
+              "const": "ExtractLowQualityEnd"
             }
           },
           "required": [
-            "Progress"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Tag duplicate reads",
           "type": "object",
           "properties": {
-            "Report": {
-              "$ref": "#/$defs/Report"
+            "source": {
+              "type": "string"
+            },
+            "out_label": {
+              "type": "string"
+            },
+            "false_positive_rate": {
+              "type": "number",
+              "format": "double"
+            },
+            "seed": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint64",
+              "minimum": 0
+            },
+            "initial_filter_capacity": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint",
+              "minimum": 0
+            },
+            "action": {
+              "type": "string",
+              "const": "TagDuplicates"
             }
           },
           "required": [
-            "Report"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Tag whether reads are in another file (by sequence)",
           "type": "object",
           "properties": {
-            "Inspect": {
-              "$ref": "#/$defs/Inspect"
+            "filename": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "other_readname_end_character": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint8",
+              "minimum": 0,
+              "maximum": 255
+            },
+            "out_label": {
+              "type": "string"
+            },
+            "seed": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint64",
+              "minimum": 0
+            },
+            "false_positive_rate": {
+              "type": "number",
+              "format": "double"
+            },
+            "include_mapped": {
+              "type": "boolean"
+            },
+            "include_unmapped": {
+              "type": "boolean"
+            },
+            "action": {
+              "type": "string",
+              "const": "TagOtherFile"
             }
           },
           "required": [
-            "Inspect"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Store the tag's 'sequence', probably modified by a previous step,\nback into the reads' sequence.\n\nThis is exactly [`StoreTagInSequence`] with the tag used as both the content\nsource and the position (anchor `Replace`): the tag's (possibly modified) bytes\noverwrite the location they came from. An unmodified location tag is already the\nread's own bytes, so writing it back is a no-op; a tag whose content diverged\n(a regex replacement, a reverse-complement or case change) replaces those bytes.\nIts quality travels with it.\n\nIf the location is a single span the content may be longer or shorter than what\nit replaces (the read grows or shrinks); if it covers several disjoint regions\nthe content must match their total length. The location is lifted through any\nedits applied since it was captured, so the content lands where the tag *now*\nsits in the read. If an intervening edit cut that location away, `on_lost`\ndecides what happens (default: leave the read unchanged).\n\n[`StoreTagInSequence`]: super::store_tag_in_sequence::StoreTagInSequence",
           "type": "object",
           "properties": {
-            "OutputFASTQ": {
-              "$ref": "#/$defs/OutputFASTQ"
+            "in_label": {
+              "type": "string"
+            },
+            "on_lost": {
+              "description": "What to do when the tag's location was lost to a later edit.",
+              "$ref": "#/$defs/OnLost"
+            },
+            "action": {
+              "type": "string",
+              "const": "StoreTagBackInSequence"
             }
           },
           "required": [
-            "OutputFASTQ"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Insert a tag's string value into a read sequence at the position defined by another\nlocation tag.\n\n`in_value_label` must be a location or string tag — its byte sequence (via `as_ref()` on\nthe value) is the text inserted into the read.\n\nA location value carries its own (possibly edited) quality with it; a string value has\nno quality, so its inserted bases get `~` (Phred 93, maximum Sanger quality).\n\n`in_position_label` must be a location tag — it defines *where* to act:\n\n- `anchor = \"Start\"` (alias `\"left\"`) — inserts **before** the leftmost start of the\n  location (the hit with the smallest `start` coordinate).\n- `anchor = \"End\"` (alias `\"right\"`) — inserts **after** the rightmost end of the\n  location (the hit with the largest `start + len` value).\n- `anchor = \"Replace\"` — overwrites the location. A single span (or several regions that\n  lift to a contiguous range) may be replaced by content of any length; several disjoint\n  regions require the content to match their total length, and the content is then laid\n  down byte-for-byte over exactly the covered positions. Any other disjoint case is a\n  runtime error.\n\nAll coordinates are lifted through edits applied since the position tag was captured, and\nthe length change is recorded so later location tags shift correctly.\n\nIf either tag value is `Missing`, the position tag carries no location, or an edit cut the\nposition away (subject to `on_lost`), the read is left unchanged.",
           "type": "object",
           "properties": {
-            "OutputFASTA": {
-              "$ref": "#/$defs/OutputFASTA"
+            "in_value_label": {
+              "description": "Location or string tag whose sequence to insert into the read.",
+              "type": "string"
+            },
+            "in_position_label": {
+              "description": "Location tag that defines the insertion position.",
+              "type": "string"
+            },
+            "anchor": {
+              "description": "Where to insert relative to the position tag.",
+              "$ref": "#/$defs/ReplacementAnchor"
+            },
+            "on_lost": {
+              "description": "What to do when the position tag's location was lost to a later edit.",
+              "$ref": "#/$defs/OnLost"
+            },
+            "action": {
+              "type": "string",
+              "const": "StoreTagInSequence"
             }
           },
           "required": [
-            "OutputFASTA"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Replace all bases with this (region) tag with one base",
           "type": "object",
           "properties": {
-            "OutputBAM": {
-              "$ref": "#/$defs/OutputBAM"
+            "in_label": {
+              "type": "string"
+            },
+            "letter": {
+              "description": "Provide the replacement letter as a single character (e.g., 'N') or its ASCII numeric value (e.g., 78 for 'N').",
+              "type": "integer",
+              "format": "uint8",
+              "minimum": 0,
+              "maximum": 255
+            },
+            "action": {
+              "type": "string",
+              "const": "ReplaceTagWithLetter"
             }
           },
           "required": [
-            "OutputBAM"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Concatenate multiple tags into a single tag.\n\nTakes n >= 2 tags (which can be location tags or string tags) and combines them:\n- If all tags are Location: appends regions and concatenates sequences\n- If all tags are String: concatenates strings with optional separator\n- If mixed (Location + String): converts all to strings and concatenates\n\n# Examples\n\n```toml\n[[step]]\naction = \"ConcatTags\"\nin_labels = [\"barcode1\", \"barcode2\"]\nout_label = \"combined_barcode\"\nseparator = \"_\"  # Optional, only used for string concatenation\n```",
           "type": "object",
           "properties": {
-            "OutputReport": {
-              "$ref": "#/$defs/OutputReport"
+            "in_labels": {
+              "description": "Input tag labels to concatenate (must have at least 2)",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "out_label": {
+              "description": "Output tag label for the concatenated result",
+              "type": "string"
+            },
+            "separator": {
+              "description": "Separator to use when concatenating strings (optional, defaults to empty)",
+              "type": "string"
+            },
+            "on_missing": {
+              "description": "Behavior when encountering missing tags\n- `merge_present`: Skip missing tags and merge only the present ones\n- `set_missing`: Set the output tag to missing if any input tag is missing",
+              "$ref": "#/$defs/OnMissing"
+            },
+            "action": {
+              "type": "string",
+              "const": "ConcatTags"
             }
           },
           "required": [
-            "OutputReport"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Return the primary tag if it is not missing, otherwise return the secondary tag.\n\nBoth tags must have the same kind (Location or String), or be a\nLocation/String mixture — in that case the output is always a String tag\n(Location values are converted to their sequence representation).",
           "type": "object",
           "properties": {
-            "Demultiplex": {
-              "$ref": "#/$defs/Demultiplex"
+            "in_label_primary": {
+              "description": "Primary tag: used when not missing.",
+              "type": "string"
+            },
+            "in_label_secondary": {
+              "description": "Secondary tag: used when the primary tag is missing.",
+              "type": "string"
+            },
+            "out_label": {
+              "description": "Output tag label for the result.",
+              "type": "string"
+            },
+            "action": {
+              "type": "string",
+              "const": "FillMissing"
             }
           },
           "required": [
-            "Demultiplex"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Remove all tags from memory",
           "type": "object",
           "properties": {
-            "HammingCorrect": {
-              "$ref": "#/$defs/HammingCorrect"
+            "ignored": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint8",
+              "minimum": 0,
+              "maximum": 255
+            },
+            "action": {
+              "type": "string",
+              "const": "ForgetAllTags"
             }
           },
           "required": [
-            "HammingCorrect"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "remove one tag from memory",
           "type": "object",
           "properties": {
-            "_HammingExactCounter": {
-              "$ref": "#/$defs/HammingExactCounter"
+            "in_label": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string",
+              "const": "ForgetTag"
             }
           },
           "required": [
-            "_HammingExactCounter"
-          ],
-          "additionalProperties": false
+            "action"
+          ]
         },
         {
+          "description": "Store currently present tags as comments on read names.\nComments are key=value pairs, separated by `comment_separator`\nwhich defaults to '|'.\nThey get inserted at the first `comment_insert_char`,\nwhich defaults to space. The `comment_insert_char` basically moves\nto the right.\n\nThat means a read name like\n@ERR12828869.501 A00627:18:HGV7TDSXX:3:1101:10502:5274/1\nbecomes\n@ERR12828869.501|key=value|key2=value2 A00627:18:HGV7TDSXX:3:1101:10502:5274/1\n\nThis way, your added tags will survive STAR alignment.\n(STAR always cuts at the first space, and by default also on /)\n\n(If the `comment_insert_char` is not present, we simply add at the right)\n\n\nBe default, comments are only placed on Read1.\nIf you need them somewhere else, or an all reads, change the target (to \"All\")",
           "type": "object",
           "properties": {
-            "AssignByHalves": {
-              "$ref": "#/$defs/AssignByHalves"
-            }
-          },
-          "required": [
-            "AssignByHalves"
-          ],
-          "additionalProperties": false
+            "in_labels": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "segment": {
+              "type": "string"
+            },
+            "comment_separator": {
+              "type": "integer",
+              "format": "uint8",
+              "minimum": 0,
+              "maximum": 255
+            },
+            "comment_insert_char": {
+              "type": "integer",
+              "format": "uint8",
+              "minimum": 0,
+              "maximum": 255
+            },
+            "region_separator": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "StoreTagInComment",
+                "StoreTagsInComment",
+                "storetagincomment",
+                "storetagsincomment"
+              ]
+            }
+          },
+          "required": [
+            "action"
+          ]
+        },
+        {
+          "description": "Store tag values into FASTQ files.\n\nFiles are named using the pattern: `{output_prefix}_{infix}.tag.fastq.{suffix}`\nWhen demultiplexing: `{output_prefix}_{infix}_{barcode}.tag.fastq.{suffix}`\n\nOptionally adds comment tags to read names before writing, similar to `StoreTagInComment`.",
+          "type": "object",
+          "properties": {
+            "in_label": {
+              "type": "string"
+            },
+            "comment_tags": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "comment_separator": {
+              "type": "integer",
+              "format": "uint8",
+              "minimum": 0,
+              "maximum": 255
+            },
+            "comment_insert_char": {
+              "type": "integer",
+              "format": "uint8",
+              "minimum": 0,
+              "maximum": 255
+            },
+            "region_separator": {
+              "type": "string"
+            },
+            "format": {
+              "$ref": "#/$defs/FileFormat"
+            },
+            "compression": {
+              "$ref": "#/$defs/CompressionFormat"
+            },
+            "compression_level": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint8",
+              "minimum": 0,
+              "maximum": 255
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "StoreTagInFastQ",
+                "StoreTagsInFastQ",
+                "storetaginfastq",
+                "storetagsinfastq"
+              ]
+            }
+          },
+          "required": [
+            "action"
+          ]
+        },
+        {
+          "description": "Store all currently defined tags in a TSV",
+          "type": "object",
+          "properties": {
+            "infix": {
+              "type": "string"
+            },
+            "compression": {
+              "$ref": "#/$defs/CompressionFormat"
+            },
+            "compression_level": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint8",
+              "minimum": 0,
+              "maximum": 255
+            },
+            "region_separator": {
+              "type": "string"
+            },
+            "include_read_name": {
+              "type": "boolean"
+            },
+            "in_labels": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "StoreTagsInTable",
+                "StoreTagInTable",
+                "storetagsintable",
+                "storetagintable"
+              ]
+            }
+          },
+          "required": [
+            "action"
+          ]
+        },
+        {
+          "description": "Collect (gene_idx, cell_idx, umi_2bit) triples per read, then write binary\ndata file(s) and lookup tables on finalize.\n\nBoth cell and gene barcodes are looked up by sequence in [barcodes.*] tables.\nIndex 0 is reserved for \"unmatched\"; real barcodes are 1-indexed.\nOutput: one binary file per demultiplex group + shared lookup .txt files.",
+          "type": "object",
+          "properties": {
+            "cell_tag": {
+              "description": "Tag carrying the cell-barcode sequence (Location or String)",
+              "type": "string"
+            },
+            "gene_tag": {
+              "description": "Tag carrying the gene-barcode sequence (Location or String)",
+              "type": "string"
+            },
+            "umi_tag": {
+              "description": "Tag carrying the raw UMI sequence (Location or String)",
+              "type": "string"
+            },
+            "umi_aggregation": {
+              "$ref": "#/$defs/UMIAggregation"
+            },
+            "cell_barcodes": {
+              "description": "[barcode.*] sec listing all valid cell barcodes (sequence → name)",
+              "type": "string"
+            },
+            "gene_barcodes": {
+              "description": "[barcode.*] section listing all valid gene identifiers (sequence → name)",
+              "type": "string"
+            },
+            "cell_tag_contains_barcode": {
+              "description": "Whether cell_tag values are barcode sequences (true) or corrected labels (false).\nDefault: auto-detect — true for Location tags, false for String tags.",
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "gene_tag_contains_barcode": {
+              "description": "Whether gene_tag values are barcode sequences (true) or corrected labels (false).\nDefault: auto-detect — true for Location tags, false for String tags.",
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "infix": {
+              "description": "Infix for output filenames",
+              "type": "string"
+            },
+            "compression": {
+              "description": "Compression for the binary data file (lookup tables are always plain text)",
+              "$ref": "#/$defs/CompressionFormat"
+            },
+            "compression_level": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint8",
+              "minimum": 0,
+              "maximum": 255
+            },
+            "action": {
+              "type": "string",
+              "const": "StoreSingleCellMatrix"
+            }
+          },
+          "required": [
+            "action"
+          ]
+        },
+        {
+          "description": "Write a histogram of tag values to a JSON file.",
+          "type": "object",
+          "properties": {
+            "infix": {
+              "type": "string"
+            },
+            "in_label": {
+              "type": "string"
+            },
+            "region_separator": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string",
+              "const": "QuantifyTag"
+            }
+          },
+          "required": [
+            "action"
+          ]
+        },
+        {
+          "description": "output a progress indicator",
+          "type": "object",
+          "properties": {
+            "n": {
+              "type": "integer",
+              "format": "uint",
+              "minimum": 0
+            },
+            "output_infix": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string",
+              "const": "Progress"
+            }
+          },
+          "required": [
+            "action"
+          ]
+        },
+        {
+          "description": "Include a report at this position",
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "count": {
+              "type": "boolean"
+            },
+            "base_statistics": {
+              "type": "boolean"
+            },
+            "length_distribution": {
+              "type": "boolean"
+            },
+            "duplicate_count_per_read": {
+              "type": "boolean"
+            },
+            "duplicate_count_per_fragment": {
+              "type": "boolean"
+            },
+            "count_oligos": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "count_oligos_segment": {
+              "type": "string"
+            },
+            "tag_histograms": {
+              "description": "Generate histograms for specified tags",
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "action": {
+              "type": "string",
+              "const": "Report"
+            }
+          },
+          "required": [
+            "action"
+          ]
+        },
+        {
+          "description": "Inspect reads within the workflow",
+          "type": "object",
+          "properties": {
+            "n": {
+              "type": "integer",
+              "format": "uint",
+              "minimum": 0
+            },
+            "segment": {
+              "type": "string"
+            },
+            "infix": {
+              "type": "string"
+            },
+            "suffix": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "format": {
+              "$ref": "#/$defs/FileFormat"
+            },
+            "compression": {
+              "$ref": "#/$defs/CompressionFormat"
+            },
+            "compression_level": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint8",
+              "minimum": 0,
+              "maximum": 255
+            },
+            "collected": {
+              "type": "integer",
+              "format": "uint",
+              "minimum": 0
+            },
+            "action": {
+              "type": "string",
+              "const": "Inspect"
+            }
+          },
+          "required": [
+            "action"
+          ]
+        },
+        {
+          "description": "Write reads to FASTQ file(s) as a pipeline step.\n\nReplicates the FASTQ behaviour of the legacy `[output]` section: per-segment\nfiles, interleaved output, stdout, chunking, hashing and compression.",
+          "type": "object",
+          "properties": {
+            "suffix": {
+              "description": "Override the file suffix (defaults to `fq`, plus the compression suffix).",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "compression": {
+              "$ref": "#/$defs/CompressionFormat"
+            },
+            "compression_level": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint8",
+              "minimum": 0,
+              "maximum": 255
+            },
+            "compression_threads": {
+              "type": "integer",
+              "format": "uint",
+              "minimum": 0
+            },
+            "output": {
+              "description": "Segments to write to individual files. Defaults to all input segments.",
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "interleave": {
+              "description": "Segments to interleave into a single file (or stdout).",
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "stdout": {
+              "type": "boolean"
+            },
+            "chunksize": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint",
+              "minimum": 0
+            },
+            "output_hash_uncompressed": {
+              "type": "boolean"
+            },
+            "output_hash_compressed": {
+              "type": "boolean"
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "OutputFASTQ",
+                "OutputFastq",
+                "outputfastq"
+              ]
+            }
+          },
+          "required": [
+            "action"
+          ]
+        },
+        {
+          "description": "Write reads to FASTA file(s) as a pipeline step.\n\nLike [`super::OutputFASTQ`] but emits FASTA records (no quality line).",
+          "type": "object",
+          "properties": {
+            "suffix": {
+              "description": "Override the file suffix (defaults to `fasta`, plus the compression suffix).",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "compression": {
+              "$ref": "#/$defs/CompressionFormat"
+            },
+            "compression_level": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint8",
+              "minimum": 0,
+              "maximum": 255
+            },
+            "compression_threads": {
+              "type": "integer",
+              "format": "uint",
+              "minimum": 0
+            },
+            "output": {
+              "description": "Segments to write to individual files. Defaults to all input segments.",
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "interleave": {
+              "description": "Segments to interleave into a single file (or stdout).",
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "stdout": {
+              "type": "boolean"
+            },
+            "chunksize": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint",
+              "minimum": 0
+            },
+            "output_hash_uncompressed": {
+              "type": "boolean"
+            },
+            "output_hash_compressed": {
+              "type": "boolean"
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "OutputFASTA",
+                "OutputFasta",
+                "outputfasta"
+              ]
+            }
+          },
+          "required": [
+            "action"
+          ]
+        },
+        {
+          "description": "Write reads to BAM file(s) as a pipeline step.\n\nReplicates the BAM behaviour of the legacy `[output]` section: per-segment\nfiles, interleaved output, chunking and compressed hashing, plus BAM\nauxiliary-tag export (`bam.tags` / `tag_to_bam_tag`) and reference\nassignment (`bam.tag_to_reference`).\n\nThe reference sequences and the shared BAM header are resolved at\nconfig-verify time (see [`resolve_output_bam`]): `references_from_barcodes`\nfrom the named `[barcodes.*]` section, `from_bam` by reading the `@SQ`\nheader of the referenced BAM file. The resolved [`BamSinkOptions`] are\nstashed on the partial and emitted in `declare_output_files`, so the writer\nis opened with the correct header. The auxiliary-tag values and the\nreference assignment per read are applied at write time by the BAM writer.\n\n`bam.merge_demultiplexed` is carried for round-trip; the actual merge of\ndemultiplexed BAMs lives in the binary crate.",
+          "type": "object",
+          "properties": {
+            "suffix": {
+              "description": "Override the file suffix (defaults to `bam`).",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "compression_level": {
+              "description": "BGZF compression level (0-9).",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint8",
+              "minimum": 0,
+              "maximum": 255
+            },
+            "output": {
+              "description": "Segments to write to individual files. Defaults to all input segments.",
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "interleave": {
+              "description": "Segments to interleave into a single file.",
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "chunksize": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint",
+              "minimum": 0
+            },
+            "output_hash_compressed": {
+              "type": "boolean"
+            },
+            "bam": {
+              "description": "BAM-specific options (comment separator, tag exports, reference assignment).",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/BamOutputOptions"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "OutputBAM",
+                "OutputBam",
+                "outputbam"
+              ]
+            }
+          },
+          "required": [
+            "action"
+          ]
+        },
+        {
+          "description": "Write the combined run report (JSON and/or HTML) as a pipeline step.\n\nReplicates the report-writing behaviour of the legacy `[output]` section\n(`report_json` / `report_html`). The report data is handed to the step in\n[`Step::post_finalize`], after every other step's `finalize` has populated\nthe report collector.\n\nAt most one `OutputReport` step is allowed per pipeline (enforced in config\nvalidation); multiple would share the same collected report data.\n\nReports are keyed by their config label (from [`ReportMetadata::report_labels`],\nindexed by `report_no`); the run/input metadata the legacy `[output]` renderer\nembedded is taken from the [`ReportMetadata`] handed to the step at `init`.",
+          "type": "object",
+          "properties": {
+            "json": {
+              "description": "Emit a `{prefix}.json` report.",
+              "type": "boolean"
+            },
+            "html": {
+              "description": "Emit a `{prefix}.html` report.",
+              "type": "boolean"
+            },
+            "action": {
+              "type": "string",
+              "const": "OutputReport"
+            }
+          },
+          "required": [
+            "action"
+          ]
+        },
+        {
+          "description": "Create multiple output files based on a tag",
+          "type": "object",
+          "properties": {
+            "in_label": {
+              "type": "string"
+            },
+            "output_unmatched": {
+              "type": "boolean"
+            },
+            "barcodes": {
+              "description": "reference to shared barcodes section (optional for boolean tag mode)",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "in_label_contains_barcode": {
+              "type": "boolean"
+            },
+            "action": {
+              "type": "string",
+              "const": "Demultiplex"
+            }
+          },
+          "required": [
+            "action"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "in_label": {
+              "description": "Input tag to correct",
+              "type": "string"
+            },
+            "out_label": {
+              "description": "Output tag to store corrected result",
+              "type": "string"
+            },
+            "barcodes": {
+              "description": "Reference to barcodes section",
+              "type": "string"
+            },
+            "max_hamming_distance": {
+              "description": "Maximum hamming distance for correction",
+              "type": "integer",
+              "format": "uint8",
+              "minimum": 0,
+              "maximum": 255
+            },
+            "output": {
+              "$ref": "#/$defs/HammingOutput"
+            },
+            "on_no_match": {
+              "description": "What to do when no match is found",
+              "$ref": "#/$defs/OnNoMatch"
+            },
+            "on_tie": {
+              "description": "What to do when more than one match an the same distance is found",
+              "$ref": "#/$defs/OnTie"
+            },
+            "on_tie_min_molecules_to_start": {
+              "type": "integer",
+              "format": "uint",
+              "minimum": 0
+            },
+            "on_tie_threshold": {
+              "type": "number",
+              "format": "double"
+            },
+            "on_tie_use_counts_from_report": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/CountsFromReport"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "on_tie_dump_counts": {
+              "type": "boolean"
+            },
+            "name_split_character": {
+              "description": "names are considered identical if they match up to the first `name_split_character`",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint8",
+              "minimum": 0,
+              "maximum": 255
+            },
+            "action": {
+              "type": "string",
+              "const": "HammingCorrect"
+            }
+          },
+          "required": [
+            "action"
+          ]
+        },
+        {
+          "description": "This transformation counts exact hamming matches until we've got enough counts to over to\n`HammingCorrect` in `ByMajority` mode.\n\nIt's created in `expand_transformations`",
+          "type": "object",
+          "properties": {
+            "in_label": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string",
+              "const": "_HammingExactCounter"
+            }
+          },
+          "required": [
+            "action"
+          ]
+        },
+        {
+          "description": "Assign each query sequence to the closest entry in a named reference database.\n\nThe reference is a FASTA or FASTQ file (optionally gzip-compressed).  Every\nsequence in the file must have the same length as the query.  The step\nbuilds a Hamming-distance index at initialisation and stores the matched\nreference name as a string tag.  When no entry is within `max_hamming_distance`\nthe tag is set to `Missing`, which lets a downstream `FilterByTag` discard\nunassigned reads.",
+          "type": "object",
+          "properties": {
+            "in_label": {
+              "description": "Tag containing the query sequence (must be a String or Location tag\nwhose sequences have the same length as the reference entries).",
+              "type": "string"
+            },
+            "out_label": {
+              "description": "Output tag where the matched reference name is stored.",
+              "type": "string"
+            },
+            "barcodes": {
+              "description": "Reference to barcodes section",
+              "type": "string"
+            },
+            "action": {
+              "type": "string",
+              "const": "AssignByHalves"
+            }
+          },
+          "required": [
+            "action"
+          ]
         }
       ]
     },
@@ -1270,6 +2747,12 @@
           "type": "string"
         },
         "if_tag": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "if_label": {
           "type": [
             "string",
             "null"
@@ -1298,6 +2781,12 @@
             "string",
             "null"
           ]
+        },
+        "if_label": {
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "required": [
@@ -1322,11 +2811,30 @@
             "string",
             "null"
           ]
+        },
+        "if_label": {
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "required": [
         "n",
         "segment"
+      ]
+    },
+    "PhredEncoding": {
+      "type": "string",
+      "enum": [
+        "Sanger",
+        "Solexa",
+        "Illumina13",
+        "sanger",
+        "illumina1.8",
+        "solexa",
+        "illumina1.3",
+        "illumina13"
       ]
     },
     "Prefix": {
@@ -1350,6 +2858,12 @@
             "string",
             "null"
           ]
+        },
+        "if_label": {
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "required": [
@@ -1357,14 +2871,6 @@
         "seq",
         "qual",
         "encoding"
-      ]
-    },
-    "PhredEncoding": {
-      "type": "string",
-      "enum": [
-        "Sanger",
-        "Solexa",
-        "Illumina13"
       ]
     },
     "Postfix": {
@@ -1384,6 +2890,12 @@
           "$ref": "#/$defs/PhredEncoding"
         },
         "if_tag": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "if_label": {
           "type": [
             "string",
             "null"
@@ -1425,6 +2937,18 @@
             "string",
             "null"
           ]
+        },
+        "segment": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "if_label": {
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "required": [
@@ -1462,6 +2986,12 @@
         },
         "segment_b": {
           "type": "string"
+        },
+        "if_label": {
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "required": [
@@ -1477,6 +3007,18 @@
           "type": "string"
         },
         "if_tag": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source": {
+          "type": "string"
+        },
+        "segment": {
+          "type": "string"
+        },
+        "if_label": {
           "type": [
             "string",
             "null"
@@ -1499,10 +3041,31 @@
             "string",
             "null"
           ]
+        },
+        "segment": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "if_label": {
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "required": [
         "target"
+      ]
+    },
+    "Direction": {
+      "type": "string",
+      "enum": [
+        "Start",
+        "End",
+        "start",
+        "end"
       ]
     },
     "TrimAtTag": {
@@ -1525,11 +3088,34 @@
         "keep_tag"
       ]
     },
-    "Direction": {
-      "type": "string",
-      "enum": [
-        "Start",
-        "End"
+    "Algorithm": {
+      "description": "Algorithm to use for scoring overlaps and resolving mismatches",
+      "oneOf": [
+        {
+          "description": "fastp algorithm: quality-score based mismatch resolution\nUses hamming distance for overlap detection and chooses higher quality base for mismatches",
+          "type": "string",
+          "enum": [
+            "Fastp",
+            "FastpSeemsWeird",
+            "fastp",
+            "fastpseemsweird"
+          ]
+        }
+      ]
+    },
+    "NoOverlapStrategy": {
+      "description": "Strategy when reads cannot be merged due to insufficient overlap",
+      "oneOf": [
+        {
+          "description": "Keep reads as they are (no merging)",
+          "type": "string",
+          "const": "AsIs"
+        },
+        {
+          "description": "Concatenate reads with spacer into first segment",
+          "type": "string",
+          "const": "Concatenate"
+        }
       ]
     },
     "MergeReads": {
@@ -1607,31 +3193,6 @@
         "segment2"
       ]
     },
-    "Algorithm": {
-      "description": "Algorithm to use for scoring overlaps and resolving mismatches",
-      "oneOf": [
-        {
-          "description": "fastp algorithm: quality-score based mismatch resolution\nUses hamming distance for overlap detection and chooses higher quality base for mismatches",
-          "type": "string",
-          "const": "Fastp"
-        }
-      ]
-    },
-    "NoOverlapStrategy": {
-      "description": "Strategy when reads cannot be merged due to insufficient overlap",
-      "oneOf": [
-        {
-          "description": "Keep reads as they are (no merging)",
-          "type": "string",
-          "const": "AsIs"
-        },
-        {
-          "description": "Concatenate reads with spacer into first segment",
-          "type": "string",
-          "const": "Concatenate"
-        }
-      ]
-    },
     "TagMatches": {
       "type": "object",
       "properties": {
@@ -1646,12 +3207,24 @@
           "items": {
             "type": "string"
           }
+        },
+        "segment": {
+          "type": "string"
         }
       },
       "required": [
         "source",
         "out_label",
         "accepted"
+      ]
+    },
+    "KeepOrRemove": {
+      "type": "string",
+      "enum": [
+        "Keep",
+        "Remove",
+        "keep",
+        "remove"
       ]
     },
     "ByTag": {
@@ -1668,13 +3241,6 @@
       "required": [
         "in_label",
         "keep_or_remove"
-      ]
-    },
-    "KeepOrRemove": {
-      "type": "string",
-      "enum": [
-        "Keep",
-        "Remove"
       ]
     },
     "ByNumericTag": {
@@ -1861,6 +3427,9 @@
       "properties": {
         "source": {
           "type": "string"
+        },
+        "segment": {
+          "type": "string"
         }
       },
       "required": [
@@ -1870,6 +3439,29 @@
     "ValidateReadNamesPrintable": {
       "description": "Validate that read names conform to the SAM/BAM specification.\n\nValid read names match `[!-?A-~]{1,254}` — printable ASCII excluding `@` and\nspace, with a maximum length of 254 characters.",
       "type": "object"
+    },
+    "Anchor": {
+      "description": "Where to search",
+      "type": "string",
+      "enum": [
+        "Left",
+        "Right",
+        "Anywhere",
+        "left",
+        "right",
+        "anywhere"
+      ]
+    },
+    "TieBreak": {
+      "type": "string",
+      "enum": [
+        "Earliest",
+        "LeftMost",
+        "RightMost",
+        "earliest",
+        "leftmost",
+        "rightmost"
+      ]
     },
     "IUPAC": {
       "description": "Extract a IUPAC described sequence from the read. E.g. an adapter.\nCan be at the start (anchor = Left, the end (anchor = Right),\nor anywhere (anchor = Anywhere) within the read.\nThe search parameter can be either a single IUPAC string or a list of IUPAC strings.\nIf multiple strings are provided, the first hit wins.",
@@ -1900,6 +3492,12 @@
         },
         "on_tie": {
           "$ref": "#/$defs/TieBreak"
+        },
+        "query": {
+          "$ref": "#/$defs/StringOrVecString"
+        },
+        "pattern": {
+          "$ref": "#/$defs/StringOrVecString"
         }
       },
       "required": [
@@ -1910,23 +3508,6 @@
         "out_label",
         "max_mismatches",
         "on_tie"
-      ]
-    },
-    "Anchor": {
-      "description": "Where to search",
-      "type": "string",
-      "enum": [
-        "Left",
-        "Right",
-        "Anywhere"
-      ]
-    },
-    "TieBreak": {
-      "type": "string",
-      "enum": [
-        "Earliest",
-        "LeftMost",
-        "RightMost"
       ]
     },
     "IUPACWithIndel": {
@@ -1962,6 +3543,12 @@
           ],
           "format": "uint",
           "minimum": 0
+        },
+        "pattern": {
+          "type": "string"
+        },
+        "query": {
+          "type": "string"
         }
       },
       "required": [
@@ -1988,6 +3575,15 @@
         },
         "source": {
           "type": "string"
+        },
+        "pattern": {
+          "type": "string"
+        },
+        "query": {
+          "type": "string"
+        },
+        "segment": {
+          "type": "string"
         }
       },
       "required": [
@@ -1995,6 +3591,17 @@
         "replacement",
         "out_label",
         "source"
+      ]
+    },
+    "RegionAnchor": {
+      "type": "string",
+      "enum": [
+        "Start",
+        "End",
+        "left",
+        "right",
+        "start",
+        "end"
       ]
     },
     "Region": {
@@ -2020,6 +3627,15 @@
         },
         "out_label": {
           "type": "string"
+        },
+        "length": {
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "segment": {
+          "description": "Source for extraction - segment name, \"tag:name\" for tag source, or \"name:segment\" for read name source",
+          "type": "string"
         }
       },
       "required": [
@@ -2027,37 +3643,6 @@
         "len",
         "source",
         "anchor",
-        "out_label"
-      ]
-    },
-    "RegionAnchor": {
-      "type": "string",
-      "enum": [
-        "Start",
-        "End"
-      ]
-    },
-    "Regions": {
-      "description": "Extract regions by coordinates\nthat is by (segment|source, 0-based start, length)\ndefined triplets, joined with (possibly empty) separator.",
-      "type": "object",
-      "properties": {
-        "regions": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/RegionDefinition"
-          }
-        },
-        "source": {
-          "description": "Source for extraction - segment name, \"tag:name\" for tag source, or \"name:segment\" for read name source",
-          "type": "string"
-        },
-        "out_label": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "regions",
-        "source",
         "out_label"
       ]
     },
@@ -2076,12 +3661,55 @@
         "anchor": {
           "description": "Whether the start position is anchored to the start (default) or end of the region",
           "$ref": "#/$defs/RegionAnchor"
+        },
+        "len": {
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "count": {
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "n": {
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
         }
       },
       "required": [
         "start",
         "length",
         "anchor"
+      ]
+    },
+    "Regions": {
+      "description": "Extract regions by coordinates\nthat is by (segment|source, 0-based start, length)\ndefined triplets, joined with (possibly empty) separator.",
+      "type": "object",
+      "properties": {
+        "regions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RegionDefinition"
+          }
+        },
+        "source": {
+          "description": "Source for extraction - segment name, \"tag:name\" for tag source, or \"name:segment\" for read name source",
+          "type": "string"
+        },
+        "out_label": {
+          "type": "string"
+        },
+        "segment": {
+          "description": "Source for extraction - segment name, \"tag:name\" for tag source, or \"name:segment\" for read name source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "regions",
+        "source",
+        "out_label"
       ]
     },
     "Length": {
@@ -2140,6 +3768,9 @@
         },
         "relative": {
           "type": "boolean"
+        },
+        "rate": {
+          "type": "boolean"
         }
       },
       "required": [
@@ -2159,6 +3790,9 @@
           "type": "string"
         },
         "relative": {
+          "type": "boolean"
+        },
+        "rate": {
           "type": "boolean"
         }
       },
@@ -2184,6 +3818,35 @@
         "segment"
       ]
     },
+    "Operator": {
+      "type": "string",
+      "enum": [
+        "Above",
+        "Below",
+        "AboveOrEqual",
+        "BelowOrEqual",
+        ">",
+        "Worse",
+        "gt",
+        "<",
+        "Better",
+        "lt",
+        ">=",
+        "WorseOrEqual",
+        "gte",
+        "<=",
+        "BetterOrEqual",
+        "lte",
+        "above",
+        "below",
+        "aboveorequal",
+        "beloworequal",
+        "worse",
+        "better",
+        "worseorequal",
+        "betterorequal"
+      ]
+    },
     "QualifiedBases": {
       "description": "Calculate bases passing quality threshold (in any direction)",
       "type": "object",
@@ -2205,6 +3868,12 @@
         },
         "segment": {
           "type": "string"
+        },
+        "op": {
+          "$ref": "#/$defs/Operator"
+        },
+        "rate": {
+          "type": "boolean"
         }
       },
       "required": [
@@ -2215,13 +3884,13 @@
         "segment"
       ]
     },
-    "Operator": {
+    "ExpectedErrorAggregate": {
       "type": "string",
       "enum": [
-        "Above",
-        "Below",
-        "AboveOrEqual",
-        "BelowOrEqual"
+        "Sum",
+        "Max",
+        "sum",
+        "max"
       ]
     },
     "ExpectedError": {
@@ -2244,13 +3913,6 @@
         "aggregate"
       ]
     },
-    "ExpectedErrorAggregate": {
-      "type": "string",
-      "enum": [
-        "Sum",
-        "Max"
-      ]
-    },
     "WorstQuality": {
       "description": "Calculate minimum quality byte value across a segment or a tagged region",
       "type": "object",
@@ -2266,6 +3928,9 @@
           "format": "int8",
           "minimum": -128,
           "maximum": 127
+        },
+        "segment": {
+          "type": "string"
         }
       },
       "required": [
@@ -2302,6 +3967,21 @@
           "type": "integer",
           "format": "uint",
           "minimum": 0
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "filenames": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "canonical": {
+          "type": "boolean"
         }
       },
       "required": [
@@ -2349,6 +4029,15 @@
         "in_label"
       ]
     },
+    "ResultType": {
+      "type": "string",
+      "enum": [
+        "Numeric",
+        "Bool",
+        "numeric",
+        "bool"
+      ]
+    },
     "EvalExpression": {
       "description": "Evaluate an equation on tags",
       "type": "object",
@@ -2363,19 +4052,26 @@
         },
         "result_type": {
           "$ref": "#/$defs/ResultType"
+        },
+        "expr": {
+          "description": "The arithmetic expression to evaluate\nVariables in the expression should match existing numeric tag names",
+          "type": "string"
+        },
+        "query": {
+          "description": "The arithmetic expression to evaluate\nVariables in the expression should match existing numeric tag names",
+          "type": "string"
+        },
+        "output_type": {
+          "$ref": "#/$defs/ResultType"
+        },
+        "out_type": {
+          "$ref": "#/$defs/ResultType"
         }
       },
       "required": [
         "out_label",
         "expression",
         "result_type"
-      ]
-    },
-    "ResultType": {
-      "type": "string",
-      "enum": [
-        "Numeric",
-        "Bool"
       ]
     },
     "CompareStringTags": {
@@ -2536,6 +4232,12 @@
         },
         "search": {
           "type": "string"
+        },
+        "query": {
+          "type": "string"
+        },
+        "pattern": {
+          "type": "string"
         }
       },
       "required": [
@@ -2668,6 +4370,18 @@
         },
         "include_unmapped": {
           "type": "boolean"
+        },
+        "segment": {
+          "type": "string"
+        },
+        "other_read_name_end_char": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint8",
+          "minimum": 0,
+          "maximum": 255
         }
       },
       "required": [
@@ -2677,23 +4391,6 @@
         "false_positive_rate",
         "include_mapped",
         "include_unmapped"
-      ]
-    },
-    "StoreTagBackInSequence": {
-      "description": "Store the tag's 'sequence', probably modified by a previous step,\nback into the reads' sequence.\n\nThis is exactly [`StoreTagInSequence`] with the tag used as both the content\nsource and the position (anchor `Replace`): the tag's (possibly modified) bytes\noverwrite the location they came from. An unmodified location tag is already the\nread's own bytes, so writing it back is a no-op; a tag whose content diverged\n(a regex replacement, a reverse-complement or case change) replaces those bytes.\nIts quality travels with it.\n\nIf the location is a single span the content may be longer or shorter than what\nit replaces (the read grows or shrinks); if it covers several disjoint regions\nthe content must match their total length. The location is lifted through any\nedits applied since it was captured, so the content lands where the tag *now*\nsits in the read. If an intervening edit cut that location away, `on_lost`\ndecides what happens (default: leave the read unchanged).\n\n[`StoreTagInSequence`]: super::store_tag_in_sequence::StoreTagInSequence",
-      "type": "object",
-      "properties": {
-        "in_label": {
-          "type": "string"
-        },
-        "on_lost": {
-          "description": "What to do when the tag's location was lost to a later edit.",
-          "$ref": "#/$defs/OnLost"
-        }
-      },
-      "required": [
-        "in_label",
-        "on_lost"
       ]
     },
     "OnLost": {
@@ -2709,6 +4406,40 @@
           "type": "string",
           "const": "Complain"
         }
+      ]
+    },
+    "StoreTagBackInSequence": {
+      "description": "Store the tag's 'sequence', probably modified by a previous step,\nback into the reads' sequence.\n\nThis is exactly [`StoreTagInSequence`] with the tag used as both the content\nsource and the position (anchor `Replace`): the tag's (possibly modified) bytes\noverwrite the location they came from. An unmodified location tag is already the\nread's own bytes, so writing it back is a no-op; a tag whose content diverged\n(a regex replacement, a reverse-complement or case change) replaces those bytes.\nIts quality travels with it.\n\nIf the location is a single span the content may be longer or shorter than what\nit replaces (the read grows or shrinks); if it covers several disjoint regions\nthe content must match their total length. The location is lifted through any\nedits applied since it was captured, so the content lands where the tag *now*\nsits in the read. If an intervening edit cut that location away, `on_lost`\ndecides what happens (default: leave the read unchanged).\n\n[`StoreTagInSequence`]: super::store_tag_in_sequence::StoreTagInSequence",
+      "type": "object",
+      "properties": {
+        "in_label": {
+          "type": "string"
+        },
+        "on_lost": {
+          "description": "What to do when the tag's location was lost to a later edit.",
+          "$ref": "#/$defs/OnLost"
+        },
+        "on_loss": {
+          "description": "What to do when the tag's location was lost to a later edit.",
+          "$ref": "#/$defs/OnLost"
+        }
+      },
+      "required": [
+        "in_label",
+        "on_lost"
+      ]
+    },
+    "ReplacementAnchor": {
+      "type": "string",
+      "enum": [
+        "Start",
+        "End",
+        "Replace",
+        "left",
+        "right",
+        "start",
+        "end",
+        "replace"
       ]
     },
     "StoreTagInSequence": {
@@ -2730,6 +4461,10 @@
         "on_lost": {
           "description": "What to do when the position tag's location was lost to a later edit.",
           "$ref": "#/$defs/OnLost"
+        },
+        "on_loss": {
+          "description": "What to do when the position tag's location was lost to a later edit.",
+          "$ref": "#/$defs/OnLost"
         }
       },
       "required": [
@@ -2737,14 +4472,6 @@
         "in_position_label",
         "anchor",
         "on_lost"
-      ]
-    },
-    "ReplacementAnchor": {
-      "type": "string",
-      "enum": [
-        "Start",
-        "End",
-        "Replace"
       ]
     },
     "ReplaceTagWithLetter": {
@@ -2765,6 +4492,21 @@
       "required": [
         "in_label",
         "letter"
+      ]
+    },
+    "OnMissing": {
+      "description": "Behavior when encountering missing tags during concatenation",
+      "oneOf": [
+        {
+          "description": "Skip missing tags and merge only the present ones",
+          "type": "string",
+          "const": "MergePresent"
+        },
+        {
+          "description": "Set the output tag to missing if any input tag is missing",
+          "type": "string",
+          "const": "SetMissing"
+        }
       ]
     },
     "ConcatTags": {
@@ -2798,21 +4540,6 @@
         "on_missing"
       ]
     },
-    "OnMissing": {
-      "description": "Behavior when encountering missing tags during concatenation",
-      "oneOf": [
-        {
-          "description": "Skip missing tags and merge only the present ones",
-          "type": "string",
-          "const": "MergePresent"
-        },
-        {
-          "description": "Set the output tag to missing if any input tag is missing",
-          "type": "string",
-          "const": "SetMissing"
-        }
-      ]
-    },
     "FillMissing": {
       "description": "Return the primary tag if it is not missing, otherwise return the secondary tag.\n\nBoth tags must have the same kind (Location or String), or be a\nLocation/String mixture — in that case the output is always a String tag\n(Location values are converted to their sequence representation).",
       "type": "object",
@@ -2827,6 +4554,22 @@
         },
         "out_label": {
           "description": "Output tag label for the result.",
+          "type": "string"
+        },
+        "primary": {
+          "description": "Primary tag: used when not missing.",
+          "type": "string"
+        },
+        "first": {
+          "description": "Primary tag: used when not missing.",
+          "type": "string"
+        },
+        "secondary": {
+          "description": "Secondary tag: used when the primary tag is missing.",
+          "type": "string"
+        },
+        "second": {
+          "description": "Secondary tag: used when the primary tag is missing.",
           "type": "string"
         }
       },
@@ -2890,6 +4633,12 @@
         },
         "region_separator": {
           "type": "string"
+        },
+        "in_label": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       },
       "required": [
@@ -2898,6 +4647,37 @@
         "comment_separator",
         "comment_insert_char",
         "region_separator"
+      ]
+    },
+    "FileFormat": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "Fastq",
+            "Fasta",
+            "Bam",
+            "None",
+            "fastq",
+            "fasta",
+            "bam",
+            "none"
+          ]
+        }
+      ]
+    },
+    "CompressionFormat": {
+      "type": "string",
+      "enum": [
+        "Uncompressed",
+        "Gzip",
+        "Zstd",
+        "uncompressed",
+        "raw",
+        "gzip",
+        "gz",
+        "zstd",
+        "zst"
       ]
     },
     "StoreTagInFastQ": {
@@ -2945,6 +4725,15 @@
           "format": "uint8",
           "minimum": 0,
           "maximum": 255
+        },
+        "comment_labels": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
         }
       },
       "required": [
@@ -2954,27 +4743,6 @@
         "region_separator",
         "format",
         "compression"
-      ]
-    },
-    "FileFormat": {
-      "oneOf": [
-        {
-          "type": "string",
-          "enum": [
-            "Fastq",
-            "Fasta",
-            "Bam",
-            "None"
-          ]
-        }
-      ]
-    },
-    "CompressionFormat": {
-      "type": "string",
-      "enum": [
-        "Uncompressed",
-        "Gzip",
-        "Zstd"
       ]
     },
     "StoreTagsInTable": {
@@ -3010,6 +4778,15 @@
           "items": {
             "type": "string"
           }
+        },
+        "tags": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
         }
       },
       "required": [
@@ -3017,6 +4794,22 @@
         "compression",
         "region_separator",
         "include_read_name"
+      ]
+    },
+    "UMIAggregation": {
+      "type": "string",
+      "enum": [
+        "None",
+        "Exact",
+        "Cluster",
+        "CellRangerLike",
+        "1MM",
+        "cellranger",
+        "none",
+        "exact",
+        "cluster",
+        "cellrangerlike",
+        "1mm"
       ]
     },
     "StoreSingleCellMatrix": {
@@ -3087,15 +4880,6 @@
         "gene_barcodes",
         "infix",
         "compression"
-      ]
-    },
-    "UMIAggregation": {
-      "type": "string",
-      "enum": [
-        "None",
-        "Exact",
-        "Cluster",
-        "CellRangerLike"
       ]
     },
     "QuantifyTag": {
@@ -3171,6 +4955,16 @@
           "type": "string"
         },
         "tag_histograms": {
+          "description": "Generate histograms for specified tags",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "tag_histogram": {
           "description": "Generate histograms for specified tags",
           "type": [
             "array",
@@ -3306,6 +5100,26 @@
         },
         "output_hash_compressed": {
           "type": "boolean"
+        },
+        "segments": {
+          "description": "Segments to write to individual files. Defaults to all input segments.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "interleaved": {
+          "description": "Segments to interleave into a single file (or stdout).",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
         }
       },
       "required": [
@@ -3380,6 +5194,26 @@
         },
         "output_hash_compressed": {
           "type": "boolean"
+        },
+        "segments": {
+          "description": "Segments to write to individual files. Defaults to all input segments.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "interleaved": {
+          "description": "Segments to interleave into a single file (or stdout).",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
         }
       },
       "required": [
@@ -3388,6 +5222,92 @@
         "stdout",
         "output_hash_uncompressed",
         "output_hash_compressed"
+      ]
+    },
+    "BamOutputOptions": {
+      "description": "BAM-specific output options.",
+      "type": "object",
+      "properties": {
+        "comment_separation_char": {
+          "description": "Character used to split read names into a BAM name field and a `CO` auxiliary tag.\nDefaults to `' '` (space).  Reads whose names contain this character are split; the\npart after the character is placed in a `CO` tag so it can exceed the 254-byte limit.",
+          "type": "integer",
+          "format": "uint8",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "tag_to_reference": {
+          "description": "Export a fastqrab tag value as the BAM reference name",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TagToReference"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "merge_demultiplexed": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "index_merged": {
+          "description": "Write a BAI index alongside each merged BAM file (default: true).",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "comment_separation_char",
+        "index_merged"
+      ]
+    },
+    "TagToReference": {
+      "description": "Source for reference sequences used by `tag_to_reference` (Feature B).\n\nExactly one of `barcodes` or `from_bam` must be set.",
+      "type": "object",
+      "properties": {
+        "tag": {
+          "description": "The fastqrab tag label whose value selects the reference sequence name.",
+          "type": "string"
+        },
+        "references_from_barcodes": {
+          "description": "Name of a `[barcodes.<name>]` section whose keys become reference names.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "references_from_bam": {
+          "description": "Path to a BAM file whose `@SQ` header lines define the reference sequences.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "from_barcodes": {
+          "description": "Name of a `[barcodes.<name>]` section whose keys become reference names.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "from_bam": {
+          "description": "Path to a BAM file whose `@SQ` header lines define the reference sequences.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "template": {
+          "description": "Path to a BAM file whose `@SQ` header lines define the reference sequences.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "tag"
       ]
     },
     "OutputBAM": {
@@ -3452,75 +5372,41 @@
               "type": "null"
             }
           ]
-        }
-      },
-      "required": [
-        "output_hash_compressed"
-      ]
-    },
-    "BamOutputOptions": {
-      "description": "BAM-specific output options.",
-      "type": "object",
-      "properties": {
-        "comment_separation_char": {
-          "description": "Character used to split read names into a BAM name field and a `CO` auxiliary tag.\nDefaults to `' '` (space).  Reads whose names contain this character are split; the\npart after the character is placed in a `CO` tag so it can exceed the 254-byte limit.",
-          "type": "integer",
-          "format": "uint8",
-          "minimum": 0,
-          "maximum": 255
         },
-        "tag_to_reference": {
-          "description": "Export a fastqrab tag value as the BAM reference name",
+        "segments": {
+          "description": "Segments to write to individual files. Defaults to all input segments.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "interleaved": {
+          "description": "Segments to interleave into a single file.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "options": {
+          "description": "BAM-specific options (comment separator, tag exports, reference assignment).",
           "anyOf": [
             {
-              "$ref": "#/$defs/TagToReference"
+              "$ref": "#/$defs/BamOutputOptions"
             },
             {
               "type": "null"
             }
           ]
-        },
-        "merge_demultiplexed": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "index_merged": {
-          "description": "Write a BAI index alongside each merged BAM file (default: true).",
-          "type": "boolean"
         }
       },
       "required": [
-        "comment_separation_char",
-        "index_merged"
-      ]
-    },
-    "TagToReference": {
-      "description": "Source for reference sequences used by `tag_to_reference` (Feature B).\n\nExactly one of `barcodes` or `from_bam` must be set.",
-      "type": "object",
-      "properties": {
-        "tag": {
-          "description": "The fastqrab tag label whose value selects the reference sequence name.",
-          "type": "string"
-        },
-        "references_from_barcodes": {
-          "description": "Name of a `[barcodes.<name>]` section whose keys become reference names.",
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "references_from_bam": {
-          "description": "Path to a BAM file whose `@SQ` header lines define the reference sequences.",
-          "type": [
-            "string",
-            "null"
-          ]
-        }
-      },
-      "required": [
-        "tag"
+        "output_hash_compressed"
       ]
     },
     "OutputReport": {
@@ -3560,12 +5446,86 @@
         },
         "in_label_contains_barcode": {
           "type": "boolean"
+        },
+        "tag_contains_barcode": {
+          "type": "boolean"
+        },
+        "tag_contains_barcodes": {
+          "type": "boolean"
+        },
+        "in_label_contains_barcodes": {
+          "type": "boolean"
         }
       },
       "required": [
         "in_label",
         "output_unmatched",
         "in_label_contains_barcode"
+      ]
+    },
+    "HammingOutput": {
+      "type": "string",
+      "enum": [
+        "Barcode",
+        "Label",
+        "DNA",
+        "barcodes",
+        "labels",
+        "barcode",
+        "label",
+        "dna"
+      ]
+    },
+    "OnNoMatch": {
+      "type": "string",
+      "enum": [
+        "Remove",
+        "Empty",
+        "Keep",
+        "remove",
+        "empty",
+        "keep"
+      ]
+    },
+    "OnTie": {
+      "type": "string",
+      "enum": [
+        "Remove",
+        "Empty",
+        "Keep",
+        "First",
+        "FirstStrict",
+        "Fail",
+        "ByMajority",
+        "ByEditProbability",
+        "remove",
+        "empty",
+        "keep",
+        "first",
+        "firststrict",
+        "fail",
+        "bymajority",
+        "byeditprobability"
+      ]
+    },
+    "CountsFromReport": {
+      "description": "Correct a tag (extracted region) to known barcodes",
+      "type": "object",
+      "properties": {
+        "filename": {
+          "type": "string"
+        },
+        "report_name": {
+          "type": "string"
+        },
+        "tag_name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "filename",
+        "report_name",
+        "tag_name"
       ]
     },
     "HammingCorrect": {
@@ -3632,6 +5592,25 @@
           "format": "uint8",
           "minimum": 0,
           "maximum": 255
+        },
+        "by_majority_min_molecules_to_start": {
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "by_majority_threshold": {
+          "type": "number",
+          "format": "double"
+        },
+        "name_split_char": {
+          "description": "names are considered identical if they match up to the first `name_split_character`",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint8",
+          "minimum": 0,
+          "maximum": 255
         }
       },
       "required": [
@@ -3645,54 +5624,6 @@
         "on_tie_min_molecules_to_start",
         "on_tie_threshold",
         "on_tie_dump_counts"
-      ]
-    },
-    "HammingOutput": {
-      "type": "string",
-      "enum": [
-        "Barcode",
-        "Label"
-      ]
-    },
-    "OnNoMatch": {
-      "type": "string",
-      "enum": [
-        "Remove",
-        "Empty",
-        "Keep"
-      ]
-    },
-    "OnTie": {
-      "type": "string",
-      "enum": [
-        "Remove",
-        "Empty",
-        "Keep",
-        "First",
-        "FirstStrict",
-        "Fail",
-        "ByMajority",
-        "ByEditProbability"
-      ]
-    },
-    "CountsFromReport": {
-      "description": "Correct a tag (extracted region) to known barcodes",
-      "type": "object",
-      "properties": {
-        "filename": {
-          "type": "string"
-        },
-        "report_name": {
-          "type": "string"
-        },
-        "tag_name": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "filename",
-        "report_name",
-        "tag_name"
       ]
     },
     "HammingExactCounter": {
