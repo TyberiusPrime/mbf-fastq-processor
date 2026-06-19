@@ -1,10 +1,11 @@
 use crate::transformations::prelude::*;
+use crate::verify_opt_path_component;
 use fastqrab_io::CompressionFormat;
 
 use super::output_fastq::{declare_text_output, interleave_present};
 use super::{
     RecordOutputState, collect_segment_list, validate_compression_level_u8, verify_chunk_size,
-    verify_record_targets, verify_suffix,
+    verify_record_targets,
 };
 
 /// Write reads to FASTA file(s) as a pipeline step.
@@ -21,6 +22,13 @@ pub struct OutputFASTA {
         reason = "read in declare_output_files via the partial config"
     )]
     suffix: Option<String>,
+
+    #[tpd(default)]
+    #[expect(
+        dead_code,
+        reason = "read in declare_output_files via the partial config"
+    )]
+    infix: Option<String>,
 
     #[tpd(default)]
     pub compression: CompressionFormat,
@@ -99,7 +107,8 @@ impl VerifyIn<PartialConfig> for PartialOutputFASTA {
         }
         self.chunksize
             .verify(|chunk_size| verify_chunk_size(chunk_size, &self.stdout));
-        self.suffix.verify(verify_suffix);
+        self.suffix.verify(verify_opt_path_component);
+        self.infix.verify(verify_opt_path_component);
         verify_record_targets(
             parent,
             &mut self.output,

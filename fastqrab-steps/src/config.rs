@@ -1781,15 +1781,6 @@ impl PartialConfig {
         }
     }
 
-    /// Detect output filename conflicts across all steps.
-    ///
-    /// Each step's `TagUser::declare_output_files()` carries a `span` pointing
-    /// at the config field most responsible for the filename (e.g. `infix`).
-    /// Collect each step's declared auxiliary input files (via
-    /// `TagUser::declare_input_files`) so the runtime can open them and hand the
-    /// handles to `Step::init`. Mirrors the declaration collection in
-    /// [`Self::verify_output_filenames_unique`]; kept separate as inputs need no
-    /// cross-step conflict detection.
     fn collect_input_file_declarations(&mut self) {
         let mut all_decls: Vec<Option<Vec<InputDeclaration>>> = Vec::new();
         self.transform.sync_nested_state();
@@ -1806,6 +1797,15 @@ impl PartialConfig {
         self.input_declarations_per_transformation = Some(all_decls);
     }
 
+    /// Detect output filename conflicts across all steps.
+    ///
+    /// Each step's `TagUser::declare_output_files()` carries a `span` pointing
+    /// at the config field most responsible for the filename (e.g. `infix`).
+    /// Collect each step's declared auxiliary input files (via
+    /// `TagUser::declare_input_files`) so the runtime can open them and hand the
+    /// handles to `Step::init`. Mirrors the declaration collection in
+    /// [`Self::verify_output_filenames_unique`]; kept separate as inputs need no
+    /// cross-step conflict detection.
     pub fn verify_output_filenames_unique(&mut self) {
         use fastqrab_io::io::output::chunked_writer::WriteTargetConfig;
 
@@ -1818,8 +1818,8 @@ impl PartialConfig {
         let mut all_decls: Vec<Option<Vec<OutputDeclaration>>> = Vec::new();
 
         self.transform.sync_nested_state();
-        if let Some(transforms) = self.transform.value.as_ref() {
-            for (idx, tv_transform) in transforms.iter().enumerate() {
+        if let Some(transforms) = self.transform.value.as_mut() {
+            for (idx, tv_transform) in transforms.iter_mut().enumerate() {
                 if let Some(decls) = tv_transform
                     .value
                     .as_ref()
@@ -1828,12 +1828,30 @@ impl PartialConfig {
                 {
                     for decl in &decls {
                         if let WriteTargetConfig::File(ft) = &decl.target {
+                            let key = (
+                                ft.infix_parts().to_vec(),
+                                ft.second_infix().map(ToOwned::to_owned),
+                                ft.suffix().to_string(),
+                            );
+                            let part = format!("{:?}", key);
+
+                            if part.contains('/') || part.contains('\\') || part.contains(':') {
+                                //cov:excl-start
+                                tv_transform.state = TomlValueState::new_validation_failed(
+                                        "Output filename components must not contain path separators or colons"
+                                            .to_string(),
+                                    );
+                                tv_transform.help = Some(
+                                        "All output files must be below the current directory. \
+                                            This is the last ditch check and you seeing this means that a step\n
+                                            has neglected to verify this earlier in verification".to_string(),
+                                    );
+                                return;
+                                //cov:excl-end
+                            }
+
                             key_to_entries
-                                .entry((
-                                    ft.infix_parts().to_vec(),
-                                    ft.second_infix().map(ToOwned::to_owned),
-                                    ft.suffix().to_string(),
-                                ))
+                                .entry(key)
                                 .or_default()
                                 .push((idx, decl.span.clone()));
                         }

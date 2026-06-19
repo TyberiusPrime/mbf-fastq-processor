@@ -2,6 +2,7 @@ use bstr::ByteSlice;
 use std::collections::BTreeMap;
 
 use crate::transformations::prelude::*;
+use crate::verify_path_component;
 use fastqrab_config::{default_region_separator, tpd_adapt_bstring};
 
 type QuantifyTagCollector = Arc<Mutex<DemultiplexedData<BTreeMap<BString, usize>>>>;
@@ -37,6 +38,7 @@ impl VerifyIn<PartialConfig> for PartialQuantifyTag {
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {
+        self.infix.verify(verify_path_component);
         self.region_separator.or_with(default_region_separator);
         Ok(())
     }

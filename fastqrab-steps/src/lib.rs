@@ -1,3 +1,5 @@
+use toml_pretty_deser::ValidationFailure;
+
 pub mod config;
 pub mod demultiplex;
 pub mod input_files;
@@ -29,4 +31,28 @@ pub fn join_nonempty<'a>(parts: impl IntoIterator<Item = &'a str>, separator: &s
 #[must_use]
 pub fn no_barcode_infix() -> &'static str {
     "nobarcode"
+}
+
+fn verify_opt_path_component(suffix: &Option<String>) -> Result<(), ValidationFailure> {
+    if let Some(path) = suffix.as_ref() {
+        verify_path_component(path)
+    } else {
+        Ok(())
+    }
+}
+
+fn verify_path_component(suffix: &String) -> Result<(), ValidationFailure> {
+    if suffix.contains('/') || suffix.contains('\\') || suffix.contains(':') {
+        Err(ValidationFailure::new(
+            "Invalid value",
+            Some("Must not contain '/', '\\' or ':'."),
+        ))
+    } else if suffix.is_empty() {
+        Err(ValidationFailure::new(
+            "Invalid value",
+            Some("Must not be empty."),
+        ))
+    } else {
+        Ok(())
+    }
 }

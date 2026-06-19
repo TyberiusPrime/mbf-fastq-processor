@@ -1,0 +1,30 @@
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+38 │ [[step]]
+39 │     action = "OutputBAM"
+   ┆              ─────┬─────
+   ┆                   │
+   ┆                   ╰────── In this step
+   ┆
+40 │     tag_to_reference = { references_from_barcodes = "barcodes", tag = "refs" }
+41 │     merge_demultiplexed = true
+   ┆                               ┬
+   ┆                               │
+   ┆                               ╰─ 1st step writing to this file
+   ┆
+43 │ [[step]]
+44 │     action = "OutputBAM"
+45 │     tag_to_reference = { references_from_barcodes = "barcodes", tag = "refs" }
+46 │     merge_demultiplexed = true
+   ┆                               ┬
+   ┆                               │
+   ┆                               ╰─ 2nd step writing to this file
+───╯
+Hint: Two steps would write to the same output file (suffix .bam).
+      Change the infix in one of them to avoid the conflict.
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/OutputBAM
+      Or run: `fastqrab template OutputBAM` for more information.
+
+

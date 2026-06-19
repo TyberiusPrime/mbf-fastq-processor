@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::transformations::{output::validate_compression_level_u8, prelude::*};
+use crate::verify_path_component;
 use fastqrab_io::{CompressionFormat, FileFormat};
 
 /// Inspect reads within the workflow
@@ -53,6 +54,7 @@ impl VerifyIn<PartialConfig> for PartialInspect {
         Self: Sized + toml_pretty_deser::Visitor,
     {
         self.segment.validate_segment(parent);
+        self.infix.verify(verify_path_component);
         self.format.verify(|format| {
             if !matches!(format, FileFormat::Fastq | FileFormat::Fasta) {
                 return Err(ValidationFailure::new(

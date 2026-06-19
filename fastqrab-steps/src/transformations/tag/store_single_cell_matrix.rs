@@ -1,5 +1,6 @@
 use crate::transformations::prelude::Result;
 use crate::transformations::prelude::*; // union_find_rs::prelude also exports a Result
+use crate::verify_opt_path_component;
 
 use bstr::{BStr, BString};
 use fastqrab_io::{CompressionFormat, FileFormat};
@@ -141,9 +142,8 @@ pub struct StoreSingleCellMatrix {
     gene_tag_contains_barcode: Option<bool>,
 
     /// Infix for output filenames
-    #[tpd(default)]
     #[expect(dead_code, reason = "only used in declare_output_files")]
-    infix: String,
+    infix: Option<String>,
 
     /// Compression for the binary data file (lookup tables are always plain text)
     #[tpd(default)]
@@ -205,6 +205,7 @@ impl VerifyIn<PartialConfig> for PartialStoreSingleCellMatrix {
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {
+        self.infix.verify(verify_opt_path_component);
         Ok(())
     }
 }
@@ -252,7 +253,13 @@ fn determine_lookup_mode(
 impl TagUser for PartialTaggedVariant<PartialStoreSingleCellMatrix> {
     fn declare_output_files(&self) -> Option<Vec<OutputDeclaration>> {
         if let Some(inner) = self.toml_value.as_ref() {
-            let infix = inner.infix.as_ref().cloned().unwrap_or_default();
+            let infix = inner
+                .infix
+                .as_ref()
+                .map(|x| x.as_ref())
+                .flatten()
+                .cloned()
+                .unwrap_or_default();
             let compression = inner.compression.as_ref().copied().unwrap_or_default();
             let compression_level = inner
                 .compression_level

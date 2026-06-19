@@ -2,6 +2,7 @@ use std::sync::{Arc, Mutex, atomic::AtomicUsize};
 
 use super::common::{default_progress_n, thousands_format};
 use crate::transformations::prelude::*;
+use crate::verify_path_component;
 
 fn format_seconds_to_hhmmss(seconds: u64) -> String {
     let hours = seconds / 3600;
@@ -46,6 +47,7 @@ impl VerifyIn<PartialConfig> for PartialProgress {
     {
         self.n.or_with(default_progress_n);
         self.output_infix.or_with(|| "--stdout--".to_string());
+        self.output_infix.verify(verify_path_component);
         self.finalize_timepoint = Some(Arc::new(Mutex::new(None)));
         Ok(())
     }

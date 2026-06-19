@@ -1,10 +1,9 @@
-use crate::transformations::prelude::*;
+use crate::{transformations::prelude::*, verify_opt_path_component};
 use fastqrab_io::CompressionFormat;
 
 use super::{
     RecordOutputDeclSpec, RecordOutputState, build_record_declarations, collect_segment_list,
     sink_config, validate_compression_level_u8, verify_chunk_size, verify_record_targets,
-    verify_suffix,
 };
 
 /// Write reads to FASTQ file(s) as a pipeline step.
@@ -100,7 +99,7 @@ impl VerifyIn<PartialConfig> for PartialOutputFASTQ {
         }
         self.chunksize
             .verify(|chunk_size| verify_chunk_size(chunk_size, &self.stdout));
-        self.suffix.verify(verify_suffix);
+        self.suffix.verify(verify_opt_path_component);
         verify_record_targets(
             parent,
             &mut self.output,

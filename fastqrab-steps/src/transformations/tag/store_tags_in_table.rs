@@ -3,6 +3,8 @@ use std::rc::Rc;
 
 use crate::transformations::output::validate_compression_level_u8;
 use crate::transformations::prelude::*;
+use crate::verify_opt_path_component;
+
 use fastqrab_config::{default_include_read_name, default_region_separator, tpd_adapt_bstring};
 use fastqrab_io::CompressionFormat;
 
@@ -15,7 +17,7 @@ type InLabels = Vec<TagLabel>;
 #[derive(Debug)]
 pub struct StoreTagsInTable {
     #[tpd(default)]
-    pub infix: String, // pub for verification inspection
+    pub infix: Option<String>, // pub for verification inspection
     #[tpd(default)]
     #[expect(dead_code, reason = "only used in verification")]
     compression: CompressionFormat,
@@ -56,6 +58,7 @@ impl VerifyIn<PartialConfig> for PartialStoreTagsInTable {
     {
         self.region_separator.or_with(default_region_separator);
         self.include_read_name.or_with(default_include_read_name);
+        self.infix.verify(verify_opt_path_component);
 
         validate_compression_level_u8(&self.compression, &mut self.compression_level);
 
@@ -66,7 +69,13 @@ impl VerifyIn<PartialConfig> for PartialStoreTagsInTable {
 impl TagUser for PartialTaggedVariant<PartialStoreTagsInTable> {
     fn declare_output_files(&self) -> Option<Vec<OutputDeclaration>> {
         if let Some(inner) = self.toml_value.as_ref() {
-            let infix = inner.infix.as_ref().cloned().unwrap_or_default();
+            let infix = inner
+                .infix
+                .as_ref()
+                .map(|x| x.as_ref())
+                .flatten()
+                .map(ToString::to_string)
+                .unwrap_or(String::new());
             let compression = inner.compression.as_ref().copied().unwrap_or_default();
             let suffix = compression.apply_suffix("tsv");
             Some(vec![OutputDeclaration {
@@ -127,8 +136,8 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagsInTable> {
                 Some(None) | None => {
                     if tags_available.is_empty() {
                         self.toml_value.state = TomlValueState::ValidationFailed {
-                message: "StoreTagsInTable needs at least one tag to be set before it in the transformation chain.".to_string(),
-                };
+                    message: "StoreTagsInTable needs at least one tag to be set before it in the transformation chain.".to_string(),
+                    };
                         inner.final_in_labels = Some(Vec::new());
                         return None;
                     }

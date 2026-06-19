@@ -2424,6 +2424,12 @@
                 "null"
               ]
             },
+            "infix": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "compression": {
               "$ref": "#/$defs/CompressionFormat"
             },
@@ -5166,6 +5172,12 @@
       "properties": {
         "suffix": {
           "description": "Override the file suffix (defaults to `fasta`, plus the compression suffix).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "infix": {
           "type": [
             "string",
             "null"

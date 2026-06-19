@@ -1,0 +1,46 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'ExtractRegion'
+    anchor = "Start"
+    source = "read1"
+    start = 0
+    len = 2
+    out_label = 'barcode'
+
+
+[[step]]
+  action = "HammingCorrect"
+    output = 'label'
+    on_tie = 'fail'
+    on_no_match = 'remove'
+  barcodes = 'barcodes'
+  in_label='barcode'
+  out_label='refs'
+  max_hamming_distance =0
+
+[[step]]
+    action = 'Demultiplex'
+    in_label = 'refs'
+    output_unmatched = true
+    barcodes = 'barcodes'
+
+[barcodes.barcodes]
+    AA = 'sample1'
+    AT = 'sample3'
+    GG = 'sample2'
+
+[output]
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputBAM"
+    tag_to_reference = { references_from_barcodes = "barcodes", tag = "refs" }
+    merge_demultiplexed = true 
+
+[[step]]
+    action = "OutputBAM"
+    tag_to_reference = { references_from_barcodes = "barcodes", tag = "refs" }
+    merge_demultiplexed = true

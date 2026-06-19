@@ -1,4 +1,5 @@
 use crate::transformations::prelude::*;
+use crate::verify_opt_path_component;
 use fastqrab_config::tpd_adapt_u8_from_byte_or_char;
 use fastqrab_io::CompressionFormat;
 use fastqrab_io::io::output::chunked_writer::{BamSinkOptions, SharedBamHeader};
@@ -11,7 +12,7 @@ use toml_pretty_deser::prelude::*;
 use super::output_fastq::interleave_present;
 use super::{
     RecordOutputDeclSpec, RecordOutputState, build_record_declarations, collect_segment_list,
-    sink_config, verify_chunk_size, verify_record_targets, verify_suffix,
+    sink_config, verify_chunk_size, verify_record_targets,
 };
 
 #[must_use]
@@ -236,7 +237,7 @@ impl VerifyIn<PartialConfig> for PartialOutputBAM {
         });
         self.chunksize
             .verify(|chunk_size| verify_chunk_size(chunk_size, &TomlValue::new_ok(false, 0..0)));
-        self.suffix.verify(verify_suffix);
+        self.suffix.verify(verify_opt_path_component);
         // BAM cannot be written to stdout; pass a throwaway stdout flag.
         let mut stdout = TomlValue::new_ok(false, 0..0);
         verify_record_targets(

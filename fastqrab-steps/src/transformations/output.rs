@@ -671,26 +671,6 @@ pub(crate) fn render_html_report(json_report_string: &str) -> Result<String> {
     Ok(html)
 }
 
-fn verify_suffix(suffix: &Option<String>) -> Result<(), ValidationFailure> {
-    if let Some(suffix) = suffix.as_ref() {
-        if suffix.contains('/') || suffix.contains('\\') || suffix.contains(':') {
-            Err(ValidationFailure::new(
-                "Invalid value",
-                Some("Must not contain '/', '\\' or ':'."),
-            ))
-        } else if suffix.is_empty() {
-            Err(ValidationFailure::new(
-                "Invalid value",
-                Some("Must not be empty."),
-            ))
-        } else {
-            Ok(())
-        }
-    } else {
-        Ok(())
-    }
-}
-
 fn verify_chunk_size(
     chunk_size: &Option<usize>,
     stdout: &TomlValue<bool>,

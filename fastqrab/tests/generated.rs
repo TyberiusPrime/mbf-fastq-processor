@@ -1883,6 +1883,17 @@ fn test_cases_x_output_x_bam_x_merge_demultiplexed_x_just_one_barcode() {
 
 #[test]
 
+fn test_cases_x_output_x_bam_x_merge_demultiplexed_x_just_one_per_pipeline() {
+    println!("Test case is in: test_cases/output/bam/merge_demultiplexed/just_one_per_pipeline");
+    run_test(
+        std::path::Path::new("../test_cases/output/bam/merge_demultiplexed/just_one_per_pipeline"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_output_x_bam_x_merge_demultiplexed_x_no_output() {
     println!("Test case is in: test_cases/output/bam/merge_demultiplexed/no_output");
     run_test(
@@ -2298,6 +2309,17 @@ fn test_cases_x_output_x_error_handling_x_compression_threads_0() {
 
 #[test]
 
+fn test_cases_x_output_x_error_handling_x_infix_path_sep() {
+    println!("Test case is in: test_cases/output/error_handling/infix_path_sep");
+    run_test(
+        std::path::Path::new("../test_cases/output/error_handling/infix_path_sep"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_output_x_error_handling_x_ix_sep_empty() {
     println!("Test case is in: test_cases/output/error_handling/ix_sep_empty");
     run_test(
@@ -2526,6 +2548,39 @@ fn test_cases_x_output_x_output_r2_only() {
     println!("Test case is in: test_cases/output/output_r2_only");
     run_test(
         std::path::Path::new("../test_cases/output/output_r2_only"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_output_x_output_suffix_x_chunked_x_fastq() {
+    println!("Test case is in: test_cases/output/output_suffix/chunked/fastq");
+    run_test(
+        std::path::Path::new("../test_cases/output/output_suffix/chunked/fastq"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_output_x_output_suffix_x_fasta() {
+    println!("Test case is in: test_cases/output/output_suffix/fasta");
+    run_test(
+        std::path::Path::new("../test_cases/output/output_suffix/fasta"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_output_x_output_suffix_x_fastq() {
+    println!("Test case is in: test_cases/output/output_suffix/fastq");
+    run_test(
+        std::path::Path::new("../test_cases/output/output_suffix/fastq"),
         "input.toml",
         1,
     );
