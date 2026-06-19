@@ -1,5 +1,5 @@
 use anyhow::{Context, Result, bail};
-use bstr::{BString, ByteSlice};
+use bstr::BString;
 use niffler;
 use std::collections::VecDeque;
 use std::num::NonZero;
@@ -345,11 +345,11 @@ impl PodFastqParser {
             let available = chunk.names.len() - self.front_consumed;
             let take = available.min(self.target - count);
             let start = self.front_consumed;
-            for i in start..start + take {
-                names.push(chunk.names.get(i).as_bytes());
-                let (seq, qual) = chunk.reads.pair(i);
-                seq_quals.push(seq.as_bytes(), qual.as_bytes());
-            }
+            // En-bloc range append: one big memcpy per column plus cheap
+            // per-entry metadata, instead of a tiny copy + range recompute per
+            // read (the profiled hot spot).
+            names.extend_from_pod(&chunk.names, start..start + take);
+            seq_quals.extend_from_pod(&chunk.reads, start..start + take);
             self.front_consumed += take;
             count += take;
             if self.front_consumed >= chunk.names.len() {
@@ -851,4 +851,131 @@ pub fn parse_to_fastq_block(
         partial_read,
         windows_mode,
     })
+}
+
+#[cfg(test)]
+mod pod_regroup_tests {
+    //! End-to-end coverage of [`PodFastqParser::next_chunk`]'s re-grouping into
+    //! exact `target`-sized blocks — the path that now appends columns en bloc
+    //! via `StringPod`/`DualStringPod::extend_from_pod`. We drive the real
+    //! parser through a temp file at several `(target, buffer_size)` ratios so
+    //! the pod parser's emissions straddle target boundaries in both directions.
+    use super::*;
+    use crate::io::input::DecompressionOptions;
+    use std::io::Write as _;
+
+    type Reads = Vec<(String, String, String)>;
+
+    fn make_payload(reads: &[(String, String, String)]) -> Vec<u8> {
+        let mut v = Vec::new();
+        for (name, seq, qual) in reads {
+            v.push(b'@');
+            v.extend_from_slice(name.as_bytes());
+            v.push(b'\n');
+            v.extend_from_slice(seq.as_bytes());
+            v.extend_from_slice(b"\n+\n");
+            v.extend_from_slice(qual.as_bytes());
+            v.push(b'\n');
+        }
+        v
+    }
+
+    /// Run the parser to completion, returning the recovered reads and the
+    /// per-block read counts.
+    fn run(payload: &[u8], target: usize, buffer_size: usize) -> (Reads, Vec<usize>) {
+        let mut tmp = tempfile::NamedTempFile::new().expect("tempfile");
+        tmp.write_all(payload).expect("write");
+        tmp.flush().expect("flush");
+        let file = tmp.reopen().expect("reopen");
+
+        let mut parser = PodFastqParser::new(
+            file,
+            None,
+            NonZero::new(target).expect("nonzero target"),
+            buffer_size,
+            2,
+            DecompressionOptions::Default,
+        )
+        .expect("parser");
+
+        let mut out: Reads = Vec::new();
+        let mut sizes = Vec::new();
+        loop {
+            let res = parser.parse().expect("parse");
+            let ParserOutput::Chunk(chunk) = res.output else {
+                panic!("PodFastqParser must emit columnar chunks");
+            };
+            sizes.push(chunk.names.len());
+            for i in 0..chunk.names.len() {
+                let name = chunk.names.get(i).to_string();
+                let (seq, qual) = chunk.seq_quals.pair(i);
+                out.push((name, seq.to_string(), qual.to_string()));
+            }
+            if res.was_final {
+                break;
+            }
+        }
+        (out, sizes)
+    }
+
+    fn assert_block_sizes(sizes: &[usize], target: usize, total: usize) {
+        let full = total / target;
+        for (i, &s) in sizes.iter().enumerate() {
+            if i < full {
+                assert_eq!(s, target, "block {i} should be exactly target");
+            }
+        }
+        assert_eq!(sizes.iter().sum::<usize>(), total, "all reads accounted for");
+    }
+
+    fn variable_reads(n: usize) -> Reads {
+        (0..n)
+            .map(|i| {
+                let len = 1 + (i % 11);
+                (
+                    format!("read.{i} some comment"),
+                    "ACGT".repeat(len)[..len].to_string(),
+                    "IIII".repeat(len)[..len].to_string(),
+                )
+            })
+            .collect()
+    }
+
+    fn fixed_reads(n: usize, len: usize) -> Reads {
+        (0..n)
+            .map(|i| {
+                (
+                    format!("rd{i:08}"), // fixed-width names too
+                    "A".repeat(len),
+                    "F".repeat(len),
+                )
+            })
+            .collect()
+    }
+
+    #[test]
+    fn regroups_variable_reads_across_ratios() {
+        let reads = variable_reads(137);
+        let payload = make_payload(&reads);
+        for &target in &[1usize, 7, 50, 137, 500] {
+            for &buf in &[8usize, 64, 4096] {
+                let (got, sizes) = run(&payload, target, buf);
+                assert_eq!(got, reads, "target={target} buf={buf}");
+                assert_block_sizes(&sizes, target, reads.len());
+            }
+        }
+    }
+
+    #[test]
+    fn regroups_fixed_reads_across_ratios() {
+        let reads = fixed_reads(200, 32);
+        let payload = make_payload(&reads);
+        for &target in &[1usize, 33, 200, 1000] {
+            for &buf in &[16usize, 256, 8192] {
+                let (got, sizes) = run(&payload, target, buf);
+                assert_eq!(got, reads, "target={target} buf={buf}");
+                assert_block_sizes(&sizes, target, reads.len());
+            }
+        }
+    }
 }
