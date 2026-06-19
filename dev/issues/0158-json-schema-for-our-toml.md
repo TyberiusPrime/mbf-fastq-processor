@@ -1,4 +1,4 @@
-status: open
+status: closed
 # JSOn schema for our toml
 
 we might get better editor support by having

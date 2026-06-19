@@ -1,4 +1,4 @@
-status: open
+status: closed
 # Tag performance
 
 We're currently have tags as Vec<TagValue>
