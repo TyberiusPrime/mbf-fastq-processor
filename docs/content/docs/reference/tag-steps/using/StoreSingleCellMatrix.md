@@ -18,7 +18,7 @@ and an output [mtx/MatrixMarket](https://math.nist.gov/MatrixMarket/formats.html
     gene_barcodes = "genes"        # [barcodes.genes] section (sequence → name)
     cell_tag_contains_barcode = true    # (optional) see below; auto-detected if omitted
     gene_tag_contains_barcode = true    # (optional) see below; auto-detected if omitted
-    infix = ""                     # (optional) filename infix. 
+    # infix = "my-infix"                     # (optional) filename infix. 
     compression = "Raw"            # (optional) Raw, Gzip, Zstd — for all output files.
     umi_aggregation = "Exact"       # How to handle duplicate UMIs. See below
 ```

@@ -2079,7 +2079,10 @@
           "type": "object",
           "properties": {
             "infix": {
-              "type": "string"
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "compression": {
               "$ref": "#/$defs/CompressionFormat"
@@ -2165,7 +2168,10 @@
             },
             "infix": {
               "description": "Infix for output filenames",
-              "type": "string"
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "compression": {
               "description": "Compression for the binary data file (lookup tables are always plain text)",
@@ -4786,7 +4792,10 @@
       "type": "object",
       "properties": {
         "infix": {
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "compression": {
           "$ref": "#/$defs/CompressionFormat"
@@ -4826,7 +4835,6 @@
         }
       },
       "required": [
-        "infix",
         "compression",
         "region_separator",
         "include_read_name"
@@ -4891,7 +4899,10 @@
         },
         "infix": {
           "description": "Infix for output filenames",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "compression": {
           "description": "Compression for the binary data file (lookup tables are always plain text)",
@@ -4914,7 +4925,6 @@
         "umi_aggregation",
         "cell_barcodes",
         "gene_barcodes",
-        "infix",
         "compression"
       ]
     },
