@@ -7,11 +7,13 @@ Error 1/1
    ┆              ─────┬─────
    ┆                   │
    ┆                   ╰────── In this step
-30 │     bam = { tag_to_reference = { tag = "ref_name_not_present", references_from_barcodes = "ref_barcodes" } }
-   ┆                                        ───────────┬──────────
-   ┆                                                   │
-   ┆                                                   ╰────────────────────────────────────────────────────────── No such tag: 'ref_name_not_present'
+30 │     tag_to_reference = { tag = "ref_name_not_present", references_from_barcodes = "ref_barcodes" }
+   ┆                                ───────────┬──────────
+   ┆                                           │
+   ┆                                           ╰──────────────────────────────────────────────────────── No such tag: 'ref_name_not_present'
 ───╯
 Hint: Did you mean: 'ref_name' or 'query_seq'?
       See https://doc_url.example/version-stripped-from-test/docs/redirects/OutputBAM
       Or run: `fastqrab template OutputBAM` for more information.
+
+

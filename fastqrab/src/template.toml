@@ -1040,7 +1040,16 @@
 ##   compression_level = 6   # (optional) BGZF level 0-9
 ##   chunksize = 1000000     # (optional) split into chunks of N molecules
 #    output_hash_compressed = false
-#    bam.tag_to_bam_tag  = { 'mytag' = 'XX'} # optional
+#    tag_to_bam_tag  = { 'mytag' = 'XX'} # optional
+#    comment_separation_char = ' ' # split read names at this char into read name and CO tag.
+#    tag_to_reference = {
+#       tag = "mytag",
+#       references_from_bam = "another_bam_filename.bam"
+#       # or 
+#       # references_from_barcodes = "barcode-section"
+#   }
+#   merge_demultiplexed = false # requires tag_to_reference
+#   index_merged = false
 
 
 # ==== OutputReport ====

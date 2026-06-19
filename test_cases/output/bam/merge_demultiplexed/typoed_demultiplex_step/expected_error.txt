@@ -7,10 +7,12 @@ Error 1/1
    ┆              ─────┬─────
    ┆                   │
    ┆                   ╰────── In this step
-55 │     bam = { tag_to_reference = { references_from_barcodes = "barcodes", tag = "refss" }, merge_demultiplexed = true }
-   ┆                                                                                                                ──┬─
-   ┆                                                                                                                  │
-   ┆                                                                                                                  ╰──── No Demultiplex step found that had in_label = refss
+   ┆
+55 │     tag_to_reference = { references_from_barcodes = "barcodes", tag = "refss" }
+56 │     merge_demultiplexed = true
+   ┆                           ──┬─
+   ┆                             │
+   ┆                             ╰── No Demultiplex step found that had in_label = refss
 ───╯
 Hint: Either add a Demultiplex step or reuse one of the following: Available are: 'refs'
       See https://doc_url.example/version-stripped-from-test/docs/redirects/OutputBAM

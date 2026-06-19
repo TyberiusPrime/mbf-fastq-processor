@@ -7,11 +7,13 @@ Error 1/1
    ┆              ─────┬─────
    ┆                   │
    ┆                   ╰────── In this step
-30 │     bam = { tag_to_reference = { tag = "ref_name", references_from_barcodes = "ref_barcodes_missing" } }
-   ┆                                                                               ───────────┬──────────
-   ┆                                                                                          │
-   ┆                                                                                          ╰─────────────── Barcode section not found for output.bam.tag_to_reference
+30 │     tag_to_reference = { tag = "ref_name", references_from_barcodes = "ref_barcodes_missing" }
+   ┆                                                                       ───────────┬──────────
+   ┆                                                                                  │
+   ┆                                                                                  ╰───────────── Barcode section not found for output.bam.tag_to_reference
 ───╯
 Hint: Did you mean: 'ref_barcodes'?
       See https://doc_url.example/version-stripped-from-test/docs/redirects/OutputBAM
       Or run: `fastqrab template OutputBAM` for more information.
+
+

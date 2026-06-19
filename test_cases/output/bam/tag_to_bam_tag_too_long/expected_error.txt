@@ -7,11 +7,13 @@ Error 1/1
    ┆              ─────┬─────
    ┆                   │
    ┆                   ╰────── In this step
-24 │     bam = { tags = { barcode = "BC", reg = "BCA" } }
-   ┆                                            ──┬──
-   ┆                                              │
-   ┆                                              ╰─────── Invalid BAM tag
+24 │     tags = { barcode = "BC", reg = "BCA" }
+   ┆                                    ──┬──
+   ┆                                      │
+   ┆                                      ╰───── Invalid BAM tag
 ───╯
 Hint: BAM tag must be exactly 2 characters; got 'BCA' (3 chars). BAM auxiliary tag names are exactly 2 ASCII alphanumeric characters.
       See https://doc_url.example/version-stripped-from-test/docs/redirects/OutputBAM
       Or run: `fastqrab template OutputBAM` for more information.
+
+

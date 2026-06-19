@@ -2052,6 +2052,17 @@ fn test_cases_x_output_x_bam_x_tag_to_bam_tag_missing_tag() {
 
 #[test]
 
+fn test_cases_x_output_x_bam_x_tag_to_bam_tag_must_not_be_comment() {
+    println!("Test case is in: test_cases/output/bam/tag_to_bam_tag_must_not_be_comment");
+    run_test(
+        std::path::Path::new("../test_cases/output/bam/tag_to_bam_tag_must_not_be_comment"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_output_x_bam_x_tag_to_bam_tag_output_tag_twice() {
     println!("Test case is in: test_cases/output/bam/tag_to_bam_tag_output_tag_twice");
     run_test(

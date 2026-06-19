@@ -2492,7 +2492,7 @@
           ]
         },
         {
-          "description": "Write reads to BAM file(s) as a pipeline step.\n\nReplicates the BAM behaviour of the legacy `[output]` section: per-segment\nfiles, interleaved output, chunking and compressed hashing, plus BAM\nauxiliary-tag export (`bam.tags` / `tag_to_bam_tag`) and reference\nassignment (`bam.tag_to_reference`).\n\nThe reference sequences and the shared BAM header are resolved at\nconfig-verify time (see [`resolve_output_bam`]): `references_from_barcodes`\nfrom the named `[barcodes.*]` section, `from_bam` by reading the `@SQ`\nheader of the referenced BAM file. The resolved [`BamSinkOptions`] are\nstashed on the partial and emitted in `declare_output_files`, so the writer\nis opened with the correct header. The auxiliary-tag values and the\nreference assignment per read are applied at write time by the BAM writer.\n\n`bam.merge_demultiplexed` is carried for round-trip; the actual merge of\ndemultiplexed BAMs lives in the binary crate.",
+          "description": "Replicates the BAM behaviour of the legacy `[output]` section: per-segment\nfiles, interleaved output, chunking and compressed hashing, plus BAM\nauxiliary-tag export (`bam.tags` / `tag_to_bam_tag`) and reference\nassignment (`bam.tag_to_reference`).\n\nThe reference sequences and the shared BAM header are resolved at\nconfig-verify time (see [`resolve_output_bam`]): `references_from_barcodes`\nfrom the named `[barcodes.*]` section, `from_bam` by reading the `@SQ`\nheader of the referenced BAM file. The resolved [`BamSinkOptions`] are\nstashed on the partial and emitted in `declare_output_files`, so the writer\nis opened with the correct header. The auxiliary-tag values and the\nreference assignment per read are applied at write time by the BAM writer.\n\n`bam.merge_demultiplexed` is carried for round-trip; the actual merge of\ndemultiplexed BAMs lives in the binary crate.",
           "type": "object",
           "properties": {
             "suffix": {
@@ -2543,16 +2543,46 @@
             "output_hash_compressed": {
               "type": "boolean"
             },
-            "bam": {
-              "description": "BAM-specific options (comment separator, tag exports, reference assignment).",
+            "comment_separation_char": {
+              "description": "Character used to split read names into a BAM name field and a `CO` auxiliary tag.\nDefaults to `' '` (space).  Reads whose names contain this character are split; the\npart after the character is placed in a `CO` tag so it can exceed the 254-byte limit.",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint8",
+              "minimum": 0,
+              "maximum": 255
+            },
+            "tag_to_bam_tag": {
+              "description": "Map of fastqrab tag labels to BAM auxiliary tag names\n\nEach key is a fastqrab tag label; each value is the two-character BAM\nauxiliary tag name to write (e.g. `BC`).",
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "tag_to_reference": {
+              "description": "Export a fastqrab tag value as the BAM reference name",
               "anyOf": [
                 {
-                  "$ref": "#/$defs/BamOutputOptions"
+                  "$ref": "#/$defs/TagToReference"
                 },
                 {
                   "type": "null"
                 }
               ]
+            },
+            "merge_demultiplexed": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "index_merged": {
+              "description": "Write a BAI index alongside each merged BAM file (default: true).",
+              "type": "boolean"
             },
             "action": {
               "type": "string",
@@ -5224,44 +5254,6 @@
         "output_hash_compressed"
       ]
     },
-    "BamOutputOptions": {
-      "description": "BAM-specific output options.",
-      "type": "object",
-      "properties": {
-        "comment_separation_char": {
-          "description": "Character used to split read names into a BAM name field and a `CO` auxiliary tag.\nDefaults to `' '` (space).  Reads whose names contain this character are split; the\npart after the character is placed in a `CO` tag so it can exceed the 254-byte limit.",
-          "type": "integer",
-          "format": "uint8",
-          "minimum": 0,
-          "maximum": 255
-        },
-        "tag_to_reference": {
-          "description": "Export a fastqrab tag value as the BAM reference name",
-          "anyOf": [
-            {
-              "$ref": "#/$defs/TagToReference"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "merge_demultiplexed": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "index_merged": {
-          "description": "Write a BAI index alongside each merged BAM file (default: true).",
-          "type": "boolean"
-        }
-      },
-      "required": [
-        "comment_separation_char",
-        "index_merged"
-      ]
-    },
     "TagToReference": {
       "description": "Source for reference sequences used by `tag_to_reference` (Feature B).\n\nExactly one of `barcodes` or `from_bam` must be set.",
       "type": "object",
@@ -5311,7 +5303,7 @@
       ]
     },
     "OutputBAM": {
-      "description": "Write reads to BAM file(s) as a pipeline step.\n\nReplicates the BAM behaviour of the legacy `[output]` section: per-segment\nfiles, interleaved output, chunking and compressed hashing, plus BAM\nauxiliary-tag export (`bam.tags` / `tag_to_bam_tag`) and reference\nassignment (`bam.tag_to_reference`).\n\nThe reference sequences and the shared BAM header are resolved at\nconfig-verify time (see [`resolve_output_bam`]): `references_from_barcodes`\nfrom the named `[barcodes.*]` section, `from_bam` by reading the `@SQ`\nheader of the referenced BAM file. The resolved [`BamSinkOptions`] are\nstashed on the partial and emitted in `declare_output_files`, so the writer\nis opened with the correct header. The auxiliary-tag values and the\nreference assignment per read are applied at write time by the BAM writer.\n\n`bam.merge_demultiplexed` is carried for round-trip; the actual merge of\ndemultiplexed BAMs lives in the binary crate.",
+      "description": "Replicates the BAM behaviour of the legacy `[output]` section: per-segment\nfiles, interleaved output, chunking and compressed hashing, plus BAM\nauxiliary-tag export (`bam.tags` / `tag_to_bam_tag`) and reference\nassignment (`bam.tag_to_reference`).\n\nThe reference sequences and the shared BAM header are resolved at\nconfig-verify time (see [`resolve_output_bam`]): `references_from_barcodes`\nfrom the named `[barcodes.*]` section, `from_bam` by reading the `@SQ`\nheader of the referenced BAM file. The resolved [`BamSinkOptions`] are\nstashed on the partial and emitted in `declare_output_files`, so the writer\nis opened with the correct header. The auxiliary-tag values and the\nreference assignment per read are applied at write time by the BAM writer.\n\n`bam.merge_demultiplexed` is carried for round-trip; the actual merge of\ndemultiplexed BAMs lives in the binary crate.",
       "type": "object",
       "properties": {
         "suffix": {
@@ -5362,16 +5354,46 @@
         "output_hash_compressed": {
           "type": "boolean"
         },
-        "bam": {
-          "description": "BAM-specific options (comment separator, tag exports, reference assignment).",
+        "comment_separation_char": {
+          "description": "Character used to split read names into a BAM name field and a `CO` auxiliary tag.\nDefaults to `' '` (space).  Reads whose names contain this character are split; the\npart after the character is placed in a `CO` tag so it can exceed the 254-byte limit.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint8",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "tag_to_bam_tag": {
+          "description": "Map of fastqrab tag labels to BAM auxiliary tag names\n\nEach key is a fastqrab tag label; each value is the two-character BAM\nauxiliary tag name to write (e.g. `BC`).",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "tag_to_reference": {
+          "description": "Export a fastqrab tag value as the BAM reference name",
           "anyOf": [
             {
-              "$ref": "#/$defs/BamOutputOptions"
+              "$ref": "#/$defs/TagToReference"
             },
             {
               "type": "null"
             }
           ]
+        },
+        "merge_demultiplexed": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "index_merged": {
+          "description": "Write a BAI index alongside each merged BAM file (default: true).",
+          "type": "boolean"
         },
         "segments": {
           "description": "Segments to write to individual files. Defaults to all input segments.",
@@ -5393,20 +5415,20 @@
             "type": "string"
           }
         },
-        "options": {
-          "description": "BAM-specific options (comment separator, tag exports, reference assignment).",
-          "anyOf": [
-            {
-              "$ref": "#/$defs/BamOutputOptions"
-            },
-            {
-              "type": "null"
-            }
-          ]
+        "tags": {
+          "description": "Map of fastqrab tag labels to BAM auxiliary tag names\n\nEach key is a fastqrab tag label; each value is the two-character BAM\nauxiliary tag name to write (e.g. `BC`).",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": "string"
+          }
         }
       },
       "required": [
-        "output_hash_compressed"
+        "output_hash_compressed",
+        "index_merged"
       ]
     },
     "OutputReport": {

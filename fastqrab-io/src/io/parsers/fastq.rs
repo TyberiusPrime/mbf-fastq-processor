@@ -281,8 +281,9 @@ impl PodFastqParser {
             Ok(())
         });
 
-        let parser_handle =
-            std::thread::spawn(move || parse_pods_from_channel(bytes_rx, chunk_tx, demux_threads, None));
+        let parser_handle = std::thread::spawn(move || {
+            parse_pods_from_channel(bytes_rx, chunk_tx, demux_threads, None)
+        });
 
         Ok(PodFastqParser {
             chunk_rx,
@@ -361,8 +362,9 @@ impl PodFastqParser {
             self.finish_threads()?;
         }
 
-        let pluses =
-            StringPod::new_all_empty(u32::try_from(count).expect("too many reads in a block for u32"));
+        let pluses = StringPod::new_all_empty(
+            u32::try_from(count).expect("too many reads in a block for u32"),
+        );
         let chunk = FastQChunk {
             names: names.finish(),
             seq_quals: seq_quals.finish(),

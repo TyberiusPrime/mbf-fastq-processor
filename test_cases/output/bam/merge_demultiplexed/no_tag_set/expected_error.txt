@@ -7,11 +7,13 @@ Error 1/1
    ┆              ─────┬─────
    ┆                   │
    ┆                   ╰────── In this step
-55 │     bam = { merge_demultiplexed = true }
-   ┆                                   ──┬─
-   ┆                                     │
-   ┆                                     ╰──── merge_demultiplexed requires tag_to_reference to be set.
+55 │     merge_demultiplexed = true
+   ┆                           ──┬─
+   ┆                             │
+   ┆                             ╰─── merge_demultiplexed requires tag_to_reference to be set.
 ───╯
 Hint: Either remove 'merge_demultiplexed' or set 'tag_to_reference' to specify how to assign reads to BAM references for merging.
       See https://doc_url.example/version-stripped-from-test/docs/redirects/OutputBAM
       Or run: `fastqrab template OutputBAM` for more information.
+
+

@@ -45,7 +45,8 @@ options.accept_duplicate_files = true
     action = "OutputBAM"
     output = []
     interleave = ["read1", "read2"]
-    bam = { tag_to_reference = { references_from_barcodes = "barcodes", tag = "refs" }, merge_demultiplexed = true }
+    tag_to_reference = { references_from_barcodes = "barcodes", tag = "refs" }
+    merge_demultiplexed = true
 
 [[step]]
     action = "OutputReport"

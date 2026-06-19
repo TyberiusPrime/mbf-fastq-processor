@@ -7,11 +7,15 @@ Error 1/1
    ┆              ─────┬─────
    ┆                   │
    ┆                   ╰────── In this step
-39 │     bam = { tag_to_reference = { references_from_barcodes = "barcodes", tag = "refs" }, merge_demultiplexed = true }
-   ┆                                                                                                               ──┬─
-   ┆                                                                                                                 │
-   ┆                                                                                                                 ╰──── No Demultiplex step found that had in_label = refs
+   ┆
+39 │     tag_to_reference = { references_from_barcodes = "barcodes", tag = "refs" }
+40 │     merge_demultiplexed = true
+   ┆                           ──┬─
+   ┆                             │
+   ┆                             ╰─── No Demultiplex step found that had in_label = refs
 ───╯
 Hint: No suitable Demultiplex step found. Make sure you have a Demultiplex step with lookup_mode = 'lookup' and an in_label that matches output.bam.tag_to_reference.tag.
       See https://doc_url.example/version-stripped-from-test/docs/redirects/OutputBAM
       Or run: `fastqrab template OutputBAM` for more information.
+
+

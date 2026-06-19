@@ -7,11 +7,13 @@ Error 1/1
    ┆              ─────┬─────
    ┆                   │
    ┆                   ╰────── In this step
-24 │     bam = { tags = { barcode = "BC", reg = "B!" } }
-   ┆                                            ──┬─
-   ┆                                              │
-   ┆                                              ╰────── Invalid BAM tag
+24 │     tags = { barcode = "BC", reg = "B!" }
+   ┆                                    ──┬─
+   ┆                                      │
+   ┆                                      ╰──── Invalid BAM tag
 ───╯
 Hint: BAM tag must be 2 alphanumeric ASCII characters; got 'B!'. Only [A-Za-z0-9] are allowed.
       See https://doc_url.example/version-stripped-from-test/docs/redirects/OutputBAM
       Or run: `fastqrab template OutputBAM` for more information.
+
+

@@ -70,7 +70,11 @@ fn drive_reads(
             ParserOutput::Chunk(chunk) => {
                 for i in 0..chunk.len() {
                     let (seq, qual) = chunk.seq_quals.pair(i);
-                    func(chunk.names.get(i).as_bytes(), seq.as_bytes(), qual.as_bytes())?;
+                    func(
+                        chunk.names.get(i).as_bytes(),
+                        seq.as_bytes(),
+                        qual.as_bytes(),
+                    )?;
                 }
             }
         }

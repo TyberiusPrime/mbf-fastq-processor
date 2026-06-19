@@ -64,8 +64,9 @@ impl ParserOutput {
         match self {
             ParserOutput::Block(b) => b,
             // cov:excl-start
-            ParserOutput::Chunk(_) => panic!("expected a row-oriented FastQBlock, got a FastQChunk"),
-            // cov:excl-stop
+            ParserOutput::Chunk(_) => {
+                panic!("expected a row-oriented FastQBlock, got a FastQChunk")
+            } // cov:excl-stop
         }
     }
 }
@@ -235,8 +236,7 @@ impl ChainedParser {
                         reason = "entries is going to be smaller than 2**52"
                     )]
                     if let Some(total_input_file_size) = self.total_input_file_size {
-                        let avg_read_length =
-                            output.total_seq_len() as f64 / reads_so_far as f64;
+                        let avg_read_length = output.total_seq_len() as f64 / reads_so_far as f64;
                         let bytes_per_base = self
                             .current
                             .as_ref()

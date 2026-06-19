@@ -59,4 +59,5 @@
 # --- Output steps (migrated from [output]) ---
 [[step]]
     action = "OutputBAM"
-    bam = { tag_to_bam_tag = { barcode = "BC", acontent = "XC", many_a = "XB", number_from_name = "RR" }, tag_to_reference = { tag = "ref_name", references_from_barcodes = "ref_barcodes" } }
+    tag_to_bam_tag = { barcode = "BC", acontent = "XC", many_a = "XB", number_from_name = "RR" }
+    tag_to_reference = { tag = "ref_name", references_from_barcodes = "ref_barcodes" }

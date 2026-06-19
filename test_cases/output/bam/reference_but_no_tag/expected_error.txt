@@ -7,10 +7,10 @@ Error 1/1
    ┆              ─────┬─────
    ┆                   │
    ┆                   ╰────── In this step
-10 │     bam = { tag_to_reference = { from_bam = "input_reference.bam" } }
-   ┆                                ──────────────────┬─────────────────
-   ┆                                                  │
-   ┆                                                  ╰──────────────────── Missing required key: 'tag'.
+10 │     tag_to_reference = { from_bam = "input_reference.bam" }
+   ┆                        ──────────────────┬─────────────────
+   ┆                                          │
+   ┆                                          ╰────────────────── Missing required key: 'tag'.
 ───╯
 Hint: See https://doc_url.example/version-stripped-from-test/docs/redirects/OutputBAM
       Or run: `fastqrab template OutputBAM` for more information.

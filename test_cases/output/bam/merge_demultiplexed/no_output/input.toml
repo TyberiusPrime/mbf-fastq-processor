@@ -42,7 +42,8 @@
 [[step]]
     action = "OutputBAM"
     output = []
-    bam = { tag_to_reference = { references_from_barcodes = "barcodes", tag = "refs" }, merge_demultiplexed = true }
+    tag_to_reference = { references_from_barcodes = "barcodes", tag = "refs" }
+    merge_demultiplexed = true 
 
 [[step]]
     action = "OutputReport"

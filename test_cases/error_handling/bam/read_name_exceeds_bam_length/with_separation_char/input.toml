@@ -8,4 +8,4 @@
 # --- Output steps (migrated from [output]) ---
 [[step]]
     action = "OutputBAM"
-    bam = { comment_separation_char = "x" }
+    comment_separation_char = "x" 

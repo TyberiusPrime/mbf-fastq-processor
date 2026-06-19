@@ -29,4 +29,4 @@
 # --- Output steps (migrated from [output]) ---
 [[step]]
     action = "OutputBAM"
-    bam = { tag_to_reference = { tag = "ref_name", from_bam = "input_reference.bam" } }
+    tag_to_reference = { tag = "ref_name", from_bam = "input_reference.bam" }

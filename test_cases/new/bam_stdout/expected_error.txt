@@ -12,7 +12,7 @@ Error 1/1
    ┆        │
    ┆        ╰────────── Unknown key.
 ───╯
-Hint: Did you mean: 'output', 'bam', or 'suffix'?
+Hint: Did you mean: 'tags' (='tag_to_bam_tag'), 'output', or 'suffix'?
       See https://doc_url.example/version-stripped-from-test/docs/redirects/OutputBAM
       Or run: `fastqrab template OutputBAM` for more information.
 

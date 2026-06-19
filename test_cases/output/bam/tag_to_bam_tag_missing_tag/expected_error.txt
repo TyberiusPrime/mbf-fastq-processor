@@ -7,11 +7,13 @@ Error 1/1
    ┆              ─────┬─────
    ┆                   │
    ┆                   ╰────── In this step
-18 │     bam = { tags = { barcode_not_present = "BC" } }
-   ┆                      ─────────┬─────────
-   ┆                               │
-   ┆                               ╰───────────────────── No such tag: 'barcode_not_present'
+18 │     tags = { barcode_not_present = "BC" }
+   ┆              ─────────┬─────────
+   ┆                       │
+   ┆                       ╰─────────────────── No such tag: 'barcode_not_present'
 ───╯
 Hint: Did you mean: 'barcode'?
       See https://doc_url.example/version-stripped-from-test/docs/redirects/OutputBAM
       Or run: `fastqrab template OutputBAM` for more information.
+
+

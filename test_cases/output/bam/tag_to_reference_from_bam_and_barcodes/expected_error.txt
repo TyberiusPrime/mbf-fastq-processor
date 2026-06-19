@@ -7,13 +7,15 @@ Error 1/1
    ┆              ─────┬─────
    ┆                   │
    ┆                   ╰────── In this step
-33 │     bam = { tag_to_reference = { tag = "ref_name", from_bam = "input_reference.bam", from_barcodes = "barcodes" } }
-   ┆                                                               ──────────┬──────────                  ─────┬────
-   ┆                                                                         │                                 │
-   ┆                                                                         ╰─────────────────────────────────────────── Conflicts with barcodes
-   ┆                                                                                                           │
-   ┆                                                                                                           ╰───────── Conflicts with from_bam
+33 │     tag_to_reference = { tag = "ref_name", from_bam = "input_reference.bam", from_barcodes = "barcodes" }
+   ┆                                                       ──────────┬──────────                  ─────┬────
+   ┆                                                                 │                                 │
+   ┆                                                                 ╰───────────────────────────────────────── Conflicts with barcodes
+   ┆                                                                                                   │
+   ┆                                                                                                   ╰─────── Conflicts with from_bam
 ───╯
 Hint: Set only one of 'barcodes' or 'from_bam'.
       See https://doc_url.example/version-stripped-from-test/docs/redirects/OutputBAM
       Or run: `fastqrab template OutputBAM` for more information.
+
+

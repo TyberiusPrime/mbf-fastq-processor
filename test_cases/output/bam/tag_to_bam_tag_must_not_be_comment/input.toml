@@ -21,4 +21,4 @@
 # --- Output steps (migrated from [output]) ---
 [[step]]
     action = "OutputBAM"
-    tags = { barcode = "BC", reg = "BC" }
+    tags = { barcode = "BC", reg = "CO" }

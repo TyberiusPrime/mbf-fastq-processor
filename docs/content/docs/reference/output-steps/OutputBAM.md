@@ -19,18 +19,17 @@ Write reads to BAM file(s).
     # interleave = ["read1","read2"]  # segments to interleave into one file (alias: interleaved)
     # chunksize = 1000000         # (optional) split into files of N molecules
     output_hash_compressed = false    # write a compressed-content hash sidecar
-    options = {
-        comment_separation_char = ' ',
-        tag_to_bam_tag = {'mytag'= 'XX'},
-        tag_to_reference = {
-           tag = "mytag",
-            references_from_bam = "another_bam_filename.bam"
-            # or 
-            #references_from_barcodes = "barcode-section"
-        },
-        merge_demultiplexed = false, # requires tag_to_reference
-        index_merged = false
+    # further options
+    comment_separation_char = ' '
+    tag_to_bam_tag = {'mytag'= 'XX'}
+    tag_to_reference = {
+       tag = "mytag",
+        references_from_bam = "another_bam_filename.bam"
+        # or 
+        #references_from_barcodes = "barcode-section"
     }
+    merge_demultiplexed = false # requires tag_to_reference
+    index_merged = false
 
 # [ output ]
 #     prefix = "output"
@@ -71,7 +70,7 @@ BAM read names are required to be ascii-readable-letters-minus-@ [!-?A-~] and sh
 step.
 
 If you read name get's too long because of tags, consider shuffling them into a comment tag
-by setting `output.bam.comment_separation_char` which places everything beyond this 
+by setting `output.comment_separation_char` which places everything beyond this 
 character in a BAM comment tag called 'CO', or not storing them in the read name 
 but in BAM tags instead (see previous section).
 
@@ -88,7 +87,7 @@ BAM output cannot be streamed to stdout and requires `output_hash_uncompressed =
 When assigning reads to references using, you might wish to produce a sorted BAM output file.
 
 To do so, you need to 
-* create a tag with reference names  using
+* create a tag with reference names using
     [HammingCorrect]({{< relref "docs/redirects/HammingCorrect.md" >}})
 * Demultiplex on that tag
 * set the output to BAM

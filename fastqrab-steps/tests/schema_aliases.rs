@@ -61,9 +61,16 @@ fn scan_tpd_aliases() -> Vec<(String, String)> {
     let tpd_attr = regex::Regex::new(r"tpd\s*\(").unwrap();
 
     let mut files = Vec::new();
-    for entry in std::fs::read_dir(&workspace).into_iter().flatten().flatten() {
+    for entry in std::fs::read_dir(&workspace)
+        .into_iter()
+        .flatten()
+        .flatten()
+    {
         let p = entry.path();
-        if p.is_dir() && p.file_name().is_some_and(|n| n.to_string_lossy().starts_with("fastqrab")) {
+        if p.is_dir()
+            && p.file_name()
+                .is_some_and(|n| n.to_string_lossy().starts_with("fastqrab"))
+        {
             rust_files(&p.join("src"), &mut files);
         }
     }

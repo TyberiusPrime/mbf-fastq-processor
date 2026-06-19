@@ -7,11 +7,13 @@ Error 1/1
    ┆              ─────┬─────
    ┆                   │
    ┆                   ╰────── In this step
-30 │     bam = { tag_to_reference = { tag = "ref_name" } }
-   ┆                                ──────────┬─────────
-   ┆                                          │
-   ┆                                          ╰──────────── Either 'reference_from_barcodes' or 'reference_from_bam' must be specified
+30 │     tag_to_reference = { tag = "ref_name" }
+   ┆                        ──────────┬─────────
+   ┆                                  │
+   ┆                                  ╰────────── Either 'reference_from_barcodes' or 'reference_from_bam' must be specified
 ───╯
 Hint: Set 'reference_from_barcodes' to a barcode section name, or 'references_from_bam' to a BAM file path.
       See https://doc_url.example/version-stripped-from-test/docs/redirects/OutputBAM
       Or run: `fastqrab template OutputBAM` for more information.
+
+

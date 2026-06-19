@@ -7,14 +7,13 @@ Error 1/1
    ┆              ─────┬─────
    ┆                   │
    ┆                   ╰────── In this step
-24 │     tags = { barcode = "BC", reg = "BC" }
-   ┆                        ──┬─        ──┬─
-   ┆                          │           │
-   ┆                          ╰──────────────── Repeated, 1st use
+24 │     tags = { barcode = "BC", reg = "CO" }
+   ┆                                    ──┬─
    ┆                                      │
-   ┆                                      ╰──── Repeated, 2nd use
+   ┆                                      ╰──── Conflicts with read name / comment splitting
 ───╯
-Hint: BAM tags must be distinct, can not write two tags into one BAM tag. Rename either one
+Hint: BAM tag 'CO' is reserved for comments (split read names at `comment_separation_char`), can not export another tag to 'CO'.
+      Rename this tag.
       See https://doc_url.example/version-stripped-from-test/docs/redirects/OutputBAM
       Or run: `fastqrab template OutputBAM` for more information.
 

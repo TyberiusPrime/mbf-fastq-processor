@@ -63,130 +63,17 @@ pub struct TagToReference {
 
     /// Name of a `[barcodes.<name>]` section whose keys become reference names.
     #[tpd(default, alias = "from_barcodes")]
-    #[expect(dead_code, reason = "Extracted in validation")]
     pub references_from_barcodes: Option<String>,
 
     /// Path to a BAM file whose `@SQ` header lines define the reference sequences.
     #[tpd(default, alias = "from_bam", alias = "template")]
-    #[expect(dead_code, reason = "Extracted in validation")]
     pub references_from_bam: Option<String>,
 }
 
 /// Alias so the `#[tpd]` macro can find the "partial" type for `BamTag`
 /// (which is its own visitor – no separate Partial struct is generated).
 pub type PartialBamTag = BamTag;
-/// BAM-specific output options.
-#[derive(Clone, JsonSchema)]
-#[tpd]
-#[derive(Debug)]
-pub struct BamOutputOptions {
-    /// Character used to split read names into a BAM name field and a `CO` auxiliary tag.
-    /// Defaults to `' '` (space).  Reads whose names contain this character are split; the
-    /// part after the character is placed in a `CO` tag so it can exceed the 254-byte limit.
-    #[tpd(with = "tpd_adapt_u8_from_byte_or_char")]
-    #[expect(dead_code, reason = "Extracted in validation")]
-    pub comment_separation_char: u8,
 
-    /// Map of fastqrab tag labels to BAM auxiliary tag names
-    ///
-    /// Each key is a fastqrab tag label; each value is the two-character BAM
-    /// auxiliary tag name to write (e.g. `BC`).
-    #[tpd(nested, alias = "tags")]
-    #[schemars(skip)]
-    #[expect(dead_code, reason = "Extracted in validation")]
-    pub tag_to_bam_tag: IndexMap<TagLabel, BamTag>,
-
-    /// Export a fastqrab tag value as the BAM reference name
-    #[tpd(nested)]
-    pub tag_to_reference: Option<TagToReference>,
-
-    #[tpd(default)]
-    pub merge_demultiplexed: Option<bool>,
-
-    /// Write a BAI index alongside each merged BAM file (default: true).
-    pub index_merged: bool,
-}
-impl<P> VerifyIn<P> for PartialBamOutputOptions {
-    fn verify(&mut self, _parent: &P, _options: &VerifyOptions) -> Result<(), ValidationFailure>
-    where
-        Self: Sized + toml_pretty_deser::Visitor,
-    {
-        self.comment_separation_char
-            .or_with(default_bam_comment_separation_char);
-        self.tag_to_bam_tag
-            .or_with(|| toml_pretty_deser::MapAndKeys {
-                map: indexmap::IndexMap::new(),
-                keys: vec![],
-            });
-
-        // Each BAM auxiliary tag may only be written once: reject two fastqrab
-        // tags mapping to the same two-letter BAM tag.
-        if let Some(map_and_keys) = self.tag_to_bam_tag.as_mut() {
-            let mut seen_bam_tags: IndexMap<[u8; 2], std::ops::Range<usize>> = IndexMap::new();
-            for bam_tag in map_and_keys.map.values_mut() {
-                if let Some(bam_tag_value) = bam_tag.as_mut()
-                    && let Some(other_span) = seen_bam_tags.insert(bam_tag_value.0, bam_tag.span())
-                {
-                    bam_tag.state = TomlValueState::Custom {
-                        spans: vec![
-                            (bam_tag.span(), "Repeated, 2nd use".to_string()),
-                            (other_span, "Repeated, 1st use".to_string()),
-                        ],
-                    };
-                    bam_tag.help = Some(
-                        "BAM tags must be distinct, \
-                            can not write two tags into one BAM tag. Rename either one"
-                            .to_string(),
-                    );
-                }
-            }
-        }
-
-        // Validate tag_to_reference: exactly one of barcodes or from_bam must be set.
-        //
-        if let Some(Some(tag_to_ref)) = self.tag_to_reference.as_mut() {
-            let has_barcodes = tag_to_ref
-                .references_from_barcodes
-                .as_ref()
-                .and_then(|x| x.as_ref())
-                .is_some();
-            let has_from_bam = tag_to_ref
-                .references_from_bam
-                .as_ref()
-                .and_then(|x| x.as_ref())
-                .is_some();
-            if !has_barcodes && !has_from_bam {
-                tag_to_ref.references_from_barcodes.state = TomlValueState::new_validation_failed(
-                    "Either 'reference_from_barcodes' or 'reference_from_bam' must be specified",
-                );
-                tag_to_ref.references_from_barcodes.help = Some(
-                    "Set 'reference_from_barcodes' to a barcode section name, or 'references_from_bam' to a BAM file path."
-                        .to_string(),
-                );
-            } else if has_barcodes && has_from_bam {
-                tag_to_ref.references_from_bam.state = TomlValueState::Custom {
-                    spans: vec![
-                        (
-                            tag_to_ref.references_from_barcodes.span(),
-                            "Conflicts with from_bam".to_string(),
-                        ),
-                        (
-                            tag_to_ref.references_from_bam.span(),
-                            "Conflicts with barcodes".to_string(),
-                        ),
-                    ],
-                };
-                tag_to_ref.references_from_bam.help =
-                    Some("Set only one of 'barcodes' or 'from_bam'.".to_string());
-            }
-        }
-        self.index_merged.or(true);
-
-        Ok(())
-    }
-}
-/// Write reads to BAM file(s) as a pipeline step.
-///
 /// Replicates the BAM behaviour of the legacy `[output]` section: per-segment
 /// files, interleaved output, chunking and compressed hashing, plus BAM
 /// auxiliary-tag export (`bam.tags` / `tag_to_bam_tag`) and reference
@@ -240,9 +127,31 @@ pub struct OutputBAM {
     )]
     output_hash_compressed: bool,
 
-    /// BAM-specific options (comment separator, tag exports, reference assignment).
-    #[tpd(nested, alias = "options")]
-    bam: Option<BamOutputOptions>, //todo: inline into main struct
+    // BAM-specific options (comment separator, tag exports, reference assignment).
+    /// Character used to split read names into a BAM name field and a `CO` auxiliary tag.
+    /// Defaults to `' '` (space).  Reads whose names contain this character are split; the
+    /// part after the character is placed in a `CO` tag so it can exceed the 254-byte limit.
+    #[tpd(with = "tpd_adapt_u8_from_byte_or_char")]
+    #[schemars(with = "Option<u8>")]
+    pub comment_separation_char: u8,
+
+    /// Map of fastqrab tag labels to BAM auxiliary tag names
+    ///
+    /// Each key is a fastqrab tag label; each value is the two-character BAM
+    /// auxiliary tag name to write (e.g. `BC`).
+    #[tpd(nested, alias = "tags")]
+    #[schemars(with = "Option<std::collections::BTreeMap<String, String>>")]
+    pub tag_to_bam_tag: IndexMap<TagLabel, BamTag>,
+
+    /// Export a fastqrab tag value as the BAM reference name
+    #[tpd(nested)]
+    pub tag_to_reference: Option<TagToReference>,
+
+    #[tpd(default)]
+    pub merge_demultiplexed: Option<bool>,
+
+    /// Write a BAI index alongside each merged BAM file (default: true).
+    pub index_merged: bool,
 
     #[tpd(skip, default)]
     #[schemars(skip)]
@@ -285,11 +194,10 @@ impl OutputBAM {
     /// not enabled. Used by the binary crate after processing finishes.
     #[must_use]
     pub fn merge_info(&self) -> Option<OutputBamMergeInfo> {
-        let bam = self.bam.as_ref()?;
-        if bam.merge_demultiplexed != Some(true) {
+        if self.merge_demultiplexed != Some(true) {
             return None;
         }
-        let reference_label = bam.tag_to_reference.as_ref()?.tag.clone();
+        let reference_label = self.tag_to_reference.as_ref()?.tag.clone();
         let suffix = FORMAT.get_suffix(CompressionFormat::Uncompressed, self.suffix.as_ref());
         let (segment_names, records_per_molecule) = match self.interleave.as_ref() {
             Some(interleave) => (vec!["interleaved".to_string()], interleave.len().max(1)),
@@ -297,7 +205,7 @@ impl OutputBAM {
         };
         Some(OutputBamMergeInfo {
             reference_label,
-            index_merged: bam.index_merged,
+            index_merged: self.index_merged,
             suffix,
             segment_names,
             records_per_molecule,
@@ -338,6 +246,91 @@ impl VerifyIn<PartialConfig> for PartialOutputBAM {
             &mut stdout,
             false,
         );
+
+        self.comment_separation_char
+            .or_with(default_bam_comment_separation_char);
+        self.tag_to_bam_tag
+            .or_with(|| toml_pretty_deser::MapAndKeys {
+                map: indexmap::IndexMap::new(),
+                keys: vec![],
+            });
+
+        // Each BAM auxiliary tag may only be written once: reject two fastqrab
+        // tags mapping to the same two-letter BAM tag.
+        if let Some(map_and_keys) = self.tag_to_bam_tag.as_mut() {
+            let mut seen_bam_tags: IndexMap<[u8; 2], std::ops::Range<usize>> = IndexMap::new();
+            for bam_tag in map_and_keys.map.values_mut() {
+                let span = bam_tag.span().clone();
+                if let Some(bam_tag_value) = bam_tag.as_mut() {
+                    if let Some(other_span) = seen_bam_tags.insert(bam_tag_value.0, span) {
+                        bam_tag.state = TomlValueState::Custom {
+                            spans: vec![
+                                (bam_tag.span(), "Repeated, 2nd use".to_string()),
+                                (other_span, "Repeated, 1st use".to_string()),
+                            ],
+                        };
+                        bam_tag.help = Some(
+                            "BAM tags must be distinct, \
+                            can not write two tags into one BAM tag. Rename either one"
+                                .to_string(),
+                        );
+                    } else {
+                        if bam_tag_value.0 == [b'C', b'O'] {
+                            bam_tag.state = TomlValueState::ValidationFailed {
+                                message: "Conflicts with read name / comment splitting".to_string(),
+                            };
+                            bam_tag.help = Some(
+                            "BAM tag 'CO' is reserved for comments (split read names at `comment_separation_char`), \
+                            can not export another tag to 'CO'.\n\
+                            Rename this tag."
+                                .to_string(),
+                        );
+                        }
+                    }
+                }
+            }
+        }
+
+        // Validate tag_to_reference: exactly one of barcodes or from_bam must be set.
+        //
+        if let Some(Some(tag_to_ref)) = self.tag_to_reference.as_mut() {
+            let has_barcodes = tag_to_ref
+                .references_from_barcodes
+                .as_ref()
+                .and_then(|x| x.as_ref())
+                .is_some();
+            let has_from_bam = tag_to_ref
+                .references_from_bam
+                .as_ref()
+                .and_then(|x| x.as_ref())
+                .is_some();
+            if !has_barcodes && !has_from_bam {
+                tag_to_ref.references_from_barcodes.state = TomlValueState::new_validation_failed(
+                    "Either 'reference_from_barcodes' or 'reference_from_bam' must be specified",
+                );
+                tag_to_ref.references_from_barcodes.help = Some(
+                    "Set 'reference_from_barcodes' to a barcode section name, or 'references_from_bam' to a BAM file path."
+                        .to_string(),
+                );
+            } else if has_barcodes && has_from_bam {
+                tag_to_ref.references_from_bam.state = TomlValueState::Custom {
+                    spans: vec![
+                        (
+                            tag_to_ref.references_from_barcodes.span(),
+                            "Conflicts with from_bam".to_string(),
+                        ),
+                        (
+                            tag_to_ref.references_from_bam.span(),
+                            "Conflicts with barcodes".to_string(),
+                        ),
+                    ],
+                };
+                tag_to_ref.references_from_bam.help =
+                    Some("Set only one of 'barcodes' or 'from_bam'.".to_string());
+            }
+        }
+        self.index_merged.or(true);
+
         Ok(())
     }
 }
@@ -375,52 +368,54 @@ pub(crate) fn resolve_output_bam(
     let mut reference_sequences: Vec<(String, usize)> = Vec::new();
     let mut references_from_bam: Option<PathBuf> = None;
 
-    if let Some(bam) = partial.bam.value.as_mut().and_then(|x| x.as_mut()) {
-        if let Some(sep) = bam.comment_separation_char.as_ref() {
-            comment_separation_char = *sep;
-        }
+    if let Some(sep) = partial.comment_separation_char.as_ref() {
+        comment_separation_char = *sep;
+    }
 
-        if let Some(map_and_keys) = bam.tag_to_bam_tag.value.as_ref() {
-            for (tag_label, bam_tag) in &map_and_keys.map {
-                if let Some(bam_tag) = bam_tag.as_ref() {
-                    tag_to_bam_tags.push((bam_tag.0, tag_label.to_string()));
-                }
+    if let Some(map_and_keys) = partial.tag_to_bam_tag.value.as_ref() {
+        for (tag_label, bam_tag) in &map_and_keys.map {
+            if let Some(bam_tag) = bam_tag.as_ref() {
+                tag_to_bam_tags.push((bam_tag.0, tag_label.to_string()));
             }
         }
+    }
 
-        if let Some(tag_to_ref) = bam.tag_to_reference.value.as_mut().and_then(|x| x.as_mut()) {
-            if let Some(tag_name) = tag_to_ref.tag.as_ref() {
-                tag_to_reference = Some(tag_name.clone());
+    if let Some(tag_to_ref) = partial
+        .tag_to_reference
+        .value
+        .as_mut()
+        .and_then(|x| x.as_mut())
+    {
+        if let Some(tag_name) = tag_to_ref.tag.as_ref() {
+            tag_to_reference = Some(tag_name.clone());
+        }
+        if let Some(section) = tag_to_ref
+            .references_from_barcodes
+            .as_ref()
+            .and_then(|o| o.as_ref())
+            .cloned()
+        {
+            if let Some(refs) = barcode_section_refs.get(&section) {
+                reference_sequences = refs.clone();
+            } else {
+                let available: Vec<&str> =
+                    barcode_section_refs.keys().map(String::as_str).collect();
+                tag_to_ref.references_from_barcodes.help =
+                    Some(offer_alternatives(&section, &available));
+                tag_to_ref.references_from_barcodes.state = TomlValueState::new_validation_failed(
+                    "Barcode section not found for output.bam.tag_to_reference",
+                );
             }
-            if let Some(section) = tag_to_ref
-                .references_from_barcodes
-                .as_ref()
-                .and_then(|o| o.as_ref())
-                .cloned()
-            {
-                if let Some(refs) = barcode_section_refs.get(&section) {
-                    reference_sequences = refs.clone();
-                } else {
-                    let available: Vec<&str> =
-                        barcode_section_refs.keys().map(String::as_str).collect();
-                    tag_to_ref.references_from_barcodes.help =
-                        Some(offer_alternatives(&section, &available));
-                    tag_to_ref.references_from_barcodes.state =
-                        TomlValueState::new_validation_failed(
-                            "Barcode section not found for output.bam.tag_to_reference",
-                        );
-                }
-            } else if let Some(path) = tag_to_ref
-                .references_from_bam
-                .as_ref()
-                .and_then(|o| o.as_ref())
-                .cloned()
-            {
-                // Carry the path; the file is read lazily when the BAM writer is
-                // opened (see `BamSinkOptions::resolve_header`). Deferring the IO
-                // keeps `validate` filesystem-free.
-                references_from_bam = Some(PathBuf::from(path));
-            }
+        } else if let Some(path) = tag_to_ref
+            .references_from_bam
+            .as_ref()
+            .and_then(|o| o.as_ref())
+            .cloned()
+        {
+            // Carry the path; the file is read lazily when the BAM writer is
+            // opened (see `BamSinkOptions::resolve_header`). Deferring the IO
+            // keeps `validate` filesystem-free.
+            references_from_bam = Some(PathBuf::from(path));
         }
     }
 
@@ -458,42 +453,39 @@ pub(crate) fn verify_output_bam_merge(
     let output_empty = matches!(partial.output.as_ref(), Some(Some(x)) if x.is_empty());
     let output_span = partial.output.span();
 
-    let Some(bam) = partial.bam.value.as_mut().and_then(|x| x.as_mut()) else {
-        return;
-    };
-    if !matches!(bam.merge_demultiplexed.as_ref(), Some(Some(true))) {
+    if !matches!(partial.merge_demultiplexed.as_ref(), Some(Some(true))) {
         return;
     }
 
     if output_empty && interleave_empty {
-        bam.merge_demultiplexed.state = TomlValueState::Custom {
+        partial.merge_demultiplexed.state = TomlValueState::Custom {
             spans: vec![
                 (
-                    bam.merge_demultiplexed.span(),
+                    partial.merge_demultiplexed.span(),
                     "Incompatible with empty outputs".to_string(),
                 ),
                 (output_span, "These output segments are empty".to_string()),
             ],
         };
-        bam.merge_demultiplexed.help = Some(
+        partial.merge_demultiplexed.help = Some(
             "Either remove 'merge_demultiplexed' or specify either output segments or interleaved output.".to_string(),
         );
     }
 
-    match bam.tag_to_reference.as_ref() {
+    match partial.tag_to_reference.as_ref() {
         Some(Some(tag_to_reference)) => {
             if let Some(ref_label) = tag_to_reference.tag.as_ref()
                 && !available_demultiplex_labels.contains(ref_label)
             {
-                bam.merge_demultiplexed.state = TomlValueState::new_validation_failed(format!(
+                partial.merge_demultiplexed.state = TomlValueState::new_validation_failed(format!(
                     "No Demultiplex step found that had in_label = {ref_label}",
                 ));
                 if available_demultiplex_labels.is_empty() {
-                    bam.merge_demultiplexed.help = Some(
+                    partial.merge_demultiplexed.help = Some(
                         "No suitable Demultiplex step found. Make sure you have a Demultiplex step with lookup_mode = 'lookup' and an in_label that matches output.bam.tag_to_reference.tag.".to_string(),
                     );
                 } else {
-                    bam.merge_demultiplexed.help = Some(format!(
+                    partial.merge_demultiplexed.help = Some(format!(
                         "Either add a Demultiplex step or reuse one of the following: {}",
                         offer_alternatives("", available_demultiplex_labels)
                     ));
@@ -501,10 +493,10 @@ pub(crate) fn verify_output_bam_merge(
             }
         }
         Some(None) => {
-            bam.merge_demultiplexed.state = TomlValueState::new_validation_failed(
+            partial.merge_demultiplexed.state = TomlValueState::new_validation_failed(
                 "merge_demultiplexed requires tag_to_reference to be set.",
             );
-            bam.merge_demultiplexed.help = Some(
+            partial.merge_demultiplexed.help = Some(
                 "Either remove 'merge_demultiplexed' or set 'tag_to_reference' to specify how to assign reads to BAM references for merging."
                     .to_string(),
             );
@@ -523,52 +515,51 @@ impl TagUser for PartialTaggedVariant<PartialOutputBAM> {
         let mut used_tags: Vec<Option<UsedTag<'_>>> = Vec::new();
         let mut used_barcodes: HashSet<TagLabel> = HashSet::new();
 
-        if let Some(bam) = inner.bam.value.as_mut().and_then(|x| x.as_mut()) {
-            // Each fastqrab tag exported to a BAM auxiliary tag must exist. The
-            // map keys carry the raw label text (`TomlValue<String>`); the
-            // parsed `TagLabel`s are the keys of `map`.
-            if let Some(map_and_keys) = bam.tag_to_bam_tag.value.as_mut() {
-                for (tv_key, tag_label) in map_and_keys.keys.iter_mut().zip(map_and_keys.map.keys())
-                {
-                    if tv_key.is_ok() {
-                        used_tags.push(Some(UsedTag {
-                            name: tag_label.clone(),
-                            accepted_tag_types: ANY_TAG_TYPE,
-                            toml_source: Rc::new(RefCell::new((
-                                &mut tv_key.state,
-                                &mut tv_key.help,
-                            ))),
-                            further_help: None,
-                        }));
-                    }
+        // Each fastqrab tag exported to a BAM auxiliary tag must exist. The
+        // map keys carry the raw label text (`TomlValue<String>`); the
+        // parsed `TagLabel`s are the keys of `map`.
+        if let Some(map_and_keys) = inner.tag_to_bam_tag.value.as_mut() {
+            for (tv_key, tag_label) in map_and_keys.keys.iter_mut().zip(map_and_keys.map.keys()) {
+                if tv_key.is_ok() {
+                    used_tags.push(Some(UsedTag {
+                        name: tag_label.clone(),
+                        accepted_tag_types: ANY_TAG_TYPE,
+                        toml_source: Rc::new(RefCell::new((&mut tv_key.state, &mut tv_key.help))),
+                        further_help: None,
+                    }));
                 }
             }
-            // The reference-selecting tag must exist; `from_barcodes` names a
-            // barcode section we then count as "used".
-            if let Some(tag_to_ref) = bam.tag_to_reference.value.as_mut().and_then(|x| x.as_mut()) {
-                if let Some(section) = tag_to_ref
-                    .references_from_barcodes
-                    .as_ref()
-                    .and_then(|o| o.as_ref())
+        }
+        // The reference-selecting tag must exist; `from_barcodes` names a
+        // barcode section we then count as "used".
+        if let Some(tag_to_ref) = inner
+            .tag_to_reference
+            .value
+            .as_mut()
+            .and_then(|x| x.as_mut())
+        {
+            if let Some(section) = tag_to_ref
+                .references_from_barcodes
+                .as_ref()
+                .and_then(|o| o.as_ref())
+            {
+                used_barcodes.insert(TagLabel::Normal(section.clone()));
+            }
+            if let Some(tag_name) = tag_to_ref.tag.as_ref() {
+                let name = TagLabel::Normal(tag_name.clone());
+                if !used_tags
+                    .iter()
+                    .any(|other| other.as_ref().map(|x| x.name == name).unwrap_or(false))
                 {
-                    used_barcodes.insert(TagLabel::Normal(section.clone()));
-                }
-                if let Some(tag_name) = tag_to_ref.tag.as_ref() {
-                    let name = TagLabel::Normal(tag_name.clone());
-                    if !used_tags
-                        .iter()
-                        .any(|other| other.as_ref().map(|x| x.name == name).unwrap_or(false))
-                    {
-                        used_tags.push(Some(UsedTag {
-                            name,
-                            accepted_tag_types: ANY_TAG_TYPE,
-                            toml_source: Rc::new(RefCell::new((
-                                &mut tag_to_ref.tag.state,
-                                &mut tag_to_ref.tag.help,
-                            ))),
-                            further_help: None,
-                        }));
-                    }
+                    used_tags.push(Some(UsedTag {
+                        name,
+                        accepted_tag_types: ANY_TAG_TYPE,
+                        toml_source: Rc::new(RefCell::new((
+                            &mut tag_to_ref.tag.state,
+                            &mut tag_to_ref.tag.help,
+                        ))),
+                        further_help: None,
+                    }));
                 }
             }
         }
@@ -583,10 +574,9 @@ impl TagUser for PartialTaggedVariant<PartialOutputBAM> {
     fn declare_output_files(&self) -> Option<Vec<OutputDeclaration>> {
         if let Some(inner) = self.toml_value.as_ref() {
             let comment_separation_char = inner
-                .bam
+                .comment_separation_char
                 .as_ref()
-                .and_then(|b| b.as_ref())
-                .and_then(|b| b.comment_separation_char.as_ref().copied())
+                .copied()
                 .unwrap_or(b' ');
 
             // Reference sequences / header / tag exports are resolved earlier by

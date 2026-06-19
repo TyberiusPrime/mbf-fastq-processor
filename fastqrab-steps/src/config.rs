@@ -263,8 +263,14 @@ fn inject_tpd_aliases(root: &mut serde_json::Map<String, serde_json::Value>) {
     }
 }
 
-fn inject_alias_group(target: &mut serde_json::Map<String, serde_json::Value>, entries: AliasEntries) {
-    if let Some(values) = target.get_mut("enum").and_then(serde_json::Value::as_array_mut) {
+fn inject_alias_group(
+    target: &mut serde_json::Map<String, serde_json::Value>,
+    entries: AliasEntries,
+) {
+    if let Some(values) = target
+        .get_mut("enum")
+        .and_then(serde_json::Value::as_array_mut)
+    {
         let mut seen: std::collections::HashSet<String> = values
             .iter()
             .filter_map(|v| v.as_str().map(str::to_owned))
@@ -276,11 +282,17 @@ fn inject_alias_group(target: &mut serde_json::Map<String, serde_json::Value>, e
                 }
             }
         }
-    } else if let Some(branches) = target.get_mut("oneOf").and_then(serde_json::Value::as_array_mut) {
+    } else if let Some(branches) = target
+        .get_mut("oneOf")
+        .and_then(serde_json::Value::as_array_mut)
+    {
         for branch in branches {
             // `Transformation` carries the discriminator at `properties.action`;
             // a plain unit-enum rendered as `oneOf` carries it on the branch itself.
-            let has_action = branch.get("properties").and_then(|p| p.get("action")).is_some();
+            let has_action = branch
+                .get("properties")
+                .and_then(|p| p.get("action"))
+                .is_some();
             for &(canonical, aliases) in entries {
                 let discriminator = if has_action {
                     branch
@@ -293,7 +305,10 @@ fn inject_alias_group(target: &mut serde_json::Map<String, serde_json::Value>, e
                 widen_const_to_enum(discriminator, canonical, aliases);
             }
         }
-    } else if let Some(properties) = target.get_mut("properties").and_then(serde_json::Value::as_object_mut) {
+    } else if let Some(properties) = target
+        .get_mut("properties")
+        .and_then(serde_json::Value::as_object_mut)
+    {
         for &(canonical, aliases) in entries {
             if let Some(canonical_schema) = properties.get(canonical).cloned() {
                 for alias in aliases {
