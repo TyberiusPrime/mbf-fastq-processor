@@ -1,6 +1,11 @@
+use std::collections::VecDeque;
 use std::sync::{Arc, Mutex, atomic::AtomicUsize};
 
 use super::common::{default_progress_n, thousands_format};
+
+/// Trailing wall-clock window (seconds) over which the "current" rate is
+/// averaged, to smooth out the lumpiness of block-sized arrivals.
+const RATE_WINDOW_SECONDS: f64 = 1.0;
 use crate::transformations::prelude::*;
 use crate::verify_path_component;
 
@@ -23,6 +28,12 @@ pub struct Progress {
     #[schemars(skip)]
     #[tpd(skip, default)]
     pub start_time: Option<std::time::Instant>,
+
+    /// Trailing samples of (elapsed_secs, count) used to compute the "current"
+    /// rate over a wall-clock window rather than between two adjacent reports.
+    #[schemars(skip)]
+    #[tpd(skip, default)]
+    rate_samples: Arc<Mutex<VecDeque<(f64, usize)>>>,
 
     pub n: usize,
     pub output_infix: String,
@@ -146,11 +157,35 @@ impl Step for Progress {
                 .elapsed()
                 .as_secs_f64();
             let rate_total = ii as f64 / elapsed;
+            // "Current" rate averaged over a trailing wall-clock window. Reports
+            // fire per-molecule-count, not per-tick, and blocks arrive lumpily
+            // (often several report points share near-identical timestamps), so
+            // a two-point delta is extremely noisy. Averaging over the window
+            // smooths that out while still tracking recent throughput.
+            let rate_current = {
+                let mut samples = self.rate_samples.lock().expect("poisoned");
+                samples.push_back((elapsed, ii));
+                // Drop samples older than the window, but always keep at least
+                // two so there is an interval to measure even on slow streams.
+                while samples.len() > 2 && samples[1].0 < elapsed - RATE_WINDOW_SECONDS {
+                    samples.pop_front();
+                }
+                let (front_elapsed, front_ii) = samples[0];
+                let dt = elapsed - front_elapsed;
+                let dn = ii as f64 - front_ii as f64;
+                if dt > f64::EPSILON && dn >= 0.0 {
+                    dn / dt
+                } else {
+                    // single sample, or out-of-order reports across threads
+                    rate_total
+                }
+            };
             let msg: String = if elapsed > 1.0 {
                 // cov:excl-start hard to trigger in tests without slowing everything down
                 format!(
-                    "Processed Total: {} ({:} molecules/s), Elapsed: {}s",
+                    "Processed Total: {:>15} ({:>15} molecules/s current, {:>15} molecules/s cumulative), Elapsed: {:>6}s",
                     thousands_format(ii as f64, 0),
+                    thousands_format(rate_current, 2),
                     thousands_format(rate_total, 2),
                     self.start_time
                         .expect("start_time must be set when processing blocks")
@@ -160,7 +195,7 @@ impl Step for Progress {
                 // cov:excl-end
             } else {
                 format!(
-                    "Processed Total: {}, Elapsed: {}s",
+                    "Processed Total: {:>15}, Elapsed: {:>6}s",
                     thousands_format(ii as f64, 0),
                     self.start_time
                         .expect("start_time must be set when processing blocks")
