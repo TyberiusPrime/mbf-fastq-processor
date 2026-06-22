@@ -2,10 +2,10 @@
 
 data=$(<stdout)
 
-pos0=$(echo "$data" | grep -n "Processed Total: 0" | cut -d: -f1)
-pos_2=$(echo "$data" | grep -n "Processed Total: 100_000" | cut -d: -f1)
-pos_3=$(echo "$data" | grep -n "Processed Total: 200_000" | cut -d: -f1)
-pos_4=$(echo "$data" | grep -n "Processed Total: 300_000" | cut -d: -f1)
+pos0=$(echo "$data" | grep -P -n "Processed Total: +0" | cut -d: -f1)
+pos_2=$(echo "$data" | grep -P -n "Processed Total: +100_000" | cut -d: -f1)
+pos_3=$(echo "$data" | grep -P -n "Processed Total: +200_000" | cut -d: -f1)
+pos_4=$(echo "$data" | grep -P -n "Processed Total: +300_000" | cut -d: -f1)
 
 if [ -z "$pos0" ] || [ "$pos0" -eq 0 ]; then
     echo "Error: 'Processed Total: 0' not found"
