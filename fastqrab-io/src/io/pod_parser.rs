@@ -182,7 +182,7 @@ fn strip_cr(line: &[u8]) -> &[u8] {
 
 #[inline]
 fn rposition_nl(data: &[u8]) -> Option<usize> {
-    data.iter().rposition(|&c| c == b'\n')
+    memchr::memrchr(b'\n', data)
 }
 
 /// FASTQ columns address their byte buffer with `u32` offsets, so any single
@@ -228,7 +228,7 @@ fn demux_chunk(idx: u64, data: &[u8], prev_tail: &[u8]) -> Result<DemuxResult> {
     let est = (data.len() / 300).max(16);
     let mut builders: [Option<StringPodBuilder>; 4] = [None, None, None, None];
 
-    let first_nl = data.iter().position(|&c| c == b'\n').expect("≥1 newline");
+    let first_nl = memchr::memchr(b'\n', data).expect("≥1 newline");
 
     // Track, per chunk, whether lines end with `\r` (CRLF) or bare LF, so the
     // collector can reject a file that mixes the two. `last()` is O(1), so this
@@ -265,17 +265,21 @@ fn demux_chunk(idx: u64, data: &[u8], prev_tail: &[u8]) -> Result<DemuxResult> {
     // Fully-contained lines: between consecutive newlines, local index from 0.
     let mut lines: u64 = 1; // the boundary line, completed by `first_nl`
     let mut local: usize = 0;
-    let mut start = first_nl + 1;
-    while let Some(rel) = data[start..].iter().position(|&c| c == b'\n') {
-        let nl = start + rel;
-        let line = &data[start..nl];
+    // SIMD newline scan (memchr/AVX2) over the chunk body rather than a scalar
+    // byte-by-byte `position`. This loop runs once per FASTQ line across the
+    // entire decoded stream, so it dominates parse CPU — profiling the 22 GB
+    // count-and-discard run showed ~120 s of user time in this scan+copy path.
+    let body = &data[first_nl + 1..];
+    let mut line_start = 0usize;
+    for rel in memchr::memchr_iter(b'\n', body) {
+        let line = &body[line_start..rel];
         observe(line, b"");
         push_line(&mut builders[local & 3], est, strip_cr(line))?;
         lines += 1;
         local += 1;
-        start = nl + 1;
+        line_start = rel + 1;
     }
-    // data[start..] is this chunk's trailing partial line — carried by Stage A.
+    // body[line_start..] is this chunk's trailing partial line — carried by Stage A.
 
     // Reserve a little slack on every bucket so the collector's per-boundary
     // appends (≤3 lines completing a straddling record) land in place instead
