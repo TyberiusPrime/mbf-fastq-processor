@@ -3,7 +3,7 @@ use bstr::ByteSlice;
 use std::num::NonZero;
 use std::path::{Path, PathBuf};
 
-use fastqrab_io::io::parsers::{ParserOutput, ThreadCount};
+use fastqrab_io::io::parsers::{ParserOutput, ParserThreadCounts, ThreadCount};
 
 /// One read's owned `(name, seq, qual)`, for buffer-size-invariance comparison.
 type OwnedRead = (Vec<u8>, Vec<u8>, Vec<u8>);
@@ -36,7 +36,12 @@ fn test_bufsize_variations(input_fastq_filename: &str, bufsize_range: &[usize]) 
             .get_parser(
                 NonZero::new(10_000).expect("can't happen"),
                 *bufsize,
-                ThreadCount(std::num::NonZero::new(1usize).expect("1 is not zero")),
+                ParserThreadCounts {
+                    decompression: ThreadCount(
+                        std::num::NonZero::new(1usize).expect("1 is not zero"),
+                    ),
+                    pod_demux: ThreadCount(std::num::NonZero::new(1usize).expect("1 is not zero")),
+                },
                 &fastqrab_io::io::input::InputOptions {
                     bam_include_mapped: None,
                     bam_include_unmapped: None,

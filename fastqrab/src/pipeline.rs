@@ -25,7 +25,7 @@ use fastqrab_io::{
         self,
         input::InputOptions,
         output::chunked_writer::{ChunkPaths, ChunkedRecordWriter, WriteTarget, WriteTargetConfig},
-        parsers::{ChainedParser, ThreadCount},
+        parsers::{ChainedParser, ParserThreadCounts, ThreadCount},
     },
 };
 use fastqrab_steps::{
@@ -318,14 +318,14 @@ fn parse_and_send(
     raw_tx: &crossbeam::channel::Sender<(FastQChunk, Option<usize>)>,
     buffer_size: usize,
     block_size: NonZero<usize>,
-    input_thread_count: ThreadCount,
+    thread_counts: ParserThreadCounts,
     input_options: InputOptions,
 ) -> Result<()> {
     let mut parser = ChainedParser::new(
         readers,
         block_size,
         buffer_size,
-        input_thread_count,
+        thread_counts,
         input_options,
     );
     loop {
@@ -350,7 +350,7 @@ fn parse_interleaved_and_send(
     combiner_output_tx: &crossbeam::channel::Sender<(io::FastQBlocksCombined, Option<usize>)>,
     segment_count: NonZero<usize>,
     buffer_size: usize,
-    input_thread_count: ThreadCount,
+    thread_counts: ParserThreadCounts,
     block_size: NonZero<usize>,
     input_options: InputOptions,
 ) -> Result<()> {
@@ -358,10 +358,10 @@ fn parse_interleaved_and_send(
         readers,
         block_size,
         buffer_size,
-        input_thread_count,
+        thread_counts,
         input_options,
     );
-    let mut block_no = 1; //block numbers are 1 based. Why though? 
+    let mut block_no = 1; //block numbers are 1 based. Why though?
     let mut expected_read_count = None;
     let mut first_read_in_block_no = 0;
     loop {
@@ -820,13 +820,14 @@ impl RunStage1 {
             // cov:excl-stop
         }));
         let input_config = &parsed.input;
-        let threads_per_parser = ThreadCount(
-            input_config
-                .options
-                .threads_per_segment.as_ref().and_then(|x|
-                    std::num::NonZero::new(*x)
-                ) .expect("threads_per_segment must have been set by config validation, and checked to be >= 0"),
-        );
+        // All input-side pool sizes come from the central `calculate_thread_counts`
+        // (via `threading_configuration`): decompression and the pod-parser demux
+        // pool are tuned separately, so route each from its own field rather than
+        // reusing one `threads_per_segment` for both.
+        let threads_per_parser = ParserThreadCounts {
+            decompression: ThreadCount(parsed.threading_configuration.n_input_per_segment),
+            pod_demux: ThreadCount(parsed.threading_configuration.n_pod_demux_per_segment),
+        };
         let mut input_files =
             crate::io::open_input_files(input_config).context("Error opening input files")?;
 
@@ -1013,7 +1014,7 @@ impl RunStage1 {
                         let options = input_options.clone();
                         let (raw_tx_read, raw_rx_read) = bounded(channel_size);
                         let read_thread = thread::Builder::new()
-                            .name(format!("Reader_{segment_name}"))
+                            .name(format!("Chunker_{segment_name}"))
                             .spawn(move || {
                                 if let Err(e) = parse_and_send(
                                     this_segments_input_files,
