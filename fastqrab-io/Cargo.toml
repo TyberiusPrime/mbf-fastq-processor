@@ -25,6 +25,7 @@ exclude.workspace = true
   gzp = {workspace = true}
   hamming-resonate = {workspace = true}
   indexmap = {workspace = true}
+  libc = {workspace = true}
   memchr = {workspace = true}
   mutants = {workspace = true}
   niffler = {workspace = true}
