@@ -153,6 +153,12 @@ pub struct InputInfo {
     pub initial_filter_capacity: Option<usize>,
     pub use_rapidgzip: bool,
     pub threading_configuration: ThreadingConfiguration,
+    /// Live gauge of blocks currently inside the work pool (stalled + being
+    /// worked on), maintained by the `WorkpoolCoordinator`. Shared so the
+    /// `Progress` step can report pipeline occupancy alongside throughput,
+    /// to tell a real stage stall (gauge drains) from a measurement artifact
+    /// (gauge stays pinned near `max_blocks_in_flight`).
+    pub blocks_in_flight: Arc<std::sync::atomic::AtomicUsize>,
     /// Report metadata, used by the `OutputReport` step to build the combined
     /// report (label-per-`report_no`, input-file config and the raw config TOML
     /// the legacy `[output]` renderer embedded). Shared so cloning `InputInfo`

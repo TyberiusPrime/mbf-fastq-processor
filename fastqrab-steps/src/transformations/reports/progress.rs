@@ -138,7 +138,7 @@ impl Step for Progress {
     fn apply(
         &self,
         block: FastQBlocksCombined,
-        _input_info: &InputInfo,
+        input_info: &InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let (counter, next) = {
@@ -181,13 +181,17 @@ impl Step for Progress {
                     rate_total
                 }
             };
+            let in_flight = input_info
+                .blocks_in_flight
+                .load(std::sync::atomic::Ordering::Relaxed);
             let msg: String = if elapsed > 1.0 {
                 // cov:excl-start hard to trigger in tests without slowing everything down
                 format!(
-                    "Processed Total: {:>15} ({:>15} molecules/s current, {:>15} molecules/s cumulative), Elapsed: {:>6}s",
+                    "Processed Total: {:>15} ({:>15} molecules/s current, {:>15} molecules/s cumulative), in-flight: {:>4}, Elapsed: {:>6}s",
                     thousands_format(ii as f64, 0),
                     thousands_format(rate_current, 2),
                     thousands_format(rate_total, 2),
+                    in_flight,
                     self.start_time
                         .expect("start_time must be set when processing blocks")
                         .elapsed()
@@ -196,8 +200,9 @@ impl Step for Progress {
                 // cov:excl-end
             } else {
                 format!(
-                    "Processed Total: {:>15}, Elapsed: {:>6}s",
+                    "Processed Total: {:>15}, in-flight: {:>4}, Elapsed: {:>6}s",
                     thousands_format(ii as f64, 0),
+                    in_flight,
                     self.start_time
                         .expect("start_time must be set when processing blocks")
                         .elapsed()

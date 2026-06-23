@@ -673,6 +673,7 @@ impl RunStage0 {
             use_rapidgzip: parsed.input.options.use_rapidgzip,
             threading_configuration: parsed.threading_configuration.clone(),
             report_metadata,
+            blocks_in_flight: std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0)),
         };
         // we need to initialize the progress_output first
         // so we can store it on each stage before the stages' init
@@ -1129,6 +1130,7 @@ impl RunStage2 {
             output_done_rx,
             report_collector,
             self.error_collector.clone(),
+            input_info.blocks_in_flight.clone(),
         );
 
         let coordinator_thread = thread::Builder::new()
