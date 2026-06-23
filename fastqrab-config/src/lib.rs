@@ -813,7 +813,6 @@ pub fn validate_segment_label(
         "bam_include_unmapped",
         "read_comment_character",
         "use_rapidgzip",
-        "build_rapidgzip_index",
         "threads_per_segment",
         "tpd_field_match_mode",
     ] {
@@ -908,7 +907,6 @@ mod test {
         validate_segment_label("bam_include_unmapped", f).unwrap_err();
         validate_segment_label("read_comment_character", f).unwrap_err();
         validate_segment_label("use_rapidgzip", f).unwrap_err();
-        validate_segment_label("build_rapidgzip_index", f).unwrap_err();
         validate_segment_label("threads_per_segment", f).unwrap_err();
         validate_segment_label("tpd_field_match_mode", f).unwrap_err();
 

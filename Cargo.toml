@@ -1,5 +1,5 @@
 [workspace]
-	members = ["fastqrab", "fastqrab-dna", "fastqrab-config", "fastqrab-io", "fastqrab-steps"]
+	members = ["fastqrab", "fastqrab-dna", "fastqrab-config", "fastqrab-io", "fastqrab-steps", "fastqrab-decompressor"]
 	exclude = ["dev/fuzz/fastq_parser"]
     resolver = "2"
 
@@ -80,12 +80,15 @@
     typed_floats = "1.0.7"
 	zstd = { version = "0.13.2", default-features = false }
 
-    which = "7"
-
     fastqrab-config  = { path = "fastqrab-config",  version = "0.9.0" }
     fastqrab-dna     = { path = "fastqrab-dna",     version = "0.9.0" }
     fastqrab-io      = { path = "fastqrab-io",      version = "0.9.0" }
     fastqrab-steps   = { path = "fastqrab-steps",   version = "0.9.0" }
+
+    # Sibling repo (same path-dep pattern as stringpod / toml-pretty-deser). Default
+    # features left on so the `libdeflate` backend is used; it only runs in the
+    # separate `fastqrab-decompressor` process.
+    rusty-rapidgzip = { path = "../rusty_rapidgzip/crates/rusty-rapidgzip", version = "0.2.0" }
 
 
 

@@ -371,7 +371,6 @@ impl VerifyIn<super::PartialConfig> for PartialInput {
                 bam_include_unmapped: TomlValue::new_ok(default.bam_include_unmapped, 0..0),
                 read_comment_character: TomlValue::new_ok(default.read_comment_character, 0..0),
                 use_rapidgzip: TomlValue::new_ok(default.use_rapidgzip, 0..0),
-                build_rapidgzip_index: TomlValue::new_ok(default.build_rapidgzip_index, 0..0),
                 threads_per_segment: TomlValue::new_ok(default.threads_per_segment, 0..0),
             }
         });

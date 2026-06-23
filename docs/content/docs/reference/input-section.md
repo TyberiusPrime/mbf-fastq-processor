@@ -127,13 +127,12 @@ see [Parser Architecture]({{< relref "docs/development/parser-architecture.md" >
 Format-specific behaviour is configured via the optional `[input.options]` table.
 These knobs are required when the corresponding file types are present and ignored otherwise.
 
-```toml
+```toml # ignore_in_test
 [input]
     read1 = ["reads.fasta"]
 
 [input.options]
     use_rapidgzip = true          # boolean, defaults to 'automatic'
-    build_rapidgzip_index = false # boolean
     threads_per_segment = 1       # (optional) how many threads to use for decompression. 
     fasta_fake_quality = 'a'      # required for FASTA inputs: synthetic Phred score to apply to every base. Used verbatim without further shifting.
     bam_include_mapped = true     # required for BAM inputs: include reads with a reference assignment
@@ -141,9 +140,7 @@ These knobs are required when the corresponding file types are present and ignor
 	read_comment_character = ' '       # defaults to ' '. The character seperating read name from the 'read comment'.
 ```
 
-- `use use_rapidgzip` - whether to decompress gzip with [rapidgzip](https://github.com/mxmlnkn/rapidgzip). 
-  See the [rapidgzip section](#rapidgzip).
-- `build_rapidgzip_index` - whether to put a rapidgzip index next to your input file if it doesn't exist.
+- `use use_rapidgzip` - whether to decompress gzip with our parallel decompressor.
   See the [rapidgzip section](#rapidgzip).
 - `threads_per_segment` - see [threading]({{< relref "docs/reference/threading.md" >}}).
 - `fasta_fake_quality` accepts a byte character or a number and is used verbatim. Stick to Phred ('!'/33 = worst).
@@ -196,30 +193,27 @@ Input files may be named pipes (FIFOs) - but only FASTQ formated data is support
 
 ## Rapidgzip
 
-fastqrab can use [rapidgzip](https://github.com/mxmlnkn/rapidgzip), a gzip decompression
-program that enables multi-core decompression of arbitrary gzip files instead of it's build-in gzip
-decompressor.
+fastqrab ships its own parallel gzip decompressor, `fastqrab-decompressor`, which
+enables multi-core decompression of arbitrary gzip files instead of the built-in
+single-threaded gzip decompressor. (The implementation is inspired by
+[rapidgzip](https://github.com/mxmlnkn/rapidgzip), hence the option name.)
 
 Since gzip decompression is often the single largest bottleneck in FASTQ processing,
 this offers massive speed advantages.
 
-By default, we use rapidgzip if a rapidgzip binary is detected on the $PATH and there are 
-at least two threads available per segment for decompression (benchmarking indicates rapidgzip
-is slower than our build-in gzip decompression otherwise).
+The decompressor runs as a separate process, so all of the (necessarily `unsafe`)
+decoder code is isolated from the main fastqrab process. The `fastqrab-decompressor`
+binary must sit right next to the `fastqrab` binary: it is located by suffixing the
+running executable's name with `-decompressor` (so `fastqrab` looks for
+`fastqrab-decompressor`, and a renamed `fastqrab_0.9.1` looks for
+`fastqrab_0.9.1-decompressor`).
 
-You can force rapidgzip use by setting `options.use_rapidgzip` to true, in that case a missing
-rapidgzip binary will lead to an error. Likewise, you can disable rapidgzip use by setting it to false.
+By default, we use it if that binary is found next to fastqrab and there are
+at least two threads available per segment for decompression (benchmarking indicates
+parallel decompression is slower than our built-in gzip decompression otherwise).
 
-Rapidgzip can be even faster when there's an index next to the gzip file telling it where
-the block starts. We auto-detect and use such an index if it's named `$input_file.rapidgzip_index`.
-
-If `options.build_rapidgzip_index` is set, the index is created if it doesn't
-exist. It's placed next to the file. If you expect to run fastqrab
-multiple times on the same input (such as in development) you might want to
-spent the disk space. Note that you may not use [Head]({{< relref "docs/reference/modification-steps/Head.md" >}}) 
-and `build_rapidgzip_index` together, since Head closes the input early, leading to the index not being
-created. To prevent this, an error will be reported when using 
-[Head]({{<relref "docs/reference/modification-steps/Head.md" >}})
+You can force its use by setting `options.use_rapidgzip` to true; in that case a missing
+decompressor binary will lead to an error. Likewise, you can disable it by setting it to false.
 
 
 ## Reading form stdin

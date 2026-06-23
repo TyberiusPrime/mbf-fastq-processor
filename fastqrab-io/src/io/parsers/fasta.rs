@@ -36,10 +36,7 @@ impl FastaParser {
 
         let (mut reader, format) = niffler::send::get_reader(Box::new(file))?;
 
-        if let DecompressionOptions::Rapidgzip {
-            thread_count,
-            index_gzip,
-        } = decompression_options
+        if let DecompressionOptions::Rapidgzip { thread_count } = decompression_options
             && format == niffler::send::compression::Format::Gzip
         {
             let file = spawn_rapidgzip(
@@ -47,7 +44,6 @@ impl FastaParser {
                     .as_ref()
                     .expect("rapid gzip and stdin not supported"),
                 thread_count,
-                index_gzip,
             )?; // cov:excl-line
             reader = Box::new(file);
         }

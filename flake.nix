@@ -135,7 +135,6 @@
           release = true;
           CARGO_PROFILE_RELEASE_debug = "0";
           COMMIT_HASH = self.rev or (pkgs.lib.removeSuffix "-dirty" self.dirtyRev or "unknown-not-in-git");
-          NIX_RAPIDGZIP = "${pkgs.rapidgzip}/bin/rapidgzip";
           postInstall =''
               rm $out/bin/fastqrab_alloc_accounting
             '';
@@ -161,6 +160,7 @@
               # make it compatible with other linuxes. It's statically linked anyway
               postInstall = ''
                 patchelf $out/bin/fastqrab --set-interpreter "/lib64/ld-linux-x86-64.so.2"
+                patchelf $out/bin/fastqrab-decompressor --set-interpreter "/lib64/ld-linux-x86-64.so.2"
                 rm $out/bin/fastqrab_alloc_accounting
               '';
             };
@@ -237,7 +237,6 @@
           release = true;
           CARGO_PROFILE_RELEASE_debug = "0";
           COMMIT_HASH = self.rev or (pkgs.lib.removeSuffix "-dirty" self.dirtyRev or "unknown-not-in-git");
-          NIX_RAPIDGZIP_ = "${pkgs.rapidgzip}/bin/rapidgzip"; # note the _, it's special cased.
           RUST_LOG = "trace";
           # every other test happens wit hteh rapidgzip in the path.
           postInstall = ''
@@ -253,19 +252,7 @@
                 echo "Error: friendly panic message ' not found in stderr"
                 exit 1
             fi
-            # without NIX_RAPIDGZIP, the test passes because the error is thrown
-            echo 'without NIX_RAPIDGZIP'
             cargo test --release 
-            # but with NIX_RAPIDGZIP, the test fails because there is a fallback
-
-            echo 'with NIX_RAPIDGZIP'
-            set +e  # Temporarily disable exit-on-error
-            NIX_RAPIDGZIP=$NIX_RAPIDGZIP_ cargo test --release error_no_rapid_gzip
-            set -e  # Re-enable exit-on-error
-            if [ "$status" -eq 0 ]; then
-              echo "Unexpected success when testing no-rapid-gzip-error-case"
-              exit 1
-            fi
 
           '';
 
@@ -371,7 +358,7 @@
                 toml
               ]
             ))
-            pkgs.rapidgzip
+            #pkgs.rapidgzip
             pkgs.which
             pkgs.ripgrep
             #rust.rust-analyzer
