@@ -22,6 +22,7 @@ use std::sync::Arc;
 
 pub(crate) mod calc;
 pub(crate) mod convert;
+pub(crate) mod debug;
 pub(crate) mod demultiplex;
 pub(crate) mod edits;
 pub(crate) mod extract;
@@ -453,6 +454,10 @@ pub enum Transformation {
     //
     #[schemars(skip)]
     _InduceFailure(Box<_InduceFailure>),
+
+
+    #[schemars(skip)]
+    DebugBlockSizes(debug::BlockSizes),
 }
 
 #[derive(Debug)]
