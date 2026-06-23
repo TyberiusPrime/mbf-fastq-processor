@@ -169,9 +169,12 @@ impl InputFile {
         self,
         target_reads_per_block: NonZero<usize>,
         buffer_size: usize,
-        thread_count: ThreadCount,
+        thread_counts: parsers::ParserThreadCounts,
         options: &crate::io::input::InputOptions,
     ) -> Result<Box<dyn parsers::Parser>> {
+        // Decompression (rapidgzip / bgzf) and the pod-parser demux pool are
+        // sized separately upstream; route each to its own consumer.
+        let thread_count = thread_counts.decompression;
         let decompression_options = if options.use_rapidgzip && self.get_filename().is_some() {
             DecompressionOptions::Rapidgzip {
                 thread_count,
@@ -186,7 +189,7 @@ impl InputFile {
                 filename.as_ref(),
                 target_reads_per_block,
                 buffer_size,
-                thread_count.0.get(),
+                thread_counts.pod_demux.0.get(),
                 decompression_options,
             )?)), // cov:excl-line
             InputFile::Fasta(file, filename) => {

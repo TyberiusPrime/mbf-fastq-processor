@@ -144,7 +144,13 @@ pub struct Stage {
 
 #[derive(Debug, Clone)]
 pub struct ThreadingConfiguration {
+    /// Decompression threads per input segment (rapidgzip `-P`, BAM bgzf
+    /// workers). Wants many threads.
     pub n_input_per_segment: std::num::NonZeroUsize,
+    /// Pod-parser demux pool per input segment — the columnar scan+copy. Tuned
+    /// independently of decompression: its sweet spot is a small handful (2-4),
+    /// more just oversubscribes the allocator.
+    pub n_pod_demux_per_segment: std::num::NonZeroUsize,
     pub n_output: std::num::NonZeroUsize,
     pub n_processing: std::num::NonZeroUsize,
 }
@@ -2079,6 +2085,7 @@ impl Config {
         } else {
             ThreadingConfiguration {
                 n_input_per_segment: std::num::NonZeroUsize::new(1).expect("Can't fail"),
+                n_pod_demux_per_segment: std::num::NonZeroUsize::new(1).expect("Can't fail"),
                 n_output: std::num::NonZeroUsize::new(1).expect("Can't fail"),
                 n_processing: std::num::NonZeroUsize::new(1).expect("Can't fail"),
             }
@@ -2314,7 +2321,7 @@ impl Config {
         // choose one core
 
         let can_multicore_compression = self.any_bam_or_gzip_output();
-        let (thread_count, input_threads_per_segment, output_threads) = calculate_thread_counts(
+        let counts = calculate_thread_counts(
             self.options.threads,
             self.input.options.threads_per_segment,
             self.output.as_ref().map(|x| x.compression_threads.into()),
@@ -2323,10 +2330,10 @@ impl Config {
             can_multicore_input,
             can_multicore_compression,
         );
-        self.options.threads = Some(thread_count);
-        self.input.options.threads_per_segment = Some(input_threads_per_segment);
+        self.options.threads = Some(counts.processing);
+        self.input.options.threads_per_segment = Some(counts.input_per_segment);
         if let Some(output) = &mut self.output {
-            output.compression_threads = NonZero::new(output_threads)
+            output.compression_threads = NonZero::new(counts.compression)
                 .expect("Calculated output threads should never be zero");
         }
 
@@ -2342,11 +2349,13 @@ impl Config {
         }
 
         ThreadingConfiguration {
-            n_input_per_segment: std::num::NonZeroUsize::new(input_threads_per_segment)
+            n_input_per_segment: std::num::NonZeroUsize::new(counts.input_per_segment)
                 .expect("Thread count must be > 0"),
-            n_output: std::num::NonZeroUsize::new(output_threads)
+            n_pod_demux_per_segment: std::num::NonZeroUsize::new(counts.pod_demux_per_segment)
                 .expect("Thread count must be > 0"),
-            n_processing: std::num::NonZeroUsize::new(thread_count)
+            n_output: std::num::NonZeroUsize::new(counts.compression)
+                .expect("Thread count must be > 0"),
+            n_processing: std::num::NonZeroUsize::new(counts.processing)
                 .expect("Thread count must be > 0"),
         }
     }
@@ -2360,6 +2369,18 @@ impl CheckedConfig {
     }
 }
 
+/// Every thread-pool size the pipeline spawns, computed in one place so they can
+/// be tuned together. `input_per_segment` sizes decompression (rapidgzip `-P`,
+/// BAM bgzf), `pod_demux_per_segment` the columnar pod-parser's demux pool,
+/// `processing` the worker pool, and `compression` the output writers.
+#[derive(Debug, PartialEq, Eq)]
+struct ThreadCounts {
+    processing: usize,
+    input_per_segment: usize,
+    pod_demux_per_segment: usize,
+    compression: usize,
+}
+
 fn calculate_thread_counts(
     step_thread_count: Option<usize>,
     threads_per_segment: Option<usize>,
@@ -2368,7 +2389,7 @@ fn calculate_thread_counts(
     cpu_count: usize,
     can_multicore_decompression: bool,
     can_multicore_compression: bool,
-) -> (usize, usize, usize) {
+) -> ThreadCounts {
     let threads_per_segment = if can_multicore_decompression {
         threads_per_segment
     } else {
@@ -2383,9 +2404,9 @@ fn calculate_thread_counts(
         }
     });
 
-    match (step_thread_count, threads_per_segment) {
+    let (processing, input_per_segment) = match (step_thread_count, threads_per_segment) {
         (Some(step_thread_count), Some(threads_per_segment)) => {
-            (step_thread_count, threads_per_segment, compression_threads)
+            (step_thread_count, threads_per_segment)
             //keep whatever the user set.
         }
         (None, Some(threads_per_segment)) => (
@@ -2394,12 +2415,11 @@ fn calculate_thread_counts(
                 .saturating_sub(threads_per_segment * segment_count)
                 .max(1),
             threads_per_segment,
-            compression_threads,
         ),
         (Some(thread_count), None) => {
             //all remaining cores into parsing
             let per_segment = (cpu_count.saturating_sub(thread_count) / segment_count).max(1);
-            (thread_count, per_segment, compression_threads)
+            (thread_count, per_segment)
         }
         (None, None) => {
             let half = cpu_count / 2;
@@ -2411,9 +2431,21 @@ fn calculate_thread_counts(
                     .saturating_sub(threads_per_segment * segment_count)
                     .max(1),
                 threads_per_segment,
-                compression_threads,
             )
         }
+    };
+
+    // Pod-parser demux pool, per segment. Independent of decompression: it's the
+    // columnar scan+copy, useful even for uncompressed input. Its sweet spot is
+    // 2-4 workers — more just oversubscribes the allocator — so we size it off
+    // spare cores per segment and clamp it small.
+    let pod_demux_per_segment = (cpu_count / segment_count.max(1) / 2).clamp(1, 4);
+
+    ThreadCounts {
+        processing,
+        input_per_segment,
+        pod_demux_per_segment,
+        compression: compression_threads,
     }
 }
 
@@ -2505,51 +2537,57 @@ mod tests {
 
     #[test]
     fn test_calculate_thread_counts() {
+        let tc = |processing, input_per_segment, pod_demux_per_segment, compression| ThreadCounts {
+            processing,
+            input_per_segment,
+            pod_demux_per_segment,
+            compression,
+        };
         // Test various combinations of inputs
         assert_eq!(
             calculate_thread_counts(Some(8), Some(2), None, 4, 16, true, false),
-            (8, 2, 1)
+            tc(8, 2, 2, 1)
         );
         assert_eq!(
             calculate_thread_counts(Some(8), Some(2), None, 40, 1, true, false),
-            (8, 2, 1)
+            tc(8, 2, 1, 1)
         );
         assert_eq!(
             calculate_thread_counts(None, Some(2), None, 4, 16, true, false),
-            (8, 2, 1)
+            tc(8, 2, 2, 1)
         );
         assert_eq!(
             calculate_thread_counts(Some(8), None, None, 4, 16, true, false),
-            (8, 2, 1)
+            tc(8, 2, 2, 1)
         );
         assert_eq!(
             calculate_thread_counts(Some(9), None, None, 4, 16, true, false),
-            (9, 1, 1)
+            tc(9, 1, 2, 1)
         );
         assert_eq!(
             calculate_thread_counts(None, None, None, 4, 16, true, false),
-            (8, 2, 1)
+            tc(8, 2, 2, 1)
         );
         assert_eq!(
             calculate_thread_counts(None, None, None, 2, 16, true, false),
-            (8, 4, 1)
+            tc(8, 4, 4, 1)
         );
         assert_eq!(
             calculate_thread_counts(None, None, None, 1, 16, true, false),
-            (11, 5, 1)
+            tc(11, 5, 4, 1)
         );
         assert_eq!(
             calculate_thread_counts(None, None, None, 1, 16, false, false),
-            (15, 1, 1)
+            tc(15, 1, 4, 1)
         );
         assert_eq!(
             calculate_thread_counts(None, None, None, 1, 16, false, true),
-            (15, 1, 5)
+            tc(15, 1, 4, 5)
         );
 
         assert_eq!(
             calculate_thread_counts(None, None, None, 1, 8, false, true),
-            (7, 1, 4)
+            tc(7, 1, 4, 4)
         );
     }
 }

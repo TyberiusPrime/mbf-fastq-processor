@@ -121,8 +121,9 @@ impl Step for Progress {
         self.start_time = Some(std::time::Instant::now());
         // report thread configuration
         self.output(&format!(
-            "Thread config: per_input_segment {}, processing: {}, per_output_file: {}",
+            "Thread config: per_input_segment {} (+ {} pod-demux), processing: {}, per_output_file: {}",
             input_info.threading_configuration.n_input_per_segment,
+            input_info.threading_configuration.n_pod_demux_per_segment,
             input_info.threading_configuration.n_processing,
             input_info.threading_configuration.n_output,
         ))?;

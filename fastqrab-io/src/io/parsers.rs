@@ -84,6 +84,17 @@ pub trait Parser: Send {
 #[derive(Clone, Copy, Debug)]
 pub struct ThreadCount(pub std::num::NonZero<usize>);
 
+/// The per-segment thread budget for one input parser. `decompression` sizes the
+/// rapidgzip `-P` decode pool (and the BAM bgzf workers); `pod_demux` sizes the
+/// columnar pod-parser's demux pool. They are tuned independently — decode wants
+/// many threads, demux wants a small handful — but both originate from
+/// `calculate_thread_counts`, the single place these are decided.
+#[derive(Clone, Copy, Debug)]
+pub struct ParserThreadCounts {
+    pub decompression: ThreadCount,
+    pub pod_demux: ThreadCount,
+}
+
 ///parse multiple files one after the other
 ///this allows the mixing of input file types, I suppose.
 pub struct ChainedParser {
@@ -93,7 +104,7 @@ pub struct ChainedParser {
     bam_index_paths: Option<Vec<std::path::PathBuf>>,
     target_reads_per_block: NonZero<usize>,
     buffer_size: usize,
-    input_thread_count: ThreadCount,
+    thread_counts: ParserThreadCounts,
     options: InputOptions,
     expected_read_count_power_of_two: Option<usize>,
     first_block_done: bool,
@@ -113,7 +124,7 @@ impl ChainedParser {
         mut files: Vec<InputFile>,
         target_reads_per_block: NonZero<usize>,
         buffer_size: usize,
-        input_thread_count: ThreadCount,
+        thread_counts: ParserThreadCounts,
         options: InputOptions,
     ) -> Self {
         files.reverse();
@@ -143,7 +154,7 @@ impl ChainedParser {
             },
             target_reads_per_block,
             buffer_size,
-            input_thread_count,
+            thread_counts,
             options,
             expected_read_count_power_of_two: None,
             first_block_done: false,
@@ -160,7 +171,7 @@ impl ChainedParser {
                     let parser = file.get_parser(
                         self.target_reads_per_block,
                         self.buffer_size,
-                        self.input_thread_count,
+                        self.thread_counts,
                         &self.options,
                     )?; // cov:excl-line
                     self.current = Some(parser);

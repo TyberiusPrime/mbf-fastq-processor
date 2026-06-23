@@ -3,7 +3,7 @@ use std::path::Path;
 
 use crate::get_number_of_cores;
 use crate::io::input::InputOptions;
-use crate::io::parsers::ThreadCount;
+use crate::io::parsers::{ParserThreadCounts, ThreadCount};
 use fastqrab_config::{default_block_size, default_buffer_size};
 pub use input::{
     DetectedInputFormat, InputFile, InputFiles, open_file, open_input_file, total_file_size,
@@ -45,11 +45,15 @@ fn drive_reads(
         threads_per_segment: Some(get_number_of_cores()), // at this point, we're ready to multicore this
                                                           // hard.
     };
+    let one = ThreadCount(std::num::NonZero::new(1usize).expect("1 is not zero"));
     let mut parser = input_file
         .get_parser(
             default_block_size(),
             default_buffer_size(),
-            ThreadCount(std::num::NonZero::new(1usize).expect("1 is not zero")),
+            ParserThreadCounts {
+                decompression: one,
+                pod_demux: one,
+            },
             &options,
         )
         .context("Getting parser")?; // cov:excl-line
