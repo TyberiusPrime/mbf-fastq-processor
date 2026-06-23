@@ -252,12 +252,21 @@ impl PodFastqParser {
 
         let (bytes_tx, bytes_rx) = channel::bounded::<Arc<Vec<u8>>>(demux_threads * 4);
         let (chunk_tx, chunk_rx) = channel::bounded::<PodFastqChunk>(demux_threads * 4);
+        // Recycle channel: demux workers hand back each drained input buffer
+        // (see `parse_pods_from_channel`) so the reader can refill it instead of
+        // allocating. Reusing the allocation keeps its pages faulted-in, which is
+        // what removes the `alloc_vec_from_elem` cost and the minor-fault churn.
+        let (recycle_tx, recycle_rx) = channel::bounded::<Vec<u8>>(demux_threads * 4);
 
         // Reader thread — fill `buffer_size` chunks and feed the byte channel.
         let reader_handle = std::thread::spawn(move || -> Result<()> {
             let mut reader = reader;
             loop {
-                let mut buf = vec![0u8; buffer_size];
+                // Reuse a recycled buffer when one is available; otherwise start
+                // fresh. `resize` only memsets already-faulted pages on the reuse
+                // path, so there are no first-touch page faults in steady state.
+                let mut buf = recycle_rx.try_recv().unwrap_or_default();
+                buf.resize(buffer_size, 0);
                 let mut filled = 0;
                 while filled < buffer_size {
                     let n = reader.read(&mut buf[filled..])?; // cov:excl-line
@@ -282,7 +291,7 @@ impl PodFastqParser {
         });
 
         let parser_handle = std::thread::spawn(move || {
-            parse_pods_from_channel(bytes_rx, chunk_tx, demux_threads, None)
+            parse_pods_from_channel(bytes_rx, chunk_tx, demux_threads, Some(recycle_tx))
         });
 
         Ok(PodFastqParser {
