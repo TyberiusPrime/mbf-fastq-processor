@@ -835,7 +835,7 @@ impl RunStage1 {
         let block_size = NonZero::new(parsed.options.block_size)
             .expect("block_size must have been validate > 0");
         let buffer_size = parsed.options.buffer_size;
-        let channel_size = 2;
+        let channel_size = 5;
         let error_collector = Arc::new(Mutex::new(Vec::<String>::new()));
         let input_options = parsed.input.options.clone();
 
