@@ -23,6 +23,121 @@ use crossbeam::channel::{self, Receiver, Sender};
 
 use stringpod::{DualStringPod, StringPod, StringPodBuilder};
 
+/// A decompressed byte chunk fed to the pod parser, abstracted over its backing
+/// storage so the same demux pipeline drives both the in-process pipe reader and
+/// the out-of-process shared-memory transport.
+///
+/// It derefs to `&[u8]` (the only thing the demux scan needs) and *releases its
+/// storage on drop*, which makes the release panic-safe — a worker that panics
+/// mid-parse still returns the buffer/slot:
+/// - [`ChunkInner::Owned`] recycles its `Vec` back to the producer (when it is
+///   the sole `Arc` owner) so the allocation's pages stay faulted-in, exactly as
+///   the old `Arc::try_unwrap` recycle did.
+/// - [`ChunkInner::Shared`] returns its shared-memory slot id to the
+///   decompressor so the slot can be refilled.
+pub struct Chunk {
+    inner: ChunkInner,
+}
+
+enum ChunkInner {
+    /// Heap buffer owned through an `Arc` (the in-process path). Recycled on drop
+    /// when no other `Arc` clone is live.
+    Owned {
+        data: Option<Arc<Vec<u8>>>,
+        recycle: Option<Sender<Vec<u8>>>,
+    },
+    /// A borrow of `len` bytes at `ptr` inside a shared-memory region owned by
+    /// the parser, occupying slot `slot`. The slot id is returned on `release`
+    /// when the chunk drops.
+    Shared {
+        ptr: *const u8,
+        len: usize,
+        slot: u32,
+        release: Sender<u32>,
+    },
+}
+
+// SAFETY: the `Shared` raw pointer addresses a shared-memory region that the
+// parser keeps mapped for longer than any `Chunk` it hands out, and each slot
+// has exactly one owner at a time (ownership is transferred through the
+// descriptor/return pipes). Sending the `Chunk` across threads therefore never
+// creates aliasing writes.
+unsafe impl Send for Chunk {}
+
+impl Chunk {
+    /// An owned heap chunk. `recycle`, when `Some`, receives the inner `Vec` on
+    /// drop (if this is the last `Arc` reference) for reuse by the producer.
+    #[must_use]
+    pub fn owned(data: Arc<Vec<u8>>, recycle: Option<Sender<Vec<u8>>>) -> Self {
+        Chunk {
+            inner: ChunkInner::Owned {
+                data: Some(data),
+                recycle,
+            },
+        }
+    }
+
+    /// A chunk borrowing `len` bytes at `ptr` from a shared-memory `slot`,
+    /// returning the slot id via `release` on drop.
+    ///
+    /// # Safety
+    /// `ptr..ptr+len` must point into a live shared region that outlives every
+    /// `Chunk` produced from it, and nothing else may read or write `slot`'s
+    /// bytes until this chunk is dropped (its slot returned).
+    #[must_use]
+    pub unsafe fn shared(ptr: *const u8, len: usize, slot: u32, release: Sender<u32>) -> Self {
+        Chunk {
+            inner: ChunkInner::Shared {
+                ptr,
+                len,
+                slot,
+                release,
+            },
+        }
+    }
+
+    #[inline]
+    fn bytes(&self) -> &[u8] {
+        match &self.inner {
+            ChunkInner::Owned { data, .. } => data.as_ref().expect("present until drop"),
+            // SAFETY: upheld by `Chunk::shared`'s contract — the region outlives
+            // the chunk and the slot has a single owner, so this borrow is valid
+            // and unaliased for the chunk's lifetime.
+            ChunkInner::Shared { ptr, len, .. } => unsafe {
+                std::slice::from_raw_parts(*ptr, *len)
+            },
+        }
+    }
+}
+
+impl std::ops::Deref for Chunk {
+    type Target = [u8];
+    #[inline]
+    fn deref(&self) -> &[u8] {
+        self.bytes()
+    }
+}
+
+impl Drop for Chunk {
+    fn drop(&mut self) {
+        match &mut self.inner {
+            ChunkInner::Owned { data, recycle } => {
+                // Recycle the Vec only if we are its sole owner (a downstream CRC
+                // validator may still hold an Arc clone); otherwise just drop it.
+                if let (Some(arc), Some(tx)) = (data.take(), recycle.as_ref())
+                    && let Ok(mut v) = Arc::try_unwrap(arc)
+                {
+                    v.clear();
+                    let _ = tx.try_send(v);
+                }
+            }
+            ChunkInner::Shared { slot, release, .. } => {
+                let _ = release.try_send(*slot);
+            }
+        }
+    }
+}
+
 /// One chunk's worth of FASTQ, split into per-role columns.
 ///
 /// `names` is a [`StringPod`] of header lines with the leading `@` stripped via
@@ -49,7 +164,7 @@ pub struct FastqChunk {
 /// the previous chunk to stitch onto this chunk's leading partial line.
 struct DemuxJob {
     idx: u64,
-    chunk: Arc<Vec<u8>>,
+    chunk: Chunk,
     prev_tail: Vec<u8>,
 }
 
@@ -77,18 +192,17 @@ struct DemuxResult {
 /// Keep it small: a few workers are enough to keep the scan + copy off the
 /// critical path, and more just oversubscribe and contend in the allocator.
 ///
-/// `recycle_tx`, when `Some`, receives each drained input `Vec<u8>` after its
-/// payload has been copied into columns, so an upstream producer can reuse the
-/// allocation (pages stay faulted-in). Pass `None` to simply drop the buffers.
+/// Each [`Chunk`] releases its backing storage on drop — recycling an owned
+/// `Vec` to its producer, or returning a shared-memory slot — so the caller
+/// chooses the transport when it builds the chunks; this function just consumes
+/// `&[u8]` and drops each chunk once its payload is copied into columns.
 ///
 /// # Panics
 /// when the fastq collector thread paniced?
-#[expect(clippy::needless_pass_by_value, reason = "Lifetime issues otherwise")]
 pub fn parse_pods_from_channel(
-    bytes_rx: Receiver<Arc<Vec<u8>>>,
+    bytes_rx: Receiver<Chunk>,
     sink: Sender<FastqChunk>,
     demux_threads: usize,
-    recycle_tx: Option<Sender<Vec<u8>>>,
 ) -> Result<()> {
     let demux_threads = if demux_threads == 0 {
         std::thread::available_parallelism()
@@ -107,17 +221,12 @@ pub fn parse_pods_from_channel(
     for _ in 0..demux_threads {
         let job_rx = job_rx.clone();
         let done_tx = done_tx.clone();
-        let recycle_tx = recycle_tx.clone();
         workers.push(std::thread::spawn(move || {
             for job in job_rx {
                 let result = demux_chunk(job.idx, &job.chunk, &job.prev_tail);
-                // Payload is copied into the columns now; hand the buffer back.
-                if let Ok(mut v) = Arc::try_unwrap(job.chunk) {
-                    v.clear();
-                    if let Some(tx) = &recycle_tx {
-                        let _ = tx.try_send(v);
-                    }
-                }
+                // Payload is copied into the columns now; drop the chunk to
+                // release its storage (recycle the Vec / return the shm slot).
+                drop(job.chunk);
                 if done_tx.send(result).is_err() {
                     return;
                 }
@@ -646,18 +755,18 @@ mod tests {
     #[test]
     fn end_to_end_through_the_channel() {
         let data = sample();
-        let (tx, rx) = channel::bounded::<Arc<Vec<u8>>>(8);
+        let (tx, rx) = channel::bounded::<Chunk>(8);
         // Feed the payload as several awkwardly-sized chunks.
         let producer = std::thread::spawn(move || {
             for piece in data.chunks(7) {
-                if tx.send(Arc::new(piece.to_vec())).is_err() {
+                if tx.send(Chunk::owned(Arc::new(piece.to_vec()), None)).is_err() {
                     break;
                 }
             }
         });
 
         let (chunk_tx, chunk_rx) = channel::bounded::<FastqChunk>(8);
-        let parser = std::thread::spawn(move || parse_pods_from_channel(rx, chunk_tx, 2, None));
+        let parser = std::thread::spawn(move || parse_pods_from_channel(rx, chunk_tx, 2));
 
         let (mut n, mut s, mut q) = (Vec::new(), Vec::new(), Vec::new());
         for c in chunk_rx {
@@ -741,18 +850,18 @@ mod tests {
         let payload = Arc::new(payload);
 
         for threads in [1usize, 4] {
-            let (tx, rx) = channel::bounded::<Arc<Vec<u8>>>(8);
+            let (tx, rx) = channel::bounded::<Chunk>(8);
             let p = Arc::clone(&payload);
             let producer = std::thread::spawn(move || {
                 for piece in p.chunks(64 * 1024) {
-                    if tx.send(Arc::new(piece.to_vec())).is_err() {
+                    if tx.send(Chunk::owned(Arc::new(piece.to_vec()), None)).is_err() {
                         break;
                     }
                 }
             });
             let (chunk_tx, chunk_rx) = channel::bounded::<FastqChunk>(8);
             let parser =
-                std::thread::spawn(move || parse_pods_from_channel(rx, chunk_tx, threads, None));
+                std::thread::spawn(move || parse_pods_from_channel(rx, chunk_tx, threads));
 
             // seq/qual share one metadata column in the DualStringPod, so their
             // counts are structurally equal; assert names line up too.
@@ -793,28 +902,31 @@ mod tests {
     #[test]
     #[ignore = "accumulates >4 GiB and needs several GiB of RAM; run with --ignored"]
     fn read_exceeding_u32_fails_gracefully() {
-        let (tx, rx) = channel::bounded::<Arc<Vec<u8>>>(8);
+        let (tx, rx) = channel::bounded::<Chunk>(8);
         let producer = std::thread::spawn(move || {
             // `@r\n` then a single sequence line longer than u32::MAX, then its
             // terminating newline: the >4 GiB line is the boundary-straddling
             // line whose assembly trips the guard.
-            if tx.send(Arc::new(b"@r\n".to_vec())).is_err() {
+            if tx.send(Chunk::owned(Arc::new(b"@r\n".to_vec()), None)).is_err() {
                 return;
             }
             let block = vec![b'A'; 64 * 1024 * 1024];
             let target: u64 = u64::from(u32::MAX) + (1 << 20);
             let mut sent: u64 = 0;
             while sent < target {
-                if tx.send(Arc::new(block.clone())).is_err() {
+                if tx
+                    .send(Chunk::owned(Arc::new(block.clone()), None))
+                    .is_err()
+                {
                     return;
                 }
                 sent += block.len() as u64;
             }
-            let _ = tx.send(Arc::new(b"\n+\n".to_vec()));
+            let _ = tx.send(Chunk::owned(Arc::new(b"\n+\n".to_vec()), None));
         });
 
         let (chunk_tx, chunk_rx) = channel::bounded::<FastqChunk>(8);
-        let parser = std::thread::spawn(move || parse_pods_from_channel(rx, chunk_tx, 2, None));
+        let parser = std::thread::spawn(move || parse_pods_from_channel(rx, chunk_tx, 2));
 
         // No whole record ever completes, so just drain until the sink closes.
         for _ in chunk_rx {}

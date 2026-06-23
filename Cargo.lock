@@ -759,6 +759,7 @@ dependencies = [
  "anyhow",
  "clap",
  "crossbeam",
+ "libc",
  "rusty-rapidgzip",
 ]
 
