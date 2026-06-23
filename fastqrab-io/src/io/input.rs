@@ -21,10 +21,7 @@ pub enum InputFile {
 #[derive(Copy, Clone)]
 pub enum DecompressionOptions {
     Default,
-    Rapidgzip {
-        thread_count: ThreadCount,
-        index_gzip: bool,
-    },
+    Rapidgzip { thread_count: ThreadCount },
 }
 
 #[derive(serde::Serialize, Clone, PartialEq, JsonSchema)]
@@ -47,31 +44,30 @@ pub struct InputOptions {
     #[serde(skip_serializing)]
     pub use_rapidgzip: bool,
 
-    #[serde(skip_serializing)]
-    pub build_rapidgzip_index: Option<bool>,
-
     pub threads_per_segment: Option<usize>,
 }
 
 impl PartialInputOptions {
-    /// Enable/disable rapidgzip. defaults to enabled if we can find the binary.
+    /// Enable/disable rapidgzip. defaults to enabled if we can find our sibling
+    /// decompressor binary.
     fn configure_rapid_gzip(&mut self) {
-        use crate::io::input::find_rapidgzip_in_path;
+        use crate::io::input::find_decompressor;
         match &self.use_rapidgzip.state {
             TomlValueState::Missing { .. } => {
                 // auto detect
                 self.use_rapidgzip.state = TomlValueState::Ok;
-                self.use_rapidgzip.value = Some(find_rapidgzip_in_path().is_some());
+                self.use_rapidgzip.value = Some(find_decompressor().is_some());
             }
             TomlValueState::Ok => {
                 if *self.use_rapidgzip.value.as_ref().expect("State was ok")
-                    && find_rapidgzip_in_path().is_none()
+                    && find_decompressor().is_none()
                 {
                     self.use_rapidgzip.state = TomlValueState::ValidationFailed {
-                        message: "rapidgzip requested but not found in PATH".to_string(),
+                        message: "rapidgzip requested but the decompressor binary was not found"
+                            .to_string(),
                     };
                     self.use_rapidgzip.help = Some(
-                                "Make sure you have a rapidgzip binary on your path, or set use_rapidgzip to false (or leave off for auto-detect).".to_string(),
+                                "The 'fastqrab-decompressor' binary must sit next to the fastqrab binary. Set use_rapidgzip to false (or leave off for auto-detect) if it is unavailable.".to_string(),
                             );
                 }
             }
@@ -107,16 +103,6 @@ impl<R> VerifyIn<R> for PartialInputOptions {
             .or_with(default_comment_insert_char);
 
         self.configure_rapid_gzip();
-        // Validate index_gzip option
-        if let Some(Some(true)) = self.build_rapidgzip_index.as_ref()
-            && let Some(false) = self.use_rapidgzip.as_ref()
-        {
-            self.build_rapidgzip_index.state = TomlValueState::ValidationFailed {
-                message: "Only accepted when use_rapidgzip is set to true".to_string(),
-            };
-            self.build_rapidgzip_index.help =
-                Some("Either set use_rapidgzip=true or unset build_rapidgzip_index".to_string());
-        }
 
         Ok(())
     }
@@ -130,7 +116,6 @@ impl Default for InputOptions {
             bam_include_unmapped: None,
             read_comment_character: default_comment_insert_char(),
             use_rapidgzip: false,
-            build_rapidgzip_index: None,
             threads_per_segment: None,
         }
     }
@@ -176,10 +161,7 @@ impl InputFile {
         // sized separately upstream; route each to its own consumer.
         let thread_count = thread_counts.decompression;
         let decompression_options = if options.use_rapidgzip && self.get_filename().is_some() {
-            DecompressionOptions::Rapidgzip {
-                thread_count,
-                index_gzip: options.build_rapidgzip_index.unwrap_or(false),
-            }
+            DecompressionOptions::Rapidgzip { thread_count }
         } else {
             DecompressionOptions::Default
         };
@@ -397,20 +379,21 @@ fn open_stdin() -> Result<ex::fs::File> {
     }
 }
 
+/// Locate our out-of-process decompressor: the `fastqrab-decompressor` crate's
+/// binary, which must sit right next to the running fastqrab binary. The name is
+/// derived by suffixing the running executable's file name with `-decompressor`,
+/// so a renamed `fastqrab_0.9.1` looks for a sibling `fastqrab_0.9.1-decompressor`.
 #[must_use]
-pub fn find_rapidgzip_in_path() -> Option<PathBuf> {
-    if let Ok(path) = which::which("rapidgzip") {
-        return Some(path);
+pub fn find_decompressor() -> Option<PathBuf> {
+    let current = std::env::current_exe().ok()?;
+    let dir = current.parent()?;
+    let name = current.file_name()?.to_str()?;
+    let candidate = dir.join(format!("{name}-decompressor"));
+    if candidate.exists() {
+        Some(candidate)
+    } else {
+        None
     }
-    //if not on path, but this is a nix binary, refer to the nix store one our flake added for
-    let nix_rapidgzip = option_env!("NIX_RAPIDGZIP");
-    nix_rapidgzip.and_then(|p| {
-        // cov:excl-start
-        // does not happen in testing
-        let path = PathBuf::from(p);
-        if path.exists() { Some(path) } else { None }
-    })
-    // cov:excl-stop
 }
 
 /// Open a (possibly compressed) byte stream for a FASTQ/FASTA input, applying
@@ -436,64 +419,44 @@ pub fn open_decompressed_reader(
     decompression_options: DecompressionOptions,
 ) -> Result<(Box<dyn Read + Send>, niffler::send::compression::Format)> {
     let (mut reader, format) = niffler::send::get_reader(Box::new(file))?;
-    if let DecompressionOptions::Rapidgzip {
-        thread_count,
-        index_gzip,
-    } = decompression_options
+    if let DecompressionOptions::Rapidgzip { thread_count } = decompression_options
         && format == niffler::send::compression::Format::Gzip
     {
         let file = spawn_rapidgzip(
             filename.expect("rapid gzip and stdin not supported"),
             thread_count,
-            index_gzip,
         )?; // cov:excl-line
         reader = Box::new(file);
     }
     Ok((reader, format))
 }
 
-/// Spawns a rapidgzip process to decompress a gzipped file
-pub fn spawn_rapidgzip(
-    filename: &Path,
-    thread_count: ThreadCount,
-    index_gzip: bool,
-) -> Result<std::fs::File> {
+/// Spawns our out-of-process `fastqrab-decompressor` to decode a gzipped file,
+/// returning its stdout as a readable file handle. Keeping the decoder in a
+/// separate process isolates all of its `unsafe` from the main process.
+pub fn spawn_rapidgzip(filename: &Path, thread_count: ThreadCount) -> Result<std::fs::File> {
     #[cfg(unix)]
     {
         use std::os::unix::io::{FromRawFd, IntoRawFd};
-        // Check for index file
-        let index_path = format!("{}.rapidgzip_index", filename.display());
-        let has_index = std::path::Path::new(&index_path).exists();
 
-        let rapidgzip_command = find_rapidgzip_in_path().unwrap_or_else(|| "rapidgzip".into());
-        // Build rapidgzip command
-        let mut cmd = Command::new(rapidgzip_command);
-        cmd.arg("--stdout")
-            .arg("-d")
-            .arg("-P")
+        let decompressor = find_decompressor()
+            .context("fastqrab-decompressor binary not found next to the fastqrab binary")?;
+        // Mirror the `fastqrab-decompressor` CLI: positional input path, `-P` threads.
+        let mut cmd = Command::new(decompressor);
+        cmd.arg("-P")
             .arg(thread_count.0.to_string())
             .arg(filename)
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit());
 
-        // Use index if it exists
-        if has_index {
-            cmd.arg("--import-index").arg(&index_path);
-        }
-
-        // Export index if requested and it doesn't exist
-        if index_gzip && !has_index {
-            cmd.arg("--export-index").arg(&index_path);
-        }
-
         let mut child = cmd.spawn().context(format!(
-            "Failed to spawn rapidgzip process for file: {}. Make sure you have a rapidgzip binary on your path.",
+            "Failed to spawn fastqrab-decompressor process for file: {}.",
             filename.display()
         ))?; // cov:excl-line
         let stdout = child
             .stdout
             .take()
-            .context("Failed to capture rapidgzip stdout")?;
+            .context("Failed to capture fastqrab-decompressor stdout")?;
 
         // Convert the stdout pipe to an ex::fs::File
         // We need to use the file descriptor directly

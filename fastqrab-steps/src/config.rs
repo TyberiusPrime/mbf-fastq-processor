@@ -88,7 +88,6 @@ pub fn validate_segment_label(
         "bam_include_unmapped",
         "read_comment_character",
         "use_rapidgzip",
-        "build_rapidgzip_index",
         "threads_per_segment",
         "tpd_field_match_mode",
     ] {
@@ -491,7 +490,6 @@ impl VerifyIn<TPDRoot> for PartialConfig {
         self.verify_barcodes_and_segment_names_disjoint();
         self.verify_benchmark_molecule_count();
         self.disable_output_on_benchmark();
-        self.verify_head_rapidgzip_conflict();
         self.expand_transformations();
         let used_barcode_sections = self.verify_transformation_labels();
         self.resolve_bam_output_references();
@@ -717,46 +715,6 @@ impl PartialConfig {
                     Ok(())
                 }
             });
-        }
-    }
-
-    fn verify_head_rapidgzip_conflict(&mut self) {
-        let build_rapidgzip_index = self
-            .input
-            .as_ref()
-            .and_then(|i| i.options.as_ref())
-            .and_then(|o| o.build_rapidgzip_index.as_ref())
-            .and_then(|x| x.as_ref())
-            .copied()
-            .unwrap_or(false);
-        if !build_rapidgzip_index {
-            return;
-        }
-        let rapidgzip_span = self
-            .input
-            .as_ref()
-            .and_then(|i| i.options.as_ref())
-            .map(|o| o.build_rapidgzip_index.span())
-            .unwrap_or_default();
-        let mut head_transform = self.transform.as_mut().and_then(|x| {
-            x.iter_mut()
-                .find(|t| matches!(t.as_ref(), Some(PartialTransformation::Head(..))))
-        });
-        if let Some(head_tv) = &mut head_transform {
-            let spans = vec![
-                (
-                    head_tv.span(),
-                    "This Head transform conflicts with build_rapidgzip_index".to_string(),
-                ),
-                (
-                    rapidgzip_span,
-                    "build_rapidgzip_index = true set here".to_string(),
-                ),
-            ];
-            head_tv.state = TomlValueState::Custom { spans };
-            head_tv.help = Some(
-                "build_rapidgzip_index and Head cannot be used together (index would not be created).\nSet build_rapidgzip_index to false.".to_string(),
-            );
         }
     }
 
@@ -2337,14 +2295,9 @@ impl Config {
                 .expect("Calculated output threads should never be zero");
         }
 
-        //rapidgzip single core is slower than regular gzip
-        if self.input.options.threads_per_segment.expect("Set before") == 1
-            // if user requests an index, run rapidgzip anyway
-            && !self.input.options.build_rapidgzip_index.unwrap_or(false)
-        // // if the user explicitly requested rapidgzip, then do don't disable it.
-        // && self.input.options.use_rapidgzip != Some(true)
-        {
-            // otherwise, we can fall back
+        //rapidgzip single core is slower than regular gzip, so fall back to
+        //the in-process decoder when only one decompression thread is allotted.
+        if self.input.options.threads_per_segment.expect("Set before") == 1 {
             self.input.options.use_rapidgzip = false;
         }
 
@@ -2527,7 +2480,6 @@ mod tests {
         validate_segment_label("bam_include_unmapped", f).unwrap_err();
         validate_segment_label("read_comment_character", f).unwrap_err();
         validate_segment_label("use_rapidgzip", f).unwrap_err();
-        validate_segment_label("build_rapidgzip_index", f).unwrap_err();
         validate_segment_label("threads_per_segment", f).unwrap_err();
         validate_segment_label("tpd_field_match_mode", f).unwrap_err();
 

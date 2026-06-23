@@ -925,7 +925,11 @@ mod pod_regroup_tests {
                 assert_eq!(s, target, "block {i} should be exactly target");
             }
         }
-        assert_eq!(sizes.iter().sum::<usize>(), total, "all reads accounted for");
+        assert_eq!(
+            sizes.iter().sum::<usize>(),
+            total,
+            "all reads accounted for"
+        );
     }
 
     fn variable_reads(n: usize) -> Reads {

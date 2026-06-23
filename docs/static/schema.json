@@ -144,13 +144,6 @@
           "type": "boolean",
           "writeOnly": true
         },
-        "build_rapidgzip_index": {
-          "type": [
-            "boolean",
-            "null"
-          ],
-          "writeOnly": true
-        },
         "threads_per_segment": {
           "type": [
             "integer",

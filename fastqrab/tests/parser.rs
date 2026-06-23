@@ -47,7 +47,6 @@ fn test_bufsize_variations(input_fastq_filename: &str, bufsize_range: &[usize]) 
                     bam_include_unmapped: None,
                     fasta_fake_quality: None,
                     read_comment_character: b' ',
-                    build_rapidgzip_index: Some(false),
                     use_rapidgzip: false,
                     threads_per_segment: Some(1),
                 },

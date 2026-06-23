@@ -1,0 +1,27 @@
+[package]
+name = "fastqrab-decompressor"
+authors.workspace = true
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+
+# Out-of-process gzip decompressor. fastqrab spawns this sibling binary so all
+# of the decompressor's `unsafe` (and its C/FFI deps) live in a separate process
+# address space — a memory bug in the decoder can't corrupt the main process.
+# Discovered at runtime as `<fastqrab-exe-name>-decompressor` next to the main
+# binary (see fastqrab-io `find_decompressor`).
+
+[lints]
+workspace = true
+
+[[bin]]
+	name = "fastqrab-decompressor"
+	path = "src/main.rs"
+
+[dependencies]
+	anyhow = { workspace = true }
+	clap = { workspace = true, features = ["derive"] }
+	crossbeam = { workspace = true }
+	rusty-rapidgzip = { workspace = true }

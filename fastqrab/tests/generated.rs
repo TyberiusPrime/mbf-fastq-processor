@@ -753,69 +753,10 @@ fn test_cases_x_input_x_compression_x_rapidgzip_x_basic() {
 
 #[test]
 
-fn test_cases_x_input_x_compression_x_rapidgzip_x_error_index_but_no_rapid_gzip() {
-    println!(
-        "Test case is in: test_cases/input/compression/rapidgzip/error_index_but_no_rapid_gzip"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/input/compression/rapidgzip/error_index_but_no_rapid_gzip",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_input_x_compression_x_rapidgzip_x_error_no_rapid_gzip() {
-    println!("Test case is in: test_cases/input/compression/rapidgzip/error_no_rapid_gzip");
-    run_test(
-        std::path::Path::new("../test_cases/input/compression/rapidgzip/error_no_rapid_gzip"),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_input_x_compression_x_rapidgzip_x_no_index_not_created() {
-    println!("Test case is in: test_cases/input/compression/rapidgzip/no_index_not_created");
-    run_test(
-        std::path::Path::new("../test_cases/input/compression/rapidgzip/no_index_not_created"),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
 fn test_cases_x_input_x_compression_x_rapidgzip_x_single_thread() {
     println!("Test case is in: test_cases/input/compression/rapidgzip/single_thread");
     run_test(
         std::path::Path::new("../test_cases/input/compression/rapidgzip/single_thread"),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_input_x_compression_x_rapidgzip_x_with_index() {
-    println!("Test case is in: test_cases/input/compression/rapidgzip/with_index");
-    run_test(
-        std::path::Path::new("../test_cases/input/compression/rapidgzip/with_index"),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_input_x_compression_x_rapidgzip_x_with_index_and_head() {
-    println!("Test case is in: test_cases/input/compression/rapidgzip/with_index_and_head");
-    run_test(
-        std::path::Path::new("../test_cases/input/compression/rapidgzip/with_index_and_head"),
         "input.toml",
         1,
     );

@@ -26,8 +26,7 @@
     # bam_include_unmapped = true   # required for BAM inputs: keep reads without alignments
 	# read_comment_char = ' '       # defaults to ' '. The character seperating read name from the 'read comment'.
     # threads_per_segment = 3       # (optional) number of decompression threads per segment. For default, see full documentation
-    # use_rapidgzip = true          # (optional) whether to use rapidgzip for gzip decompression if available. Defaults to 'auto', which looks if rapidgzip is in path.
-    # build_rapidgzip_index = false # (optional) whether to build a rapidgzip index for later use next to the index files.
+    # use_rapidgzip = true          # (optional) whether to use the parallel fastqrab-decompressor for gzip decompression if available. Defaults to 'auto', which looks for the decompressor binary next to fastqrab.
 
 ## Interleaved mode:
 ## specify exactly one key=[files] value, and set interleaved to ['read1','read2',...]
