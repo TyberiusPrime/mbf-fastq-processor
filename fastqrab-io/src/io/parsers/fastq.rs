@@ -12,7 +12,7 @@ use stringpod::{DualStringPodBuilder, StringPod, StringPodBuilder};
 
 use crate::blocks::FastQChunk;
 use crate::io::parsers::{ParseResult, Parser, ParserOutput};
-use crate::io::pod_parser::{FastqChunk as PodFastqChunk, parse_pods_from_channel};
+use crate::io::pod_parser::{Chunk, FastqChunk as PodFastqChunk, parse_pods_from_channel};
 use crate::io::{
     FastQBlock, FastQElement, FastQRead, Position,
     input::{DecompressionOptions, open_decompressed_reader},
@@ -221,8 +221,18 @@ pub struct PodFastqParser {
     chunk_rx: Receiver<PodFastqChunk>,
     /// The pod parser thread; joined at EOF to surface a parse error.
     parser_handle: Option<JoinHandle<Result<()>>>,
-    /// The byte-reader thread; joined at EOF to surface an io error.
+    /// The byte-reader thread; joined at EOF to surface an io error. In pipe mode
+    /// this reads decompressed bytes; in shm mode it reads `(slot, len)`
+    /// descriptors and wraps each slot as a borrowed [`Chunk`].
     reader_handle: Option<JoinHandle<Result<()>>>,
+    /// shm mode only: relays freed slot ids to the decompressor's stdin.
+    slot_writer_handle: Option<JoinHandle<()>>,
+    /// shm mode only: the decompressor child, waited on at EOF to surface a
+    /// non-zero exit (e.g. a mid-stream decode error after a truncated stream).
+    child: Option<std::process::Child>,
+    /// shm mode only: keeps the shared-memory mapping alive (type-erased so the
+    /// field is cross-platform) for as long as any borrowed [`Chunk`] could be.
+    _region: Option<Arc<dyn std::any::Any + Send + Sync>>,
     /// Emitted-but-not-yet-consumed chunks, with `front_consumed` reads already
     /// drained off the front one.
     pending: VecDeque<PodFastqChunk>,
@@ -233,6 +243,61 @@ pub struct PodFastqParser {
     /// Set once `chunk_rx` is closed and drained.
     eof: bool,
     compression_format: niffler::send::compression::Format,
+}
+
+/// Whether the shared-memory decompressor transport is enabled. On by default;
+/// `FASTQRAB_DECOMP_SHM=0` forces the legacy pipe path (A/B and field escape
+/// hatch).
+#[cfg(unix)]
+fn shm_enabled() -> bool {
+    !matches!(std::env::var("FASTQRAB_DECOMP_SHM").as_deref(), Ok("0"))
+}
+
+/// Shared-memory slot size in bytes (`FASTQRAB_DECOMP_SHM_SLOT_SIZE`, default
+/// 8 MiB — comfortably above the decoder's ~4 MiB chunk so a chunk usually fits
+/// one slot). Tunable; tests shrink it to force the multi-slot chunk-split path.
+#[cfg(unix)]
+fn shm_slot_size() -> usize {
+    std::env::var("FASTQRAB_DECOMP_SHM_SLOT_SIZE")
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+        .filter(|&n| n > 0)
+        .unwrap_or(8 * 1024 * 1024)
+}
+
+/// Number of shared-memory slots (`FASTQRAB_DECOMP_SHM_SLOTS`, default `fallback`
+/// computed from the thread counts). Tunable; tests shrink it to a tiny ring to
+/// stress backpressure / recycling. The pipeline is deadlock-free for any ring
+/// size ≥ 1 (demux workers never wait on a slot to finish).
+#[cfg(unix)]
+fn shm_slot_count(fallback: usize) -> usize {
+    std::env::var("FASTQRAB_DECOMP_SHM_SLOTS")
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+        .filter(|&n| n >= 1)
+        .unwrap_or(fallback)
+}
+
+/// True only for a *regular* file whose first two bytes are the gzip magic
+/// (`1f 8b`). Peeks and rewinds so, when this returns false, the fall-through
+/// `Read`-based path sees the file untouched at offset 0. Pipes/FIFOs (not
+/// seekable) and non-gzip inputs return false and keep the existing transport.
+#[cfg(unix)]
+fn shm_eligible_gzip(file: &std::fs::File) -> bool {
+    use std::io::{Read as _, Seek as _, SeekFrom};
+    let Ok(meta) = file.metadata() else {
+        return false;
+    };
+    if !meta.is_file() {
+        return false;
+    }
+    let mut handle: &std::fs::File = file;
+    let mut magic = [0u8; 2];
+    let read = handle.read_exact(&mut magic);
+    // Always rewind a regular file, even on a short read, so the fall-through
+    // reader is unaffected.
+    let _ = handle.seek(SeekFrom::Start(0));
+    read.is_ok() && magic == [0x1f, 0x8b]
 }
 
 impl PodFastqParser {
@@ -246,11 +311,26 @@ impl PodFastqParser {
         demux_threads: usize,
         decompression_options: DecompressionOptions,
     ) -> Result<PodFastqParser> {
-        let (reader, format) = open_decompressed_reader(file, filename, decompression_options)?;
         let demux_threads = demux_threads.max(1);
         let buffer_size = buffer_size.max(1);
 
-        let (bytes_tx, bytes_rx) = channel::bounded::<Arc<Vec<u8>>>(demux_threads * 4);
+        // Shared-memory fast path: rapidgzip-decoded gzip FASTQ, unless the
+        // `FASTQRAB_DECOMP_SHM=0` escape hatch is set. The decompressor memcpies
+        // each chunk into a shared slot and we parse it in place — no bulk pipe
+        // copies. FASTA, non-gzip, stdin/FIFO, and the Default path stay on the
+        // existing `Read`-based reader below.
+        #[cfg(unix)]
+        if let DecompressionOptions::Rapidgzip { thread_count } = decompression_options
+            && let Some(path) = filename
+            && shm_enabled()
+            && shm_eligible_gzip(&file)
+        {
+            return Self::new_shm(path, thread_count, target_reads_per_block, demux_threads);
+        }
+
+        let (reader, format) = open_decompressed_reader(file, filename, decompression_options)?;
+
+        let (bytes_tx, bytes_rx) = channel::bounded::<Chunk>(demux_threads * 4);
         let (chunk_tx, chunk_rx) = channel::bounded::<PodFastqChunk>(demux_threads * 4);
         // Recycle channel: demux workers hand back each drained input buffer
         // (see `parse_pods_from_channel`) so the reader can refill it instead of
@@ -263,10 +343,22 @@ impl PodFastqParser {
             let mut reader = reader;
             loop {
                 // Reuse a recycled buffer when one is available; otherwise start
-                // fresh. `resize` only memsets already-faulted pages on the reuse
-                // path, so there are no first-touch page faults in steady state.
+                // fresh. A recycled buffer was filled to `buffer_size` on a prior
+                // pass (we only ever shrink it via `truncate`), so its first
+                // `buffer_size` bytes are already initialized and we can re-expose
+                // them without a memset — `read` overwrites the prefix we consume
+                // and we `truncate` to what was actually read. A fresh buffer
+                // (cold start / empty recycle channel) still has to be zeroed.
                 let mut buf = recycle_rx.try_recv().unwrap_or_default();
-                buf.resize(buffer_size, 0);
+                if buf.capacity() >= buffer_size {
+                    // SAFETY: `buf` came back from a previous full-size pass, so
+                    // bytes `0..buffer_size` are initialized (plain `u8`, no
+                    // `Drop`); nothing reads them before `read` overwrites the
+                    // consumed prefix.
+                    unsafe { buf.set_len(buffer_size) };
+                } else {
+                    buf.resize(buffer_size, 0);
+                }
                 let mut filled = 0;
                 while filled < buffer_size {
                     let n = reader.read(&mut buf[filled..])?; // cov:excl-line
@@ -279,7 +371,10 @@ impl PodFastqParser {
                     break;
                 }
                 buf.truncate(filled);
-                if bytes_tx.send(Arc::new(buf)).is_err() {
+                if bytes_tx
+                    .send(Chunk::owned(Arc::new(buf), Some(recycle_tx.clone())))
+                    .is_err()
+                {
                     // Pod parser hung up (an error downstream); stop feeding it.
                     break; // cov:excl-line
                 }
@@ -291,18 +386,128 @@ impl PodFastqParser {
         });
 
         let parser_handle = std::thread::spawn(move || {
-            parse_pods_from_channel(bytes_rx, chunk_tx, demux_threads, Some(recycle_tx))
+            parse_pods_from_channel(bytes_rx, chunk_tx, demux_threads)
         });
 
         Ok(PodFastqParser {
             chunk_rx,
             parser_handle: Some(parser_handle),
             reader_handle: Some(reader_handle),
+            slot_writer_handle: None,
+            child: None,
+            _region: None,
             pending: VecDeque::new(),
             front_consumed: 0,
             target: target_reads_per_block.get(),
             eof: false,
             compression_format: format,
+        })
+    }
+
+    /// Shared-memory constructor (Unix, gzip FASTQ via rapidgzip). Spawns the
+    /// decompressor in shm mode and stands up three threads: a *descriptor
+    /// reader* that wraps each `(slot, len)` as a borrowed [`Chunk`] and feeds
+    /// the pod parser, a *slot-return writer* that relays freed slot ids back to
+    /// the child, and the pod *parser* itself. The shared mapping is kept alive
+    /// for the parser's lifetime so every borrowed chunk stays valid.
+    #[cfg(unix)]
+    fn new_shm(
+        path: &std::path::Path,
+        thread_count: crate::io::parsers::ThreadCount,
+        target_reads_per_block: NonZero<usize>,
+        demux_threads: usize,
+    ) -> Result<PodFastqParser> {
+        use crate::io::input::{ShmRapidgzip, spawn_rapidgzip_shm};
+        use std::io::{Read as _, Write as _};
+
+        // Slots are sized a bit larger than the decoder's ~4 MiB chunk so the
+        // common chunk lands in a single slot (an oversized chunk still splits).
+        // The region is `memfd`-backed and sparse, so unused slots cost no
+        // physical memory — only in-flight slots fault in — and we can size the
+        // ring generously for overlap. Both are overridable
+        // (`FASTQRAB_DECOMP_SHM_SLOT_SIZE` / `_SLOTS`) for tuning and to stress
+        // the small-ring / multi-slot-split paths under test.
+        let slot_size = shm_slot_size();
+        let depth = thread_count.0.get().max(demux_threads);
+        let slots = shm_slot_count((depth * 2 + 4).clamp(8, 64));
+
+        let ShmRapidgzip {
+            region,
+            mut descriptors,
+            mut slot_return,
+            child,
+            slots,
+            slot_size,
+        } = spawn_rapidgzip_shm(path, thread_count, slots, slot_size)?;
+
+        // `bytes_tx` capacity ≥ `slots` guarantees the descriptor reader can
+        // always enqueue an in-flight chunk without blocking, so the demux
+        // workers (which never wait on a slot to finish) keep draining and
+        // returning slots — no deadlock for any ring size ≥ 1.
+        let (bytes_tx, bytes_rx) = channel::bounded::<Chunk>(slots);
+        let (chunk_tx, chunk_rx) = channel::bounded::<PodFastqChunk>(demux_threads * 4);
+        // Slot-return channel: a `Chunk`'s drop pushes its freed slot id here;
+        // the writer thread relays them to the child's stdin.
+        let (slot_ret_tx, slot_ret_rx) = channel::unbounded::<u32>();
+
+        let region_for_reader = Arc::clone(&region);
+        let reader_handle = std::thread::spawn(move || -> Result<()> {
+            let mut desc = [0u8; 8];
+            loop {
+                if let Err(e) = descriptors.read_exact(&mut desc) {
+                    // EOF before the sentinel ⇒ the decompressor died; surface it
+                    // (its stderr is inherited, so the real cause is already shown).
+                    return Err(anyhow::Error::new(e).context(
+                        "fastqrab-decompressor closed before sending its EOF sentinel",
+                    ));
+                }
+                let slot = u32::from_le_bytes(desc[0..4].try_into().expect("4 bytes"));
+                let len = u32::from_le_bytes(desc[4..8].try_into().expect("4 bytes")) as usize;
+                if slot == u32::MAX {
+                    break; // EOF sentinel
+                }
+                // SAFETY: the decompressor only emits `slot < slots` and
+                // `len <= slot_size`, and won't reuse the slot until we return its
+                // id (on chunk drop), so this borrow into the mapped region is
+                // valid and unaliased for the chunk's lifetime.
+                let ptr = unsafe { region_for_reader.as_ptr().add(slot as usize * slot_size) };
+                // SAFETY: as above — `ptr..ptr+len` is inside the live mapping
+                // (held by `region_for_reader`) and the slot is single-owner
+                // until this chunk drops and returns it.
+                let chunk = unsafe { Chunk::shared(ptr, len, slot, slot_ret_tx.clone()) };
+                if bytes_tx.send(chunk).is_err() {
+                    break; // pod parser hung up (a downstream error)
+                }
+            }
+            Ok(())
+        });
+
+        let slot_writer_handle = std::thread::spawn(move || {
+            for slot in slot_ret_rx {
+                // Ignore write errors: the child may have already exited after the
+                // sentinel, so its stdin is closed (EPIPE) — that's expected.
+                if slot_return.write_all(&slot.to_le_bytes()).is_err() {
+                    break;
+                }
+            }
+            let _ = slot_return.flush();
+        });
+
+        let parser_handle =
+            std::thread::spawn(move || parse_pods_from_channel(bytes_rx, chunk_tx, demux_threads));
+
+        Ok(PodFastqParser {
+            chunk_rx,
+            parser_handle: Some(parser_handle),
+            reader_handle: Some(reader_handle),
+            slot_writer_handle: Some(slot_writer_handle),
+            child: Some(child),
+            _region: Some(region),
+            pending: VecDeque::new(),
+            front_consumed: 0,
+            target: target_reads_per_block.get(),
+            eof: false,
+            compression_format: niffler::send::compression::Format::Gzip,
         })
     }
 
@@ -320,6 +525,26 @@ impl PodFastqParser {
             handle
                 .join()
                 .map_err(|_| anyhow::anyhow!("pod fastq reader thread panicked"))??;
+        }
+        // shm mode: the parser + reader are done, so every borrowed chunk has
+        // dropped and returned its slot id; the slot-return channel is now closed
+        // and the writer thread can finish relaying.
+        if let Some(handle) = self.slot_writer_handle.take() {
+            handle
+                .join()
+                .map_err(|_| anyhow::anyhow!("pod fastq slot-return thread panicked"))?;
+        }
+        // shm mode: surface a non-zero decompressor exit. This catches the case
+        // where a mid-stream decode error makes the child emit its EOF sentinel
+        // (its input channel closed) yet exit non-zero — the data we parsed would
+        // be silently truncated otherwise.
+        if let Some(mut child) = self.child.take() {
+            let status = child
+                .wait()
+                .context("waiting on fastqrab-decompressor (shm mode)")?;
+            if !status.success() {
+                bail!("fastqrab-decompressor exited unsuccessfully: {status}");
+            }
         }
         Ok(())
     }

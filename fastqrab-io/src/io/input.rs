@@ -483,3 +483,167 @@ pub fn spawn_rapidgzip(filename: &Path, thread_count: ThreadCount) -> Result<std
         bail!("Rapidgzip is only supported on Unix systems");
     }
 }
+
+/// A shared-memory region mapped from the decompressor's `memfd`, unmapped on
+/// drop. The pod parser keeps it alive (behind an `Arc`) for as long as any
+/// borrowed-slot chunk is outstanding.
+#[cfg(unix)]
+pub struct ShmRegion {
+    ptr: *mut u8,
+    len: usize,
+}
+
+// SAFETY: the region is a plain shared byte buffer. All access is coordinated by
+// the single-owner-per-slot protocol carried on the descriptor / slot-return
+// pipes (not by Rust's aliasing rules), so the handle is safe to move and share
+// across threads.
+#[cfg(unix)]
+unsafe impl Send for ShmRegion {}
+// SAFETY: same invariant as `Send` above — slot ownership is coordinated by the
+// control pipes, not Rust aliasing, so shared `&ShmRegion` access is sound.
+#[cfg(unix)]
+unsafe impl Sync for ShmRegion {}
+
+#[cfg(unix)]
+impl ShmRegion {
+    /// Base pointer of the mapped region. Callers form per-slot sub-slices under
+    /// the single-owner invariant (a slot is read only between receiving its
+    /// descriptor and returning its id).
+    #[must_use]
+    pub fn as_ptr(&self) -> *const u8 {
+        self.ptr
+    }
+}
+
+#[cfg(unix)]
+impl Drop for ShmRegion {
+    fn drop(&mut self) {
+        // SAFETY: `ptr`/`len` are exactly what `mmap` returned; never remapped.
+        unsafe {
+            libc::munmap(self.ptr.cast(), self.len);
+        }
+    }
+}
+
+/// Handle to a decompressor running in shared-memory mode: the mapped region
+/// plus the two control pipes and the child process.
+#[cfg(unix)]
+pub struct ShmRapidgzip {
+    /// The mapped shared region, kept alive as long as any borrowed chunk.
+    pub region: std::sync::Arc<ShmRegion>,
+    /// Child stdout: an ordered stream of `(slot:u32, len:u32)` descriptors,
+    /// terminated by a `(u32::MAX, 0)` sentinel.
+    pub descriptors: std::process::ChildStdout,
+    /// Child stdin: freed slot ids (`u32` LE) returned to the decompressor.
+    pub slot_return: std::process::ChildStdin,
+    /// The decompressor child process (waited on at EOF to surface its exit).
+    pub child: std::process::Child,
+    pub slots: usize,
+    pub slot_size: usize,
+}
+
+/// Spawn the out-of-process decompressor in shared-memory mode: create an
+/// `memfd`-backed region of `slots × slot_size` bytes, map it `MAP_SHARED`, and
+/// hand the (non-`CLOEXEC`) fd to the child by inheritance. The child memcpies
+/// finished chunks into free slots and streams `(slot, len)` descriptors back on
+/// its stdout; we return freed slot ids on its stdin.
+///
+/// This is the FASTQ-only fast path; FASTA and generic readers stay on
+/// [`spawn_rapidgzip`]'s pipe transport.
+#[cfg(unix)]
+pub fn spawn_rapidgzip_shm(
+    filename: &Path,
+    thread_count: ThreadCount,
+    slots: usize,
+    slot_size: usize,
+) -> Result<ShmRapidgzip> {
+    let decompressor = find_decompressor()
+        .context("fastqrab-decompressor binary not found next to the fastqrab binary")?;
+    let total = slots
+        .checked_mul(slot_size)
+        .context("shared-memory region size overflow")?;
+    let total_off = libc::off_t::try_from(total).context("shared-memory region too large")?;
+
+    // memfd sized to the whole region. No `MFD_CLOEXEC` so the child inherits the
+    // fd (with the same number) and can map the same region.
+    // SAFETY: standard libc call with a valid C name and zero flags.
+    let fd = unsafe { libc::memfd_create(c"fastqrab-shm".as_ptr(), 0) };
+    if fd < 0 {
+        bail!("memfd_create failed: {}", std::io::Error::last_os_error());
+    }
+
+    // SAFETY: `fd` is the live memfd we just created.
+    if unsafe { libc::ftruncate(fd, total_off) } != 0 {
+        let err = std::io::Error::last_os_error();
+        // SAFETY: `fd` is ours and unused past this point.
+        unsafe { libc::close(fd) };
+        bail!("ftruncate of shared-memory region failed: {err}");
+    }
+
+    // SAFETY: mapping our own memfd `MAP_SHARED` for read+write.
+    let ptr = unsafe {
+        libc::mmap(
+            std::ptr::null_mut(),
+            total,
+            libc::PROT_READ | libc::PROT_WRITE,
+            libc::MAP_SHARED,
+            fd,
+            0,
+        )
+    };
+    if ptr == libc::MAP_FAILED {
+        let err = std::io::Error::last_os_error();
+        // SAFETY: `fd` is ours and unused past this point.
+        unsafe { libc::close(fd) };
+        bail!("mmap of shared-memory region failed: {err}");
+    }
+    let region = std::sync::Arc::new(ShmRegion {
+        ptr: ptr.cast::<u8>(),
+        len: total,
+    });
+
+    let mut cmd = Command::new(&decompressor);
+    cmd.arg("--shm-fd")
+        .arg(fd.to_string())
+        .arg("--shm-slots")
+        .arg(slots.to_string())
+        .arg("--shm-slot-size")
+        .arg(slot_size.to_string())
+        // Leave the decoder's chunk size at its default: the caller sizes slots
+        // comfortably larger than a decode chunk so the common chunk fits one
+        // slot, while the child still splits any oversized chunk across slots.
+        .arg("-P")
+        .arg(thread_count.0.to_string())
+        .arg(filename)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::inherit());
+
+    let mut child = cmd.spawn().context(format!(
+        "Failed to spawn fastqrab-decompressor (shm mode) for file: {}.",
+        filename.display()
+    ))?;
+
+    // The child inherited the fd at fork; our mapping holds the region alive, so
+    // the parent no longer needs its own fd.
+    // SAFETY: `fd` is ours and no longer referenced in the parent.
+    unsafe { libc::close(fd) };
+
+    let descriptors = child
+        .stdout
+        .take()
+        .context("Failed to capture fastqrab-decompressor stdout (shm descriptors)")?;
+    let slot_return = child
+        .stdin
+        .take()
+        .context("Failed to capture fastqrab-decompressor stdin (shm slot returns)")?;
+
+    Ok(ShmRapidgzip {
+        region,
+        descriptors,
+        slot_return,
+        child,
+        slots,
+        slot_size,
+    })
+}
