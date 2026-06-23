@@ -267,6 +267,24 @@ impl FastQChunk {
         self.len()
     }
 
+    /// A segment over reads `range`, sharing this segment's byte buffers — no
+    /// bytes are copied (O(1) for fixed-length columns, O(range) metadata for
+    /// variable). The combiner uses this to align segment block sizes by
+    /// slicing each segment's current block down to the common read count
+    /// instead of re-copying reads into fixed-size blocks.
+    ///
+    /// # Panics
+    /// If `range.start > range.end` or `range.end > self.len()`.
+    #[must_use]
+    pub fn slice(&self, range: Range<usize>) -> FastQChunk {
+        let n = u32::try_from(range.end - range.start).expect("slice length exceeds u32::MAX");
+        FastQChunk {
+            names: self.names.slice(range.clone()),
+            seq_quals: self.seq_quals.slice(range),
+            pluses: StringPod::new_all_empty(n),
+        }
+    }
+
     /// Keep only the first `n` reads.
     pub fn truncate(&mut self, n: usize) {
         self.names.truncate(n);

@@ -415,41 +415,91 @@ fn run_combiner_thread(
     largest_segment_idx: usize,
     error_collector: &Arc<Mutex<Vec<String>>>,
 ) {
-    //I need to receive the blocks (from all segment input threads)
-    //and then, match them up into something that's the same length!
+    // Receive the per-segment blocks and align them into lockstep
+    // (identical-read-count) combined blocks for the downstream pairing.
+    //
+    // The per-segment parsers no longer pre-copy reads into fixed `block_size`
+    // blocks; each emits its native, arbitrarily-sized blocks (e.g. one decode
+    // chunk of reads). R1 and R2 are independent streams whose blocks don't line
+    // up, so we align *by slicing*: each round we slice every segment's current
+    // block down to the common `min(remaining)` reads — a pure O(1)/metadata
+    // operation sharing the decode-chunk `Arc`, no bytes copied — and carry the
+    // remainders into the next round. A segment is *done* when its channel is
+    // closed and its current block is fully consumed; if some segments run dry
+    // while others still have reads, the read counts disagree.
+    let segment_count = raw_rx_readers.len();
     let mut block_no = 1; // for the sorting later on.
     let expected_read_count = OnceCell::new();
     let mut first_read_in_block_no = 0;
+    // Per-segment current block + reads already consumed from it.
+    let mut current: Vec<Option<(FastQChunk, usize)>> = vec![None; segment_count];
+    let mut done = vec![false; segment_count];
+
     loop {
-        let mut blocks = Vec::new();
-        for receiver in raw_rx_readers {
-            //since we read the channels in order,
-            //the resulting blocks will also be in order.
-            if let Ok((block, block_expected_read_count)) = receiver.recv() {
-                if block_no == 1 && blocks.len() == largest_segment_idx {
-                    //println!("Received expected read count for largest segment: {:?}", block_expected_read_count);
-                    expected_read_count
-                        .set(block_expected_read_count)
-                        .expect("Read count already set!?");
-                }
-                blocks.push(block);
-            } else if blocks.is_empty() {
-                //The first segment reader is done.
-                //that's the expected behaviour when we're running out of reads.
-                //now every other reader should also be returning an error.
-                //because otherwise the others have more remaining reads
-                for other_receiver in &raw_rx_readers[1..] {
-                    if let Ok((_block, _block_expected_read_count)) = other_receiver.recv() {
-                        error_collector.lock()
-                            .unwrap_or_else(std::sync::PoisonError::into_inner)
-                            .push("Unequal number of reads in the segment inputs (first < later). Check your fastqs for identical read counts".to_string());
+        // Ensure every not-yet-exhausted segment has a current block with reads
+        // remaining, pulling the next block when the current one is drained. The
+        // parsers may emit empty non-final blocks, so skip those.
+        for seg in 0..segment_count {
+            if done[seg] {
+                continue;
+            }
+            while current[seg]
+                .as_ref()
+                .is_none_or(|(block, cursor)| *cursor >= block.len())
+            {
+                match raw_rx_readers[seg].recv() {
+                    Ok((block, block_expected_read_count)) => {
+                        if expected_read_count.get().is_none() && seg == largest_segment_idx {
+                            expected_read_count
+                                .set(block_expected_read_count)
+                                .expect("Read count already set!?");
+                        }
+                        if block.len() > 0 {
+                            current[seg] = Some((block, 0));
+                            break;
+                        }
+                        // empty block: keep pulling
+                    }
+                    Err(_) => {
+                        done[seg] = true;
+                        current[seg] = None;
+                        break;
                     }
                 }
-                // Send final empty block
-                let empty_segments: Vec<FastQChunk> = raw_rx_readers
-                    .iter()
-                    .map(|_| FastQChunk::new_empty())
-                    .collect();
+            }
+        }
+
+        // All segments exhausted at a block boundary ⇒ clean EOF.
+        if done.iter().all(|&d| d) {
+            let empty_segments: Vec<FastQChunk> =
+                (0..segment_count).map(|_| FastQChunk::new_empty()).collect();
+            let final_block = io::FastQBlocksCombined::new(
+                empty_segments,
+                None,
+                Default::default(),
+                true,
+                block_no,
+                first_read_in_block_no,
+            );
+            let _ = combiner_output_tx.send((
+                final_block,
+                // Won't have been set if we suffered an early parse error.
+                *expected_read_count.get().unwrap_or(&None),
+            ));
+            return;
+        }
+
+        // Some segments are done while others still have reads ⇒ the inputs hold
+        // unequal read counts. Direction is keyed off the first segment, matching
+        // the historical messages: segment 0 drained first means it had fewer.
+        if done.iter().any(|&d| d) {
+            if done[0] {
+                error_collector.lock()
+                    .unwrap_or_else(std::sync::PoisonError::into_inner)
+                    .push("Unequal number of reads in the segment inputs (first < later). Check your fastqs for identical read counts".to_string());
+                // Send final empty block (matches the historical first-done path).
+                let empty_segments: Vec<FastQChunk> =
+                    (0..segment_count).map(|_| FastQChunk::new_empty()).collect();
                 let final_block = io::FastQBlocksCombined::new(
                     empty_segments,
                     None,
@@ -458,32 +508,36 @@ fn run_combiner_thread(
                     block_no,
                     first_read_in_block_no,
                 );
-                let _ = combiner_output_tx.send((
-                    final_block,
-                    //'will not have been set if we're suffering
-                    // an early parse error
-                    *expected_read_count.get().unwrap_or(&None),
-                ));
-                return;
+                let _ = combiner_output_tx
+                    .send((final_block, *expected_read_count.get().unwrap_or(&None)));
             } else {
                 error_collector.lock()
                     .unwrap_or_else(std::sync::PoisonError::into_inner)
                     .push("Unequal number of reads in the segment inputs (first > later). Check your fastqs for identical read counts".to_string());
-
-                return;
             }
-        }
-        // make sure they all have the same length
-        let first_len = blocks[0].len();
-        if !blocks.iter().all(|b| b.len() == first_len) {
-            error_collector.lock()
-                .unwrap_or_else(std::sync::PoisonError::into_inner)
-                .push("Unequal block sizes in input segments. This suggests your fastqs have different numbers of reads.".to_string());
             return;
         }
+
+        // Every segment has reads remaining: slice each to the common minimum,
+        // advance its cursor, and emit one matched combined block.
+        let n = (0..segment_count)
+            .map(|seg| {
+                let (block, cursor) = current[seg].as_ref().expect("filled above");
+                block.len() - cursor
+            })
+            .min()
+            .expect("segment_count >= 1");
+        let segments: Vec<FastQChunk> = (0..segment_count)
+            .map(|seg| {
+                let (block, cursor) = current[seg].as_mut().expect("filled above");
+                let sliced = block.slice(*cursor..*cursor + n);
+                *cursor += n;
+                sliced
+            })
+            .collect();
         let out = (
             io::FastQBlocksCombined::new(
-                blocks,
+                segments,
                 None,
                 Default::default(),
                 false,
@@ -494,12 +548,9 @@ fn run_combiner_thread(
         );
         first_read_in_block_no += out.0.len();
         block_no += 1;
-        match combiner_output_tx.send(out) {
-            Ok(()) => {}
-            Err(_) => {
-                //downstream hung up
-                break;
-            }
+        if combiner_output_tx.send(out).is_err() {
+            //downstream hung up
+            break;
         }
     }
 }

@@ -1,14 +1,13 @@
 use anyhow::{Context, Result, bail};
 use bstr::BString;
 use niffler;
-use std::collections::VecDeque;
 use std::num::NonZero;
 use std::sync::Arc;
 use std::thread::JoinHandle;
 use std::{io::Read, path::PathBuf};
 
 use crossbeam::channel::{self, Receiver};
-use stringpod::{DualStringPodBuilder, StringPod, StringPodBuilder};
+use stringpod::StringPod;
 
 use crate::blocks::FastQChunk;
 use crate::io::parsers::{ParseResult, Parser, ParserOutput};
@@ -210,12 +209,10 @@ impl Parser for FastqParser {
 /// `chunk_rx`.
 ///
 /// The pod parser emits one chunk per arbitrary input byte-chunk, so its chunk
-/// sizes bear no relation to the requested block size. [`parse_chunk`] therefore
-/// re-groups the emitted columns into blocks of exactly `target` reads (the
-/// final block may be short), which is what keeps the per-segment input streams
-/// in lockstep for the combiner.
-///
-/// [`parse_chunk`]: PodFastqParser::parse_chunk
+/// sizes bear no relation to the requested block size. Those native chunks are
+/// forwarded straight through (no regroup, no extra copy); the combiner aligns
+/// per-segment block sizes by slicing, so a fixed emitted size is no longer
+/// required to keep the segment streams in lockstep.
 pub struct PodFastqParser {
     /// Record-aligned columnar chunks emitted by the pod parser thread.
     chunk_rx: Receiver<PodFastqChunk>,
@@ -233,13 +230,11 @@ pub struct PodFastqParser {
     /// shm mode only: keeps the shared-memory mapping alive (type-erased so the
     /// field is cross-platform) for as long as any borrowed [`Chunk`] could be.
     _region: Option<Arc<dyn std::any::Any + Send + Sync>>,
-    /// Emitted-but-not-yet-consumed chunks, with `front_consumed` reads already
-    /// drained off the front one.
-    pending: VecDeque<PodFastqChunk>,
-    /// Reads already consumed from `pending.front()`.
-    front_consumed: usize,
-    /// Reads per emitted block (the molecule-count target).
-    target: usize,
+    /// One-chunk lookahead. The pod parser's native chunks are forwarded
+    /// straight through (no regroup); we peek one chunk ahead so the *last*
+    /// data block can carry `was_final` instead of trailing an empty block —
+    /// the shape the chained parser expects. `None` until the first `parse`.
+    peeked: Option<PodFastqChunk>,
     /// Set once `chunk_rx` is closed and drained.
     eof: bool,
     compression_format: niffler::send::compression::Format,
@@ -311,6 +306,10 @@ impl PodFastqParser {
         demux_threads: usize,
         decompression_options: DecompressionOptions,
     ) -> Result<PodFastqParser> {
+        // The emitted block size is now the pod parser's native per-decode-chunk
+        // size (the combiner aligns segments by slicing), so the requested
+        // reads-per-block is retained only as an API hint and otherwise ignored.
+        let _ = target_reads_per_block;
         let demux_threads = demux_threads.max(1);
         let buffer_size = buffer_size.max(1);
 
@@ -325,7 +324,7 @@ impl PodFastqParser {
             && shm_enabled()
             && shm_eligible_gzip(&file)
         {
-            return Self::new_shm(path, thread_count, target_reads_per_block, demux_threads);
+            return Self::new_shm(path, thread_count, demux_threads);
         }
 
         let (reader, format) = open_decompressed_reader(file, filename, decompression_options)?;
@@ -396,9 +395,7 @@ impl PodFastqParser {
             slot_writer_handle: None,
             child: None,
             _region: None,
-            pending: VecDeque::new(),
-            front_consumed: 0,
-            target: target_reads_per_block.get(),
+            peeked: None,
             eof: false,
             compression_format: format,
         })
@@ -414,7 +411,6 @@ impl PodFastqParser {
     fn new_shm(
         path: &std::path::Path,
         thread_count: crate::io::parsers::ThreadCount,
-        target_reads_per_block: NonZero<usize>,
         demux_threads: usize,
     ) -> Result<PodFastqParser> {
         use crate::io::input::{ShmRapidgzip, spawn_rapidgzip_shm};
@@ -503,9 +499,7 @@ impl PodFastqParser {
             slot_writer_handle: Some(slot_writer_handle),
             child: Some(child),
             _region: Some(region),
-            pending: VecDeque::new(),
-            front_consumed: 0,
-            target: target_reads_per_block.get(),
+            peeked: None,
             eof: false,
             compression_format: niffler::send::compression::Format::Gzip,
         })
@@ -549,69 +543,68 @@ impl PodFastqParser {
         Ok(())
     }
 
-    /// Produce the next block of up to `target` reads as a [`FastQChunk`],
-    /// together with `was_final`. Re-groups the pod parser's arbitrarily-sized
-    /// emissions into exact block sizes by copying reads through fresh column
-    /// builders; the leftover tail of a straddling emission is carried in
-    /// `pending` / `front_consumed` for the next call.
-    fn next_chunk(&mut self) -> Result<(FastQChunk, bool)> {
-        let mut names = StringPodBuilder::with_capacity(0, self.target);
-        let mut seq_quals = DualStringPodBuilder::with_capacity(0, self.target);
-        let mut count = 0usize;
-
-        while count < self.target {
-            let Some(chunk) = self.pending.front() else {
-                match self.chunk_rx.recv() {
-                    Ok(chunk) => {
-                        // The pod parser never emits empty chunks, but guard anyway.
-                        if chunk.names.len() > 0 {
-                            self.pending.push_back(chunk);
-                        }
-                    }
-                    Err(_) => {
-                        self.eof = true;
-                        break;
-                    }
-                }
-                continue;
-            };
-
-            let available = chunk.names.len() - self.front_consumed;
-            let take = available.min(self.target - count);
-            let start = self.front_consumed;
-            // En-bloc range append: one big memcpy per column plus cheap
-            // per-entry metadata, instead of a tiny copy + range recompute per
-            // read (the profiled hot spot).
-            names.extend_from_pod(&chunk.names, start..start + take);
-            seq_quals.extend_from_pod(&chunk.reads, start..start + take);
-            self.front_consumed += take;
-            count += take;
-            if self.front_consumed >= chunk.names.len() {
-                self.pending.pop_front();
-                self.front_consumed = 0;
+    /// Pull the next non-empty chunk (from the one-chunk lookahead or the
+    /// channel), skipping any empty chunks. `None` once the channel is closed
+    /// and drained.
+    fn recv_nonempty(&mut self) -> Option<PodFastqChunk> {
+        if let Some(chunk) = self.peeked.take() {
+            return Some(chunk);
+        }
+        loop {
+            match self.chunk_rx.recv() {
+                // The pod parser never emits empty chunks, but guard anyway.
+                Ok(chunk) if chunk.names.len() > 0 => return Some(chunk),
+                Ok(_) => {}
+                Err(_) => return None,
             }
         }
+    }
 
-        if self.eof {
+    /// Produce the next block as a [`FastQChunk`], together with `was_final`.
+    ///
+    /// The pod parser's native per-decode-chunk emission is forwarded straight
+    /// through — its columns are moved in with no regroup/copy — so blocks are
+    /// roughly one decode chunk of reads each. The combiner aligns segment block
+    /// sizes by slicing, so the emitted size no longer needs to match a fixed
+    /// `block_size`. A one-chunk lookahead lets the final data block carry
+    /// `was_final` rather than trailing a separate empty block.
+    fn next_chunk(&mut self) -> Result<(FastQChunk, bool)> {
+        let Some(chunk) = self.recv_nonempty() else {
+            // Channel drained: emit the terminal empty block.
+            self.eof = true;
             self.finish_threads()?;
-        }
+            return Ok((FastQChunk::new_empty(), true));
+        };
 
+        // Peek one chunk ahead: if there's none, this chunk is the last.
+        let was_final = match self.recv_nonempty() {
+            Some(next) => {
+                self.peeked = Some(next);
+                false
+            }
+            None => {
+                self.eof = true;
+                self.finish_threads()?;
+                true
+            }
+        };
+
+        let count = chunk.names.len();
         let pluses = StringPod::new_all_empty(
             u32::try_from(count).expect("too many reads in a block for u32"),
         );
-        let chunk = FastQChunk {
-            names: names.finish(),
-            seq_quals: seq_quals.finish(),
+        let out = FastQChunk {
+            names: chunk.names,
+            seq_quals: chunk.reads,
             pluses,
         };
-        let was_final = self.eof && self.pending.is_empty();
-        Ok((chunk, was_final))
+        Ok((out, was_final))
     }
 }
 
 impl Parser for PodFastqParser {
-    /// Emits columnar [`FastQChunk`] blocks of exactly `target` reads (the final
-    /// block may be short).
+    /// Emits the pod parser's native columnar [`FastQChunk`] blocks (roughly one
+    /// decode chunk of reads each), terminated by an empty final block.
     ///
     /// # Panics
     /// If a single block would exceed `u32::MAX` reads.
@@ -1089,11 +1082,12 @@ pub fn parse_to_fastq_block(
 
 #[cfg(test)]
 mod pod_regroup_tests {
-    //! End-to-end coverage of [`PodFastqParser::next_chunk`]'s re-grouping into
-    //! exact `target`-sized blocks — the path that now appends columns en bloc
-    //! via `StringPod`/`DualStringPod::extend_from_pod`. We drive the real
-    //! parser through a temp file at several `(target, buffer_size)` ratios so
-    //! the pod parser's emissions straddle target boundaries in both directions.
+    //! End-to-end coverage of [`PodFastqParser`] forwarding the pod parser's
+    //! native per-decode-chunk blocks straight through (the regroup was deleted;
+    //! the combiner now aligns sizes by slicing). We drive the real parser
+    //! through a temp file at several `(target, buffer_size)` ratios and assert
+    //! the recovered reads are identical and complete regardless of `target` —
+    //! `target` no longer governs the emitted block sizes.
     use super::*;
     use crate::io::input::DecompressionOptions;
     use std::io::Write as _;
@@ -1152,18 +1146,16 @@ mod pod_regroup_tests {
         (out, sizes)
     }
 
-    fn assert_block_sizes(sizes: &[usize], target: usize, total: usize) {
-        let full = total / target;
+    /// Blocks are now native-sized, so we only assert completeness: every read
+    /// is accounted for, and no non-final block is empty (the parser skips empty
+    /// emissions; a trailing `0` is the terminal block).
+    fn assert_block_sizes(sizes: &[usize], total: usize) {
         for (i, &s) in sizes.iter().enumerate() {
-            if i < full {
-                assert_eq!(s, target, "block {i} should be exactly target");
+            if i + 1 < sizes.len() {
+                assert!(s > 0, "non-final block {i} should be non-empty");
             }
         }
-        assert_eq!(
-            sizes.iter().sum::<usize>(),
-            total,
-            "all reads accounted for"
-        );
+        assert_eq!(sizes.iter().sum::<usize>(), total, "all reads accounted for");
     }
 
     fn variable_reads(n: usize) -> Reads {
@@ -1199,7 +1191,7 @@ mod pod_regroup_tests {
             for &buf in &[8usize, 64, 4096] {
                 let (got, sizes) = run(&payload, target, buf);
                 assert_eq!(got, reads, "target={target} buf={buf}");
-                assert_block_sizes(&sizes, target, reads.len());
+                assert_block_sizes(&sizes, reads.len());
             }
         }
     }
@@ -1212,7 +1204,7 @@ mod pod_regroup_tests {
             for &buf in &[16usize, 256, 8192] {
                 let (got, sizes) = run(&payload, target, buf);
                 assert_eq!(got, reads, "target={target} buf={buf}");
-                assert_block_sizes(&sizes, target, reads.len());
+                assert_block_sizes(&sizes, reads.len());
             }
         }
     }
