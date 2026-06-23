@@ -794,6 +794,7 @@ dependencies = [
  "gzp",
  "hamming-resonate",
  "indexmap",
+ "libc",
  "memchr",
  "mutants 0.0.3",
  "niffler",

@@ -461,6 +461,19 @@ pub fn spawn_rapidgzip(filename: &Path, thread_count: ThreadCount) -> Result<std
         // Convert the stdout pipe to an ex::fs::File
         // We need to use the file descriptor directly
         let raw_fd = stdout.into_raw_fd();
+
+        // Enlarge the pipe buffer to 1 MiB (the usual /proc/sys/fs/pipe-max-size).
+        // The default 64 KiB pipe forces the 4 MiB decompressor chunks through in
+        // ~64 KiB reads, so producer and consumer ping-pong on a near-empty/near-full
+        // buffer instead of overlapping (millions of voluntary context switches).
+        // A bigger buffer gives both sides slack and cuts read/write syscalls.
+        // Best-effort: failure here is not fatal, the pipe just keeps its default size.
+        const PIPE_BUF_SIZE: libc::c_int = 1024 * 1024;
+        // SAFETY: `raw_fd` is a live pipe fd we own; F_SETPIPE_SZ takes an int arg.
+        unsafe {
+            libc::fcntl(raw_fd, libc::F_SETPIPE_SZ, PIPE_BUF_SIZE);
+        }
+
         // SAFETY: We own the file descriptor from the child process stdout
         let file = unsafe { std::fs::File::from_raw_fd(raw_fd) };
         Ok(file)
