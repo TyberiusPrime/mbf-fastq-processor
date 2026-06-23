@@ -414,6 +414,7 @@ fn run_combiner_thread(
     combiner_output_tx: &crossbeam::channel::Sender<(io::FastQBlocksCombined, Option<usize>)>,
     largest_segment_idx: usize,
     error_collector: &Arc<Mutex<Vec<String>>>,
+    target_block_size: usize,
 ) {
     // Receive the per-segment blocks and align them into lockstep
     // (identical-read-count) combined blocks for the downstream pairing.
@@ -471,8 +472,9 @@ fn run_combiner_thread(
 
         // All segments exhausted at a block boundary ⇒ clean EOF.
         if done.iter().all(|&d| d) {
-            let empty_segments: Vec<FastQChunk> =
-                (0..segment_count).map(|_| FastQChunk::new_empty()).collect();
+            let empty_segments: Vec<FastQChunk> = (0..segment_count)
+                .map(|_| FastQChunk::new_empty())
+                .collect();
             let final_block = io::FastQBlocksCombined::new(
                 empty_segments,
                 None,
@@ -498,8 +500,9 @@ fn run_combiner_thread(
                     .unwrap_or_else(std::sync::PoisonError::into_inner)
                     .push("Unequal number of reads in the segment inputs (first < later). Check your fastqs for identical read counts".to_string());
                 // Send final empty block (matches the historical first-done path).
-                let empty_segments: Vec<FastQChunk> =
-                    (0..segment_count).map(|_| FastQChunk::new_empty()).collect();
+                let empty_segments: Vec<FastQChunk> = (0..segment_count)
+                    .map(|_| FastQChunk::new_empty())
+                    .collect();
                 let final_block = io::FastQBlocksCombined::new(
                     empty_segments,
                     None,
@@ -526,7 +529,8 @@ fn run_combiner_thread(
                 block.len() - cursor
             })
             .min()
-            .expect("segment_count >= 1");
+            .expect("segment_count >= 1")
+            .min(target_block_size);
         let segments: Vec<FastQChunk> = (0..segment_count)
             .map(|seg| {
                 let (block, cursor) = current[seg].as_mut().expect("filled above");
@@ -1101,6 +1105,7 @@ impl RunStage1 {
                                     &combiner_output_tx,
                                     largest_segment_idx,
                                     &error_collector,
+                                    block_size.into(),
                                 );
                             })
                             .expect("Thread spawning failed. OS resource exhaustion?");
