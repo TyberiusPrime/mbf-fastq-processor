@@ -55,6 +55,9 @@ pub struct WorkpoolCoordinator {
 
     current_blocks_in_flight: usize, // that's 'within pipeline, stalled + currently being worked on.
     max_blocks_in_flight: usize,
+    /// Shared mirror of `current_blocks_in_flight`, published once per loop tick
+    /// so the `Progress` step can report pipeline occupancy. Diagnostic only.
+    blocks_in_flight_gauge: Arc<std::sync::atomic::AtomicUsize>,
 
     incoming_rx: Option<Receiver<(io::FastQBlocksCombined, Option<usize>)>>,
     todo_tx: Sender<WorkItem>,     //towards workers
@@ -87,6 +90,7 @@ impl WorkpoolCoordinator {
 
         report_collector: Arc<Mutex<Vec<transformations::FinalizeReportResult>>>,
         error_collector: Arc<Mutex<Vec<String>>>,
+        blocks_in_flight_gauge: Arc<std::sync::atomic::AtomicUsize>,
     ) -> (Self, Vec<Arc<Stage>>) {
         let stage_progress: Vec<StageProgress> = stages
             .iter()
@@ -110,6 +114,7 @@ impl WorkpoolCoordinator {
             stalled_blocks: Some(Vec::new()),
             max_blocks_in_flight,
             current_blocks_in_flight: 0,
+            blocks_in_flight_gauge,
 
             incoming_rx: Some(incoming_rx),
             todo_tx,
@@ -128,6 +133,11 @@ impl WorkpoolCoordinator {
     #[expect(clippy::too_many_lines, reason = "needed")]
     pub fn run(mut self, demultiplex_infos: &[(usize, OptDemultiplex)]) {
         loop {
+            // Publish current occupancy for the Progress step's diagnostic gauge.
+            self.blocks_in_flight_gauge.store(
+                self.current_blocks_in_flight,
+                std::sync::atomic::Ordering::Relaxed,
+            );
             // Check if we're at capacity
             let accept_new_incoming = self.current_blocks_in_flight < self.max_blocks_in_flight;
             if self.incoming_rx.is_none() || !accept_new_incoming {
