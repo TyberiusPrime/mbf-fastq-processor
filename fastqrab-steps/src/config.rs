@@ -1070,9 +1070,6 @@ impl PartialConfig {
                                 && let Some(seq_to_name) = &barcodes_section.seq_to_name
                             {
                                 let on_tie_min_molecules_to_start = *step_config.on_tie_min_molecules_to_start.as_ref().expect("parent was ok, VerifyIn<HammingCorrect> must have set this");
-                                let reads_per_block = self.options.as_ref().and_then(|options| options.block_size.as_ref()).copied().expect("Expect options to have been set/defaulted in at this point");
-                                let blocks_to_count =
-                                    on_tie_min_molecules_to_start / reads_per_block;
                                 let pt = PartialHammingExactCounter::new(
                                     step_config
                                         .in_label
@@ -1080,7 +1077,7 @@ impl PartialConfig {
                                         .expect("parent was ok")
                                         .clone(),
                                     seq_to_name.clone(),
-                                    blocks_to_count,
+                                    on_tie_min_molecules_to_start,
                                 );
                                 step_config.majority_data = Some(pt.majority_data.clone());
                                 push_new(PartialTransformation::_HammingExactCounter(

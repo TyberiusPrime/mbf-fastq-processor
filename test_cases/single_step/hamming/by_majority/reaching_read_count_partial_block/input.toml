@@ -1,0 +1,40 @@
+[options]
+  block_size =2
+  # min_molecules_to_start (5) is deliberately NOT a multiple of block_size (2).
+  # The ByMajority warm-up is read-based: HammingExactCounter counts whole blocks
+  # up to and including the one holding the 5th read (block 3, reads 5-6), then
+  # HammingCorrect takes over. This config used to be rejected outright.
+
+[input]
+  r1 = 'input_read1.fasta'
+  options.fasta_fake_quality ='C'
+
+[output]
+    prefix = "output"
+[[step]]
+  action = 'ExtractRegion'
+  source = 'r1'
+  start = 0
+  len = 4
+  anchor ='left'
+  out_label='bc_raw'
+
+
+[[step]]
+  action = 'HammingCorrect'
+  in_label = 'bc_raw'
+  out_label = 'bc_corr'
+  max_hamming_distance=1
+  on_tie = 'ByMajority'
+  on_no_match = 'Remove'
+  barcodes = 'barcodes'
+  by_majority_threshold = 0.47
+  by_majority_min_molecules_to_start = 5
+
+[barcodes.barcodes]
+  AGTA= 'two'
+  AGTC = 'one'
+
+
+[[step]]
+  action = "StoreTagsInTable"

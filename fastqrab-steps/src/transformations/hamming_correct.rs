@@ -571,7 +571,7 @@ impl Step for HammingCorrect {
                     .majority_data
                     .as_ref()
                     .expect("ByMajority means we have .majority");
-                if mj.blocks_to_count > 0 {
+                if mj.reads_to_count > 0 {
                     let (guard, cv) = &*mj.barrier.clone();
                     let _guard = cv.wait_while(
                             guard.lock().map_err(|err| {
