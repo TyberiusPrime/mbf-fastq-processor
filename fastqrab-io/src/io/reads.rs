@@ -1650,7 +1650,7 @@ impl FastQBlocksCombined {
 
     /// # Panics
     /// When the segments have different read counts
-    /// (that's teh point of this function)
+    /// (that's the point of this function)
     pub fn sanity_check(&self) -> Result<()> {
         // The PodStack should prevent this for the segments,
         // but let's just be safe.

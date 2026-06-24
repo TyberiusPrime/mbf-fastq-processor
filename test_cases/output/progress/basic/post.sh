@@ -2,13 +2,16 @@
 
 data=$(<output_run.progress)
 
-pos0=$(echo "$data" | grep -P -n "Processed Total: +0" | cut -d: -f1)
+# First progress line: reports the running total of the first block (a value
+# below the first 100_000 boundary), so we just require *some* initial line
+# before the 100_000 report rather than a synthetic "0".
+pos0=$(echo "$data" | grep -n "Processed Total:" | head -1 | cut -d: -f1)
 pos_2=$(echo "$data" | grep -P -n "Processed Total: +1[0-9]{2}_[0-9]{3}" | cut -d: -f1)
 pos_3=$(echo "$data" | grep -P -n "Processed Total: +2[0-9]{2}_[0-9]{3}" | cut -d: -f1)
 pos_4=$(echo "$data" | grep -P -n "Processed Total: +3[0-9]{2}_[0-9]{3}" | cut -d: -f1)
 
 if [ -z "$pos0" ] || [ "$pos0" -eq 0 ]; then
-    echo "Error: 'Processed Total: 0' not found"
+    echo "Error: no initial 'Processed Total:' line found"
     exit 1
 fi
 

@@ -867,6 +867,16 @@ pub fn normalize_progress_content(content: &str) -> String {
     //it's not quite deterministic with the last (few) Processed in output order.
     let normalized = normalized.replace("Final block passed Progress stage.\n", "");
 
+    // The count value, its right-aligned padding, comma grouping and the number
+    // of "Processed Total:" lines all depend on the (intentionally irregular)
+    // block sizes and timing. Collapse any run of them into a single canonical
+    // line so none of that is compared. Applied to both expected and actual.
+    let progress_re = Regex::new(r"(?m)^Processed Total:.*\n(?:Processed Total:.*\n)*")
+        .expect("invalid progress regex");
+    let normalized = progress_re
+        .replace_all(&normalized, "Processed Total: _IGNORED_\n")
+        .into_owned();
+
     // Strip absolute paths, preserving any separator character that precedes them.
     // e.g. "from /tmp/abc/foo.fq" -> "from foo.fq" (space preserved).
     let file_re =

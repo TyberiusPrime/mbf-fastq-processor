@@ -149,9 +149,15 @@ impl Step for Progress {
             let next = val + len;
             (val, next)
         };
-        let offset = counter % self.n;
-        //todo: Why are we printing multiple times per block?
-        for ii in ((counter + offset)..next).step_by(self.n) {
+        // Print at most one progress line per block: on the first block, and
+        // thereafter whenever the running total crosses a multiple of `n`.
+        // (The old code looped over every crossed multiple within a block,
+        // emitting near-identical lines microseconds apart and making the line
+        // count depend on the — now irregular — block sizes.) Each multiple of
+        // `n` falls in exactly one block, so this is deterministic in the total
+        // count regardless of how blocks are chunked.
+        if next > counter && (counter == 0 || next / self.n != counter / self.n) {
+            let ii = next;
             let elapsed = self
                 .start_time
                 .expect("start_time must be set when processing blocks")
