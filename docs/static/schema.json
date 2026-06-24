@@ -251,34 +251,49 @@
           "format": "uint",
           "minimum": 0
         },
-        "max_blocks_in_flight": {
-          "type": "integer",
+        "max_reads_in_flight": {
+          "type": [
+            "integer",
+            "null"
+          ],
           "format": "uint",
           "minimum": 0
         },
         "block_size": {
-          "type": "integer",
+          "type": [
+            "integer",
+            "null"
+          ],
           "format": "uint",
           "minimum": 0
         },
         "buffer_size": {
-          "type": "integer",
+          "type": [
+            "integer",
+            "null"
+          ],
           "format": "uint",
           "minimum": 0
         },
         "output_buffer_size": {
-          "type": "integer",
+          "type": [
+            "integer",
+            "null"
+          ],
           "format": "uint",
           "minimum": 0
         },
         "accept_duplicate_files": {
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "null"
+          ]
         },
         "spot_check_read_pairing": {
-          "type": "boolean"
-        },
-        "debug_failures": {
-          "$ref": "#/$defs/FailureOptions"
+          "type": [
+            "boolean",
+            "null"
+          ]
         },
         "thread_count": {
           "type": [
@@ -288,55 +303,7 @@
           "format": "uint",
           "minimum": 0
         }
-      },
-      "required": [
-        "max_blocks_in_flight",
-        "block_size",
-        "buffer_size",
-        "output_buffer_size",
-        "accept_duplicate_files",
-        "spot_check_read_pairing",
-        "debug_failures"
-      ]
-    },
-    "FailureOptions": {
-      "type": "object",
-      "properties": {
-        "fail_output_after_bytes": {
-          "type": [
-            "integer",
-            "null"
-          ],
-          "format": "uint",
-          "minimum": 0
-        },
-        "fail_output_error": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/FailOutputError"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "fail_output_raw_os_code": {
-          "type": [
-            "integer",
-            "null"
-          ],
-          "format": "int32"
-        }
       }
-    },
-    "FailOutputError": {
-      "type": "string",
-      "enum": [
-        "DiskFull",
-        "RawOs",
-        "diskfull",
-        "rawos"
-      ]
     },
     "Transformation": {
       "oneOf": [

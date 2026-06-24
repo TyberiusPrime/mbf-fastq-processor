@@ -1156,12 +1156,13 @@ impl RunStage2 {
             .options
             .threads
             .expect("Thread count should have been set by config parsing");
-        let max_blocks_in_flight = parsed.options.max_blocks_in_flight;
+        let max_reads_in_flight = parsed.options.max_reads_in_flight;
 
         // Create channels
-        // unbounded is fine, we later on count blocks in flight
-        // and prevent having more than max_blocks_in_flight
-        // across *all* channels.
+        // unbounded is fine, we later on count reads in flight
+        // and prevent having more than max_reads_in_flight
+        // across *all* channels (admitting whole blocks, so we may overshoot
+        // the budget by up to one block).
         let (todo_tx, todo_rx) = unbounded();
         let (done_tx, done_rx) = unbounded();
         let (output_tx, output_rx) = unbounded();
@@ -1178,7 +1179,7 @@ impl RunStage2 {
 
         let (coordinator, shared_stages) = WorkpoolCoordinator::new(
             stages,
-            max_blocks_in_flight,
+            max_reads_in_flight,
             self.combiner_output_rx,
             todo_tx,
             done_rx,

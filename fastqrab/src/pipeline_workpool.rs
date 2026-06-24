@@ -6,6 +6,7 @@
 ///
 use anyhow::{Result, bail};
 use crossbeam::channel::{Receiver, Sender, select};
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use crate::{
@@ -54,7 +55,13 @@ pub struct WorkpoolCoordinator {
     stalled_blocks: Option<Vec<BlockStatus>>, //blocks waiting to get ready.
 
     current_blocks_in_flight: usize, // that's 'within pipeline, stalled + currently being worked on.
-    max_blocks_in_flight: usize,
+    /// Sum of the *admitted* read counts of all blocks currently in flight.
+    /// Drives backpressure (`max_reads_in_flight`). We record the read count a
+    /// block had at admission and release exactly that amount when it leaves,
+    /// because stages (e.g. Head) truncate blocks mid-pipeline.
+    current_reads_in_flight: usize,
+    reads_in_flight_by_block: HashMap<usize, usize>,
+    max_reads_in_flight: usize,
     /// Shared mirror of `current_blocks_in_flight`, published once per loop tick
     /// so the `Progress` step can report pipeline occupancy. Diagnostic only.
     blocks_in_flight_gauge: Arc<std::sync::atomic::AtomicUsize>,
@@ -81,7 +88,7 @@ impl WorkpoolCoordinator {
     #[expect(clippy::too_many_arguments, reason = "needed")]
     pub fn new(
         stages: Vec<Stage>,
-        max_blocks_in_flight: usize,
+        max_reads_in_flight: usize,
         incoming_rx: Receiver<(io::FastQBlocksCombined, Option<usize>)>,
         todo_tx: Sender<WorkItem>,     //towards workers
         done_rx: Receiver<WorkResult>, //back from workers
@@ -112,8 +119,10 @@ impl WorkpoolCoordinator {
             stages: arc_stages,
             stage_progress,
             stalled_blocks: Some(Vec::new()),
-            max_blocks_in_flight,
+            max_reads_in_flight,
             current_blocks_in_flight: 0,
+            current_reads_in_flight: 0,
+            reads_in_flight_by_block: HashMap::new(),
             blocks_in_flight_gauge,
 
             incoming_rx: Some(incoming_rx),
@@ -138,8 +147,12 @@ impl WorkpoolCoordinator {
                 self.current_blocks_in_flight,
                 std::sync::atomic::Ordering::Relaxed,
             );
-            // Check if we're at capacity
-            let accept_new_incoming = self.current_blocks_in_flight < self.max_blocks_in_flight;
+            // Check if we're at capacity. We admit whole blocks while still
+            // under the read budget, so we may overshoot by up to one block.
+            // (A read-based budget instead of a block count keeps memory bounded
+            // regardless of block_size, and never stalls a block-granular
+            // pre-fetch such as HammingCorrect's ByMajority warm-up.)
+            let accept_new_incoming = self.current_reads_in_flight < self.max_reads_in_flight;
             if self.incoming_rx.is_none() || !accept_new_incoming {
                 // Only listen for completed work when input is closed
                 select! {
@@ -168,8 +181,8 @@ impl WorkpoolCoordinator {
                     }
                     recv(self.output_done_rx) -> msg => {
                         match msg {
-                            Ok(_completed_block_no) => {
-                                self.current_blocks_in_flight -= 1;
+                            Ok(completed_block_no) => {
+                                self.release_block(completed_block_no);
                             }
                             Err(_) => {
                                 // Output pipe crashed?
@@ -225,8 +238,8 @@ impl WorkpoolCoordinator {
                     }
                     recv(self.output_done_rx) -> msg => {
                         match msg {
-                            Ok(_completed_block_no) => {
-                                self.current_blocks_in_flight -= 1;
+                            Ok(completed_block_no) => {
+                                self.release_block(completed_block_no);
                             }
                             Err(_) => {
                                 // Output pipe crashed?
@@ -266,6 +279,7 @@ impl WorkpoolCoordinator {
                 && self.stalled_blocks.as_ref().expect("Should never be none outside of queue_stalled, and there only for borrow checker workaround").is_empty()
                 && self.current_blocks_in_flight == 0
             {
+                debug_assert_eq!(self.current_reads_in_flight, 0);
                 break;
             }
         }
@@ -289,14 +303,29 @@ impl WorkpoolCoordinator {
         }
 
         self.last_incoming_block = Some(block_no);
+        let admitted_reads = block.len();
         let block_status = BlockStatus {
             current_stage: 0,
             block,
             expected_read_count,
         };
         self.current_blocks_in_flight += 1;
+        self.current_reads_in_flight += admitted_reads;
+        self.reads_in_flight_by_block
+            .insert(block_no, admitted_reads);
         self.queue_block(block_status)?;
         Ok(())
+    }
+
+    /// A block has left the pipeline (output, dropped at a closed stage, or
+    /// discarded after the stage that closed it). Release the bookkeeping we
+    /// took at admission — exactly the read count it had then, since stages may
+    /// have truncated it since.
+    fn release_block(&mut self, block_no: usize) {
+        self.current_blocks_in_flight -= 1;
+        if let Some(reads) = self.reads_in_flight_by_block.remove(&block_no) {
+            self.current_reads_in_flight -= reads;
+        }
     }
 
     fn queue_block(&mut self, block_status: BlockStatus) -> Result<()> {
@@ -323,7 +352,7 @@ impl WorkpoolCoordinator {
                     //     "Dropping after stage: block {} (next stage was {}",
                     //     block_status.block_no, block_status.current_stage
                     // );
-                    self.current_blocks_in_flight -= 1; // we drop it here
+                    self.release_block(block_status.block.block_no()); // we drop it here
                 }
             }
         }
@@ -405,7 +434,7 @@ impl WorkpoolCoordinator {
         }
         // but unless the stage said 'no more blocks' *previously*, we still process this one.
         if was_already_closed {
-            self.current_blocks_in_flight -= 1;
+            self.release_block(block_no);
         } else if block_status.current_stage >= self.stages.len() {
             // eprintln!("outputing {}", block_status.block_no);
             self.output_block(block_status)?;
@@ -440,7 +469,7 @@ impl WorkpoolCoordinator {
                     //     "Dropping stalled block {} (next stage was {}",
                     //     block_status.block_no, block_status.current_stage
                     // );
-                    self.current_blocks_in_flight -= 1; // we drop it here. 
+                    self.release_block(block_status.block.block_no()); // we drop it here.
                 }
             }
         }

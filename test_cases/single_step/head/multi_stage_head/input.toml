@@ -2,6 +2,10 @@
     read1 = 'input_read1.fq.zst'
 [options]
     block_size = 15
+    # Cap reads in flight well under the top _InternalReadCount bound (1000) so
+    # Head's early termination is observed deterministically, not racing the
+    # pre-fetch (which can otherwise admit up to max_reads_in_flight reads).
+    max_reads_in_flight = 500
 
 [[step]]
     action = '_InternalReadCount'

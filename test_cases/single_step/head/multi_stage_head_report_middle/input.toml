@@ -4,6 +4,10 @@
     block_size = 15 # number of reads per block. We keep it low, and should see much fewer than the 10k
                     # in teh input file,
                     # depending on the actual schedulding
+    # Cap reads in flight well under the top _InternalReadCount bound (1000) so
+    # Head's early termination is observed deterministically, not racing the
+    # pre-fetch (which can otherwise admit up to max_reads_in_flight reads).
+    max_reads_in_flight = 500
 
 
 [[step]]

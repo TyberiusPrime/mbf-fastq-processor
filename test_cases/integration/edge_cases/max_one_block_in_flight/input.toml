@@ -3,7 +3,8 @@
     read2 = 'input_read2.fq.zst'
 
 [options]
-  max_blocks_in_flight = 1
+  # 1 read budget => only ever one block admitted at a time (overshoot by one block).
+  max_reads_in_flight = 1
 
 [[step]]
     action = 'Report'

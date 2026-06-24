@@ -158,7 +158,8 @@ pub struct InputInfo {
     /// worked on), maintained by the `WorkpoolCoordinator`. Shared so the
     /// `Progress` step can report pipeline occupancy alongside throughput,
     /// to tell a real stage stall (gauge drains) from a measurement artifact
-    /// (gauge stays pinned near `max_blocks_in_flight`).
+    /// (gauge stays pinned at capacity while the `max_reads_in_flight` budget
+    /// is saturated).
     pub blocks_in_flight: Arc<std::sync::atomic::AtomicUsize>,
     /// Report metadata, used by the `OutputReport` step to build the combined
     /// report (label-per-`report_no`, input-file config and the raw config TOML

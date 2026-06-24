@@ -1,4 +1,4 @@
-// this file is written by dev/update_tests.py
+// this file is written by dev/ci/_update_tests.py
 // there is a test case that will inform you if tests are missing and you need
 // to rerun dev/update_tests.py
 #![expect(clippy::should_panic_without_expect, reason = "generated")]
@@ -10880,21 +10880,6 @@ fn test_cases_x_single_step_x_hamming_x_by_majority_x_dump_counts() {
     println!("Test case is in: test_cases/single_step/hamming/by_majority/dump_counts");
     run_test(
         std::path::Path::new("../test_cases/single_step/hamming/by_majority/dump_counts"),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_hamming_x_by_majority_x_min_reads_must_be_multiple_of_blocksize() {
-    println!(
-        "Test case is in: test_cases/single_step/hamming/by_majority/min_reads_must_be_multiple_of_blocksize"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/hamming/by_majority/min_reads_must_be_multiple_of_blocksize",
-        ),
         "input.toml",
         1,
     );
