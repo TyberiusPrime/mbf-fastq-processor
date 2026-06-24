@@ -22,8 +22,8 @@ Error 1/1
 ───╯
 Hint: Using on_tie=ByMajority (or ByEditProbability) must first collect enough data. 
       It is configured to require 8 molecules.
-      Your options.blocks_in_flight * options.reads_per_block only yield 2 molecules.
-      Increase either one.
+      Your options.max_reads_in_flight is only 6 molecules.
+      Increase it.
       Having a total number of reads below 8 is not a problem,
       ByMajority|ByEditProbability will simply use all reads.
       See https://doc_url.example/version-stripped-from-test/docs/redirects/HammingCorrect

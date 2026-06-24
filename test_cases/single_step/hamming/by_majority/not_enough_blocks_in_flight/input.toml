@@ -1,6 +1,6 @@
 [options]
   block_size =2
-  max_blocks_in_flight = 1
+  max_reads_in_flight = 6
 
 [input]
   r1 = 'input_read1.fasta'

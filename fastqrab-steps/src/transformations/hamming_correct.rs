@@ -244,45 +244,27 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
             self.on_tie.as_ref(),
             Some(OnTie::ByMajority | OnTie::ByEditProbability)
         ) {
-            let blocks_in_flight: usize = parent
+            let reads_in_flight: usize = parent
                 .options
                 .as_ref()
-                .and_then(|options| options.max_blocks_in_flight.as_ref())
+                .and_then(|options| options.max_reads_in_flight.as_ref())
                 .copied()
-                .unwrap_or_else(fastqrab_config::default_blocks_in_flight);
-            let reads_per_block = parent
-                .options
-                .as_ref()
-                .and_then(|options| options.block_size.as_ref())
-                .copied()
-                .unwrap_or_else(|| fastqrab_config::default_block_size().into());
+                .unwrap_or_else(fastqrab_config::default_reads_in_flight);
             let reads_wanted = *self
                 .on_tie_min_molecules_to_start
                 .as_ref()
                 .expect("just set above");
-            if !reads_wanted.is_multiple_of(reads_per_block) {
-                return Err(ValidationFailure::new(
-                    format!(
-                        "on_tie_min_molecules_to_start must be a multiple of options.block_size ({reads_per_block})"
-                    ),
-                    Some(
-                        "Adjust either on_tie_min_molecules_to_start or options.block_size"
-                            .to_string(),
-                    ),
-                ));
-            }
 
-            if blocks_in_flight * reads_per_block < reads_wanted {
+            if reads_in_flight < reads_wanted {
                 return Err(ValidationFailure::new(
                     "Not enough reads 'in flight' for ByMajority|ByEditProbability".to_string(),
                     Some(format!(
                         "Using on_tie=ByMajority (or ByEditProbability) must first collect enough data. \n\
                     It is configured to require {reads_wanted} molecules.\n\
-                    Your options.blocks_in_flight * options.reads_per_block only yield {reads_available} molecules.\n\
-                    Increase either one.\n\
+                    Your options.max_reads_in_flight is only {reads_in_flight} molecules.\n\
+                    Increase it.\n\
                     Having a total number of reads below {reads_wanted} is not a problem,\n\
                     ByMajority|ByEditProbability will simply use all reads.",
-                        reads_available = blocks_in_flight * reads_per_block,
                     )),
                 ));
             }
