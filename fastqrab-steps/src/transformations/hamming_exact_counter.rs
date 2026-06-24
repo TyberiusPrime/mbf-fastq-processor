@@ -35,7 +35,10 @@ pub struct MajorityData {
     pub barcode_counts: Arc<Vec<AtomicUsize>>,
     pub barrier: Arc<(Mutex<bool>, Condvar)>,
     blocks_counted: Arc<AtomicUsize>,
-    pub blocks_to_count: usize,
+    /// Number of leading reads to count as the ByMajority warm-up sample
+    /// (= `on_tie_min_molecules_to_start`). The warm-up covers whole blocks up
+    /// to and including the one holding the `reads_to_count`-th read.
+    pub reads_to_count: usize,
     pub start_counting_in_hamming_at_this_block_no: Arc<AtomicUsize>,
     pub total_reads_considered: Arc<AtomicUsize>, // for verification purposes, not actual logic
 }
@@ -101,7 +104,7 @@ impl PartialHammingExactCounter {
     pub(crate) fn new(
         in_label: TagLabel,
         seq_to_name: Arc<IndexMap<BString, String>>,
-        blocks_to_count: usize,
+        reads_to_count: usize,
     ) -> Self {
         let seq_to_idx: FxHashMap<BString, usize> = seq_to_name
             .keys()
@@ -114,7 +117,7 @@ impl PartialHammingExactCounter {
                 barcode_counts: Arc::new(build_atomic_counts(seq_to_name.len())),
                 seq_to_idx: Arc::new(seq_to_idx),
                 seq_to_name,
-                blocks_to_count,
+                reads_to_count,
                 blocks_counted: Arc::new(AtomicUsize::new(0)),
                 barrier: Arc::new((Mutex::new(false), Condvar::new())),
                 // We need to wait for the counter to be done before we can count reads.
@@ -169,10 +172,17 @@ impl Step for HammingExactCounter {
         _input_info: &InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<(FastQBlocksCombined, bool)> {
-        //the 0 blocks to count special case
+        //the 0 reads to count special case
         //is handled in HammingCorrect by not blocking at all in that case.
 
-        if block.block_no() <= self.majority_data.blocks_to_count {
+        // A block belongs to the warm-up sample iff its first read falls within
+        // the first `reads_to_count` reads of the stream. Because blocks are
+        // contiguous, sequentially numbered ranges of the global read stream,
+        // `first_read_sequential_number` makes this an exact, order-independent
+        // decision even though this stage runs in parallel and out of order.
+        let reads_to_count = self.majority_data.reads_to_count;
+        let first_read = block.first_read_sequential_number;
+        if first_read < reads_to_count {
             // block no is 1 based.
             let input_tags = block.tags.get(&self.in_label).expect("Input tag not found");
             let counts = &*self.majority_data.barcode_counts;
@@ -206,25 +216,26 @@ impl Step for HammingExactCounter {
             self.majority_data
                 .total_reads_considered
                 .fetch_add(input_tags.len(), Ordering::SeqCst);
-            let mut counted = self
-                .majority_data
+            self.majority_data
                 .blocks_counted
-                .fetch_add(1, Ordering::SeqCst)
-                + 1;
-            if block.is_final {
-                // we need to somehow delay for the other concurrent blocks to have been counted.
-                // which means that blocks_counted == our block number, since the final block
-                // always has the highest block_no().
-                //cov:excl-start
+                .fetch_add(1, Ordering::SeqCst);
+
+            // This block holds the `reads_to_count`-th read (the "stop") iff the
+            // threshold lands inside its range; that makes it the last warm-up
+            // block. If the stream ends before reaching the threshold, the final
+            // block takes that role instead. Either way it is the highest-numbered
+            // warm-up block, so it owns the hand-off to `HammingCorrect`.
+            let holds_stop = first_read + block.len() >= reads_to_count;
+            if block.is_final || holds_stop {
+                // Wait until every earlier warm-up block has been counted, so the
+                // counts handed to HammingCorrect are complete. Warm-up blocks are
+                // exactly 1..=block_no and each increments once, so
+                // blocks_counted == our block_no means they are all in.
                 while self.majority_data.blocks_counted.load(Ordering::SeqCst) < block.block_no() {
                     // yeah it's a busy wait. Shouldn't last long though.
                     std::thread::yield_now();
                 }
-                //cov:excl-stop
-                counted = block.block_no(); // or reload blocks_counted, but this is cheaper
-            }
-            if block.is_final || counted == self.majority_data.blocks_to_count {
-                self.signal_downstream_go(counted)?;
+                self.signal_downstream_go(block.block_no())?;
             }
         }
 

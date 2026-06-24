@@ -10935,6 +10935,21 @@ fn test_cases_x_single_step_x_hamming_x_by_majority_x_reaching_read_count() {
 
 #[test]
 
+fn test_cases_x_single_step_x_hamming_x_by_majority_x_reaching_read_count_partial_block() {
+    println!(
+        "Test case is in: test_cases/single_step/hamming/by_majority/reaching_read_count_partial_block"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/hamming/by_majority/reaching_read_count_partial_block",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_hamming_x_by_majority_x_simple() {
     println!("Test case is in: test_cases/single_step/hamming/by_majority/simple");
     run_test(
