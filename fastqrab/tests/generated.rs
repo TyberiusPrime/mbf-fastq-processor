@@ -2,8 +2,9 @@
 // there is a test case that will inform you if tests are missing and you need
 // to rerun dev/update_tests.py
 #![expect(clippy::should_panic_without_expect, reason = "generated")]
-mod test_runner;
-use test_runner::run_test;
+#[path = "common/mod.rs"]
+mod common;
+use common::test_runner::run_test;
 
 #[test]
 

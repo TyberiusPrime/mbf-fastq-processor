@@ -21,6 +21,10 @@ use std::process::Command;
 use flate2::Compression;
 use flate2::write::GzEncoder;
 
+#[path = "common/mod.rs"]
+mod common;
+use common::decompressor;
+
 /// Build a multi-record FASTQ payload (~`reads` records, variable read lengths,
 /// space-free names so output is a byte-exact identity roundtrip). Large enough
 /// to span several decode chunks.
@@ -86,7 +90,8 @@ fn run_case(dir: &Path, payload: &[u8], env: &[(&str, &str)]) {
         .arg(dir.join("input.toml"))
         .arg("--output-dir")
         .arg(dir.join("actual"))
-        .env("NO_FRIENDLY_PANIC", "1");
+        .env("NO_FRIENDLY_PANIC", "1")
+        .env("FASTQRAB_DECOMPRESSOR", decompressor());
     for (k, val) in env {
         cmd.env(k, val);
     }

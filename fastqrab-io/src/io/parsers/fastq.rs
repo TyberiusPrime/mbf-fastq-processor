@@ -384,9 +384,8 @@ impl PodFastqParser {
             Ok(())
         });
 
-        let parser_handle = std::thread::spawn(move || {
-            parse_pods_from_channel(bytes_rx, chunk_tx, demux_threads)
-        });
+        let parser_handle =
+            std::thread::spawn(move || parse_pods_from_channel(bytes_rx, chunk_tx, demux_threads));
 
         Ok(PodFastqParser {
             chunk_rx,
@@ -453,9 +452,8 @@ impl PodFastqParser {
                 if let Err(e) = descriptors.read_exact(&mut desc) {
                     // EOF before the sentinel ⇒ the decompressor died; surface it
                     // (its stderr is inherited, so the real cause is already shown).
-                    return Err(anyhow::Error::new(e).context(
-                        "fastqrab-decompressor closed before sending its EOF sentinel",
-                    ));
+                    return Err(anyhow::Error::new(e)
+                        .context("fastqrab-decompressor closed before sending its EOF sentinel"));
                 }
                 let slot = u32::from_le_bytes(desc[0..4].try_into().expect("4 bytes"));
                 let len = u32::from_le_bytes(desc[4..8].try_into().expect("4 bytes")) as usize;
@@ -1155,7 +1153,11 @@ mod pod_regroup_tests {
                 assert!(s > 0, "non-final block {i} should be non-empty");
             }
         }
-        assert_eq!(sizes.iter().sum::<usize>(), total, "all reads accounted for");
+        assert_eq!(
+            sizes.iter().sum::<usize>(),
+            total,
+            "all reads accounted for"
+        );
     }
 
     fn variable_reads(n: usize) -> Reads {

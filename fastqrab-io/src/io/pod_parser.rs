@@ -759,7 +759,10 @@ mod tests {
         // Feed the payload as several awkwardly-sized chunks.
         let producer = std::thread::spawn(move || {
             for piece in data.chunks(7) {
-                if tx.send(Chunk::owned(Arc::new(piece.to_vec()), None)).is_err() {
+                if tx
+                    .send(Chunk::owned(Arc::new(piece.to_vec()), None))
+                    .is_err()
+                {
                     break;
                 }
             }
@@ -854,14 +857,16 @@ mod tests {
             let p = Arc::clone(&payload);
             let producer = std::thread::spawn(move || {
                 for piece in p.chunks(64 * 1024) {
-                    if tx.send(Chunk::owned(Arc::new(piece.to_vec()), None)).is_err() {
+                    if tx
+                        .send(Chunk::owned(Arc::new(piece.to_vec()), None))
+                        .is_err()
+                    {
                         break;
                     }
                 }
             });
             let (chunk_tx, chunk_rx) = channel::bounded::<FastqChunk>(8);
-            let parser =
-                std::thread::spawn(move || parse_pods_from_channel(rx, chunk_tx, threads));
+            let parser = std::thread::spawn(move || parse_pods_from_channel(rx, chunk_tx, threads));
 
             // seq/qual share one metadata column in the DualStringPod, so their
             // counts are structurally equal; assert names line up too.
@@ -907,7 +912,10 @@ mod tests {
             // `@r\n` then a single sequence line longer than u32::MAX, then its
             // terminating newline: the >4 GiB line is the boundary-straddling
             // line whose assembly trips the guard.
-            if tx.send(Chunk::owned(Arc::new(b"@r\n".to_vec()), None)).is_err() {
+            if tx
+                .send(Chunk::owned(Arc::new(b"@r\n".to_vec()), None))
+                .is_err()
+            {
                 return;
             }
             let block = vec![b'A'; 64 * 1024 * 1024];

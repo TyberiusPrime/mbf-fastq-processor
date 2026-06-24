@@ -383,8 +383,17 @@ fn open_stdin() -> Result<ex::fs::File> {
 /// binary, which must sit right next to the running fastqrab binary. The name is
 /// derived by suffixing the running executable's file name with `-decompressor`,
 /// so a renamed `fastqrab_0.9.1` looks for a sibling `fastqrab_0.9.1-decompressor`.
+///
+/// The `FASTQRAB_DECOMPRESSOR` environment variable overrides this lookup with an
+/// explicit path. This keeps integration tests hermetic (they can point at a
+/// freshly built binary regardless of target-dir layout) and lets packagers
+/// relocate the decompressor away from the main binary.
 #[must_use]
 pub fn find_decompressor() -> Option<PathBuf> {
+    if let Some(path) = std::env::var_os("FASTQRAB_DECOMPRESSOR") {
+        let path = PathBuf::from(path);
+        return path.exists().then_some(path);
+    }
     let current = std::env::current_exe().ok()?;
     let dir = current.parent()?;
     let name = current.file_name()?.to_str()?;
