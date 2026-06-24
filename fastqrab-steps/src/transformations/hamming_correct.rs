@@ -247,16 +247,20 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
             let reads_in_flight: usize = parent
                 .options
                 .as_ref()
-                .and_then(|options| options.max_reads_in_flight.as_ref())
+                .and_then(|options| options.max_molecules_in_flight.as_ref())
                 .copied()
                 .unwrap_or_else(|| {
-                    fastqrab_config::default_reads_in_flight(
-                        parent.options.as_ref()
+                    fastqrab_config::default_max_molecules_in_flight(
+                        parent
+                            .options
+                            .as_ref()
                             .and_then(|x| x.block_size.as_ref())
                             .copied()
-                            .unwrap_or_else(|| fastqrab_config::default_block_size().into()),
+                            .unwrap_or_else(|| fastqrab_config::default_block_size().into())
+                            .into(),
                     )
-                });
+                })
+                .into();
             let reads_wanted = *self
                 .on_tie_min_molecules_to_start
                 .as_ref()

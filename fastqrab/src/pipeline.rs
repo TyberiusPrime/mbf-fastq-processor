@@ -1142,6 +1142,13 @@ pub struct RunStage2 {
     error_collector: Arc<Mutex<Vec<String>>>,
     allow_overwrite: bool,
 }
+
+#[derive(Copy, Clone, Debug)]
+pub struct BlockFinallyDone {
+    // pub block_no: usize,
+    pub initial_molecule_count: usize,
+}
+
 impl RunStage2 {
     pub fn create_stage_threads(self, parsed: &mut CheckedConfig) -> RunStage3 {
         self.create_workpool_pipeline(parsed)
@@ -1156,7 +1163,7 @@ impl RunStage2 {
             .options
             .threads
             .expect("Thread count should have been set by config parsing");
-        let max_reads_in_flight = parsed.options.max_reads_in_flight;
+        let max_molecules_in_flight = parsed.options.max_molecules_in_flight;
 
         // Create channels
         // unbounded is fine, we later on count reads in flight
@@ -1179,7 +1186,7 @@ impl RunStage2 {
 
         let (coordinator, shared_stages) = WorkpoolCoordinator::new(
             stages,
-            max_reads_in_flight,
+            max_molecules_in_flight.into(),
             self.combiner_output_rx,
             todo_tx,
             done_rx,
@@ -1255,7 +1262,7 @@ pub struct RunStage3 {
     stage_threads: Vec<thread::JoinHandle<()>>,
     stage_to_output_channel: crossbeam::channel::Receiver<(io::FastQBlocksCombined, Option<usize>)>,
     error_collector: Arc<Mutex<Vec<String>>>,
-    output_done_tx: crossbeam::channel::Sender<usize>,
+    output_done_tx: crossbeam::channel::Sender<BlockFinallyDone>,
     reads_per_tag: Arc<Mutex<BTreeMap<crate::demultiplex::Tag, u64>>>,
 }
 
@@ -1357,8 +1364,10 @@ impl RunStage3 {
                                 }
                             }
                             if let Some(send_idx) = send {
-                                let (block_no, _block) = buffer.remove(send_idx);
-                                let _ = output_done_tx.send(block_no); // can fail if the coordinator exited on error
+                                let (_block_no, block) = buffer.remove(send_idx);
+                                let _ = output_done_tx.send(BlockFinallyDone {
+                                    initial_molecule_count: block.initial_molecule_count(),
+                                }); // can fail if the coordinator exited on error
                             } else {
                                 break;
                             }

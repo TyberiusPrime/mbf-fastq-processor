@@ -5,7 +5,7 @@ use crate::transformations::{PartialTransformation, TagUser, Transformation};
 use anyhow::{Result, anyhow, bail};
 use bstr::BString;
 use fastqrab_config::{
-    RemovedTags, StringTagContent, TagLabel, TagValueType, default_reads_in_flight,
+    RemovedTags, StringTagContent, TagLabel, TagValueType, default_max_molecules_in_flight,
 };
 use fastqrab_config::{
     default_block_size, default_buffer_size, default_output_buffer_size,
@@ -464,8 +464,8 @@ impl VerifyIn<TPDRoot> for PartialConfig {
         self.options.or_with(|| PartialOptions {
             threads: TomlValue::new_ok(None, 0..0),
             block_size: TomlValue::new_ok(default_block_size().into(), 0..0),
-            max_reads_in_flight: TomlValue::new_ok(
-                default_reads_in_flight(default_block_size().into()),
+            max_molecules_in_flight: TomlValue::new_ok(
+                default_max_molecules_in_flight(default_block_size().into()),
                 0..0,
             ),
             buffer_size: TomlValue::new_ok(default_buffer_size(), 0..0),

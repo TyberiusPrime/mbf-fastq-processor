@@ -11,7 +11,7 @@ Most workflows can rely on the defaults.
 ```toml
 [options]
     threads = 10
-    max_blocks_in_flight = 100
+    max_molecules_in_flight = 1_000_000
     block_size = 10000
     buffer_size = 102400
     accept_duplicate_files = false
@@ -21,7 +21,7 @@ Most workflows can rely on the defaults.
 | Key                      | Default | Description |
 |--------------------------|---------|-------------|
 | `threads`           | (auto)    | Worker threads for transformations. See [threading]({{< relref "docs/reference/threading.md" >}}). |
-| `max_blocks_in_flight`    | `100`    | How many blocks may be concurrently being processed. Lowering this limits RAM usage. |
+| `max_molecules_in_flight`    | `100`    | How many molecules may be concurrently loaded. Lowering this limits RAM usage. Note that this is in 'inital count', so filtering molecules has no influence on this.|
 | `block_size`             | `10000` | Number of fragments pulled per batch. Increase for very large runs when IO is abundant; decrease to reduce peak memory use. |
 | `buffer_size`            | `102400` | Initial bytes reserved per block. The allocator grows buffers on demand, so tuning is rarely necessary. |
 | `accept_duplicate_files` | `false` | Permit the same path to appear multiple times across segments. Useful for fixtures or synthetic tests; keep disabled to catch accidental copy/paste errors. |

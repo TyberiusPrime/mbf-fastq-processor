@@ -251,7 +251,7 @@
           "format": "uint",
           "minimum": 0
         },
-        "max_reads_in_flight": {
+        "max_molecules_in_flight": {
           "type": [
             "integer",
             "null"
@@ -296,6 +296,14 @@
           ]
         },
         "thread_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint",
+          "minimum": 0
+        },
+        "max_reads_in_flight": {
           "type": [
             "integer",
             "null"

@@ -1283,6 +1283,7 @@ pub struct FastQBlocksCombined {
     pub tags: IndexMap<TagLabel, TagColumn>,
     pub is_final: bool,
     block_no: usize,
+    molecules_at_start: usize,
     pub first_read_sequential_number: usize,
     _force_private: PhantomData<u8>,
 }
@@ -1315,6 +1316,7 @@ impl FastQBlocksCombined {
             );
         }
         FastQBlocksCombined {
+            molecules_at_start: segments[0].len(),
             segments,
             output_tags,
             tags,
@@ -1328,6 +1330,14 @@ impl FastQBlocksCombined {
     #[must_use]
     pub fn block_no(&self) -> usize {
         self.block_no
+    }
+
+    /// Read count before the block was processed at all
+    ///
+    /// Necessary to count reads-in-flight correctly
+    /// #[must_use]
+    pub fn initial_molecule_count(&self) -> usize {
+        self.molecules_at_start
     }
 
     #[must_use]
@@ -1395,6 +1405,7 @@ impl FastQBlocksCombined {
             is_final: self.is_final,
             block_no: self.block_no,
             first_read_sequential_number: self.first_read_sequential_number,
+            molecules_at_start: self.molecules_at_start,
             _force_private: PhantomData,
         }
     }

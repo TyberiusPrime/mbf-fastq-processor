@@ -1,4 +1,5 @@
 #![expect(clippy::unwrap_used, reason = "it's tests")]
+#![allow(dead_code, reason = "not every test binary uses every helper")]
 use anyhow::{Context, Result};
 use std::env;
 use std::path::{Path, PathBuf};
