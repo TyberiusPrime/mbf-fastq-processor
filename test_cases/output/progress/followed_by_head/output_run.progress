@@ -1,4 +1,4 @@
-Thread config: per_input_segment _IGNORED_, processing: _IGNORED_, per_output_file: _IGNORED_
-Processed Total:               _IGNORED_, Elapsed:      _IGNORED_s
-Took _IGNORED_ s (_IGNORED_:_IGNORED_:_IGNORED_) to process _IGNORED_ molecules for an effective rate of _IGNORED_ molecules/s
-Finalizing all steps took _IGNORED_ s (_IGNORED_:_IGNORED_:_IGNORED_).
+Thread config: per_input_segment 5 (+ 4 pod-demux), processing: 27, per_output_file: 1
+Processed Total:               0, in-flight:    2, Elapsed:      0s
+Took 0.06 s (00:00:00) to process 10_459 molecules for an effective rate of 183_830.59 molecules/s
+Finalizing all steps took 0.03 s (00:00:00).

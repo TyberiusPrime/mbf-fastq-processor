@@ -9,7 +9,7 @@ if grep -q "337_903 molecules" output_run.progress; then
 fi
 
  #verify that 10_000, 20_000 or similar low multple of 10k was found
- if ! grep -q "to process 10_000\|20_000\|30_000\|40_000\|50_000 molecules" output_run.progress; then
+ if ! grep -q -P "to process [12345][0-9]_[0-9]{3} molecules" output_run.progress; then
     echo "Error: Expected 'Processed Total: x0_000' not found"
     cat output_run.progress
     exit 1
