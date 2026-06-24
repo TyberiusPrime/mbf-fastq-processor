@@ -60,15 +60,22 @@ pub enum FailOutputError {
 pub struct Options {
     #[tpd(alias = "thread_count")]
     pub threads: Option<usize>,
+    #[schemars(with = "Option<usize>")]
     pub max_blocks_in_flight: usize,
 
+    #[schemars(with = "Option<usize>")]
     pub block_size: usize,
+    #[schemars(with = "Option<usize>")]
     pub buffer_size: usize,
+    #[schemars(with = "Option<usize>")]
     pub output_buffer_size: usize,
     #[tpd(default)]
+    #[schemars(with = "Option<bool>")]
     pub accept_duplicate_files: bool,
+    #[schemars(with = "Option<bool>")]
     pub spot_check_read_pairing: bool,
     #[tpd(nested)]
+    #[schemars(skip)]
     pub debug_failures: FailureOptions,
 }
 
