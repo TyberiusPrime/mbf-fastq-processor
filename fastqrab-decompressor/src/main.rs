@@ -72,9 +72,7 @@ fn main() -> Result<()> {
     // Recycle channel: drained output Vecs flow back to workers so pages
     // stay faulted. Capacity ~= worker pool size; if it fills, drop the
     // Vec rather than block stdout.
-    let recycle_cap = std::thread::available_parallelism()
-        .map_or(4, std::num::NonZero::get)
-        * 2;
+    let recycle_cap = std::thread::available_parallelism().map_or(4, std::num::NonZero::get) * 2;
     let (recycle_tx, recycle_rx) = bounded::<Vec<u8>>(recycle_cap);
 
     let cfg = Config {

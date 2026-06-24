@@ -112,7 +112,10 @@ fn run_verify_test(
         .arg(&config_file)
         .arg("--output-dir")
         .arg(&actual_dir)
-        .env("NO_FRIENDLY_PANIC", "1");
+        .env("NO_FRIENDLY_PANIC", "1")
+        // Test cases with `use_rapidgzip = true` spawn the sibling decompressor;
+        // ensure it is built and point the child straight at it.
+        .env("FASTQRAB_DECOMPRESSOR", super::decompressor());
     if prep_file.exists() || post_file.exists() || test_file.exists() {
         cmd.arg("--unsafe-call-prep-sh");
     }
