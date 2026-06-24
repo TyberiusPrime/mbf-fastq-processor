@@ -219,6 +219,7 @@ impl Step for MergeReads {
         _input_info: &InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
+        use stringpod::CrossPods;
         let seg1_idx = self.segment1.as_index();
         let seg2_idx = self.segment2.as_index();
         let reverse_complement_segment2 = self.reverse_complement_segment2;
@@ -245,7 +246,6 @@ impl Step for MergeReads {
         let mut new_seg1 = DualStringPodBuilder::with_capacity(block.len(), block.len());
         let mut new_seg2 = DualStringPodBuilder::with_capacity(block.len(), block.len());
 
-        use stringpod::CrossPods;
         for (read1, read2) in block.segments[seg1_idx]
             .iter()
             .zip(block.segments[seg2_idx].iter())

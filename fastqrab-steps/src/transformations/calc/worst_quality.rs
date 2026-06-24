@@ -65,13 +65,13 @@ impl Step for WorstQuality {
                 extract_numeric_tags_plus_all_from_qualities(
                     *seg_or_all,
                     &self.out_label,
-                    |read| min_quality(read, self.offset) as f64,
+                    |read| f64::from(min_quality(read, self.offset)),
                     |reads| {
-                        reads
+                        f64::from(reads
                             .iter()
                             .map(|r| min_quality(r, self.offset))
                             .min()
-                            .unwrap_or(33) as f64
+                            .unwrap_or(33))
                     },
                     &mut block,
                 );
@@ -83,22 +83,22 @@ impl Step for WorstQuality {
                     .expect("source tag not found — should have been caught in validation")
                     .clone();
 
-                let location_items = match &tag_values {
-                    TagColumn::Location(items) => items,
-                    _ => anyhow::bail!("WorstQuality source tag must be a Location column"),
+                let TagColumn::Location(location_items) = &tag_values else {
+                    anyhow::bail!("WorstQuality source tag must be a Location column");
                 };
-                let missing_value = 33.0 + self.offset as f64;
+
+                let missing_value = 33.0 + f64::from(self.offset);
                 let mut values = Vec::with_capacity(location_items.row_count());
                 {
                     for qual in location_items.iter_qual() {
                         let q = if qual.is_empty() {
                             missing_value
                         } else {
-                            qual.iter()
-                                .map(|x| Into::<i16>::into(*x) + self.offset as i16)
+                            f64::from(qual.iter()
+                                .map(|x| Into::<i16>::into(*x) + i16::from(self.offset))
                                 .min()
-                                .unwrap_or(33 + self.offset as i16)
-                                as f64
+                                .unwrap_or(33 + i16::from(self.offset))
+                            )
                         };
                         values.push(q);
                     }
@@ -118,7 +118,7 @@ impl Step for WorstQuality {
 fn min_quality(quality: &BStr, offset: i8) -> i16 {
     quality
         .iter()
-        .map(|x| Into::<i16>::into(*x) + offset as i16)
+        .map(|x| Into::<i16>::into(*x) + i16::from(offset))
         .min()
         .unwrap_or(33)
 }

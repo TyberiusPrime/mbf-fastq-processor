@@ -130,7 +130,10 @@ impl Step for PolyTail {
                     max_consecutive_mismatches,
                 )
             };
-
+            #[expect(
+                clippy::cast_possible_truncation,
+                reason = "lengths are guaranteed to be within u32 range"
+            )]
             last_pos.map(|last_pos| last_pos as u32..read_seq.len() as u32)
         });
         Ok((block, true))

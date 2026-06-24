@@ -2,7 +2,7 @@ use crate::transformations::prelude::*;
 
 /// Compare two string- or location-valued tags lexicographically (byte-by-byte).
 ///
-/// Returns -1.0 if tag_a < tag_b, 0.0 if equal, 1.0 if tag_a > tag_b,
+/// Returns -1.0 if `tag_a` < `tag_b`, 0.0 if equal, 1.0 if `tag_a` > `tag_b`,
 /// like Rust's `PartialOrd` on byte slices. Missing on either input → Missing output.
 /// Raises a runtime error if the two byte sequences for a read have different lengths.
 #[derive(Clone, JsonSchema)]

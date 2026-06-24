@@ -184,8 +184,7 @@ impl TagUser for PartialTaggedVariant<PartialDemultiplex> {
                             } else {
                                 let upstream_contents = tags_available
                                     .get(in_label)
-                                    .map(|meta| &meta.contents)
-                                    .unwrap_or(&StringTagContent::Undefined);
+                                    .map_or(&StringTagContent::Undefined, |meta| &meta.contents);
                                 match upstream_contents {
                                     StringTagContent::Undefined => { // require the user to set it
                                     }

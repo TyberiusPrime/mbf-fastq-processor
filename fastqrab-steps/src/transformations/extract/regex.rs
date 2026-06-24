@@ -176,8 +176,8 @@ impl TagUser for PartialTaggedVariant<PartialRegex> {
             }
 
             Some(TagUsageInfo {
-                declared_tag,
                 used_tags,
+                declared_tag,
                 ..Default::default()
             })
         } else {
@@ -237,7 +237,7 @@ impl Step for Regex {
                             read_no,
                             block_tags,
                         )
-                        .map(|x| x.into())
+                        .map(Into::into)
                     },
                 );
             }
@@ -278,6 +278,7 @@ impl Step for Regex {
                             return RegexExtraction::None;
                         };
                         let g0 = hit.get(0).expect("group 0 always present on a match");
+                        #[expect(clippy::cast_possible_truncation, reason = "regex match is always within read length, which is u32")]
                         let anchor = g0.start() as u32..g0.end() as u32;
 
                         // Fast path: `$0` (the whole match) is the one replacement

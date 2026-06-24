@@ -356,6 +356,10 @@ impl Step for LongestPolyX {
             segment_index,
             &self.out_label,
             move |read_seq| {
+                #[expect(
+                    clippy::cast_possible_truncation,
+                    reason = "lengths are guaranteed to be within u32 range"
+                )]
                 Self::find_best(
                     read_seq,
                     base,

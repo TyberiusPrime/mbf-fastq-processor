@@ -351,7 +351,7 @@ fn drop_transform_from_required(root: &mut serde_json::Map<String, serde_json::V
     }
 }
 
-/// schemars emits enum values as the canonical (PascalCase) variant names, but
+/// schemars emits enum values as the canonical (`PascalCase`) variant names, but
 /// configs are parsed case-insensitively (`FieldMatchMode::AnyCase`). Append the
 /// lowercase spelling of each value next to the canonical one, so the common
 /// lowercase form validates while the editor still offers completion for both.
@@ -592,9 +592,9 @@ impl PartialConfig {
                     (None, None) => (None, None),
                     (None, Some(rti)) => (None, Some(&mut transform[rti])),
                     (Some(roti), None) => (Some(&mut transform[roti]), None),
-                    (Some(roti), Some(rti)) => {
+                    (Some(roti), Some(rti_index)) => {
                         let [a, b] = transform
-                            .get_disjoint_mut([roti, rti])
+                            .get_disjoint_mut([roti, rti_index])
                             .expect("coordinates verified before hand");
                         (Some(a), Some(b))
                     }
@@ -725,8 +725,7 @@ impl PartialConfig {
         let has_any_output = self
             .output_declarations_per_transformation
             .as_ref()
-            .map(|x| x.iter().any(|x| x.is_some()))
-            .unwrap_or(false);
+            .is_some_and(|x| x.iter().any(Option::is_some));
 
         let is_benchmark = self
             .benchmark
@@ -1749,7 +1748,7 @@ impl PartialConfig {
         let mut all_decls: Vec<Option<Vec<InputDeclaration>>> = Vec::new();
         self.transform.sync_nested_state();
         if let Some(transforms) = self.transform.value.as_ref() {
-            for tv_transform in transforms.iter() {
+            for tv_transform in transforms {
                 let decls = tv_transform
                     .value
                     .as_ref()
@@ -1797,7 +1796,7 @@ impl PartialConfig {
                                 ft.second_infix().map(ToOwned::to_owned),
                                 ft.suffix().to_string(),
                             );
-                            let part = format!("{:?}", key);
+                            let part = format!("{key:?}");
 
                             if part.contains('/') || part.contains('\\') || part.contains(':') {
                                 //cov:excl-start
@@ -2240,7 +2239,7 @@ impl Config {
     }
 
     fn any_bam_or_gzip_output(&self) -> bool {
-        for transform in self.transform.iter() {
+        for transform in &self.transform {
             if let Transformation::OutputBAM(_) = transform {
                 return true;
             }

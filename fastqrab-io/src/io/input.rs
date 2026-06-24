@@ -446,6 +446,7 @@ pub fn open_decompressed_reader(
 pub fn spawn_rapidgzip(filename: &Path, thread_count: ThreadCount) -> Result<std::fs::File> {
     #[cfg(unix)]
     {
+        const PIPE_BUF_SIZE: libc::c_int = 1024 * 1024;
         use std::os::unix::io::{FromRawFd, IntoRawFd};
 
         let decompressor = find_decompressor()
@@ -477,7 +478,6 @@ pub fn spawn_rapidgzip(filename: &Path, thread_count: ThreadCount) -> Result<std
         // buffer instead of overlapping (millions of voluntary context switches).
         // A bigger buffer gives both sides slack and cuts read/write syscalls.
         // Best-effort: failure here is not fatal, the pipe just keeps its default size.
-        const PIPE_BUF_SIZE: libc::c_int = 1024 * 1024;
         // SAFETY: `raw_fd` is a live pipe fd we own; F_SETPIPE_SZ takes an int arg.
         unsafe {
             libc::fcntl(raw_fd, libc::F_SETPIPE_SZ, PIPE_BUF_SIZE);

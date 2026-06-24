@@ -1335,7 +1335,7 @@ impl FastQBlocksCombined {
     /// Read count before the block was processed at all
     ///
     /// Necessary to count reads-in-flight correctly
-    /// #[must_use]
+    #[must_use]
     pub fn initial_molecule_count(&self) -> usize {
         self.molecules_at_start
     }

@@ -122,6 +122,10 @@ impl Step for IUPACSuffix {
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         extract_region_tags_from_seq(&mut block, self.segment, &self.out_label, |seq| {
             //cheap empty range if read length too short no need for explicit check
+            #[expect(
+                clippy::cast_possible_truncation,
+                reason = "lengths are guaranteed to be within u32 range"
+            )]
             Self::longest_suffix_that_is_a_prefix(
                 seq,
                 &self.search,

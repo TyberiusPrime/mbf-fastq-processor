@@ -78,6 +78,10 @@ impl Step for LowQualityStart {
                 }
             }
             if cut_pos > 0 {
+                #[expect(
+                    clippy::cast_possible_truncation,
+                    reason = "lengths are guaranteed to be within u32 range"
+                )]
                 Some(0..cut_pos as u32)
             } else {
                 None

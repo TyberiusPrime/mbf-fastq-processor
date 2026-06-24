@@ -59,15 +59,20 @@ impl TagColumn {
         self.len() == 0
     }
 
+    /// Retain just the values where keep is true.
+    ///
+    /// # Panics
+    /// if keep has the wrong length.
     pub fn retain_by_bool(&mut self, keep: &[bool]) {
         assert!(keep.len() == self.len());
         match self {
             TagColumn::String(StringColumn(items, validity)) => {
                 items.retain_by_bools(keep);
-                let new_valid =
-                    bv::BitBox::from_iter(validity.iter().zip(keep.iter()).filter_map(
-                        |(is_some, &do_keep)| if do_keep { Some(is_some) } else { None },
-                    ));
+                let new_valid = validity
+                    .iter()
+                    .zip(keep.iter())
+                    .filter_map(|(is_some, &do_keep)| if do_keep { Some(is_some) } else { None })
+                    .collect::<bv::BitBox>();
                 *validity = new_valid;
             }
             TagColumn::Location(col) => {
@@ -79,10 +84,11 @@ impl TagColumn {
                 items.retain(|_| *keep_func());
             }
             TagColumn::Bool(items) => {
-                *items =
-                    bv::BitBox::from_iter(items.iter().zip(keep.iter()).filter_map(
-                        |(is_some, &do_keep)| if do_keep { Some(is_some) } else { None },
-                    ));
+                *items = items
+                    .iter()
+                    .zip(keep.iter())
+                    .filter_map(|(is_some, &do_keep)| if do_keep { Some(is_some) } else { None })
+                    .collect::<bv::BitBox>();
             }
         }
     }
@@ -295,36 +301,45 @@ impl TagColumn {
             TagColumn::Location(col) => col.drain(range),
             TagColumn::String(StringColumn(items, valid)) => {
                 items.drain(range.clone());
-                *valid =
-                    bv::BitBox::from_iter(valid.iter().enumerate().filter_map(|(i, is_valid)| {
+                *valid = valid
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(i, is_valid)| {
                         if range.contains(&i) {
                             None
                         } else {
                             Some(*is_valid)
                         }
-                    }));
+                    })
+                    .collect::<bv::BitBox>();
             }
             TagColumn::Numeric(items) => {
                 items.drain(range);
             }
             TagColumn::Bool(items) => {
-                *items =
-                    bv::BitBox::from_iter(items.iter().enumerate().filter_map(|(i, is_valid)| {
+                *items = items
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(i, is_valid)| {
                         if range.contains(&i) {
                             None
                         } else {
                             Some(*is_valid)
                         }
-                    }));
+                    })
+                    .collect::<bv::BitBox>();
             }
         }
     }
 }
 
 impl StringColumn {
+    #[must_use]
     pub fn empty() -> Self {
         StringColumn(StringPod::empty(), bv::BitVec::new().into_boxed_bitslice())
     }
+
+    #[must_use]
     pub fn get_string(&self, index: usize) -> Option<&BStr> {
         if self.1[index] {
             Some(self.0.get(index))
@@ -355,6 +370,7 @@ pub struct StringColumnBuilder {
 }
 
 impl StringColumnBuilder {
+    #[must_use]
     pub fn new() -> Self {
         StringColumnBuilder {
             pod_builder: stringpod::StringPodBuilder::new(),
@@ -370,11 +386,12 @@ impl StringColumnBuilder {
             }
             None => {
                 self.pod_builder.push(b"");
-                self.valid.push(false)
+                self.valid.push(false);
             }
         }
     }
 
+    #[must_use]
     pub fn finish(self) -> StringColumn {
         StringColumn(self.pod_builder.finish(), self.valid.into_iter().collect())
     }
@@ -384,7 +401,7 @@ impl FromIterator<Option<BString>> for StringColumn {
     fn from_iter<T: IntoIterator<Item = Option<BString>>>(iter: T) -> Self {
         let mut builder = StringColumnBuilder::new();
         for item in iter {
-            builder.push(item.map(Cow::Owned))
+            builder.push(item.map(Cow::Owned));
         }
         builder.finish()
     }
@@ -394,7 +411,7 @@ impl<'a> FromIterator<Option<&'a BStr>> for StringColumn {
     fn from_iter<T: IntoIterator<Item = Option<&'a BStr>>>(iter: T) -> Self {
         let mut builder = StringColumnBuilder::new();
         for item in iter {
-            builder.push(item.map(Cow::Borrowed))
+            builder.push(item.map(Cow::Borrowed));
         }
         builder.finish()
     }
@@ -404,7 +421,7 @@ impl<'a> FromIterator<Option<Cow<'a, BStr>>> for StringColumn {
     fn from_iter<T: IntoIterator<Item = Option<Cow<'a, BStr>>>>(iter: T) -> Self {
         let mut builder = StringColumnBuilder::new();
         for item in iter {
-            builder.push(item)
+            builder.push(item);
         }
         builder.finish()
     }
