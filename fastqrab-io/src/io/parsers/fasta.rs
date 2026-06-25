@@ -1,5 +1,4 @@
-use anyhow::Result;
-use bio::io::fasta::{self, FastaRead, Record as FastaRecord};
+use anyhow::{Result, bail};
 use ex::Wrapper;
 use ex::fs::File;
 use niffler;
@@ -21,32 +20,41 @@ use crate::io::{
     pod_parser::Chunk,
 };
 #[cfg(unix)]
-use anyhow::{Context, anyhow, bail};
+use anyhow::{Context, anyhow};
 #[cfg(unix)]
 use crossbeam::channel::Receiver;
 #[cfg(unix)]
 use std::{sync::Arc, thread::JoinHandle};
 
-type BoxedFastaReader = fasta::Reader<BufReader<Box<dyn Read + Send>>>;
+/// Size of one read from the generic-reader FASTA path before it is handed to the
+/// serial assembler. Large enough to amortize syscalls, small enough to keep
+/// per-pull latency and the carry buffer modest.
+const READER_CHUNK_SIZE: usize = 256 * 1024;
 
-/// FASTA parser. The default (and non-gzip/zstd, stdin/FIFO) path uses rust-bio's
-/// streaming reader; a regular gzip/zstd file decoded out-of-process takes the
+/// FASTA parser. Every path funnels bytes into the same serial assembler
+/// ([`FastaPods`]): a regular gzip/zstd file decoded out-of-process takes the
 /// shared-memory fast path ([`FastaInner::Pod`]), parsing borrowed decode chunks
-/// in place with no bulk pipe copy — the FASTA analogue of [`super::PodFastqParser`].
+/// in place with no bulk pipe copy; everything else ([`FastaInner::Reader`] —
+/// uncompressed, bzip2/xz, stdin/FIFO, subprocess-piped, non-Unix) reads the
+/// decompressed byte stream in chunks and feeds the same assembler. The FASTA
+/// analogue of [`super::PodFastqParser`].
 pub struct FastaParser {
     inner: FastaInner,
     compression_format: niffler::send::compression::Format,
 }
 
 enum FastaInner {
-    /// rust-bio streaming reader over a (possibly subprocess-piped) byte stream.
-    Bio {
-        reader: BoxedFastaReader,
-        target_reads_per_block: NonZero<usize>,
-        fake_quality_char: u8,
+    /// Generic byte-stream path: read `READER_CHUNK_SIZE` bytes at a time from a
+    /// (possibly subprocess-piped / niffler-decoded) reader and feed the serial
+    /// FASTA assembler.
+    Reader {
+        reader: BufReader<Box<dyn Read + Send>>,
+        state: FastaPods,
+        buf: Vec<u8>,
+        eof: bool,
     },
     /// Shared-memory transport: borrowed decode chunks parsed in place. Boxed —
-    /// it is much larger than the `Bio` variant and the shm path is not the
+    /// it is much larger than the `Reader` variant and the shm path is not the
     /// common case.
     #[cfg(unix)]
     Pod(Box<FastaPodInner>),
@@ -100,13 +108,12 @@ impl FastaParser {
             reader = Box::new(file);
         }
 
-        let buffered = BufReader::new(reader);
-        let reader = fasta::Reader::from_bufread(buffered);
         Ok(FastaParser {
-            inner: FastaInner::Bio {
-                reader,
-                target_reads_per_block,
-                fake_quality_char: fake_quality_phred,
+            inner: FastaInner::Reader {
+                reader: BufReader::new(reader),
+                state: FastaPods::new(fake_quality_phred, target_reads_per_block.get()),
+                buf: vec![0u8; READER_CHUNK_SIZE],
+                eof: false,
             },
             compression_format: format,
         })
@@ -148,60 +155,52 @@ impl FastaParser {
         })
     }
 
-    /// One pull of the bio reader: up to `target` records into columnar form.
-    fn parse_bio(
-        reader: &mut BoxedFastaReader,
-        target: usize,
-        fake_quality_char: u8,
+    /// One pull of the generic-reader path: read decompressed bytes in
+    /// `READER_CHUNK_SIZE` chunks into the serial assembler until a block is ready
+    /// (≥ `target` records) or the stream ends. Mirrors [`FastaPodInner::parse`],
+    /// reading from a byte stream instead of borrowed shm slots.
+    fn parse_reader(
+        reader: &mut BufReader<Box<dyn Read + Send>>,
+        state: &mut FastaPods,
+        buf: &mut [u8],
+        eof: &mut bool,
     ) -> Result<ParseResult> {
-        let mut names = StringPodBuilder::with_capacity(0, target);
-        let mut seq_quals = DualStringPodBuilder::with_capacity(0, target);
-        let mut qual = vec![fake_quality_char; 100];
-        let mut count = 0usize;
-        let mut was_final = false;
-
-        while count < target {
-            let mut record = FastaRecord::new();
-            reader.read(&mut record)?;
-            if record.is_empty() {
-                was_final = true;
-                break;
-            }
-
-            let seq = record.seq();
-            if qual.len() < seq.len() {
-                //mutant false positive, <= isn't harmful, just tad slower
-                qual.resize(seq.len(), fake_quality_char);
-            }
-
-            // FASTA carries no '+'/quality, so qualities are faked and the plus
-            // column is left empty (filled in one shot below).
-            match record.desc() {
-                Some(desc) => {
-                    let id = record.id().as_bytes();
-                    let desc = desc.as_bytes();
-                    let mut name = Vec::with_capacity(id.len() + 1 + desc.len());
-                    name.extend_from_slice(id);
-                    name.push(b' ');
-                    name.extend_from_slice(desc);
-                    names.push(name.as_slice());
-                }
-                _ => names.push(record.id().as_bytes()),
-            }
-            seq_quals.push(seq, &qual[..seq.len()]);
-            count += 1;
+        if *eof {
+            return Ok(ParseResult {
+                output: ParserOutput::Chunk(FastQChunk::new_empty()),
+                was_final: true,
+            });
         }
+        loop {
+            let n = fill(reader, buf)?;
+            if n == 0 {
+                state.finish_stream()?;
+                *eof = true;
+                return Ok(ParseResult {
+                    output: ParserOutput::Chunk(state.take_block()),
+                    was_final: true,
+                });
+            }
+            state.feed_chunk(&buf[..n])?;
+            if state.has_block() {
+                return Ok(ParseResult {
+                    output: ParserOutput::Chunk(state.take_block()),
+                    was_final: false,
+                });
+            }
+        }
+    }
+}
 
-        Ok(ParseResult {
-            output: ParserOutput::Chunk(FastQChunk {
-                names: names.finish(),
-                seq_quals: seq_quals.finish(),
-                pluses: StringPod::new_all_empty(
-                    u32::try_from(count).expect("too many reads in a block for u32"),
-                ),
-            }),
-            was_final,
-        })
+/// One `read`, retrying past `Interrupted`. `Ok(0)` means end of stream.
+fn fill(reader: &mut impl Read, buf: &mut [u8]) -> Result<usize> {
+    loop {
+        match reader.read(buf) {
+            Ok(n) => return Ok(n),
+            // Interrupted: retry the read on the next loop iteration.
+            Err(e) if e.kind() == std::io::ErrorKind::Interrupted => {}
+            Err(e) => return Err(e.into()),
+        }
     }
 }
 
@@ -218,13 +217,12 @@ impl Parser for FastaParser {
 
     fn parse(&mut self) -> Result<ParseResult> {
         match &mut self.inner {
-            FastaInner::Bio {
+            FastaInner::Reader {
                 reader,
-                target_reads_per_block,
-                fake_quality_char,
-            } => {
-                FastaParser::parse_bio(reader, (*target_reads_per_block).get(), *fake_quality_char)
-            }
+                state,
+                buf,
+                eof,
+            } => FastaParser::parse_reader(reader, state, buf, eof),
             #[cfg(unix)]
             FastaInner::Pod(inner) => inner.parse(),
         }
@@ -232,8 +230,8 @@ impl Parser for FastaParser {
 }
 
 /// Trim trailing ASCII whitespace, matching rust-bio's `str::trim_end` on each
-/// FASTA line so the shm pod path yields byte-identical names and sequences.
-#[cfg(unix)]
+/// FASTA line so this parser yields byte-identical names and sequences to the
+/// reference reader it replaced.
 fn trim_end_ascii_whitespace(mut s: &[u8]) -> &[u8] {
     while let [rest @ .., last] = s {
         if last.is_ascii_whitespace() {
@@ -252,9 +250,8 @@ fn trim_end_ascii_whitespace(mut s: &[u8]) -> &[u8] {
 /// this threads a partial-line `carry` across chunk boundaries and accumulates
 /// each record's (multi-line) sequence into `cur_seq`, emitting completed records
 /// into columnar builders. Name/sequence handling mirrors rust-bio exactly (see
-/// [`trim_end_ascii_whitespace`] and the header `splitn(2, whitespace)`) so the
-/// shm path is byte-for-byte interchangeable with [`FastaInner::Bio`].
-#[cfg(unix)]
+/// [`trim_end_ascii_whitespace`] and the header `splitn(2, whitespace)`) so this
+/// parser is byte-for-byte interchangeable with the reference reader it replaced.
 struct FastaPods {
     names: StringPodBuilder,
     seq_quals: DualStringPodBuilder,
@@ -272,7 +269,6 @@ struct FastaPods {
     target: usize,
 }
 
-#[cfg(unix)]
 impl FastaPods {
     fn new(fake_quality: u8, target: usize) -> Self {
         FastaPods {

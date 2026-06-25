@@ -15,7 +15,6 @@ exclude.workspace = true
 
 [dependencies]
   anyhow = {workspace = true}
-  bio = {workspace = true}
   bstr = {workspace = true}
   crossbeam = {workspace = true}
   ex = {workspace = true}

@@ -733,6 +733,7 @@ dependencies = [
  "toml_edit",
  "wait-timeout",
  "walkdir",
+ "zstd",
 ]
 
 [[package]]
@@ -786,7 +787,6 @@ name = "fastqrab-io"
 version = "0.9.1"
 dependencies = [
  "anyhow",
- "bio",
  "bstr",
  "crossbeam",
  "ex",
