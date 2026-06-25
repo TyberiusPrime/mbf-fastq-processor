@@ -11,7 +11,6 @@ mod tests {
     use fastqrab_config::FileFormat;
     use noodles::bam;
     use noodles::sam::alignment::record::Flags as SamFlags;
-    use std::num::NonZero;
     use stringpod::CrossPods;
     use tempfile::TempDir;
 
@@ -42,7 +41,7 @@ mod tests {
             SinkConfig::default(),
             ChunkPolicy::default(),
             Some(bam_options),
-            NonZero::<usize>::new(1).unwrap(),
+            std::num::NonZero::<usize>::MIN,
             true,
         )
         .unwrap();

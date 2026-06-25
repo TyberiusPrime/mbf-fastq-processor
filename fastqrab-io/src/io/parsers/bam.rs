@@ -267,7 +267,7 @@ mod tests {
             NonZero::new(10).unwrap(),
             true,
             false,
-            std::num::NonZero::new(1usize).expect("1 is not zero"),
+            std::num::NonZero::<usize>::MIN,
         )?; // cov:excl-line
         let ParseResult {
             output,
@@ -285,7 +285,7 @@ mod tests {
             NonZero::new(10).unwrap(),
             false,
             true,
-            std::num::NonZero::new(1usize).expect("1 is not zero"),
+            std::num::NonZero::<usize>::MIN,
         )?; // cov:excl-line
         let ParseResult {
             output,
@@ -303,7 +303,7 @@ mod tests {
             NonZero::new(10).unwrap(),
             true,
             true,
-            std::num::NonZero::new(1usize).expect("1 is not zero"),
+            std::num::NonZero::<usize>::MIN,
         )?; // cov:excl-line
         let ParseResult {
             output,

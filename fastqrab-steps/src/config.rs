@@ -2041,10 +2041,10 @@ impl Config {
             self.configure_multithreading(&input_formats_observed)
         } else {
             ThreadingConfiguration {
-                n_input_per_segment: std::num::NonZeroUsize::new(1).expect("Can't fail"),
-                n_pod_demux_per_segment: std::num::NonZeroUsize::new(1).expect("Can't fail"),
-                n_output: std::num::NonZeroUsize::new(1).expect("Can't fail"),
-                n_processing: std::num::NonZeroUsize::new(1).expect("Can't fail"),
+                n_input_per_segment: std::num::NonZeroUsize::MIN,
+                n_pod_demux_per_segment: std::num::NonZeroUsize::MIN,
+                n_output: std::num::NonZeroUsize::MIN,
+                n_processing: std::num::NonZeroUsize::MIN,
             }
         };
 

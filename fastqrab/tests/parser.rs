@@ -48,9 +48,9 @@ fn test_bufsize_variations(input_fastq_filename: &str, bufsize_range: &[usize]) 
                 *bufsize,
                 ParserThreadCounts {
                     decompression: ThreadCount(
-                        std::num::NonZero::new(1usize).expect("1 is not zero"),
+                        std::num::NonZero::<usize>::MIN,
                     ),
-                    pod_demux: ThreadCount(std::num::NonZero::new(1usize).expect("1 is not zero")),
+                    pod_demux: ThreadCount(std::num::NonZero::<usize>::MIN),
                 },
                 &fastqrab_io::io::input::InputOptions {
                     bam_include_mapped: None,

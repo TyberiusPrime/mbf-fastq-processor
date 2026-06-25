@@ -1884,35 +1884,35 @@ mod test {
     #[test]
     fn test_longest_suffix_that_is_a_prefix() {
         assert_eq!(
-            longest_suffix_that_is_a_prefix(b"ACGTAGCT", b"ACGT", 0, NonZero::new(1).unwrap()),
+            longest_suffix_that_is_a_prefix(b"ACGTAGCT", b"ACGT", 0, NonZero::<usize>::MIN),
             None
         );
         assert_eq!(
-            longest_suffix_that_is_a_prefix(b"ACGTACGTACGT", b"ACGT", 0, NonZero::new(1).unwrap()),
+            longest_suffix_that_is_a_prefix(b"ACGTACGTACGT", b"ACGT", 0, NonZero::<usize>::MIN),
             Some(4)
         );
         assert_eq!(
-            longest_suffix_that_is_a_prefix(b"ACGTACGTACGC", b"ACGT", 1, NonZero::new(1).unwrap()),
+            longest_suffix_that_is_a_prefix(b"ACGTACGTACGC", b"ACGT", 1, NonZero::<usize>::MIN),
             Some(4)
         );
         assert_eq!(
-            longest_suffix_that_is_a_prefix(b"ACGTACGTACGC", b"ACGT", 0, NonZero::new(1).unwrap()),
+            longest_suffix_that_is_a_prefix(b"ACGTACGTACGC", b"ACGT", 0, NonZero::<usize>::MIN),
             None
         );
         assert_eq!(
-            longest_suffix_that_is_a_prefix(b"ACGTACGTACG", b"ACGT", 0, NonZero::new(1).unwrap()),
+            longest_suffix_that_is_a_prefix(b"ACGTACGTACG", b"ACGT", 0, NonZero::<usize>::MIN),
             Some(3)
         );
         assert_eq!(
-            longest_suffix_that_is_a_prefix(b"ACGTACGTAC", b"ACGT", 0, NonZero::new(1).unwrap()),
+            longest_suffix_that_is_a_prefix(b"ACGTACGTAC", b"ACGT", 0, NonZero::<usize>::MIN),
             Some(2)
         );
         assert_eq!(
-            longest_suffix_that_is_a_prefix(b"ACGTACGTA", b"ACGT", 0, NonZero::new(1).unwrap()),
+            longest_suffix_that_is_a_prefix(b"ACGTACGTA", b"ACGT", 0, NonZero::<usize>::MIN),
             Some(1)
         );
         assert_eq!(
-            longest_suffix_that_is_a_prefix(b"ACG", b"ACGT", 0, NonZero::new(1).unwrap()),
+            longest_suffix_that_is_a_prefix(b"ACG", b"ACGT", 0, NonZero::<usize>::MIN),
             Some(3)
         );
         assert_eq!(

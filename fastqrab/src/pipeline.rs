@@ -163,7 +163,7 @@ fn build_step_output_files(
                     sink_config,
                     decl.chunk_policy,
                     decl.bam_options.clone(),
-                    NonZero::new(1).expect("1 is nonzero"),
+                    NonZero::<usize>::MIN,
                     allow_overwrite,
                 )?;
                 per_tag.insert(tag, writer);

@@ -44,7 +44,7 @@ fn drive_reads(
         threads_per_segment: Some(get_number_of_cores()), // at this point, we're ready to multicore this
                                                           // hard.
     };
-    let one = ThreadCount(std::num::NonZero::new(1usize).expect("1 is not zero"));
+    let one = ThreadCount(std::num::NonZero::<usize>::MIN);
     let mut parser = input_file
         .get_parser(
             default_block_size(),
