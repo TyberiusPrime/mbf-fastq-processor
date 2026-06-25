@@ -54,19 +54,53 @@ fn gzip(data: &[u8]) -> Vec<u8> {
     enc.finish().unwrap()
 }
 
-/// Lay out a self-contained test case (gz input, reference output, identity
-/// pipeline toml) in `dir`, then run `fastqrab verify` under the given shm env
-/// overrides. A success exit means the output matched the reference byte for
-/// byte through the shm transport.
-fn run_case(dir: &Path, payload: &[u8], env: &[(&str, &str)]) {
-    std::fs::write(dir.join("input_read1.fq.gz"), gzip(payload)).unwrap();
+fn zstd_compress(data: &[u8]) -> Vec<u8> {
+    zstd::encode_all(data, 3).unwrap()
+}
+
+/// Build a multi-record wrapped FASTA payload (descriptions on some headers,
+/// sequence wrapped across multiple lines) to exercise the pod-FASTA parser's
+/// header split and multi-line/cross-chunk sequence assembly.
+fn make_fasta(records: usize) -> Vec<u8> {
+    let mut v = Vec::new();
+    for i in 0..records {
+        if i % 3 == 0 {
+            write!(v, ">seq{i:06} some description {i}\n").unwrap();
+        } else {
+            write!(v, ">seq{i:06}\n").unwrap();
+        }
+        let len = 60 + (i % 100);
+        let seq: Vec<u8> = (0..len)
+            .map(|j| b"ACGT"[(i.wrapping_mul(7).wrapping_add(j)) % 4])
+            .collect();
+        for line in seq.chunks(70) {
+            v.extend_from_slice(line);
+            v.push(b'\n');
+        }
+    }
+    v
+}
+
+/// Lay out a self-contained identity test case (compressed input named
+/// `input_name`, reference output, identity pipeline toml) in `dir`, then run
+/// `fastqrab verify` under the given shm env overrides. A success exit means the
+/// output matched the reference byte for byte through the transport under test.
+fn run_verify_case(
+    dir: &Path,
+    input_name: &str,
+    compressed: &[u8],
+    plain: &[u8],
+    env: &[(&str, &str)],
+) {
+    std::fs::write(dir.join(input_name), compressed).unwrap();
     // Identity pipeline ⇒ the reference output is the input verbatim.
-    std::fs::write(dir.join("output_read1.fq"), payload).unwrap();
+    std::fs::write(dir.join("output_read1.fq"), plain).unwrap();
     std::fs::write(
         dir.join("input.toml"),
-        "\
+        format!(
+            "\
 [input]
-    read1 = ['input_read1.fq.gz']
+    read1 = ['{input_name}']
 
 [input.options]
     use_rapidgzip = true
@@ -80,7 +114,8 @@ fn run_case(dir: &Path, payload: &[u8], env: &[(&str, &str)]) {
 
 [[step]]
     action = \"OutputFASTQ\"
-",
+"
+        ),
     )
     .unwrap();
 
@@ -98,10 +133,67 @@ fn run_case(dir: &Path, payload: &[u8], env: &[(&str, &str)]) {
     let output = cmd.output().expect("failed to run fastqrab verify");
     assert!(
         output.status.success(),
-        "verify failed (env={env:?})\nstdout:\n{}\nstderr:\n{}",
+        "verify failed (input={input_name}, env={env:?})\nstdout:\n{}\nstderr:\n{}",
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr),
     );
+}
+
+/// Gzip-FASTQ identity convenience over [`run_verify_case`].
+fn run_case(dir: &Path, payload: &[u8], env: &[(&str, &str)]) {
+    run_verify_case(dir, "input_read1.fq.gz", &gzip(payload), payload, env);
+}
+
+/// Run a FASTA→FASTQ pipeline over a `compressed` FASTA input and return the
+/// produced `output_read1.fq` bytes. Used to compare the shm pod-FASTA parser
+/// against the bio reader for byte-for-byte equality.
+fn run_process_fasta(input_name: &str, compressed: &[u8], env: &[(&str, &str)]) -> Vec<u8> {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = tmp.path();
+    std::fs::write(dir.join(input_name), compressed).unwrap();
+    std::fs::write(
+        dir.join("input.toml"),
+        format!(
+            "\
+[input]
+    read1 = ['{input_name}']
+
+[input.options]
+    use_rapidgzip = true
+    fasta_fake_quality = 'B'
+
+[options]
+    block_size = 1000
+    threads = 2
+
+[output]
+    prefix = \"output\"
+
+[[step]]
+    action = \"OutputFASTQ\"
+"
+        ),
+    )
+    .unwrap();
+
+    let fastqrab = env!("CARGO_BIN_EXE_fastqrab");
+    let mut cmd = Command::new(fastqrab);
+    cmd.arg("process")
+        .arg("input.toml")
+        .current_dir(dir)
+        .env("NO_FRIENDLY_PANIC", "1")
+        .env("FASTQRAB_DECOMPRESSOR", decompressor());
+    for (k, val) in env {
+        cmd.env(k, val);
+    }
+    let output = cmd.output().expect("failed to run fastqrab process");
+    assert!(
+        output.status.success(),
+        "process failed (input={input_name}, env={env:?})\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr),
+    );
+    std::fs::read(dir.join("output_read1.fq")).expect("read FASTA pipeline output")
 }
 
 /// Default ring/slot config over a multi-MiB input: many decode chunks, slot
@@ -151,4 +243,78 @@ fn shm_disabled_falls_back_to_pipe() {
     let payload = make_fastq(20_000);
     let dir = tempfile::tempdir().unwrap();
     run_case(dir.path(), &payload, &[("FASTQRAB_DECOMP_SHM", "0")]);
+}
+
+/// zstd FASTQ over the shared-memory transport: the decompressor decodes with
+/// libzstd (`--format zstd`) and memcpies into slots exactly as the gzip path, so
+/// a multi-chunk identity roundtrip must reproduce the input byte-for-byte.
+#[test]
+fn shm_zstd_fastq_roundtrip() {
+    let payload = make_fastq(60_000);
+    let dir = tempfile::tempdir().unwrap();
+    run_verify_case(
+        dir.path(),
+        "input_read1.fq.zst",
+        &zstd_compress(&payload),
+        &payload,
+        &[],
+    );
+}
+
+/// zstd FASTQ with tiny slots forces the multi-slot chunk-split path on the zstd
+/// producer (whose chunks come from the streaming decode loop, not rapidgzip).
+#[test]
+fn shm_zstd_tiny_slots_force_chunk_split() {
+    let payload = make_fastq(60_000);
+    let dir = tempfile::tempdir().unwrap();
+    run_verify_case(
+        dir.path(),
+        "input_read1.fq.zst",
+        &zstd_compress(&payload),
+        &payload,
+        &[("FASTQRAB_DECOMP_SHM_SLOT_SIZE", "65536")],
+    );
+}
+
+/// gzip FASTA over shm (the pod-FASTA parser) must produce output byte-identical
+/// to the bio reader (forced via `FASTQRAB_DECOMP_SHM=0`). This pins the new
+/// in-place FASTA assembler — header split, multi-line and cross-chunk sequence
+/// concatenation, faked quality — to rust-bio's behavior.
+#[test]
+fn shm_fasta_gzip_matches_bio() {
+    let fasta = make_fasta(20_000);
+    let gz = gzip(&fasta);
+    let shm = run_process_fasta("input.fa.gz", &gz, &[]);
+    let bio = run_process_fasta("input.fa.gz", &gz, &[("FASTQRAB_DECOMP_SHM", "0")]);
+    assert!(!shm.is_empty(), "FASTA pipeline produced no output");
+    assert_eq!(shm, bio, "shm pod-FASTA output must match the bio reader");
+}
+
+/// As above but zstd-compressed: exercises zstd → FASTA shm decode end to end.
+#[test]
+fn shm_fasta_zstd_matches_bio() {
+    let fasta = make_fasta(15_000);
+    let zst = zstd_compress(&fasta);
+    let shm = run_process_fasta("input.fa.zst", &zst, &[]);
+    let bio = run_process_fasta("input.fa.zst", &zst, &[("FASTQRAB_DECOMP_SHM", "0")]);
+    assert!(!shm.is_empty(), "FASTA pipeline produced no output");
+    assert_eq!(
+        shm, bio,
+        "shm pod-FASTA (zstd) output must match the bio reader"
+    );
+}
+
+/// Tiny slots over zstd FASTA: forces cross-slot/cross-chunk sequence assembly in
+/// the pod-FASTA parser (a record's wrapped sequence straddling many slots).
+#[test]
+fn shm_fasta_zstd_tiny_slots() {
+    let fasta = make_fasta(15_000);
+    let zst = zstd_compress(&fasta);
+    let shm = run_process_fasta(
+        "input.fa.zst",
+        &zst,
+        &[("FASTQRAB_DECOMP_SHM_SLOT_SIZE", "65536")],
+    );
+    let bio = run_process_fasta("input.fa.zst", &zst, &[("FASTQRAB_DECOMP_SHM", "0")]);
+    assert_eq!(shm, bio, "shm pod-FASTA must be chunk-boundary independent");
 }

@@ -21,7 +21,51 @@ pub enum InputFile {
 #[derive(Copy, Clone)]
 pub enum DecompressionOptions {
     Default,
-    Rapidgzip { thread_count: ThreadCount },
+    /// Decode out-of-process via the sibling `fastqrab-decompressor` binary
+    /// (gzip *or* zstd). `thread_count` sizes the gzip decode pool; it is ignored
+    /// for zstd (serial libzstd decode).
+    Subprocess {
+        thread_count: ThreadCount,
+    },
+}
+
+/// Which decoder the out-of-process decompressor should run, passed to the child
+/// as `--format`. Only the formats the child can decode are representable.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum DecompressorFormat {
+    Gzip,
+    Zstd,
+}
+
+impl DecompressorFormat {
+    fn as_arg(self) -> &'static str {
+        match self {
+            DecompressorFormat::Gzip => "gzip",
+            DecompressorFormat::Zstd => "zstd",
+        }
+    }
+
+    /// Map niffler's detected format to a child format, when the child supports
+    /// it (gzip / zstd). Other formats (bzip2, xz, …) return `None` and stay on
+    /// the in-process niffler decoder.
+    #[must_use]
+    pub fn from_niffler(format: niffler::send::compression::Format) -> Option<Self> {
+        match format {
+            niffler::send::compression::Format::Gzip => Some(DecompressorFormat::Gzip),
+            niffler::send::compression::Format::Zstd => Some(DecompressorFormat::Zstd),
+            _ => None,
+        }
+    }
+
+    /// The niffler format this child format corresponds to, for the downstream
+    /// read-count `bytes_per_base` heuristics (which key off compression).
+    #[must_use]
+    pub fn to_niffler(self) -> niffler::send::compression::Format {
+        match self {
+            DecompressorFormat::Gzip => niffler::send::compression::Format::Gzip,
+            DecompressorFormat::Zstd => niffler::send::compression::Format::Zstd,
+        }
+    }
 }
 
 #[derive(serde::Serialize, Clone, PartialEq, JsonSchema)]
@@ -161,7 +205,7 @@ impl InputFile {
         // sized separately upstream; route each to its own consumer.
         let thread_count = thread_counts.decompression;
         let decompression_options = if options.use_rapidgzip && self.get_filename().is_some() {
-            DecompressionOptions::Rapidgzip { thread_count }
+            DecompressionOptions::Subprocess { thread_count }
         } else {
             DecompressionOptions::Default
         };
@@ -428,11 +472,12 @@ pub fn open_decompressed_reader(
     decompression_options: DecompressionOptions,
 ) -> Result<(Box<dyn Read + Send>, niffler::send::compression::Format)> {
     let (mut reader, format) = niffler::send::get_reader(Box::new(file))?;
-    if let DecompressionOptions::Rapidgzip { thread_count } = decompression_options
-        && format == niffler::send::compression::Format::Gzip
+    if let DecompressionOptions::Subprocess { thread_count } = decompression_options
+        && let Some(child_format) = DecompressorFormat::from_niffler(format)
     {
-        let file = spawn_rapidgzip(
-            filename.expect("rapid gzip and stdin not supported"),
+        let file = spawn_decompressor(
+            filename.expect("out-of-process decode and stdin not supported"),
+            child_format,
             thread_count,
         )?; // cov:excl-line
         reader = Box::new(file);
@@ -440,10 +485,14 @@ pub fn open_decompressed_reader(
     Ok((reader, format))
 }
 
-/// Spawns our out-of-process `fastqrab-decompressor` to decode a gzipped file,
-/// returning its stdout as a readable file handle. Keeping the decoder in a
+/// Spawns our out-of-process `fastqrab-decompressor` to decode a gzip or zstd
+/// file, returning its stdout as a readable file handle. Keeping the decoder in a
 /// separate process isolates all of its `unsafe` from the main process.
-pub fn spawn_rapidgzip(filename: &Path, thread_count: ThreadCount) -> Result<std::fs::File> {
+pub fn spawn_decompressor(
+    filename: &Path,
+    format: DecompressorFormat,
+    thread_count: ThreadCount,
+) -> Result<std::fs::File> {
     #[cfg(unix)]
     {
         const PIPE_BUF_SIZE: libc::c_int = 1024 * 1024;
@@ -451,9 +500,12 @@ pub fn spawn_rapidgzip(filename: &Path, thread_count: ThreadCount) -> Result<std
 
         let decompressor = find_decompressor()
             .context("fastqrab-decompressor binary not found next to the fastqrab binary")?;
-        // Mirror the `fastqrab-decompressor` CLI: positional input path, `-P` threads.
+        // Mirror the `fastqrab-decompressor` CLI: `--format`, `-P` threads, then
+        // the positional input path.
         let mut cmd = Command::new(decompressor);
-        cmd.arg("-P")
+        cmd.arg("--format")
+            .arg(format.as_arg())
+            .arg("-P")
             .arg(thread_count.0.to_string())
             .arg(filename)
             .stdout(Stdio::piped())
@@ -489,7 +541,37 @@ pub fn spawn_rapidgzip(filename: &Path, thread_count: ThreadCount) -> Result<std
     }
     #[cfg(not(unix))]
     {
-        bail!("Rapidgzip is only supported on Unix systems");
+        bail!("Out-of-process decompression is only supported on Unix systems");
+    }
+}
+
+/// Magic-sniff a *regular* file for a compression format the out-of-process
+/// decompressor can decode over shared memory: gzip (`1f 8b`) or zstd
+/// (`28 b5 2f fd`). Peeks and rewinds, so a `None` result leaves the file
+/// untouched at offset 0 for the fall-through `Read`-based path. Pipes/FIFOs (not
+/// seekable) and unrecognized/short files return `None` and keep their existing
+/// transport.
+#[cfg(unix)]
+#[must_use]
+pub fn shm_eligible_format(file: &std::fs::File) -> Option<DecompressorFormat> {
+    use std::io::{Read as _, Seek as _, SeekFrom};
+    let meta = file.metadata().ok()?;
+    if !meta.is_file() {
+        return None;
+    }
+    let mut handle: &std::fs::File = file;
+    let mut magic = [0u8; 4];
+    let read = handle.read_exact(&mut magic);
+    // Always rewind a regular file, even on a short read, so the fall-through
+    // reader is unaffected.
+    let _ = handle.seek(SeekFrom::Start(0));
+    read.ok()?;
+    if magic[..2] == [0x1f, 0x8b] {
+        Some(DecompressorFormat::Gzip)
+    } else if magic == [0x28, 0xb5, 0x2f, 0xfd] {
+        Some(DecompressorFormat::Zstd)
+    } else {
+        None
     }
 }
 
@@ -537,7 +619,7 @@ impl Drop for ShmRegion {
 /// Handle to a decompressor running in shared-memory mode: the mapped region
 /// plus the two control pipes and the child process.
 #[cfg(unix)]
-pub struct ShmRapidgzip {
+pub struct ShmDecompressor {
     /// The mapped shared region, kept alive as long as any borrowed chunk.
     pub region: std::sync::Arc<ShmRegion>,
     /// Child stdout: an ordered stream of `(slot:u32, len:u32)` descriptors,
@@ -557,15 +639,17 @@ pub struct ShmRapidgzip {
 /// finished chunks into free slots and streams `(slot, len)` descriptors back on
 /// its stdout; we return freed slot ids on its stdin.
 ///
-/// This is the FASTQ-only fast path; FASTA and generic readers stay on
-/// [`spawn_rapidgzip`]'s pipe transport.
+/// The shared-memory transport is format-agnostic — `format` only selects the
+/// child's decode backend (gzip/zstd); inputs that can't ride shm (FIFOs, other
+/// codecs) stay on [`spawn_decompressor`]'s pipe transport.
 #[cfg(unix)]
-pub fn spawn_rapidgzip_shm(
+pub fn spawn_decompressor_shm(
     filename: &Path,
+    format: DecompressorFormat,
     thread_count: ThreadCount,
     slots: usize,
     slot_size: usize,
-) -> Result<ShmRapidgzip> {
+) -> Result<ShmDecompressor> {
     let decompressor = find_decompressor()
         .context("fastqrab-decompressor binary not found next to the fastqrab binary")?;
     let total = slots
@@ -612,7 +696,9 @@ pub fn spawn_rapidgzip_shm(
     });
 
     let mut cmd = Command::new(&decompressor);
-    cmd.arg("--shm-fd")
+    cmd.arg("--format")
+        .arg(format.as_arg())
+        .arg("--shm-fd")
         .arg(fd.to_string())
         .arg("--shm-slots")
         .arg(slots.to_string())
@@ -647,7 +733,7 @@ pub fn spawn_rapidgzip_shm(
         .take()
         .context("Failed to capture fastqrab-decompressor stdin (shm slot returns)")?;
 
-    Ok(ShmRapidgzip {
+    Ok(ShmDecompressor {
         region,
         descriptors,
         slot_return,

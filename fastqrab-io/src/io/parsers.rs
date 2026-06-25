@@ -9,6 +9,8 @@ use crate::io::{FastQBlock, InputFile};
 mod bam;
 mod fasta;
 mod fastq;
+#[cfg(unix)]
+mod shm;
 
 pub use bam::{BamParser, bam_read_count_from_index};
 pub use fasta::FastaParser;

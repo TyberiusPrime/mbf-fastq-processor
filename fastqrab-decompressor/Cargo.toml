@@ -7,11 +7,12 @@ license.workspace = true
 repository.workspace = true
 version.workspace = true
 
-# Out-of-process gzip decompressor. fastqrab spawns this sibling binary so all
-# of the decompressor's `unsafe` (and its C/FFI deps) live in a separate process
-# address space — a memory bug in the decoder can't corrupt the main process.
-# Discovered at runtime as `<fastqrab-exe-name>-decompressor` next to the main
-# binary (see fastqrab-io `find_decompressor`).
+# Out-of-process gzip/zstd decompressor. fastqrab spawns this sibling binary so
+# all of the decompressor's `unsafe` (and its C/FFI deps in libzstd)
+# live in a separate process address space — a memory bug in the decoder can't
+# corrupt the main process. Discovered at runtime as
+# `<fastqrab-exe-name>-decompressor` next to the main binary (see fastqrab-io
+# `find_decompressor`).
 
 [lints]
 workspace = true
@@ -26,3 +27,4 @@ workspace = true
 	crossbeam = { workspace = true }
 	libc = { workspace = true }
 	rusty-rapidgzip = { workspace = true }
+	zstd = { workspace = true }

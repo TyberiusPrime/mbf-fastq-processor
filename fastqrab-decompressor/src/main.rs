@@ -1,26 +1,43 @@
-//! fastqrab's out-of-process gzip decompressor.
+//! fastqrab's out-of-process gzip/zstd decompressor.
 //!
-//! Parses args, calls `rusty_rapidgzip::read_gz`, and copies the channel output
-//! to stdout. fastqrab spawns this as a sibling binary (see fastqrab-io
-//! `spawn_rapidgzip` / `find_decompressor`) so the decoder's `unsafe` runs in an
-//! isolated process. A near-verbatim port of `rusty-rapidgzip-rs`, kept to that
-//! CLI shape (positional input, `-P`, `--chunk-size`, `-v`).
+//! Parses args, decodes the input (gzip via `rusty_rapidgzip::read_gz`, zstd via
+//! [`read_zstd`]) into a channel of decompressed byte chunks, and ships that
+//! channel out — either as raw bytes on stdout (pipe mode) or memcpy'd into a
+//! shared-memory ring (shm mode). fastqrab spawns this as a sibling binary (see
+//! fastqrab-io `spawn_decompressor` / `find_decompressor`) so the decoders'
+//! `unsafe` (rapidgzip, libzstd) runs in an isolated process. The transport
+//! (`run_pipe` / `run_shm`) is format-agnostic — it only consumes the decoded
+//! chunk channel — so adding zstd was purely a second producer. Kept to a small
+//! CLI shape (positional input, `--format`, `-P`, `--chunk-size`, `-v`).
 
-use std::io::Write;
+use std::io::{Read as _, Write};
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{Context, Result, bail};
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use crossbeam::channel::{Receiver, Sender, bounded};
 use rusty_rapidgzip::{Config, Verbosity, elapsed_since_start, read_gz};
+
+/// Input compression format. The transport downstream is identical for both; the
+/// only difference is which producer fills the decoded-chunk channel.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, ValueEnum)]
+enum Format {
+    Gzip,
+    Zstd,
+}
 
 #[derive(Parser, Debug)]
 #[command(name = "fastqrab-decompressor", version)]
 struct Args {
-    /// Input .gz file, or `-` for stdin.
+    /// Input file, or `-` for stdin.
     input: PathBuf,
-    /// Number of worker threads (0 = auto).
+    /// Input compression format. `gzip` uses the parallel rapidgzip decoder;
+    /// `zstd` uses a single-threaded libzstd streaming decode (so `-P` is
+    /// ignored). The parent already sniffs the format and passes it explicitly.
+    #[arg(long, value_enum, default_value_t = Format::Gzip)]
+    format: Format,
+    /// Number of worker threads (0 = auto). Gzip only; zstd decode is serial.
     #[arg(short = 'P', long, default_value_t = 0)]
     threads: usize,
     /// Approximate chunk size in bytes.
@@ -75,21 +92,9 @@ fn main() -> Result<()> {
     let recycle_cap = std::thread::available_parallelism().map_or(4, std::num::NonZero::get) * 2;
     let (recycle_tx, recycle_rx) = bounded::<Vec<u8>>(recycle_cap);
 
-    let cfg = Config {
-        num_threads: args.threads,
-        chunk_size_bytes: args.chunk_size,
-        verbose: if args.verbose {
-            Verbosity::On
-        } else {
-            Verbosity::Off
-        },
-        recycle_rx: Some(recycle_rx),
-        recycle_tx: Some(recycle_tx.clone()),
-    };
-
     let (tx, rx) = bounded::<Arc<Vec<u8>>>(16);
 
-    // `-` means stdin. `/dev/stdin` lets `read_gz` open it as a normal path:
+    // `-` means stdin. `/dev/stdin` lets the decoder open it as a normal path:
     // when stdin is a pipe it routes to the streaming decoder, and when it's a
     // redirected regular file (`< foo.gz`) it still mmaps.
     let input = if args.input.as_os_str() == "-" {
@@ -97,7 +102,29 @@ fn main() -> Result<()> {
     } else {
         args.input.clone()
     };
-    let producer = std::thread::spawn(move || read_gz(&input, tx, cfg));
+
+    // Producer: fill `tx` with decoded chunks, recycling drained buffers from
+    // `recycle_rx` to keep their pages faulted. Both formats feed the identical
+    // `run_shm` / `run_pipe` transport below; only the decode backend differs.
+    let chunk_size = args.chunk_size;
+    let verbose = args.verbose;
+    let producer = match args.format {
+        Format::Gzip => {
+            let cfg = Config {
+                num_threads: args.threads,
+                chunk_size_bytes: chunk_size,
+                verbose: if verbose {
+                    Verbosity::On
+                } else {
+                    Verbosity::Off
+                },
+                recycle_rx: Some(recycle_rx),
+                recycle_tx: Some(recycle_tx.clone()),
+            };
+            std::thread::spawn(move || read_gz(&input, tx, cfg).map(|_| ()).map_err(Into::into))
+        }
+        Format::Zstd => std::thread::spawn(move || read_zstd(&input, &tx, &recycle_rx, chunk_size)),
+    };
 
     match args.shm_fd {
         Some(fd) => {
@@ -116,6 +143,51 @@ fn main() -> Result<()> {
     drop(recycle_tx);
 
     producer.join().expect("producer thread panicked")?;
+    Ok(())
+}
+
+/// Streaming zstd producer: decode `input` and feed `tx` decoded byte chunks of
+/// up to `chunk_size`, mirroring `read_gz`'s channel contract (stream order; the
+/// channel closes when `tx` drops on return) and its buffer recycling (drained
+/// `Vec`s return on `recycle_rx`, so their pages stay faulted). libzstd decode is
+/// single-threaded, so unlike the gzip path there is no worker pool — just this
+/// one decode loop feeding the shared `run_shm` / `run_pipe` transport.
+fn read_zstd(
+    input: &std::path::Path,
+    tx: &Sender<Arc<Vec<u8>>>,
+    recycle_rx: &Receiver<Vec<u8>>,
+    chunk_size: usize,
+) -> Result<()> {
+    let file = std::fs::File::open(input)
+        .with_context(|| format!("opening {} for zstd decode", input.display()))?;
+    // `Decoder` reads through concatenated frames by default (like `zstd -d`).
+    let mut decoder =
+        zstd::stream::read::Decoder::new(file).context("initializing zstd decoder")?;
+    loop {
+        // Reuse a recycled buffer when available so its pages stay faulted; only
+        // the regrown tail of a previously-truncated buffer is re-zeroed.
+        let mut buf = recycle_rx.try_recv().unwrap_or_default();
+        buf.clear();
+        buf.resize(chunk_size, 0);
+        let mut filled = 0usize;
+        while filled < chunk_size {
+            let n = decoder.read(&mut buf[filled..])?;
+            if n == 0 {
+                break;
+            }
+            filled += n;
+        }
+        if filled == 0 {
+            break; // clean EOF, nothing pending
+        }
+        buf.truncate(filled);
+        if tx.send(Arc::new(buf)).is_err() {
+            break; // consumer hung up
+        }
+        if filled < chunk_size {
+            break; // short fill ⇒ EOF
+        }
+    }
     Ok(())
 }
 

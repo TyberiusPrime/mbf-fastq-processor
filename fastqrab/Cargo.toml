@@ -66,6 +66,7 @@ workspace = true
 	##function_name="0.3.0"
 	walkdir = "2.5.0"
 	criterion = "0.5"
+	zstd = {workspace = true} # for creating zstd encoded test data. 
 
 [[bench]]
 name = "simple_benchmarks"
