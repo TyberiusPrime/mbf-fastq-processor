@@ -3,8 +3,8 @@ use std::num::NonZero;
 use std::path::PathBuf;
 
 use crate::blocks::FastQChunk;
+use crate::io::InputFile;
 use crate::io::input::InputOptions;
-use crate::io::{FastQBlock, InputFile};
 
 mod bam;
 mod fasta;
@@ -14,67 +14,10 @@ mod shm;
 
 pub use bam::{BamParser, bam_read_count_from_index};
 pub use fasta::FastaParser;
-pub use fastq::{FastqParser, PodFastqParser};
-
-/// One parser's per-block output. Parsers are being migrated from the legacy
-/// row-oriented [`FastQBlock`] to the columnar [`FastQChunk`] one at a time, so
-/// the [`Parser`] trait carries whichever representation a given parser already
-/// produces. Consumers convert to columns via [`into_chunk`](Self::into_chunk).
-pub enum ParserOutput {
-    /// Legacy row-oriented block (FASTA, BAM, and the legacy FASTQ parser).
-    Block(FastQBlock),
-    /// Columnar block (the channel-driven pod FASTQ parser).
-    Chunk(FastQChunk),
-}
-
-impl ParserOutput {
-    /// Convert to columnar form. `Block` pays the transitional row→column copy
-    /// (see `Into<FastQChunk> for FastQBlock`); `Chunk` is already columnar.
-    #[must_use]
-    pub fn into_chunk(self) -> FastQChunk {
-        match self {
-            ParserOutput::Block(b) => b.into(),
-            ParserOutput::Chunk(c) => c,
-        }
-    }
-
-    /// Number of reads in this block.
-    #[must_use]
-    pub fn row_count(&self) -> usize {
-        match self {
-            ParserOutput::Block(b) => b.entries.len(),
-            ParserOutput::Chunk(c) => c.row_count(),
-        }
-    }
-
-    /// Total sequence length across all reads — used for read-count estimation.
-    #[must_use]
-    pub fn total_seq_len(&self) -> usize {
-        match self {
-            ParserOutput::Block(b) => b.entries.iter().map(|e| e.seq.len()).sum(),
-            ParserOutput::Chunk(c) => c.seq_quals.iter_seq_lens().sum(),
-        }
-    }
-
-    /// Extract the legacy block, panicking if this is already columnar. For
-    /// callers (and tests) that still operate on [`FastQBlock`] directly.
-    ///
-    /// # Panics
-    /// If this is a [`ParserOutput::Chunk`].
-    #[must_use]
-    pub fn expect_block(self) -> FastQBlock {
-        match self {
-            ParserOutput::Block(b) => b,
-            // cov:excl-start
-            ParserOutput::Chunk(_) => {
-                panic!("expected a row-oriented FastQBlock, got a FastQChunk")
-            } // cov:excl-stop
-        }
-    }
-}
+pub use fastq::PodFastqParser;
 
 pub struct ParseResult {
-    pub output: ParserOutput,
+    pub output: FastQChunk,
     pub was_final: bool,
 }
 
@@ -282,7 +225,7 @@ impl ChainedParser {
             }
         }
 
-        let fastq_block = output.into_chunk();
+        let fastq_block = output;
         self.reads_so_far += fastq_block.row_count();
         Ok(ChainParseResult {
             fastq_block,

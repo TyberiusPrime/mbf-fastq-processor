@@ -643,7 +643,9 @@ fn run_benchmark_interleaved_thread(
         "Empty first block in benchmark. Should have been validated before?"
     );
 
-    let out_blocks = first_block.split_interleaved(segment_count).expect("Interleave splitting failed");
+    let out_blocks = first_block
+        .split_interleaved(segment_count)
+        .expect("Interleave splitting failed");
 
     while molecules_sent < molecule_count {
         //we don't worry about having a few reads too many here.
@@ -694,7 +696,6 @@ fn run_benchmark_interleaved_thread(
 pub struct RunStage0 {}
 
 impl RunStage0 {
-
     #[expect(clippy::too_many_lines, reason = "needed")]
     pub fn configure_demultiplex_and_init_stages(
         parsed: &mut CheckedConfig,

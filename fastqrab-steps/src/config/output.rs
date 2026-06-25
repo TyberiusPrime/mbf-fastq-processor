@@ -74,8 +74,7 @@ impl VerifyIn<super::PartialConfig> for PartialOutput {
         });
 
         self.ix_separator.or_with(default_ix_separator);
-        self.compression_threads
-            .or_with(|| NonZero::<usize>::MIN);
+        self.compression_threads.or_with(|| NonZero::<usize>::MIN);
 
         Ok(())
     }

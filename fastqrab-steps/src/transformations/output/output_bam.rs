@@ -235,8 +235,9 @@ impl VerifyIn<PartialConfig> for PartialOutputBAM {
                 Ok(())
             }
         });
-        self.chunksize
-            .verify(|chunk_size| verify_chunk_size(chunk_size.as_ref(), &TomlValue::new_ok(false, 0..0)));
+        self.chunksize.verify(|chunk_size| {
+            verify_chunk_size(chunk_size.as_ref(), &TomlValue::new_ok(false, 0..0))
+        });
         self.suffix.verify(verify_opt_path_component);
         // BAM cannot be written to stdout; pass a throwaway stdout flag.
         let mut stdout = TomlValue::new_ok(false, 0..0);

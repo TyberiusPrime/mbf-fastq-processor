@@ -2094,7 +2094,7 @@
           ]
         },
         {
-          "description": "Collect (gene_idx, cell_idx, umi_2bit) triples per read, then write binary\ndata file(s) and lookup tables on finalize.\n\nBoth cell and gene barcodes are looked up by sequence in [barcodes.*] tables.\nIndex 0 is reserved for \"unmatched\"; real barcodes are 1-indexed.\nOutput: one binary file per demultiplex group + shared lookup .txt files.",
+          "description": "Collect (`gene_idx`, `cell_idx`, `umi_2bit`) triples per read, then write binary\ndata file(s) and lookup tables on finalize.\n\nBoth cell and gene barcodes are looked up by sequence in [barcodes.*] tables.\nIndex 0 is reserved for \"unmatched\"; real barcodes are 1-indexed.\nOutput: one binary file per demultiplex group + shared lookup .txt files.",
           "type": "object",
           "properties": {
             "cell_tag": {
@@ -2121,14 +2121,14 @@
               "type": "string"
             },
             "cell_tag_contains_barcode": {
-              "description": "Whether cell_tag values are barcode sequences (true) or corrected labels (false).\nDefault: auto-detect — true for Location tags, false for String tags.",
+              "description": "Whether `cell_tag` values are barcode sequences (true) or corrected labels (false).\nDefault: auto-detect — true for Location tags, false for String tags.",
               "type": [
                 "boolean",
                 "null"
               ]
             },
             "gene_tag_contains_barcode": {
-              "description": "Whether gene_tag values are barcode sequences (true) or corrected labels (false).\nDefault: auto-detect — true for Location tags, false for String tags.",
+              "description": "Whether `gene_tag` values are barcode sequences (true) or corrected labels (false).\nDefault: auto-detect — true for Location tags, false for String tags.",
               "type": [
                 "boolean",
                 "null"
@@ -4825,7 +4825,7 @@
       ]
     },
     "StoreSingleCellMatrix": {
-      "description": "Collect (gene_idx, cell_idx, umi_2bit) triples per read, then write binary\ndata file(s) and lookup tables on finalize.\n\nBoth cell and gene barcodes are looked up by sequence in [barcodes.*] tables.\nIndex 0 is reserved for \"unmatched\"; real barcodes are 1-indexed.\nOutput: one binary file per demultiplex group + shared lookup .txt files.",
+      "description": "Collect (`gene_idx`, `cell_idx`, `umi_2bit`) triples per read, then write binary\ndata file(s) and lookup tables on finalize.\n\nBoth cell and gene barcodes are looked up by sequence in [barcodes.*] tables.\nIndex 0 is reserved for \"unmatched\"; real barcodes are 1-indexed.\nOutput: one binary file per demultiplex group + shared lookup .txt files.",
       "type": "object",
       "properties": {
         "cell_tag": {
@@ -4852,14 +4852,14 @@
           "type": "string"
         },
         "cell_tag_contains_barcode": {
-          "description": "Whether cell_tag values are barcode sequences (true) or corrected labels (false).\nDefault: auto-detect — true for Location tags, false for String tags.",
+          "description": "Whether `cell_tag` values are barcode sequences (true) or corrected labels (false).\nDefault: auto-detect — true for Location tags, false for String tags.",
           "type": [
             "boolean",
             "null"
           ]
         },
         "gene_tag_contains_barcode": {
-          "description": "Whether gene_tag values are barcode sequences (true) or corrected labels (false).\nDefault: auto-detect — true for Location tags, false for String tags.",
+          "description": "Whether `gene_tag` values are barcode sequences (true) or corrected labels (false).\nDefault: auto-detect — true for Location tags, false for String tags.",
           "type": [
             "boolean",
             "null"

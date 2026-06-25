@@ -10,7 +10,7 @@ use std::{
 use crate::CompressionFormat;
 use crate::blocks::FastQChunk;
 use crate::io::input::{DecompressionOptions, open_decompressed_reader};
-use crate::io::parsers::{ParseResult, Parser, ParserOutput};
+use crate::io::parsers::{ParseResult, Parser};
 use stringpod::{DualStringPodBuilder, StringPod, StringPodBuilder};
 
 #[cfg(unix)]
@@ -101,7 +101,10 @@ impl FastaParser {
         Ok(FastaParser {
             inner: FastaInner::Reader {
                 reader: BufReader::new(reader),
-                state: Box::new(FastaPods::new(fake_quality_phred, target_reads_per_block.get())),
+                state: Box::new(FastaPods::new(
+                    fake_quality_phred,
+                    target_reads_per_block.get(),
+                )),
                 buf: vec![0u8; READER_CHUNK_SIZE],
                 eof: false,
             },
@@ -157,7 +160,7 @@ impl FastaParser {
     ) -> Result<ParseResult> {
         if *eof {
             return Ok(ParseResult {
-                output: ParserOutput::Chunk(FastQChunk::new_empty()),
+                output: FastQChunk::new_empty(),
                 was_final: true,
             });
         }
@@ -167,14 +170,14 @@ impl FastaParser {
                 state.finish_stream()?;
                 *eof = true;
                 return Ok(ParseResult {
-                    output: ParserOutput::Chunk(state.take_block()),
+                    output: state.take_block(),
                     was_final: true,
                 });
             }
             state.feed_chunk(&buf[..n])?;
             if state.has_block() {
                 return Ok(ParseResult {
-                    output: ParserOutput::Chunk(state.take_block()),
+                    output: state.take_block(),
                     was_final: false,
                 });
             }
@@ -414,7 +417,7 @@ impl FastaPodInner {
     fn parse(&mut self) -> Result<ParseResult> {
         if self.eof {
             return Ok(ParseResult {
-                output: ParserOutput::Chunk(FastQChunk::new_empty()),
+                output: FastQChunk::new_empty(),
                 was_final: true,
             });
         }
@@ -425,7 +428,7 @@ impl FastaPodInner {
                     drop(chunk); // copied out; release the slot
                     if self.state.has_block() {
                         return Ok(ParseResult {
-                            output: ParserOutput::Chunk(self.state.take_block()),
+                            output: self.state.take_block(),
                             was_final: false,
                         });
                     }
@@ -436,7 +439,7 @@ impl FastaPodInner {
                     self.eof = true;
                     self.finish_threads()?;
                     return Ok(ParseResult {
-                        output: ParserOutput::Chunk(self.state.take_block()),
+                        output: self.state.take_block(),
                         was_final: true,
                     });
                 }
@@ -494,7 +497,7 @@ mod tests {
         )?; // cov:excl-line
 
         let ParseResult { output, was_final } = parser.parse()?;
-        let chunk = output.into_chunk();
+        let chunk = output;
         assert!(was_final);
         assert_eq!(chunk.len(), 2);
 
@@ -514,7 +517,7 @@ mod tests {
             output: second_output,
             was_final: is_final,
         } = parser.parse()?;
-        let second_chunk = second_output.into_chunk();
+        let second_chunk = second_output;
 
         assert!(is_final);
         assert!(second_chunk.is_empty());

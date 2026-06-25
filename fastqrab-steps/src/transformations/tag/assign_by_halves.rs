@@ -456,8 +456,7 @@ mod test {
         );
         let engine = CellRangerProbeAssigner::new(seq_to_name).unwrap();
         assert_eq!(
-            engine
-                .query("AAAAAAAAAAAAAAAAAAAACCCCCCCCCCTTTTTTTTTTTTTTTTTTTT".into()),
+            engine.query("AAAAAAAAAAAAAAAAAAAACCCCCCCCCCTTTTTTTTTTTTTTTTTTTT".into()),
             None
         );
 
@@ -481,8 +480,7 @@ mod test {
         );
         let engine = CellRangerProbeAssigner::new(seq_to_name).unwrap();
         assert_eq!(
-            engine
-                .query("GGAATGTAGCTGGCTCCGGCTATGTTCCAGGGAGGTCTCGCAGGTAAACT".into()),
+            engine.query("GGAATGTAGCTGGCTCCGGCTATGTTCCAGGGAGGTCTCGCAGGTAAACT".into()),
             None
         );
     }
@@ -508,14 +506,12 @@ mod test {
         );
         let engine = CellRangerProbeAssigner::new(seq_to_name).unwrap();
         assert_eq!(
-            engine
-                .query("TCCAGTTCTGGGTCGAGCTCTGGTTCCTCACGGAATTTTCTGTCACGTTC".into()),
+            engine.query("TCCAGTTCTGGGTCGAGCTCTGGTTCCTCACGGAATTTTCTGTCACGTTC".into()),
             Some("probe2")
         );
 
         assert_eq!(
-            engine
-                .query("TCCAGTTCTTGGTCGAGCTCTTGTTCCTCACGGATTTTTCTGTCACGTTC".into()),
+            engine.query("TCCAGTTCTTGGTCGAGCTCTTGTTCCTCACGGATTTTTCTGTCACGTTC".into()),
             Some("probe3")
         );
     }

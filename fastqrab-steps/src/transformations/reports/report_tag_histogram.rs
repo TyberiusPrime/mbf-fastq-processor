@@ -213,7 +213,10 @@ impl _ReportTagHistogram {
     // registry on first call. The returned Arc is never held by any other
     // thread, so locking it is always uncontended.
     fn get_or_create_local(&self) -> Arc<Mutex<DemultiplexedData<HistogramData>>> {
-        #[expect(clippy::ref_as_ptr, reason="we are (ab)using the pointer as index into a hashmap")]
+        #[expect(
+            clippy::ref_as_ptr,
+            reason = "we are (ab)using the pointer as index into a hashmap"
+        )]
         //todo: can we do this prettier? thread id or such?
         let step_addr = self as *const _ReportTagHistogram as usize;
         LOCAL.with(|local| {

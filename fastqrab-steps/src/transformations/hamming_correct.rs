@@ -518,7 +518,7 @@ fn run_match_phase(
 }
 
 impl HammingCorrect {
-    #[expect(clippy::unnecessary_wraps, reason="caller ergonomics")]
+    #[expect(clippy::unnecessary_wraps, reason = "caller ergonomics")]
     fn output_string(&self, matched_idx: usize, output_barcode: bool) -> Option<BString> {
         let (matched_seq, matched_name) = self
             .seq_to_name
@@ -531,7 +531,7 @@ impl HammingCorrect {
         }
     }
 
-    #[expect(clippy::unnecessary_wraps, reason="caller ergonomics")]
+    #[expect(clippy::unnecessary_wraps, reason = "caller ergonomics")]
     fn output_empty_string() -> Option<BString> {
         Some(BString::from(""))
     }

@@ -57,7 +57,11 @@ pub fn aggregate_to_matrix_cellranger_like(
                     }
                 }
                 let gene = gene_chunk[0].gene;
-                result.push((gene, cell_idx, distinct.len().try_into().expect("Exceeded u32")));
+                result.push((
+                    gene,
+                    cell_idx,
+                    distinct.len().try_into().expect("Exceeded u32"),
+                ));
             }
             result
         })
@@ -146,13 +150,11 @@ fn find_umis_with_conflicting_genes(
             .copied()
             .fold(None, |acc, (_umi, _gene, count)| match acc {
                 None => Some((count, false)),
-                Some((m, tied)) => {
-                    match count.cmp(&m) {
-                        std::cmp::Ordering::Greater => Some((count, false)),
-                        std::cmp::Ordering::Equal => Some((count, true)),
-                        std::cmp::Ordering::Less => Some((m, tied)),
-                    }
-                }
+                Some((m, tied)) => match count.cmp(&m) {
+                    std::cmp::Ordering::Greater => Some((count, false)),
+                    std::cmp::Ordering::Equal => Some((count, true)),
+                    std::cmp::Ordering::Less => Some((m, tied)),
+                },
             })
             .expect("ALways at least one");
         for (umi, gene, count) in gene_counts {

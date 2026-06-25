@@ -9,7 +9,7 @@ use std::num::NonZero;
 use std::path::{Path, PathBuf};
 
 use crate::blocks::FastQChunk;
-use crate::io::parsers::{ParseResult, Parser, ParserOutput};
+use crate::io::parsers::{ParseResult, Parser};
 use stringpod::{DualStringPodBuilder, StringPod, StringPodBuilder};
 
 type BamReader = bam::io::Reader<bgzf::io::MultithreadedReader<File>>;
@@ -196,13 +196,13 @@ impl Parser for BamParser {
         }
 
         Ok(ParseResult {
-            output: ParserOutput::Chunk(FastQChunk {
+            output: FastQChunk {
                 names: names.finish(),
                 seq_quals: seq_quals.finish(),
                 pluses: StringPod::new_all_empty(
                     u32::try_from(count).expect("too many reads in a block for u32"),
                 ),
-            }),
+            },
             was_final,
         })
     }
@@ -273,7 +273,7 @@ mod tests {
             output,
             was_final: finished,
         } = parser.parse()?;
-        let chunk = output.into_chunk();
+        let chunk = output;
         assert!(finished);
         assert_eq!(chunk.len(), 1);
         assert_eq!(chunk.names.get(0).as_bytes(), b"mapped");
@@ -291,7 +291,7 @@ mod tests {
             output,
             was_final: finished,
         } = parser.parse()?;
-        let chunk = output.into_chunk();
+        let chunk = output;
         assert!(finished);
         assert_eq!(chunk.len(), 1);
         assert_eq!(chunk.names.get(0).as_bytes(), b"unmapped");
@@ -309,7 +309,7 @@ mod tests {
             output,
             was_final: finished,
         } = parser.parse()?;
-        let chunk = output.into_chunk();
+        let chunk = output;
         assert!(finished);
         assert_eq!(chunk.len(), 2);
 

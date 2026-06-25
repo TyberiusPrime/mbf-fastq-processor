@@ -32,7 +32,6 @@ fn drive_reads(
     include_unmapped: bool,
     use_rapidgzip: bool,
 ) -> Result<()> {
-    use crate::io::parsers::ParserOutput;
     use bstr::ByteSlice;
 
     let options = InputOptions {
@@ -60,26 +59,13 @@ fn drive_reads(
         let res = parser.parse()?;
         // The parser may hand us either the legacy row-oriented block (FASTA /
         // BAM) or columnar chunks (FASTQ); iterate reads out of whichever.
-        match &res.output {
-            ParserOutput::Block(block) => {
-                for read in &block.entries {
-                    func(
-                        read.name.get(&block.block),
-                        read.seq.get(&block.block),
-                        read.qual.get(&block.block),
-                    )?;
-                }
-            }
-            ParserOutput::Chunk(chunk) => {
-                for i in 0..chunk.len() {
-                    let (seq, qual) = chunk.seq_quals.pair(i);
-                    func(
-                        chunk.names.get(i).as_bytes(),
-                        seq.as_bytes(),
-                        qual.as_bytes(),
-                    )?;
-                }
-            }
+        for i in 0..res.output.len() {
+            let (seq, qual) = res.output.seq_quals.pair(i);
+            func(
+                res.output.names.get(i).as_bytes(),
+                seq.as_bytes(),
+                qual.as_bytes(),
+            )?;
         }
         if res.was_final {
             break;

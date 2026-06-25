@@ -369,7 +369,10 @@ pub struct StringColumnBuilder {
 }
 
 impl StringColumnBuilder {
-    #[expect(clippy::new_without_default, reason = "We want to be explicit about the builder pattern")]
+    #[expect(
+        clippy::new_without_default,
+        reason = "We want to be explicit about the builder pattern"
+    )]
     #[must_use]
     pub fn new() -> Self {
         StringColumnBuilder {

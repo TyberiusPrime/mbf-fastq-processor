@@ -136,7 +136,8 @@ impl TagUser for PartialTaggedVariant<PartialOutputFASTA> {
                 *inner.output_hash_compressed.unwrap_ref(),
                 &collect_segment_list(&inner.output),
                 interleave_present(&inner.interleave)
-                    .then(|| collect_segment_list(&inner.interleave)).as_ref(),
+                    .then(|| collect_segment_list(&inner.interleave))
+                    .as_ref(),
                 *inner.stdout.unwrap_ref(),
                 inner.chunksize.as_ref().and_then(|x| x.as_ref()).copied(),
                 self.toml_value.span(),

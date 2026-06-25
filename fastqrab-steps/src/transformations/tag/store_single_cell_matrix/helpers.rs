@@ -48,7 +48,7 @@ pub fn write_matrix(
     writer.write_text_record(format!("{n_genes} {n_cells} {total}\n").as_bytes())?;
     for (gene, cell, count) in matrix {
         assert!(cell.0 <= n_cells, "n_cells and actual cells mismatch");
-        assert!(gene.0 <= n_genes, "n_genes and actual genes mismatch"); 
+        assert!(gene.0 <= n_genes, "n_genes and actual genes mismatch");
         writer
             .write_text_record(format!("{} {} {}\n", gene.0 + 1, cell.0 + 1, count).as_bytes())?;
     }

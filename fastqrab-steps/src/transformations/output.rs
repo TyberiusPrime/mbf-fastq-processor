@@ -509,7 +509,10 @@ pub(crate) fn verify_record_targets(
 
 fn segment_order(parent: &PartialConfig) -> Option<&Vec<String>> {
     //todo: turn into a mothed on PartialConfig!
-    parent.input.as_ref().map(crate::config::PartialInput::get_segment_order)
+    parent
+        .input
+        .as_ref()
+        .map(crate::config::PartialInput::get_segment_order)
 }
 
 /// Validate a list of segment names against the valid set, marking duplicates

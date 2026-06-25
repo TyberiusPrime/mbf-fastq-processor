@@ -3,7 +3,7 @@ use bstr::ByteSlice;
 use std::num::NonZero;
 use std::path::{Path, PathBuf};
 
-use fastqrab_io::io::parsers::{ParserOutput, ParserThreadCounts, ThreadCount};
+use fastqrab_io::io::parsers::{ParserThreadCounts, ThreadCount};
 
 #[path = "common/mod.rs"]
 mod common;
@@ -47,9 +47,7 @@ fn test_bufsize_variations(input_fastq_filename: &str, bufsize_range: &[usize]) 
                 NonZero::new(10_000).expect("can't happen"),
                 *bufsize,
                 ParserThreadCounts {
-                    decompression: ThreadCount(
-                        std::num::NonZero::<usize>::MIN,
-                    ),
+                    decompression: ThreadCount(std::num::NonZero::<usize>::MIN),
                     pod_demux: ThreadCount(std::num::NonZero::<usize>::MIN),
                 },
                 &fastqrab_io::io::input::InputOptions {
@@ -67,26 +65,14 @@ fn test_bufsize_variations(input_fastq_filename: &str, bufsize_range: &[usize]) 
             let pr = p.parse().unwrap();
             // get_parser yields either the legacy row block or columnar chunks;
             // flatten both into owned (name, seq, qual) reads for comparison.
-            match pr.output {
-                ParserOutput::Block(b) => {
-                    for read in &b.entries {
-                        here.push((
-                            read.name.get(&b.block).to_vec(),
-                            read.seq.get(&b.block).to_vec(),
-                            read.qual.get(&b.block).to_vec(),
-                        ));
-                    }
-                }
-                ParserOutput::Chunk(c) => {
-                    for i in 0..c.len() {
-                        let (seq, qual) = c.seq_quals.pair(i);
-                        here.push((
-                            c.names.get(i).as_bytes().to_vec(),
-                            seq.as_bytes().to_vec(),
-                            qual.as_bytes().to_vec(),
-                        ));
-                    }
-                }
+            let c = pr.output;
+            for i in 0..c.len() {
+                let (seq, qual) = c.seq_quals.pair(i);
+                here.push((
+                    c.names.get(i).as_bytes().to_vec(),
+                    seq.as_bytes().to_vec(),
+                    qual.as_bytes().to_vec(),
+                ));
             }
             if pr.was_final {
                 break;

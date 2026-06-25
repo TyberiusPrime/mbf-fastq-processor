@@ -123,6 +123,13 @@ impl FastQChunk {
     //     self.seq_quals.qual_mut.push(read.qual.as_ref());
     //     self.pluses.push(read.plus.as_ref());
     // }
+    //
+    //
+
+    /// Length of all sequences, added up
+    pub fn total_seq_len(&self) -> usize {
+        self.seq_quals.iter_seq_lens().sum()
+    }
 }
 
 #[derive(Debug)]
@@ -592,4 +599,3 @@ mod tests {
         let _ = chunk.split_interleaved(NonZero::new(2).unwrap()).unwrap();
     }
 }
-

@@ -240,7 +240,10 @@ fn print_completions<G: Generator>(generator: G, cmd: &mut Command) {
 
 fn print_schema() {
     let schema = fastqrab_steps::config::config_schema();
-    println!("{}", serde_json::to_string_pretty(&schema).expect("Schema could not be jsonified?"));
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&schema).expect("Schema could not be jsonified?")
+    );
 }
 
 fn print_template(step: Option<&String>) {
