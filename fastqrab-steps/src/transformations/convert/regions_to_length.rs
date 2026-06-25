@@ -70,7 +70,10 @@ impl Step for RegionsToLength {
             );
 
         if let TagColumn::Location(locations) = region_values {
-            #[expect(clippy::cast_precision_loss, reason = "lengths are small enough that f64 is sufficient")]
+            #[expect(
+                clippy::cast_precision_loss,
+                reason = "lengths are small enough that f64 is sufficient"
+            )]
             let lengths: Vec<_> = locations.iter_row_lengths(None).map(|x| x as f64).collect();
 
             block

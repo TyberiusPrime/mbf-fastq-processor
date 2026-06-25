@@ -92,7 +92,10 @@ impl Step for ConvertToRate {
         } else {
             let len = block.segments[0].len();
             let mut totals = vec![0.0; len];
-            #[expect(clippy::cast_precision_loss, reason = "loss is acceptable, it's going to be within u32 range")]
+            #[expect(
+                clippy::cast_precision_loss,
+                reason = "loss is acceptable, it's going to be within u32 range"
+            )]
             for segment in &block.segments {
                 for ii in 0..len {
                     totals[ii] += segment.seq_quals.entry_len(ii) as f64;

@@ -67,11 +67,13 @@ impl Step for WorstQuality {
                     &self.out_label,
                     |read| f64::from(min_quality(read, self.offset)),
                     |reads| {
-                        f64::from(reads
-                            .iter()
-                            .map(|r| min_quality(r, self.offset))
-                            .min()
-                            .unwrap_or(33))
+                        f64::from(
+                            reads
+                                .iter()
+                                .map(|r| min_quality(r, self.offset))
+                                .min()
+                                .unwrap_or(33),
+                        )
                     },
                     &mut block,
                 );
@@ -94,10 +96,11 @@ impl Step for WorstQuality {
                         let q = if qual.is_empty() {
                             missing_value
                         } else {
-                            f64::from(qual.iter()
-                                .map(|x| Into::<i16>::into(*x) + i16::from(self.offset))
-                                .min()
-                                .unwrap_or(33 + i16::from(self.offset))
+                            f64::from(
+                                qual.iter()
+                                    .map(|x| Into::<i16>::into(*x) + i16::from(self.offset))
+                                    .min()
+                                    .unwrap_or(33 + i16::from(self.offset)),
                             )
                         };
                         values.push(q);

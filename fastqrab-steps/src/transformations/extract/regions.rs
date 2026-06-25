@@ -355,8 +355,14 @@ fn extract_string_regions(s: &[u8], regions: &[RegionDefinition]) -> Option<BStr
 /// positions are coalesced into contiguous spans (a gappy source can split one
 /// region into several). Returns `None` if any offset falls outside the read
 /// (`< 0` or `>= seq_len`), so the caller can drop the whole row.
-#[expect(clippy::cast_possible_truncation, reason = "lengths are small enough that isize is sufficient")]
-#[expect(clippy::cast_possible_wrap, reason = "lengths are small enough that isize is sufficient, and we're always on 64bit systems")]
+#[expect(
+    clippy::cast_possible_truncation,
+    reason = "lengths are small enough that isize is sufficient"
+)]
+#[expect(
+    clippy::cast_possible_wrap,
+    reason = "lengths are small enough that isize is sufficient, and we're always on 64bit systems"
+)]
 fn extract_from_joined(
     covered: &[u32],
     seq_len: usize,
