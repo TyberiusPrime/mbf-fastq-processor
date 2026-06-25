@@ -1,17 +1,1 @@
-Error Details ==
-Error 1/1
-   ╭─config.toml
-   ┆
-42 │ [barcodes.barcodes]
-43 │   from_file = {filename = 'input_barcodes.fasta'}
-   ┆                                                  ┬
-   ┆                                                  │
-   ┆                                                  ╰─ Error reading from input_barcodes.fasta
-───╯
-Hint: open_input_file
-      
-      Caused by:
-          0: Problem detecting file format
-          1: File is too short, less than five bytes
-
-
+Barcodes: reference file 'input_barcodes.fasta' contains no sequences.

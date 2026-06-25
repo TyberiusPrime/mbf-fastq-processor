@@ -45,27 +45,62 @@ impl DecompressorFormat {
         }
     }
 
-    /// Map niffler's detected format to a child format, when the child supports
-    /// it (gzip / zstd). Other formats (bzip2, xz, …) return `None` and stay on
-    /// the in-process niffler decoder.
+    /// Map a sniffed compression format to a child decoder format. Only the
+    /// formats the child can decode are representable; [`CompressionFormat::Uncompressed`]
+    /// returns `None` (no subprocess — read the bytes directly).
     #[must_use]
-    pub fn from_niffler(format: niffler::send::compression::Format) -> Option<Self> {
+    pub fn from_compression(format: CompressionFormat) -> Option<Self> {
         match format {
-            niffler::send::compression::Format::Gzip => Some(DecompressorFormat::Gzip),
-            niffler::send::compression::Format::Zstd => Some(DecompressorFormat::Zstd),
-            _ => None,
+            CompressionFormat::Gzip => Some(DecompressorFormat::Gzip),
+            CompressionFormat::Zstd => Some(DecompressorFormat::Zstd),
+            CompressionFormat::Uncompressed => None,
         }
     }
 
-    /// The niffler format this child format corresponds to, for the downstream
-    /// read-count `bytes_per_base` heuristics (which key off compression).
+    /// The compression format this child format corresponds to, for the
+    /// downstream read-count `bytes_per_base` heuristics (which key off
+    /// compression).
     #[must_use]
-    pub fn to_niffler(self) -> niffler::send::compression::Format {
+    pub fn to_compression(self) -> CompressionFormat {
         match self {
-            DecompressorFormat::Gzip => niffler::send::compression::Format::Gzip,
-            DecompressorFormat::Zstd => niffler::send::compression::Format::Zstd,
+            DecompressorFormat::Gzip => CompressionFormat::Gzip,
+            DecompressorFormat::Zstd => CompressionFormat::Zstd,
         }
     }
+}
+
+/// Sniff a compression format from a file's leading magic bytes: gzip (`1f 8b`)
+/// or zstd (`28 b5 2f fd`); anything else (including a short read) is treated as
+/// uncompressed. The single source of truth for "what codec is this", replacing
+/// niffler's detection so all real decoding stays in the out-of-process
+/// containment zone.
+#[must_use]
+pub fn sniff_compression(magic: &[u8]) -> CompressionFormat {
+    if magic.len() >= 2 && magic[..2] == [0x1f, 0x8b] {
+        CompressionFormat::Gzip
+    } else if magic.len() >= 4 && magic[..4] == [0x28, 0xb5, 0x2f, 0xfd] {
+        CompressionFormat::Zstd
+    } else {
+        CompressionFormat::Uncompressed
+    }
+}
+
+/// Read up to four leading bytes from `reader` for magic sniffing, returning them
+/// alongside a reader that still yields the full original stream (the peeked bytes
+/// chained back in front). Works for non-seekable inputs (pipes, stdin), unlike a
+/// read-then-rewind.
+fn peek_magic(mut reader: Box<dyn Read + Send>) -> Result<([u8; 4], usize, Box<dyn Read + Send>)> {
+    let mut magic = [0u8; 4];
+    let mut filled = 0;
+    while filled < magic.len() {
+        let n = reader.read(&mut magic[filled..])?;
+        if n == 0 {
+            break;
+        }
+        filled += n;
+    }
+    let prefix = std::io::Cursor::new(magic[..filled].to_vec());
+    Ok((magic, filled, Box::new(prefix.chain(reader))))
 }
 
 #[derive(serde::Serialize, Clone, PartialEq, JsonSchema)]
@@ -286,6 +321,55 @@ pub enum DetectedInputFormat {
     Bam,
 }
 
+/// Bounded compressed prefix pulled into memory to peek a path-less handle's first
+/// decoded bytes (see [`detect_input_format_from_handle`]). Comfortably larger
+/// than a gzip/zstd block, so it always decodes well past the first record marker.
+const DETECT_COMPRESSED_PREFIX: usize = 128 * 1024;
+
+/// Read as many bytes as possible into `buf` (handling short reads), returning the
+/// number filled. `Ok(0)` short of `buf.len()` means end of stream.
+fn read_full(reader: &mut impl Read, buf: &mut [u8]) -> Result<usize> {
+    let mut filled = 0;
+    while filled < buf.len() {
+        let n = reader.read(&mut buf[filled..])?;
+        if n == 0 {
+            break;
+        }
+        filled += n;
+    }
+    Ok(filled)
+}
+
+/// Read up to four leading bytes (the format-discriminating head) from `reader`.
+fn read_head(reader: &mut impl Read) -> Result<([u8; 4], usize)> {
+    let mut head = [0u8; 4];
+    let n = read_full(reader, &mut head)?;
+    Ok((head, n))
+}
+
+/// Recognize compression formats fastqrab deliberately does not support (bzip2,
+/// xz) from their raw magic, so detection can give a precise "unsupported
+/// compression" error instead of a confusing "not FASTA/FASTQ/BAM".
+fn is_unsupported_compression(magic: &[u8]) -> bool {
+    magic.starts_with(&[0x42, 0x5a, 0x68])                  // bzip2 "BZh"
+        || magic.starts_with(&[0xfd, 0x37, 0x7a, 0x58]) // xz
+}
+
+/// Classify the leading *decoded* bytes of an input as BAM / FASTA / FASTQ.
+/// `None` means they match no supported format. An empty head is treated as an
+/// empty FASTQ (downstream handles zero reads gracefully).
+fn classify_head(head: &[u8]) -> Option<DetectedInputFormat> {
+    if head.len() >= 4 && head[..4] == *b"BAM\x01" {
+        return Some(DetectedInputFormat::Bam);
+    }
+    match head.first() {
+        Some(b'>') => Some(DetectedInputFormat::Fasta),
+        // `@` is FASTQ; an empty head is treated as an empty FASTQ.
+        Some(b'@') | None => Some(DetectedInputFormat::Fastq),
+        Some(_) => None,
+    }
+}
+
 /// # Errors
 /// On io errors, on invalid / undecidable file types
 pub fn detect_input_format(path: &Path) -> Result<(DetectedInputFormat, CompressionFormat)> {
@@ -303,36 +387,41 @@ pub fn detect_input_format(path: &Path) -> Result<(DetectedInputFormat, Compress
         }
     }
 
-    let file = open_file(path)?;
-    let (mut reader, format) =
-        niffler::send::get_reader(Box::new(file)).context("Problem detecting file format")?;
-    let mut buf = [0u8; 4];
-    let bytes_read = reader.read(&mut buf)?;
-    if bytes_read >= 4 && &buf[..4] == b"BAM\x01" {
-        return Ok((DetectedInputFormat::Bam, CompressionFormat::Uncompressed));
+    let file = open_file(path)?.into_inner();
+    // Sniff the codec from raw magic (no decode), then read the first *decoded*
+    // bytes — through the out-of-process decompressor for gzip/zstd — to tell
+    // BAM / FASTA / FASTQ apart.
+    let (magic, magic_n, reader) = peek_magic(Box::new(file))?;
+    if is_unsupported_compression(&magic[..magic_n]) {
+        bail!("Unsupported compression format for input detection");
     }
-    let compression_format = match format {
-        niffler::send::compression::Format::Gzip => CompressionFormat::Gzip,
-        niffler::send::compression::Format::Zstd => CompressionFormat::Zstd,
-        niffler::send::compression::Format::No => CompressionFormat::Uncompressed,
-        _ => bail!("Unsupported compression format for input detection"),
-    };
-    if bytes_read >= 1 {
-        match buf[0] {
-            b'>' => Ok((DetectedInputFormat::Fasta, compression_format)),
-            b'@' => Ok((DetectedInputFormat::Fastq, compression_format)),
-            _ => {
-                bail!(
-                    "Could not detect input format for {path}. Expected FASTA, FASTQ, or BAM.",
-                    path = path.display()
-                );
-            }
+    let compression = sniff_compression(&magic[..magic_n]);
+    let (head, head_n) = match DecompressorFormat::from_compression(compression) {
+        Some(child_format) => {
+            let mut dec =
+                spawn_decompressor(path, child_format, ThreadCount(NonZero::<usize>::MIN))?;
+            read_head(&mut dec)?
+            // `dec` drops here, reaping the decompressor child.
         }
+        None => {
+            let mut reader = reader;
+            read_head(&mut reader)?
+        }
+    };
+    let format = classify_head(&head[..head_n]).with_context(|| {
+        format!(
+            "Could not detect input format for {}. Expected FASTA, FASTQ, or BAM.",
+            path.display()
+        )
+    })?;
+    // BAM payloads are BGZF, but their bgzf is decoded in-process by noodles, so
+    // report BAM as uncompressed (matching the historical detection contract).
+    let reported = if format == DetectedInputFormat::Bam {
+        CompressionFormat::Uncompressed
     } else {
-        // an empty file. We just treat it as no reads fastq and let the downstream handle
-        // 0 reads gracefully
-        Ok((DetectedInputFormat::Fastq, compression_format))
-    }
+        compression
+    };
+    Ok((format, reported))
 }
 
 /// Detect the read format of a seekable input handle by sniffing its (possibly
@@ -345,35 +434,55 @@ pub fn detect_input_format(path: &Path) -> Result<(DetectedInputFormat, Compress
 /// On io errors or an undecidable file format.
 fn detect_input_format_from_handle(file: &mut ex::fs::File) -> Result<DetectedInputFormat> {
     use std::io::{Seek, SeekFrom};
-    // Sniff through a clone so niffler can consume bytes; `try_clone` shares the
-    // OS file offset on unix, so we rewind the original afterwards regardless.
-    let clone = file.try_clone()?;
-    let (mut reader, _format) =
-        niffler::send::get_reader(Box::new(clone)).context("Problem detecting file format")?;
-    let mut buf = [0u8; 4];
-    let bytes_read = reader.read(&mut buf)?;
-    drop(reader);
-    file.seek(SeekFrom::Start(0))?;
-    if bytes_read >= 4 && &buf[..4] == b"BAM\x01" {
-        return Ok(DetectedInputFormat::Bam);
+    // `try_clone` shares the OS file offset on unix, so read a bounded prefix from
+    // the clone sequentially and rewind the original afterwards. For compressed
+    // handles we decode that in-memory prefix (no path to hand the child, and no
+    // concurrent fd access), which is enough to reach the first record marker.
+    let mut clone = file.try_clone()?;
+    let (magic, magic_n) = read_head(&mut clone)?;
+    if is_unsupported_compression(&magic[..magic_n]) {
+        file.seek(SeekFrom::Start(0))?;
+        bail!("Unsupported compression format for input detection");
     }
-    if bytes_read >= 1 {
-        match buf[0] {
-            b'>' => Ok(DetectedInputFormat::Fasta),
-            b'@' => Ok(DetectedInputFormat::Fastq),
-            _ => bail!("Could not detect input format from handle. Expected FASTA, FASTQ, or BAM."),
+    let compression = sniff_compression(&magic[..magic_n]);
+    let (head, head_n) = match DecompressorFormat::from_compression(compression) {
+        None => (magic, magic_n),
+        Some(child_format) => {
+            let mut rest = vec![0u8; DETECT_COMPRESSED_PREFIX];
+            let got = read_full(&mut clone, &mut rest)?;
+            let mut prefix = Vec::with_capacity(magic_n + got);
+            prefix.extend_from_slice(&magic[..magic_n]);
+            prefix.extend_from_slice(&rest[..got]);
+            let mut dec = spawn_decompressor_from_reader(
+                Box::new(std::io::Cursor::new(prefix)),
+                child_format,
+                ThreadCount(NonZero::<usize>::MIN),
+            )?;
+            read_head(&mut dec)?
+            // `dec` drops here, reaping the child and ending the feeder thread.
         }
-    } else {
-        // an empty file: treat as a no-read fastq, matching `detect_input_format`.
-        Ok(DetectedInputFormat::Fastq)
-    }
+    };
+    drop(clone);
+    file.seek(SeekFrom::Start(0))?;
+    classify_head(&head[..head_n])
+        .context("Could not detect input format from handle. Expected FASTA, FASTQ, or BAM.")
 }
 
+/// Open a (possibly gzip/zstd-compressed) text file by path, returning a reader
+/// over its decoded bytes. Compressed inputs decode out-of-process (all FFI in the
+/// containment zone); uncompressed inputs are read directly.
 pub fn open_text_file(maybe_compressed_filename: impl AsRef<Path>) -> Result<Box<dyn Read + Send>> {
-    let in_stream = open_file(maybe_compressed_filename)?;
-    let (reader, _format) =
-        niffler::send::get_reader(Box::new(in_stream)).context("Problem detecting file format")?;
-    Ok(reader)
+    let path = maybe_compressed_filename.as_ref();
+    let file = open_file(path)?.into_inner();
+    let (magic, magic_n, reader) = peek_magic(Box::new(file))?;
+    match DecompressorFormat::from_compression(sniff_compression(&magic[..magic_n])) {
+        Some(child_format) => Ok(Box::new(spawn_decompressor(
+            path,
+            child_format,
+            ThreadCount(NonZero::<usize>::MIN),
+        )?)),
+        None => Ok(reader),
+    }
 }
 
 /// # Errors
@@ -449,11 +558,11 @@ pub fn find_decompressor() -> Option<PathBuf> {
     }
 }
 
-/// Open a (possibly compressed) byte stream for a FASTQ/FASTA input, applying
-/// rapidgzip when requested (and the detected format is gzip), otherwise letting
-/// niffler pick the decompressor. Returns the decompressed reader together with
-/// the detected compression format (used downstream for the read-count
-/// estimation heuristics).
+/// Open a (possibly compressed) byte stream for a FASTQ/FASTA input. gzip/zstd is
+/// sniffed by magic and decoded out-of-process (all FFI in the containment zone);
+/// uncompressed bytes pass straight through. Returns the decompressed reader
+/// together with the detected compression format (used downstream for the
+/// read-count estimation heuristics).
 ///
 /// This is the shared core behind both the legacy [`FastqParser`] and the
 /// columnar pod parser.
@@ -470,79 +579,181 @@ pub fn open_decompressed_reader(
     file: std::fs::File,
     filename: Option<&PathBuf>,
     decompression_options: DecompressionOptions,
-) -> Result<(Box<dyn Read + Send>, niffler::send::compression::Format)> {
-    let (mut reader, format) = niffler::send::get_reader(Box::new(file))?;
-    if let DecompressionOptions::Subprocess { thread_count } = decompression_options
-        && let Some(child_format) = DecompressorFormat::from_niffler(format)
-    {
-        let file = spawn_decompressor(
-            filename.expect("out-of-process decode and stdin not supported"),
+) -> Result<(Box<dyn Read + Send>, CompressionFormat)> {
+    let (magic, _filled, reader) = peek_magic(Box::new(file))?;
+    let compression = sniff_compression(&magic);
+    let Some(child_format) = DecompressorFormat::from_compression(compression) else {
+        // Uncompressed: hand the bytes straight through, no subprocess needed.
+        return Ok((reader, CompressionFormat::Uncompressed));
+    };
+    // Compressed: decode out-of-process — all gzip/zstd FFI stays in the child.
+    // `thread_count` only sizes the gzip decode pool; the Default path (stdin /
+    // no explicit subprocess request) decodes serially.
+    let thread_count = match decompression_options {
+        DecompressionOptions::Subprocess { thread_count } => thread_count,
+        DecompressionOptions::Default => ThreadCount(NonZero::<usize>::MIN),
+    };
+    let decoded: Box<dyn Read + Send> = match filename {
+        Some(path) => Box::new(spawn_decompressor(path, child_format, thread_count)?),
+        None => Box::new(spawn_decompressor_from_reader(
+            reader,
             child_format,
             thread_count,
-        )?; // cov:excl-line
-        reader = Box::new(file);
-    }
-    Ok((reader, format))
+        )?),
+    };
+    Ok((decoded, compression))
 }
 
-/// Spawns our out-of-process `fastqrab-decompressor` to decode a gzip or zstd
-/// file, returning its stdout as a readable file handle. Keeping the decoder in a
-/// separate process isolates all of its `unsafe` from the main process.
+/// A reader over a spawned `fastqrab-decompressor` child in pipe mode: yields the
+/// child's decoded stdout and reaps the child on drop. Reaping matters because
+/// callers may stop early (format detection peeks only the first bytes) — drop
+/// then kills the child instead of leaving it blocked writing into a closed pipe,
+/// and waits it so we don't leak a zombie.
+pub struct DecompressorReader {
+    stdout: std::process::ChildStdout,
+    child: std::process::Child,
+    /// For path-less inputs: the thread copying our input into the child's stdin.
+    /// Killing the child on drop closes its stdin, so this thread finishes on its
+    /// own; we don't join it.
+    _feeder: Option<std::thread::JoinHandle<()>>,
+    /// Set once we've reached EOF and verified the child's exit, so a reader that
+    /// keeps calling `read` past EOF doesn't re-`wait` an already-reaped child.
+    exit_verified: bool,
+}
+
+impl Read for DecompressorReader {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        let n = self.stdout.read(buf)?;
+        if n == 0 && !self.exit_verified {
+            // EOF: the child closed stdout. Verify it succeeded — a non-zero exit
+            // (e.g. a truncated/corrupt input) must surface as a read error, not a
+            // silently short stream. (Detection peeks only the first bytes and
+            // drops us before EOF, so this never fires for those.)
+            self.exit_verified = true;
+            let status = self.child.wait()?;
+            if !status.success() {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    format!("fastqrab-decompressor exited unsuccessfully: {status}"),
+                ));
+            }
+        }
+        Ok(n)
+    }
+}
+
+impl Drop for DecompressorReader {
+    fn drop(&mut self) {
+        // Best-effort: if the consumer drained to EOF the child has already
+        // exited and `kill` is a no-op; if it stopped early, this unblocks it.
+        let _ = self.child.kill();
+        let _ = self.child.wait();
+    }
+}
+
+/// Build the `fastqrab-decompressor` command shared by the path and stdin
+/// spawners: `--format`, `-P` threads, positional input (`-` ⇒ stdin), stdout
+/// piped, stderr inherited.
+fn decompressor_command(
+    input: &std::ffi::OsStr,
+    format: DecompressorFormat,
+    thread_count: ThreadCount,
+) -> Result<Command> {
+    let decompressor = find_decompressor()
+        .context("fastqrab-decompressor binary not found next to the fastqrab binary")?;
+    let mut cmd = Command::new(decompressor);
+    cmd.arg("--format")
+        .arg(format.as_arg())
+        .arg("-P")
+        .arg(thread_count.0.to_string())
+        .arg(input)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::inherit());
+    Ok(cmd)
+}
+
+/// On unix, enlarge the child's stdout pipe to 1 MiB (the usual
+/// `/proc/sys/fs/pipe-max-size`). The default 64 KiB pipe forces the 4 MiB
+/// decompressor chunks through in ~64 KiB reads, so producer and consumer
+/// ping-pong on a near-empty/near-full buffer instead of overlapping (millions of
+/// voluntary context switches). Best-effort: failure just keeps the default size.
+/// No-op off unix.
+fn enlarge_stdout_pipe(stdout: &std::process::ChildStdout) {
+    #[cfg(unix)]
+    {
+        use std::os::unix::io::AsRawFd;
+        const PIPE_BUF_SIZE: libc::c_int = 1024 * 1024;
+        // SAFETY: `as_raw_fd` is a live pipe fd we own; F_SETPIPE_SZ takes an int.
+        unsafe {
+            libc::fcntl(stdout.as_raw_fd(), libc::F_SETPIPE_SZ, PIPE_BUF_SIZE);
+        }
+    }
+    #[cfg(not(unix))]
+    let _ = stdout;
+}
+
+/// Spawn our out-of-process `fastqrab-decompressor` to decode a gzip or zstd file
+/// *by path*, returning a reader over its decoded stdout. Keeping the decoder in a
+/// separate process isolates all of its `unsafe`/FFI from the main process.
+/// Cross-platform: unix tunes the pipe size, other platforms read the child's
+/// stdout directly.
 pub fn spawn_decompressor(
     filename: &Path,
     format: DecompressorFormat,
     thread_count: ThreadCount,
-) -> Result<std::fs::File> {
-    #[cfg(unix)]
-    {
-        const PIPE_BUF_SIZE: libc::c_int = 1024 * 1024;
-        use std::os::unix::io::{FromRawFd, IntoRawFd};
+) -> Result<DecompressorReader> {
+    let mut cmd = decompressor_command(filename.as_os_str(), format, thread_count)?;
+    let mut child = cmd.spawn().context(format!(
+        "Failed to spawn fastqrab-decompressor process for file: {}.",
+        filename.display()
+    ))?; // cov:excl-line
+    let stdout = child
+        .stdout
+        .take()
+        .context("Failed to capture fastqrab-decompressor stdout")?;
+    enlarge_stdout_pipe(&stdout);
+    Ok(DecompressorReader {
+        stdout,
+        child,
+        _feeder: None,
+        exit_verified: false,
+    })
+}
 
-        let decompressor = find_decompressor()
-            .context("fastqrab-decompressor binary not found next to the fastqrab binary")?;
-        // Mirror the `fastqrab-decompressor` CLI: `--format`, `-P` threads, then
-        // the positional input path.
-        let mut cmd = Command::new(decompressor);
-        cmd.arg("--format")
-            .arg(format.as_arg())
-            .arg("-P")
-            .arg(thread_count.0.to_string())
-            .arg(filename)
-            .stdout(Stdio::piped())
-            .stderr(Stdio::inherit());
-
-        let mut child = cmd.spawn().context(format!(
-            "Failed to spawn fastqrab-decompressor process for file: {}.",
-            filename.display()
-        ))?; // cov:excl-line
-        let stdout = child
-            .stdout
-            .take()
-            .context("Failed to capture fastqrab-decompressor stdout")?;
-
-        // Convert the stdout pipe to an ex::fs::File
-        // We need to use the file descriptor directly
-        let raw_fd = stdout.into_raw_fd();
-
-        // Enlarge the pipe buffer to 1 MiB (the usual /proc/sys/fs/pipe-max-size).
-        // The default 64 KiB pipe forces the 4 MiB decompressor chunks through in
-        // ~64 KiB reads, so producer and consumer ping-pong on a near-empty/near-full
-        // buffer instead of overlapping (millions of voluntary context switches).
-        // A bigger buffer gives both sides slack and cuts read/write syscalls.
-        // Best-effort: failure here is not fatal, the pipe just keeps its default size.
-        // SAFETY: `raw_fd` is a live pipe fd we own; F_SETPIPE_SZ takes an int arg.
-        unsafe {
-            libc::fcntl(raw_fd, libc::F_SETPIPE_SZ, PIPE_BUF_SIZE);
-        }
-
-        // SAFETY: We own the file descriptor from the child process stdout
-        let file = unsafe { std::fs::File::from_raw_fd(raw_fd) };
-        Ok(file)
-    }
-    #[cfg(not(unix))]
-    {
-        bail!("Out-of-process decompression is only supported on Unix systems");
-    }
+/// As [`spawn_decompressor`] but for a path-less input (a declared handle, stdin):
+/// run the child reading from its own stdin (`-`) and copy `input` into it on a
+/// background thread. Cross-platform — the only contained way to decode bytes that
+/// have no filesystem path.
+pub fn spawn_decompressor_from_reader(
+    mut input: Box<dyn Read + Send>,
+    format: DecompressorFormat,
+    thread_count: ThreadCount,
+) -> Result<DecompressorReader> {
+    let mut cmd = decompressor_command(std::ffi::OsStr::new("-"), format, thread_count)?;
+    cmd.stdin(Stdio::piped());
+    let mut child = cmd
+        .spawn()
+        .context("Failed to spawn fastqrab-decompressor process (stdin mode)")?;
+    let mut stdin = child
+        .stdin
+        .take()
+        .context("Failed to capture fastqrab-decompressor stdin")?;
+    let stdout = child
+        .stdout
+        .take()
+        .context("Failed to capture fastqrab-decompressor stdout")?;
+    enlarge_stdout_pipe(&stdout);
+    // Pump our input into the child. A broken pipe (child gone / early stop) just
+    // ends the copy; it is not an error we can act on here.
+    let feeder = std::thread::spawn(move || {
+        let _ = std::io::copy(&mut input, &mut stdin);
+    });
+    Ok(DecompressorReader {
+        stdout,
+        child,
+        _feeder: Some(feeder),
+        exit_verified: false,
+    })
 }
 
 /// Magic-sniff a *regular* file for a compression format the out-of-process
@@ -566,13 +777,7 @@ pub fn shm_eligible_format(file: &std::fs::File) -> Option<DecompressorFormat> {
     // reader is unaffected.
     let _ = handle.seek(SeekFrom::Start(0));
     read.ok()?;
-    if magic[..2] == [0x1f, 0x8b] {
-        Some(DecompressorFormat::Gzip)
-    } else if magic == [0x28, 0xb5, 0x2f, 0xfd] {
-        Some(DecompressorFormat::Zstd)
-    } else {
-        None
-    }
+    DecompressorFormat::from_compression(sniff_compression(&magic))
 }
 
 /// A shared-memory region mapped from the decompressor's `memfd`, unmapped on

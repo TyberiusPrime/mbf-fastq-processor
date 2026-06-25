@@ -1,21 +1,21 @@
 use anyhow::{Result, bail};
 use ex::Wrapper;
 use ex::fs::File;
-use niffler;
 use std::{
     io::{BufReader, Read},
     num::NonZero,
     path::PathBuf,
 };
 
+use crate::CompressionFormat;
 use crate::blocks::FastQChunk;
-use crate::io::input::{DecompressionOptions, DecompressorFormat, spawn_decompressor};
+use crate::io::input::{DecompressionOptions, open_decompressed_reader};
 use crate::io::parsers::{ParseResult, Parser, ParserOutput};
 use stringpod::{DualStringPodBuilder, StringPod, StringPodBuilder};
 
 #[cfg(unix)]
 use crate::io::{
-    input::shm_eligible_format,
+    input::{DecompressorFormat, shm_eligible_format},
     parsers::shm::{ShmChunkReader, shm_enabled, spawn_shm_chunk_reader},
     pod_parser::Chunk,
 };
@@ -35,18 +35,17 @@ const READER_CHUNK_SIZE: usize = 256 * 1024;
 /// ([`FastaPods`]): a regular gzip/zstd file decoded out-of-process takes the
 /// shared-memory fast path ([`FastaInner::Pod`]), parsing borrowed decode chunks
 /// in place with no bulk pipe copy; everything else ([`FastaInner::Reader`] —
-/// uncompressed, bzip2/xz, stdin/FIFO, subprocess-piped, non-Unix) reads the
+/// uncompressed, stdin/FIFO, out-of-process-piped gzip/zstd, non-Unix) reads the
 /// decompressed byte stream in chunks and feeds the same assembler. The FASTA
 /// analogue of [`super::PodFastqParser`].
 pub struct FastaParser {
     inner: FastaInner,
-    compression_format: niffler::send::compression::Format,
+    compression_format: CompressionFormat,
 }
 
 enum FastaInner {
     /// Generic byte-stream path: read `READER_CHUNK_SIZE` bytes at a time from a
-    /// (possibly subprocess-piped / niffler-decoded) reader and feed the serial
-    /// FASTA assembler.
+    /// (possibly subprocess-piped) reader and feed the serial FASTA assembler.
     Reader {
         reader: BufReader<Box<dyn Read + Send>>,
         state: FastaPods,
@@ -71,8 +70,9 @@ impl FastaParser {
         fake_quality_phred: u8,
         decompression_options: DecompressionOptions,
     ) -> Result<FastaParser> {
-        // `ex::fs::File` → `std::fs::File` so the shm magic-sniff and niffler both
-        // take a plain handle (mirrors the FASTQ parser's `file.into_inner()`).
+        // `ex::fs::File` → `std::fs::File` so the shm magic-sniff and
+        // `open_decompressed_reader` both take a plain handle (mirrors the FASTQ
+        // parser's `file.into_inner()`).
         let file = file.into_inner();
 
         // Shared-memory fast path: out-of-process-decoded gzip/zstd FASTA on a
@@ -93,20 +93,10 @@ impl FastaParser {
             );
         }
 
-        let (mut reader, format) = niffler::send::get_reader(Box::new(file))?;
-
-        if let DecompressionOptions::Subprocess { thread_count } = decompression_options
-            && let Some(child_format) = DecompressorFormat::from_niffler(format)
-        {
-            let file = spawn_decompressor(
-                filename
-                    .as_ref()
-                    .expect("out-of-process decode and stdin not supported"),
-                child_format,
-                thread_count,
-            )?; // cov:excl-line
-            reader = Box::new(file);
-        }
+        // Non-shm path: gzip/zstd decode out-of-process (all FFI in the child),
+        // uncompressed read directly — both surfaced as one byte stream.
+        let (reader, compression_format) =
+            open_decompressed_reader(file, filename, decompression_options)?;
 
         Ok(FastaParser {
             inner: FastaInner::Reader {
@@ -115,7 +105,7 @@ impl FastaParser {
                 buf: vec![0u8; READER_CHUNK_SIZE],
                 eof: false,
             },
-            compression_format: format,
+            compression_format,
         })
     }
 
@@ -151,7 +141,7 @@ impl FastaParser {
                 state: FastaPods::new(fake_quality_phred, target_reads_per_block.get()),
                 eof: false,
             })),
-            compression_format: format.to_niffler(),
+            compression_format: format.to_compression(),
         })
     }
 
@@ -207,11 +197,8 @@ fn fill(reader: &mut impl Read, buf: &mut [u8]) -> Result<usize> {
 impl Parser for FastaParser {
     fn bytes_per_base(&self) -> f64 {
         match self.compression_format {
-            niffler::send::compression::Format::Gzip
-            | niffler::send::compression::Format::Bzip
-            | niffler::send::compression::Format::Lzma
-            | niffler::send::compression::Format::Zstd => 0.38,
-            niffler::send::compression::Format::No => 1.4,
+            CompressionFormat::Gzip | CompressionFormat::Zstd => 0.38,
+            CompressionFormat::Uncompressed => 1.4,
         }
     }
 

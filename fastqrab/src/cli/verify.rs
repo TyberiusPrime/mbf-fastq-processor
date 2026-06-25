@@ -926,22 +926,29 @@ fn is_compressed_file(path: &Path) -> bool {
 }
 
 pub fn decompress_file(path: &Path) -> Result<Vec<u8>> {
-    let file = std::fs::File::open(path)
+    use std::io::Read as _;
+    // This reads back fastqrab's *own* output for verification, which is
+    // compressed in-process (gzp/zstd). So decompress it in-process with the same
+    // libraries — the out-of-process containment zone is for untrusted *input*
+    // decode, not for re-reading files we just wrote. gzp writes multi-member
+    // gzip, so a `MultiGzDecoder` is required.
+    let bytes = std::fs::read(path)
         .with_context(|| format!("Failed to open compressed file: {}", path.display()))?;
 
-    let (mut reader, _format) = niffler::send::get_reader(Box::new(file)).with_context(|| {
-        // cov:excl-start
-        format!(
-            "Failed to create decompression reader for: {}",
-            path.display()
-        )
-    })?;
-    // cov:excl-stop
-
     let mut decompressed = Vec::new();
-    reader
-        .read_to_end(&mut decompressed)
-        .with_context(|| format!("Failed to decompress file: {}", path.display()))?;
+    match fastqrab_io::io::input::sniff_compression(&bytes) {
+        fastqrab_io::CompressionFormat::Gzip => {
+            flate2::read::MultiGzDecoder::new(&bytes[..])
+                .read_to_end(&mut decompressed)
+                .with_context(|| format!("Failed to decompress file: {}", path.display()))?;
+        }
+        fastqrab_io::CompressionFormat::Zstd => {
+            zstd::stream::read::Decoder::new(&bytes[..])
+                .and_then(|mut d| d.read_to_end(&mut decompressed))
+                .with_context(|| format!("Failed to decompress file: {}", path.display()))?;
+        }
+        fastqrab_io::CompressionFormat::Uncompressed => decompressed = bytes,
+    }
 
     Ok(decompressed)
 }

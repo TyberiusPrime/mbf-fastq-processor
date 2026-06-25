@@ -239,7 +239,11 @@ impl ChainedParser {
             } else {
                 //this happens for non-bam files!
                 let reads_so_far = output.row_count();
-                assert!(reads_so_far > 0, "First block done, but no reads read???");
+                // A 0-read first block is legitimate when the input is empty or
+                // the out-of-process decoder failed before emitting a record (e.g.
+                // a truncated gzip): skip the estimation and let the real error
+                // surface downstream (the decompressor's non-zero exit / reader
+                // thread), rather than asserting here.
                 if reads_so_far > 0 {
                     //sheer paranoia, but downstream has to cope with this being
                     //unknown anyway for non-file inputs

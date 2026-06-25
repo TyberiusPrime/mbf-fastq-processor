@@ -4,8 +4,8 @@ use toml_pretty_deser::prelude::*;
 
 use crate::config::{PartialConfig, StructuredInput};
 use fastqrab_config::{
-    default_block_size, default_buffer_size, default_output_buffer_size, default_max_molecules_in_flight,
-    default_spot_check_read_pairing,
+    default_block_size, default_buffer_size, default_max_molecules_in_flight,
+    default_output_buffer_size, default_spot_check_read_pairing,
 };
 use fastqrab_io::io::output::simulated_failure::{SimulatedWriteError, SimulatedWriteFailure};
 

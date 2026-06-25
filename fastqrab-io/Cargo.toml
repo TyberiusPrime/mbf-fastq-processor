@@ -27,7 +27,6 @@ exclude.workspace = true
   libc = {workspace = true}
   memchr = {workspace = true}
   mutants = {workspace = true}
-  niffler = {workspace = true}
   noodles = {workspace = true}
   noodles-core = {workspace = true}
   schemars = {workspace = true}

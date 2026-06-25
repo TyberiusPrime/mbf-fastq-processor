@@ -5,11 +5,21 @@ use std::path::{Path, PathBuf};
 
 use fastqrab_io::io::parsers::{ParserOutput, ParserThreadCounts, ThreadCount};
 
+#[path = "common/mod.rs"]
+mod common;
+
 /// One read's owned `(name, seq, qual)`, for buffer-size-invariance comparison.
 type OwnedRead = (Vec<u8>, Vec<u8>, Vec<u8>);
 
 #[test]
 fn test_fastq_bufsize_variations_windows_file() {
+    // The input is zstd-compressed, which now always decodes out-of-process; point
+    // `find_decompressor` at the freshly built binary so the pipe path can spawn it.
+    // SAFETY: set once at the start of this single-threaded test, before any spawn.
+    unsafe {
+        std::env::set_var("FASTQRAB_DECOMPRESSOR", common::decompressor());
+    }
+
     let filename = "../test_cases/sample_data/zstd/input_read1.fq.zst";
     //verify we have \r\n in that
     let contents: Vec<u8> =

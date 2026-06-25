@@ -134,15 +134,22 @@ fn main() -> Result<()> {
             let slot_size = args
                 .shm_slot_size
                 .context("--shm-slot-size is required together with --shm-fd")?;
-            run_shm(fd, slots, slot_size, &rx, &recycle_tx)?;
+            // `run_shm` joins the producer before emitting the EOF sentinel, so a
+            // decode failure is reported instead of a clean sentinel that would
+            // make the consumer treat a truncated stream as complete.
+            run_shm(fd, slots, slot_size, &rx, &recycle_tx, producer)?;
+            // Close recycle_tx so any worker still blocked on recv exits cleanly
+            // (workers use try_recv though, so this is belt-and-braces).
+            drop(recycle_tx);
         }
-        None => run_pipe(&rx, &recycle_tx, args.verbose)?,
+        None => {
+            run_pipe(&rx, &recycle_tx, args.verbose)?;
+            drop(recycle_tx);
+            // Pipe mode: no sentinel, so surface a decode failure here (the
+            // consumer also detects it via our non-zero exit).
+            producer.join().expect("producer thread panicked")?;
+        }
     }
-    // Close recycle_tx so any worker still blocked on recv exits cleanly
-    // (workers use try_recv though, so this is belt-and-braces).
-    drop(recycle_tx);
-
-    producer.join().expect("producer thread panicked")?;
     Ok(())
 }
 
@@ -206,7 +213,12 @@ fn run_pipe(
     let mut bytes_since_last: u64 = 0;
     let mut total_bytes: u64 = 0;
     for chunk in rx {
-        out.write_all(&chunk)?;
+        if let Err(e) = out.write_all(&chunk) {
+            if is_consumer_gone(&e) {
+                return Ok(());
+            }
+            return Err(e.into());
+        }
         bytes_since_last += chunk.len() as u64;
         total_bytes += chunk.len() as u64;
         if verbose {
@@ -248,6 +260,7 @@ fn run_shm(
     slot_size: usize,
     rx: &Receiver<Arc<Vec<u8>>>,
     recycle_tx: &Sender<Vec<u8>>,
+    producer: std::thread::JoinHandle<Result<()>>,
 ) -> Result<()> {
     use std::io::Read as _;
 
@@ -318,11 +331,16 @@ fn run_shm(
                     n,
                 );
             }
-            write_descriptor(
+            if let Err(e) = write_descriptor(
                 &mut out,
                 slot,
                 u32::try_from(n).expect("n <= slot_size, a usize that fit a slot"),
-            )?;
+            ) {
+                if is_consumer_gone(&e) {
+                    return Ok(());
+                }
+                return Err(e.into());
+            }
             off += n;
         }
         // Recycle the inner Vec when we're its sole owner, exactly as pipe mode.
@@ -330,8 +348,19 @@ fn run_shm(
             let _ = recycle_tx.try_send(v);
         }
     }
+    // The producer dropped `tx` (ending the loop above), so it has finished.
+    // Surface any decode failure BEFORE the EOF sentinel: on a truncated/corrupt
+    // input we must NOT send the sentinel, so the consumer sees EOF-before-sentinel
+    // and reports the error instead of silently accepting a short stream.
+    producer.join().expect("producer thread panicked")?;
+
     // EOF sentinel: slot = u32::MAX (never a real slot id), len = 0.
-    write_descriptor(&mut out, u32::MAX, 0)?;
+    if let Err(e) = write_descriptor(&mut out, u32::MAX, 0) {
+        if is_consumer_gone(&e) {
+            return Ok(());
+        }
+        return Err(e.into());
+    }
     out.flush()?;
     // Don't join the stdin reader: it may still be blocked reading slot returns
     // from a consumer that has already drained everything. Process exit reaps it.
@@ -346,6 +375,7 @@ fn run_shm(
     _slot_size: usize,
     _rx: &Receiver<Arc<Vec<u8>>>,
     _recycle_tx: &Sender<Vec<u8>>,
+    _producer: std::thread::JoinHandle<Result<()>>,
 ) -> Result<()> {
     bail!("shared-memory output is only supported on Unix");
 }
@@ -355,11 +385,19 @@ fn run_shm(
 /// is negligible — and necessary: the consumer blocks reading exactly 8 bytes,
 /// so an unflushed descriptor (stdout is block/line-buffered) would deadlock it
 /// (it can't return a slot it never sees).
-fn write_descriptor(out: &mut impl Write, slot: u32, len: u32) -> Result<()> {
+fn write_descriptor(out: &mut impl Write, slot: u32, len: u32) -> std::io::Result<()> {
     let mut desc = [0u8; 8];
     desc[0..4].copy_from_slice(&slot.to_le_bytes());
     desc[4..8].copy_from_slice(&len.to_le_bytes());
     out.write_all(&desc)?;
-    out.flush()?;
-    Ok(())
+    out.flush()
+}
+
+/// True if an io error means the consumer closed our stdout. That is a normal,
+/// successful shutdown — the parent read enough, hit a `Head`, or only peeked the
+/// first bytes for format detection — exactly like `zcat | head`. (Rust's runtime
+/// sets `SIGPIPE` to `SIG_IGN`, so a closed pipe surfaces as `BrokenPipe` here
+/// instead of killing the process; we must translate it to a clean exit.)
+fn is_consumer_gone(e: &std::io::Error) -> bool {
+    e.kind() == std::io::ErrorKind::BrokenPipe
 }

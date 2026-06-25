@@ -1467,7 +1467,7 @@
           ]
         },
         {
-          "description": "Compare two string- or location-valued tags lexicographically (byte-by-byte).\n\nReturns -1.0 if tag_a < tag_b, 0.0 if equal, 1.0 if tag_a > tag_b,\nlike Rust's `PartialOrd` on byte slices. Missing on either input → Missing output.\nRaises a runtime error if the two byte sequences for a read have different lengths.",
+          "description": "Compare two string- or location-valued tags lexicographically (byte-by-byte).\n\nReturns -1.0 if `tag_a` < `tag_b`, 0.0 if equal, 1.0 if `tag_a` > `tag_b`,\nlike Rust's `PartialOrd` on byte slices. Missing on either input → Missing output.\nRaises a runtime error if the two byte sequences for a read have different lengths.",
           "type": "object",
           "properties": {
             "in_label_a": {
@@ -4085,7 +4085,7 @@
       ]
     },
     "CompareStringTags": {
-      "description": "Compare two string- or location-valued tags lexicographically (byte-by-byte).\n\nReturns -1.0 if tag_a < tag_b, 0.0 if equal, 1.0 if tag_a > tag_b,\nlike Rust's `PartialOrd` on byte slices. Missing on either input → Missing output.\nRaises a runtime error if the two byte sequences for a read have different lengths.",
+      "description": "Compare two string- or location-valued tags lexicographically (byte-by-byte).\n\nReturns -1.0 if `tag_a` < `tag_b`, 0.0 if equal, 1.0 if `tag_a` > `tag_b`,\nlike Rust's `PartialOrd` on byte slices. Missing on either input → Missing output.\nRaises a runtime error if the two byte sequences for a read have different lengths.",
       "type": "object",
       "properties": {
         "in_label_a": {

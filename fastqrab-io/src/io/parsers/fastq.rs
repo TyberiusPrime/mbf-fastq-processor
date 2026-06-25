@@ -1,6 +1,5 @@
 use anyhow::{Context, Result, bail};
 use bstr::BString;
-use niffler;
 use std::num::NonZero;
 use std::sync::Arc;
 use std::thread::JoinHandle;
@@ -9,6 +8,7 @@ use std::{io::Read, path::PathBuf};
 use crossbeam::channel::{self, Receiver};
 use stringpod::StringPod;
 
+use crate::CompressionFormat;
 use crate::blocks::FastQChunk;
 use crate::io::parsers::{ParseResult, Parser, ParserOutput};
 use crate::io::pod_parser::{Chunk, FastqChunk as PodFastqChunk, parse_pods_from_channel};
@@ -30,7 +30,7 @@ pub struct FastqParser {
     last_partial: Option<FastQRead>,
     last_status: PartialStatus,
     windows_mode: Option<bool>,
-    compression_format: niffler::send::compression::Format,
+    compression_format: crate::CompressionFormat,
 }
 
 impl FastqParser {
@@ -196,11 +196,8 @@ impl Parser for FastqParser {
 
     fn bytes_per_base(&self) -> f64 {
         match self.compression_format {
-            niffler::send::compression::Format::Gzip
-            | niffler::send::compression::Format::Bzip
-            | niffler::send::compression::Format::Lzma
-            | niffler::send::compression::Format::Zstd => 0.5,
-            niffler::send::compression::Format::No => 2.25,
+            CompressionFormat::Gzip | CompressionFormat::Zstd => 0.5,
+            CompressionFormat::Uncompressed => 2.25,
         }
     }
 }
@@ -208,7 +205,7 @@ impl Parser for FastqParser {
 /// Columnar FASTQ parser backed by [`parse_pods_from_channel`].
 ///
 /// It owns two background threads: a *reader* thread that pulls (already
-/// rapidgzip/niffler-decompressed) bytes off the input in `buffer_size` chunks
+/// subprocess-decompressed) bytes off the input in `buffer_size` chunks
 /// and feeds them into the pod parser's byte channel, and the *pod parser*
 /// thread itself, which emits record-aligned [`PodFastqChunk`]s into
 /// `chunk_rx`.
@@ -242,7 +239,7 @@ pub struct PodFastqParser {
     peeked: Option<PodFastqChunk>,
     /// Set once `chunk_rx` is closed and drained.
     eof: bool,
-    compression_format: niffler::send::compression::Format,
+    compression_format: crate::CompressionFormat,
 }
 
 impl PodFastqParser {
@@ -383,7 +380,7 @@ impl PodFastqParser {
             _region: Some(region as Arc<dyn std::any::Any + Send + Sync>),
             peeked: None,
             eof: false,
-            compression_format: format.to_niffler(),
+            compression_format: format.to_compression(),
         })
     }
 
@@ -500,11 +497,8 @@ impl Parser for PodFastqParser {
 
     fn bytes_per_base(&self) -> f64 {
         match self.compression_format {
-            niffler::send::compression::Format::Gzip
-            | niffler::send::compression::Format::Bzip
-            | niffler::send::compression::Format::Lzma
-            | niffler::send::compression::Format::Zstd => 0.5,
-            niffler::send::compression::Format::No => 2.25,
+            CompressionFormat::Gzip | CompressionFormat::Zstd => 0.5,
+            CompressionFormat::Uncompressed => 2.25,
         }
     }
 }

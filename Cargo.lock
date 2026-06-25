@@ -81,18 +81,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bgzip"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b64fd8980fb64af5951bc05de7772b598150a6f7eac42ec17f73e8489915f99b"
-dependencies = [
- "flate2",
- "log",
- "rayon",
- "thiserror 1.0.69",
-]
-
-[[package]]
 name = "bio"
 version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -254,25 +242,6 @@ name = "bytes"
 version = "1.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1e748733b7cbc798e1434b6ac524f0c1ff2ab456fe201501e6497c8417a4fc33"
-
-[[package]]
-name = "bzip2"
-version = "0.5.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "49ecfb22d906f800d4fe833b6282cf4dc1c298f5057ca0b5445e5c209735ca47"
-dependencies = [
- "bzip2-sys",
-]
-
-[[package]]
-name = "bzip2-sys"
-version = "0.1.13+1.0.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "225bff33b2141874fe80d71e07d6eec4f85c5c216453dd96388240f96e1acc14"
-dependencies = [
- "cc",
- "pkg-config",
-]
 
 [[package]]
 name = "cast"
@@ -720,7 +689,6 @@ dependencies = [
  "json_value_merge",
  "mimalloc",
  "mutants 0.0.3",
- "niffler",
  "noodles",
  "noodles-core",
  "regex",
@@ -799,7 +767,6 @@ dependencies = [
  "libc",
  "memchr",
  "mutants 0.0.3",
- "niffler",
  "noodles",
  "noodles-core",
  "schemars",
@@ -1251,26 +1218,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "liblzma"
-version = "0.3.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a631d2b24be269775ba8f7789a6afa1ac228346a20c9e87dbbbe4975a79fd764"
-dependencies = [
- "liblzma-sys",
-]
-
-[[package]]
-name = "liblzma-sys"
-version = "0.3.13"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "efdadf1a99aceff34553de1461674ab6ac7e7f0843ae9875e339f4a14eb43475"
-dependencies = [
- "cc",
- "libc",
- "pkg-config",
-]
-
-[[package]]
 name = "libm"
 version = "0.2.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1431,21 +1378,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ac8cd24d9f185bb7223958d8c1ff7a961b74b1953fd05dba7cc568a63b3861ec"
 dependencies = [
  "rustc_version",
-]
-
-[[package]]
-name = "niffler"
-version = "3.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "62d3115cc93dac9fabdfd25f7d4fda51ad4a959fb4667d39af20f70bddfb3574"
-dependencies = [
- "bgzip",
- "bzip2",
- "cfg-if",
- "flate2",
- "liblzma",
- "thiserror 2.0.18",
- "zstd",
 ]
 
 [[package]]

@@ -1,1 +1,1 @@
-Error in reading thread for segment r1: unexpected end of file
+fastqrab-decompressor exited unsuccessfully
