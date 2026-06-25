@@ -927,28 +927,17 @@ fn is_compressed_file(path: &Path) -> bool {
 
 pub fn decompress_file(path: &Path) -> Result<Vec<u8>> {
     use std::io::Read as _;
-    // This reads back fastqrab's *own* output for verification, which is
-    // compressed in-process (gzp/zstd). So decompress it in-process with the same
-    // libraries — the out-of-process containment zone is for untrusted *input*
-    // decode, not for re-reading files we just wrote. gzp writes multi-member
-    // gzip, so a `MultiGzDecoder` is required.
-    let bytes = std::fs::read(path)
-        .with_context(|| format!("Failed to open compressed file: {}", path.display()))?;
+    // Decode through the single gzip/zstd decode path — the out-of-process
+    // decompressor (uncompressed files pass straight through). verify's output is
+    // small, so the spawn cost is negligible, and we keep exactly one decode
+    // pathway in the codebase.
+    let mut reader = fastqrab_io::io::input::open_text_file(path)
+        .with_context(|| format!("Failed to open file for decompression: {}", path.display()))?;
 
     let mut decompressed = Vec::new();
-    match fastqrab_io::io::input::sniff_compression(&bytes) {
-        fastqrab_io::CompressionFormat::Gzip => {
-            flate2::read::MultiGzDecoder::new(&bytes[..])
-                .read_to_end(&mut decompressed)
-                .with_context(|| format!("Failed to decompress file: {}", path.display()))?;
-        }
-        fastqrab_io::CompressionFormat::Zstd => {
-            zstd::stream::read::Decoder::new(&bytes[..])
-                .and_then(|mut d| d.read_to_end(&mut decompressed))
-                .with_context(|| format!("Failed to decompress file: {}", path.display()))?;
-        }
-        fastqrab_io::CompressionFormat::Uncompressed => decompressed = bytes,
-    }
+    reader
+        .read_to_end(&mut decompressed)
+        .with_context(|| format!("Failed to decompress file: {}", path.display()))?;
 
     Ok(decompressed)
 }
@@ -1364,27 +1353,9 @@ mod test {
         }
     }
 
-    #[test]
-    fn test_decompress_file() {
-        use super::decompress_file;
-        use std::io::Write;
-        use tempfile::NamedTempFile;
-
-        let mut temp_file = NamedTempFile::new().expect("Failed to create temp file");
-        {
-            let mut encoder =
-                flate2::write::GzEncoder::new(&mut temp_file, flate2::Compression::default());
-            encoder
-                .write_all(b"Hello, world!")
-                .expect("Failed to write to encoder");
-            encoder.finish().expect("Failed to finish encoding");
-        }
-
-        let decompressed_data =
-            decompress_file(temp_file.path()).expect("Failed to decompress file");
-
-        assert_eq!(decompressed_data, b"Hello, world!");
-    }
+    // `decompress_file` decodes out-of-process now, so its test needs the
+    // decompressor binary (unavailable in a `--lib` unit-test context) and lives
+    // in `tests/decompress_file.rs`.
 
     #[test]
     fn test_strip_backtrace() {
