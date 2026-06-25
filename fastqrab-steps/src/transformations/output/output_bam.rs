@@ -236,7 +236,7 @@ impl VerifyIn<PartialConfig> for PartialOutputBAM {
             }
         });
         self.chunksize
-            .verify(|chunk_size| verify_chunk_size(chunk_size, &TomlValue::new_ok(false, 0..0)));
+            .verify(|chunk_size| verify_chunk_size(chunk_size.as_ref(), &TomlValue::new_ok(false, 0..0)));
         self.suffix.verify(verify_opt_path_component);
         // BAM cannot be written to stdout; pass a throwaway stdout flag.
         let mut stdout = TomlValue::new_ok(false, 0..0);
@@ -275,18 +275,16 @@ impl VerifyIn<PartialConfig> for PartialOutputBAM {
                             can not write two tags into one BAM tag. Rename either one"
                                 .to_string(),
                         );
-                    } else {
-                        if bam_tag_value.0 == [b'C', b'O'] {
-                            bam_tag.state = TomlValueState::ValidationFailed {
-                                message: "Conflicts with read name / comment splitting".to_string(),
-                            };
-                            bam_tag.help = Some(
+                    } else if bam_tag_value.0 == [b'C', b'O'] {
+                        bam_tag.state = TomlValueState::ValidationFailed {
+                            message: "Conflicts with read name / comment splitting".to_string(),
+                        };
+                        bam_tag.help = Some(
                             "BAM tag 'CO' is reserved for comments (split read names at `comment_separation_char`), \
                             can not export another tag to 'CO'.\n\
                             Rename this tag."
                                 .to_string(),
                         );
-                        }
                     }
                 }
             }
@@ -397,7 +395,7 @@ pub(crate) fn resolve_output_bam(
             .cloned()
         {
             if let Some(refs) = barcode_section_refs.get(&section) {
-                reference_sequences = refs.clone();
+                reference_sequences.clone_from(refs);
             } else {
                 let available: Vec<&str> =
                     barcode_section_refs.keys().map(String::as_str).collect();
@@ -550,7 +548,7 @@ impl TagUser for PartialTaggedVariant<PartialOutputBAM> {
                 let name = TagLabel::Normal(tag_name.clone());
                 if !used_tags
                     .iter()
-                    .any(|other| other.as_ref().map(|x| x.name == name).unwrap_or(false))
+                    .any(|other| other.as_ref().is_some_and(|x| x.name == name))
                 {
                     used_tags.push(Some(UsedTag {
                         name,

@@ -108,7 +108,7 @@ impl From<HistogramData> for serde_json::Value {
                 let mut keys: Vec<_> = map.keys().collect();
                 keys.sort();
                 keys.iter()
-                    .map(|k| (k.to_string(), *map.get(*k).expect("Keys came from map")))
+                    .map(|k| ((*k).clone(), *map.get(*k).expect("Keys came from map")))
                     .collect()
             }
             //json only does string keys
@@ -213,6 +213,8 @@ impl _ReportTagHistogram {
     // registry on first call. The returned Arc is never held by any other
     // thread, so locking it is always uncontended.
     fn get_or_create_local(&self) -> Arc<Mutex<DemultiplexedData<HistogramData>>> {
+        #[expect(clippy::ref_as_ptr, reason="we are (ab)using the pointer as index into a hashmap")]
+        //todo: can we do this prettier? thread id or such?
         let step_addr = self as *const _ReportTagHistogram as usize;
         LOCAL.with(|local| {
             let mut cache = local.borrow_mut();

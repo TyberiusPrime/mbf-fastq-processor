@@ -139,10 +139,8 @@ impl Step for AssignByHalves {
                     let hit = if seq.is_empty() {
                         None
                     } else {
-                        engine
-                            .query(seq.as_ref())
-                            //BStr::new(&col.joined_sequence(slot_hits, None)))
-                            .map_err(|e| anyhow::anyhow!("AssignToProbe query failed: {e}"))?
+                        engine.query(seq.as_ref())
+                        //BStr::new(&col.joined_sequence(slot_hits, None)))
                     };
                     output_strings.push(hit.map(|name| Cow::Owned(name.as_bytes().into())));
                 }
@@ -151,9 +149,7 @@ impl Step for AssignByHalves {
                 for item in items.iter() {
                     let hit = match item {
                         None => None,
-                        Some(s) => engine
-                            .query(s)
-                            .map_err(|e| anyhow::anyhow!("AssignToProbe query failed: {e}"))?,
+                        Some(s) => engine.query(s),
                     };
                     output_strings.push(hit.map(|name| Cow::Owned(name.as_bytes().into())));
                 }
@@ -227,7 +223,7 @@ impl CellRangerProbeAssigner {
         clippy::cast_possible_wrap,
         reason = "can't have loss at reasonable lengths"
     )]
-    fn query(&self, query: &BStr) -> Result<Option<&str>> {
+    fn query(&self, query: &BStr) -> Option<&str> {
         fn lookup_half<'a>(
             half_query: &'a BStr,
             half_probes: &'a IndexMap<BString, String>,
@@ -244,7 +240,7 @@ impl CellRangerProbeAssigner {
         }
 
         if let Some(name) = self.seq_to_name.get(query) {
-            Ok(Some(name))
+            Some(name)
         } else {
             //the 'rescue' algorithm is simple
             //either the left or the right hand half have to match within 1-hamming
@@ -284,7 +280,7 @@ impl CellRangerProbeAssigner {
                     if left_hand_probe_id == right_hand_probe_id {
                         //both halves agree on the same candidate,
                         //Score must be good enough  alreayd
-                        return Ok(Some(left_hand_probe_id.as_str()));
+                        return Some(left_hand_probe_id.as_str());
                     }
                 }
                 (Some(left_hand_matches), None) => {
@@ -307,7 +303,7 @@ impl CellRangerProbeAssigner {
                     let score_right =
                         ((query.len() - query.len() / 2) as i32) - (2 * right_hand_distance as i32);
                     if score_right > 0 && (score_left + score_right >= self.rescue_min_score) {
-                        return Ok(Some(left_hand_name.as_str()));
+                        return Some(left_hand_name.as_str());
                     }
                 }
                 (None, Some(right_hand_matches)) => {
@@ -329,11 +325,11 @@ impl CellRangerProbeAssigner {
                     let score_right =
                         ((query.len() - query.len() / 2) as i32) - (2 * right_hand_distance as i32);
                     if score_left > 0 && (score_left + score_right >= self.rescue_min_score) {
-                        return Ok(Some(right_hand_name.as_str()));
+                        return Some(right_hand_name.as_str());
                     }
                 }
             }
-            Ok(None)
+            None
         }
     }
 }
@@ -365,111 +361,79 @@ mod test {
         let engine = CellRangerProbeAssigner::new(seq_to_name).unwrap();
         //perfect queries
         assert_eq!(
-            engine
-                .query("AAAAAAAAAAAAAAAAAAAACCCCCGGGGGTTTTTTTTTTTTTTTTTTTT".into())
-                .unwrap(),
+            engine.query("AAAAAAAAAAAAAAAAAAAACCCCCGGGGGTTTTTTTTTTTTTTTTTTTT".into()),
             Some("probe1")
         );
         assert_eq!(
-            engine
-                .query("TTTTTTTTTTTTTTTTTTTTGGGGGCCCCCAAAAAAAAAAAAAAAAAAAA".into())
-                .unwrap(),
+            engine.query("TTTTTTTTTTTTTTTTTTTTGGGGGCCCCCAAAAAAAAAAAAAAAAAAAA".into()),
             Some("probe2")
         );
 
         //one mismatch in left half
         assert_eq!(
-            engine
-                .query("TAAAAAAAAAAAAAAAAAAACCCCCGGGGGTTTTTTTTTTTTTTTTTTTT".into())
-                .unwrap(),
+            engine.query("TAAAAAAAAAAAAAAAAAAACCCCCGGGGGTTTTTTTTTTTTTTTTTTTT".into()),
             Some("probe1")
         );
 
         //lhs perfect, rhs has 2 mismatches (rescue)
         //
         assert_eq!(
-            engine
-                .query("AAAAAAAAAAAAAAAAAAAACCCCCGGGGGTTTTTTTTTTTATTTATTTT".into())
-                .unwrap(),
+            engine.query("AAAAAAAAAAAAAAAAAAAACCCCCGGGGGTTTTTTTTTTTATTTATTTT".into()),
             Some("probe1")
         );
         //split mapped
         assert_eq!(
-            engine
-                .query("AAAAAAAAAAAAAAAAAAAACCCCCCCCCCAAAAAAAAAAAAAAAAAAAA".into())
-                .unwrap(),
+            engine.query("AAAAAAAAAAAAAAAAAAAACCCCCCCCCCAAAAAAAAAAAAAAAAAAAA".into()),
             None
         );
         //perfect lhs, 7 mismatches in RHS
         assert_eq!(
-            engine
-                .query("AAAAAAAAAAAAAAAAAAAACCCCCGGGGGTTTTTTTTTTTTCCCCCCCC".into())
-                .unwrap(),
+            engine.query("AAAAAAAAAAAAAAAAAAAACCCCCGGGGGTTTTTTTTTTTTCCCCCCCC".into()),
             Some("probe1")
         );
 
         //perfect lhs, 6 mismatches in RHS
         assert_eq!(
-            engine
-                .query("TAAAAAAAAAAAAAAAAAAACCCCCGGGGGTTTTTTTTTTTTCCCCCCCT".into())
-                .unwrap(),
+            engine.query("TAAAAAAAAAAAAAAAAAAACCCCCGGGGGTTTTTTTTTTTTCCCCCCCT".into()),
             Some("probe1")
         );
         //one lhs mismatch, 9 mismatches in RHS
         assert_eq!(
-            engine
-                .query("TAAAAAAAAAAAAAAAAAAACCCCCGGGGGTTTTTTTTTTCCCCCCCCCT".into())
-                // "AAAAAAAAAAAAAAAAAAAACCCCCGGGGGTTTTTTTTTTTTTTTTTTTT".into(),
-                .unwrap(),
+            engine.query("TAAAAAAAAAAAAAAAAAAACCCCCGGGGGTTTTTTTTTTCCCCCCCCCT".into()), // "AAAAAAAAAAAAAAAAAAAACCCCCGGGGGTTTTTTTTTTTTTTTTTTTT".into(),
             Some("probe1")
         );
         //one lhs mismatch, 10 mismatches in RHS
         assert_eq!(
-            engine
-                .query("TAAAAAAAAAAAAAAAAAAACCCCCGGGGGTTTTTTTTTTCCCCCCCCCC".into())
-                // "AAAAAAAAAAAAAAAAAAAACCCCCGGGGGTTTTTTTTTTTTTTTTTTTT".into(),
-                .unwrap(),
+            engine.query("TAAAAAAAAAAAAAAAAAAACCCCCGGGGGTTTTTTTTTTCCCCCCCCCC".into()), // "AAAAAAAAAAAAAAAAAAAACCCCCGGGGGTTTTTTTTTTTTTTTTTTTT".into(),
             None
         );
 
         //now let's change the right half
         assert_eq!(
-            engine
-                .query("TTTTTTTTTTTTTTTTTTTTGGGGGCCCCCAAAAAAAAAAAAAAAAAATA".into())
-                .unwrap(),
+            engine.query("TTTTTTTTTTTTTTTTTTTTGGGGGCCCCCAAAAAAAAAAAAAAAAAATA".into()),
             Some("probe2")
         );
         //now let's change the right half
         assert_eq!(
-            engine
-                .query("XXXXXXXXXTTTTTTTTTTTGGGGGCCCCCAAAAAAAAAAAAAAAAAATA".into())
-                .unwrap(),
+            engine.query("XXXXXXXXXTTTTTTTTTTTGGGGGCCCCCAAAAAAAAAAAAAAAAAATA".into()),
             Some("probe2")
         );
         assert_eq!(
-            engine
-                .query("XXXXXXXXXXTTTTTTTTTTGGGGGCCCCCAAAAAAAAAAAAAAAAAATA".into())
-                .unwrap(),
+            engine.query("XXXXXXXXXXTTTTTTTTTTGGGGGCCCCCAAAAAAAAAAAAAAAAAATA".into()),
             None
         );
 
         assert_eq!(
-            engine
-                .query("XXXXXXXXXXTTTTTTTTTTGGGGGCCCCCAAAAAAAAAAAAAAAAAAAA".into())
-                .unwrap(),
+            engine.query("XXXXXXXXXXTTTTTTTTTTGGGGGCCCCCAAAAAAAAAAAAAAAAAAAA".into()),
             Some("probe2")
         );
         //split mapped -> none
         assert_eq!(
-            engine
-                .query("AAAAAAAAAAAAAAAAAAAACCCCCCCCCCAAAAAAAAAAAAAAAAAAAA".into())
-                .unwrap(),
+            engine.query("AAAAAAAAAAAAAAAAAAAACCCCCCCCCCAAAAAAAAAAAAAAAAAAAA".into()),
             None
         );
         assert_eq!(
-            engine
-                .query("TTTTTTTTTTTTTTTTTTTTGGGGGGGGGGTTTTTTTTTTTTTTTTTTTT".into())
-                .unwrap(),
+            engine.query("TTTTTTTTTTTTTTTTTTTTGGGGGGGGGGTTTTTTTTTTTTTTTTTTTT".into()),
             None
         );
 
@@ -493,8 +457,7 @@ mod test {
         let engine = CellRangerProbeAssigner::new(seq_to_name).unwrap();
         assert_eq!(
             engine
-                .query("AAAAAAAAAAAAAAAAAAAACCCCCCCCCCTTTTTTTTTTTTTTTTTTTT".into())
-                .unwrap(),
+                .query("AAAAAAAAAAAAAAAAAAAACCCCCCCCCCTTTTTTTTTTTTTTTTTTTT".into()),
             None
         );
 
@@ -519,8 +482,7 @@ mod test {
         let engine = CellRangerProbeAssigner::new(seq_to_name).unwrap();
         assert_eq!(
             engine
-                .query("GGAATGTAGCTGGCTCCGGCTATGTTCCAGGGAGGTCTCGCAGGTAAACT".into())
-                .unwrap(),
+                .query("GGAATGTAGCTGGCTCCGGCTATGTTCCAGGGAGGTCTCGCAGGTAAACT".into()),
             None
         );
     }
@@ -547,15 +509,13 @@ mod test {
         let engine = CellRangerProbeAssigner::new(seq_to_name).unwrap();
         assert_eq!(
             engine
-                .query("TCCAGTTCTGGGTCGAGCTCTGGTTCCTCACGGAATTTTCTGTCACGTTC".into())
-                .unwrap(),
+                .query("TCCAGTTCTGGGTCGAGCTCTGGTTCCTCACGGAATTTTCTGTCACGTTC".into()),
             Some("probe2")
         );
 
         assert_eq!(
             engine
-                .query("TCCAGTTCTTGGTCGAGCTCTTGTTCCTCACGGATTTTTCTGTCACGTTC".into())
-                .unwrap(),
+                .query("TCCAGTTCTTGGTCGAGCTCTTGTTCCTCACGGATTTTTCTGTCACGTTC".into()),
             Some("probe3")
         );
     }

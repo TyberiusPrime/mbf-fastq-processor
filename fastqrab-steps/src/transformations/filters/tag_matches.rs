@@ -109,8 +109,7 @@ impl Step for TagMatches {
                     .iter_stringified()
                     .map(|opt_tag_value| {
                         opt_tag_value
-                            .map(|tag_value| accepted_set.contains(tag_value.as_ref()))
-                            .unwrap_or(false)
+                            .map_or(false, |tag_value| accepted_set.contains(tag_value.as_ref()))
                     })
                     .collect()
             }

@@ -72,7 +72,7 @@ pub struct HammingCorrect {
 
     /// FxHash-backed sequence -> position-in-`seq_to_name` lookup. Built once at
     /// verify-time; used for the hot exact-match path which is dominated by hashing
-    /// short DNA keys (default IndexMap hasher is SipHash, far slower on tiny keys).
+    /// short DNA keys (default `IndexMap` hasher is `SipHash`, far slower on tiny keys).
     #[tpd(skip)]
     #[schemars(skip)]
     pub(crate) seq_to_idx: Arc<FxHashMap<BString, usize>>,
@@ -477,7 +477,7 @@ fn run_match_phase(
     let mut results: Vec<MatchSlot> = Vec::with_capacity(input_tags.len());
     match input_tags {
         TagColumn::Location(col) => {
-            for hits in col.iter() {
+            for hits in col {
                 let result = if hits.0.is_empty() {
                     None
                 } else {
@@ -509,7 +509,7 @@ fn run_match_phase(
         if let TagColumn::Location(col) = input_tags {
             for (hits, slot) in col.iter().zip(results.iter_mut()) {
                 if !hits.1.is_empty() && matches!(&slot.result, Some(MatchResultOwned::Tie(_))) {
-                    slot.quality = Some(hits.1.into_owned())
+                    slot.quality = Some(hits.1.into_owned());
                 }
             }
         }
@@ -518,6 +518,7 @@ fn run_match_phase(
 }
 
 impl HammingCorrect {
+    #[expect(clippy::unnecessary_wraps, reason="caller ergonomics")]
     fn output_string(&self, matched_idx: usize, output_barcode: bool) -> Option<BString> {
         let (matched_seq, matched_name) = self
             .seq_to_name
@@ -530,6 +531,7 @@ impl HammingCorrect {
         }
     }
 
+    #[expect(clippy::unnecessary_wraps, reason="caller ergonomics")]
     fn output_empty_string() -> Option<BString> {
         Some(BString::from(""))
     }
@@ -820,8 +822,7 @@ impl Step for HammingCorrect {
                 let total = mj.total_reads_considered.load(Ordering::Acquire);
                 assert_eq!(
                     total, 0,
-                    "In on_tie_use_counts_from_report mode, no reads should have been counted. But {} were counted",
-                    total,
+                    "In on_tie_use_counts_from_report mode, no reads should have been counted. But {total} were counted",
                 );
             }
             if let Some(mut writer) = self.count_writer.lock().expect("Mutex poisoned").take() {

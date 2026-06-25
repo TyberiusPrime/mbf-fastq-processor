@@ -392,12 +392,12 @@ impl PodFastqParser {
         if let Some(handle) = self.parser_handle.take() {
             handle
                 .join()
-                .map_err(|_| anyhow::anyhow!("pod fastq parser thread panicked"))??;
+                .map_err(|e| anyhow::anyhow!("pod fastq parser thread panicked: {e:?}"))??;
         }
         if let Some(handle) = self.reader_handle.take() {
             handle
                 .join()
-                .map_err(|_| anyhow::anyhow!("pod fastq reader thread panicked"))??;
+                .map_err(|e| anyhow::anyhow!("pod fastq reader thread panicked: {e:?}"))??;
         }
         // shm mode: the parser + reader are done, so every borrowed chunk has
         // dropped and returned its slot id; the slot-return channel is now closed
@@ -405,7 +405,7 @@ impl PodFastqParser {
         if let Some(handle) = self.slot_writer_handle.take() {
             handle
                 .join()
-                .map_err(|_| anyhow::anyhow!("pod fastq slot-return thread panicked"))?;
+                .map_err(|e| anyhow::anyhow!("pod fastq slot-return thread panicked: {e:?}"))?;
         }
         // shm mode: surface a non-zero decompressor exit. This catches the case
         // where a mid-stream decode error makes the child emit its EOF sentinel
@@ -432,7 +432,7 @@ impl PodFastqParser {
         loop {
             match self.chunk_rx.recv() {
                 // The pod parser never emits empty chunks, but guard anyway.
-                Ok(chunk) if chunk.names.len() > 0 => return Some(chunk),
+                Ok(chunk) if !chunk.names.is_empty()  => return Some(chunk),
                 Ok(_) => {}
                 Err(_) => return None,
             }

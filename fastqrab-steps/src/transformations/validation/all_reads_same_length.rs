@@ -74,7 +74,7 @@ impl Step for ValidateAllReadsSameLength {
                     SegmentIndexOrAll::All => {
                         for molecule in block.molecules() {
                             let mut length_here = 0;
-                            for read in molecule.iter() {
+                            for read in &molecule {
                                 length_here += read.seq.len();
                             }
                             self.check(length_here)?;
@@ -120,7 +120,7 @@ impl Step for ValidateAllReadsSameLength {
                         for molecule in block.molecules() {
                             //todo: We want an iter_names?
                             let mut length_here = 0;
-                            for read in molecule.iter() {
+                            for read in &molecule {
                                 let nn = split_name_and_comment(read.name, *split_character).0;
                                 length_here += nn.len();
                             }
@@ -128,7 +128,7 @@ impl Step for ValidateAllReadsSameLength {
                         }
                     }
                     SegmentIndexOrAll::Indexed(segment_index) => {
-                        for name in block.segments[segment_index.as_index()].names.iter() {
+                        for name in &block.segments[segment_index.as_index()].names {
                             let nn = split_name_and_comment(name, *split_character).0;
                             self.check(nn.len())?;
                         }

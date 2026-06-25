@@ -87,7 +87,7 @@ fn inner_run(
     // Extract merge config before parsed is shadowed/moved. Merge is configured
     // on the OutputBAM step now; prefix and ix_separator stay global ([output]).
     let merge_config = parsed.output.as_ref().and_then(|output_config| {
-        let sep = output_config.ix_separator.as_str();
+        let separator = output_config.ix_separator.as_str();
         parsed.stages.iter().find_map(|stage| {
             let fastqrab_steps::transformations::Transformation::OutputBAM(step) =
                 &stage.transformation
@@ -98,11 +98,11 @@ fn inner_run(
             let tails: Vec<String> = info
                 .segment_names
                 .iter()
-                .map(|name| format!("{sep}{name}.{}", info.suffix))
+                .map(|name| format!("{separator}{name}.{}", info.suffix))
                 .collect();
             Some(MergeConfig {
                 prefix: output_config.prefix.clone(),
-                ix_separator: sep.to_string(),
+                ix_separator: separator.to_string(),
                 reference_label: info.reference_label,
                 index_merged: info.index_merged,
                 segment_tails: tails,
@@ -111,8 +111,7 @@ fn inner_run(
         })
     });
     {
-        let run = pipeline::RunStage0::new(&parsed);
-        let run = run.configure_demultiplex_and_init_stages(
+        let run = pipeline::RunStage0::configure_demultiplex_and_init_stages(
             &mut parsed,
             output_directory,
             allow_overwrite,

@@ -142,12 +142,12 @@ impl TagColumn {
                 }
             })),
             TagColumn::Location(col) => {
-                Box::new(col.iter_seq().map(|x| (!x.is_empty()).then(|| x)))
+                Box::new(col.iter_seq().map(|x| (!x.is_empty()).then_some(x)))
             }
             TagColumn::String(StringColumn(items, validity)) => {
                 Box::new(items.iter().zip(validity.iter()).map(|(value, valid)| {
                     if *valid {
-                        Some(Cow::Borrowed(BStr::new(&value[..])))
+                        Some(Cow::Borrowed(BStr::new(value)))
                     } else {
                         None
                     }
@@ -239,7 +239,6 @@ impl TagColumn {
     }
 
     #[must_use]
-    #[expect(clippy::elidable_lifetime_names, reason = "Conflicting lints")]
     pub fn to_bstr<'a, F>(
         &'a self,
         index: usize,
@@ -370,6 +369,7 @@ pub struct StringColumnBuilder {
 }
 
 impl StringColumnBuilder {
+    #[expect(clippy::new_without_default, reason = "We want to be explicit about the builder pattern")]
     #[must_use]
     pub fn new() -> Self {
         StringColumnBuilder {
@@ -1169,7 +1169,6 @@ mod test {
     }
 
     #[test]
-    #[expect(clippy::too_many_lines, reason = "it's a test")]
     fn test_find_iupac_with_indel() {
         assert_eq!(
             super::find_iupac_with_indel(b"AGTTC", b"AGT", super::Anchor::Anywhere, 0, 0, None,),

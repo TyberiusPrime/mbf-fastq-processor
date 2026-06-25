@@ -5,7 +5,7 @@ use super::{CellIdx, GeneIdx, ObservedEvent, Umi};
 use crate::transformations::prelude::*; // union_find_rs::prelude also exports a Result
 
 pub fn aggregate_to_matrix_cellranger_like(
-    entries: Vec<ObservedEvent>,
+    entries: &[ObservedEvent],
     umi_length: u16,
 ) -> Vec<(GeneIdx, CellIdx, u32)> {
     //cell ranger overview:
@@ -29,8 +29,10 @@ pub fn aggregate_to_matrix_cellranger_like(
             //cell ranger 3 special. Count 1 before
             for (raw_key, corrected_key) in &corrections {
                 // One read has been counted before determining low-support UMI-genes.
-                *counts.get_mut(raw_key).unwrap() -= 1;
-                *counts.get_mut(corrected_key).unwrap() += 1;
+                *counts.get_mut(raw_key).expect("Key not found?") -= 1;
+                *counts
+                    .get_mut(corrected_key)
+                    .expect("correcected key not found?") += 1;
             }
 
             let low_support_umigenes = find_umis_with_conflicting_genes(&counts);
@@ -55,7 +57,7 @@ pub fn aggregate_to_matrix_cellranger_like(
                     }
                 }
                 let gene = gene_chunk[0].gene;
-                result.push((gene, cell_idx, distinct.len() as u32));
+                result.push((gene, cell_idx, distinct.len().try_into().expect("Exceeded u32")));
             }
             result
         })
@@ -145,12 +147,10 @@ fn find_umis_with_conflicting_genes(
             .fold(None, |acc, (_umi, _gene, count)| match acc {
                 None => Some((count, false)),
                 Some((m, tied)) => {
-                    if count > m {
-                        Some((count, false))
-                    } else if count == m {
-                        Some((count, true))
-                    } else {
-                        Some((m, tied))
+                    match count.cmp(&m) {
+                        std::cmp::Ordering::Greater => Some((count, false)),
+                        std::cmp::Ordering::Equal => Some((count, true)),
+                        std::cmp::Ordering::Less => Some((m, tied)),
                     }
                 }
             })

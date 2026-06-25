@@ -29,8 +29,6 @@
 //! BAM has no uncompressed-hash layer because BGZF block boundaries are decided
 //! inside noodles. Only the compressed-hash layer is meaningful.
 
-#![allow(clippy::module_name_repetitions)]
-
 use anyhow::{Context, Result};
 use bstr::ByteSlice;
 use fastqrab_config::{CompressionFormat, FileFormat};
@@ -1003,7 +1001,6 @@ impl ChunkedRecordWriter {
         reason = "they are all needed at construction time"
     )]
     #[expect(clippy::items_after_statements, reason = "unix only use statements")]
-
     pub fn new(
         format: FileFormat,
         target: WriteTarget,
@@ -1211,14 +1208,15 @@ impl ChunkedRecordWriter {
         };
         // Re-emit the header at the top of every chunk after the first (the
         // first chunk's header is written by set_header() itself).
-        if self.chunk_index > 0 {
-            if let (Some(header), ActiveSink::Text(sink)) = (&self.header, &mut self.active) {
-                //cov:excl-start
-                sink.write_all(header)
-                    .context("Writing chunk header on rotation")?;
-                //cov:excl-stop
-            }
+        if self.chunk_index > 0
+            && let (Some(header), ActiveSink::Text(sink)) = (&self.header, &mut self.active)
+        {
+            //cov:excl-start
+            sink.write_all(header)
+                .context("Writing chunk header on rotation")?;
+            //cov:excl-stop
         }
+
         Ok(())
     }
 

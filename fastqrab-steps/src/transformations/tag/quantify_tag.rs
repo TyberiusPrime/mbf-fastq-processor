@@ -135,11 +135,7 @@ impl Step for QuantifyTag {
                 Box::new(col.iter_seq_joined(Some(self.region_separator.as_ref())))
             }
             TagColumn::String(col) => Box::new(col.iter().map(|s| {
-                Cow::Borrowed(
-                    s.as_ref()
-                        .map(|x| x.as_bstr())
-                        .unwrap_or_else(|| BStr::new(b"")),
-                )
+                Cow::Borrowed(s.as_ref().map_or_else(|| BStr::new(b""), |x| x.as_bstr()))
             })),
             _ => unreachable!("Tag validation must prevent numeric/bool tags from reaching here"),
         };

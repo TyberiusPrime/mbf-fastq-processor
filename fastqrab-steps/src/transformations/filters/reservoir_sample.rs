@@ -303,7 +303,7 @@ impl TagColumnInAssembly {
         match self {
             TagColumnInAssembly::Location { rows, .. } => rows.push(source.get_location(pos)),
             TagColumnInAssembly::String(items) => {
-                items.push(source.get_string(pos).map(|x| x.to_owned()))
+                items.push(source.get_string(pos).map(ToOwned::to_owned));
             }
             TagColumnInAssembly::Numeric(items) => items.push(source.get_numeric(pos)),
             TagColumnInAssembly::Bool(items) => items.push(source.get_bool(pos)),
@@ -316,7 +316,7 @@ impl TagColumnInAssembly {
         match self {
             TagColumnInAssembly::Location { rows, .. } => rows[slot] = source.get_location(pos),
             TagColumnInAssembly::String(items) => {
-                items[slot] = source.get_string(pos).map(ToOwned::to_owned)
+                items[slot] = source.get_string(pos).map(ToOwned::to_owned);
             }
             TagColumnInAssembly::Numeric(items) => items[slot] = source.get_numeric(pos),
             TagColumnInAssembly::Bool(items) => items[slot] = source.get_bool(pos),

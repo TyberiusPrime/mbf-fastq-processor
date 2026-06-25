@@ -509,7 +509,7 @@ pub(crate) fn verify_record_targets(
 
 fn segment_order(parent: &PartialConfig) -> Option<&Vec<String>> {
     //todo: turn into a mothed on PartialConfig!
-    parent.input.as_ref().map(|input| input.get_segment_order())
+    parent.input.as_ref().map(crate::config::PartialInput::get_segment_order)
 }
 
 /// Validate a list of segment names against the valid set, marking duplicates
@@ -672,10 +672,10 @@ pub(crate) fn render_html_report(json_report_string: &str) -> Result<String> {
 }
 
 fn verify_chunk_size(
-    chunk_size: &Option<usize>,
+    chunk_size: Option<&usize>,
     stdout: &TomlValue<bool>,
 ) -> Result<(), ValidationFailure> {
-    if let Some(chunk_size) = chunk_size.as_ref() {
+    if let Some(chunk_size) = chunk_size {
         if *chunk_size == 0 {
             return Err(ValidationFailure::new(
                 "Must not be 0.",

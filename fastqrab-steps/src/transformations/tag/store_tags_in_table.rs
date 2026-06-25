@@ -74,8 +74,7 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagsInTable> {
                 .as_ref()
                 .map(|x| x.as_ref())
                 .flatten()
-                .map(ToString::to_string)
-                .unwrap_or(String::new());
+                .map_or_else(|| String::new(), ToString::to_string);
             let compression = inner.compression.as_ref().copied().unwrap_or_default();
             let suffix = compression.apply_suffix("tsv");
             Some(vec![OutputDeclaration {
@@ -210,7 +209,7 @@ impl Step for StoreTagsInTable {
             header_fields.push(Cow::Borrowed(b"ReadName".into()));
         }
         for tag in tag_list {
-            header_fields.push(Cow::Borrowed(BStr::new(tag.as_ref())))
+            header_fields.push(Cow::Borrowed(BStr::new(tag.as_ref())));
         }
         let header_bytes = format_tsv_row(&header_fields);
 
@@ -247,7 +246,7 @@ impl Step for StoreTagsInTable {
             .expect("was set in init?")
             .lock()
             .expect("lock poisoned");
-        for name in block.segments[0].names.iter() {
+        for name in &block.segments[0].names {
             let output_tag = output_tags.map_or(0, |x| x[ii]);
             if let Some(Some(writer)) = output_handles.get_mut(&output_tag) {
                 let mut record: Vec<Cow<BStr>> = Vec::new();

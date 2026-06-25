@@ -240,7 +240,7 @@ fn print_completions<G: Generator>(generator: G, cmd: &mut Command) {
 
 fn print_schema() {
     let schema = fastqrab_steps::config::config_schema();
-    println!("{}", serde_json::to_string_pretty(&schema).unwrap());
+    println!("{}", serde_json::to_string_pretty(&schema).expect("Schema could not be jsonified?"));
 }
 
 fn print_template(step: Option<&String>) {
@@ -309,6 +309,8 @@ fn handle_toml_arg(config_file: Option<&String>) -> PathBuf {
     }
 }
 
+/// # Panics
+/// on friendly panic test
 pub fn entry_point() -> Result<()> {
     // Support environment-based completion generation (modern approach)
     // Usage: COMPLETE=bash fastqrab

@@ -49,7 +49,7 @@ fn symlinks_in_test_cases_are_relative_and_within_repo() {
     for entry in WalkDir::new(&test_cases_dir)
         .into_iter()
         .filter_map(Result::ok)
-        .filter(|e| e.path_is_symlink())
+        .filter(walkdir::DirEntry::path_is_symlink)
     {
         let link_path = entry.path();
 

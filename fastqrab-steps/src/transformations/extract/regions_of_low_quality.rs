@@ -83,7 +83,7 @@ impl Step for RegionsOfLowQuality {
         let mut col = block.location_column_builder(segment);
         let min_quality = self.min_quality;
         let min_length = self.min_length;
-        for read in block.member(self.segment.as_index()).seq_quals.iter() {
+        for read in &block.member(self.segment.as_index()).seq_quals {
             let mut entries: Vec<(u32, u32)> = Vec::new();
             let mut in_low_quality_region = false;
             let mut region_start = 0;
@@ -98,7 +98,10 @@ impl Step for RegionsOfLowQuality {
                     in_low_quality_region = false;
                     let region_len = pos - region_start;
                     if region_len >= min_length {
-                        entries.push((region_start as u32, region_len as u32));
+                        entries.push((
+                            region_start.try_into().expect("region_start exceeds u32"),
+                            region_len.try_into().expect("Region_len exceeds u32"),
+                        ));
                     }
                 }
             }
@@ -106,7 +109,10 @@ impl Step for RegionsOfLowQuality {
             if in_low_quality_region {
                 let region_len = read.qual.len() - region_start;
                 if region_len >= min_length {
-                    entries.push((region_start as u32, region_len as u32));
+                    entries.push((
+                        region_start.try_into().expect("region_start exceeds u32"),
+                        region_len.try_into().expect("Region_len exceeds u32"),
+                    ));
                 }
             }
             col.push_row(&entries);

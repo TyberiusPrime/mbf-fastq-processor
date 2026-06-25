@@ -1692,7 +1692,6 @@ impl FastQBlocksCombined {
     }
 
     /// Apply a function in place to all read sequencs in a segment
-
     pub fn apply_in_place(
         &mut self,
         segment: SegmentIndex,

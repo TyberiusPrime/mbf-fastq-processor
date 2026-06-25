@@ -106,7 +106,7 @@ impl VerifyIn<PartialConfig> for PartialOutputFASTA {
             validate_compression_level_u8(&self.compression, &mut self.compression_level);
         }
         self.chunksize
-            .verify(|chunk_size| verify_chunk_size(chunk_size, &self.stdout));
+            .verify(|chunk_size| verify_chunk_size(chunk_size.as_ref(), &self.stdout));
         self.suffix.verify(verify_opt_path_component);
         self.infix.verify(verify_opt_path_component);
         verify_record_targets(
@@ -136,7 +136,7 @@ impl TagUser for PartialTaggedVariant<PartialOutputFASTA> {
                 *inner.output_hash_compressed.unwrap_ref(),
                 &collect_segment_list(&inner.output),
                 interleave_present(&inner.interleave)
-                    .then(|| collect_segment_list(&inner.interleave)),
+                    .then(|| collect_segment_list(&inner.interleave)).as_ref(),
                 *inner.stdout.unwrap_ref(),
                 inner.chunksize.as_ref().and_then(|x| x.as_ref()).copied(),
                 self.toml_value.span(),

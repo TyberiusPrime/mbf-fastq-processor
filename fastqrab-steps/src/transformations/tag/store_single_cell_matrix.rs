@@ -38,20 +38,21 @@ impl Umi {
         return Self(0);
     }
 
-    fn is_n(&self) -> bool {
+    fn is_n(self) -> bool {
         self.0 == u32::MAX
     }
 
     #[expect(clippy::unreadable_literal, reason = "they're repeating")]
-    fn is_homopolymer(&self, umi_length: u16) -> bool {
+    fn is_homopolymer(self, umi_length: u16) -> bool {
         assert!(umi_length <= 16, "Max umi length exceeded");
         let x = self.0;
-        let bits = umi_length as u32 * 2;
+        let bits = u32::from(umi_length) * 2;
         //make sure we have no bits set above umi_length, so we detect if the umis are longer than
         //the length at least...
-        if umi_length < 16 && x & (u32::MAX << bits) != 0 && !self.is_n() {
-            panic!("Umi.his_homopolymer: bits set above umi_length"); // cov:excl-line
-        }
+        assert!(
+            !(umi_length < 16 && x & (u32::MAX << bits) != 0 && !self.is_n()),
+            "Umi.his_homopolymer: bits set above umi_length"
+        );
         let shift = 32 - bits;
         x == 0 // all A
             || x == 0b01010101010101010101010101010101 >> shift // all C 01
@@ -61,13 +62,13 @@ impl Umi {
 }
 
 impl GeneIdx {
-    fn is_unmatched(&self) -> bool {
+    fn is_unmatched(self) -> bool {
         self.0 == 0
     }
 }
 
 impl CellIdx {
-    fn is_unmatched(&self) -> bool {
+    fn is_unmatched(self) -> bool {
         self.0 == 0
     }
 }
@@ -95,7 +96,7 @@ enum UMIAggregation {
     #[tpd(alias = "cellranger")]
     CellRangerLike,
 }
-/// Collect (gene_idx, cell_idx, umi_2bit) triples per read, then write binary
+/// Collect (`gene_idx`, `cell_idx`, `umi_2bit`) triples per read, then write binary
 /// data file(s) and lookup tables on finalize.
 ///
 /// Both cell and gene barcodes are looked up by sequence in [barcodes.*] tables.
@@ -123,7 +124,7 @@ pub struct StoreSingleCellMatrix {
     /// [barcode.*] section listing all valid gene identifiers (sequence → name)
     gene_barcodes: TagLabel,
 
-    /// Whether cell_tag values are barcode sequences (true) or corrected labels (false).
+    /// Whether `cell_tag` values are barcode sequences (true) or corrected labels (false).
     /// Default: auto-detect — true for Location tags, false for String tags.
     #[tpd(default)]
     #[expect(
@@ -132,7 +133,7 @@ pub struct StoreSingleCellMatrix {
     )]
     cell_tag_contains_barcode: Option<bool>,
     ///
-    /// Whether gene_tag values are barcode sequences (true) or corrected labels (false).
+    /// Whether `gene_tag` values are barcode sequences (true) or corrected labels (false).
     /// Default: auto-detect — true for Location tags, false for String tags.
     #[tpd(default)]
     #[expect(
@@ -380,8 +381,7 @@ impl TagUser for PartialTaggedVariant<PartialStoreSingleCellMatrix> {
 
 fn seq_to_idx(seq: &[u8], map: &FxIndexMap<BString, String>) -> u32 {
     map.get_index_of(BStr::new(seq))
-        .map(|i| i as u32 + 1)
-        .unwrap_or(0)
+        .map_or(0, |i| u32::try_from(i + 1).expect("idx exceeds u32::MAX-1"))
 }
 
 impl StoreSingleCellMatrix {
@@ -522,6 +522,7 @@ impl Step for StoreSingleCellMatrix {
                 _ => 0,
             };
 
+            #[expect(clippy::cast_possible_truncation, reason = "umi max length 16")]
             let (umi_enc, umi_len) = match umi_tags {
                 TagColumn::String(items) => match items.get_string(ii) {
                     Some(s) => {
@@ -555,9 +556,7 @@ impl Step for StoreSingleCellMatrix {
                     expected_umi_len = umi_len;
                 } else if umi_len > 0 && expected_umi_len != umi_len {
                     anyhow::bail!(
-                        "UMI lengths are not uniform: expected {}bp, got {}bp",
-                        expected_umi_len,
-                        umi_len
+                        "UMI lengths are not uniform: expected {expected_umi_len}bp, got {umi_len}bp",
                     );
                 }
             }
@@ -582,7 +581,7 @@ impl Step for StoreSingleCellMatrix {
         }
 
         let mut entries = self.entries.lock().expect("lock poisoned");
-        for (demultiplex_tag, local) in local_entries.into_iter() {
+        for (demultiplex_tag, local) in local_entries {
             entries
                 .get_mut(&demultiplex_tag)
                 .expect("Entries were created in init")
@@ -615,7 +614,7 @@ impl Step for StoreSingleCellMatrix {
 
             let mut any_gene_matches = false;
             let mut any_cell_matches = false;
-            for (tag, mut entries) in entries_map.into_iter() {
+            for (tag, mut entries) in entries_map {
                 let mut stats = Vec::new();
                 if let Some(Some(writer)) = data_guard.get_mut(&tag) {
                     //entries.par_sort_by_key(|&[g, c, _]| (g, c)); it's not measurably faster.
@@ -634,9 +633,9 @@ impl Step for StoreSingleCellMatrix {
                     stats.push(("Input reads", total));
 
                     let matrix = aggregate_to_matrix(
-                        entries,
+                        &entries,
                         self.umi_aggregation,
-                        *self.max_umi_len.lock().expect("lock poisoned") as u16,
+                        u16::from(*self.max_umi_len.lock().expect("lock poisoned")),
                     );
 
                     let unique_genes: FxHashSet<_> = matrix
@@ -696,8 +695,12 @@ impl Step for StoreSingleCellMatrix {
                         matrix,
                         //+1 for unmatched. Cast is safe, we
                         //checked this before
-                        self.gene_lookup.len() as u32 + 1,
-                        self.cell_lookup.len() as u32 + 1,
+                        (self.gene_lookup.len() + 1)
+                            .try_into()
+                            .expect("gene_lookup.len() + 1 exceeds u32::MAX"),
+                        (self.cell_lookup.len() + 1)
+                            .try_into()
+                            .expect("cell_lookup.len() + 1 exceeds u32::MAX"),
                         writer,
                     )?;
                 }
@@ -714,8 +717,7 @@ impl Step for StoreSingleCellMatrix {
 
                     for (metric, value) in &rows {
                         writer.write_text_record(
-                            format!("{}\t{:>width$}\n", metric, value, width = col_width)
-                                .as_bytes(),
+                            format!("{metric}\t{value:>col_width$}\n").as_bytes(),
                         )?;
                     }
                 }
@@ -806,7 +808,7 @@ impl Step for StoreSingleCellMatrix {
 }
 
 fn aggregate_to_matrix(
-    entries: Vec<ObservedEvent>,
+    entries: &[ObservedEvent],
     umi_aggregation: UMIAggregation,
     umi_length: u16,
 ) -> Vec<(GeneIdx, CellIdx, u32)> {
@@ -814,21 +816,21 @@ fn aggregate_to_matrix(
         return Vec::new();
     } else {
         match umi_aggregation {
-            UMIAggregation::None => aggregate_to_matrix_none(entries),
-            UMIAggregation::Exact => aggregate_to_matrix_exact(entries),
-            UMIAggregation::Cluster => aggregate_to_matrix_cluster(entries, umi_length),
+            UMIAggregation::None => aggregate_to_matrix_none(&entries),
+            UMIAggregation::Exact => aggregate_to_matrix_exact(&entries),
+            UMIAggregation::Cluster => aggregate_to_matrix_cluster(&entries, umi_length),
             UMIAggregation::CellRangerLike => {
-                aggregate_to_matrix_cellranger_like(entries, umi_length)
+                aggregate_to_matrix_cellranger_like(&entries, umi_length)
             }
         }
     }
 }
 
-fn aggregate_to_matrix_none(entries: Vec<ObservedEvent>) -> Vec<(GeneIdx, CellIdx, u32)> {
+fn aggregate_to_matrix_none(entries: &[ObservedEvent]) -> Vec<(GeneIdx, CellIdx, u32)> {
     let mut matrix = Vec::new();
     let mut counter = 0u32; //doesn't matter though, overwritten in first loop.
     let mut last: Option<(GeneIdx, CellIdx)> = None;
-    for entry in &entries {
+    for entry in entries {
         //let umi = entry[2];
         let key = (entry.gene, entry.cell);
         match last {
@@ -855,11 +857,11 @@ fn aggregate_to_matrix_none(entries: Vec<ObservedEvent>) -> Vec<(GeneIdx, CellId
     matrix
 }
 
-fn aggregate_to_matrix_exact(entries: Vec<ObservedEvent>) -> Vec<(GeneIdx, CellIdx, u32)> {
+fn aggregate_to_matrix_exact(entries: &[ObservedEvent]) -> Vec<(GeneIdx, CellIdx, u32)> {
     let mut matrix = Vec::new();
     let mut counter = 0u32;
     let mut last: Option<(GeneIdx, CellIdx, Umi)> = None;
-    for entry in &entries {
+    for entry in entries {
         let umi = entry.umi;
         if umi.is_n() {
             //invalid umi / any N

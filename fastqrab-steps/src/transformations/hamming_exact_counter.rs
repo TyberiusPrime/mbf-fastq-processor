@@ -29,13 +29,13 @@ pub struct HammingExactCounter {
 pub struct MajorityData {
     pub seq_to_name: Arc<IndexMap<BString, String>>,
     /// FxHash-backed sequence -> position-in-`seq_to_name` lookup. The default
-    /// IndexMap hasher (SipHash) dominates the hot path on short DNA keys.
+    /// `IndexMap` hasher (`SipHash`) dominates the hot path on short DNA keys.
     pub seq_to_idx: Arc<FxHashMap<BString, usize>>,
     /// One counter per barcode in `seq_to_name`, indexed by its position there.
     pub barcode_counts: Arc<Vec<AtomicUsize>>,
     pub barrier: Arc<(Mutex<bool>, Condvar)>,
     blocks_counted: Arc<AtomicUsize>,
-    /// Number of leading reads to count as the ByMajority warm-up sample
+    /// Number of leading reads to count as the `ByMajority` warm-up sample
     /// (= `on_tie_min_molecules_to_start`). The warm-up covers whole blocks up
     /// to and including the one holding the `reads_to_count`-th read.
     pub reads_to_count: usize,
@@ -86,7 +86,7 @@ impl MajorityData {
             if !barcode.is_empty() {
                 let count = count.as_u64().ok_or_else(|| anyhow!("Expected count for barcode {} in 'tag_histogram' entry for tag {} in report {} in counts from report file {} to be a u64", barcode, cfr.tag_name, cfr.report_name, cfr.filename))?;
                 if let Some(idx) = self.seq_to_idx.get(BStr::new(barcode.as_bytes())) {
-                    self.barcode_counts[*idx].store(count as usize, Ordering::SeqCst);
+                    self.barcode_counts[*idx].store(count.try_into().expect("Did not fit usize (32 bit system?)"), Ordering::SeqCst);
                 } else {
                     //cov:excl-start
                     return Err(anyhow!("Barcode {} found in 'tag_histogram' entry \
@@ -188,7 +188,7 @@ impl Step for HammingExactCounter {
             let counts = &*self.majority_data.barcode_counts;
             match input_tags {
                 TagColumn::Location(col) => {
-                    for hits in col.iter() {
+                    for hits in col {
                         let idx = if hits.0.is_empty() {
                             continue;
                         } else {

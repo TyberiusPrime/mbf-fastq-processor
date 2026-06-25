@@ -389,14 +389,15 @@ fn extract_from_joined(
         let read_pos = if offset < 0 {
             first + offset
         } else if offset < joined_len {
-            covered[offset as usize] as isize
+            let offset: usize = offset.try_into().expect("Negativ offset -> bug");
+            covered[offset] as isize
         } else {
             last + 1 + (offset - joined_len)
         };
         if read_pos < 0 || read_pos >= seq_len {
             return None;
         }
-        let read_pos = read_pos as u32;
+        let read_pos = read_pos.try_into().expect("read pos exceeded u32");
         // Coalesce runs of consecutive read positions into one span, preserving
         // join order (so a jump back into the read starts a fresh span).
         match spans.last_mut() {

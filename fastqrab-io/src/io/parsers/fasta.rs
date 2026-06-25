@@ -48,7 +48,7 @@ enum FastaInner {
     /// (possibly subprocess-piped) reader and feed the serial FASTA assembler.
     Reader {
         reader: BufReader<Box<dyn Read + Send>>,
-        state: FastaPods,
+        state: Box<FastaPods>,
         buf: Vec<u8>,
         eof: bool,
     },
@@ -101,7 +101,7 @@ impl FastaParser {
         Ok(FastaParser {
             inner: FastaInner::Reader {
                 reader: BufReader::new(reader),
-                state: FastaPods::new(fake_quality_phred, target_reads_per_block.get()),
+                state: Box::new(FastaPods::new(fake_quality_phred, target_reads_per_block.get())),
                 buf: vec![0u8; READER_CHUNK_SIZE],
                 eof: false,
             },
@@ -451,12 +451,12 @@ impl FastaPodInner {
         if let Some(handle) = self.reader_handle.take() {
             handle
                 .join()
-                .map_err(|_| anyhow!("fasta shm reader thread panicked"))??;
+                .map_err(|e| anyhow!("fasta shm reader thread panicked {e:?}"))??;
         }
         if let Some(handle) = self.slot_writer_handle.take() {
             handle
                 .join()
-                .map_err(|_| anyhow!("fasta shm slot-return thread panicked"))?;
+                .map_err(|e| anyhow!("fasta shm slot-return thread panicked: {e:?}"))?;
         }
         if let Some(mut child) = self.child.take() {
             let status = child

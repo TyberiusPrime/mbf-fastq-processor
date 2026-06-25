@@ -29,7 +29,7 @@ pub struct Progress {
     #[tpd(skip, default)]
     pub start_time: Option<std::time::Instant>,
 
-    /// Trailing samples of (elapsed_secs, count) used to compute the "current"
+    /// Trailing samples of (`elapsed_secs`, `count`) used to compute the "current"
     /// rate over a wall-clock window rather than between two adjacent reports.
     #[schemars(skip)]
     #[tpd(skip, default)]
@@ -254,6 +254,12 @@ impl Step for Progress {
         Ok(None)
     }
 
+    #[expect(
+        clippy::cast_sign_loss,
+        clippy::cast_possible_truncation,
+        clippy::cast_precision_loss,
+        reason = "don't run it for more than 2^53 seconds^^"
+    )]
     fn post_finalize(&self, _reports: &[FinalizeReportResult]) -> Result<()> {
         let elapsed = self
             .finalize_timepoint

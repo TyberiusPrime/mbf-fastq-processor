@@ -57,8 +57,8 @@ fn scan_tpd_aliases() -> Vec<(String, String)> {
         .parent()
         .expect("crate dir has a parent (the workspace root)")
         .to_path_buf();
-    let alias = regex::Regex::new(r#"alias\s*=\s*"([^"]+)""#).unwrap();
-    let tpd_attr = regex::Regex::new(r"tpd\s*\(").unwrap();
+    let alias = regex::Regex::new(r#"alias\s*=\s*"([^"]+)""#).expect("regex compilation failed");
+    let tpd_attr = regex::Regex::new(r"tpd\s*\(").expect("regex compilation failed");
 
     let mut files = Vec::new();
     for entry in std::fs::read_dir(&workspace)

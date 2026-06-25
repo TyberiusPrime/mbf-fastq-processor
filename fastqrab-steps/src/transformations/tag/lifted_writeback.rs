@@ -19,7 +19,7 @@
 //!   keeps its length.
 //!
 //! Anything else (disjoint regions whose covered length differs from the content)
-//! is a runtime error, as it was before the StringPod redesign.
+//! is a runtime error, as it was before the `StringPod` redesign.
 //!
 //! [`StoreTagBackInSequence`]: super::store_tag_back_in_sequence::StoreTagBackInSequence
 //! [`StoreTagInSequence`]: super::store_tag_in_sequence::StoreTagInSequence
@@ -43,6 +43,8 @@ pub enum OnLost {
 
 /// Where a write-back lands, relative to the position tag's location. Both steps
 /// funnel into the one code path; they differ only in which of these they pick.
+#[repr(u8)]
+#[derive(Clone, Copy)]
 pub(crate) enum WriteAnchor {
     /// Insert before the leftmost start of the location.
     Start,

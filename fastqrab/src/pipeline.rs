@@ -105,7 +105,7 @@ pub(crate) fn enumerate_declaration_outputs(
                     std::iter::once(output_prefix)
                         .chain(ft.infix_parts().iter().map(String::as_str))
                         .chain(demux_name)
-                        .chain(ft.second_infix().map(|x| x.as_str())),
+                        .chain(ft.second_infix().map(String::as_str)),
                     output_ix_separator,
                 );
                 ResolvedOutputName::File {
@@ -643,7 +643,7 @@ fn run_benchmark_interleaved_thread(
         "Empty first block in benchmark. Should have been validated before?"
     );
 
-    let out_blocks = first_block.split_interleaved(segment_count).unwrap();
+    let out_blocks = first_block.split_interleaved(segment_count).expect("Interleave splitting failed");
 
     while molecules_sent < molecule_count {
         //we don't worry about having a few reads too many here.
@@ -694,13 +694,9 @@ fn run_benchmark_interleaved_thread(
 pub struct RunStage0 {}
 
 impl RunStage0 {
-    pub fn new(_parsed: &CheckedConfig) -> Self {
-        RunStage0 {}
-    }
 
     #[expect(clippy::too_many_lines, reason = "needed")]
     pub fn configure_demultiplex_and_init_stages(
-        self,
         parsed: &mut CheckedConfig,
         output_directory: &Path,
         allow_overwrite: bool,

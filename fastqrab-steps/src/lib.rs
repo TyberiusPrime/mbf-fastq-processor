@@ -33,6 +33,10 @@ pub fn no_barcode_infix() -> &'static str {
     "nobarcode"
 }
 
+#[expect(
+    clippy::ref_option,
+    reason = "Must be this way to slot into tpd, which takes a &T for verify"
+)]
 fn verify_opt_path_component(suffix: &Option<String>) -> Result<(), ValidationFailure> {
     if let Some(path) = suffix.as_ref() {
         verify_path_component(path)

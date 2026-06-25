@@ -537,7 +537,7 @@ impl WorkpoolCoordinator {
                 .report_collector
                 .lock()
                 .unwrap_or_else(std::sync::PoisonError::into_inner);
-            for stage in self.stages.iter() {
+            for stage in &self.stages {
                 if let Err(err) = stage.transformation.post_finalize(&reports) {
                     self.error_collector
                         .lock()
@@ -680,8 +680,8 @@ fn process_work_item(
                             // Lift each captured (birth-frame) region forward into
                             // the segment's *current* frame, replaying only the
                             // edits applied since the tag was born.
-                            let (born_gen, born_len) = col.row_born(row);
-                            let view = segment.seq_quals.ops_since(born_gen, row).expect(
+                            let (born_generation, born_len) = col.row_born(row);
+                            let view = segment.seq_quals.ops_since(born_generation, row).expect(
                                 "born generation captured from this pod; row in range. Bug",
                             );
                             let mut lifted: Vec<(usize, usize)> = Vec::new();
@@ -741,7 +741,7 @@ fn process_work_item(
                                 let mut seq = BString::new(segment_name.as_bytes().to_vec());
                                 seq.push(b':');
                                 let mut first = true;
-                                for (start, len) in start_lens.iter() {
+                                for (start, len) in &start_lens {
                                     if !first {
                                         seq.push(b',');
                                     }

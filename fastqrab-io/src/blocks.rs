@@ -78,7 +78,7 @@ impl FastQChunk {
     pub fn split_interleaved(self, n: NonZero<usize>) -> Result<Vec<FastQChunk>> {
         let n = n.get();
         let total = self.len();
-        if total % n != 0 {
+        if !total.is_multiple_of(n) {
             bail!(
                 "Can't split {total} reads into {n} interleaved segments.\n\
             Since the config verifies that your input.config.block_size satisfies this,\n\
@@ -513,6 +513,32 @@ impl<'a> Iterator for MoleculesMut<'a> {
 
 impl ExactSizeIterator for MoleculesMut<'_> {}
 
+/// Splits a read 'name' into the actual name/id and the comment
+#[must_use]
+pub fn split_name_and_comment(name: &BStr, read_comment_insert_char: u8) -> (&BStr, &BStr) {
+    use bstr::ByteSlice;
+    //let pos_of_first_space = name.iter().position(|&x| x == read_comment_insert_char);
+    match name.find_byte(read_comment_insert_char) {
+        Some(pos) => (name[..pos].as_ref(), name[pos + 1..].as_ref()),
+        None => (name, BStr::new("")),
+    }
+}
+
+/// Splits a read 'name' into the actual name/id and the comment, mutably.
+pub fn split_name_and_comment_mut(
+    name: &mut BStr,
+    read_comment_insert_char: u8,
+) -> (&mut BStr, &mut BStr) {
+    use bstr::ByteSlice;
+    match name.find_byte(read_comment_insert_char) {
+        Some(pos) => {
+            let (left, right) = name.split_at_mut(pos);
+            (left.as_bstr_mut(), right[1..].as_bstr_mut())
+        }
+        None => (name, <&mut BStr>::default()),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -567,28 +593,3 @@ mod tests {
     }
 }
 
-/// Splits a read 'name' into the actual name/id and the comment
-#[must_use]
-pub fn split_name_and_comment(name: &BStr, read_comment_insert_char: u8) -> (&BStr, &BStr) {
-    use bstr::ByteSlice;
-    //let pos_of_first_space = name.iter().position(|&x| x == read_comment_insert_char);
-    match name.find_byte(read_comment_insert_char) {
-        Some(pos) => (name[..pos].as_ref(), name[pos + 1..].as_ref()),
-        None => (name, BStr::new("")),
-    }
-}
-
-/// Splits a read 'name' into the actual name/id and the comment, mutably.
-pub fn split_name_and_comment_mut(
-    name: &mut BStr,
-    read_comment_insert_char: u8,
-) -> (&mut BStr, &mut BStr) {
-    use bstr::ByteSlice;
-    match name.find_byte(read_comment_insert_char) {
-        Some(pos) => {
-            let (left, right) = name.split_at_mut(pos);
-            (left.as_bstr_mut(), right[1..].as_bstr_mut())
-        }
-        None => (name, <&mut BStr>::default()),
-    }
-}

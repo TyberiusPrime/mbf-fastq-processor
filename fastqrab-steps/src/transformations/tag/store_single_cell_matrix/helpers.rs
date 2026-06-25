@@ -47,12 +47,8 @@ pub fn write_matrix(
     let total: usize = matrix.len();
     writer.write_text_record(format!("{n_genes} {n_cells} {total}\n").as_bytes())?;
     for (gene, cell, count) in matrix {
-        if cell.0 > n_cells {
-            panic!("n_cells and actual cells mismatch"); //cov:excl-line
-        }
-        if gene.0 > n_genes {
-            panic!("n_genes and actual genes mismatch"); //cov:excl-line
-        }
+        assert!(cell.0 <= n_cells, "n_cells and actual cells mismatch");
+        assert!(gene.0 <= n_genes, "n_genes and actual genes mismatch"); 
         writer
             .write_text_record(format!("{} {} {}\n", gene.0 + 1, cell.0 + 1, count).as_bytes())?;
     }

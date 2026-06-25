@@ -98,7 +98,7 @@ impl VerifyIn<PartialConfig> for PartialOutputFASTQ {
             validate_compression_level_u8(&self.compression, &mut self.compression_level);
         }
         self.chunksize
-            .verify(|chunk_size| verify_chunk_size(chunk_size, &self.stdout));
+            .verify(|chunk_size| verify_chunk_size(chunk_size.as_ref(), &self.stdout));
         self.suffix.verify(verify_opt_path_component);
         verify_record_targets(
             parent,
@@ -133,7 +133,8 @@ impl TagUser for PartialTaggedVariant<PartialOutputFASTQ> {
                     .expect("parent was ok"),
                 &collect_segment_list(&inner.output),
                 interleave_present(&inner.interleave)
-                    .then(|| collect_segment_list(&inner.interleave)),
+                    .then(|| collect_segment_list(&inner.interleave))
+                    .as_ref(),
                 *inner.stdout.as_ref().expect("parent was ok"),
                 inner.chunksize.as_ref().and_then(|x| x.as_ref()).copied(),
                 self.toml_value.span(),
@@ -213,7 +214,7 @@ pub(super) fn declare_text_output(
     hash_uncompressed: bool,
     hash_compressed: bool,
     segments: &[String],
-    interleave: Option<Vec<String>>,
+    interleave: Option<&Vec<String>>,
     stdout: bool,
     chunksize: Option<usize>,
     span: std::ops::Range<usize>,
@@ -222,7 +223,7 @@ pub(super) fn declare_text_output(
         format,
         suffix: format.get_suffix(compression, suffix_override),
         segments,
-        interleave: interleave.as_deref(),
+        interleave: interleave.as_deref().map(|v| &**v),
         stdout,
         sink_config: sink_config(
             compression,

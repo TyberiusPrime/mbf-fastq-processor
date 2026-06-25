@@ -275,7 +275,7 @@ impl Step for Inspect {
             match self.format {
                 FileFormat::None | FileFormat::Fastq | FileFormat::Text => {
                     for (molecule, tag) in collector.iter() {
-                        for read in molecule.reads.iter() {
+                        for read in &molecule.reads {
                             buf.clear();
                             buf.push(b'@');
                             buf.extend_from_slice(&read.name);
@@ -296,7 +296,7 @@ impl Step for Inspect {
                 }
                 FileFormat::Fasta => {
                     for (molecule, tag) in collector.iter() {
-                        for read in molecule.reads.iter() {
+                        for read in &molecule.reads {
                             buf.clear();
                             buf.push(b'>');
                             buf.extend_from_slice(&read.name);

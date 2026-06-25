@@ -6,7 +6,7 @@ use rayon::prelude::*;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 pub fn aggregate_to_matrix_cluster(
-    entries: Vec<super::ObservedEvent>,
+    entries: &[super::ObservedEvent],
     umi_length: u16,
 ) -> Vec<(GeneIdx, CellIdx, u32)> {
     debug_assert!(!entries.is_empty(), "Checked in caller");
@@ -79,7 +79,7 @@ pub fn umi_cluster_count(umis: &[Umi], umi_length: u16) -> u32 {
         roots.insert(uf.root_of(i));
     }
 
-    roots.len() as u32
+    roots.len().try_into().expect("exceeded u32")
 }
 
 #[inline]
@@ -156,7 +156,7 @@ fn calibrate_pairwise_threshold() -> usize {
 
     for &n in &candidates {
         // structured but non-trivial data
-        let data: Vec<Umi> = (0..n as u32)
+        let data: Vec<Umi> = (0..n.try_into().expect("candidates > u32::max"))
             .map(|x| x ^ (x << 1) ^ (x >> 1))
             .map(Umi)
             .collect();
