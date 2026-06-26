@@ -1,0 +1,55 @@
+# We used to 'shut down' the input when a head was 'full',
+# but we must not do that if a Report/Quantify/Inspect was before
+
+
+[input]
+    read1 = 'input_read1.fq.zst'
+[options]
+    block_size = 15
+
+[[step]]
+    action = 'ExtractRegions'
+    out_label = 'kmer1'
+
+    regions = [
+            {  start = 6, length = 6, anchor="Start"},
+    ]
+    segment = 'read1'
+
+[[step]]
+    action = 'ExtractRegions'
+    out_label = 'namesparts'
+
+    regions = [
+            {  start = 0, length = 7, anchor="Start"}
+    ]
+    segment = 'name:read1'
+
+[[step]]
+  action= 'ConcatTags'
+  in_labels = ['kmer1', 'namesparts']
+  out_label = 'joined'
+  on_missing = 'SetMissing'
+  separator = 'xyz'
+
+[[step]]
+  action = 'CalcLength'
+  out_label = 'dalen'
+  segment = 'read1'
+
+[[step]]
+  action = 'EvalExpression'
+  out_label = 'bool'
+  expression = 'dalen > 20'
+  out_type = 'bool'
+
+[[step]]
+    action ='Head'
+    n = 10
+
+[output]
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "StoreTagsInTable"

@@ -98,8 +98,8 @@ impl FileFormat {
                 let base = self.default_suffix();
                 compression.apply_suffix(base)
             }
-            FileFormat::Bam => self.default_suffix().to_string(),
-            FileFormat::Text | FileFormat::None => String::new(),
+            FileFormat::Bam => self.default_suffix().to_string(), // cov:exl-line
+            FileFormat::Text | FileFormat::None => unreachable!("No default suffix for text files"), // cov:exl-line
         }
     }
 }
@@ -173,28 +173,10 @@ pub enum StringOrVecString {
 
 #[derive(Debug, Clone, Copy)]
 pub enum TagValueType {
-    //Todo: should this be a struct with 4 bools?
     Location, // string + in-sequence-location
     String,   // just a piece of text
     Numeric((Option<NonNaN>, Option<NonNaN>)),
     Bool,
-}
-impl TagValueType {
-    #[must_use]
-    pub fn any() -> &'static [Self] {
-        &[
-            TagValueType::Location,
-            TagValueType::String,
-            TagValueType::Bool,
-            TagValueType::Numeric((None, None)),
-        ]
-    }
-}
-
-impl PartialEq for TagValueType {
-    fn eq(&self, other: &Self) -> bool {
-        core::mem::discriminant(self) == core::mem::discriminant(other)
-    }
 }
 
 #[derive(Debug)]

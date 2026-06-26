@@ -20,6 +20,7 @@ pub use triple_accel::hamming; //todo: do we need this. Profile.
 #[derive(Debug, Clone)]
 pub struct StringColumn(StringPod, bv::BitBox);
 
+//todo: move this into it's own file
 #[derive(Debug, Clone)]
 pub enum TagColumn {
     Location(DualStringPodMultiLocation),
@@ -55,9 +56,11 @@ impl TagColumn {
     }
 
     #[must_use]
+    //cov:excl-start
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
+    //cov:excl-stop
 
     /// Retain just the values where keep is true.
     ///

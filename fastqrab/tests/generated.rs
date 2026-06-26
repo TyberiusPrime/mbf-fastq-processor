@@ -11331,6 +11331,17 @@ fn test_cases_x_single_step_x_head_x_head_stops_reading_multiple() {
 
 #[test]
 
+fn test_cases_x_single_step_x_head_x_head_with_tags() {
+    println!("Test case is in: test_cases/single_step/head/head_with_tags");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/head/head_with_tags"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_head_x_multi_stage_head() {
     println!("Test case is in: test_cases/single_step/head/multi_stage_head");
     run_test(
