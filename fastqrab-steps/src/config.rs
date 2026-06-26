@@ -87,7 +87,6 @@ pub fn validate_segment_label(
         "bam_include_mapped",
         "bam_include_unmapped",
         "read_comment_character",
-        "use_rapidgzip",
         "threads_per_segment",
         "tpd_field_match_mode",
     ] {
@@ -2292,12 +2291,6 @@ impl Config {
                 .expect("Calculated output threads should never be zero");
         }
 
-        //rapidgzip single core is slower than regular gzip, so fall back to
-        //the in-process decoder when only one decompression thread is allotted.
-        if self.input.options.threads_per_segment.expect("Set before") == 1 {
-            self.input.options.use_rapidgzip = false;
-        }
-
         ThreadingConfiguration {
             n_input_per_segment: std::num::NonZeroUsize::new(counts.input_per_segment)
                 .expect("Thread count must be > 0"),
@@ -2476,7 +2469,6 @@ mod tests {
         validate_segment_label("bam_include_mapped", f).unwrap_err();
         validate_segment_label("bam_include_unmapped", f).unwrap_err();
         validate_segment_label("read_comment_character", f).unwrap_err();
-        validate_segment_label("use_rapidgzip", f).unwrap_err();
         validate_segment_label("threads_per_segment", f).unwrap_err();
         validate_segment_label("tpd_field_match_mode", f).unwrap_err();
 

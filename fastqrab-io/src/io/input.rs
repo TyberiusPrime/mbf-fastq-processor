@@ -120,39 +120,7 @@ pub struct InputOptions {
     #[tpd(with = "tpd_adapt_u8_from_byte_or_char", alias = "read_comment_char")]
     pub read_comment_character: u8,
 
-    #[serde(skip_serializing)]
-    pub use_rapidgzip: bool,
-
     pub threads_per_segment: Option<usize>,
-}
-
-impl PartialInputOptions {
-    /// Enable/disable rapidgzip. defaults to enabled if we can find our sibling
-    /// decompressor binary.
-    fn configure_rapid_gzip(&mut self) {
-        use crate::io::input::find_decompressor;
-        match &self.use_rapidgzip.state {
-            TomlValueState::Missing { .. } => {
-                // auto detect
-                self.use_rapidgzip.state = TomlValueState::Ok;
-                self.use_rapidgzip.value = Some(find_decompressor().is_some());
-            }
-            TomlValueState::Ok => {
-                if *self.use_rapidgzip.value.as_ref().expect("State was ok")
-                    && find_decompressor().is_none()
-                {
-                    self.use_rapidgzip.state = TomlValueState::ValidationFailed {
-                        message: "rapidgzip requested but the decompressor binary was not found"
-                            .to_string(),
-                    };
-                    self.use_rapidgzip.help = Some(
-                                "The fastqrab binary path could not be determined. Set use_rapidgzip to false (or leave off for auto-detect).".to_string(),
-                            );
-                }
-            }
-            _ => {} // cov:excl-line
-        }
-    }
 }
 
 impl<R> VerifyIn<R> for PartialInputOptions {
@@ -180,9 +148,6 @@ impl<R> VerifyIn<R> for PartialInputOptions {
         });
         self.read_comment_character
             .or_with(default_comment_insert_char);
-
-        self.configure_rapid_gzip();
-
         Ok(())
     }
 }
@@ -194,7 +159,6 @@ impl Default for InputOptions {
             bam_include_mapped: None,
             bam_include_unmapped: None,
             read_comment_character: default_comment_insert_char(),
-            use_rapidgzip: false,
             threads_per_segment: None,
         }
     }
@@ -239,11 +203,7 @@ impl InputFile {
         // Decompression (rapidgzip / bgzf) and the pod-parser demux pool are
         // sized separately upstream; route each to its own consumer.
         let thread_count = thread_counts.decompression;
-        let decompression_options = if options.use_rapidgzip && self.get_filename().is_some() {
-            DecompressionOptions::Subprocess { thread_count }
-        } else {
-            DecompressionOptions::Default
-        };
+        let decompression_options = DecompressionOptions::Subprocess { thread_count };
         match self {
             InputFile::Fastq(file, filename) => Ok(Box::new(parsers::PodFastqParser::new(
                 file.into_inner(),
@@ -635,7 +595,7 @@ impl Read for DecompressorReader {
             let status = self.child.wait()?;
             let mut stderr = Vec::new();
             self.stderr.read_to_end(&mut stderr)?;
-            let stderr: String =  String::from_utf8_lossy(&stderr).into_owned();
+            let stderr: String = String::from_utf8_lossy(&stderr).into_owned();
             if !status.success() {
                 return Err(std::io::Error::new(
                     std::io::ErrorKind::InvalidData,
@@ -696,9 +656,7 @@ fn decompressor_command(
     if let Some(n) = peek_bytes {
         cmd.arg("--peek-bytes").arg(n.to_string());
     }
-    cmd.arg(input)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
+    cmd.arg(input).stdout(Stdio::piped()).stderr(Stdio::piped());
     Ok(cmd)
 }
 
@@ -767,7 +725,8 @@ pub fn spawn_decompressor_from_reader(
     thread_count: ThreadCount,
     peek_bytes: Option<usize>,
 ) -> Result<DecompressorReader> {
-    let mut cmd = decompressor_command(std::ffi::OsStr::new("-"), format, thread_count, peek_bytes)?;
+    let mut cmd =
+        decompressor_command(std::ffi::OsStr::new("-"), format, thread_count, peek_bytes)?;
     cmd.stdin(Stdio::piped());
     let mut child = cmd
         .spawn()

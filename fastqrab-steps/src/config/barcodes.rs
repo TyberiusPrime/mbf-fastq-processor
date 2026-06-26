@@ -75,7 +75,6 @@ fn read_barcodes_from_txt(filename: &Path, entries: &mut IndexMap<BString, Strin
 impl PartialBarcodesFromFile {
     fn load_from_file(
         &self,
-        use_rapidgzip: bool,
     ) -> Result<IndexMap<BString, String>, ValidationFailure> {
         let mut entries: IndexMap<BString, String> = IndexMap::new();
         let filename = self.filename.as_ref().expect("Should be checked before");
@@ -102,7 +101,6 @@ impl PartialBarcodesFromFile {
                 }
                 Ok(())
             },
-            use_rapidgzip,
         ) {
             if entries.is_empty() && filename.contains(".txt") {
                 if let Err(second_err) =
@@ -141,7 +139,7 @@ impl VerifyIn<PartialConfig> for PartialBarcodes {
     #[expect(clippy::too_many_lines, reason = "needed")]
     fn verify(
         &mut self,
-        parent: &PartialConfig,
+        _parent: &PartialConfig,
         _options: &VerifyOptions,
     ) -> std::result::Result<(), ValidationFailure>
     where
@@ -223,13 +221,6 @@ impl VerifyIn<PartialConfig> for PartialBarcodes {
                 } else {
                     //we are good to read the barcodes
                     let barcode_to_name = from_file.load_from_file(
-                        parent
-                            .input
-                            .as_ref()
-                            .and_then(|x| x.options.as_ref())
-                            .and_then(|x| x.use_rapidgzip.as_ref())
-                            .copied()
-                            .unwrap_or(false),
                     )?;
                     Some(barcode_to_name)
                 }

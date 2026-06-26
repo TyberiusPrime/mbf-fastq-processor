@@ -1,9 +1,6 @@
 [input]
     read1 = ['input_read1.fq.gz']
 
-[input.options]
-    use_rapidgzip = true
-
 [options]
     block_size = 10
     threads = 1 # Should fall back to single-threaded decompression

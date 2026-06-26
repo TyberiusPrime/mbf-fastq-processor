@@ -30,7 +30,6 @@ fn drive_reads(
     func: &mut impl FnMut(&[u8], &[u8], &[u8]) -> Result<()>,
     include_mapped: bool,
     include_unmapped: bool,
-    use_rapidgzip: bool,
 ) -> Result<()> {
     use bstr::ByteSlice;
 
@@ -39,7 +38,6 @@ fn drive_reads(
         bam_include_mapped: Some(include_mapped),
         bam_include_unmapped: Some(include_unmapped),
         read_comment_character: b' ', // ignored here.
-        use_rapidgzip,
         threads_per_segment: Some(get_number_of_cores()), // at this point, we're ready to multicore this
                                                           // hard.
     };
@@ -90,7 +88,6 @@ pub fn apply_to_read_names(
         &mut |name: &[u8], _seq: &[u8], _qual: &[u8]| func(name),
         include_mapped,
         include_unmapped,
-        false,
     )
 }
 
@@ -106,7 +103,6 @@ pub fn apply_to_read_sequences(
         &mut |_name: &[u8], seq: &[u8], _qual: &[u8]| func(seq),
         include_mapped,
         include_unmapped,
-        false,
     )
 }
 
@@ -117,7 +113,6 @@ pub fn apply_to_read_sequences(
 pub fn apply_to_read_names_and_sequences(
     filename: impl AsRef<Path>,
     func: &mut impl FnMut(&[u8], &[u8]) -> Result<()>,
-    use_rapidgzip: bool,
 ) -> Result<()> {
     let input_file = open_input_file(filename.as_ref()).context("open_input_file")?;
     drive_reads(
@@ -125,6 +120,5 @@ pub fn apply_to_read_names_and_sequences(
         &mut |name: &[u8], seq: &[u8], _qual: &[u8]| func(name, seq),
         true,
         true,
-        use_rapidgzip,
     )
 }

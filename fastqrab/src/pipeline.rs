@@ -722,7 +722,6 @@ impl RunStage0 {
             barcodes_data: parsed.barcodes.clone(),
             comment_insert_char: parsed.input.options.read_comment_character,
             initial_filter_capacity: None, // Filled after the first block.
-            use_rapidgzip: parsed.input.options.use_rapidgzip,
             threading_configuration: parsed.threading_configuration.clone(),
             report_metadata,
             blocks_in_flight: std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0)),
