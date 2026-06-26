@@ -9,8 +9,7 @@ pub use input::{
     DetectedInputFormat, InputFile, InputFiles, open_file, open_input_file, total_file_size,
 };
 pub use reads::{
-    FastQBlocksCombined, Position, SegmentsCombined, Tags,
-    longest_suffix_that_is_a_prefix,
+    FastQBlocksCombined, Position, SegmentsCombined, Tags, longest_suffix_that_is_a_prefix,
 };
 
 pub use output::simulated_failure;

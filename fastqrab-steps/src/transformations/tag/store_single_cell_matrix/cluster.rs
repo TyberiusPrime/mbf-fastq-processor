@@ -83,7 +83,7 @@ pub fn umi_cluster_count(umis: &[Umi], umi_length: u16) -> u32 {
 }
 
 #[inline]
-#[expect(clippy::needless_range_loop,reason=" Clearest way to state this")]
+#[expect(clippy::needless_range_loop, reason = " Clearest way to state this")]
 fn pairwise_union(values: &[Umi], uf: &mut DisjointSet) {
     for i in 0..values.len() {
         let x = values[i];

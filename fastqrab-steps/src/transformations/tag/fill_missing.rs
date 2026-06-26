@@ -113,12 +113,9 @@ impl Step for FillMissing {
                 }
                 TagColumn::Location(out.finish())
             }
-            (TagColumn::String(prim), TagColumn::String(sec)) => TagColumn::String(
-                prim.iter()
-                    .zip(sec.iter())
-                    .map(|(p, s)| p.or(s))
-                    .collect(),
-            ),
+            (TagColumn::String(prim), TagColumn::String(sec)) => {
+                TagColumn::String(prim.iter().zip(sec.iter()).map(|(p, s)| p.or(s)).collect())
+            }
             (TagColumn::Location(prim), TagColumn::String(sec)) => TagColumn::String(
                 prim.iter_seq()
                     .zip(sec.iter())

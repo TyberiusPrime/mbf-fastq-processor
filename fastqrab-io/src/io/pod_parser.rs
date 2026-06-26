@@ -39,6 +39,21 @@ pub struct Chunk {
     inner: ChunkInner,
 }
 
+/// Backing store for a borrowed shared-memory [`Chunk`]: owns the live mapping
+/// and yields a sub-slice of it. Implemented by the shm transport's region
+/// handle ([`crate::io::input::ShmRegion`]). A `Chunk` holds an `Arc<dyn
+/// ChunkRegion>`, so the mapping cannot be torn down while any chunk still
+/// borrows it — the lifetime coupling is by *ownership*, not by convention.
+///
+/// `Send + Sync` because the region is a plain shared byte buffer whose per-slot
+/// single-owner access is coordinated by the transport's descriptor/return
+/// pipes, not by Rust aliasing.
+pub trait ChunkRegion: Send + Sync {
+    /// The `len` bytes at `offset` within the region. Implementations bounds-check
+    /// the sub-range against the region's own size.
+    fn slice(&self, offset: usize, len: usize) -> &[u8];
+}
+
 enum ChunkInner {
     /// Heap buffer owned through an `Arc` (the in-process path). Recycled on drop
     /// when no other `Arc` clone is live.
@@ -46,23 +61,22 @@ enum ChunkInner {
         data: Option<Arc<Vec<u8>>>,
         recycle: Option<Sender<Vec<u8>>>,
     },
-    /// A borrow of `len` bytes at `ptr` inside a shared-memory region owned by
-    /// the parser, occupying slot `slot`. The slot id is returned on `release`
-    /// when the chunk drops.
+    /// A borrow of `len` bytes at `offset` within a shared-memory `region`,
+    /// occupying slot `slot`. The chunk holds an `Arc` to the region, so the
+    /// mapping outlives the chunk *by construction*; the slot id is returned on
+    /// `release` when the chunk drops.
     Shared {
-        ptr: *const u8,
+        region: Arc<dyn ChunkRegion>,
+        offset: usize,
         len: usize,
         slot: u32,
         release: Sender<u32>,
     },
 }
 
-// SAFETY: the `Shared` raw pointer addresses a shared-memory region that the
-// parser keeps mapped for longer than any `Chunk` it hands out, and each slot
-// has exactly one owner at a time (ownership is transferred through the
-// descriptor/return pipes). Sending the `Chunk` across threads therefore never
-// creates aliasing writes.
-unsafe impl Send for Chunk {}
+// `Chunk` is `Send`/`Sync` automatically: every field (the region `Arc<dyn
+// ChunkRegion: Send + Sync>`, the channels, the plain integers) already is. No
+// `unsafe impl` is needed now that no bare raw pointer is stored.
 
 impl Chunk {
     /// An owned heap chunk. `recycle`, when `Some`, receives the inner `Vec` on
@@ -77,18 +91,26 @@ impl Chunk {
         }
     }
 
-    /// A chunk borrowing `len` bytes at `ptr` from a shared-memory `slot`,
-    /// returning the slot id via `release` on drop.
+    /// A chunk borrowing `len` bytes at `offset` within a shared-memory `region`,
+    /// occupying `slot`; the slot id is returned via `release` on drop.
     ///
-    /// # Safety
-    /// `ptr..ptr+len` must point into a live shared region that outlives every
-    /// `Chunk` produced from it, and nothing else may read or write `slot`'s
-    /// bytes until this chunk is dropped (its slot returned).
+    /// The chunk holds an `Arc` clone of `region`, so the mapping is guaranteed to
+    /// outlive the chunk — no raw pointer escapes the region's ownership, hence no
+    /// `unsafe`. The caller must still uphold the slot *liveness* protocol (nothing
+    /// else reads or writes `slot`'s bytes until this chunk drops and returns it),
+    /// but that is coordinated by the descriptor/return pipes, not Rust aliasing.
     #[must_use]
-    pub unsafe fn shared(ptr: *const u8, len: usize, slot: u32, release: Sender<u32>) -> Self {
+    pub fn shared(
+        region: Arc<dyn ChunkRegion>,
+        offset: usize,
+        len: usize,
+        slot: u32,
+        release: Sender<u32>,
+    ) -> Self {
         Chunk {
             inner: ChunkInner::Shared {
-                ptr,
+                region,
+                offset,
                 len,
                 slot,
                 release,
@@ -100,12 +122,15 @@ impl Chunk {
     fn bytes(&self) -> &[u8] {
         match &self.inner {
             ChunkInner::Owned { data, .. } => data.as_ref().expect("present until drop"),
-            // SAFETY: upheld by `Chunk::shared`'s contract — the region outlives
-            // the chunk and the slot has a single owner, so this borrow is valid
-            // and unaliased for the chunk's lifetime.
-            ChunkInner::Shared { ptr, len, .. } => unsafe {
-                std::slice::from_raw_parts(*ptr, *len)
-            },
+            // The region is owned through the `Arc` held in this variant, so it is
+            // mapped for at least as long as `self`; `slice` bounds-checks the
+            // sub-range. No raw pointer, no `unsafe`.
+            ChunkInner::Shared {
+                region,
+                offset,
+                len,
+                ..
+            } => region.slice(*offset, *len),
         }
     }
 }
@@ -944,6 +969,69 @@ mod tests {
             err.to_string()
                 .contains("FASTQ read length exceeds the allowed maximum of 4 GiB"),
             "unexpected error: {err}"
+        );
+    }
+
+    /// Regression: a borrowed shared-memory [`Chunk`] must keep its backing region
+    /// mapped for as long as it is alive — even after every *transport-side* handle
+    /// to that region (the descriptor-reader thread's clone, the parser's
+    /// keep-alive) has been dropped.
+    ///
+    /// The original bug stored a bare raw pointer inside the chunk and coupled the
+    /// mapping's lifetime to those external handles only *by convention*. Under
+    /// load the region was `munmap`'d while a demux worker's AVX `memchr` was still
+    /// scanning the chunk, faulting on the freed page (the `Chunker_read1`
+    /// segfaults). Here a tracked region records when it is dropped: while a chunk
+    /// borrows it, it must stay alive and readable; it may only drop once the last
+    /// borrowing chunk is gone.
+    #[test]
+    fn shared_chunk_keeps_its_region_alive_after_transport_handle_drops() {
+        use std::sync::atomic::{AtomicBool, Ordering};
+
+        struct TrackedRegion {
+            bytes: Vec<u8>,
+            dropped: Arc<AtomicBool>,
+        }
+        impl ChunkRegion for TrackedRegion {
+            fn slice(&self, offset: usize, len: usize) -> &[u8] {
+                &self.bytes[offset..offset + len]
+            }
+        }
+        impl Drop for TrackedRegion {
+            fn drop(&mut self) {
+                self.dropped.store(true, Ordering::SeqCst);
+            }
+        }
+
+        let dropped = Arc::new(AtomicBool::new(false));
+        let payload = b"@r\nACGT\n+\nIIII\n";
+        let region: Arc<dyn ChunkRegion> = Arc::new(TrackedRegion {
+            bytes: payload.to_vec(),
+            dropped: Arc::clone(&dropped),
+        });
+
+        // Slot-return channel: the chunk pushes its freed slot id here on drop.
+        let (slot_tx, slot_rx) = channel::unbounded::<u32>();
+        let chunk = Chunk::shared(Arc::clone(&region), 0, payload.len(), 7, slot_tx);
+
+        // Drop the *transport-side* handle. With ownership coupled correctly the
+        // chunk's own clone keeps the region mapped; under the old raw-pointer
+        // design this was the last reference and freed the region out from under
+        // the live chunk.
+        drop(region);
+        assert!(
+            !dropped.load(Ordering::SeqCst),
+            "region freed while a chunk still borrows it (use-after-free)"
+        );
+        // The borrowed bytes are still valid and readable through the chunk.
+        assert_eq!(&*chunk, payload);
+
+        // Dropping the chunk returns its slot id and releases the last region ref.
+        drop(chunk);
+        assert_eq!(slot_rx.recv().ok(), Some(7), "slot id returned on drop");
+        assert!(
+            dropped.load(Ordering::SeqCst),
+            "region must be freed once the last borrowing chunk drops"
         );
     }
 }

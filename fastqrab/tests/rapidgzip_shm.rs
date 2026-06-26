@@ -102,9 +102,6 @@ fn run_verify_case(
 [input]
     read1 = ['{input_name}']
 
-[input.options]
-    use_rapidgzip = true
-
 [options]
     block_size = 1000
     threads = 2
@@ -159,7 +156,6 @@ fn run_process_fasta(input_name: &str, compressed: &[u8], env: &[(&str, &str)]) 
     read1 = ['{input_name}']
 
 [input.options]
-    use_rapidgzip = true
     fasta_fake_quality = 'B'
 
 [options]

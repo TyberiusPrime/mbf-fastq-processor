@@ -97,7 +97,7 @@ impl Step for ConvertToRate {
                 reason = "loss is acceptable, it's going to be within u32 range"
             )]
             for segment in &block.segments {
-                #[expect(clippy::needless_range_loop, reason="Sometimes that's the clearest")]
+                #[expect(clippy::needless_range_loop, reason = "Sometimes that's the clearest")]
                 for ii in 0..len {
                     totals[ii] += segment.seq_quals.entry_len(ii) as f64;
                 }

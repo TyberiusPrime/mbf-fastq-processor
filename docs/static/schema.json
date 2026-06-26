@@ -140,10 +140,6 @@
           "minimum": 0,
           "maximum": 255
         },
-        "use_rapidgzip": {
-          "type": "boolean",
-          "writeOnly": true
-        },
         "threads_per_segment": {
           "type": [
             "integer",
@@ -160,8 +156,7 @@
         }
       },
       "required": [
-        "read_comment_character",
-        "use_rapidgzip"
+        "read_comment_character"
       ]
     },
     "Output": {

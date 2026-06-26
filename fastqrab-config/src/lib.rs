@@ -151,8 +151,7 @@ pub fn default_max_molecules_in_flight(block_size: NonZero<usize>) -> NonZero<us
     // Historically this was 100 *blocks*; at the default block_size of 10000
     // that is 1_000_000 molecules, which we keep as the read-based default.
     let block_size: usize = block_size.into();
-    NonZero::new(block_size * 100)
-        .expect("Block_size == 0 should have been caught in validation")
+    NonZero::new(block_size * 100).expect("Block_size == 0 should have been caught in validation")
 }
 
 #[must_use]

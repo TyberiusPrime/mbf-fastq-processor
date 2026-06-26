@@ -97,7 +97,11 @@ pub fn run() -> Result<()> {
         Some(_) => args.chunk_size.min(PEEK_CHUNK_SIZE),
         None => args.chunk_size,
     };
-    let threads = if peek_bytes.is_some() { 1 } else { args.threads };
+    let threads = if peek_bytes.is_some() {
+        1
+    } else {
+        args.threads
+    };
     let verbose = args.verbose;
     let producer = match args.format {
         Format::Gzip => {
@@ -402,7 +406,10 @@ fn apply_landlock(input: &std::path::Path) -> Result<()> {
     let mut ruleset = Ruleset::default()
         .handle_access(AccessFs::from_read(abi))?
         .create()?
-        .add_rule(PathBeneath::new(PathFd::new(input)?, AccessFs::from_read(abi)))?;
+        .add_rule(PathBeneath::new(
+            PathFd::new(input)?,
+            AccessFs::from_read(abi),
+        ))?;
 
     // Under coverage instrumentation (cargo-llvm-cov sets LLVM_PROFILE_FILE), the
     // LLVM profiling runtime writes a .profraw on exit. With the default `%m`

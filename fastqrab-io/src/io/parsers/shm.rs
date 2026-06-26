@@ -16,7 +16,7 @@ use crossbeam::channel::{self, Receiver};
 
 use crate::io::input::{DecompressorFormat, ShmDecompressor, ShmRegion, spawn_decompressor_shm};
 use crate::io::parsers::ThreadCount;
-use crate::io::pod_parser::Chunk;
+use crate::io::pod_parser::{Chunk, ChunkRegion};
 
 /// Whether the shared-memory decompressor transport is enabled. On by default;
 /// `FASTQRAB_DECOMP_SHM=0` forces the legacy pipe path (A/B and field escape
@@ -117,15 +117,15 @@ pub(crate) fn spawn_shm_chunk_reader(
             if slot == u32::MAX {
                 break; // EOF sentinel
             }
-            // SAFETY: the decompressor only emits `slot < slots` and
-            // `len <= slot_size`, and won't reuse the slot until we return its id
-            // (on chunk drop), so this borrow into the mapped region is valid and
-            // unaliased for the chunk's lifetime.
-            let ptr = unsafe { region_for_reader.as_ptr().add(slot as usize * slot_size) };
-            // SAFETY: as above — `ptr..ptr+len` is inside the live mapping (held
-            // by `region_for_reader`) and the slot is single-owner until this
-            // chunk drops and returns it.
-            let chunk = unsafe { Chunk::shared(ptr, len, slot, slot_ret_tx.clone()) };
+            // The chunk borrows `len` bytes at this slot's offset and holds an
+            // `Arc` clone of the region, so the mapping outlives the chunk by
+            // construction; `ShmRegion::slice` bounds-checks the range. The
+            // decompressor only emits `slot < slots` and `len <= slot_size`, and
+            // won't reuse the slot until we return its id (on chunk drop), so the
+            // borrow is single-owner for the chunk's lifetime.
+            let offset = slot as usize * slot_size;
+            let region: Arc<dyn ChunkRegion> = region_for_reader.clone();
+            let chunk = Chunk::shared(region, offset, len, slot, slot_ret_tx.clone());
             if bytes_tx.send(chunk).is_err() {
                 break; // consumer hung up (a downstream error)
             }

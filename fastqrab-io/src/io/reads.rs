@@ -9,9 +9,7 @@ use stringpod::CrossPods;
 
 use crate::blocks::{self, FastQChunk, FastQReadMut, Molecules, MoleculesMut};
 use fastqrab_config::{TagLabel, segments::SegmentIndexOrAll};
-use fastqrab_dna::dna::{
-     TagColumn,  hamming
-};
+use fastqrab_dna::dna::{TagColumn, hamming};
 use fastqrab_dna::segments::SegmentIndex;
 
 pub type DemultiplexTag = u64;
@@ -34,7 +32,6 @@ pub struct Position {
 // *or* as positions in a larger buffer.
 // and the parser places *most* reads in the buffer,
 // greatly reducing the number of allocations we do.
-
 
 pub struct SegmentsCombined<T> {
     pub segments: Vec<T>,

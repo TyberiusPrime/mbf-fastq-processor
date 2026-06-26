@@ -805,12 +805,37 @@ unsafe impl Sync for ShmRegion {}
 
 #[cfg(unix)]
 impl ShmRegion {
-    /// Base pointer of the mapped region. Callers form per-slot sub-slices under
-    /// the single-owner invariant (a slot is read only between receiving its
-    /// descriptor and returning its id).
+    /// The `len` bytes at `offset` within the mapped region, bounds-checked
+    /// against the region's size. Per the slot protocol a slot is read only
+    /// between receiving its descriptor and returning its id, so the sub-range is
+    /// single-owner for the borrow.
+    ///
+    /// # Panics
+    /// If `offset + len` overflows or exceeds the region size — a corrupt or
+    /// out-of-protocol descriptor, never reachable for a well-behaved decompressor.
     #[must_use]
-    pub fn as_ptr(&self) -> *const u8 {
-        self.ptr
+    pub fn slice(&self, offset: usize, len: usize) -> &[u8] {
+        let end = offset
+            .checked_add(len)
+            .expect("shm slice range overflows usize");
+        assert!(
+            end <= self.len,
+            "shm slice {offset}..{end} out of bounds for region of {} bytes",
+            self.len
+        );
+        // SAFETY: the range is within the live mapping (`end <= self.len`), which
+        // is held for at least the lifetime of `&self`. The slot protocol gives
+        // this sub-range a single owner for the borrow, so the `&[u8]` is unaliased.
+        unsafe { std::slice::from_raw_parts(self.ptr.add(offset), len) }
+    }
+}
+
+// A `Chunk` holds an `Arc<dyn ChunkRegion>` to this region, so the mapping cannot
+// be `munmap`'d (its `Drop`) while any chunk still borrows it.
+#[cfg(unix)]
+impl crate::io::pod_parser::ChunkRegion for ShmRegion {
+    fn slice(&self, offset: usize, len: usize) -> &[u8] {
+        ShmRegion::slice(self, offset, len)
     }
 }
 

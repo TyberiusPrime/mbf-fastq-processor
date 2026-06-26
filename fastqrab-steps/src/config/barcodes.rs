@@ -73,9 +73,7 @@ fn read_barcodes_from_txt(filename: &Path, entries: &mut IndexMap<BString, Strin
 }
 
 impl PartialBarcodesFromFile {
-    fn load_from_file(
-        &self,
-    ) -> Result<IndexMap<BString, String>, ValidationFailure> {
+    fn load_from_file(&self) -> Result<IndexMap<BString, String>, ValidationFailure> {
         let mut entries: IndexMap<BString, String> = IndexMap::new();
         let filename = self.filename.as_ref().expect("Should be checked before");
         let comment_char = self
@@ -83,9 +81,8 @@ impl PartialBarcodesFromFile {
             .as_ref()
             .and_then(|x| x.as_ref());
 
-        if let Err(err) = apply_to_read_names_and_sequences(
-            filename,
-            &mut |name: &[u8], seq: &[u8]| {
+        if let Err(err) =
+            apply_to_read_names_and_sequences(filename, &mut |name: &[u8], seq: &[u8]| {
                 let name_str = if let Some(comment_char) = comment_char
                     && let Some(pos) = name.iter().position(|&c| c == *comment_char)
                 {
@@ -100,8 +97,8 @@ impl PartialBarcodesFromFile {
                     bail!("Duplicate sequence in {filename}: '{}'", BString::from(seq));
                 }
                 Ok(())
-            },
-        ) {
+            })
+        {
             if entries.is_empty() && filename.contains(".txt") {
                 if let Err(second_err) =
                     read_barcodes_from_txt(&PathBuf::from(filename), &mut entries)
@@ -220,8 +217,7 @@ impl VerifyIn<PartialConfig> for PartialBarcodes {
                     None
                 } else {
                     //we are good to read the barcodes
-                    let barcode_to_name = from_file.load_from_file(
-                    )?;
+                    let barcode_to_name = from_file.load_from_file()?;
                     Some(barcode_to_name)
                 }
             } else if let Some(barcode_to_name) = self.barcode_to_name.as_mut()

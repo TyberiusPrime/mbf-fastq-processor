@@ -1,7 +1,7 @@
 mod bam_merge;
 pub mod cli;
-pub mod decompressor;
 pub mod cookbooks;
+pub mod decompressor;
 pub mod documentation;
 pub mod interactive;
 pub mod io;

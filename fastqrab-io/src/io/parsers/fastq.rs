@@ -399,7 +399,7 @@ mod pod_regroup_tests {
         );
     }
 
-    #[expect(clippy::string_slice, reason="No utf-8 issues in this test data")]
+    #[expect(clippy::string_slice, reason = "No utf-8 issues in this test data")]
     fn variable_reads(n: usize) -> Reads {
         (0..n)
             .map(|i| {

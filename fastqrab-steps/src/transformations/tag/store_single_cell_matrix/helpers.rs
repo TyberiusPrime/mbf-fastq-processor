@@ -105,4 +105,3 @@ mod tests {
         assert_eq!(human_fmt_usize(1_234_567_890), "1_234_567_890");
     }
 }
-

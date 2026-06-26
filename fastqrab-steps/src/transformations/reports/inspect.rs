@@ -18,7 +18,7 @@ pub struct Inspect {
     pub infix: String,
     #[tpd(skip, default)]
     #[schemars(skip)]
-    #[expect(dead_code, reason="only accessed in PartialInspect")]
+    #[expect(dead_code, reason = "only accessed in PartialInspect")]
     resolved_segment_name: String,
     #[tpd(default)]
     pub suffix: Option<String>,

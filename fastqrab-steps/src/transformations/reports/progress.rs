@@ -272,7 +272,7 @@ impl Step for Progress {
             elapsed,
             format_seconds_to_hhmmss(elapsed as u64)
         );
-        let _  = self.output(&msg); //swallow error. If it fails here, we ignore that
+        let _ = self.output(&msg); //swallow error. If it fails here, we ignore that
 
         if let Some(writer) = self.writer.lock().expect("poisoned").take() {
             let _ = writer.finish().ok(); //we choose to ignore if finishing the progress writer
