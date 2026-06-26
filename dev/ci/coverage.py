@@ -27,7 +27,9 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import os
 from pathlib import Path
+import re
 
 EXCL_LINE = "cov:excl-line"
 EXCL_START = "cov:excl-start"
@@ -99,6 +101,7 @@ def apply_exclusions_to_lcov(lcov_path: Path, base_dir: Path = None, strip_excl:
     lf = lh = brf = brh = 0
 
     total_excl = files_with_excl = total_lf = total_lh = 0
+    wrong_exclusions: dict = {}  # src Path -> [lineno, ...]
 
     for line in raw.splitlines():
         if line.startswith("SF:"):
@@ -117,10 +120,12 @@ def apply_exclusions_to_lcov(lcov_path: Path, base_dir: Path = None, strip_excl:
         elif line.startswith("DA:"):
             parts = line[3:].split(",")
             lineno = int(parts[0])
+            hits = int(parts[1])
             if strip_excl and lineno in excluded:
                 total_excl += 1
+                if hits > 0:
+                    wrong_exclusions.setdefault(current_source, []).append(lineno)
             else:
-                hits = int(parts[1])
                 lf += 1
                 if hits > 0:
                     lh += 1
@@ -165,7 +170,7 @@ def apply_exclusions_to_lcov(lcov_path: Path, base_dir: Path = None, strip_excl:
                 output.append(line)
 
     lcov_path.write_text("\n".join(output) + "\n")
-    return total_excl, files_with_excl, total_lf, total_lh
+    return total_excl, files_with_excl, total_lf, total_lh, wrong_exclusions
 
 
 def sum_lcov(lcov_path: Path) -> tuple:
@@ -196,6 +201,165 @@ def check_genhtml():
         print("genhtml is not available (required for HTML reports).")
         print("Install via nix: add pkgs.lcov to your devShell, then re-enter with 'nix develop'.")
         sys.exit(1)
+
+
+def _inject_css(html_dir: Path):
+    """Append CSS rules for wrong-exclusion highlighting to gcov.css."""
+    css_path = html_dir / "gcov.css"
+    extra = """
+
+/* Wrong exclusion: line marked cov:excl but actually executed */
+span.wrongExcl {
+  background-color: #e080e0;
+}
+td.coverNumWrong {
+  text-align: right;
+  padding-left: 10px;
+  padding-right: 10px;
+  background-color: #e080e0;
+  font-weight: bold;
+  font-family: sans-serif;
+}
+span.coverLegendWrong {
+  padding-left: 10px;
+  padding-right: 10px;
+  padding-bottom: 2px;
+  background-color: #e080e0;
+}
+"""
+    css_path.write_text(css_path.read_text() + extra)
+
+
+def _color_wrong_lines(gcov_path: Path, wrong_linenos: list[int]):
+    """Color wrongly-excluded lines in a source-view HTML file."""
+    text = gcov_path.read_text()
+    for lineno in wrong_linenos:
+        # Excluded lines have no coverage span, just ': content' in plain text:
+        #   <span id="L{N}"><span class="lineNum">     {N}</span>              : content</span>
+        pattern = rf'(<span id="L{lineno}"><span class="lineNum">[^<]*</span>)(\s+: [^<]*)(</span>)'
+        text = re.sub(pattern, r'\1<span class="wrongExcl">\2</span>\3', text)
+    gcov_path.write_text(text)
+
+
+def _add_source_legend(gcov_path: Path):
+    """Add 'wrong excl' entry to the source-view legend."""
+    text = gcov_path.read_text()
+    text = re.sub(
+        r'(<span class="coverLegendNoCov">not hit</span>)',
+        r'\1\n            <span class="coverLegendWrong">wrong excl</span>',
+        text,
+    )
+    gcov_path.write_text(text)
+
+
+def _process_index(idx_path: Path, html_dir: Path,
+                   file_wrong: dict[str, int], dir_wrong: dict[str, int]):
+    """Add a 'Wrong' column to an index page's coverage table."""
+    text = idx_path.read_text()
+    lines = text.split('\n')
+    idx_rel_dir = str(idx_path.relative_to(html_dir).parent)
+
+    output = []
+    i = 0
+    n = len(lines)
+
+    while i < n:
+        line = lines[i]
+
+        # --- Header row 1: contains 'Line Coverage' colspan ---
+        if 'colspan=4>Line Coverage' in line:
+            # Emit everything up to (and including) the </tr> of this row.
+            while i < n and lines[i].strip() != '</tr>':
+                output.append(lines[i])
+                i += 1
+            # Insert Wrong column header before </tr>
+            indent = lines[i][:len(lines[i]) - len(lines[i].lstrip())]
+            output.append(f'{indent}<td class="tableHead" rowspan=2>Wrong</td>')
+            output.append(lines[i])
+            i += 1
+            continue
+
+        # --- Data row: starts with coverFile or coverDirectory ---
+        if ('<td class="coverFile">' in line or '<td class="coverDirectory">' in line) \
+                and '<a href=' in line:
+            href_match = re.search(r'href="([^"]+)"', line)
+            href = href_match.group(1) if href_match else None
+            is_directory = '<td class="coverDirectory">' in line
+
+            output.append(line)
+            i += 1
+
+            # Collect remaining lines of this row until </tr>.
+            # Use strip() to skip nested </tr> inside the coverBar's inner table.
+            while i < n and lines[i].strip() != '</tr>':
+                output.append(lines[i])
+                i += 1
+
+            # Compute wrong-exclusion count for this row
+            wrong_count = 0
+            if href:
+                if is_directory:
+                    sub_dir = str((Path(idx_rel_dir) / href).parent)
+                    wrong_count = dir_wrong.get(sub_dir, 0)
+                else:
+                    gcov_full = str(Path(idx_rel_dir) / href)
+                    wrong_count = file_wrong.get(gcov_full, 0)
+
+            # Insert Wrong column cell before </tr>
+            indent = lines[i][:len(lines[i]) - len(lines[i].lstrip())]
+            if wrong_count > 0:
+                output.append(f'{indent}<td class="coverNumWrong">{wrong_count}</td>')
+            else:
+                output.append(f'{indent}<td class="coverNumDflt"></td>')
+            output.append(lines[i])
+            i += 1
+            continue
+
+        output.append(line)
+        i += 1
+
+    idx_path.write_text('\n'.join(output))
+
+
+def _post_process_html(html_dir: Path, wrong_exclusions: dict, project_root: Path):
+    """Post-process genhtml output to highlight wrongly-excluded lines.
+
+    Injects CSS, colors source lines, adds legend entries, and appends a
+    'Wrong' column to all coverage report tables.
+    """
+    if not wrong_exclusions:
+        return
+
+    # Build look-up tables keyed by path *relative to html_dir*.
+    # genhtml mirrors the absolute source path under html_dir, e.g.
+    #   SF:/project/main/fastqrab/src/lib.rs
+    #   -> html_dir/project/main/fastqrab/src/lib.rs.gcov.html
+    file_wrong: dict[str, int] = {}   # .gcov.html rel-path -> count
+    dir_wrong: dict[str, int] = {}     # directory rel-path   -> total count
+
+    for src, linenos in wrong_exclusions.items():
+        rel = str(src)[1:]                     # strip leading '/'
+        gcov_rel = rel + '.gcov.html'
+        file_wrong[gcov_rel] = len(linenos)
+        parent = str(Path(gcov_rel).parent)
+        dir_wrong[parent] = dir_wrong.get(parent, 0) + len(linenos)
+
+    # 1. CSS
+    _inject_css(html_dir)
+
+    # 2. Source views: color wrong lines + legend
+    for src, linenos in wrong_exclusions.items():
+        rel = str(src)[1:]
+        gcov_path = html_dir / (rel + '.gcov.html')
+        if gcov_path.exists():
+            _color_wrong_lines(gcov_path, linenos)
+            _add_source_legend(gcov_path)
+
+    # 3. Index tables: add 'Wrong' column
+    for idx_path in sorted(html_dir.rglob('index*.html')):
+        if 'detail' in idx_path.name:
+            continue
+        _process_index(idx_path, html_dir, file_wrong, dir_wrong)
 
 
 def main():
@@ -260,7 +424,7 @@ def main():
 
         # Normalize SF: paths and optionally strip excluded lines.
         # All subsequent consumers (genhtml, summary, coverage.lcov) get this file.
-        excl, files, lf, lh = apply_exclusions_to_lcov(
+        excl, files, lf, lh, wrong_exclusions = apply_exclusions_to_lcov(
             raw_lcov, base_dir=project_root, strip_excl=not args.no_excl
         )
 
@@ -273,6 +437,7 @@ def main():
                 f"--show-details --legend --no-function-coverage --ignore-errors category --quiet",
                 "Rendering HTML report",
             )
+            _post_process_html(html_dir, wrong_exclusions, project_root)
             print(f"  HTML report: {html_dir}/index.html")
             if args.open:
                 try:
@@ -284,6 +449,25 @@ def main():
         # --- Summary / LCOV ---
         if need_summary:
             print_lcov_summary(excl, files, lf, lh)
+
+        # --- Wrong exclusions ---
+        if wrong_exclusions:
+            total_wrong = sum(len(v) for v in wrong_exclusions.values())
+            files_wrong = len(wrong_exclusions)
+            # Compute a sensible display root from the actual source paths
+            # (project_root may be dev/ while sources live under the workspace root)
+            common_parent = Path(os.path.commonpath(
+                [str(p) for p in wrong_exclusions]
+            ))
+            if not common_parent.is_dir():
+                common_parent = common_parent.parent
+            print(f"\n  Wrong exclusions: {total_wrong} line(s) across {files_wrong} file(s)")
+            for src, linenos in sorted(wrong_exclusions.items()):
+                try:
+                    rel = src.relative_to(project_root)
+                except ValueError:
+                    rel = src.relative_to(common_parent)
+                print(f"    {len(linenos):>4d}  {rel}")
 
         if need_lcov:
             shutil.copy(raw_lcov, "coverage.lcov")
