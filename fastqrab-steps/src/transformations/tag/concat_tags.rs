@@ -185,7 +185,7 @@ impl Step for ConcatTags {
                             let mut first = true;
                             for p in parts {
                                 if !first && !self.separator.is_empty() {
-                                    new_value.extend_from_slice(&self.separator.as_bytes());
+                                    new_value.extend_from_slice(self.separator.as_bytes());
                                 } else {
                                     first = false;
                                 }

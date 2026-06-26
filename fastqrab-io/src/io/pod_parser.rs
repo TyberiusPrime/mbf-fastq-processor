@@ -277,8 +277,7 @@ pub fn parse_pods_from_channel(
     for w in workers {
         let _ = w.join();
     }
-    let split_result = collector.join().expect("fastq collector thread panicked");
-    split_result
+    collector.join().expect("fastq collector thread panicked")
 }
 
 #[inline]
@@ -373,19 +372,17 @@ fn demux_chunk(idx: u64, data: &[u8], prev_tail: &[u8]) -> Result<DemuxResult> {
 
     // Fully-contained lines: between consecutive newlines, local index from 0.
     let mut lines: u64 = 1; // the boundary line, completed by `first_nl`
-    let mut local: usize = 0;
     // SIMD newline scan (memchr/AVX2) over the chunk body rather than a scalar
     // byte-by-byte `position`. This loop runs once per FASTQ line across the
     // entire decoded stream, so it dominates parse CPU — profiling the 22 GB
     // count-and-discard run showed ~120 s of user time in this scan+copy path.
     let body = &data[first_nl + 1..];
     let mut line_start = 0usize;
-    for rel in memchr::memchr_iter(b'\n', body) {
+    for (local, rel) in memchr::memchr_iter(b'\n', body).enumerate() {
         let line = &body[line_start..rel];
         observe(line, b"");
         push_line(&mut builders[local & 3], est, strip_cr(line))?;
         lines += 1;
-        local += 1;
         line_start = rel + 1;
     }
     // body[line_start..] is this chunk's trailing partial line — carried by Stage A.
@@ -441,10 +438,10 @@ fn emit_records(cols: Cols, emit: &mut impl FnMut(FastqChunk)) -> Result<()> {
     // as-is). `try_from_columns` verifies seq.len() == qual.len() for every
     // record and that the two layouts are a constant translation, surfacing any
     // mismatch as an error rather than emitting a malformed chunk.
-    let reads = DualStringPod::try_from_columns(seqs, quals).map_err(|_| {
+    let reads = DualStringPod::try_from_columns(seqs, quals).map_err(|e| {
         anyhow!(
             "Sequence and quality must have the same length. Check your input fastq. \
-             Wrapped FASTQ is not supported."
+             Wrapped FASTQ is not supported. Original error: {e:?}"
         )
     })?;
     names.cut_start(1, None); // drop the leading '@' from every header, O(1)
@@ -810,8 +807,8 @@ mod tests {
 
     #[test]
     fn len_guard_accepts_up_to_the_limit_and_rejects_past_it() {
-        assert!(fastq_len_guard(MAX_FASTQ_COLUMN_BYTES - 10, 10).is_ok());
-        assert!(fastq_len_guard(0, MAX_FASTQ_COLUMN_BYTES).is_ok());
+        fastq_len_guard(MAX_FASTQ_COLUMN_BYTES - 10, 10).unwrap();
+        fastq_len_guard(0, MAX_FASTQ_COLUMN_BYTES).unwrap();
         let err = fastq_len_guard(0, MAX_FASTQ_COLUMN_BYTES + 1).unwrap_err();
         assert!(err.to_string().contains("4 GiB"), "got: {err}");
         assert!(fastq_len_guard(MAX_FASTQ_COLUMN_BYTES, 1).is_err());

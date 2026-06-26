@@ -996,10 +996,6 @@ enum ActiveSink {
 
 impl ChunkedRecordWriter {
     /// Construct, validating writability and opening the first chunk.
-    #[expect(
-        clippy::too_many_arguments,
-        reason = "they are all needed at construction time"
-    )]
     #[expect(clippy::items_after_statements, reason = "unix only use statements")]
     pub fn new(
         format: FileFormat,
@@ -1288,7 +1284,6 @@ fn write_hash_sidecar(filename: &Path, hash: &str, suffix: &str) -> Result<()> {
     Ok(())
 }
 
-#[expect(clippy::string_slice, reason = "ascii filename arithmetic")]
 fn renamed_chunk_path(old: &Path, old_digits: usize, new_digits: usize) -> PathBuf {
     // Mirror what `widen_existing` does to a single recorded path.
     let parent = old.parent().expect("Parent failed on path");

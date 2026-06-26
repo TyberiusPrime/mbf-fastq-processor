@@ -143,20 +143,21 @@ impl Step for OutputReport {
             .expect("report_metadata is set in init");
         let json = build_report_json(reports, metadata)?;
 
-        if let Some(writer) = &self.json_writer {
-            if let Some(mut writer) = writer.lock().expect("lock poisoned").take() {
-                writer.write_text_record(json.as_bytes())?;
-                let _ = writer.finish()?;
-            }
+        if let Some(writer) = &self.json_writer
+            && let Some(mut writer) = writer.lock().expect("lock poisoned").take()
+        {
+            writer.write_text_record(json.as_bytes())?;
+            let _ = writer.finish()?;
         }
 
-        if let Some(writer) = &self.html_writer {
-            if let Some(mut writer) = writer.lock().expect("lock poisoned").take() {
-                let html = render_html_report(&json)?;
-                writer.write_text_record(html.as_bytes())?;
-                let _ = writer.finish()?;
-            }
+        if let Some(writer) = &self.html_writer
+            && let Some(mut writer) = writer.lock().expect("lock poisoned").take()
+        {
+            let html = render_html_report(&json)?;
+            writer.write_text_record(html.as_bytes())?;
+            let _ = writer.finish()?;
         }
+
         Ok(())
     }
 }

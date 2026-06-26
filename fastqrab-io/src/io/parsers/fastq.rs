@@ -319,10 +319,6 @@ impl Parser for PodFastqParser {
     }
 }
 
-#[expect(
-    clippy::too_many_lines,
-    reason = "it is a large state machine, therefore many lines"
-)]
 #[cfg(test)]
 mod pod_regroup_tests {
     //! End-to-end coverage of [`PodFastqParser`] forwarding the pod parser's
@@ -403,6 +399,7 @@ mod pod_regroup_tests {
         );
     }
 
+    #[expect(clippy::string_slice, reason="No utf-8 issues in this test data")]
     fn variable_reads(n: usize) -> Reads {
         (0..n)
             .map(|i| {

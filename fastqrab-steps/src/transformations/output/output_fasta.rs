@@ -122,8 +122,8 @@ impl VerifyIn<PartialConfig> for PartialOutputFASTA {
 
 impl TagUser for PartialTaggedVariant<PartialOutputFASTA> {
     fn declare_output_files(&self) -> Option<Vec<OutputDeclaration>> {
-        if let Some(inner) = self.toml_value.as_ref() {
-            Some(declare_text_output(
+        self.toml_value.as_ref().map(|inner| {
+            declare_text_output(
                 FORMAT,
                 inner.suffix.as_ref().and_then(|x| x.as_ref()),
                 inner.compression.as_ref().copied().unwrap_or_default(),
@@ -141,10 +141,8 @@ impl TagUser for PartialTaggedVariant<PartialOutputFASTA> {
                 *inner.stdout.unwrap_ref(),
                 inner.chunksize.as_ref().and_then(|x| x.as_ref()).copied(),
                 self.toml_value.span(),
-            ))
-        } else {
-            None
-        }
+            )
+        })
     }
 }
 

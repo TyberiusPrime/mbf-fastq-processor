@@ -18,7 +18,7 @@ pub struct Inspect {
     pub infix: String,
     #[tpd(skip, default)]
     #[schemars(skip)]
-    #[allow(dead_code)]
+    #[expect(dead_code, reason="only accessed in PartialInspect")]
     resolved_segment_name: String,
     #[tpd(default)]
     pub suffix: Option<String>,
@@ -238,8 +238,7 @@ impl Step for Inspect {
                 name.extend_from_slice(&values.to_bstr(read_idx, |float| float.to_string(), None));
             }
         };
-        let mut read_idx = 0;
-        for (molecule, tag) in iter {
+        for (read_idx, (molecule, tag)) in iter.enumerate() {
             if collected >= self.n {
                 break;
             }
@@ -255,7 +254,6 @@ impl Step for Inspect {
             collector.push((molecule, tag));
 
             collected += 1; //count per molecule, not per segment
-            read_idx += 1;
         }
         self.collected
             .store(collected, std::sync::atomic::Ordering::Relaxed);

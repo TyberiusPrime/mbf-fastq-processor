@@ -97,12 +97,13 @@ impl Step for ConvertToRate {
                 reason = "loss is acceptable, it's going to be within u32 range"
             )]
             for segment in &block.segments {
+                #[expect(clippy::needless_range_loop, reason="Sometimes that's the clearest")]
                 for ii in 0..len {
                     totals[ii] += segment.seq_quals.entry_len(ii) as f64;
                 }
             }
             let values: Vec<f64> = source_iter
-                .zip(totals.into_iter())
+                .zip(totals)
                 .map(|(source, total_len)| {
                     if total_len > 0.0 {
                         source / total_len

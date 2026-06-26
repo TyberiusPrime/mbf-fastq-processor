@@ -229,7 +229,7 @@ impl CellRangerProbeAssigner {
             half_probes: &'a IndexMap<BString, String>,
             resonator: &'a HammingResonator,
         ) -> Option<(&'a BStr, u32)> {
-            if let Some(_) = half_probes.get(half_query) {
+            if half_probes.get(half_query).is_some() {
                 Some((half_query, 0))
             } else {
                 let hits = resonator

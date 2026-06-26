@@ -140,7 +140,7 @@ impl Step for Box<_ReportBaseStatisticsPart2> {
                     None => Box::new(segment.seq_quals.iter_seq()),
                 };
                 for sequence in iter {
-                    update_from_read(storage, &sequence);
+                    update_from_read(storage, sequence);
                 }
             }
         }

@@ -13,7 +13,10 @@ pub struct TagMatches {
     source: ResolvedSourceNoAll,
 
     out_label: TagLabel,
-    #[allow(dead_code)] //translated in verify
+    #[expect(
+        dead_code,
+        reason = "translated in verify, so only accessed in PartialTagMatches"
+    )]
     accepted: Vec<String>,
 
     #[tpd(skip)]
@@ -109,7 +112,7 @@ impl Step for TagMatches {
                     .iter_stringified()
                     .map(|opt_tag_value| {
                         opt_tag_value
-                            .map_or(false, |tag_value| accepted_set.contains(tag_value.as_ref()))
+                            .is_some_and(|tag_value| accepted_set.contains(tag_value.as_ref()))
                     })
                     .collect()
             }

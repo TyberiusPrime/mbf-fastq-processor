@@ -101,7 +101,10 @@ pub struct HammingCorrect {
     final_block_seen: AtomicBool,
 }
 
-#[expect(clippy::missing_fields_in_debug)]
+#[expect(
+    clippy::missing_fields_in_debug,
+    reason = "Thats the reason for the impl"
+)]
 impl std::fmt::Debug for HammingCorrect {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("HammingCorrect")
@@ -345,26 +348,26 @@ impl TagUser for PartialTaggedVariant<PartialHammingCorrect> {
     }
 
     fn declare_output_files(&self) -> Option<Vec<OutputDeclaration>> {
-        if let Some(inner) = self.toml_value.as_ref() {
-            if inner.on_tie_dump_counts.as_ref().is_some_and(|x| *x)
-                && let Some(in_label) = inner.in_label.as_ref()
-            {
-                return Some(vec![OutputDeclaration {
-                    id: "counts".to_string(),
-                    target: WriteTargetConfig::new(
-                        vec![format!("{}.counts", in_label)],
-                        None,
-                        "tsv".to_string(),
-                    ),
-                    sink_config: SinkConfig::new_uncompressed_unhashed(),
-                    format: FileFormat::Text,
-                    chunk_policy: ChunkPolicy::no_chunks(),
-                    bam_options: None,
-                    singleton: true,
-                    span: inner.on_tie_dump_counts.span(),
-                }]);
-            }
+        if let Some(inner) = self.toml_value.as_ref()
+            && inner.on_tie_dump_counts.as_ref().is_some_and(|x| *x)
+            && let Some(in_label) = inner.in_label.as_ref()
+        {
+            return Some(vec![OutputDeclaration {
+                id: "counts".to_string(),
+                target: WriteTargetConfig::new(
+                    vec![format!("{}.counts", in_label)],
+                    None,
+                    "tsv".to_string(),
+                ),
+                sink_config: SinkConfig::new_uncompressed_unhashed(),
+                format: FileFormat::Text,
+                chunk_policy: ChunkPolicy::no_chunks(),
+                bam_options: None,
+                singleton: true,
+                span: inner.on_tie_dump_counts.span(),
+            }]);
         }
+
         None //doesn't count as an output job if unconfigured
     }
 
@@ -492,7 +495,7 @@ fn run_match_phase(
         TagColumn::String(items) => {
             for item in items.iter() {
                 let result = match item {
-                    Some(bstring) => Some(match_sequence(seq_to_idx, resonator, bstring.as_ref())?),
+                    Some(bstring) => Some(match_sequence(seq_to_idx, resonator, bstring)?),
                     None => None,
                 };
                 results.push(MatchSlot {
@@ -505,15 +508,14 @@ fn run_match_phase(
             unreachable!("Validation was meant to prevent this situation. Bug?")
         } // cov:excl-line
     }
-    if needs_qualities {
-        if let TagColumn::Location(col) = input_tags {
-            for (hits, slot) in col.iter().zip(results.iter_mut()) {
-                if !hits.1.is_empty() && matches!(&slot.result, Some(MatchResultOwned::Tie(_))) {
-                    slot.quality = Some(hits.1.into_owned());
-                }
+    if needs_qualities && let TagColumn::Location(col) = input_tags {
+        for (hits, slot) in col.iter().zip(results.iter_mut()) {
+            if !hits.1.is_empty() && matches!(&slot.result, Some(MatchResultOwned::Tie(_))) {
+                slot.quality = Some(hits.1.into_owned());
             }
         }
     }
+
     Ok(results)
 }
 
@@ -833,7 +835,7 @@ impl Step for HammingCorrect {
                 records.sort(); //sort by sequence for easier diffing between runs
                 writer.write_text_record(b"Barcode\tCount\n")?;
                 for record in records {
-                    writer.write_text_record(&record.as_bytes())?;
+                    writer.write_text_record(record.as_bytes())?;
                 }
                 let _ = writer.finish()?;
             }
@@ -1015,7 +1017,7 @@ mod test_correct_barcode_via_base_editing_likelihood {
         // Higher edit-probability (lower Q) wins when counts match.
         let observed = b(b"AAAAAAAA");
         // pos 0 = '!' (Q0, p_edit = 1.0); pos 4 = 'I' (Q40, p_edit = 1e-4).
-        let qual: &[u8] = &[b'!', b'I', b'I', b'I', b'I', b'I', b'I', b'I'];
+        let qual: &[u8] = b"!bIbIbIbIbIbIbI";
         // cand1 differs at pos 0 (low quality -> high p_edit -> wins)
         // cand2 differs at pos 4 (high quality -> low p_edit -> loses)
         let candidates = [(b(b"TAAAAAAA"), 0usize), (b(b"AAAATAAA"), 0usize)];
@@ -1037,7 +1039,7 @@ mod test_correct_barcode_via_base_editing_likelihood {
     fn ambiguous_returns_none_below_threshold() {
         // Two equal candidates -> each gets 0.5 of the mass; 0.99 threshold not reached.
         let observed = b(b"AAAAAAAA");
-        let qual: &[u8] = &[b'!', b'I', b'I', b'I', b'!', b'I', b'I', b'I'];
+        let qual: &[u8] = b"!III!III";
         // Both diff positions are Q0 -> p_edit = 1, counts equal -> 50/50 split.
         let candidates = [(b(b"TAAAAAAA"), 5usize), (b(b"AAAATAAA"), 5usize)];
         let res = correct_barcode_via_base_editing_likelihood(0.99, observed, qual, &candidates);
@@ -1053,7 +1055,7 @@ mod test_correct_barcode_via_base_editing_likelihood {
         // Two candidates at the same diff position, with extremely high quality,
         // should still be distinguishable by count.
         let observed = b(b"AAAA");
-        let qual: &[u8] = &[b'~', b'~', b'~', b'~']; // '~' = 126, beyond Q66
+        let qual: &[u8] = b"~~~~"; // '~' = 126, beyond Q66
         let candidates = [(b(b"TAAA"), 0usize), (b(b"CAAA"), 10usize)];
         let res = correct_barcode_via_base_editing_likelihood(0.5, observed, qual, &candidates);
         assert_eq!(res, Some(b(b"CAAA")));

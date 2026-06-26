@@ -53,24 +53,24 @@ impl VerifyIn<PartialConfig> for PartialPolyTail {
             }
         });
         let fastp_enabled = self.fastp_mode.as_ref().copied().flatten().unwrap_or(false);
-        if fastp_enabled {
-            if let Some(base) = self.base.as_ref()
-                && *base != b'G'
-            {
-                let spans = vec![
-                    (
-                        self.base.span(),
-                        "This must be 'G' when fastp_mode is enabled".to_string(),
-                    ),
-                    (
-                        self.fastp_mode.span(),
-                        "fastp_mode is enabled here".to_string(),
-                    ),
-                ];
-                self.fastp_mode.state = TomlValueState::Custom { spans };
-                self.fastp_mode.help = Some("Set base = 'G' or disable fastp_mode.".to_string());
-            }
+        if fastp_enabled
+            && let Some(base) = self.base.as_ref()
+            && *base != b'G'
+        {
+            let spans = vec![
+                (
+                    self.base.span(),
+                    "This must be 'G' when fastp_mode is enabled".to_string(),
+                ),
+                (
+                    self.fastp_mode.span(),
+                    "fastp_mode is enabled here".to_string(),
+                ),
+            ];
+            self.fastp_mode.state = TomlValueState::Custom { spans };
+            self.fastp_mode.help = Some("Set base = 'G' or disable fastp_mode.".to_string());
         }
+
         Ok(())
     }
 }

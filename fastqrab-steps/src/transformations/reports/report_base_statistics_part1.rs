@@ -117,7 +117,7 @@ impl Step for Box<_ReportBaseStatisticsPart1> {
                     None => Box::new(read_block.seq_quals.iter_qual()),
                 };
                 for read in iter {
-                    update_from_read(storage, &read);
+                    update_from_read(storage, read);
                 }
             }
         }

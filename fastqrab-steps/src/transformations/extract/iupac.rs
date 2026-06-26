@@ -123,38 +123,34 @@ impl Step for IUPAC {
                             return Some(hit);
                         }
                     }
-                    return None;
+                    None
                 }
-                TieBreak::LeftMost => {
-                    return self
-                        .search
-                        .iter()
-                        .filter_map(|query| {
-                            find_iupac(
-                                read_seq,
-                                query,
-                                self.anchor,
-                                self.max_mismatches,
-                                self.max_anchor_distance,
-                            )
-                        })
-                        .min_by_key(|hit| hit.start);
-                }
-                TieBreak::RightMost => {
-                    return self
-                        .search
-                        .iter()
-                        .filter_map(|query| {
-                            find_iupac(
-                                read_seq,
-                                query,
-                                self.anchor,
-                                self.max_mismatches,
-                                self.max_anchor_distance,
-                            )
-                        })
-                        .max_by_key(|hit| hit.start);
-                }
+                TieBreak::LeftMost => self
+                    .search
+                    .iter()
+                    .filter_map(|query| {
+                        find_iupac(
+                            read_seq,
+                            query,
+                            self.anchor,
+                            self.max_mismatches,
+                            self.max_anchor_distance,
+                        )
+                    })
+                    .min_by_key(|hit| hit.start),
+                TieBreak::RightMost => self
+                    .search
+                    .iter()
+                    .filter_map(|query| {
+                        find_iupac(
+                            read_seq,
+                            query,
+                            self.anchor,
+                            self.max_mismatches,
+                            self.max_anchor_distance,
+                        )
+                    })
+                    .max_by_key(|hit| hit.start),
             }
         });
 

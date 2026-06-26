@@ -91,7 +91,7 @@ impl Step for Rename {
                 }
                 new_names.push(&renamed);
             }
-            segment.names = new_names.finish().into();
+            segment.names = new_names.finish();
         }
 
         Ok((block, true))

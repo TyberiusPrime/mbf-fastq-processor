@@ -435,10 +435,10 @@ pub(crate) fn verify_record_targets(
     let valid: std::collections::HashSet<&String> = seg_order.iter().collect();
     let stdout_set = allow_stdout && matches!(stdout.as_ref(), Some(true));
 
-    if let Some(Some(output_segments)) = output.as_mut() {
-        if validate_segment_names(output_segments, &valid, "output segments") {
-            output.state = TomlValueState::Nested;
-        }
+    if let Some(Some(output_segments)) = output.as_mut()
+        && validate_segment_names(output_segments, &valid, "output segments")
+    {
+        output.state = TomlValueState::Nested;
     }
 
     if let Some(Some(interleave_order)) = interleave.as_mut() {
@@ -480,10 +480,8 @@ pub(crate) fn verify_record_targets(
         && interleaved_segments.is_empty()
     {
         true
-    } else if let Some(None) = interleave.as_ref() {
-        true
     } else {
-        false
+        matches!(interleave.as_ref(), Some(None))
     };
     if let Some(Some(output_segments)) = output.as_ref()
         && output_segments.is_empty()
@@ -531,7 +529,7 @@ fn validate_segment_names(
             if valid.contains(segment_str) {
                 if !seen.insert(segment_str.clone()) {
                     segment.help = Some(format!("Remove all but one '{segment_str}'"));
-                    segment.state = TomlValueState::new_validation_failed(&format!(
+                    segment.state = TomlValueState::new_validation_failed(format!(
                         "Segment is duplicated in {container}"
                     ));
                     any_failed = true;

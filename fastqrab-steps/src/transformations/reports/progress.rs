@@ -236,7 +236,7 @@ impl Step for Progress {
             .unwrap_or_else(std::time::Instant::now)
             .elapsed()
             .as_secs_f64();
-        let count: usize = self.total_count.load(std::sync::atomic::Ordering::SeqCst) as usize;
+        let count: usize = self.total_count.load(std::sync::atomic::Ordering::SeqCst);
         let msg = format!(
             "Took {:.2} s ({}) to process {} molecules for an effective rate of {:} molecules/s",
             elapsed,
@@ -273,7 +273,7 @@ impl Step for Progress {
             elapsed,
             format_seconds_to_hhmmss(elapsed as u64)
         );
-        self.output(&msg).ok(); //swallow error. If it fails here, we ignore that
+        let _  = self.output(&msg); //swallow error. If it fails here, we ignore that
 
         if let Some(writer) = self.writer.lock().expect("poisoned").take() {
             let _ = writer.finish().ok(); //we choose to ignore if finishing the progress writer

@@ -116,7 +116,7 @@ impl Step for FillMissing {
             (TagColumn::String(prim), TagColumn::String(sec)) => TagColumn::String(
                 prim.iter()
                     .zip(sec.iter())
-                    .map(|(p, s)| p.clone().or_else(|| s.clone()))
+                    .map(|(p, s)| p.or(s))
                     .collect(),
             ),
             (TagColumn::Location(prim), TagColumn::String(sec)) => TagColumn::String(
@@ -135,7 +135,7 @@ impl Step for FillMissing {
                     .map(|(prim_str, sec_hit)| {
                         prim_str
                             .map(Cow::Borrowed)
-                            .or_else(|| (!sec_hit.is_empty()).then(|| sec_hit))
+                            .or_else(|| (!sec_hit.is_empty()).then_some(sec_hit))
                     })
                     .collect(),
             ),

@@ -161,7 +161,7 @@ impl Step for Box<_ReportDuplicateCount> {
                 };
 
                 for seq in iter {
-                    update_from_read(storage, &seq);
+                    update_from_read(storage, seq);
                 }
             }
         }

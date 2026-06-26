@@ -127,6 +127,7 @@ impl FastQChunk {
     //
 
     /// Length of all sequences, added up
+    #[must_use]
     pub fn total_seq_len(&self) -> usize {
         self.seq_quals.iter_seq_lens().sum()
     }

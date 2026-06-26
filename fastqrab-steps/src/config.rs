@@ -1856,33 +1856,33 @@ impl PartialConfig {
 
         // Second pass (mutable): report conflicts.
         for ((infix_parts, _second_suffix, suffix), entries) in key_to_entries {
-            if entries.len() > 1 {
-                if let Some(transforms) = self.transform.value.as_mut() {
-                    let spans: Vec<_> = entries
-                        .iter()
-                        .enumerate()
-                        .map(|(n, (_, span))| {
-                            (
-                                span.clone(),
-                                format!(
-                                    "{}step writing to this file",
-                                    if n == 0 { "1st " } else { "2nd " }
-                                ),
-                            )
-                        })
-                        .collect();
-                    let file_hint = if infix_parts.is_empty() {
-                        format!("suffix .{suffix}") //cov:excl-line
-                    } else {
-                        format!("infix '{}', suffix .{suffix}", infix_parts.join("_"))
-                    };
-                    transforms[entries[0].0].state = TomlValueState::Custom { spans };
-                    transforms[entries[0].0].help = Some(format!(
-                        "Two steps would write to the same output file ({file_hint}).\n\
+            if entries.len() > 1
+                && let Some(transforms) = self.transform.value.as_mut()
+            {
+                let spans: Vec<_> = entries
+                    .iter()
+                    .enumerate()
+                    .map(|(n, (_, span))| {
+                        (
+                            span.clone(),
+                            format!(
+                                "{}step writing to this file",
+                                if n == 0 { "1st " } else { "2nd " }
+                            ),
+                        )
+                    })
+                    .collect();
+                let file_hint = if infix_parts.is_empty() {
+                    format!("suffix .{suffix}") //cov:excl-line
+                } else {
+                    format!("infix '{}', suffix .{suffix}", infix_parts.join("_"))
+                };
+                transforms[entries[0].0].state = TomlValueState::Custom { spans };
+                transforms[entries[0].0].help = Some(format!(
+                    "Two steps would write to the same output file ({file_hint}).\n\
                         Change the infix in one of them to avoid the conflict."
-                    ));
-                } //cov:excl-line
-            }
+                ));
+            } //cov:excl-line
         }
 
         // Third pass (mutable): report stdout errors.
@@ -2247,20 +2247,18 @@ impl Config {
                 compression,
                 ..
             }) = transform
+                && matches!(compression, CompressionFormat::Gzip)
             {
-                if matches!(compression, CompressionFormat::Gzip) {
-                    return true;
-                }
+                return true;
             }
 
             if let Transformation::OutputFASTQ(crate::transformations::output::OutputFASTQ {
                 compression,
                 ..
             }) = transform
+                && matches!(compression, CompressionFormat::Gzip)
             {
-                if matches!(compression, CompressionFormat::Gzip) {
-                    return true;
-                }
+                return true;
             }
         }
         false

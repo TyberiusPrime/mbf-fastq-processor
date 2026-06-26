@@ -146,6 +146,7 @@ pub struct _ReportTagHistogram {
     #[tpd(skip)]
     pub tag_type: TagValueType,
     #[tpd(skip)]
+    #[expect(clippy::type_complexity, reason="Don't see teh point in refactoring it")]
     pub data: Arc<Mutex<HashMap<ThreadId, Arc<Mutex<DemultiplexedData<HistogramData>>>>>>,
 }
 

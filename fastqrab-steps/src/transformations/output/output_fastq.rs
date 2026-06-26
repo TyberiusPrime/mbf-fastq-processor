@@ -223,7 +223,7 @@ pub(super) fn declare_text_output(
         format,
         suffix: format.get_suffix(compression, suffix_override),
         segments,
-        interleave: interleave.as_deref().map(|v| &**v),
+        interleave: interleave.map(|v| &**v),
         stdout,
         sink_config: sink_config(
             compression,

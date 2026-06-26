@@ -24,13 +24,13 @@ impl Step for BlockSizes {
         _input_info: &crate::transformations::InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        self.progress_output.as_ref().map(|progress| {
+        if let Some(progress) = self.progress_output.as_ref() {
             let _ = progress.output(&format!(
                 "Block_no: {}, Blocksize: {}",
                 block.block_no(),
                 block.segments[0].len()
             ));
-        });
+        }
         Ok((block, true))
     }
 }

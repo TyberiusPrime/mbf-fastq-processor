@@ -204,7 +204,7 @@ impl Step for Regex {
             if let Some(hit) = re_hit {
                 let mut out = Vec::new();
                 //let g = hit.get(0).expect("Regex should always match");
-                hit.expand(&replacement, &mut out);
+                hit.expand(replacement, &mut out);
                 for (tag_name, tags) in block_tags {
                     // only those we listed in use_tags.
                     let query = format!("[[{tag_name}]]");
