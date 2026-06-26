@@ -39,6 +39,12 @@ struct Args {
     #[arg(short = 'v', long)]
     verbose: bool,
 
+    /// Peek mode: emit at most this many decoded bytes on stdout, then exit
+    /// without decoding the rest of the input. Used by format detection, which
+    /// only needs the first few decoded bytes to tell BAM/FASTA/FASTQ apart.
+    #[arg(long)]
+    peek_bytes: Option<usize>,
+
     /// File descriptor of the inherited shared-memory region (`memfd`).
     #[arg(long)]
     shm_fd: Option<i32>,
@@ -84,12 +90,19 @@ pub fn run() -> Result<()> {
         });
     }
 
-    let chunk_size = args.chunk_size;
+    // Peek mode only wants the first few decoded bytes, so cap the chunk size
+    // (don't inflate a multi-MiB chunk for a 4-byte answer) and decode serially.
+    let peek_bytes = args.peek_bytes;
+    let chunk_size = match peek_bytes {
+        Some(_) => args.chunk_size.min(PEEK_CHUNK_SIZE),
+        None => args.chunk_size,
+    };
+    let threads = if peek_bytes.is_some() { 1 } else { args.threads };
     let verbose = args.verbose;
     let producer = match args.format {
         Format::Gzip => {
             let cfg = Config {
-                num_threads: args.threads,
+                num_threads: threads,
                 chunk_size_bytes: chunk_size,
                 verbose: if verbose {
                     Verbosity::On
@@ -114,6 +127,11 @@ pub fn run() -> Result<()> {
                 .context("--shm-slot-size is required together with --shm-fd")?;
             run_shm(fd, slots, slot_size, &rx, &recycle_tx, producer)?;
             drop(recycle_tx);
+        }
+        None if peek_bytes.is_some() => {
+            // Emits the head then returns, leaving the producer unjoined if it is
+            // still decoding the rest (which we don't need).
+            run_peek(&rx, peek_bytes.unwrap_or(0), producer)?;
         }
         None => {
             run_pipe(&rx, &recycle_tx, args.verbose)?;
@@ -174,6 +192,47 @@ fn report_throughput(bytes_since_last: u64, total_bytes: u64, elapsed_secs: f64,
         avg,
         total_bytes as f64 / (1024.0 * 1024.0),
     );
+}
+
+/// Chunk size used in peek mode: large enough that the first decoded chunk always
+/// covers the format-discriminating head, small enough to be cheap to inflate.
+const PEEK_CHUNK_SIZE: usize = 64 * 1024;
+
+/// Peek mode: write at most `n` decoded bytes to stdout, then stop without
+/// decoding the rest of the input. Format detection only needs the first few
+/// decoded bytes; returning as soon as we have them (rather than running to EOF or
+/// waiting to be killed) lets the parent reap us cleanly — which also lets a
+/// coverage build's profiling runtime flush its `.profraw` on the way out.
+///
+/// If the stream ends before we fill the head, the producer has finished, so we
+/// join it and surface any decode error (e.g. a truncated gzip) just as the
+/// full-read path does — otherwise detection would silently treat a broken input
+/// as empty and the error would only surface later, mid-read.
+fn run_peek(
+    rx: &Receiver<Arc<Vec<u8>>>,
+    n: usize,
+    producer: std::thread::JoinHandle<Result<()>>,
+) -> Result<()> {
+    let stdout = std::io::stdout();
+    let mut out = stdout.lock();
+    let mut written = 0usize;
+    while written < n {
+        let Ok(chunk) = rx.recv() else {
+            // Channel disconnected: every sender dropped, so the producer is done
+            // and joining it won't block. Surface its error, if any.
+            let _ = out.flush();
+            return producer.join().expect("producer thread panicked");
+        };
+        let take = (n - written).min(chunk.len());
+        if out.write_all(&chunk[..take]).is_err() {
+            break; // consumer already has what it needs
+        }
+        written += take;
+    }
+    // Head delivered. The producer may still be mid-decode; we deliberately leave
+    // it unjoined (detached at process exit) rather than wait out the rest.
+    let _ = out.flush();
+    Ok(())
 }
 
 fn run_pipe(
@@ -340,11 +399,25 @@ fn apply_landlock(input: &std::path::Path) -> Result<()> {
     use landlock::{ABI, AccessFs, PathBeneath, PathFd, Ruleset, RulesetAttr, RulesetCreatedAttr};
 
     let abi = ABI::V1;
-    Ruleset::default()
+    let mut ruleset = Ruleset::default()
         .handle_access(AccessFs::from_read(abi))?
         .create()?
-        .add_rule(PathBeneath::new(PathFd::new(input)?, AccessFs::from_read(abi)))?
-        .restrict_self()?;
+        .add_rule(PathBeneath::new(PathFd::new(input)?, AccessFs::from_read(abi)))?;
+
+    // Under coverage instrumentation (cargo-llvm-cov sets LLVM_PROFILE_FILE), the
+    // LLVM profiling runtime writes a .profraw on exit. With the default `%m`
+    // online-merge pattern it *opens that file for reading* to merge counters
+    // across processes — a read outside the input path, which this read-only
+    // sandbox would otherwise deny ("Permission denied", leaking onto stderr and
+    // breaking tests). Allow reads beneath the profile directory when present.
+    if let Some(profile) = std::env::var_os("LLVM_PROFILE_FILE")
+        && let Some(dir) = std::path::Path::new(&profile).parent()
+        && let Ok(fd) = PathFd::new(dir)
+    {
+        ruleset = ruleset.add_rule(PathBeneath::new(fd, AccessFs::from_read(abi)))?;
+    }
+
+    ruleset.restrict_self()?;
     Ok(())
 }
 

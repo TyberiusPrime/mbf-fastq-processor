@@ -398,10 +398,15 @@ pub fn detect_input_format(path: &Path) -> Result<(DetectedInputFormat, Compress
     let compression = sniff_compression(&magic[..magic_n]);
     let (head, head_n) = match DecompressorFormat::from_compression(compression) {
         Some(child_format) => {
-            let mut dec =
-                spawn_decompressor(path, child_format, ThreadCount(NonZero::<usize>::MIN))?;
+            let mut dec = spawn_decompressor(
+                path,
+                child_format,
+                ThreadCount(NonZero::<usize>::MIN),
+                Some(DETECT_HEAD_BYTES),
+            )?;
             read_head(&mut dec)?
-            // `dec` drops here, reaping the decompressor child.
+            // `dec` drops here, reaping the decompressor child (which exits on its
+            // own once it has emitted the peeked head).
         }
         None => {
             let mut reader = reader;
@@ -457,6 +462,7 @@ fn detect_input_format_from_handle(file: &mut ex::fs::File) -> Result<DetectedIn
                 Box::new(std::io::Cursor::new(prefix)),
                 child_format,
                 ThreadCount(NonZero::<usize>::MIN),
+                Some(DETECT_HEAD_BYTES),
             )?;
             read_head(&mut dec)?
             // `dec` drops here, reaping the child and ending the feeder thread.
@@ -480,6 +486,7 @@ pub fn open_text_file(maybe_compressed_filename: impl AsRef<Path>) -> Result<Box
             path,
             child_format,
             ThreadCount(NonZero::<usize>::MIN),
+            None,
         )?)),
         None => Ok(reader),
     }
@@ -583,11 +590,12 @@ pub fn open_decompressed_reader(
         DecompressionOptions::Default => ThreadCount(NonZero::<usize>::MIN),
     };
     let decoded: Box<dyn Read + Send> = match filename {
-        Some(path) => Box::new(spawn_decompressor(path, child_format, thread_count)?),
+        Some(path) => Box::new(spawn_decompressor(path, child_format, thread_count, None)?),
         None => Box::new(spawn_decompressor_from_reader(
             reader,
             child_format,
             thread_count,
+            None,
         )?),
     };
     Ok((decoded, compression))
@@ -609,6 +617,10 @@ pub struct DecompressorReader {
     /// Set once we've reached EOF and verified the child's exit, so a reader that
     /// keeps calling `read` past EOF doesn't re-`wait` an already-reaped child.
     exit_verified: bool,
+    /// True if the child was spawned in `--peek-bytes` mode: it emits a bounded
+    /// head and then exits on its own, so drop reaps it cleanly rather than
+    /// killing it (see [`DecompressorReader::drop`]).
+    peek: bool,
 }
 
 impl Read for DecompressorReader {
@@ -639,20 +651,39 @@ impl Read for DecompressorReader {
 
 impl Drop for DecompressorReader {
     fn drop(&mut self) {
-        // Best-effort: if the consumer drained to EOF the child has already
-        // exited and `kill` is a no-op; if it stopped early, this unblocks it.
+        if self.peek {
+            // Peek child emits its bounded head and then exits on its own, so just
+            // reap it — no SIGKILL. (Killing would be both pointless and harmful: a
+            // SIGKILL racing the child's exit can truncate the coverage profiling
+            // runtime's .profraw.) Draining any head bytes we didn't read lets it
+            // reach that exit without blocking on a full pipe.
+            let _ = std::io::copy(&mut self.stdout, &mut std::io::sink());
+            let _ = self.child.wait();
+            return;
+        }
+        // Full-stream reader: if the consumer stopped early, kill to abort the
+        // (possibly long) decode rather than draining the whole input. If it
+        // already drained to EOF the child has exited and `kill` is a no-op.
         let _ = self.child.kill();
         let _ = self.child.wait();
     }
 }
 
+/// Number of leading decoded bytes format detection needs to classify an input
+/// (`BAM\x01` is the longest discriminator). Passed to the decompressor's peek
+/// mode so it stops after emitting this much instead of decoding the whole input.
+const DETECT_HEAD_BYTES: usize = 4;
+
 /// Build the decompressor command shared by the path and stdin spawners.
 /// Invokes `fastqrab __decompressor` with `--format`, `-P` threads, and the
-/// positional input (`-` ⇒ stdin). stdout piped, stderr inherited.
+/// positional input (`-` ⇒ stdin). stdout piped, stderr inherited. When
+/// `peek_bytes` is set, adds `--peek-bytes`, so the child emits only that many
+/// decoded bytes and then exits (format detection).
 fn decompressor_command(
     input: &std::ffi::OsStr,
     format: DecompressorFormat,
     thread_count: ThreadCount,
+    peek_bytes: Option<usize>,
 ) -> Result<Command> {
     let exe =
         find_decompressor().context("could not determine fastqrab binary path for decompressor")?;
@@ -661,8 +692,11 @@ fn decompressor_command(
         .arg("--format")
         .arg(format.as_arg())
         .arg("-P")
-        .arg(thread_count.0.to_string())
-        .arg(input)
+        .arg(thread_count.0.to_string());
+    if let Some(n) = peek_bytes {
+        cmd.arg("--peek-bytes").arg(n.to_string());
+    }
+    cmd.arg(input)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
     Ok(cmd)
@@ -697,8 +731,9 @@ pub fn spawn_decompressor(
     filename: &Path,
     format: DecompressorFormat,
     thread_count: ThreadCount,
+    peek_bytes: Option<usize>,
 ) -> Result<DecompressorReader> {
-    let mut cmd = decompressor_command(filename.as_os_str(), format, thread_count)?;
+    let mut cmd = decompressor_command(filename.as_os_str(), format, thread_count, peek_bytes)?;
     let mut child = cmd.spawn().context(format!(
         "Failed to spawn decompressor subprocess for file: {}.",
         filename.display()
@@ -718,6 +753,7 @@ pub fn spawn_decompressor(
         child,
         _feeder: None,
         exit_verified: false,
+        peek: peek_bytes.is_some(),
     })
 }
 
@@ -729,8 +765,9 @@ pub fn spawn_decompressor_from_reader(
     mut input: Box<dyn Read + Send>,
     format: DecompressorFormat,
     thread_count: ThreadCount,
+    peek_bytes: Option<usize>,
 ) -> Result<DecompressorReader> {
-    let mut cmd = decompressor_command(std::ffi::OsStr::new("-"), format, thread_count)?;
+    let mut cmd = decompressor_command(std::ffi::OsStr::new("-"), format, thread_count, peek_bytes)?;
     cmd.stdin(Stdio::piped());
     let mut child = cmd
         .spawn()
@@ -759,6 +796,7 @@ pub fn spawn_decompressor_from_reader(
         child,
         _feeder: Some(feeder),
         exit_verified: false,
+        peek: peek_bytes.is_some(),
     })
 }
 
