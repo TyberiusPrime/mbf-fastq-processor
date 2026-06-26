@@ -687,11 +687,13 @@ dependencies = [
  "indexmap",
  "itertools 0.14.0",
  "json_value_merge",
+ "libc",
  "mimalloc",
  "mutants 0.0.3",
  "noodles",
  "noodles-core",
  "regex",
+ "rusty-rapidgzip",
  "schemars",
  "serde_json",
  "stringpod",
@@ -719,18 +721,6 @@ dependencies = [
  "toml-pretty-deser",
  "toml_edit",
  "typed_floats",
-]
-
-[[package]]
-name = "fastqrab-decompressor"
-version = "0.9.1"
-dependencies = [
- "anyhow",
- "clap",
- "crossbeam",
- "libc",
- "rusty-rapidgzip",
- "zstd",
 ]
 
 [[package]]

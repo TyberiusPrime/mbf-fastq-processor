@@ -315,6 +315,12 @@ fn handle_toml_arg(config_file: Option<&String>) -> PathBuf {
 /// # Panics
 /// on friendly panic test
 pub fn entry_point() -> Result<()> {
+    // Internal decompressor dispatch: `fastqrab __decompressor <args...>`.
+    // Checked before build_cli() so the subcommand never needs to be defined there.
+    if std::env::args_os().nth(1).as_deref() == Some(std::ffi::OsStr::new("__decompressor")) {
+        return crate::decompressor::run();
+    }
+
     // Support environment-based completion generation (modern approach)
     // Usage: COMPLETE=bash fastqrab
     if let Ok(shell_str) = std::env::var("COMPLETE")

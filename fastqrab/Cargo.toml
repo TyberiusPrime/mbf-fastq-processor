@@ -35,7 +35,7 @@ workspace = true
 	anyhow = {workspace = true}
 	bstr = {workspace = true}
 	clap_complete = {workspace = true}
-	clap = {workspace = true}
+	clap = { workspace = true, features = ["derive"] }
 	crossbeam = {workspace = true}
 	ctrlc = "3.5"
 	ex = {workspace = true}
@@ -46,7 +46,10 @@ workspace = true
     fastqrab-io = {workspace = true}
     fastqrab-steps = {workspace = true}
     fastqrab-config = {workspace = true}
+    libc = {workspace = true}
     mimalloc = {workspace = true}
+    rusty-rapidgzip = {workspace = true}
+    zstd = {workspace = true}
 	mutants = {workspace = true}
 	noodles = {workspace = true}
 	noodles-core = {workspace = true}

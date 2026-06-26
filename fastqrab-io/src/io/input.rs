@@ -146,7 +146,7 @@ impl PartialInputOptions {
                             .to_string(),
                     };
                     self.use_rapidgzip.help = Some(
-                                "The 'fastqrab-decompressor' binary must sit next to the fastqrab binary. Set use_rapidgzip to false (or leave off for auto-detect) if it is unavailable.".to_string(),
+                                "The fastqrab binary path could not be determined. Set use_rapidgzip to false (or leave off for auto-detect).".to_string(),
                             );
                 }
             }
@@ -532,30 +532,19 @@ fn open_stdin() -> Result<ex::fs::File> {
     }
 }
 
-/// Locate our out-of-process decompressor: the `fastqrab-decompressor` crate's
-/// binary, which must sit right next to the running fastqrab binary. The name is
-/// derived by suffixing the running executable's file name with `-decompressor`,
-/// so a renamed `fastqrab_0.9.1` looks for a sibling `fastqrab_0.9.1-decompressor`.
+/// Locate the binary to spawn for out-of-process decompression.
 ///
-/// The `FASTQRAB_DECOMPRESSOR` environment variable overrides this lookup with an
-/// explicit path. This keeps integration tests hermetic (they can point at a
-/// freshly built binary regardless of target-dir layout) and lets packagers
-/// relocate the decompressor away from the main binary.
+/// The decompressor is now a subcommand of the main fastqrab binary
+/// (`fastqrab __decompressor …`), so this simply returns the running
+/// executable's path. The `FASTQRAB_DECOMPRESSOR` environment variable
+/// overrides the lookup — useful in tests that point at a specific binary.
 #[must_use]
 pub fn find_decompressor() -> Option<PathBuf> {
     if let Some(path) = std::env::var_os("FASTQRAB_DECOMPRESSOR") {
         let path = PathBuf::from(path);
         return path.exists().then_some(path);
     }
-    let current = std::env::current_exe().ok()?;
-    let dir = current.parent()?;
-    let name = current.file_name()?.to_str()?;
-    let candidate = dir.join(format!("{name}-decompressor"));
-    if candidate.exists() {
-        Some(candidate)
-    } else {
-        None
-    }
+    std::env::current_exe().ok()
 }
 
 /// Open a (possibly compressed) byte stream for a FASTQ/FASTA input. gzip/zstd is
@@ -611,6 +600,7 @@ pub fn open_decompressed_reader(
 /// and waits it so we don't leak a zombie.
 pub struct DecompressorReader {
     stdout: std::process::ChildStdout,
+    stderr: std::process::ChildStderr,
     child: std::process::Child,
     /// For path-less inputs: the thread copying our input into the child's stdin.
     /// Killing the child on drop closes its stdin, so this thread finishes on its
@@ -631,10 +621,15 @@ impl Read for DecompressorReader {
             // drops us before EOF, so this never fires for those.)
             self.exit_verified = true;
             let status = self.child.wait()?;
+            let mut stderr = Vec::new();
+            self.stderr.read_to_end(&mut stderr)?;
+            let stderr: String =  String::from_utf8_lossy(&stderr).into_owned();
             if !status.success() {
                 return Err(std::io::Error::new(
                     std::io::ErrorKind::InvalidData,
-                    format!("fastqrab-decompressor exited unsuccessfully: {status}"),
+                    format!(
+                        "decompressor subprocess exited unsuccessfully: {status}. \nStderr was '''\n{stderr}'''"
+                    ),
                 ));
             }
         }
@@ -651,24 +646,25 @@ impl Drop for DecompressorReader {
     }
 }
 
-/// Build the `fastqrab-decompressor` command shared by the path and stdin
-/// spawners: `--format`, `-P` threads, positional input (`-` ⇒ stdin), stdout
-/// piped, stderr inherited.
+/// Build the decompressor command shared by the path and stdin spawners.
+/// Invokes `fastqrab __decompressor` with `--format`, `-P` threads, and the
+/// positional input (`-` ⇒ stdin). stdout piped, stderr inherited.
 fn decompressor_command(
     input: &std::ffi::OsStr,
     format: DecompressorFormat,
     thread_count: ThreadCount,
 ) -> Result<Command> {
-    let decompressor = find_decompressor()
-        .context("fastqrab-decompressor binary not found next to the fastqrab binary")?;
-    let mut cmd = Command::new(decompressor);
-    cmd.arg("--format")
+    let exe =
+        find_decompressor().context("could not determine fastqrab binary path for decompressor")?;
+    let mut cmd = Command::new(exe);
+    cmd.arg("__decompressor")
+        .arg("--format")
         .arg(format.as_arg())
         .arg("-P")
         .arg(thread_count.0.to_string())
         .arg(input)
         .stdout(Stdio::piped())
-        .stderr(Stdio::inherit());
+        .stderr(Stdio::piped());
     Ok(cmd)
 }
 
@@ -704,16 +700,21 @@ pub fn spawn_decompressor(
 ) -> Result<DecompressorReader> {
     let mut cmd = decompressor_command(filename.as_os_str(), format, thread_count)?;
     let mut child = cmd.spawn().context(format!(
-        "Failed to spawn fastqrab-decompressor process for file: {}.",
+        "Failed to spawn decompressor subprocess for file: {}.",
         filename.display()
     ))?; // cov:excl-line
     let stdout = child
         .stdout
         .take()
-        .context("Failed to capture fastqrab-decompressor stdout")?;
+        .context("Failed to capture decompressor subprocess stdout")?;
+    let stderr = child
+        .stderr
+        .take()
+        .context("Failed to capture decompressor subprocess stderr")?;
     enlarge_stdout_pipe(&stdout);
     Ok(DecompressorReader {
         stdout,
+        stderr,
         child,
         _feeder: None,
         exit_verified: false,
@@ -733,7 +734,7 @@ pub fn spawn_decompressor_from_reader(
     cmd.stdin(Stdio::piped());
     let mut child = cmd
         .spawn()
-        .context("Failed to spawn fastqrab-decompressor process (stdin mode)")?;
+        .context("Failed to spawn decompressor subprocess (stdin mode)")?;
     let mut stdin = child
         .stdin
         .take()
@@ -741,7 +742,11 @@ pub fn spawn_decompressor_from_reader(
     let stdout = child
         .stdout
         .take()
-        .context("Failed to capture fastqrab-decompressor stdout")?;
+        .context("Failed to capture decompressor subprocess stdout")?;
+    let stderr = child
+        .stderr
+        .take()
+        .context("Failed to capture decompressor subprocess stderr")?;
     enlarge_stdout_pipe(&stdout);
     // Pump our input into the child. A broken pipe (child gone / early stop) just
     // ends the copy; it is not an error we can act on here.
@@ -750,6 +755,7 @@ pub fn spawn_decompressor_from_reader(
     });
     Ok(DecompressorReader {
         stdout,
+        stderr,
         child,
         _feeder: Some(feeder),
         exit_verified: false,
@@ -855,8 +861,8 @@ pub fn spawn_decompressor_shm(
     slots: usize,
     slot_size: usize,
 ) -> Result<ShmDecompressor> {
-    let decompressor = find_decompressor()
-        .context("fastqrab-decompressor binary not found next to the fastqrab binary")?;
+    let decompressor =
+        find_decompressor().context("could not determine fastqrab binary path for decompressor")?;
     let total = slots
         .checked_mul(slot_size)
         .context("shared-memory region size overflow")?;
@@ -901,7 +907,8 @@ pub fn spawn_decompressor_shm(
     });
 
     let mut cmd = Command::new(&decompressor);
-    cmd.arg("--format")
+    cmd.arg("__decompressor")
+        .arg("--format")
         .arg(format.as_arg())
         .arg("--shm-fd")
         .arg(fd.to_string())
@@ -920,7 +927,7 @@ pub fn spawn_decompressor_shm(
         .stderr(Stdio::inherit());
 
     let mut child = cmd.spawn().context(format!(
-        "Failed to spawn fastqrab-decompressor (shm mode) for file: {}.",
+        "Failed to spawn decompressor subprocess (shm mode) for file: {}.",
         filename.display()
     ))?;
 
@@ -932,11 +939,11 @@ pub fn spawn_decompressor_shm(
     let descriptors = child
         .stdout
         .take()
-        .context("Failed to capture fastqrab-decompressor stdout (shm descriptors)")?;
+        .context("Failed to capture decompressor subprocess stdout (shm descriptors)")?;
     let slot_return = child
         .stdin
         .take()
-        .context("Failed to capture fastqrab-decompressor stdin (shm slot returns)")?;
+        .context("Failed to capture decompressor subprocess stdin (shm slot returns)")?;
 
     Ok(ShmDecompressor {
         region,
