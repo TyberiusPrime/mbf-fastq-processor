@@ -31,6 +31,15 @@
           ];
         };
 
+        # Nightly toolchain for the `nightly` devShell.
+        rust-nightly = pkgs.rust-bin.nightly.latest.default.override {
+          targets = [ "x86_64-unknown-linux-musl" ];
+          extensions = [
+            "llvm-tools-preview"
+            "rust-analyzer"
+          ];
+        };
+
         # Minimal toolchain for Windows cross-check (no extras needed).
         rust-windows = pkgs.rust-bin.stable."1.93.1".minimal.override {
           targets = [ "x86_64-pc-windows-gnu" ];
@@ -114,6 +123,57 @@
             !(type == "directory" && builtins.elem baseName excludedDirs);
           name = "fastqrab-docker-src";
         };
+
+        # Shared developer tooling for the stable and nightly devShells.
+        # The rust toolchain itself is appended per-shell.
+        devTools = with pkgs; [
+          bacon
+          bash
+          aflplusplus
+          cargo-afl
+          cargo-audit
+          cargo-bloat
+          cargo-crev
+          cargo-deny
+          cargo-features-manager
+          cargo-flamegraph
+          cargo-insta
+          cargo-license
+          cargo-llvm-cov
+          cargo-llvm-lines
+          lcov
+          cargo-machete
+          cargo-mutants
+          cargo-nextest
+          cargo-outdated
+          cargo-shear
+          #cargo-udeps
+          cargo-vet
+          cmake
+          gcc
+          gnumake
+          git
+          hugo
+          jq
+          mold
+          openssl
+          pkg-config
+          samply
+          (python315.withPackages (
+            ps: with ps; [
+              #scipy
+              #anndata
+              #pysam
+              #pandas
+              toml
+            ]
+          ))
+          #rapidgzip
+          which
+          ripgrep
+          #rust.rust-analyzer
+          shellcheck
+        ];
       in
       rec {
         # `nix build`
@@ -316,55 +376,21 @@
             export SHELL="${pkgs.bash}/bin/bash"
           '';
           # supply the specific rust version
-          nativeBuildInputs = [
-            bacon
-            pkgs.bash
-            pkgs.aflplusplus
-            cargo-afl
-            pkgs.cargo-audit
-            pkgs.cargo-bloat
-            pkgs.cargo-crev
-            pkgs.cargo-deny
-            pkgs.cargo-features-manager
-            pkgs.cargo-flamegraph
-            pkgs.cargo-insta
-            pkgs.cargo-license
-            pkgs.cargo-llvm-cov
-            pkgs.cargo-llvm-lines
-            pkgs.lcov
-            pkgs.cargo-machete
-            pkgs.cargo-mutants
-            pkgs.cargo-nextest
-            pkgs.cargo-outdated
-            pkgs.cargo-shear
-            #pkgs.cargo-udeps
-            pkgs.cargo-vet
-            pkgs.cmake
-            pkgs.gcc
-            pkgs.gnumake
-            pkgs.git
-            pkgs.hugo
-            pkgs.jq
-            pkgs.mold
-            pkgs.openssl
-            pkgs.pkg-config
-            pkgs.samply
-            (pkgs.python315.withPackages (
-              ps: with ps; [
-                #scipy
-                #anndata
-                #pysam
-                #pandas
-                toml
-              ]
-            ))
-            #pkgs.rapidgzip
-            pkgs.which
-            pkgs.ripgrep
-            #rust.rust-analyzer
-            pkgs.shellcheck
-            rust
-          ];
+          nativeBuildInputs = devTools ++ [ rust ];
+        };
+
+        # `nix develop .#nightly` — same tooling as the default devShell but on
+        # the latest nightly rust toolchain.
+        devShells.nightly = pkgs.mkShell {
+          COMMIT_HASH = self.rev or (pkgs.lib.removeSuffix "-dirty" self.dirtyRev or "unknown-not-in-git");
+          # we only link with mold in our dev environment for build speed. CI can use the old school rust linker
+          shellHook = ''
+            export RUSTFLAGS="-C link-arg=-fuse-ld=mold"
+            # Set shell for cmake builds
+            export CONFIG_SHELL="${pkgs.bash}/bin/bash"
+            export SHELL="${pkgs.bash}/bin/bash"
+          '';
+          nativeBuildInputs = devTools ++ [ rust-nightly ];
         };
       }
     );
