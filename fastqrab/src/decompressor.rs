@@ -75,6 +75,14 @@ pub fn run() -> Result<()> {
         args.input.clone()
     };
 
+    // Restrict filesystem reads to the input file before spawning any threads.
+    // Skipped for stdin (data arrives via an already-open fd, nothing to lock down).
+    #[cfg(target_os = "linux")]
+    if args.input.as_os_str() != "-" {
+        apply_landlock(&input).unwrap_or_else(|e| {
+            eprintln!("[decompressor] warning: landlock sandbox not applied: {e}");
+        });
+    }
 
     let chunk_size = args.chunk_size;
     let verbose = args.verbose;
@@ -327,6 +335,18 @@ fn write_descriptor(out: &mut impl Write, slot: u32, len: u32) -> std::io::Resul
     out.flush()
 }
 
+#[cfg(target_os = "linux")]
+fn apply_landlock(input: &std::path::Path) -> Result<()> {
+    use landlock::{ABI, AccessFs, PathBeneath, PathFd, Ruleset, RulesetAttr, RulesetCreatedAttr};
+
+    let abi = ABI::V1;
+    Ruleset::default()
+        .handle_access(AccessFs::from_read(abi))?
+        .create()?
+        .add_rule(PathBeneath::new(PathFd::new(input)?, AccessFs::from_read(abi)))?
+        .restrict_self()?;
+    Ok(())
+}
 
 fn is_consumer_gone(e: &std::io::Error) -> bool {
     e.kind() == std::io::ErrorKind::BrokenPipe
