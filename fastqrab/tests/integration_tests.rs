@@ -8,6 +8,9 @@ use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
 
+#[path = "common/mod.rs"]
+mod common;
+
 #[test]
 fn test_cookbooks_in_sync() {
     // Verify that the generated cookbooks.rs matches the actual cookbook directories
@@ -395,21 +398,47 @@ fn test_interactive_processes_file_on_first_run() {
         .join(format!("fastqrab-interactive-{child_pid}"))
         .join("interactive_output_inspect_interleaved.fq");
 
-    // Poll until the inspect output file appears (proves a full processing pass completed)
-    // or time out after 30 s.
+    // Stream the child's stdout on a background thread into a shared buffer.
+    // The "Processing completed successfully" line is printed only *after* the
+    // processing pass has fully finished (and the inspect file has been written
+    // and read back), so it — not the mere existence of the inspect file — is the
+    // true completion signal. Polling the file would race: the file can appear a
+    // moment before the success line is emitted, and killing the child in that
+    // window drops the line we assert on.
+    use std::io::BufRead;
+    use std::sync::{Arc, Mutex};
+    let stdout_pipe = child.stdout.take().unwrap();
+    let stdout_buf = Arc::new(Mutex::new(String::new()));
+    let reader_buf = Arc::clone(&stdout_buf);
+    let reader = std::thread::spawn(move || {
+        let mut reader = std::io::BufReader::new(stdout_pipe);
+        let mut line = String::new();
+        while reader.read_line(&mut line).map(|n| n > 0).unwrap_or(false) {
+            reader_buf.lock().unwrap().push_str(&line);
+            line.clear();
+        }
+    });
+
+    // Poll until the success line shows up, or time out after 30 s.
     let deadline = Instant::now() + Duration::from_secs(30);
-    while Instant::now() < deadline && !inspect_file.exists() {
+    while Instant::now() < deadline
+        && !stdout_buf
+            .lock()
+            .unwrap()
+            .contains("Processing completed successfully")
+    {
         std::thread::sleep(Duration::from_millis(100));
     }
 
     child.kill().unwrap();
-    let output = child.wait_with_output().unwrap();
+    child.wait().unwrap();
+    reader.join().unwrap();
 
     assert!(
         inspect_file.exists(),
         "interactive never produced inspect output file"
     );
-    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stdout = stdout_buf.lock().unwrap();
     assert!(
         stdout.contains("Interactive mode starting"),
         "stdout: {stdout}"
@@ -3944,6 +3973,7 @@ fn test_verify_compressed_size_difference_too_large() {
         .arg("process")
         .arg(&config_level9)
         .current_dir(temp_path)
+        .env("FASTQRAB_DECOMPRESSOR", common::decompressor())
         .output()
         .unwrap();
     assert!(proc.status.success(), "process (level 9) should succeed");
@@ -3974,6 +4004,7 @@ fn test_verify_compressed_size_difference_too_large() {
         .arg("verify")
         .arg(&config_level9)
         .current_dir(temp_path)
+        .env("FASTQRAB_DECOMPRESSOR", common::decompressor())
         .output()
         .unwrap();
 

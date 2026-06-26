@@ -39,7 +39,6 @@ workspace = true
 	crossbeam = {workspace = true}
 	ctrlc = "3.5"
 	ex = {workspace = true}
-	flate2 = {workspace = true}
 	human-panic = {workspace = true}
     indexmap = {workspace = true}
     itertools = "0.14.0"
@@ -65,6 +64,7 @@ workspace = true
 	##function_name="0.3.0"
 	walkdir = "2.5.0"
 	criterion = "0.5"
+	flate2 = {workspace = true}
 	zstd = {workspace = true} # creating zstd test data
 
 [[bench]]
