@@ -153,6 +153,7 @@ impl WorkpoolCoordinator {
             // regardless of block_size, and never stalls a block-granular
             // pre-fetch such as HammingCorrect's ByMajority warm-up.)
             let accept_new_incoming = self.current_reads_in_flight < self.max_reads_in_flight;
+
             if self.incoming_rx.is_none() || !accept_new_incoming {
                 // Only listen for completed work when input is closed
                 select! {

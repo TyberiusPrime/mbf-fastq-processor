@@ -144,11 +144,11 @@ pub const fn default_block_size() -> NonZero<usize> {
 
 #[must_use]
 #[mutants::skip]
-pub const fn default_reads_in_flight() -> usize {
+pub const fn default_reads_in_flight(block_size: usize) -> usize {
     // in 'molecules', ie. read1, read2, index1, index2 tuples.
     // Historically this was 100 *blocks*; at the default block_size of 10000
     // that is 1_000_000 molecules, which we keep as the read-based default.
-    1_000_000
+    block_size * 100
 }
 
 #[must_use]

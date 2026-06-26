@@ -89,7 +89,9 @@ impl VerifyIn<PartialConfig> for PartialOptions {
         Self: Sized,
     {
         self.block_size.or_with(|| default_block_size().into());
-        self.max_reads_in_flight.or_with(default_reads_in_flight);
+        self.max_reads_in_flight.or_with(|| default_reads_in_flight(
+            *self.block_size.as_ref().expect("Just defaulted"),
+        ));
         self.buffer_size.or_with(default_buffer_size);
         self.output_buffer_size.or_with(default_output_buffer_size);
         self.accept_duplicate_files.or(false);

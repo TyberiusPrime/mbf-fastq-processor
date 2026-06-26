@@ -463,8 +463,11 @@ impl VerifyIn<TPDRoot> for PartialConfig {
     {
         self.options.or_with(|| PartialOptions {
             threads: TomlValue::new_ok(None, 0..0),
-            max_reads_in_flight: TomlValue::new_ok(default_reads_in_flight(), 0..0),
             block_size: TomlValue::new_ok(default_block_size().into(), 0..0),
+            max_reads_in_flight: TomlValue::new_ok(
+                default_reads_in_flight(default_block_size().into()),
+                0..0,
+            ),
             buffer_size: TomlValue::new_ok(default_buffer_size(), 0..0),
             output_buffer_size: TomlValue::new_ok(default_output_buffer_size(), 0..0),
             accept_duplicate_files: TomlValue::new_ok(false, 0..0),
