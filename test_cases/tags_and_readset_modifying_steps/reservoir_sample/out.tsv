@@ -1,4 +1,4 @@
-ReadName	len1	reg1
-Read6	51	GCT
-Read2	51	GGC
-Read4	51	GGA
+ReadName	astr	len1	reg1
+Read6		51	GCT
+Read2	Read2	51	GGC
+Read4	Read4	51	GGA

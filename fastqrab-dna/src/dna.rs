@@ -97,24 +97,7 @@ impl TagColumn {
     }
 
     #[must_use]
-    pub fn into_locations(self) -> Option<DualStringPodMultiLocation> {
-        if let TagColumn::Location(col) = self {
-            Some(col)
-        } else {
-            None
-        }
-    }
-
-    #[must_use]
     pub fn as_locations(&self) -> Option<&DualStringPodMultiLocation> {
-        if let TagColumn::Location(col) = self {
-            Some(col)
-        } else {
-            None
-        }
-    }
-
-    pub fn as_locations_mut(&mut self) -> Option<&mut DualStringPodMultiLocation> {
         if let TagColumn::Location(col) = self {
             Some(col)
         } else {

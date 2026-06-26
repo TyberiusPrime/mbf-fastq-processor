@@ -59,7 +59,7 @@ impl Step for Box<_ReportDuplicateFragmentCount> {
         _input_files: &mut StepInputFiles,
     ) -> Result<Option<DemultiplexBarcodes>> {
         // Initialize data structures but not the filters (those are initialized in apply)
-        let mut data_lock = self.data.lock().expect("lock poisened");
+        let mut data_lock = self.data.lock().expect("lock poisoned");
         for valid_tag in demultiplex_info.iter_tags() {
             data_lock.insert(
                 valid_tag,
@@ -79,7 +79,7 @@ impl Step for Box<_ReportDuplicateFragmentCount> {
         demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         // Initialize filters on first block using dynamic sizing
-        let mut data_lock = self.data.lock().expect("lock poisened");
+        let mut data_lock = self.data.lock().expect("lock poisoned");
         if block.block_no() == 1 {
             let false_positive_probability = if self.debug_reproducibility {
                 0.1
@@ -87,13 +87,13 @@ impl Step for Box<_ReportDuplicateFragmentCount> {
                 0.01
             };
             let capacity = calculate_filter_capacity(
-                *self.initial_filter_capacity.lock().expect("lock poisened"),
+                *self.initial_filter_capacity.lock().expect("lock poisoned"),
                 input_info,
                 demultiplex_info.len(),
             );
             self.initial_filter_capacity
                 .lock()
-                .expect("lock poisened")
+                .expect("lock poisoned")
                 .replace(capacity);
 
             for tag in demultiplex_info.iter_tags() {
@@ -132,10 +132,10 @@ impl Step for Box<_ReportDuplicateFragmentCount> {
 
     fn finalize(&self, demultiplex_info: &OptDemultiplex) -> Result<Option<FinalizeReportResult>> {
         let mut contents = serde_json::Map::new();
-        let data_lock = self.data.lock().expect("lock poisened");
+        let data_lock = self.data.lock().expect("lock poisoned");
 
         // Add filter capacity information if available
-        if let Some(capacity) = *self.initial_filter_capacity.lock().expect("lock poisened") {
+        if let Some(capacity) = *self.initial_filter_capacity.lock().expect("lock poisoned") {
             contents.insert(
                 "initial_filter_capacity".to_string(),
                 serde_json::Value::Number(capacity.into()),

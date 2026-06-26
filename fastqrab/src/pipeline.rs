@@ -1420,7 +1420,7 @@ impl RunStage4 {
         let reads_per_tag = Arc::into_inner(self.reads_per_demultiplex_tag)
             .expect("reads_per_demultiplex_tag mutex still had multiple references")
             .into_inner()
-            .expect("reads_per_tag mutex was poisened");
+            .expect("reads_per_tag mutex was poisoned");
 
         RunStage5 {
             errors,

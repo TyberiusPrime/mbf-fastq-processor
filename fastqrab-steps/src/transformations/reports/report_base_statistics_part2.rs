@@ -123,7 +123,7 @@ impl Step for Box<_ReportBaseStatisticsPart2> {
         for tag in demultiplex_info.iter_tags() {
             // no need to capture no-barcode if we're
             // not outputing it
-            let output = data_lock.get_mut(&tag).expect("Lock poisened");
+            let output = data_lock.get_mut(&tag).expect("Lock poisoned");
             for (ii, segment) in block.segments.iter().enumerate() {
                 let storage = &mut output.segments[ii].1;
 

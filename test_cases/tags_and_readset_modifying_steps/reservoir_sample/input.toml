@@ -7,8 +7,14 @@
   out_label = "reg1"
   start = 0
   length = 3 
-anchor = "lefT"
-source = 'read1'
+  anchor = "lefT"
+  source = 'read1'
+
+[[step]]
+  action ="ExtractRegex"
+  out_label = "astr"
+  source = 'name:read1'
+  query = 'Read[1234]'
 
 [[step]]
   action ="CalcLength"

@@ -54,7 +54,7 @@ impl Step for Box<_ReportBaseStatisticsPart1> {
         for valid_tag in demultiplex_info.iter_tags() {
             self.data
                 .lock()
-                .expect("data poisened?")
+                .expect("data poisoned?")
                 .insert(valid_tag, PerReadReportData::new(input_info));
         }
         Ok(None)
@@ -97,7 +97,7 @@ impl Step for Box<_ReportBaseStatisticsPart1> {
         for tag in demultiplex_info.iter_tags() {
             // no need to capture no-barcode if we're
             // not outputting it
-            let mut data_lock = self.data.lock().expect("data poisened");
+            let mut data_lock = self.data.lock().expect("data poisoned");
             let output = data_lock
                 .get_mut(&tag)
                 .expect("demultiplex tag not in data, but expected");
@@ -130,14 +130,14 @@ impl Step for Box<_ReportBaseStatisticsPart1> {
             OptDemultiplex::No => {
                 self.data
                     .lock()
-                    .expect("data poisened")
+                    .expect("data poisoned")
                     .get(&0)
                     .expect("no-demultiplex tag missing in data, but expected")
                     .store("base_statistics", &mut contents);
             }
 
             OptDemultiplex::Yes(demultiplex_info) => {
-                let data_lock = self.data.lock().expect("data poisened");
+                let data_lock = self.data.lock().expect("data poisoned");
                 for (tag, name) in &demultiplex_info.tag_to_name {
                     if let Some(name) = name {
                         let mut local = serde_json::Map::new();

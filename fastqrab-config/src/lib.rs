@@ -472,12 +472,9 @@ impl PartialOrd for TagLabel {
     }
 }
 impl Ord for TagLabel {
-    //cov:excl-start  - necessary for  Vec<TagLabel> to support sort_unstable
-    //but not actually called apparently?
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.as_ref().cmp(other.as_ref())
     }
-    //cov:excl-stop
 }
 
 impl std::hash::Hash for TagLabel {

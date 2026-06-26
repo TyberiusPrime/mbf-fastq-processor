@@ -32,7 +32,7 @@ impl Step for Box<_ReportLengthDistribution> {
         demultiplex_info: &OptDemultiplex,
         _input_files: &mut StepInputFiles,
     ) -> Result<Option<DemultiplexBarcodes>> {
-        let mut data_lock = self.data.lock().expect("lock poisened");
+        let mut data_lock = self.data.lock().expect("lock poisoned");
         for valid_tag in demultiplex_info.iter_tags() {
             data_lock.insert(valid_tag, PerReadReportData::new(input_info));
         }
@@ -81,7 +81,7 @@ impl Step for Box<_ReportLengthDistribution> {
                 }
             }
         }
-        let mut data_lock = self.data.lock().expect("lock poisened");
+        let mut data_lock = self.data.lock().expect("lock poisoned");
         for (tag, report_data) in data {
             let stored = data_lock.get_mut(&tag).expect("tag must exist in data map");
             for (segment_no, (_segment_name, lengths)) in
@@ -99,7 +99,7 @@ impl Step for Box<_ReportLengthDistribution> {
     }
 
     fn finalize(&self, demultiplex_info: &OptDemultiplex) -> Result<Option<FinalizeReportResult>> {
-        let data_lock = self.data.lock().expect("lock poisened");
+        let data_lock = self.data.lock().expect("lock poisoned");
         let mut contents = serde_json::Map::new();
         match demultiplex_info {
             OptDemultiplex::No => {

@@ -526,7 +526,7 @@ impl WorkpoolCoordinator {
                 Err(err) => {
                     self.error_collector
                         .lock()
-                        .expect("error collector poisened")
+                        .expect("error collector poisoned")
                         .push(format!("Error finalizing report: {err:?}"));
                 }
             }
@@ -541,7 +541,7 @@ impl WorkpoolCoordinator {
                 if let Err(err) = stage.transformation.post_finalize(&reports) {
                     self.error_collector
                         .lock()
-                        .expect("error collector poisened")
+                        .expect("error collector poisoned")
                         .push(format!("Error in post_finalize: {err:?}"));
                 }
             }
