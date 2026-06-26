@@ -34,6 +34,7 @@ import re
 EXCL_LINE = "cov:excl-line"
 EXCL_START = "cov:excl-start"
 EXCL_STOP = "cov:excl-stop"
+EXCL_END = "cov:excl-end"
 
 
 def run_command(cmd, description):
@@ -67,9 +68,11 @@ def get_excluded_lines(source_path: Path) -> set:
             in_block = True
         if in_block:
             excluded.add(lineno)
-        if EXCL_STOP in line:
+        if EXCL_STOP in line or EXCL_END in line:
             in_block = False
         elif EXCL_LINE in line:
+            excluded.add(lineno)
+        elif not in_block and ('unreachable!(' in line or 'panic!(' in line):
             excluded.add(lineno)
 
     return excluded
