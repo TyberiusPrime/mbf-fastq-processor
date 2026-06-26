@@ -146,11 +146,13 @@ pub const fn default_block_size() -> NonZero<usize> {
 #[mutants::skip]
 /// # Panics
 /// Can't static value into non-zero
-pub const fn default_max_molecules_in_flight(block_size: usize) -> std::num::NonZero<usize> {
+pub fn default_max_molecules_in_flight(block_size: NonZero<usize>) -> NonZero<usize> {
     // in 'molecules', ie. read1, read2, index1, index2 tuples.
     // Historically this was 100 *blocks*; at the default block_size of 10000
     // that is 1_000_000 molecules, which we keep as the read-based default.
-    NonZero::new(block_size*100).expect("can't fail")
+    let block_size: usize = block_size.into();
+    NonZero::new(block_size * 100)
+        .expect("Block_size == 0 should have been caught in validation")
 }
 
 #[must_use]

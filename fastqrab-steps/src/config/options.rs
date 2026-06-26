@@ -1,3 +1,5 @@
+use std::num::NonZero;
+
 use anyhow::{Context, Result};
 use schemars::JsonSchema;
 use toml_pretty_deser::prelude::*;
@@ -65,7 +67,7 @@ pub struct Options {
     pub max_molecules_in_flight: std::num::NonZero<usize>,
 
     #[schemars(with = "Option<usize>")]
-    pub block_size: usize,
+    pub block_size: NonZero<usize>,
     #[schemars(with = "Option<usize>")]
     pub buffer_size: usize,
     #[schemars(with = "Option<usize>")]
@@ -91,7 +93,7 @@ impl VerifyIn<PartialConfig> for PartialOptions {
     {
         self.block_size.or_with(|| default_block_size().into());
         self.max_molecules_in_flight.or_with(|| default_max_molecules_in_flight(
-            *self.block_size.as_ref().expect("Just defaulted"),
+            self.block_size.as_ref().copied().unwrap_or(default_block_size()),
         ));
         self.buffer_size.or_with(default_buffer_size);
         self.output_buffer_size.or_with(default_output_buffer_size);
@@ -105,18 +107,18 @@ impl VerifyIn<PartialConfig> for PartialOptions {
         });
 
         self.block_size.verify(|v| {
-            if *v == 0 {
-                return Err(ValidationFailure::new(
-                    "Must be > 0",
-                    Some("Set to a positive integer."),
-                ));
-            }
+            // if *v == 0 {
+            //     return Err(ValidationFailure::new(
+            //         "Must be > 0",
+            //         Some("Set to a positive integer."),
+            //     ));
+            // }
             if parent
                 .input
                 .as_ref()
                 .and_then(|input_def| input_def.structured.as_ref())
                 .is_some_and(StructuredInput::is_interleaved)
-                && !v.is_multiple_of(2)
+                && !v.get().is_multiple_of(2)
             {
                 return Err(ValidationFailure::new(
                     "block_size must be a multiple of 2",

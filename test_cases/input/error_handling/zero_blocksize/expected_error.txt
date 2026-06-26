@@ -6,7 +6,8 @@ Error 1/1
 5 │   block_size = 0
   ┆                ┬
   ┆                │
-  ┆                ╰─ Must be > 0
+  ┆                ╰─ integer (NonZero<usize>), must not be zero
 ──╯
-Hint: Set to a positive integer.
+Hint: Use a non-zero value.
+
 
