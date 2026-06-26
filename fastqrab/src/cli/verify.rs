@@ -118,11 +118,12 @@ pub fn verify_outputs(
 
     // On Windows, a process cannot delete its own CWD (ERROR_SHARING_VIOLATION).
     // We set CWD to temp_path above, so cd away before cleanup.
-    if let Some(ref d) = output_dir {
-        if let Some(parent) = d.parent() {
-            let _ = std::env::set_current_dir(parent);
-        }
+    if let Some(ref d) = output_dir
+        && let Some(parent) = d.parent()
+    {
+        let _ = std::env::set_current_dir(parent);
     }
+
     cleanup_output_dir(output_dir.as_deref())?;
     Ok(())
 }
@@ -189,12 +190,14 @@ fn extract_output_config(raw_config: &str) -> Result<(String, bool)> {
                 "This is a benchmarking configuration, which can't be verified for it's output (it has none). Maybe turn off benchmark.enable in your TOML, or use another configuration?"
             )
         }
-        for output_declarations in &parsed.output_declarations_per_transformation {
-            if let Some(output_declarations) = output_declarations {
-                for declaration in output_declarations {
-                    if declaration.target.is_stdout() {
-                        stdout = true;
-                    }
+        for output_declarations in parsed
+            .output_declarations_per_transformation
+            .iter()
+            .flatten()
+        {
+            for declaration in output_declarations {
+                if declaration.target.is_stdout() {
+                    stdout = true;
                 }
             }
         }
@@ -326,7 +329,10 @@ fn symlink_input_files(
     Ok(())
 }
 
-#[allow(unused_variables)] // temp_path not used on windows
+#[cfg_attr(
+    windows,
+    expect(unused_variables, reason = "temp_path not used on windows")
+)]
 fn run_prep_if_needed(
     prep_script: &Path,
     post_script: &Path,

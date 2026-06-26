@@ -3,7 +3,6 @@
 //! `--lib` unit test can't see. This integration test points
 //! `FASTQRAB_DECOMPRESSOR` at the freshly built binary and round-trips gzip and
 //! zstd (and an uncompressed passthrough).
-#![expect(clippy::unwrap_used, reason = "it's tests")]
 
 use std::io::Write as _;
 

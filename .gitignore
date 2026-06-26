@@ -52,3 +52,4 @@ opencode.json
 dev/fuzz/**/output
 dev/fuzz/**/logs
 dev/fuzz/**/core
+.*

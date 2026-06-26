@@ -75,6 +75,19 @@ pub fn finish_writer(handle: &WriterHandle) -> Result<()> {
     Ok(())
 }
 
+#[inline]
+pub fn hamming_bp_16(a: Umi, b: Umi) -> u32 {
+    // XOR marks differing bits within each 2-bit base.
+    let x = a.0 ^ b.0;
+
+    // Collapse each 2-bit lane to 1 bit:
+    // 00 -> 0
+    // 01,10,11 -> 1
+    let y = (x | (x >> 1)) & 0x5555_5555;
+
+    y.count_ones()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -93,15 +106,3 @@ mod tests {
     }
 }
 
-#[inline]
-pub fn hamming_bp_16(a: Umi, b: Umi) -> u32 {
-    // XOR marks differing bits within each 2-bit base.
-    let x = a.0 ^ b.0;
-
-    // Collapse each 2-bit lane to 1 bit:
-    // 00 -> 0
-    // 01,10,11 -> 1
-    let y = (x | (x >> 1)) & 0x5555_5555;
-
-    y.count_ones()
-}

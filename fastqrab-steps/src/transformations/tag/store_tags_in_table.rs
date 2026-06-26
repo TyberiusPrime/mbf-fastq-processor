@@ -72,9 +72,8 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagsInTable> {
             let infix = inner
                 .infix
                 .as_ref()
-                .map(|x| x.as_ref())
-                .flatten()
-                .map_or_else(|| String::new(), ToString::to_string);
+                .and_then(|x| x.as_ref())
+                .map_or_else(String::new, ToString::to_string);
             let compression = inner.compression.as_ref().copied().unwrap_or_default();
             let suffix = compression.apply_suffix("tsv");
             Some(vec![OutputDeclaration {

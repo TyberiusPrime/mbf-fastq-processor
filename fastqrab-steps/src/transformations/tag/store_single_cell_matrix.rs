@@ -35,7 +35,7 @@ impl Umi {
     }
 
     fn new_unmatched() -> Self {
-        return Self(0);
+        Self(0)
     }
 
     fn is_n(self) -> bool {
@@ -257,8 +257,7 @@ impl TagUser for PartialTaggedVariant<PartialStoreSingleCellMatrix> {
             let infix = inner
                 .infix
                 .as_ref()
-                .map(|x| x.as_ref())
-                .flatten()
+                .and_then(|x| x.as_ref())
                 .cloned()
                 .unwrap_or_default();
             let compression = inner.compression.as_ref().copied().unwrap_or_default();
@@ -813,14 +812,14 @@ fn aggregate_to_matrix(
     umi_length: u16,
 ) -> Vec<(GeneIdx, CellIdx, u32)> {
     if entries.is_empty() {
-        return Vec::new();
+        Vec::new()
     } else {
         match umi_aggregation {
-            UMIAggregation::None => aggregate_to_matrix_none(&entries),
-            UMIAggregation::Exact => aggregate_to_matrix_exact(&entries),
-            UMIAggregation::Cluster => aggregate_to_matrix_cluster(&entries, umi_length),
+            UMIAggregation::None => aggregate_to_matrix_none(entries),
+            UMIAggregation::Exact => aggregate_to_matrix_exact(entries),
+            UMIAggregation::Cluster => aggregate_to_matrix_cluster(entries, umi_length),
             UMIAggregation::CellRangerLike => {
-                aggregate_to_matrix_cellranger_like(&entries, umi_length)
+                aggregate_to_matrix_cellranger_like(entries, umi_length)
             }
         }
     }

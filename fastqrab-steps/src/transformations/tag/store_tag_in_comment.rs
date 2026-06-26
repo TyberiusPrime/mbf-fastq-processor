@@ -193,7 +193,7 @@ impl Step for StoreTagInComment {
                     new_names.push(&new_name);
                 }
             }
-            block.segments[segment_idx].names = new_names.finish().into();
+            block.segments[segment_idx].names = new_names.finish();
         }
 
         Ok((block, true))

@@ -489,8 +489,6 @@ fn extract_from_sequence(
             // For start anchoring, negative values count from the beginning
             (out_start + sub_sequence_start)
                 .min(seq_len.try_into().expect("seq_len did not fit into isize"))
-                .try_into()
-                .expect("actual_start did not fit into isize")
         }
         RegionAnchor::End => {
             // For end anchoring, negative values count from the end

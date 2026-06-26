@@ -39,7 +39,7 @@ fn make_fastq(reads: usize) -> Vec<u8> {
         let qual: Vec<u8> = (0..len)
             .map(|j| 33 + u8::try_from((i.wrapping_add(j * 7)) % 40).unwrap())
             .collect();
-        write!(v, "@read{i:08}\n").unwrap();
+        writeln!(v, "@read{i:08}").unwrap();
         v.extend_from_slice(&seq);
         v.extend_from_slice(b"\n+\n");
         v.extend_from_slice(&qual);
@@ -65,9 +65,9 @@ fn make_fasta(records: usize) -> Vec<u8> {
     let mut v = Vec::new();
     for i in 0..records {
         if i % 3 == 0 {
-            write!(v, ">seq{i:06} some description {i}\n").unwrap();
+            writeln!(v, ">seq{i:06} some description {i}").unwrap();
         } else {
-            write!(v, ">seq{i:06}\n").unwrap();
+            writeln!(v, ">seq{i:06}").unwrap();
         }
         let len = 60 + (i % 100);
         let seq: Vec<u8> = (0..len)

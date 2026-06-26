@@ -154,24 +154,25 @@ pub(crate) fn store_tag_into_segment(
     apply_plans(segment, plans, on_lost, step_name)
 }
 
+struct OnePosition {
+    pos: u32,
+    seq: u8,
+    qual: u8,
+}
+
 /// Outcome of resolving one row's [`Plan`] against the read's current frame.
 enum Resolved {
     /// A length-*changing* splice: replace `del` bytes at `at` with the content.
     /// Recorded into the edit log so later tag liftover shifts through it. Used
     /// for inserts and for replacing a single (contiguous) span with content of a
     /// different length.
-    Splice {
-        at: usize,
-        del: usize,
-        seq: Vec<u8>,
-        qual: Vec<u8>,
-    },
+    Splice(stringpod::Splice),
     /// A length-*neutral* overwrite of the covered positions (one `(pos, seq, qual)`
     /// per covered byte, in the read's current frame). Done in place and recorded
     /// as *nothing*: the coordinate space is unchanged, so a tag pointing at these
     /// bytes still validly points at them afterwards. This is "follow along the
     /// covered positions".
-    InPlace(Vec<(usize, u8, u8)>),
+    InPlace(Vec<OnePosition>),
     /// The captured location was cut away / split — handled per [`OnLost`].
     Lost,
     /// Disjoint regions whose covered length differs from the content — a hard
@@ -196,15 +197,15 @@ fn apply_plans(
 
     // Pass 1: lift each plan into the read's current frame (borrows the segment
     // immutably, so it must finish before any mutation).
-    let mut splices: Vec<Option<(usize, usize, Vec<u8>, Vec<u8>)>> = vec![None; n];
-    let mut in_place: Vec<(usize, Vec<(usize, u8, u8)>)> = Vec::new();
+    let mut splices: Vec<Option<stringpod::Splice>> = vec![None; n];
+    let mut in_place: Vec<(usize, Vec<OnePosition>)> = Vec::new();
     // Keep the plan of each lost row so the error can show a concrete example.
     let mut lost: Vec<(usize, Plan)> = Vec::new();
     let mut invalid: Vec<usize> = Vec::new();
     for (row, plan) in plans.into_iter().enumerate() {
         let Some(plan) = plan else { continue };
         match resolve(segment, row, &plan) {
-            Resolved::Splice { at, del, seq, qual } => splices[row] = Some((at, del, seq, qual)),
+            Resolved::Splice(splice) => splices[row] = Some(splice),
             Resolved::InPlace(writes) => {
                 if !writes.is_empty() {
                     in_place.push((row, writes));
@@ -251,9 +252,14 @@ fn apply_plans(
                 .expect("buffers made exclusive above; row in range. Bug");
             let s: &mut [u8] = s;
             let q: &mut [u8] = q;
-            for &(pos, sb, qb) in writes {
-                s[pos] = sb;
-                q[pos] = qb;
+            for &OnePosition {
+                pos,
+                seq: sb,
+                qual: qb,
+            } in writes
+            {
+                s[pos as usize] = sb;
+                q[pos as usize] = qb;
             }
         }
     }
@@ -316,12 +322,12 @@ fn resolve(segment: &FastQChunk, row: usize, plan: &Plan) -> Resolved {
                 }
             };
             return match pos {
-                Some(at) => Resolved::Splice {
+                Some(at) => Resolved::Splice(stringpod::Splice {
                     at,
                     del: 0,
                     seq: plan.seq.clone(),
                     qual: plan.qual.clone(),
-                },
+                }),
                 None => Resolved::Lost,
             };
         }
@@ -371,7 +377,11 @@ fn resolve(segment: &FastQChunk, row: usize, plan: &Plan) -> Resolved {
         let mut taken = 0;
         for &(start, len) in &lifted {
             for pos in start..start + len {
-                writes.push((pos, plan.seq[taken], plan.qual[taken]));
+                writes.push(OnePosition {
+                    pos: pos.try_into().expect("did not fit u32"),
+                    seq: plan.seq[taken],
+                    qual: plan.qual[taken],
+                });
                 taken += 1;
             }
         }
@@ -381,12 +391,12 @@ fn resolve(segment: &FastQChunk, row: usize, plan: &Plan) -> Resolved {
     // Length changes. That is only unambiguous over a single contiguous span;
     // disjoint regions with a differing length are a hard error.
     if bounding_len == covered_len {
-        Resolved::Splice {
+        Resolved::Splice(stringpod::Splice {
             at: min_start,
             del: bounding_len,
             seq: plan.seq.clone(),
             qual: plan.qual.clone(),
-        }
+        })
     } else {
         Resolved::Invalid
     }

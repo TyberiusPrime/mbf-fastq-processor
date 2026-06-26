@@ -1017,7 +1017,7 @@ mod test_correct_barcode_via_base_editing_likelihood {
         // Higher edit-probability (lower Q) wins when counts match.
         let observed = b(b"AAAAAAAA");
         // pos 0 = '!' (Q0, p_edit = 1.0); pos 4 = 'I' (Q40, p_edit = 1e-4).
-        let qual: &[u8] = b"!bIbIbIbIbIbIbI";
+        let qual: &[u8] = b"!bIbIbIb";
         // cand1 differs at pos 0 (low quality -> high p_edit -> wins)
         // cand2 differs at pos 4 (high quality -> low p_edit -> loses)
         let candidates = [(b(b"TAAAAAAA"), 0usize), (b(b"AAAATAAA"), 0usize)];

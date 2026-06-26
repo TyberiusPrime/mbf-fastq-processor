@@ -65,7 +65,7 @@ pub fn umi_cluster_count(umis: &[Umi], umi_length: u16) -> u32 {
     //to decide which ones to use
     let mut uf = DisjointSet::with_len(n);
     if n <= pairwise_threshold() {
-        pairwise_union(&values, &mut uf);
+        pairwise_union(values, &mut uf);
     } else {
         //cov:excl-start
         neighbor_union_hash(values, &mut uf, umi_length);
@@ -83,6 +83,7 @@ pub fn umi_cluster_count(umis: &[Umi], umi_length: u16) -> u32 {
 }
 
 #[inline]
+#[expect(clippy::needless_range_loop,reason=" Clearest way to state this")]
 fn pairwise_union(values: &[Umi], uf: &mut DisjointSet) {
     for i in 0..values.len() {
         let x = values[i];
@@ -219,8 +220,8 @@ fn test_pairwise_neighbor_aggreement() {
     let mut uf = DisjointSet::with_len(n);
     pairwise_union(&values, &mut uf);
     let mut roots = FxHashSet::default();
-    for i in 0..n {
-        println!("{}, {}, {}", i, values[i].0, uf.root_of(i));
+    for (i, value) in values.iter().enumerate() {
+        println!("{}, {}, {}", i, value.0, uf.root_of(i));
         roots.insert(uf.root_of(i));
     }
     let l_pairwise = roots.len();

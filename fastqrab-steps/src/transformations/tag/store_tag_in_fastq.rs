@@ -205,7 +205,6 @@ impl Step for StoreTagInFastQ {
         Ok(None)
     }
 
-    #[expect(clippy::too_many_lines, reason = "It takes this many")]
     fn apply(
         &self,
         block: FastQBlocksCombined,

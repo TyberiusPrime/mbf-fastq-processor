@@ -45,6 +45,7 @@ fn verify_opt_path_component(suffix: &Option<String>) -> Result<(), ValidationFa
     }
 }
 
+#[expect(clippy::ptr_arg, reason="TPD needs this signature")]
 fn verify_path_component(suffix: &String) -> Result<(), ValidationFailure> {
     if suffix.contains('/') || suffix.contains('\\') || suffix.contains(':') {
         Err(ValidationFailure::new(

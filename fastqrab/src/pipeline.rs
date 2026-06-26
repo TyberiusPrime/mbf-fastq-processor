@@ -410,7 +410,7 @@ fn parse_interleaved_and_send(
 
 //#[allow(clippy::needless_pass_by_value)]
 fn run_combiner_thread(
-    raw_rx_readers: &Vec<crossbeam::channel::Receiver<(FastQChunk, Option<usize>)>>,
+    raw_rx_readers: &[crossbeam::channel::Receiver<(FastQChunk, Option<usize>)>],
     combiner_output_tx: &crossbeam::channel::Sender<(io::FastQBlocksCombined, Option<usize>)>,
     largest_segment_idx: usize,
     error_collector: &Arc<Mutex<Vec<String>>>,
@@ -455,7 +455,7 @@ fn run_combiner_thread(
                                 .set(block_expected_read_count)
                                 .expect("Read count already set!?");
                         }
-                        if block.len() > 0 {
+                        if !block.is_empty() {
                             current[seg] = Some((block, 0));
                             break;
                         }

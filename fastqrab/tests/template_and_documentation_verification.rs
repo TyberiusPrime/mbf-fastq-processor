@@ -459,18 +459,20 @@ prefix = "output"
     if extracted_section.contains("StoreSingleCellMatrix") {
         for field in &["cell_tag", "gene_tag", "umi_tag"] {
             for line in extracted_section.lines() {
-                if line.contains(field) && !line.trim_start().starts_with('#') {
-                    if let Some(start) = line.find(field) {
-                        let after = &line[start..];
-                        if let Some(quote_start) = after.find(['\'', '"']) {
-                            let quote_char = after.chars().nth(quote_start).unwrap();
-                            let after_quote = &after[quote_start + 1..];
-                            if let Some(quote_end) = after_quote.find(quote_char) {
-                                let label = &after_quote[..quote_end];
-                                if !created_tags.contains(label) {
-                                    write!(
-                                        &mut config,
-                                        r#"
+                if line.contains(field)
+                    && !line.trim_start().starts_with('#')
+                    && let Some(start) = line.find(field)
+                {
+                    let after = &line[start..];
+                    if let Some(quote_start) = after.find(['\'', '"']) {
+                        let quote_char = after.chars().nth(quote_start).unwrap();
+                        let after_quote = &after[quote_start + 1..];
+                        if let Some(quote_end) = after_quote.find(quote_char) {
+                            let label = &after_quote[..quote_end];
+                            if !created_tags.contains(label) {
+                                write!(
+                                    &mut config,
+                                    r#"
 [[step]]
     action = "ExtractRegion"
     segment = "read1"
@@ -479,10 +481,9 @@ prefix = "output"
     out_label = "{label}"
     anchor = "Start"
 "#
-                                    )
-                                    .unwrap();
-                                    created_tags.insert(label.to_string());
-                                }
+                                )
+                                .unwrap();
+                                created_tags.insert(label.to_string());
                             }
                         }
                     }
@@ -492,30 +493,31 @@ prefix = "output"
         // Add barcodes sections for cell_barcodes and gene_barcodes if not already present
         for field in &["cell_barcodes", "gene_barcodes"] {
             for line in extracted_section.lines() {
-                if line.contains(field) && !line.trim_start().starts_with('#') {
-                    if let Some(start) = line.find(field) {
-                        let after = &line[start..];
-                        if let Some(eq_pos) = after.find('=') {
-                            let after_eq = &after[eq_pos + 1..];
-                            if let Some(quote_start) = after_eq.find(['\'', '"']) {
-                                let quote_char = after_eq.chars().nth(quote_start).unwrap();
-                                let after_quote = &after_eq[quote_start + 1..];
-                                if let Some(quote_end) = after_quote.find(quote_char) {
-                                    let name = &after_quote[..quote_end];
-                                    let section_key = format!("[barcodes.{name}]");
-                                    if !extracted_section.contains(&section_key)
-                                        && !config.contains(&section_key)
-                                    {
-                                        write!(
-                                            &mut config,
-                                            r"
+                if line.contains(field)
+                    && !line.trim_start().starts_with('#')
+                    && let Some(start) = line.find(field)
+                {
+                    let after = &line[start..];
+                    if let Some(eq_pos) = after.find('=') {
+                        let after_eq = &after[eq_pos + 1..];
+                        if let Some(quote_start) = after_eq.find(['\'', '"']) {
+                            let quote_char = after_eq.chars().nth(quote_start).unwrap();
+                            let after_quote = &after_eq[quote_start + 1..];
+                            if let Some(quote_end) = after_quote.find(quote_char) {
+                                let name = &after_quote[..quote_end];
+                                let section_key = format!("[barcodes.{name}]");
+                                if !extracted_section.contains(&section_key)
+                                    && !config.contains(&section_key)
+                                {
+                                    write!(
+                                        &mut config,
+                                        r"
 [barcodes.{name}]
     'AAAAAAAA' = 'entry-1'
     'CCCCCCCC' = 'entry-2'
 "
-                                        )
-                                        .unwrap();
-                                    }
+                                    )
+                                    .unwrap();
                                 }
                             }
                         }
@@ -1062,7 +1064,6 @@ fn extract_transformation_from_filename(file_path: &Path) -> Option<String> {
         .map(str::to_string)
 }
 
-#[expect(clippy::type_complexity, reason = "don't care")]
 fn extract_toml_from_markdown(
     file_path: &Path,
 ) -> Result<Vec<(String, usize)>, Box<dyn std::error::Error>> {

@@ -96,8 +96,7 @@ fn correct_umis_to_next_by_hamming(
     umis.sort_unstable();
     let mut corrections = FxIndexMap::default();
     for gene_chunk in umis.chunk_by(|((gene, _), _), ((b_gene, _), _)| gene == b_gene) {
-        for i in 0..gene_chunk.len() {
-            let (x, x_count) = gene_chunk[i];
+        for &(x, x_count) in gene_chunk {
             let mut best = x;
             let mut best_count = x_count;
 
