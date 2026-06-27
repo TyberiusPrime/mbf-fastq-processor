@@ -4,6 +4,23 @@ use clap_complete::{Generator, Shell, generate};
 use human_panic::{Metadata, setup_panic};
 use std::path::{Path, PathBuf};
 
+/// Returned when the error has already been printed to stderr; callers should
+/// exit with a non-zero code without printing anything further.
+#[derive(Debug)]
+pub struct EarlyExit;
+
+impl std::fmt::Display for EarlyExit {
+    fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        Ok(())
+    }
+}
+
+impl std::error::Error for EarlyExit {}
+
+fn early_exit() -> anyhow::Error {
+    anyhow::Error::new(EarlyExit)
+}
+
 #[expect(clippy::too_many_lines, reason = "cli is complex")]
 fn build_cli() -> Command {
     // Construct version string with git commit hash
@@ -264,7 +281,7 @@ fn comment(text: &str) -> String {
     commented
 }
 
-fn print_cookbook(cookbook_number: Option<&String>) {
+fn print_cookbook(cookbook_number: Option<&String>) -> Result<()> {
     match cookbook_number {
         None => {
             // List all cookbooks
@@ -287,26 +304,28 @@ fn print_cookbook(cookbook_number: Option<&String>) {
                 println!("\n## Configuration (input.toml)\n");
                 println!("{}", cookbook.toml);
             } else {
-                eprintln!("Error: Cookbook {num_str} not found");
-                eprintln!("Use 'cookbook' without argument to list all available cookbooks",);
-                std::process::exit(1);
+                bail!(
+                    "Cookbook {num_str} not found. \
+                     Use 'cookbook' without argument to list all available cookbooks."
+                );
             }
         }
     }
+    Ok(())
 }
 
-fn handle_toml_arg(config_file: Option<&String>) -> PathBuf {
+fn handle_toml_arg(config_file: Option<&String>) -> Result<PathBuf> {
     match config_file {
-        Some(path) => PathBuf::from(path),
+        Some(path) => Ok(PathBuf::from(path)),
         None => match find_single_valid_toml() {
-            Ok(path) => path,
+            Ok(path) => Ok(path),
             Err(e) => {
                 eprintln!("Error: {e}");
                 eprintln!(
                     "\nPlease specify a configuration file explicitly: \
                      fastqrab verify <config.toml>"
                 );
-                std::process::exit(1);
+                Err(early_exit())
             }
         },
     }
@@ -367,9 +386,9 @@ pub fn entry_point() -> Result<()> {
 
     match matches.subcommand() {
         Some(("process", sub_matches)) => {
-            let toml_path = handle_toml_arg(sub_matches.get_one::<String>("config"));
+            let toml_path = handle_toml_arg(sub_matches.get_one::<String>("config"))?;
             let allow_overwrites = sub_matches.get_flag("allow-overwrite");
-            process_from_toml_file(&toml_path, allow_overwrites);
+            process_from_toml_file(&toml_path, allow_overwrites)?;
             if std::env::var("RUST_MEASURE_ALLOC").as_deref() == Ok("1") {
                 print_peak_rss_kb();
             }
@@ -377,136 +396,105 @@ pub fn entry_point() -> Result<()> {
         Some(("template", sub_matches)) => {
             let section = sub_matches.get_one::<String>("section");
             print_template(section);
-            std::process::exit(0);
         }
         Some(("cookbook", sub_matches)) => {
             let number = sub_matches.get_one::<String>("number");
-            print_cookbook(number);
-            std::process::exit(0);
+            print_cookbook(number)?;
         }
         Some(("list-steps", _)) => {
             print!("{}", crate::list_steps::format_steps_list());
-            std::process::exit(0);
         }
         Some(("version", _)) => {
-            print_version_and_exit();
+            print_version();
         }
         Some(("validate", sub_matches)) => {
-            let toml_path = handle_toml_arg(sub_matches.get_one::<String>("config"));
-            validate_config_file(&toml_path);
+            let toml_path = handle_toml_arg(sub_matches.get_one::<String>("config"))?;
+            validate_config_file(&toml_path)?;
         }
         Some(("output-files", sub_matches)) => {
-            let toml_path = handle_toml_arg(sub_matches.get_one::<String>("config"));
-            output_files(&toml_path);
+            let toml_path = handle_toml_arg(sub_matches.get_one::<String>("config"))?;
+            output_files(&toml_path)?;
         }
         Some(("verify", sub_matches)) => {
             let output_dir = sub_matches.get_one::<String>("output-dir");
             let unsafe_prep = sub_matches.get_flag("unsafe-call-prep-sh");
 
-            let toml_path = handle_toml_arg(sub_matches.get_one::<String>("config"));
-            verify_config_file(&toml_path, output_dir.map(PathBuf::from), unsafe_prep);
+            let toml_path = handle_toml_arg(sub_matches.get_one::<String>("config"))?;
+            verify_config_file(&toml_path, output_dir.map(PathBuf::from), unsafe_prep)?;
         }
         Some(("interactive", sub_matches)) => {
             if sub_matches
                 .get_one::<String>("config")
                 .is_some_and(|s| s == "-")
             {
-                eprintln!("Error: interactive mode cannot read configuration from stdin.");
-                std::process::exit(1);
+                bail!("interactive mode cannot read configuration from stdin.");
             }
-            let toml_path = handle_toml_arg(sub_matches.get_one::<String>("config"));
+            let toml_path = handle_toml_arg(sub_matches.get_one::<String>("config"))?;
             let head = sub_matches.get_one::<u64>("head").copied();
             let sample = sub_matches.get_one::<u64>("sample").copied();
             let inspect = sub_matches.get_one::<u64>("inspect").copied();
             let poll_interval = sub_matches.get_one::<u64>("poll_interval").copied();
             let max_runs = sub_matches.get_one::<u64>("max_runs").copied();
-            run_interactive_mode(&toml_path, head, sample, inspect, poll_interval, max_runs);
+            run_interactive_mode(&toml_path, head, sample, inspect, poll_interval, max_runs)?;
         }
         Some(("completions", sub_matches)) => {
             if let Some(shell) = sub_matches.get_one::<Shell>("shell") {
                 let mut cmd = build_cli();
                 print_completions(*shell, &mut cmd);
-                std::process::exit(0);
             } // cov:excl-line
         }
         Some(("json-schema", _sub_matches)) => {
             print_schema();
-            std::process::exit(0);
         }
         _ => {
             // This shouldn't happen due to arg_required_else_help, but just in case
             build_cli().print_help()?;
-            std::process::exit(1);
+            bail!("no subcommand provided");
         }
     }
     Ok(())
 }
 
-fn print_version_and_exit() {
+fn print_version() {
     println!(
         "{} (git: {})",
         env!("CARGO_PKG_VERSION"),
         option_env!("COMMIT_HASH").unwrap_or("unknown")
     );
-    std::process::exit(0);
 }
 
-fn process_from_toml_file(toml_file: &Path, allow_overwrites: bool) {
-    let current_dir = std::env::current_dir().expect("failed to get current directory");
+fn process_from_toml_file(toml_file: &Path, allow_overwrites: bool) -> Result<()> {
+    let current_dir = std::env::current_dir().context("failed to get current directory")?;
     if let Err(e) = crate::run(toml_file, &current_dir, allow_overwrites) {
         eprintln!("Unfortunately, an error was detected and led to an early exit.\n");
-        // let docs = docs_matching_error_message(&e);
-        // if !docs.is_empty() {
-        //     let indented_docs = docs
-        //         .trim()
-        //         .lines()
-        //         .map(|line| format!("    {line}"))
-        //         .collect::<Vec<_>>()
-        //         .join("\n");
-        //     eprintln!("# == Documentation == \n(from the 'template' command)\n{indented_docs}\n",);
-        // }
-
-        eprintln!("# == Error Details ==\n{e:?}",);
-        std::process::exit(1);
+        eprintln!("# == Error Details ==\n{e:?}");
+        return Err(early_exit());
     }
+    Ok(())
 }
 
-fn validate_config_file(toml_path: &Path) {
+fn validate_config_file(toml_path: &Path) -> Result<()> {
     match crate::validate_config(toml_path) {
         Ok(warnings) => {
             if warnings.is_empty() {
                 println!("✓ Configuration is valid");
-                std::process::exit(0);
             } else {
                 println!("✓ Configuration is valid (with warnings)");
                 for warning in warnings {
                     eprintln!("Warning: {warning}");
                 }
-                std::process::exit(0);
             }
+            Ok(())
         }
         Err(e) => {
             eprintln!("Configuration validation failed:\n");
-            // let docs = docs_matching_error_message(&e);
-            // if !docs.is_empty() {
-            //     let indented_docs = docs
-            //         .trim()
-            //         .lines()
-            //         .map(|line| format!("    {line}"))
-            //         .collect::<Vec<_>>()
-            //         .join("\n");
-            //     eprintln!(
-            //         "# == Documentation == \n(from the 'template' command)\n{indented_docs}\n",
-            //     );
-            // }
-
-            eprintln!("# == Error Details ==\n{e:?}",);
-            std::process::exit(1);
+            eprintln!("# == Error Details ==\n{e:?}");
+            Err(early_exit())
         }
     }
 }
 
-fn output_files(toml_path: &Path) {
+fn output_files(toml_path: &Path) -> Result<()> {
     match crate::list_config_output_files(toml_path) {
         Ok(listing) => {
             if listing.files.is_empty() {
@@ -525,39 +513,31 @@ fn output_files(toml_path: &Path) {
                     );
                 }
             }
+            Ok(())
         }
         Err(e) => {
             eprintln!("Configuration validation failed:\n");
-            // let docs = docs_matching_error_message(&e);
-            // if !docs.is_empty() {
-            //     let indented_docs = docs
-            //         .trim()
-            //         .lines()
-            //         .map(|line| format!("    {line}"))
-            //         .collect::<Vec<_>>()
-            //         .join("\n");
-            //     eprintln!(
-            //         "# == Documentation == \n(from the 'template' command)\n{indented_docs}\n",
-            //     );
-            // }
-
-            eprintln!("# == Error Details ==\n{e:?}",);
-            std::process::exit(1);
+            eprintln!("# == Error Details ==\n{e:?}");
+            Err(early_exit())
         }
     }
 }
 
 #[expect(clippy::needless_pass_by_value, reason = "it's only a test")]
-fn verify_config_file(toml_file: &Path, output_dir: Option<PathBuf>, unsafe_prep: bool) {
+fn verify_config_file(
+    toml_file: &Path,
+    output_dir: Option<PathBuf>,
+    unsafe_prep: bool,
+) -> Result<()> {
     match crate::verify_outputs(toml_file, output_dir.as_deref(), unsafe_prep) {
         Ok(()) => {
             println!("✓ Verification passed: outputs match expected outputs");
-            std::process::exit(0);
+            Ok(())
         }
         Err(e) => {
             eprintln!("Verification failed:\n");
-            eprintln!("# == Error Details ==\n{e:?}",);
-            std::process::exit(1);
+            eprintln!("# == Error Details ==\n{e:?}");
+            Err(early_exit())
         }
     }
 }
@@ -569,7 +549,7 @@ fn run_interactive_mode(
     inspect: Option<u64>,
     poll_interval: Option<u64>,
     max_runs: Option<u64>,
-) {
+) -> Result<()> {
     if let Err(e) = crate::interactive::run_interactive(
         toml_path,
         head,
@@ -579,9 +559,10 @@ fn run_interactive_mode(
         max_runs,
     ) {
         eprintln!("Interactive mode error: {e:?}");
-        std::process::exit(1);
+        return Err(early_exit());
     } // cov:excl-line
-} // cov:excl-line
+    Ok(()) // cov:excl-line
+}
 
 /// Find a single .toml file in the current directory that has both [input] and [output] sections
 fn find_single_valid_toml() -> Result<PathBuf> {

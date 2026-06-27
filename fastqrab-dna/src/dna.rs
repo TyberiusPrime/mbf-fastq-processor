@@ -101,7 +101,7 @@ impl TagColumn {
         if let TagColumn::Location(col) = self {
             Some(col)
         } else {
-            None
+            None //cov:excl-line
         }
     }
 

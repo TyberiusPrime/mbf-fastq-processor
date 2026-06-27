@@ -1,0 +1,4 @@
+ReadName	loc_tag	result	str_tag
+read1_has_location	AAAA	AAAA	
+read22_uses_string_fallback		read22	read22
+read33_has_both	AAAA	read33	read33

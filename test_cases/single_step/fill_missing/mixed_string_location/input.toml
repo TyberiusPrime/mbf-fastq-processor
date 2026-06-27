@@ -1,0 +1,33 @@
+[input]
+    read1 = 'input_read1.fq'
+
+# Location tag: only read1 has AAAA at the start
+[[step]]
+    action = 'ExtractIUPAC'
+    search = 'AAAA'
+    out_label = 'loc_tag'
+    anchor = 'Left'
+    max_mismatches = 0
+
+# String tag: extract 'read' from the read name (always present)
+[[step]]
+    action = 'ExtractRegex'
+    search = 'read\d{2,}'
+    out_label = 'str_tag'
+    source = 'name:read1'
+
+# FillMissing with mixed types: Location primary, String secondary.
+# Output type is String (Location values are converted to their sequence).
+[[step]]
+    action = 'FillMissing'
+    in_label_primary = 'str_tag'
+    in_label_secondary = 'loc_tag'
+    out_label = 'result'
+
+[[step]]
+    action = 'StoreTagInTable'
+
+[output]
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---

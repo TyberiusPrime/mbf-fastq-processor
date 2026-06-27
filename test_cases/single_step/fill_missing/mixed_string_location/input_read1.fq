@@ -1,0 +1,12 @@
+@read1_has_location
+AAAACGTACGCGCG
++
+IIIIIIIIIIIIII
+@read22_uses_string_fallback
+CGCGCGTACGCGCG
++
+IIIIIIIIIIIIII
+@read33_has_both
+AAAACGTACGCGCG
++
+IIIIIIIIIIIIII

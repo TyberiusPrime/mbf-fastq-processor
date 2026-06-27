@@ -9750,6 +9750,17 @@ fn test_cases_x_single_step_x_fill_missing_x_mixed_location_string() {
 
 #[test]
 
+fn test_cases_x_single_step_x_fill_missing_x_mixed_string_location() {
+    println!("Test case is in: test_cases/single_step/fill_missing/mixed_string_location");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/fill_missing/mixed_string_location"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_fill_missing_x_number_number() {
     println!("Test case is in: test_cases/single_step/fill_missing/number_number");
     run_test(

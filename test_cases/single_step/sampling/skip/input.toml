@@ -1,16 +1,44 @@
 [input]
-    read1 = 'input_read1.fq'
+read1 = "input_read1.fq"
 
 [options]
-    block_size = 2
+block_size = 2
 
 [[step]]
-    action='Skip'
-    n = 5
+action = "CalcLength"
+out_label = "int"
+segment = "read1"
 
-[output]
-    prefix = "output"
+[[step]]
+action = "extractregion"
+out_label = "str"
+source = "name:read1"
+start = 0
+len = 3
+anchor = "left"
+
+[[step]]
+action = "extractregion"
+out_label = "loc"
+source = "read1"
+start = 0
+len = 5
+anchor = "left"
+
+[[step]]
+  action = 'evalexpression'
+  out_label='bool'
+  expression = 'read_no % 2 ==0'
+  result_type = 'bool'
+
+
+[[step]]
+action = "Skip"
+n = 5
 
 # --- Output steps (migrated from [output]) ---
 [[step]]
-    action = "OutputFASTQ"
+action = "StoreTagsInTable"
+
+[output]
+prefix = "output"
