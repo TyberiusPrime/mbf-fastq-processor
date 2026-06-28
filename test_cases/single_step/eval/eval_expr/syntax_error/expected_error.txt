@@ -17,28 +17,22 @@ Error 1/2
 Hint: Inner error message UnparsedTokensRemaining(")")
       See https://doc_url.example/version-stripped-from-test/docs/redirects/EvalExpression
       Or run: `fastqrab template EvalExpression` for more information.
-      Make sure to either use, or forget (using ForgetTag) all your tags.
 
 Error 2/2
    ╭─config.toml
    ┆
- 4 │ [[step]]
- 5 │     action = 'CalcNContent'
- 6 │     relative = false
- 7 │     segment = 'read1'
- 8 │     out_label = 'n_count'
-   ┆                 ────┬────
-   ┆                     │
-   ┆                     ╰───── Unused tag
-   ┆
-10 │ [[step]]
-11 │     action = 'CalcLength'
-12 │     segment = 'read1'
-13 │     out_label = 'length'
-   ┆                 ────┬───
-   ┆                     │
-   ┆                     ╰──── Unused tag
+20 │ [[step]]
+21 │     action = 'StoreTagInComment'
+   ┆              ─────────┬─────────
+   ┆                       │
+   ┆                       ╰────────── In this step
+22 │     in_label = 'n_rate'
+   ┆                ────┬───
+   ┆                    │
+   ┆                    ╰──── No such tag: 'n_rate'
 ───╯
-Hint: Make sure to either use, or forget (using ForgetTag) all your tags.
+Hint: Did you mean: 'n_count' or 'length'?
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/StoreTagInComment
+      Or run: `fastqrab template StoreTagInComment` for more information.
 
 

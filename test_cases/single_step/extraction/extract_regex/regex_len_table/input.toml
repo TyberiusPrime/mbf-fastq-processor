@@ -13,7 +13,6 @@ out_label = 'match'
 [[step]]
 action = 'EvalExpression'
 expression = 'len_match'
-result_type = 'numeric'
 out_label = 'match_length'
 
 # Store tags in table (no other output)

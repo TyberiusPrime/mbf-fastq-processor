@@ -4,7 +4,6 @@
   action ="EvalExpression"
   expression ="read_no < 5"
   out_label = "xy"
-  result_type = "bool"
 
 [[step]]
     action = 'CutEnd'

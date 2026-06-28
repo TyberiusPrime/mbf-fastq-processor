@@ -1441,11 +1441,18 @@
               "type": "string"
             },
             "expression": {
-              "description": "The arithmetic expression to evaluate\nVariables in the expression should match existing numeric tag names",
+              "description": "The arithmetic or boolean expression to evaluate.\nVariables in the expression should match existing tag names.\nExpressions using comparison or logical operators (`<`, `>`, `==`, `!=`, `&&`, `||`, `!`)\nproduce a bool tag; pure arithmetic expressions produce a numeric tag.",
               "type": "string"
             },
             "result_type": {
-              "$ref": "#/$defs/ResultType"
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/ResultType"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "action": {
               "type": "string",
@@ -2079,8 +2086,12 @@
               "enum": [
                 "StoreTagsInTable",
                 "StoreTagInTable",
+                "OutputTable",
+                "OutputTSV",
                 "storetagsintable",
-                "storetagintable"
+                "storetagintable",
+                "outputtable",
+                "outputtsv"
               ]
             }
           },
@@ -4039,6 +4050,9 @@
       "enum": [
         "Numeric",
         "Bool",
+        "number",
+        "float",
+        "boolean",
         "numeric",
         "bool"
       ]
@@ -4052,31 +4066,51 @@
           "type": "string"
         },
         "expression": {
-          "description": "The arithmetic expression to evaluate\nVariables in the expression should match existing numeric tag names",
+          "description": "The arithmetic or boolean expression to evaluate.\nVariables in the expression should match existing tag names.\nExpressions using comparison or logical operators (`<`, `>`, `==`, `!=`, `&&`, `||`, `!`)\nproduce a bool tag; pure arithmetic expressions produce a numeric tag.",
           "type": "string"
         },
         "result_type": {
-          "$ref": "#/$defs/ResultType"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ResultType"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "expr": {
-          "description": "The arithmetic expression to evaluate\nVariables in the expression should match existing numeric tag names",
+          "description": "The arithmetic or boolean expression to evaluate.\nVariables in the expression should match existing tag names.\nExpressions using comparison or logical operators (`<`, `>`, `==`, `!=`, `&&`, `||`, `!`)\nproduce a bool tag; pure arithmetic expressions produce a numeric tag.",
           "type": "string"
         },
         "query": {
-          "description": "The arithmetic expression to evaluate\nVariables in the expression should match existing numeric tag names",
+          "description": "The arithmetic or boolean expression to evaluate.\nVariables in the expression should match existing tag names.\nExpressions using comparison or logical operators (`<`, `>`, `==`, `!=`, `&&`, `||`, `!`)\nproduce a bool tag; pure arithmetic expressions produce a numeric tag.",
           "type": "string"
         },
-        "output_type": {
-          "$ref": "#/$defs/ResultType"
-        },
         "out_type": {
-          "$ref": "#/$defs/ResultType"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ResultType"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "output_type": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ResultType"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "required": [
         "out_label",
-        "expression",
-        "result_type"
+        "expression"
       ]
     },
     "CompareStringTags": {

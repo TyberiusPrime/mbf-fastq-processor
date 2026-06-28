@@ -7385,6 +7385,36 @@ fn test_cases_x_single_step_x_eval_x_eval_expr_x_eval_expression_complex() {
 
 #[test]
 
+fn test_cases_x_single_step_x_eval_x_eval_expr_x_eval_expression_force_type_bool() {
+    println!(
+        "Test case is in: test_cases/single_step/eval/eval_expr/eval_expression_force_type_bool"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/eval/eval_expr/eval_expression_force_type_bool",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_eval_x_eval_expr_x_eval_expression_force_type_numeric() {
+    println!(
+        "Test case is in: test_cases/single_step/eval/eval_expr/eval_expression_force_type_numeric"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/eval/eval_expr/eval_expression_force_type_numeric",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_eval_x_eval_expr_x_missing_result_type() {
     println!("Test case is in: test_cases/single_step/eval/eval_expr/missing_result_type");
     run_test(

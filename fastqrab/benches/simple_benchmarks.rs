@@ -534,7 +534,6 @@ fn benchmark_key_steps(c: &mut Criterion) {
     action = "EvalExpression"
     expression = "length + length"
     out_label = "score"
-    result_type = "numeric"
 
 [[step]]
     action = "ForgetAllTags""#,

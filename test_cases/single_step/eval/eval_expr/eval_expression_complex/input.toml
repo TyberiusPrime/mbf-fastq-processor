@@ -22,7 +22,6 @@
     action = 'EvalExpression'
     out_label = 'quality_score'
     expression = '(1 - n_count / length) * gc_content + 0.5'
-    result_type = 'numeric'
 
 [[step]]
     action = 'StoreTagInComment'

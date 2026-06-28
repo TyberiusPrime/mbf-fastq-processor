@@ -10,7 +10,6 @@
 	action = "EvalExpression"
 	out_label = "out_tag"
 	expression = "len_not_a_location_tag > 5"
-	result_type = "numeric"
 
 [[step]]
 	action = "StoreTagsInTable"

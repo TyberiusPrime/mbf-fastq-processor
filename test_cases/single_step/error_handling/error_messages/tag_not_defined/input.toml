@@ -5,7 +5,6 @@
     action = 'EvalExpression'
 	out_label = 'eval_result'
 	expression = '5 * whatever'
-	result_type = 'numeric'
 
 [output]
     prefix = "output"

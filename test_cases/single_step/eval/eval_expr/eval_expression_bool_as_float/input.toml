@@ -11,14 +11,12 @@
     action = 'EvalExpression'
     out_label = 'n_even'
     expression = 'n_count % 2 == 0'
-	result_type = 'bool'
 
 
 [[step]]
     action = 'EvalExpression'
     out_label = 'mult'
     expression = 'n_even * 3'
-	result_type = 'numeric'
 
 [[step]]
     action = 'StoreTagInComment'

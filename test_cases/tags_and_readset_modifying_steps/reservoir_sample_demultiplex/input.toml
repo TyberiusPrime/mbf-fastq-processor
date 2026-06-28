@@ -18,7 +18,6 @@
   action = "EvalExpression"
   expression = "read_no % 2 != 0"
   out_label = "even"
-  result_type = "bool"
 
 [[step]]
   action = "Demultiplex"

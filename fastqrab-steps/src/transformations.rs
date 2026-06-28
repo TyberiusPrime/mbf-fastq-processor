@@ -397,6 +397,8 @@ pub enum Transformation {
     #[tpd(alias = "StoreTagsInFastQ")]
     StoreTagInFastQ(tag::StoreTagInFastQ),
     #[tpd(alias = "StoreTagInTable")]
+    #[tpd(alias = "OutputTable")]
+    #[tpd(alias = "OutputTSV")]
     StoreTagsInTable(tag::StoreTagsInTable),
     StoreSingleCellMatrix(tag::StoreSingleCellMatrix),
     // //other

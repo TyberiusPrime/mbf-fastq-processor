@@ -11,7 +11,7 @@
   action = "EvaluateExpression"
   out_label = "nope"
   expression = "0"
-  result_type = "bool"
+  output_type = 'bool'
 
 [[step]]
   action = "FilterByTag"
