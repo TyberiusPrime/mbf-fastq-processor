@@ -20,7 +20,6 @@
     action = 'EvalExpression'
     out_label = 'should_swap'
     expression = 'length > 10'
-    result_type = 'bool'
 
 # Conditionally swap reads based on the boolean tag
 [[step]]

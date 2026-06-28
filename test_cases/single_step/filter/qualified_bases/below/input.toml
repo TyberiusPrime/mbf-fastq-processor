@@ -13,7 +13,6 @@
 	action = 'EvalExpression'
 	out_label = 'qbr'
 	expression = 'qb / len_read1'
-    result_type = 'numeric'
 
 # [[step]]
 # 	action = 'StoreTagsInTable'

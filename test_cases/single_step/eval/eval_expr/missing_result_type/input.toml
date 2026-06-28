@@ -15,7 +15,7 @@
 [[step]]
     action = 'EvalExpression'
     out_label = 'n_rate'
-    expression = 'len_read1 + 23'
+    expression = 'n_count + length'
 
 [[step]]
     action = 'StoreTagInComment'

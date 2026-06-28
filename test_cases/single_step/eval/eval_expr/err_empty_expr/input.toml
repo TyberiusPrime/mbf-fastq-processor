@@ -16,7 +16,6 @@
     action = 'EvalExpression'
     out_label = 'n_rate'
     expression = ''
-	result_type = 'numeric'
 
 [[step]]
     action = 'StoreTagInComment'

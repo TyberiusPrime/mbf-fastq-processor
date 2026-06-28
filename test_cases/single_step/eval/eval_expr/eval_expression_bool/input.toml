@@ -16,7 +16,6 @@
     action = 'EvalExpression'
     out_label = 'high_n_rate'
     expression = '(n_count / length) > 0.5'
-    result_type = 'bool'
 
 [[step]]
     action = 'StoreTagInComment'

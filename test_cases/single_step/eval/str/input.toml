@@ -16,7 +16,6 @@
 	expression = '''
 		regexp_one
 	'''
-    result_type = 'bool'
 
 [[step]]
 	action ='FilterByTag'

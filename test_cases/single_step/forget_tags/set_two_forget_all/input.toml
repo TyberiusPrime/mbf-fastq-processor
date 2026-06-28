@@ -15,7 +15,6 @@
   action = 'EvalExpression'
   query= "read_no % 2 == 0"
   out_label = 'even'
-  result_type = 'bool'
 
 [[step]]
   action ='ForgetallTags'
@@ -24,7 +23,6 @@
   action = 'EvalExpression'
   query= "read_no % 2 != 0"
   out_label = 'even'
-  result_type = 'bool'
 
 [[step]]
   action = 'FilterByTag'

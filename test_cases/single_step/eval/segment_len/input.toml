@@ -13,7 +13,6 @@
 	expression = '''
 		len_read2 >= 9
 	'''
-    result_type = 'bool'
 [[step]]
 	action = "FilterByTag"
 	in_label = 'filter_len'

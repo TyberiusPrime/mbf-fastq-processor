@@ -8,7 +8,6 @@
 	expression = '''
 		ReadName + 2 + all
 	'''
-    result_type = 'bool'
 
 [[step]]
 	action ='FilterByTag'

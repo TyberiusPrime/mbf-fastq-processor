@@ -45,7 +45,6 @@
   action = "EvalExpression"
   expression = "read_no < 4"
   out_label = "read_no_lt_4"
-  result_type = "bool"
 
 # Create histogram reports
 [[step]]

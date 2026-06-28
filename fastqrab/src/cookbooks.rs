@@ -409,7 +409,6 @@ This cookbook demonstrates three equivalent ways to filter PhiX-contaminated rea
     action = "EvalExpression"
     expression = "phix_kmer_count >= 25"
     out_label = "is_phix"
-    result_type = "bool"
 
 # Separate clean reads from PhiX-contaminated reads
 # For boolean tags, Demultiplex creates files with pattern: {prefix}_{label}={value}_{segment}.fq
@@ -1160,7 +1159,6 @@ min_value = 100
     action = 'EvalExpression'
     expression = 'len1 + len2 >= 50'
     out_label = 'long_enough'
-    result_type = 'bool'
 
 [[step]]
     action = 'FilterByTag'

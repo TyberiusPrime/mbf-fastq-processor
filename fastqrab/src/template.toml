@@ -306,7 +306,6 @@
 #             mytag>= 50
 #   '''
 #   out_label = "outtag"
-#   result_type = 'bool'
 
 ## Besides the regular arithmetic operators (+, -, *, /, %, ^)
 ## this supports log(base, val), e(), pi(), int(), ceil(), floor(), round(), abs(), sign(), min(a,b,...), max(a,b,...)

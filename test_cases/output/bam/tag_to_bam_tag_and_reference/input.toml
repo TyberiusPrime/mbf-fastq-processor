@@ -51,7 +51,6 @@
   action = 'EvalExpression'
   query = 'acontent > 0.25'
   out_label='many_a'
-  result_type='bool'
 
 [[step]]
   action = 'StoreTagsInTable'

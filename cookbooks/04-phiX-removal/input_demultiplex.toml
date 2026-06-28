@@ -24,7 +24,6 @@
     action = "EvalExpression"
     expression = "phix_kmer_count >= 25"
     out_label = "is_phix"
-    result_type = "bool"
 
 [[step]]
     # Separate reads into two output files based on contamination status

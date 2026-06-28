@@ -7,11 +7,28 @@ use std::{
 
 use crate::transformations::prelude::*;
 
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+enum ResultType {
+    #[default]
+    Numeric,
+    Bool,
+}
+
+fn infer_result_type(instruction: &fasteval::Instruction) -> ResultType {
+    use fasteval::Instruction::{IAND, IEQ, IGT, IGTE, ILT, ILTE, INE, INot, IOR};
+    match instruction {
+        ILT(..) | ILTE(..) | IGT(..) | IGTE(..) | IEQ(..) | INE(..) | IAND(..) | IOR(..)
+        | INot(..) => ResultType::Bool,
+        _ => ResultType::Numeric,
+    }
+}
+
 #[derive(Debug)]
 struct CompiledExpression {
     slab: Slab,
     instruction: fasteval::Instruction,
     var_names: BTreeSet<String>,
+    result_type: ResultType,
 }
 
 /// Evaluate an equation on tags
@@ -21,15 +38,13 @@ struct CompiledExpression {
 pub struct EvalExpression {
     /// The tag label to store the result
     pub out_label: TagLabel,
-    /// The arithmetic expression to evaluate
-    /// Variables in the expression should match existing numeric tag names
+    /// The arithmetic or boolean expression to evaluate.
+    /// Variables in the expression should match existing tag names.
+    /// Expressions using comparison or logical operators (`<`, `>`, `==`, `!=`, `&&`, `||`, `!`)
+    /// produce a bool tag; pure arithmetic expressions produce a numeric tag.
     #[tpd(alias = "expr")]
     #[tpd(alias = "query")]
     pub expression: String,
-
-    #[tpd(alias = "output_type")]
-    #[tpd(alias = "out_type")]
-    pub result_type: ResultType,
 
     #[tpd(skip)]
     #[schemars(skip)]
@@ -70,8 +85,10 @@ impl VerifyIn<PartialConfig> for PartialEvalExpression {
                 }
                 Ok(parsed) => {
                     let instruction = parsed.from(&slab.ps).compile(&slab.ps, &mut slab.cs);
+                    let result_type = infer_result_type(&instruction);
                     self.compiled = Some(CompiledExpression {
                         var_names: instruction.var_names(&slab),
+                        result_type,
                         slab,
                         instruction,
                     });
@@ -91,19 +108,11 @@ impl std::fmt::Debug for EvalExpression {
         f.debug_struct("EvalExpression")
             .field("label", &self.out_label)
             .field("expression", &self.expression)
-            .field("result_type", &self.result_type)
+            .field("result_type", &self.compiled.result_type)
             .finish()
     }
 }
 // cov:excl-stop
-
-#[derive(Debug, Clone, Copy, PartialEq, Default, JsonSchema)]
-#[tpd]
-pub enum ResultType {
-    #[default]
-    Numeric,
-    Bool,
-}
 
 impl TagUser for PartialTaggedVariant<Box<PartialEvalExpression>> {
     fn get_tag_usage(
@@ -178,16 +187,18 @@ impl TagUser for PartialTaggedVariant<Box<PartialEvalExpression>> {
                 Default::default()
             };
 
+            let result_type = inner
+                .compiled
+                .as_ref()
+                .map_or(ResultType::Numeric, |c| c.result_type);
+
             inner.var_name_to_tag = Some(var_name_to_tag);
             Some(TagUsageInfo {
                 used_tags,
-                declared_tag: inner.out_label.to_declared_tag(
-                    match inner.result_type.as_ref().unwrap_or(&ResultType::Numeric)// user forgot result_type, or mistype 
-                    {
-                        ResultType::Numeric => TagValueType::Numeric((None, None)),
-                        ResultType::Bool => TagValueType::Bool,
-                    },
-                ),
+                declared_tag: inner.out_label.to_declared_tag(match result_type {
+                    ResultType::Numeric => TagValueType::Numeric((None, None)),
+                    ResultType::Bool => TagValueType::Bool,
+                }),
                 ..Default::default()
             })
         } else {
@@ -280,7 +291,7 @@ impl Step for Box<EvalExpression> {
             results.push(result);
         }
 
-        let tag_column = match self.result_type {
+        let tag_column = match self.compiled.result_type {
             ResultType::Numeric => TagColumn::Numeric(results.into_iter().collect()),
             ResultType::Bool => {
                 // Treat 0.0 as false, any other value as true

@@ -1441,9 +1441,6 @@
               "description": "The arithmetic expression to evaluate\nVariables in the expression should match existing numeric tag names",
               "type": "string"
             },
-            "result_type": {
-              "$ref": "#/$defs/ResultType"
-            },
             "action": {
               "type": "string",
               "enum": [
@@ -4031,15 +4028,6 @@
         "in_label"
       ]
     },
-    "ResultType": {
-      "type": "string",
-      "enum": [
-        "Numeric",
-        "Bool",
-        "numeric",
-        "bool"
-      ]
-    },
     "EvalExpression": {
       "description": "Evaluate an equation on tags",
       "type": "object",
@@ -4049,31 +4037,21 @@
           "type": "string"
         },
         "expression": {
-          "description": "The arithmetic expression to evaluate\nVariables in the expression should match existing numeric tag names",
+          "description": "The arithmetic or boolean expression to evaluate.\nVariables in the expression should match existing tag names.\nExpressions using comparison or logical operators produce a bool tag; pure arithmetic expressions produce a numeric tag.",
           "type": "string"
         },
-        "result_type": {
-          "$ref": "#/$defs/ResultType"
-        },
         "expr": {
-          "description": "The arithmetic expression to evaluate\nVariables in the expression should match existing numeric tag names",
+          "description": "The arithmetic or boolean expression to evaluate.\nVariables in the expression should match existing tag names.\nExpressions using comparison or logical operators produce a bool tag; pure arithmetic expressions produce a numeric tag.",
           "type": "string"
         },
         "query": {
-          "description": "The arithmetic expression to evaluate\nVariables in the expression should match existing numeric tag names",
+          "description": "The arithmetic or boolean expression to evaluate.\nVariables in the expression should match existing tag names.\nExpressions using comparison or logical operators produce a bool tag; pure arithmetic expressions produce a numeric tag.",
           "type": "string"
-        },
-        "output_type": {
-          "$ref": "#/$defs/ResultType"
-        },
-        "out_type": {
-          "$ref": "#/$defs/ResultType"
         }
       },
       "required": [
         "out_label",
-        "expression",
-        "result_type"
+        "expression"
       ]
     },
     "CompareStringTags": {

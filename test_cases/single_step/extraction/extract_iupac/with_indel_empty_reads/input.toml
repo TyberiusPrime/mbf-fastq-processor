@@ -6,7 +6,6 @@
   action = "EvaluateExpression"
   out_label = "early"
   expression = "read_no < 2"
-  result_type = "bool"
 
 
 [[step]]

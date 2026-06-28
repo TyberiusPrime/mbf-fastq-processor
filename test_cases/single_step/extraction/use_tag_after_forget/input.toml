@@ -9,7 +9,6 @@
 [[step]]
     action = 'EvaluateExpression'
     expr = 'length + 1'
-    output_type = 'numeric'
     out_label = 'v1'
 
 [[step]]

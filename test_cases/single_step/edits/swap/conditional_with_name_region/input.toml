@@ -25,7 +25,6 @@
     action = 'EvalExpression'
     out_label = 'should_swap'
     expression = 'length > 6'
-    result_type = 'bool'
 
 [[step]]
     action = 'Swap'

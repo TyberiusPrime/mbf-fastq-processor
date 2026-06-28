@@ -21,7 +21,6 @@
 	expression = '''
 		regexp_one and regex_two
 	'''
-    result_type = 'bool'
 
 [[step]]
 	action ='FilterByTag'

@@ -9,7 +9,6 @@
 [[step]]
   action=  'EvalExpression'
   out_label = 'even'
-  result_type = 'bool'
   expr = 'read_no % 2 == 0'
 
 [[step]]

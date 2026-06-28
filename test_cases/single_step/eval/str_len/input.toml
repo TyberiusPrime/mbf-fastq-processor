@@ -16,7 +16,6 @@
 	expression = '''
 		len_regexp_one > 2
 	'''
-    result_type = 'bool'
 
 [[step]]
 	action ='FilterByTag'
