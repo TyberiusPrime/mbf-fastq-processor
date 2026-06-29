@@ -457,6 +457,8 @@ pub enum Transformation {
 
     #[schemars(skip)]
     DebugBlockSizes(debug::BlockSizes),
+    #[schemars(skip)]
+    _InducePanic(debug::InducedPanic),
 }
 
 #[derive(Debug)]

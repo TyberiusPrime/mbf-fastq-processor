@@ -866,10 +866,9 @@ impl RunStage1 {
         let orig_hook = panic::take_hook();
         panic::set_hook(Box::new(move |panic_info| {
             // invoke the default handler and exit the process
-            // cov:excl-start
             orig_hook(panic_info);
-            std::process::exit(1);
-            // cov:excl-stop
+            eprintln!("A panic occured in a work thread. Aborting run.");
+            std::process::exit(1); //abort would be more sensible, but kills coverage.
         }));
         let input_config = &parsed.input;
         // All input-side pool sizes come from the central `calculate_thread_counts`

@@ -666,6 +666,17 @@ fn test_cases_x_error_handling_x_misc_x_too_many_open_files() {
 
 #[test]
 
+fn test_cases_x_error_handling_x_panic_in_thread() {
+    println!("Test case is in: test_cases/error_handling/panic_in_thread");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/panic_in_thread"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_error_handling_x_replace_tag_with_letter_x_no_letter() {
     println!("Test case is in: test_cases/error_handling/replace_tag_with_letter/no_letter");
     run_test(
