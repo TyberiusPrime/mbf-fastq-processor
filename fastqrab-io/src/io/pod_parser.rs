@@ -632,12 +632,15 @@ fn collect(
             next += 1;
         }
     }
-    // Any stragglers (shouldn't happen once done_rx is closed, but be safe).
-    while let Some(res) = reorder.remove(&next) {
-        check_endings(&res, &mut saw_crlf, &mut saw_lf)?;
-        absorb(res, &mut held, &mut global_lines, &mut emit)?;
-        next += 1;
-    }
+    // The inner loop drains `next..` after every insert, so once `done_rx` is
+    // closed `reorder` holds no processable stragglers (the next index is never
+    // a key in it). Assert that invariant in debug builds rather than carrying a
+    // second, provably-unreachable drain loop.
+    debug_assert!(
+        reorder.is_empty(),
+        "collector left {} unordered chunk(s) unprocessed",
+        reorder.len()
+    );
 
     let carry = tail_rx.recv().unwrap_or_default();
     // The final unterminated line counts toward the newline-style check too.
@@ -773,12 +776,8 @@ mod tests {
         // Feed the payload as several awkwardly-sized chunks.
         let producer = std::thread::spawn(move || {
             for piece in data.chunks(7) {
-                if tx
-                    .send(Chunk::owned(Arc::new(piece.to_vec()), None))
-                    .is_err()
-                {
-                    break;
-                }
+                tx.send(Chunk::owned(Arc::new(piece.to_vec()), None))
+                    .expect("consumer not supposed to hang up in this test");
             }
         });
 
@@ -871,12 +870,8 @@ mod tests {
             let p = Arc::clone(&payload);
             let producer = std::thread::spawn(move || {
                 for piece in p.chunks(64 * 1024) {
-                    if tx
-                        .send(Chunk::owned(Arc::new(piece.to_vec()), None))
-                        .is_err()
-                    {
-                        break;
-                    }
+                    tx.send(Chunk::owned(Arc::new(piece.to_vec()), None))
+                        .expect("Consumer not supposed to hang up in this test");
                 }
             });
             let (chunk_tx, chunk_rx) = channel::bounded::<FastqChunk>(8);
@@ -919,29 +914,21 @@ mod tests {
     /// cargo test -p fastqrab-io --release -- --ignored read_exceeding_u32
     /// ```
     #[test]
-    #[ignore = "accumulates >4 GiB and needs several GiB of RAM; run with --ignored"]
+    //#[ignore = "accumulates >4 GiB and needs several GiB of RAM; run with --ignored"]
     fn read_exceeding_u32_fails_gracefully() {
         let (tx, rx) = channel::bounded::<Chunk>(8);
         let producer = std::thread::spawn(move || {
             // `@r\n` then a single sequence line longer than u32::MAX, then its
             // terminating newline: the >4 GiB line is the boundary-straddling
             // line whose assembly trips the guard.
-            if tx
-                .send(Chunk::owned(Arc::new(b"@r\n".to_vec()), None))
-                .is_err()
-            {
-                return;
-            }
+            tx.send(Chunk::owned(Arc::new(b"@r\n".to_vec()), None))
+                .expect("consumer not supposed to hang up in this test");
             let block = vec![b'A'; 64 * 1024 * 1024];
             let target: u64 = u64::from(u32::MAX) + (1 << 20);
             let mut sent: u64 = 0;
             while sent < target {
-                if tx
-                    .send(Chunk::owned(Arc::new(block.clone()), None))
-                    .is_err()
-                {
-                    return;
-                }
+                tx.send(Chunk::owned(Arc::new(block.clone()), None))
+                    .expect("consumer not supposed to hang up in this test");
                 sent += block.len() as u64;
             }
             let _ = tx.send(Chunk::owned(Arc::new(b"\n+\n".to_vec()), None));

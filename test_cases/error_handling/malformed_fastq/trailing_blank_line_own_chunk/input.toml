@@ -1,0 +1,16 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[options]
+    # 15-byte record fills chunk 1 exactly; the lone trailing '\n' (the extra
+    # blank line) lands alone in chunk 2. The record is flushed in absorb, so at
+    # end-of-stream `held` is just that empty name line. The trailing-blank
+    # tolerance truncates it to nothing, so finish_eof calls emit_records with an
+    # empty `names` column -> the `names.is_empty()` early return in emit_records.
+    buffer_size = 15
+
+[output]
+    prefix = "output"
+
+[[step]]
+    action = "OutputFASTQ"

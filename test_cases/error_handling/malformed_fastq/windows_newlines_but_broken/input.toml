@@ -1,11 +1,12 @@
 [input]
 read1 = ['input_read1.fq.zst', 'input_read2.fq.zst']
 
-read2 = ['input_read2.fq.zst', 'input_read1.fq.zst']
+# read2 = ['input_read2.fq.zst', 'input_read1.fq.zst'] # makes the error message toggle betwen 
+# read1, read2, or both...
 
 [options]
 accept_duplicate_files = true
-buffer_size=1024
+buffer_size=52
 block_size=12
 
 [output]

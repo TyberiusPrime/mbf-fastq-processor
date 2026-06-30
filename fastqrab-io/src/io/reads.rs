@@ -79,12 +79,12 @@ impl FastQBlocksCombined {
         );
         let expected = segments[0].row_count();
         for (idx, segment) in segments.iter().enumerate().skip(1) {
+            let observed = segment.row_count();
             assert_eq!(
                 segment.row_count(),
                 expected,
-                "FastQBlocksCombined segment {idx} has {} reads but segment 0 has {expected}; \
+                "FastQBlocksCombined segment {idx} has {observed} reads but segment 0 has {expected}; \
                  segments must be in lockstep",
-                segment.row_count(),
             );
         }
         FastQBlocksCombined {

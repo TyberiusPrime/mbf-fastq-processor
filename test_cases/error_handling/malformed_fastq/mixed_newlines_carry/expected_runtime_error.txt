@@ -1,0 +1,2 @@
+Error Details ==
+Error in reading thread for segment read1: FASTQ uses inconsistent line endings (a mix of LF and CR+LF). Convert the file to a single newline style.

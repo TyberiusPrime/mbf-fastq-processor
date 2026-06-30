@@ -890,15 +890,18 @@ pub fn spawn_decompressor_shm(
     // SAFETY: standard libc call with a valid C name and zero flags.
     let fd = unsafe { libc::memfd_create(c"fastqrab-shm".as_ptr(), 0) };
     if fd < 0 {
-        bail!("memfd_create failed: {}", std::io::Error::last_os_error());
+        bail!("memfd_create failed: {}", std::io::Error::last_os_error()); // cov:excl-line
+        // functionally untestable
     }
 
     // SAFETY: `fd` is the live memfd we just created.
     if unsafe { libc::ftruncate(fd, total_off) } != 0 {
+        //cov:excl-start
         let err = std::io::Error::last_os_error();
         // SAFETY: `fd` is ours and unused past this point.
         unsafe { libc::close(fd) };
         bail!("ftruncate of shared-memory region failed: {err}");
+        //cov:excl-stop
     }
 
     // SAFETY: mapping our own memfd `MAP_SHARED` for read+write.
@@ -912,14 +915,14 @@ pub fn spawn_decompressor_shm(
             0,
         )
     };
-    // cov:excl-start
     if ptr == libc::MAP_FAILED {
+        // cov:excl-start
         let err = std::io::Error::last_os_error();
         // SAFETY: `fd` is ours and unused past this point.
         unsafe { libc::close(fd) };
         bail!("mmap of shared-memory region failed: {err}");
+        // cov:excl-stop
     }
-    // cov:excl-stop
     let region = std::sync::Arc::new(ShmRegion {
         ptr: ptr.cast::<u8>(),
         len: total,

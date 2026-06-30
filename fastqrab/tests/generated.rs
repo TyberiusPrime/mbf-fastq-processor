@@ -609,6 +609,17 @@ fn test_cases_x_error_handling_x_malformed_fastq_x_broken_panics() {
 
 #[test]
 
+fn test_cases_x_error_handling_x_malformed_fastq_x_crlf_no_newline_at_end() {
+    println!("Test case is in: test_cases/error_handling/malformed_fastq/crlf_no_newline_at_end");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/malformed_fastq/crlf_no_newline_at_end"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_error_handling_x_malformed_fastq_x_error_diff_ids() {
     println!("Test case is in: test_cases/error_handling/malformed_fastq/error_diff_ids");
     run_test(
@@ -967,6 +978,17 @@ fn test_cases_x_error_handling_x_malformed_fastq_x_mismatched_seq_qual_len_2nd_r
 
 #[test]
 
+fn test_cases_x_error_handling_x_malformed_fastq_x_mixed_newlines_carry() {
+    println!("Test case is in: test_cases/error_handling/malformed_fastq/mixed_newlines_carry");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/malformed_fastq/mixed_newlines_carry"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_error_handling_x_malformed_fastq_x_no_newline_and_truncated_qual() {
     println!(
         "Test case is in: test_cases/error_handling/malformed_fastq/no_newline_and_truncated_qual"
@@ -1008,6 +1030,21 @@ fn test_cases_x_error_handling_x_malformed_fastq_x_quality_starts_with_at() {
     println!("Test case is in: test_cases/error_handling/malformed_fastq/quality_starts_with_at");
     run_test(
         std::path::Path::new("../test_cases/error_handling/malformed_fastq/quality_starts_with_at"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_error_handling_x_malformed_fastq_x_trailing_blank_line_own_chunk() {
+    println!(
+        "Test case is in: test_cases/error_handling/malformed_fastq/trailing_blank_line_own_chunk"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/error_handling/malformed_fastq/trailing_blank_line_own_chunk",
+        ),
         "input.toml",
         1,
     );
