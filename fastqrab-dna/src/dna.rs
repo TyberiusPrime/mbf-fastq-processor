@@ -873,7 +873,7 @@ fn iupac_to_bases(c: u8) -> &'static [u8] {
         b'H' => b"ACT",
         b'V' => b"ACG",
         b'N' => b"ACGT",
-        b'_' => b"", // cov:excl-line
+        b'_' => b"",
         _ => panic!("non iupac string passed to iupac_to_bases"),
     }
 }
@@ -942,14 +942,7 @@ pub fn init_hamming_resonator(
     let seqs: Vec<BString> = seq_to_name.keys().cloned().collect();
 
     let resonator = HammingResonator::new(seqs, max_dist.into())
-        //cov:excl-start
-        .map_err(|e| {
-            ValidationFailure::new(
-                "Failed to initialize".to_string(),
-                Some(format!("Inner error: {e}")),
-            )
-        })?;
-    //cov:excl-stop
+        .expect("Hamming resonator failed to init? Unequal seq lengths?");
     Ok(resonator)
 }
 

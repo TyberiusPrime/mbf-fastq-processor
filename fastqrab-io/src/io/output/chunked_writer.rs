@@ -156,7 +156,7 @@ impl<W: Write> FailForTestLayer<W> {
     fn finish(self) -> W {
         match self {
             FailForTestLayer::PassThrough(w) => w,
-            FailForTestLayer::Active(w) => w.finish(), //cov:excl-line we're not calling finish after a failure
+            FailForTestLayer::Active(w) => w.finish(),
         }
     }
 }
@@ -165,14 +165,14 @@ impl<W: Write> Write for FailForTestLayer<W> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         match self {
             FailForTestLayer::PassThrough(w) => w.write(buf),
-            FailForTestLayer::Active(w) => w.write(buf), //cov:excl-line we're not calling finish after a failure
+            FailForTestLayer::Active(w) => w.write(buf),
         }
     }
 
     fn flush(&mut self) -> io::Result<()> {
         match self {
             FailForTestLayer::PassThrough(w) => w.flush(),
-            FailForTestLayer::Active(w) => w.flush(), //cov:excl-line we're not calling flush after a failure
+            FailForTestLayer::Active(w) => w.flush(),
         }
     }
 }
@@ -445,7 +445,7 @@ impl SharedBamHeader {
             BamHeaderSource::FromBam(path) => {
                 let refs = read_bam_reference_sequences(path).with_context(|| {
                     format!(
-                        "Could not read reference sequences from BAM file: {}",
+                        "Could not read reference sequences from BAM file: '{}'",
                         path.display()
                     )
                 })?;

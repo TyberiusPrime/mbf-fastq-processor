@@ -2683,6 +2683,17 @@ fn test_cases_x_output_x_bam_x_tag_to_reference_from_bam_and_barcodes() {
 
 #[test]
 
+fn test_cases_x_output_x_bam_x_tag_to_reference_from_bam_broken_bam() {
+    println!("Test case is in: test_cases/output/bam/tag_to_reference_from_bam_broken_bam");
+    run_test(
+        std::path::Path::new("../test_cases/output/bam/tag_to_reference_from_bam_broken_bam"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_output_x_bam_x_tag_to_reference_from_bam_non_existant_reference() {
     println!(
         "Test case is in: test_cases/output/bam/tag_to_reference_from_bam_non_existant_reference"

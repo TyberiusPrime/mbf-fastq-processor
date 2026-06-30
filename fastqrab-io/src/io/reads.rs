@@ -1,15 +1,14 @@
-use anyhow::{Result, bail};
+use anyhow::Result;
 use bstr::BStr;
 use indexmap::IndexMap;
 use smallvec::SmallVec;
 use std::marker::PhantomData;
-use std::num::NonZero;
 use std::ops::Range;
 use stringpod::CrossPods;
 
-use crate::blocks::{self, FastQChunk, FastQReadMut, Molecules, MoleculesMut};
+use crate::blocks::{self, FastQChunk, FastQReadMut, Molecules};
 use fastqrab_config::{TagLabel, segments::SegmentIndexOrAll};
-use fastqrab_dna::dna::{TagColumn, hamming};
+use fastqrab_dna::dna::TagColumn;
 use fastqrab_dna::segments::SegmentIndex;
 
 pub type DemultiplexTag = u64;
@@ -253,25 +252,21 @@ impl FastQBlocksCombined {
         blocks::molecules(&self.segments)
     }
 
-    /// Iterate molecules mutably. Shared buffers are made exclusive first
-    /// (silent copy-on-write).
-    pub fn molecules_mut(&mut self) -> MoleculesMut<'_> {
-        blocks::molecules_mut(&mut self.segments)
-    }
-
-    /// Ensure every segment owns its byte buffers outright.
-    pub fn make_exclusive(&mut self) {
-        for segment in &mut self.segments {
-            segment.make_exclusive();
-        }
-    }
+    // /// Iterate molecules mutably. Shared buffers are made exclusive first
+    // /// (silent copy-on-write).
+    // pub fn molecules_mut(&mut self) -> MoleculesMut<'_> {
+    //     blocks::molecules_mut(&mut self.segments)
+    // }
 
     pub fn truncate(&mut self, len: usize) {
         for segment in &mut self.segments {
             segment.truncate(len);
         }
-        if let Some(output_tags) = &mut self.output_tags {
-            output_tags.truncate(len);
+        if let Some(_output_tags) = &mut self.output_tags {
+            // output_tags.truncate(len);
+            unreachable!(
+                "Truncating should respect demultiplex, this doesn't. See Head step for a working impl"
+            );
         }
         for tags in self.tags.values_mut() {
             tags.truncate(len);
@@ -293,24 +288,24 @@ impl FastQBlocksCombined {
         //     // only use drain in the non-demultiplexing case, completeness and future use.
         // }
     }
+    //
+    // ///in place mutation.
+    // pub fn apply_mut_sequences<F>(&mut self, f: F)
+    // where
+    //     F: for<'a> Fn(&SmallVec<[&'a mut BStr; 4]>),
+    // {
+    //     // One molecule per row; gather each segment's seq into the slice the
+    //     // closure expects. `molecules_mut` makes the buffers exclusive itself
+    //     // (silent copy-on-write), so the old "apply to_exclusive first" caveat
+    //     // is gone.
+    //     for molecule in blocks::molecules_mut(&mut self.segments) {
+    //         let mut reads: SmallVec<[&mut BStr; 4]> =
+    //             molecule.into_iter().map(|read| read.seq).collect();
+    //         f(&mut reads);
+    //     }
+    // }
 
-    ///in place mutation.
-    pub fn apply_mut_sequences<F>(&mut self, f: F)
-    where
-        F: for<'a> Fn(&SmallVec<[&'a mut BStr; 4]>),
-    {
-        // One molecule per row; gather each segment's seq into the slice the
-        // closure expects. `molecules_mut` makes the buffers exclusive itself
-        // (silent copy-on-write), so the old "apply to_exclusive first" caveat
-        // is gone.
-        for molecule in blocks::molecules_mut(&mut self.segments) {
-            let mut reads: SmallVec<[&mut BStr; 4]> =
-                molecule.into_iter().map(|read| read.seq).collect();
-            f(&mut reads);
-        }
-    }
-
-    ///in place mutati
+    ///in place mutation
     pub fn apply_mut_qualities<F>(&mut self, f: F)
     where
         F: for<'a> Fn(&mut SmallVec<[&'a mut BStr; 4]>),
@@ -322,19 +317,19 @@ impl FastQBlocksCombined {
         }
     }
 
-    ///in place mutation.
-    pub fn apply_mut_both<F>(&mut self, f: F)
-    where
-        F: for<'a> Fn(&mut SmallVec<[(&'a mut BStr, &'a mut BStr); 4]>),
-    {
-        for molecule in blocks::molecules_mut(&mut self.segments) {
-            let mut reads: SmallVec<[(&mut BStr, &mut BStr); 4]> = molecule
-                .into_iter()
-                .map(|read| (read.seq, read.qual))
-                .collect();
-            f(&mut reads);
-        }
-    }
+    // ///in place mutation.
+    // pub fn apply_mut_both<F>(&mut self, f: F)
+    // where
+    //     F: for<'a> Fn(&mut SmallVec<[(&'a mut BStr, &'a mut BStr); 4]>),
+    // {
+    //     for molecule in blocks::molecules_mut(&mut self.segments) {
+    //         let mut reads: SmallVec<[(&mut BStr, &mut BStr); 4]> = molecule
+    //             .into_iter()
+    //             .map(|read| (read.seq, read.qual))
+    //             .collect();
+    //         f(&mut reads);
+    //     }
+    // }
 
     /// # Panics
     /// when the tag is missing or not a Location column
@@ -357,55 +352,56 @@ impl FastQBlocksCombined {
             f(seq, &row_regions);
         }
     }
+    //
+    // /// # Panics
+    // /// when the tag is missing or not a String column
+    // pub fn apply_mut_with_string_tag<F>(&mut self, label: &TagLabel, mut f: F)
+    // where
+    //     F: for<'a> FnMut(&mut SmallVec<[&BStr; 4]>, Option<&BStr>),
+    // {
+    //     let TagColumn::String(col) = self.tags.get(label).expect("Tag must be present, bug") else {
+    //         panic!("Tag {label:?} is not a String column");
+    //     };
+    //     for (ii, molecule) in blocks::molecules(&self.segments).enumerate() {
+    //         let mut reads: SmallVec<[&BStr; 4]> =
+    //             molecule.into_iter().map(|read| read.seq).collect();
+    //         f(&mut reads, col.get_string(ii));
+    //     }
+    // }
 
-    /// # Panics
-    /// when the tag is missing or not a String column
-    pub fn apply_mut_with_string_tag<F>(&mut self, label: &TagLabel, mut f: F)
-    where
-        F: for<'a> FnMut(&mut SmallVec<[&BStr; 4]>, Option<&BStr>),
-    {
-        let TagColumn::String(col) = self.tags.get(label).expect("Tag must be present, bug") else {
-            panic!("Tag {label:?} is not a String column");
-        };
-        for (ii, molecule) in blocks::molecules(&self.segments).enumerate() {
-            let mut reads: SmallVec<[&BStr; 4]> =
-                molecule.into_iter().map(|read| read.seq).collect();
-            f(&mut reads, col.get_string(ii));
-        }
-    }
-
-    /// # Panics
-    /// when the tag is missing or not a Numeric column
-    pub fn apply_mut_with_numeric_tag<F>(&mut self, label: &TagLabel, mut f: F)
-    where
-        F: for<'a> FnMut(&mut SmallVec<[&BStr; 4]>, f64),
-    {
-        let TagColumn::Numeric(tags) = self.tags.get(label).expect("Tag must be present, bug")
-        else {
-            panic!("Tag {label:?} is not a Numeric column");
-        };
-        for (ii, molecule) in blocks::molecules(&self.segments).enumerate() {
-            let mut reads: SmallVec<[&BStr; 4]> =
-                molecule.into_iter().map(|read| read.seq).collect();
-            f(&mut reads, tags[ii]);
-        }
-    }
-
-    /// # Panics
-    /// when the tag is missing or not a Bool column
-    pub fn apply_mut_with_bool_tag<F>(&mut self, label: &TagLabel, mut f: F)
-    where
-        F: for<'a> FnMut(&mut SmallVec<[&BStr; 4]>, bool),
-    {
-        let TagColumn::Bool(tags) = self.tags.get(label).expect("Tag must be present, bug") else {
-            panic!("Tag {label:?} is not a Bool column");
-        };
-        for (ii, molecule) in blocks::molecules(&self.segments).enumerate() {
-            let mut reads: SmallVec<[&BStr; 4]> =
-                molecule.into_iter().map(|read| read.seq).collect();
-            f(&mut reads, tags[ii]);
-        }
-    }
+    // /// # Panics
+    //
+    // /// when the tag is missing or not a Numeric column
+    // pub fn apply_mut_with_numeric_tag<F>(&mut self, label: &TagLabel, mut f: F)
+    // where
+    //     F: for<'a> FnMut(&mut SmallVec<[&BStr; 4]>, f64),
+    // {
+    //     let TagColumn::Numeric(tags) = self.tags.get(label).expect("Tag must be present, bug")
+    //     else {
+    //         panic!("Tag {label:?} is not a Numeric column");
+    //     };
+    //     for (ii, molecule) in blocks::molecules(&self.segments).enumerate() {
+    //         let mut reads: SmallVec<[&BStr; 4]> =
+    //             molecule.into_iter().map(|read| read.seq).collect();
+    //         f(&mut reads, tags[ii]);
+    //     }
+    // }
+    //
+    // /// # Panics
+    // /// when the tag is missing or not a Bool column
+    // pub fn apply_mut_with_bool_tag<F>(&mut self, label: &TagLabel, mut f: F)
+    // where
+    //     F: for<'a> FnMut(&mut SmallVec<[&BStr; 4]>, bool),
+    // {
+    //     let TagColumn::Bool(tags) = self.tags.get(label).expect("Tag must be present, bug") else {
+    //         panic!("Tag {label:?} is not a Bool column");
+    //     };
+    //     for (ii, molecule) in blocks::molecules(&self.segments).enumerate() {
+    //         let mut reads: SmallVec<[&BStr; 4]> =
+    //             molecule.into_iter().map(|read| read.seq).collect();
+    //         f(&mut reads, tags[ii]);
+    //     }
+    // }
 
     // /// # Panics
     // /// when the tag is missing
@@ -438,64 +434,62 @@ impl FastQBlocksCombined {
         // but let's just be safe.
         let mut count = None;
         for (ii, v) in self.segments.iter().enumerate() {
+            let vl = v.len();
             if let Some(c) = count {
-                if c != v.len() {
-                    bail!(
-                        "Segment counts differ (unequal number of reads), expected {c}, got {} in segment {ii}",
-                        v.len()
-                    );
-                }
+                assert_eq!(
+                    c, vl,
+                    "Segment counts differ (unequal number of reads), expected {c}, got {vl} in segment {ii}",
+                );
             } else {
-                count = Some(v.len());
+                count = Some(vl);
             }
         }
         if let Some(count) = count
             && let Some(output_tags) = &self.output_tags
         {
+            let actual = output_tags.len();
             assert_eq!(
-                count,
-                output_tags.len(),
-                "Output tag count differs, expected {count}, got {}",
-                output_tags.len()
+                count, actual,
+                "Output tag count differs, expected {count}, got {actual}",
             );
         }
         Ok(())
     }
 
-    /// Apply a function in place to all read sequencs in a segment
-    pub fn apply_in_place(
-        &mut self,
-        segment: SegmentIndex,
-        mut f: impl FnMut(&mut BStr),
-        condition: Option<&[bool]>,
-    ) {
-        for (idx, seq) in self.segments[segment.as_index()]
-            .seq_quals
-            .iter_seq_mut()
-            .enumerate()
-        {
-            if condition.is_none_or(|c| c[idx]) {
-                f(seq);
-            }
-        }
-    }
-    /// Apply a function in place to all reads in a segment,
-    /// allowing mutation on the reads (non length changing!)
-    /// with optional condition filter
-    /// wrapped
-    /// for easy access.
-    pub fn apply_in_place_wrapped(
-        &mut self,
-        segment: SegmentIndex,
-        mut f: impl FnMut(&mut FastQReadMut),
-        condition: Option<&[bool]>,
-    ) {
-        for (idx, mut read) in self.segments[segment.as_index()].iter_mut().enumerate() {
-            if condition.is_none_or(|c| c[idx]) {
-                f(&mut read);
-            }
-        }
-    }
+    // /// Apply a function in place to all read sequencs in a segment
+    // pub fn apply_in_place(
+    //     &mut self,
+    //     segment: SegmentIndex,
+    //     mut f: impl FnMut(&mut BStr),
+    //     condition: Option<&[bool]>,
+    // ) {
+    //     for (idx, seq) in self.segments[segment.as_index()]
+    //         .seq_quals
+    //         .iter_seq_mut()
+    //         .enumerate()
+    //     {
+    //         if condition.is_none_or(|c| c[idx]) {
+    //             f(seq);
+    //         }
+    //     }
+    // }
+    // /// Apply a function in place to all reads in a segment,
+    // /// allowing mutation on the reads (non length changing!)
+    // /// with optional condition filter
+    // /// wrapped
+    // /// for easy access.
+    // pub fn apply_in_place_wrapped(
+    //     &mut self,
+    //     segment: SegmentIndex,
+    //     mut f: impl FnMut(&mut FastQReadMut),
+    //     condition: Option<&[bool]>,
+    // ) {
+    //     for (idx, mut read) in self.segments[segment.as_index()].iter_mut().enumerate() {
+    //         if condition.is_none_or(|c| c[idx]) {
+    //             f(&mut read);
+    //         }
+    //     }
+    // }
 
     /// `apply_in_place_wrapped`, but support `SegmentIndexOrAll::All`
     /// by iterating the function over all segmetns
@@ -618,7 +612,7 @@ impl Drop for MemberGuard<'_> {
     fn drop(&mut self) {
         // Don't mask an in-flight panic with a second one (that would abort).
         if std::thread::panicking() {
-            return;
+            return; // cov:excl-line
         }
         let now = self.segment.row_count();
         assert_eq!(
@@ -628,22 +622,4 @@ impl Drop for MemberGuard<'_> {
             self.expected,
         );
     }
-}
-
-#[must_use]
-pub fn longest_suffix_that_is_a_prefix(
-    seq: &[u8],
-    query: &[u8],
-    max_mismatches: usize,
-    min_length: NonZero<usize>,
-) -> Option<usize> {
-    let max_len = std::cmp::min(seq.len(), query.len());
-    for prefix_len in (min_length.into()..=max_len).rev() {
-        let suffix_start = seq.len() - prefix_len;
-        let dist = hamming(&seq[suffix_start..], &query[..prefix_len]) as usize;
-        if dist <= max_mismatches {
-            return Some(prefix_len);
-        }
-    }
-    None
 }

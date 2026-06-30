@@ -1,0 +1,6 @@
+Error building output files. Index 2: OutputBAM(OutputBAM { suffix: None, compression_level: None, output: Some(["read1"]), interleave: None, chunksize: None, output_hash_compressed: false, comment_separation_char: 32, tag_to_bam_tag: {}, tag_to_reference: Some(TagToReference { tag: "ref_name", references_from_barcodes: None, references_from_bam: Some("input_reference.bam") }), merge_demultiplexed: None, index_merged: true, output_state: None, resolved_bam_options: Some(BamSinkOptions { comment_separation_char: 32, tag_to_bam_tags: [], tag_to_reference: Some("ref_name"), header: SharedBamHeader { inner: SharedBamHeaderInner { source: FromBam("input_reference.bam"), cached: Mutex { data: None, poisoned: false, .. } } } }) })
+
+Caused by:
+    0: Could not read reference sequences from BAM file: 'input_reference.bam'
+    1: Could not read BAM header from: input_reference.bam
+    2: failed to fill whole buffer

@@ -79,16 +79,10 @@ impl Step for Box<_ReportCountOligos> {
         demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let mut blocks = Vec::new();
-        match &self.segment {
-            SegmentIndexOrAll::Indexed(idx) => {
-                blocks.push(&block.segments[idx.as_index()]);
-            }
-            SegmentIndexOrAll::All => {
-                for segment in &block.segments {
-                    blocks.push(segment);
-                }
-            }
+        for segment in block.iter_matching_segments(self.segment) {
+            blocks.push(segment);
         }
+
         let mut counts = DemultiplexedData::default();
         for valid_tag in demultiplex_info.iter_tags() {
             counts.insert(valid_tag, vec![0; self.oligos.len()]);

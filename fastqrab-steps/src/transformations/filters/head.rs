@@ -55,6 +55,7 @@ impl Step for Head {
             .lock()
             .expect("lock poisoned");
         if so_far.len() == 1 {
+            //the no demultiplex case
             let so_far = so_far.get_mut(&0).expect("tag 0 must exist in so_far");
             if *so_far >= self.n {
                 // cov:excl-start

@@ -118,7 +118,7 @@ impl ChainedParser {
                         self.buffer_size,
                         self.thread_counts,
                         &self.options,
-                    )?; // cov:excl-line
+                    )?;
                     self.current = Some(parser);
                 }
                 None => return Ok(false), // cov:excl-line -- see below
@@ -136,16 +136,11 @@ impl ChainedParser {
     )]
     pub fn parse(&mut self) -> Result<ChainParseResult> {
         if !self.ensure_parser()? {
-            // cov:excl-start
-            // this would only happen if we alled empty inputs.
-            // but since this is a lower level, we still handle it
-            // even though it doesn't happen in fastqrab
             return Ok(ChainParseResult {
                 fastq_block: FastQChunk::new_empty(),
                 was_final: true,
                 expected_read_count: self.expected_read_count_power_of_two,
             });
-            // cov:excl-stop
         }
 
         let res = self
@@ -213,7 +208,7 @@ impl ChainedParser {
                             total_input_file_size,
                             expected_reads
                         ); */
-                    } // cov:excl-line
+                    }
                 } // cov:excl-line
             }
         }

@@ -1,0 +1,30 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[output]
+    prefix = "output"
+[[step]]
+    action = 'ExtractRegion'
+    source = 'read1'
+    anchor = 'start'
+    start = 0
+    length = 50
+    out_label = 'query_seq'
+
+[[step]]
+    action = 'HammingCorrect'
+    output = 'label'
+    on_tie = 'fail'
+    on_no_match = 'remove'
+    in_label = 'query_seq'
+    out_label = 'ref_name'
+    barcodes = 'ref_barcodes'
+    max_hamming_distance = 0
+
+[barcodes.ref_barcodes]
+    from_file.filename = 'input_reference.fa'
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputBAM"
+    tag_to_reference = { tag = "ref_name", from_bam = "input_reference.bam" }
