@@ -6,15 +6,21 @@ fn main() {
     let info = measure(|| {
         result = entry_point();
     });
-    eprintln!(
-        "alloc: count_total={} count_max={} count_current={} bytes_total={} bytes_max={} bytes_current={}",
-        info.count_total,
-        info.count_max,
-        info.count_current,
-        info.bytes_total,
-        info.bytes_max,
-        info.bytes_current
-    );
+    // The decompressor runs as a subprocess of this same binary (`fastqrab
+    // __decompressor`), so it would otherwise print its own `alloc:` line. The
+    // test harness expects exactly one alloc line per invocation, so suppress
+    // the print in the subprocess and only report the parent's accounting.
+    if !std::env::args().any(|a| a == "__decompressor") {
+        eprintln!(
+            "alloc: count_total={} count_max={} count_current={} bytes_total={} bytes_max={} bytes_current={}",
+            info.count_total,
+            info.count_max,
+            info.count_current,
+            info.bytes_total,
+            info.bytes_max,
+            info.bytes_current
+        );
+    }
     match result {
         Ok(()) => {}
         Err(e) if e.is::<EarlyExit>() => std::process::exit(1),
