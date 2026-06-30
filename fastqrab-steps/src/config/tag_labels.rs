@@ -60,7 +60,7 @@ impl ValidateTagLabel for TomlValue<MustAdapt<String, TagLabel>> {
                             Err(ValidationFailure::new(
                                 "Unknown length tag label".to_string(),
                                 Some(format!(
-                                    "'{segment_name}' is neither a segment nor a tag name. Choose an existing name.\n{}",
+                                    "'{segment_name}' is neither a segment nor an available tag name. Choose an existing name.\n{}",
                                     offer_alternatives(segment_name, &available)
                                 )),
                             ))

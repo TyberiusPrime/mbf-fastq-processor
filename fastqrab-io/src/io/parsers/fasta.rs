@@ -26,11 +26,6 @@ use crossbeam::channel::Receiver;
 #[cfg(unix)]
 use std::{sync::Arc, thread::JoinHandle};
 
-/// Size of one read from the generic-reader FASTA path before it is handed to the
-/// serial assembler. Large enough to amortize syscalls, small enough to keep
-/// per-pull latency and the carry buffer modest.
-const READER_CHUNK_SIZE: usize = 256 * 1024;
-
 /// FASTA parser. Every path funnels bytes into the same serial assembler
 /// ([`FastaPods`]): a regular gzip/zstd file decoded out-of-process takes the
 /// shared-memory fast path ([`FastaInner::Pod`]), parsing borrowed decode chunks
@@ -69,6 +64,7 @@ impl FastaParser {
         target_reads_per_block: NonZero<usize>,
         fake_quality_phred: u8,
         decompression_options: DecompressionOptions,
+        buffer_size: usize,
     ) -> Result<FastaParser> {
         // `ex::fs::File` → `std::fs::File` so the shm magic-sniff and
         // `open_decompressed_reader` both take a plain handle (mirrors the FASTQ
@@ -104,7 +100,7 @@ impl FastaParser {
                     fake_quality_phred,
                     target_reads_per_block.get(),
                 )),
-                buf: vec![0u8; READER_CHUNK_SIZE],
+                buf: vec![0u8; buffer_size.max(1)],
                 eof: false,
             },
             compression_format,
@@ -495,6 +491,7 @@ mod tests {
             DecompressionOptions {
                 thread_count: crate::io::parsers::ThreadCount(std::num::NonZero::<usize>::MIN),
             },
+            256 * 1024,
         )?; // cov:excl-line
 
         let ParseResult { output, was_final } = parser.parse()?;

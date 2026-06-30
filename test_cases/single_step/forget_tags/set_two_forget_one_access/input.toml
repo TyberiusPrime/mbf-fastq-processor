@@ -1,0 +1,37 @@
+[input]
+  r1 = "input_read1.fq"
+
+
+[[step]]
+  action= 'ExtractRegion'
+  start = 0
+  length = 16
+  anchor = 'left'
+  out_label='reg1'
+  source = 'r1'
+
+
+[[step]]
+  action= 'ExtractRegion'
+  start = 1
+  length = 16
+  anchor = 'left'
+  out_label='reg2'
+  source = 'r1'
+
+[[step]]
+  action ='ForgetTag'
+  in_label='reg1'
+
+[[step]]
+  action = 'CompareStringTags' 
+  out_label = 'matchafter'
+  in_label_a = 'reg1'
+  in_label_b = 'reg2'
+
+[[step]]
+  action = 'StoreTagsInTable'
+
+[output]
+    prefix = "output"
+

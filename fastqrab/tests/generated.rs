@@ -2999,6 +2999,21 @@ fn test_cases_x_output_x_output_compression_single_thread_with_compression_level
 
 #[test]
 
+fn test_cases_x_output_x_output_compression_single_thread_with_compression_level_fasta() {
+    println!(
+        "Test case is in: test_cases/output/output_compression_single_thread_with_compression_level_fasta"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/output/output_compression_single_thread_with_compression_level_fasta",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_output_x_output_compression_single_thread_zst() {
     println!("Test case is in: test_cases/output/output_compression_single_thread_zst");
     run_test(
@@ -8693,6 +8708,17 @@ fn test_cases_x_single_step_x_extraction_x_extract_region_x_and_replace_multiple
 
 #[test]
 
+fn test_cases_x_single_step_x_extraction_x_extract_region_x_before_read() {
+    println!("Test case is in: test_cases/single_step/extraction/extract_region/before_read");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/extraction/extract_region/before_read"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_extraction_x_extract_region_x_beyond_read_len() {
     println!("Test case is in: test_cases/single_step/extraction/extract_region/beyond_read_len");
     run_test(
@@ -9628,10 +9654,43 @@ fn test_cases_x_single_step_x_fileformats_x_bam_with_index_to_fastq_x_unmapped()
 
 #[test]
 
+fn test_cases_x_single_step_x_fileformats_x_bam_without_quals() {
+    println!("Test case is in: test_cases/single_step/fileformats/bam_without_quals");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/fileformats/bam_without_quals"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_fileformats_x_empty_bam() {
+    println!("Test case is in: test_cases/single_step/fileformats/empty_bam");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/fileformats/empty_bam"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_fileformats_x_fasta_gz_to_fastq() {
     println!("Test case is in: test_cases/single_step/fileformats/fasta_gz_to_fastq");
     run_test(
         std::path::Path::new("../test_cases/single_step/fileformats/fasta_gz_to_fastq"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_fileformats_x_fasta_long_line_to_fastq() {
+    println!("Test case is in: test_cases/single_step/fileformats/fasta_long_line_to_fastq");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/fileformats/fasta_long_line_to_fastq"),
         "input.toml",
         1,
     );
@@ -10423,6 +10482,17 @@ fn test_cases_x_single_step_x_forget_tags_x_set_two_forget_all() {
     println!("Test case is in: test_cases/single_step/forget_tags/set_two_forget_all");
     run_test(
         std::path::Path::new("../test_cases/single_step/forget_tags/set_two_forget_all"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_forget_tags_x_set_two_forget_one_access() {
+    println!("Test case is in: test_cases/single_step/forget_tags/set_two_forget_one_access");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/forget_tags/set_two_forget_one_access"),
         "input.toml",
         1,
     );
@@ -11928,6 +11998,17 @@ fn test_cases_x_single_step_x_reports_x_report_x_tag_histogram_x_tag_not_defined
         std::path::Path::new(
             "../test_cases/single_step/reports/report/tag_histogram/tag_not_defined",
         ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_reports_x_report_x_two_outputs() {
+    println!("Test case is in: test_cases/single_step/reports/report/two_outputs");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/reports/report/two_outputs"),
         "input.toml",
         1,
     );

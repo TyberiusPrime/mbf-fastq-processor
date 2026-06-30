@@ -221,6 +221,7 @@ impl InputFile {
                     target_reads_per_block,
                     fake_quality,
                     decompression_options,
+                    buffer_size,
                 )?; // cov:excl-line
                 Ok(Box::new(parser))
             }

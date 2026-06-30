@@ -1,0 +1,17 @@
+[input]
+    read1 = 'input_read1.fasta'
+
+[input.options]
+	fasta_fake_quality = 'a'
+
+[options]
+    block_size = 1
+    buffer_size = 5
+
+
+[output]
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

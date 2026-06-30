@@ -162,13 +162,12 @@ pub fn config_schema() -> schemars::Schema {
     let mut schema = schemars::schema_for!(Config);
     // The fixups below need the assembled `$defs`, which only exist on the
     // finished root schema — not when a `#[schemars(transform)]` hook would run.
-    if let Some(root) = schema.as_object_mut() {
-        inline_transformation_variants(root);
-        inject_tpd_aliases(root);
-        drop_transform_from_required(root);
-        for value in root.values_mut() {
-            add_lowercase_enum_aliases(value);
-        }
+    let root = schema.as_object_mut().expect("root schema is an object");
+    inline_transformation_variants(root);
+    inject_tpd_aliases(root);
+    drop_transform_from_required(root);
+    for value in root.values_mut() {
+        add_lowercase_enum_aliases(value);
     }
     schema
 }
@@ -180,46 +179,41 @@ pub fn config_schema() -> schemars::Schema {
 /// schema into its variant so `action` lives alongside the step's own fields in
 /// one self-contained object.
 fn inline_transformation_variants(root: &mut serde_json::Map<String, serde_json::Value>) {
-    let Some(defs) = root.get("$defs").and_then(|d| d.as_object()).cloned() else {
-        return;
-    };
-    let Some(variants) = root
+    let defs = root
+        .get("$defs")
+        .and_then(|d| d.as_object())
+        .cloned()
+        .expect("schema had no transformations?");
+    let variants = root
         .get_mut("$defs")
         .and_then(|d| d.get_mut("Transformation"))
         .and_then(|t| t.get_mut("oneOf"))
         .and_then(serde_json::Value::as_array_mut)
-    else {
-        return;
-    };
+        .expect("variants not found");
 
     for variant in variants {
-        let Some(obj) = variant.as_object_mut() else {
-            continue;
-        };
-        let Some(name) = obj
+        let obj = variant.as_object_mut().expect("Variant was not mut");
+        let name = obj
             .get("$ref")
             .and_then(|r| r.as_str())
             .and_then(|r| r.strip_prefix("#/$defs/"))
             .map(str::to_owned)
-        else {
-            continue;
-        };
-        let Some(target) = defs.get(&name).and_then(|t| t.as_object()) else {
-            continue;
-        };
+            .expect("variant had no name?");
+        let target = defs
+            .get(&name)
+            .and_then(|t| t.as_object())
+            .expect("Variant had no target");
 
         let action = obj.get("properties").and_then(|p| p.get("action")).cloned();
 
         let mut merged = target.clone();
-        let has_action = action.is_some();
-        if let Some(action) = action {
-            merged
-                .entry("properties")
-                .or_insert_with(|| serde_json::json!({}))
-                .as_object_mut()
-                .expect("properties is an object")
-                .insert("action".to_owned(), action);
-        }
+        let action = action.expect("no action? all transforms have actions");
+        merged
+            .entry("properties")
+            .or_insert_with(|| serde_json::json!({}))
+            .as_object_mut()
+            .expect("properties is an object")
+            .insert("action".to_owned(), action);
         // The step structs use plain (non-`Option`) fields that tpd fills with
         // defaults — or validates — in `verify()`, so schemars over-reports them
         // all as `required`. A strict editor then fails *every* `oneOf` branch
@@ -227,11 +221,7 @@ fn inline_transformation_variants(root: &mut serde_json::Map<String, serde_json:
         // branch's discriminator mismatch. The parser is the source of truth for
         // which fields are mandatory, so the schema only requires `action` (the
         // discriminator that selects the branch).
-        if has_action {
-            merged.insert("required".to_owned(), serde_json::json!(["action"]));
-        } else {
-            merged.remove("required");
-        }
+        merged.insert("required".to_owned(), serde_json::json!(["action"]));
         *obj = merged;
     }
 }
@@ -251,7 +241,7 @@ fn inline_transformation_variants(root: &mut serde_json::Map<String, serde_json:
 fn inject_tpd_aliases(root: &mut serde_json::Map<String, serde_json::Value>) {
     for (def_name, entries) in toml_pretty_deser::collect_alias_tree::<Config>() {
         if entries.is_empty() {
-            continue;
+            unreachable!("Did not expect entries to be empty. Might just 'continue'?");
         }
         let target = if def_name == "Config" {
             Some(&mut *root)
@@ -314,13 +304,15 @@ fn inject_alias_group(
         .and_then(serde_json::Value::as_object_mut)
     {
         for &(canonical, aliases) in entries {
-            if let Some(canonical_schema) = properties.get(canonical).cloned() {
-                for alias in aliases {
-                    properties.insert((*alias).to_owned(), canonical_schema.clone());
-                }
+            let canonical_schema = properties
+                .get(canonical)
+                .cloned()
+                .expect("No canonical schema");
+            for alias in aliases {
+                properties.insert((*alias).to_owned(), canonical_schema.clone());
             }
         }
-    }
+    } // cov:excl-line
 }
 
 /// If `node` is `{ "const": canonical }`, rewrite it to
@@ -329,9 +321,7 @@ fn widen_const_to_enum(node: &mut serde_json::Value, canonical: &str, aliases: &
     if node.get("const").and_then(serde_json::Value::as_str) != Some(canonical) {
         return;
     }
-    let Some(obj) = node.as_object_mut() else {
-        return;
-    };
+    let obj = node.as_object_mut().expect("enums are always objects");
     obj.remove("const");
     let mut values = vec![serde_json::Value::from(canonical)];
     values.extend(aliases.iter().map(|a| serde_json::Value::from(*a)));
@@ -347,7 +337,7 @@ fn drop_transform_from_required(root: &mut serde_json::Map<String, serde_json::V
         .and_then(serde_json::Value::as_array_mut)
     {
         required.retain(|v| v != "transform");
-    }
+    } // cov:excl-line
 }
 
 /// schemars emits enum values as the canonical (`PascalCase`) variant names, but
@@ -364,11 +354,10 @@ fn add_lowercase_enum_aliases(value: &mut serde_json::Value) {
                     .collect();
                 let mut additions = Vec::new();
                 for variant in variants.iter() {
-                    if let Some(s) = variant.as_str() {
-                        let lower = s.to_lowercase();
-                        if seen.insert(lower.clone()) {
-                            additions.push(serde_json::Value::from(lower));
-                        }
+                    let s = variant.as_str().expect("Variant was not a string");
+                    let lower = s.to_lowercase();
+                    if seen.insert(lower.clone()) {
+                        additions.push(serde_json::Value::from(lower));
                     }
                 }
                 variants.extend(additions);
@@ -689,6 +678,7 @@ impl PartialConfig {
         if report_spans.len() <= 1 {
             return;
         }
+        //we now know it's multiple
         for t in transforms.iter_mut() {
             if matches!(t.as_ref(), Some(PartialTransformation::OutputReport { .. })) {
                 let spans = report_spans
@@ -701,6 +691,7 @@ impl PartialConfig {
                      Remove all but one."
                         .to_string(),
                 );
+                break; // we only complain once, but it icludes all spans
             }
         }
     }
@@ -1529,30 +1520,33 @@ impl PartialConfig {
                                     }
                                 }
                             } else {
-                                // The virtual tag's source is gone — typically
-                                // forgotten by an intermediate step (a conditional
-                                // `Swap` forgets location tags on the swapped
-                                // segments). Without this the missing source would
-                                // only surface as a runtime panic when the virtual
-                                // tag is materialized.
-                                any_tag_errors = true;
-                                let toml_source = &used_tag_info.toml_source;
-                                *toml_source.borrow_mut().0 = TomlValueState::new_validation_failed(
-                                    format!("No such tag: '{source_tag}'"),
+                                unreachable!(
+                                    "Would only have been reachable by a step that uses it's own forgotten tag? Code is still here if you ever reach this unreachable"
                                 );
-                                let alternatives = offer_alternatives(
-                                    source_tag.as_str(),
-                                    &tags_available.keys().map(AsRef::as_ref).collect::<Vec<_>>(),
-                                );
-                                let help = if all_tags_ever.contains_key(source_tag.as_str()) {
-                                    format!(
-                                        "Tag '{source_tag}' was generated by a previous step, but it is not available at this point.\n\
-                                        This likely means that it was removed (forgotten) by an intermediate step.\n{alternatives}",
-                                    )
-                                } else {
-                                    alternatives
-                                };
-                                *toml_source.borrow_mut().1 = Some(help);
+                                // // The virtual tag's source is gone — typically
+                                // // forgotten by an intermediate step (a conditional
+                                // // `Swap` forgets location tags on the swapped
+                                // // segments). Without this the missing source would
+                                // // only surface as a runtime panic when the virtual
+                                // // tag is materialized.
+                                // any_tag_errors = true;
+                                // let toml_source = &used_tag_info.toml_source;
+                                // *toml_source.borrow_mut().0 = TomlValueState::new_validation_failed(
+                                //     format!("No such tag: '{source_tag}'"),
+                                // );
+                                // let alternatives = offer_alternatives(
+                                //     source_tag.as_str(),
+                                //     &tags_available.keys().map(AsRef::as_ref).collect::<Vec<_>>(),
+                                // );
+                                // let help = if all_tags_ever.contains_key(source_tag.as_str()) {
+                                //     format!(
+                                //         "Tag '{source_tag}' was generated by a previous step, but it is not available at this point.\n\
+                                //         This likely means that it was removed (forgotten) by an intermediate step.\n{alternatives}",
+                                //     )
+                                // } else {
+                                //     alternatives
+                                // };
+                                // *toml_source.borrow_mut().1 = Some(help);
                             }
                         }
 
@@ -1690,7 +1684,7 @@ impl PartialConfig {
                                 self.output.as_ref().and_then(|o| o.as_ref()),
                                 before,
                             );
-                        } // cov:excl-line
+                        }
                     }
                 }
             }
@@ -1725,7 +1719,7 @@ impl PartialConfig {
                         }
                     }
                     barcode_section_refs.insert(label.to_string(), refs);
-                }
+                } // cov:excl-line
             }
         }
 
@@ -1740,7 +1734,7 @@ impl PartialConfig {
                     );
                 }
             }
-        }
+        } // cov:excl-line
     }
 
     fn collect_input_file_declarations(&mut self) {
@@ -1872,7 +1866,7 @@ impl PartialConfig {
                     })
                     .collect();
                 let file_hint = if infix_parts.is_empty() {
-                    format!("suffix .{suffix}") //cov:excl-line
+                    format!("suffix .{suffix}")
                 } else {
                     format!("infix '{}', suffix .{suffix}", infix_parts.join("_"))
                 };
@@ -1881,7 +1875,7 @@ impl PartialConfig {
                     "Two steps would write to the same output file ({file_hint}).\n\
                         Change the infix in one of them to avoid the conflict."
                 ));
-            } //cov:excl-line
+            }
         }
 
         // Third pass (mutable): report stdout errors.
@@ -1920,7 +1914,7 @@ impl PartialConfig {
                         .to_string(),
                 );
             }
-        }
+        } // cov:excl-line
     }
 
     pub fn verify_demultiplex_unique(&mut self) {
@@ -2015,7 +2009,7 @@ impl PartialConfig {
                     );
                 }
             }
-        }
+        } // cov:excl-line
     }
 }
 
@@ -2030,9 +2024,7 @@ impl Config {
         let mut errors = Vec::new();
 
         //no point in checking them if segment definition is broken
-        let stages = self.transforms_to_stages();
-        //self.transform is now empty, the trafos have been expanded into steps.
-        assert!(self.transform.is_empty());
+
         let threading_configuration = if check_input_files_exist {
             //todo :if we figure out a way to have VerifyIn do this only
             // when requested, we could have better error messages.
@@ -2046,7 +2038,9 @@ impl Config {
                 n_processing: std::num::NonZeroUsize::MIN,
             }
         };
-
+        let stages = self.transforms_to_stages();
+        //self.transform is now empty, the trafos have been expanded into steps.
+        assert!(self.transform.is_empty());
         // Return collected errors if any
         if !errors.is_empty() {
             // For multiple errors, format them cleanly

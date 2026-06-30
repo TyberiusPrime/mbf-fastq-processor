@@ -1,0 +1,23 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[output]
+    prefix = "output"
+[[step]]
+    action = 'Report'
+    name = 'xyz'
+    count = true
+    base_statistics = true
+    length_distribution = true
+    duplicate_count_per_read = true
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputReport"
+    json = true
+    html = false
+
+[[step]]
+    action = "OutputReport"
+    json = false
+    html = true

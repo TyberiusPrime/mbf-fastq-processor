@@ -1,0 +1,1 @@
+Error in reading thread for segment read1: An input file (input_read1.bam) provided no reads. Please check your inputs.

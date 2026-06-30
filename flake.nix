@@ -163,7 +163,7 @@
             ps: with ps; [
               #scipy
               #anndata
-              #pysam
+              pysam
               #pandas
               toml
             ]

@@ -838,7 +838,7 @@ impl std::fmt::Display for WriteTarget {
             WriteTarget::Files(paths) => {
                 write!(f, "{}", paths.directory.join(&paths.basename).display())
             }
-            WriteTarget::Stdout => write!(f, "stdout"),
+            WriteTarget::Stdout => write!(f, "stdout"), //cov:excl-line
         }
     }
 }
@@ -1081,7 +1081,9 @@ impl ChunkedRecordWriter {
     pub fn flush(&mut self) -> Result<()> {
         match &mut self.active {
             ActiveSink::Text(sink) => Ok(sink.flush()?),
-            ActiveSink::Bam(_) | ActiveSink::Idle => Ok(()),
+            ActiveSink::Bam(_) | ActiveSink::Idle => {
+                unreachable!("bam should do it's own flushing, Idle should never be flushed")
+            }
         }
     }
 
@@ -1198,7 +1200,7 @@ impl ChunkedRecordWriter {
                     &self.sink_config,
                     opts,
                     self.output_thread_count,
-                )?) //cov:excl-line
+                )?)
             }
             FileFormat::None => unreachable!("Cannot open ChunkedRecordWriter with format None"), //cov:excl-line
         };

@@ -162,7 +162,9 @@ impl Parser for BamParser {
                             "An input file ({}) provided no reads. Please check your inputs.",
                             filename.display()
                         ),
-                        None => bail!("An input file provided no reads. Please check your inputs."),
+                        None => unreachable!(
+                            "BAM can not be read from stdin currently, so this can't happen"
+                        ),
                     }
                 }
                 was_final = true;
@@ -321,13 +323,10 @@ mod tests {
         let path = PathBuf::from("../test_cases/sample_data/bam/input_read1.bam")
             .canonicalize()
             .unwrap();
-        // cov:excl-start
         assert!(
             std::fs::metadata(&path).is_ok(),
-            "Test BAM file not found at {:?}",
-            &path
+            "Test BAM file not found at {path:?}",
         );
-        // cov:excl-stop
         assert_eq!(bam_read_count_from_index(&path, true, false), Some(0));
         assert_eq!(bam_read_count_from_index(&path, false, false), Some(0));
         assert_eq!(bam_read_count_from_index(&path, false, true), Some(2));

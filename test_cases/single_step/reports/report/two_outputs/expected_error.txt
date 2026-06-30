@@ -1,0 +1,24 @@
+Error 1/1
+   ╭─config.toml
+   ┆
+15 │ [[step]]
+16 │     action = "OutputReport"
+   ┆              ───────┬──────
+   ┆                     │
+   ┆                     ╰─────── In this step
+   ┆
+17 │     json = true
+18 │     html = false
+   ┆                 ┬
+   ┆                 │
+   ┆                 ╰─ Multiple OutputReport steps
+   ┆
+20 │ [[step]]
+21 │     action = "OutputReport"
+22 │     json = false
+23 │     html = true
+   ┆               ┬
+   ┆               │
+   ┆               ╰─ Multiple OutputReport steps
+───╯
+Hint: Only one OutputReport step is allowed; they would share the same report data. Remove all but one.

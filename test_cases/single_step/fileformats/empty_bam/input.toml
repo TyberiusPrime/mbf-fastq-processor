@@ -1,0 +1,11 @@
+[input] 
+  read1 = "input_read1.bam"
+[input.options]
+  bam_include_unmapped =true
+  bam_include_mapped =true
+  
+[output]
+  prefix = 'output'
+
+[[step]]
+  action ='OutputFASTQ'

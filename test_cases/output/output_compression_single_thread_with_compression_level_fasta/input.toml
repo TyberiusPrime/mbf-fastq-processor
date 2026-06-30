@@ -1,0 +1,17 @@
+[input]
+    read1 = 'input_read1.fq'
+    read2 = 'input_read2.fq'
+
+[[step]]
+    action='Head' 
+    n = 5
+
+[output]
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTA"
+    compression = "gzip"
+    compression_level = 9
+    compression_threads = 5

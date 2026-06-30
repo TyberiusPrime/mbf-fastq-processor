@@ -109,8 +109,10 @@ pub(crate) fn spawn_shm_chunk_reader(
             if let Err(e) = descriptors.read_exact(&mut desc) {
                 // EOF before the sentinel ⇒ the decompressor died; surface it
                 // (its stderr is inherited, so the real cause is already shown).
+                // cov:excl-start
                 return Err(anyhow::Error::new(e)
                     .context("fastqrab-decompressor closed before sending its EOF sentinel"));
+                // cov:excl-end
             }
             let slot = u32::from_le_bytes(desc[0..4].try_into().expect("4 bytes"));
             let len = u32::from_le_bytes(desc[4..8].try_into().expect("4 bytes")) as usize;
@@ -127,7 +129,7 @@ pub(crate) fn spawn_shm_chunk_reader(
             let region: Arc<dyn ChunkRegion> = region_for_reader.clone();
             let chunk = Chunk::shared(region, offset, len, slot, slot_ret_tx.clone());
             if bytes_tx.send(chunk).is_err() {
-                break; // consumer hung up (a downstream error)
+                break; // consumer hung up (a downstream error) // cov:excl-line
             }
         }
         Ok(())
