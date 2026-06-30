@@ -91,7 +91,9 @@ def get_excluded_lines(source_path: Path) -> tuple[set, set]:
             in_block = False
         elif EXCL_LINE in line:
             excluded.add(lineno)
-        elif not in_block and ('unreachable!(' in line or 'panic!(' in line):
+        elif not in_block and ('unreachable!(' in line):
+            excluded.add(lineno) # reaching an unreachable is bad, mkay.
+        elif not in_block and ('panic!(' in line):
             ignored.add(lineno)
 
     return excluded, ignored
