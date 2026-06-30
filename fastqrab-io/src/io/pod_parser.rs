@@ -227,17 +227,9 @@ struct DemuxResult {
 pub fn parse_pods_from_channel(
     bytes_rx: Receiver<Chunk>,
     sink: Sender<FastqChunk>,
-    demux_threads: usize,
+    _demux_threads: usize,
 ) -> Result<()> {
-    let demux_threads = if demux_threads == 0 {
-        std::thread::available_parallelism()
-            .map(std::num::NonZero::get)
-            .unwrap_or(4)
-            .min(4)
-    } else {
-        demux_threads
-    }
-    .max(1);
+    let demux_threads = 1; //we found that additional threads are not helpful
 
     // Demux pool — phase-agnostic per-chunk bucketing (the heavy scan + copy).
     let (job_tx, job_rx) = channel::bounded::<DemuxJob>(demux_threads * 2);
