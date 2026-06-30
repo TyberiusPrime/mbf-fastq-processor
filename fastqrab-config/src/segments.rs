@@ -104,15 +104,14 @@ impl ResolvedSourceAll {
     /// when segment index is out of bounds
     pub fn get_name(&self, segment_order: &[String]) -> String {
         match self {
-            ResolvedSourceAll::Segment(SegmentIndexOrAll::Indexed(idx)) => {
-                segment_order.get(idx.as_index()).cloned().unwrap_or_else(|| {
-                    // cov:excl-start
+            ResolvedSourceAll::Segment(SegmentIndexOrAll::Indexed(idx)) => segment_order
+                .get(idx.as_index())
+                .cloned()
+                .unwrap_or_else(|| {
                     panic!(
-                        "Segment index {idx} out of bounds for segment order: [{segment_order:?}]"
+                        "Segment index {idx:?} out of bounds for segment order: [{segment_order:?}]"
                     )
-                    // cov:excl-stop
-                })
-            }
+                }),
             ResolvedSourceAll::Segment(SegmentIndexOrAll::All) => "all".to_string(),
             ResolvedSourceAll::Tag(name) => format!("tag:{name}"),
             ResolvedSourceAll::Name {
@@ -123,9 +122,7 @@ impl ResolvedSourceAll {
                 match segment_index_or_all {
                     SegmentIndexOrAll::Indexed(idx) => {
                         segment_order.get(idx.as_index()).cloned().unwrap_or_else(|| {
-                        // cov:excl-start
-                        panic!("Segment index {idx} out of bounds for segment order: [{segment_order:?}]")
-                        // cov:excl-stop
+                        panic!("Segment index {idx:?} out of bounds for segment order: [{segment_order:?}]")
                     })
                     }
                     SegmentIndexOrAll::All => "all".to_string(),

@@ -496,7 +496,7 @@ impl<'a> Iterator for MoleculesMut<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.members.is_empty() {
-            return None;
+            unreachable!("A 0 reads molecule is unexpected");
         }
         let mut molecule = SmallVec::with_capacity(self.members.len());
         for (index, member) in self.members.iter_mut().enumerate() {

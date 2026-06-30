@@ -894,17 +894,21 @@ pub fn spawn_decompressor_shm(
     // fd (with the same number) and can map the same region.
     // SAFETY: standard libc call with a valid C name and zero flags.
     let fd = unsafe { libc::memfd_create(c"fastqrab-shm".as_ptr(), 0) };
+    // cov:excl-start
     if fd < 0 {
         bail!("memfd_create failed: {}", std::io::Error::last_os_error());
     }
+    // cov:excl-stop
 
     // SAFETY: `fd` is the live memfd we just created.
+    // cov:excl-start
     if unsafe { libc::ftruncate(fd, total_off) } != 0 {
         let err = std::io::Error::last_os_error();
         // SAFETY: `fd` is ours and unused past this point.
         unsafe { libc::close(fd) };
         bail!("ftruncate of shared-memory region failed: {err}");
     }
+    // cov:excl-stop
 
     // SAFETY: mapping our own memfd `MAP_SHARED` for read+write.
     let ptr = unsafe {
@@ -917,12 +921,14 @@ pub fn spawn_decompressor_shm(
             0,
         )
     };
+    // cov:excl-start
     if ptr == libc::MAP_FAILED {
         let err = std::io::Error::last_os_error();
         // SAFETY: `fd` is ours and unused past this point.
         unsafe { libc::close(fd) };
         bail!("mmap of shared-memory region failed: {err}");
     }
+    // cov:excl-stop
     let region = std::sync::Arc::new(ShmRegion {
         ptr: ptr.cast::<u8>(),
         len: total,
@@ -951,7 +957,7 @@ pub fn spawn_decompressor_shm(
     let mut child = cmd.spawn().context(format!(
         "Failed to spawn decompressor subprocess (shm mode) for file: {}.",
         filename.display()
-    ))?;
+    ))?; //cov:excl-line
 
     // The child inherited the fd at fork; our mapping holds the region alive, so
     // the parent no longer needs its own fd.
@@ -975,4 +981,50 @@ pub fn spawn_decompressor_shm(
         slots,
         slot_size,
     })
+}
+
+#[cfg(test)]
+#[cfg(unix)]
+mod tests {
+    use super::*;
+
+    /// `slots × slot_size` overflows `usize` before any syscall — the
+    /// `checked_mul` guard must reject it.
+    #[test]
+    fn shm_rejects_region_size_overflow() {
+        // `ShmDecompressor` is not `Debug`, so match rather than `expect_err`.
+        let Err(err) = spawn_decompressor_shm(
+            Path::new("/dev/null"),
+            DecompressorFormat::Gzip,
+            ThreadCount(NonZero::<usize>::MIN),
+            usize::MAX,
+            2,
+        ) else {
+            panic!("usize-overflowing region size must be rejected");
+        };
+        assert!(
+            err.to_string().contains("region size overflow"),
+            "unexpected error: {err}"
+        );
+    }
+
+    /// The region size fits in `usize` (`1 × usize::MAX`) but not in `off_t`
+    /// (i64), so the `off_t::try_from` guard — distinct from the `checked_mul`
+    /// one above — must reject it.
+    #[test]
+    fn shm_rejects_region_too_large_for_off_t() {
+        let Err(err) = spawn_decompressor_shm(
+            Path::new("/dev/null"),
+            DecompressorFormat::Gzip,
+            ThreadCount(NonZero::<usize>::MIN),
+            1,
+            usize::MAX,
+        ) else {
+            panic!("region exceeding off_t range must be rejected");
+        };
+        assert!(
+            err.to_string().contains("too large"),
+            "unexpected error: {err}"
+        );
+    }
 }
