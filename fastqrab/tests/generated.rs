@@ -576,6 +576,482 @@ fn test_cases_x_error_handling_x_duplicate_tag_name() {
 
 #[test]
 
+fn test_cases_x_error_handling_x_malformed_fastq_x_broken_newline() {
+    println!("Test case is in: test_cases/error_handling/malformed_fastq/broken_newline");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/malformed_fastq/broken_newline"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_error_handling_x_malformed_fastq_x_broken_newline2() {
+    println!("Test case is in: test_cases/error_handling/malformed_fastq/broken_newline2");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/malformed_fastq/broken_newline2"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_error_handling_x_malformed_fastq_x_broken_panics() {
+    println!("Test case is in: test_cases/error_handling/malformed_fastq/broken_panics");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/malformed_fastq/broken_panics"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_error_handling_x_malformed_fastq_x_error_diff_ids() {
+    println!("Test case is in: test_cases/error_handling/malformed_fastq/error_diff_ids");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/malformed_fastq/error_diff_ids"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_error_handling_x_malformed_fastq_x_error_double_qual() {
+    println!("Test case is in: test_cases/error_handling/malformed_fastq/error_double_qual");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/malformed_fastq/error_double_qual"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_error_handling_x_malformed_fastq_x_error_double_seq() {
+    println!("Test case is in: test_cases/error_handling/malformed_fastq/error_double_seq");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/malformed_fastq/error_double_seq"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_error_handling_x_malformed_fastq_x_error_long_qual() {
+    println!("Test case is in: test_cases/error_handling/malformed_fastq/error_long_qual");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/malformed_fastq/error_long_qual"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_error_handling_x_malformed_fastq_x_error_no_qual() {
+    println!("Test case is in: test_cases/error_handling/malformed_fastq/error_no_qual");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/malformed_fastq/error_no_qual"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_error_handling_x_malformed_fastq_x_error_qual_del() {
+    println!("Test case is in: test_cases/error_handling/malformed_fastq/error_qual_del");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/malformed_fastq/error_qual_del"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_error_handling_x_malformed_fastq_x_error_qual_escape() {
+    println!("Test case is in: test_cases/error_handling/malformed_fastq/error_qual_escape");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/malformed_fastq/error_qual_escape"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_error_handling_x_malformed_fastq_x_error_qual_null() {
+    println!("Test case is in: test_cases/error_handling/malformed_fastq/error_qual_null");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/malformed_fastq/error_qual_null"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_error_handling_x_malformed_fastq_x_error_qual_space() {
+    println!("Test case is in: test_cases/error_handling/malformed_fastq/error_qual_space");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/malformed_fastq/error_qual_space"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_error_handling_x_malformed_fastq_x_error_qual_tab() {
+    println!("Test case is in: test_cases/error_handling/malformed_fastq/error_qual_tab");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/malformed_fastq/error_qual_tab"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_error_handling_x_malformed_fastq_x_error_qual_unit_sep() {
+    println!("Test case is in: test_cases/error_handling/malformed_fastq/error_qual_unit_sep");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/malformed_fastq/error_qual_unit_sep"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_error_handling_x_malformed_fastq_x_error_qual_vtab() {
+    println!("Test case is in: test_cases/error_handling/malformed_fastq/error_qual_vtab");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/malformed_fastq/error_qual_vtab"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_error_handling_x_malformed_fastq_x_error_short_qual() {
+    println!("Test case is in: test_cases/error_handling/malformed_fastq/error_short_qual");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/malformed_fastq/error_short_qual"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_error_handling_x_malformed_fastq_x_error_spaces() {
+    println!("Test case is in: test_cases/error_handling/malformed_fastq/error_spaces");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/malformed_fastq/error_spaces"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_error_handling_x_malformed_fastq_x_error_tabs() {
+    println!("Test case is in: test_cases/error_handling/malformed_fastq/error_tabs");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/malformed_fastq/error_tabs"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_error_handling_x_malformed_fastq_x_error_trunc_at_plus() {
+    println!("Test case is in: test_cases/error_handling/malformed_fastq/error_trunc_at_plus");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/malformed_fastq/error_trunc_at_plus"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_error_handling_x_malformed_fastq_x_error_trunc_at_qual() {
+    println!("Test case is in: test_cases/error_handling/malformed_fastq/error_trunc_at_qual");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/malformed_fastq/error_trunc_at_qual"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_error_handling_x_malformed_fastq_x_error_trunc_at_seq() {
+    println!("Test case is in: test_cases/error_handling/malformed_fastq/error_trunc_at_seq");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/malformed_fastq/error_trunc_at_seq"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_error_handling_x_malformed_fastq_x_error_trunc_in_plus() {
+    println!("Test case is in: test_cases/error_handling/malformed_fastq/error_trunc_in_plus");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/malformed_fastq/error_trunc_in_plus"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_error_handling_x_malformed_fastq_x_error_trunc_in_qual() {
+    println!("Test case is in: test_cases/error_handling/malformed_fastq/error_trunc_in_qual");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/malformed_fastq/error_trunc_in_qual"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_error_handling_x_malformed_fastq_x_error_trunc_in_seq() {
+    println!("Test case is in: test_cases/error_handling/malformed_fastq/error_trunc_in_seq");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/malformed_fastq/error_trunc_in_seq"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_error_handling_x_malformed_fastq_x_error_trunc_in_seq_tiny_blocksize() {
+    println!(
+        "Test case is in: test_cases/error_handling/malformed_fastq/error_trunc_in_seq_tiny_blocksize"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/error_handling/malformed_fastq/error_trunc_in_seq_tiny_blocksize",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_error_handling_x_malformed_fastq_x_error_trunc_in_title() {
+    println!("Test case is in: test_cases/error_handling/malformed_fastq/error_trunc_in_title");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/malformed_fastq/error_trunc_in_title"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_error_handling_x_malformed_fastq_x_invalid_base() {
+    println!("Test case is in: test_cases/error_handling/malformed_fastq/invalid_base");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/malformed_fastq/invalid_base"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_error_handling_x_malformed_fastq_x_invalid_base_or_dot() {
+    println!("Test case is in: test_cases/error_handling/malformed_fastq/invalid_base_or_dot");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/malformed_fastq/invalid_base_or_dot"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_error_handling_x_malformed_fastq_x_invalid_base_or_dot_too_long() {
+    println!(
+        "Test case is in: test_cases/error_handling/malformed_fastq/invalid_base_or_dot_too_long"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/error_handling/malformed_fastq/invalid_base_or_dot_too_long",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_error_handling_x_malformed_fastq_x_mismatched_seq_qual_len_1st_read_qual_too_long()
+{
+    println!(
+        "Test case is in: test_cases/error_handling/malformed_fastq/mismatched_seq_qual_len_1st_read_qual_too_long"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/error_handling/malformed_fastq/mismatched_seq_qual_len_1st_read_qual_too_long",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_error_handling_x_malformed_fastq_x_mismatched_seq_qual_len_1st_read_qual_too_short()
+{
+    println!(
+        "Test case is in: test_cases/error_handling/malformed_fastq/mismatched_seq_qual_len_1st_read_qual_too_short"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/error_handling/malformed_fastq/mismatched_seq_qual_len_1st_read_qual_too_short",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_error_handling_x_malformed_fastq_x_mismatched_seq_qual_len_2nd_read_qual_too_long()
+{
+    println!(
+        "Test case is in: test_cases/error_handling/malformed_fastq/mismatched_seq_qual_len_2nd_read_qual_too_long"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/error_handling/malformed_fastq/mismatched_seq_qual_len_2nd_read_qual_too_long",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_error_handling_x_malformed_fastq_x_mismatched_seq_qual_len_2nd_read_qual_too_short()
+{
+    println!(
+        "Test case is in: test_cases/error_handling/malformed_fastq/mismatched_seq_qual_len_2nd_read_qual_too_short"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/error_handling/malformed_fastq/mismatched_seq_qual_len_2nd_read_qual_too_short",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_error_handling_x_malformed_fastq_x_no_newline_and_truncated_qual() {
+    println!(
+        "Test case is in: test_cases/error_handling/malformed_fastq/no_newline_and_truncated_qual"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/error_handling/malformed_fastq/no_newline_and_truncated_qual",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_error_handling_x_malformed_fastq_x_no_newline_at_all() {
+    println!("Test case is in: test_cases/error_handling/malformed_fastq/no_newline_at_all");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/malformed_fastq/no_newline_at_all"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_error_handling_x_malformed_fastq_x_no_newline_at_end_ok() {
+    println!("Test case is in: test_cases/error_handling/malformed_fastq/no_newline_at_end_ok");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/malformed_fastq/no_newline_at_end_ok"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_error_handling_x_malformed_fastq_x_quality_starts_with_at() {
+    println!("Test case is in: test_cases/error_handling/malformed_fastq/quality_starts_with_at");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/malformed_fastq/quality_starts_with_at"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_error_handling_x_malformed_fastq_x_truncated_after_at() {
+    println!("Test case is in: test_cases/error_handling/malformed_fastq/truncated_after_at");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/malformed_fastq/truncated_after_at"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_error_handling_x_malformed_fastq_x_windows_newlines() {
+    println!("Test case is in: test_cases/error_handling/malformed_fastq/windows_newlines");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/malformed_fastq/windows_newlines"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_error_handling_x_malformed_fastq_x_windows_newlines_but_broken() {
+    println!(
+        "Test case is in: test_cases/error_handling/malformed_fastq/windows_newlines_but_broken"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/error_handling/malformed_fastq/windows_newlines_but_broken",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_error_handling_x_misc_x_disk_full_fastq() {
     println!("Test case is in: test_cases/error_handling/misc/disk_full_fastq");
     run_test(
@@ -688,6 +1164,17 @@ fn test_cases_x_error_handling_x_replace_tag_with_letter_x_no_letter() {
 
 #[test]
 
+fn test_cases_x_error_handling_x_truncated_fastq_finish_eof() {
+    println!("Test case is in: test_cases/error_handling/truncated_fastq_finish_eof");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/truncated_fastq_finish_eof"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_from_the_field_x_basecount_expansion() {
     println!("Test case is in: test_cases/from_the_field/basecount_expansion");
     run_test(
@@ -791,6 +1278,28 @@ fn test_cases_x_input_x_error_handling_x_input_array() {
     println!("Test case is in: test_cases/input/error_handling/input_array");
     run_test(
         std::path::Path::new("../test_cases/input/error_handling/input_array"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_input_x_error_handling_x_input_bzip2() {
+    println!("Test case is in: test_cases/input/error_handling/input_bzip2");
+    run_test(
+        std::path::Path::new("../test_cases/input/error_handling/input_bzip2"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_input_x_error_handling_x_input_gzip_but_not_fastq() {
+    println!("Test case is in: test_cases/input/error_handling/input_gzip_but_not_fastq");
+    run_test(
+        std::path::Path::new("../test_cases/input/error_handling/input_gzip_but_not_fastq"),
         "input.toml",
         1,
     );
@@ -5796,603 +6305,6 @@ fn test_cases_x_single_step_x_error_handling_x_kmer_x_wrong_type_for_files_neste
 
 #[test]
 
-fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_broken_newline() {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/malformed_fastq/broken_newline"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/malformed_fastq/broken_newline",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_broken_newline2() {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/malformed_fastq/broken_newline2"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/malformed_fastq/broken_newline2",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_broken_panics() {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/malformed_fastq/broken_panics"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/malformed_fastq/broken_panics",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_error_diff_ids() {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/malformed_fastq/error_diff_ids"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/malformed_fastq/error_diff_ids",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_error_double_qual() {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/malformed_fastq/error_double_qual"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/malformed_fastq/error_double_qual",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_error_double_seq() {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/malformed_fastq/error_double_seq"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/malformed_fastq/error_double_seq",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_error_long_qual() {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/malformed_fastq/error_long_qual"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/malformed_fastq/error_long_qual",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_error_no_qual() {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/malformed_fastq/error_no_qual"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/malformed_fastq/error_no_qual",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_error_qual_del() {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/malformed_fastq/error_qual_del"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/malformed_fastq/error_qual_del",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_error_qual_escape() {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/malformed_fastq/error_qual_escape"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/malformed_fastq/error_qual_escape",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_error_qual_null() {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/malformed_fastq/error_qual_null"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/malformed_fastq/error_qual_null",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_error_qual_space() {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/malformed_fastq/error_qual_space"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/malformed_fastq/error_qual_space",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_error_qual_tab() {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/malformed_fastq/error_qual_tab"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/malformed_fastq/error_qual_tab",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_error_qual_unit_sep() {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/malformed_fastq/error_qual_unit_sep"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/malformed_fastq/error_qual_unit_sep",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_error_qual_vtab() {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/malformed_fastq/error_qual_vtab"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/malformed_fastq/error_qual_vtab",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_error_short_qual() {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/malformed_fastq/error_short_qual"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/malformed_fastq/error_short_qual",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_error_spaces() {
-    println!("Test case is in: test_cases/single_step/error_handling/malformed_fastq/error_spaces");
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/malformed_fastq/error_spaces",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_error_tabs() {
-    println!("Test case is in: test_cases/single_step/error_handling/malformed_fastq/error_tabs");
-    run_test(
-        std::path::Path::new("../test_cases/single_step/error_handling/malformed_fastq/error_tabs"),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_error_trunc_at_plus() {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/malformed_fastq/error_trunc_at_plus"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/malformed_fastq/error_trunc_at_plus",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_error_trunc_at_qual() {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/malformed_fastq/error_trunc_at_qual"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/malformed_fastq/error_trunc_at_qual",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_error_trunc_at_seq() {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/malformed_fastq/error_trunc_at_seq"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/malformed_fastq/error_trunc_at_seq",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_error_trunc_in_plus() {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/malformed_fastq/error_trunc_in_plus"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/malformed_fastq/error_trunc_in_plus",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_error_trunc_in_qual() {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/malformed_fastq/error_trunc_in_qual"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/malformed_fastq/error_trunc_in_qual",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_error_trunc_in_seq() {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/malformed_fastq/error_trunc_in_seq"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/malformed_fastq/error_trunc_in_seq",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_error_trunc_in_seq_tiny_blocksize()
-{
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/malformed_fastq/error_trunc_in_seq_tiny_blocksize"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/malformed_fastq/error_trunc_in_seq_tiny_blocksize",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_error_trunc_in_title() {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/malformed_fastq/error_trunc_in_title"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/malformed_fastq/error_trunc_in_title",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_invalid_base() {
-    println!("Test case is in: test_cases/single_step/error_handling/malformed_fastq/invalid_base");
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/malformed_fastq/invalid_base",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_invalid_base_or_dot() {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/malformed_fastq/invalid_base_or_dot"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/malformed_fastq/invalid_base_or_dot",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_invalid_base_or_dot_too_long() {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/malformed_fastq/invalid_base_or_dot_too_long"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/malformed_fastq/invalid_base_or_dot_too_long",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_mismatched_seq_qual_len_1st_read_qual_too_long()
- {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/malformed_fastq/mismatched_seq_qual_len_1st_read_qual_too_long"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/malformed_fastq/mismatched_seq_qual_len_1st_read_qual_too_long",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_mismatched_seq_qual_len_1st_read_qual_too_short()
- {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/malformed_fastq/mismatched_seq_qual_len_1st_read_qual_too_short"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/malformed_fastq/mismatched_seq_qual_len_1st_read_qual_too_short",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_mismatched_seq_qual_len_2nd_read_qual_too_long()
- {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/malformed_fastq/mismatched_seq_qual_len_2nd_read_qual_too_long"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/malformed_fastq/mismatched_seq_qual_len_2nd_read_qual_too_long",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_mismatched_seq_qual_len_2nd_read_qual_too_short()
- {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/malformed_fastq/mismatched_seq_qual_len_2nd_read_qual_too_short"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/malformed_fastq/mismatched_seq_qual_len_2nd_read_qual_too_short",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_no_newline_and_truncated_qual() {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/malformed_fastq/no_newline_and_truncated_qual"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/malformed_fastq/no_newline_and_truncated_qual",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_no_newline_at_all() {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/malformed_fastq/no_newline_at_all"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/malformed_fastq/no_newline_at_all",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_no_newline_at_end_ok() {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/malformed_fastq/no_newline_at_end_ok"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/malformed_fastq/no_newline_at_end_ok",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_quality_starts_with_at() {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/malformed_fastq/quality_starts_with_at"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/malformed_fastq/quality_starts_with_at",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_truncated_after_at() {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/malformed_fastq/truncated_after_at"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/malformed_fastq/truncated_after_at",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_windows_newlines() {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/malformed_fastq/windows_newlines"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/malformed_fastq/windows_newlines",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_windows_newlines_but_broken() {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/malformed_fastq/windows_newlines_but_broken"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/malformed_fastq/windows_newlines_but_broken",
-        ),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
 fn test_cases_x_single_step_x_error_handling_x_misc_x_empty_list_of_files() {
     println!("Test case is in: test_cases/single_step/error_handling/misc/empty_list_of_files");
     run_test(
@@ -10014,6 +9926,17 @@ fn test_cases_x_single_step_x_filter_x_other_file_by_name_x_distinct_separators_
 
 #[test]
 
+fn test_cases_x_single_step_x_filter_x_other_file_by_name_x_error_bzip2() {
+    println!("Test case is in: test_cases/single_step/filter/other_file_by_name/error_bzip2");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/filter/other_file_by_name/error_bzip2"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_filter_x_other_file_by_name_x_error_false_positive_rate_x_too_high() {
     println!(
         "Test case is in: test_cases/single_step/filter/other_file_by_name/error_false_positive_rate/too_high"
@@ -10063,6 +9986,17 @@ fn test_cases_x_single_step_x_filter_x_other_file_by_name_x_keep() {
     println!("Test case is in: test_cases/single_step/filter/other_file_by_name/keep");
     run_test(
         std::path::Path::new("../test_cases/single_step/filter/other_file_by_name/keep"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_filter_x_other_file_by_name_x_keep_zstd() {
+    println!("Test case is in: test_cases/single_step/filter/other_file_by_name/keep_zstd");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/filter/other_file_by_name/keep_zstd"),
         "input.toml",
         1,
     );
@@ -10159,6 +10093,21 @@ fn test_cases_x_single_step_x_filter_x_other_file_by_name_x_remove_bam_unmapped_
     run_test(
         std::path::Path::new(
             "../test_cases/single_step/filter/other_file_by_name/remove_bam_unmapped_only",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_filter_x_other_file_by_name_x_wrong_compression_format() {
+    println!(
+        "Test case is in: test_cases/single_step/filter/other_file_by_name/wrong_compression_format"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/filter/other_file_by_name/wrong_compression_format",
         ),
         "input.toml",
         1,

@@ -16,6 +16,7 @@ fn test_fastq_bufsize_variations_windows_file() {
     // The input is zstd-compressed, which now always decodes out-of-process; point
     // `find_decompressor` at the freshly built binary so the pipe path can spawn it.
     // SAFETY: set once at the start of this single-threaded test, before any spawn.
+    // and there's only this one test.
     unsafe {
         std::env::set_var("FASTQRAB_DECOMPRESSOR", common::decompressor());
     }

@@ -367,6 +367,8 @@ fn test_interactive_nonexistent_file() {
 #[test]
 #[cfg(unix)]
 fn test_interactive_processes_file_on_first_run() {
+    use std::io::BufRead;
+    use std::sync::{Arc, Mutex};
     use std::time::{Duration, Instant};
 
     let dir = tempfile::tempdir().unwrap();
@@ -405,8 +407,6 @@ fn test_interactive_processes_file_on_first_run() {
     // true completion signal. Polling the file would race: the file can appear a
     // moment before the success line is emitted, and killing the child in that
     // window drops the line we assert on.
-    use std::io::BufRead;
-    use std::sync::{Arc, Mutex};
     let stdout_pipe = child.stdout.take().unwrap();
     let stdout_buf = Arc::new(Mutex::new(String::new()));
     let reader_buf = Arc::clone(&stdout_buf);
@@ -3973,7 +3973,6 @@ fn test_verify_compressed_size_difference_too_large() {
         .arg("process")
         .arg(&config_level9)
         .current_dir(temp_path)
-        .env("FASTQRAB_DECOMPRESSOR", common::decompressor())
         .output()
         .unwrap();
     assert!(proc.status.success(), "process (level 9) should succeed");
@@ -4004,7 +4003,6 @@ fn test_verify_compressed_size_difference_too_large() {
         .arg("verify")
         .arg(&config_level9)
         .current_dir(temp_path)
-        .env("FASTQRAB_DECOMPRESSOR", common::decompressor())
         .output()
         .unwrap();
 
@@ -4733,5 +4731,141 @@ chunk_size = 1000
     assert!(
         stderr.contains("first chunk") && stderr.contains("'.0'"),
         "expected chunk warning on stderr, got: {stderr}"
+    );
+}
+
+/// Locate an executable by name on `PATH`. We deliberately avoid hard-coding
+/// `/usr/bin/gzip` etc.: under Nix the system tools live at hashed
+/// `/nix/store/...` paths and `/usr/bin` may not exist at all, so the only
+/// portable way to find `gzip` is to walk `PATH`.
+fn find_on_path(name: &str) -> Option<PathBuf> {
+    let path = std::env::var_os("PATH")?;
+    std::env::split_paths(&path)
+        .map(|dir| dir.join(name))
+        .find(|candidate| candidate.is_file())
+}
+
+/// Lay down a gzip-compressed FASTQ input and a minimal identity-pipeline config
+/// in `dir`, then return the path to the config. Reuses the checked-in sample
+/// gzip so we don't depend on a system gzip just to produce the input.
+fn write_gz_process_case(dir: &Path) -> PathBuf {
+    let sample = Path::new("../test_cases/sample_data/gzip/home_input_read1.fq.gz");
+    assert!(
+        sample.exists(),
+        "sample gzip input missing at {}",
+        sample.display()
+    );
+    fs::copy(sample, dir.join("input_read1.fq.gz")).unwrap();
+
+    let config_path = dir.join("config.toml");
+    fs::write(
+        &config_path,
+        r"[input]
+read1 = ['input_read1.fq.gz']
+
+[output]
+prefix = 'output'
+
+[[step]]
+action = 'OutputFASTQ'
+",
+    )
+    .unwrap();
+    config_path
+}
+
+/// Pointing `FASTQRAB_DECOMPRESSOR` at a path that does not exist must fail with
+/// a clear "could not determine fastqrab binary path" error rather than, say, a
+/// silent empty output: `find_decompressor` rejects a non-existent override and
+/// the gzip input then has no decoder to run.
+#[test]
+fn test_decompressor_nonexistent_binary() {
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    let config_path = write_gz_process_case(temp_path);
+
+    let cmd = std::process::Command::new(get_bin_path())
+        .arg("process")
+        .arg(&config_path)
+        .current_dir(temp_path)
+        .env(
+            "FASTQRAB_DECOMPRESSOR",
+            temp_path.join("this-binary-does-not-exist"),
+        )
+        .output()
+        .unwrap();
+
+    let stderr = std::str::from_utf8(&cmd.stderr).unwrap().to_string();
+    assert!(
+        !cmd.status.success(),
+        "expected failure for non-existent decompressor, stderr: {stderr}"
+    );
+    assert!(
+        stderr.contains("could not determine fastqrab binary path for decompressor"),
+        "expected decompressor-path error, got: {stderr}"
+    );
+}
+
+/// Run a gzip-input `process` with `FASTQRAB_DECOMPRESSOR` pointed at a real but
+/// incompatible binary (`gzip`, which knows nothing of our `__decompressor`
+/// subcommand). Returns the failing run's stderr. Skips (returns `None`) if gzip
+/// isn't on `PATH`, since it isn't a build dependency. `extra_env` lets a caller
+/// pin the transport.
+fn run_incompatible_decompressor(extra_env: &[(&str, &str)]) -> Option<String> {
+    let gzip = find_on_path("gzip")?;
+
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    let config_path = write_gz_process_case(temp_path);
+
+    let mut cmd = std::process::Command::new(get_bin_path());
+    cmd.arg("process")
+        .arg(&config_path)
+        .current_dir(temp_path)
+        .env("FASTQRAB_DECOMPRESSOR", &gzip);
+    for (k, v) in extra_env {
+        cmd.env(k, v);
+    }
+    let output = cmd.output().unwrap();
+
+    let stderr = std::str::from_utf8(&output.stderr).unwrap().to_string();
+    assert!(
+        !output.status.success(),
+        "expected failure for incompatible decompressor ({}), stderr: {stderr}",
+        gzip.display()
+    );
+    Some(stderr)
+}
+
+/// An incompatible decompressor over the *default* transport (shm on unix) must
+/// still fail loudly rather than hang or silently truncate. We deliberately do
+/// not set `FASTQRAB_DECOMP_SHM` — a user who points the variable at the wrong
+/// binary will not have disabled shm either, so this is the realistic path.
+#[test]
+fn test_decompressor_incompatible_binary_default_transport() {
+    let Some(stderr) = run_incompatible_decompressor(&[]) else {
+        eprintln!("skipping: gzip not found on PATH");
+        return;
+    };
+    assert!(
+        stderr.contains("fastqrab-decompressor exited unsuccessfully")
+            || stderr.contains("fastqrab-decompressor closed before sending its EOF sentinel")
+            || stderr.contains("decompressor subprocess exited unsuccessfully"),
+        "expected a decompressor failure error, got: {stderr}"
+    );
+}
+
+/// The same incompatible binary over the forced pipe transport
+/// (`FASTQRAB_DECOMP_SHM=0`) takes the `DecompressorReader` EOF path, whose
+/// non-zero-exit check is the deterministic "subprocess exited unsuccessfully".
+#[test]
+fn test_decompressor_incompatible_binary_pipe_transport() {
+    let Some(stderr) = run_incompatible_decompressor(&[("FASTQRAB_DECOMP_SHM", "0")]) else {
+        eprintln!("skipping: gzip not found on PATH");
+        return;
+    };
+    assert!(
+        stderr.contains("decompressor subprocess exited unsuccessfully"),
+        "expected subprocess-exit error, got: {stderr}"
     );
 }

@@ -462,9 +462,9 @@ impl VerifyIn<TPDRoot> for PartialConfig {
     {
         self.options.or_with(|| PartialOptions {
             threads: TomlValue::new_ok(None, 0..0),
-            block_size: TomlValue::new_ok(default_block_size().into(), 0..0),
+            block_size: TomlValue::new_ok(default_block_size(), 0..0),
             max_molecules_in_flight: TomlValue::new_ok(
-                default_max_molecules_in_flight(default_block_size().into()),
+                default_max_molecules_in_flight(default_block_size()),
                 0..0,
             ),
             buffer_size: TomlValue::new_ok(default_buffer_size(), 0..0),

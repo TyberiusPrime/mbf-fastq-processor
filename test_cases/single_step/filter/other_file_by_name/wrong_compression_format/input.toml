@@ -1,0 +1,24 @@
+[input]
+    read1 = 'input_read1.fq.zst'
+     options.read_comment_character = ' '
+
+[[step]]
+    action = 'TagOtherFile'
+    source = 'name:read1'
+	out_label = 'tag'
+    filename = 'input_ERR12828869_10k_1.head_500.fq'
+    false_positive_rate = 0
+    other_readname_end_char =' '
+    seed  = 42
+
+[[step]]
+	action = "FilterByTag"
+	in_label = "tag"
+    keep_or_remove = 'Keep'
+
+[output]
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

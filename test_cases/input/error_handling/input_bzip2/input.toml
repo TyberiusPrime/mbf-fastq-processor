@@ -1,0 +1,14 @@
+[input]
+  read1= "input_read1.fq.bz2"
+
+
+[[step]]
+    action='Head'
+    n = 5
+
+[output]
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

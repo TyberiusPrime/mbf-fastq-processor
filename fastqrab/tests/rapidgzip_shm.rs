@@ -23,7 +23,6 @@ use flate2::write::GzEncoder;
 
 #[path = "common/mod.rs"]
 mod common;
-use common::decompressor;
 
 /// Build a multi-record FASTQ payload (~`reads` records, variable read lengths,
 /// space-free names so output is a byte-exact identity roundtrip). Large enough
@@ -122,8 +121,7 @@ fn run_verify_case(
         .arg(dir.join("input.toml"))
         .arg("--output-dir")
         .arg(dir.join("actual"))
-        .env("NO_FRIENDLY_PANIC", "1")
-        .env("FASTQRAB_DECOMPRESSOR", decompressor());
+        .env("NO_FRIENDLY_PANIC", "1");
     for (k, val) in env {
         cmd.env(k, val);
     }
@@ -177,8 +175,7 @@ fn run_process_fasta(input_name: &str, compressed: &[u8], env: &[(&str, &str)]) 
     cmd.arg("process")
         .arg("input.toml")
         .current_dir(dir)
-        .env("NO_FRIENDLY_PANIC", "1")
-        .env("FASTQRAB_DECOMPRESSOR", decompressor());
+        .env("NO_FRIENDLY_PANIC", "1");
     for (k, val) in env {
         cmd.env(k, val);
     }

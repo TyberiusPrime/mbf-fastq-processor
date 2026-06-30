@@ -19,14 +19,11 @@ pub enum InputFile {
 }
 
 #[derive(Copy, Clone)]
-pub enum DecompressionOptions {
-    Default,
+pub struct DecompressionOptions {
     /// Decode out-of-process via the sibling `fastqrab-decompressor` binary
     /// (gzip *or* zstd). `thread_count` sizes the gzip decode pool; it is ignored
     /// for zstd (serial libzstd decode).
-    Subprocess {
-        thread_count: ThreadCount,
-    },
+    pub thread_count: ThreadCount,
 }
 
 /// Which decoder the out-of-process decompressor should run, passed to the child
@@ -173,7 +170,8 @@ impl InputFile {
     /// # Errors
     /// On io errors or an undecidable file format.
     pub fn from_handle(mut file: ex::fs::File) -> Result<InputFile> {
-        let format = detect_input_format_from_handle(&mut file)?;
+        let format = detect_input_format_from_handle(&mut file)
+            .context("Supported formats are uncompressed, gzip and zstd")?;
         Ok(match format {
             DetectedInputFormat::Fastq => InputFile::Fastq(file, None),
             DetectedInputFormat::Fasta => InputFile::Fasta(file, None),
@@ -203,7 +201,7 @@ impl InputFile {
         // Decompression (rapidgzip / bgzf) and the pod-parser demux pool are
         // sized separately upstream; route each to its own consumer.
         let thread_count = thread_counts.decompression;
-        let decompression_options = DecompressionOptions::Subprocess { thread_count };
+        let decompression_options = DecompressionOptions { thread_count };
         match self {
             InputFile::Fastq(file, filename) => Ok(Box::new(parsers::PodFastqParser::new(
                 file.into_inner(),
@@ -423,7 +421,7 @@ fn detect_input_format_from_handle(file: &mut ex::fs::File) -> Result<DetectedIn
                 child_format,
                 ThreadCount(NonZero::<usize>::MIN),
                 Some(DETECT_HEAD_BYTES),
-            )?;
+            )?; //cov:excl-line
             read_head(&mut dec)?
             // `dec` drops here, reaping the child and ending the feeder thread.
         }
@@ -447,7 +445,7 @@ pub fn open_text_file(maybe_compressed_filename: impl AsRef<Path>) -> Result<Box
             child_format,
             ThreadCount(NonZero::<usize>::MIN),
             None,
-        )?)),
+        )?)), // cov:excl-line
         None => Ok(reader),
     }
 }
@@ -545,10 +543,7 @@ pub fn open_decompressed_reader(
     // Compressed: decode out-of-process — all gzip/zstd FFI stays in the child.
     // `thread_count` only sizes the gzip decode pool; the Default path (stdin /
     // no explicit subprocess request) decodes serially.
-    let thread_count = match decompression_options {
-        DecompressionOptions::Subprocess { thread_count } => thread_count,
-        DecompressionOptions::Default => ThreadCount(NonZero::<usize>::MIN),
-    };
+    let thread_count = decompression_options.thread_count;
     let decoded: Box<dyn Read + Send> = match filename {
         Some(path) => Box::new(spawn_decompressor(path, child_format, thread_count, None)?),
         None => Box::new(spawn_decompressor_from_reader(
@@ -556,7 +551,7 @@ pub fn open_decompressed_reader(
             child_format,
             thread_count,
             None,
-        )?),
+        )?), // cov:excl-line
     };
     Ok((decoded, compression))
 }
@@ -665,7 +660,7 @@ fn decompressor_command(
 /// decompressor chunks through in ~64 KiB reads, so producer and consumer
 /// ping-pong on a near-empty/near-full buffer instead of overlapping (millions of
 /// voluntary context switches). Best-effort: failure just keeps the default size.
-/// No-op off unix.
+/// No-op off unix.""pres
 fn enlarge_stdout_pipe(stdout: &std::process::ChildStdout) {
     #[cfg(unix)]
     {
@@ -894,21 +889,17 @@ pub fn spawn_decompressor_shm(
     // fd (with the same number) and can map the same region.
     // SAFETY: standard libc call with a valid C name and zero flags.
     let fd = unsafe { libc::memfd_create(c"fastqrab-shm".as_ptr(), 0) };
-    // cov:excl-start
     if fd < 0 {
         bail!("memfd_create failed: {}", std::io::Error::last_os_error());
     }
-    // cov:excl-stop
 
     // SAFETY: `fd` is the live memfd we just created.
-    // cov:excl-start
     if unsafe { libc::ftruncate(fd, total_off) } != 0 {
         let err = std::io::Error::last_os_error();
         // SAFETY: `fd` is ours and unused past this point.
         unsafe { libc::close(fd) };
         bail!("ftruncate of shared-memory region failed: {err}");
     }
-    // cov:excl-stop
 
     // SAFETY: mapping our own memfd `MAP_SHARED` for read+write.
     let ptr = unsafe {

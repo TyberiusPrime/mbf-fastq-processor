@@ -82,12 +82,16 @@ impl PodFastqParser {
         // bulk pipe copies. Other codecs, stdin/FIFO, and the Default path stay on
         // the existing `Read`-based reader below.
         #[cfg(unix)]
-        if let DecompressionOptions::Subprocess { thread_count } = decompression_options
-            && let Some(path) = filename
+        if let Some(path) = filename
             && shm_enabled()
             && let Some(format) = shm_eligible_format(&file)
         {
-            return Self::new_shm(path, format, thread_count, demux_threads);
+            return Self::new_shm(
+                path,
+                format,
+                decompression_options.thread_count,
+                demux_threads,
+            );
         }
 
         let (reader, format) = open_decompressed_reader(file, filename, decompression_options)?;
@@ -361,7 +365,9 @@ mod pod_regroup_tests {
             NonZero::new(target).expect("nonzero target"),
             buffer_size,
             2,
-            DecompressionOptions::Default,
+            DecompressionOptions {
+                thread_count: crate::io::parsers::ThreadCount(std::num::NonZero::<usize>::MIN),
+            },
         )
         .expect("parser");
 

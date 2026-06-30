@@ -91,7 +91,7 @@ impl VerifyIn<PartialConfig> for PartialOptions {
     where
         Self: Sized,
     {
-        self.block_size.or_with(|| default_block_size().into());
+        self.block_size.or_with(default_block_size);
         self.max_molecules_in_flight.or_with(|| {
             default_max_molecules_in_flight(
                 self.block_size

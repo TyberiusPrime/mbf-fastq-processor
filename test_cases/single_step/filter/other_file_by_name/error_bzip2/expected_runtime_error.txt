@@ -1,0 +1,5 @@
+Error in transform initalization. Index 0: TagOtherFile(OtherFile { filename: "input_ERR12828869_10k_1.head_500.fq.bz2", source: Name { segment_index: SegmentIndex(0), split_character: 32 }, other_readname_end_character: Some(32), out_label: Normal("tag"), seed: Some(42), false_positive_rate: 0.0, include_mapped: false, include_unmapped: false, filter: None, progress_output: None })
+
+Caused by:
+    0: Supported formats are uncompressed, gzip and zstd
+    1: Unsupported compression format for input detection

@@ -1,3 +1,7 @@
+#![expect(
+    clippy::allow_attributes,
+    reason = "dead code in some tests, but not all test binaries"
+)] //we need an allow since it triggers only in some test binaryies
 //! Shared helpers for the fastqrab integration tests.
 //!
 //! Lives in a `tests/` subdirectory so cargo does not compile it as its own test
@@ -15,6 +19,12 @@ pub mod test_runner;
 /// (`fastqrab __decompressor …`), so we just return the already-built
 /// fastqrab binary that cargo made available via `CARGO_BIN_EXE_fastqrab`.
 /// Callers hand that path to the child via the `FASTQRAB_DECOMPRESSOR` env var.
+///
+/// (the tests need this since they otherwise try to call their own binary!
+#[allow(
+    dead_code,
+    reason = " not all test binaries that include this module use it"
+)]
 pub fn decompressor() -> &'static Path {
     Path::new(env!("CARGO_BIN_EXE_fastqrab"))
 }

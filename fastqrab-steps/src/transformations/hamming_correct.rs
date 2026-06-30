@@ -259,8 +259,7 @@ impl VerifyIn<PartialConfig> for PartialHammingCorrect {
                             .as_ref()
                             .and_then(|x| x.block_size.as_ref())
                             .copied()
-                            .unwrap_or_else(|| fastqrab_config::default_block_size().into())
-                            .into(),
+                            .unwrap_or_else(fastqrab_config::default_block_size),
                     )
                 })
                 .into();

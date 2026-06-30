@@ -79,15 +79,14 @@ impl FastaParser {
         // regular file, unless `FASTQRAB_DECOMP_SHM=0`. Everything else (stdin/
         // FIFO, other codecs, uncompressed, the Default path) uses the bio reader.
         #[cfg(unix)]
-        if let DecompressionOptions::Subprocess { thread_count } = decompression_options
-            && let Some(path) = filename
+        if let Some(path) = filename
             && shm_enabled()
             && let Some(format) = shm_eligible_format(&file)
         {
             return Self::new_shm(
                 path,
                 format,
-                thread_count,
+                decompression_options.thread_count,
                 target_reads_per_block,
                 fake_quality_phred,
             );
@@ -493,7 +492,9 @@ mod tests {
             Some(temp.path().to_owned()).as_ref(),
             NonZero::new(10).unwrap(),
             30,
-            DecompressionOptions::Default,
+            DecompressionOptions {
+                thread_count: crate::io::parsers::ThreadCount(std::num::NonZero::<usize>::MIN),
+            },
         )?; // cov:excl-line
 
         let ParseResult { output, was_final } = parser.parse()?;

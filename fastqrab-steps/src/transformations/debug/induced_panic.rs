@@ -10,6 +10,10 @@ pub struct InducedPanic {
 impl TagUser for PartialTaggedVariant<PartialInducedPanic> {}
 
 impl Step for InducedPanic {
+    #[expect(
+        clippy::manual_assert,
+        reason = "Clearer this way, it's not an assert but a manual panic"
+    )]
     fn apply(
         &self,
         block: FastQBlocksCombined,
