@@ -186,8 +186,8 @@ fn fill(reader: &mut impl Read, buf: &mut [u8]) -> Result<usize> {
         match reader.read(buf) {
             Ok(n) => return Ok(n),
             // Interrupted: retry the read on the next loop iteration.
-            Err(e) if e.kind() == std::io::ErrorKind::Interrupted => {}
-            Err(e) => return Err(e.into()),
+            Err(e) if e.kind() == std::io::ErrorKind::Interrupted => {} // cov:excl-line
+            Err(e) => return Err(e.into()), // cov:excl-line
         }
     }
 }

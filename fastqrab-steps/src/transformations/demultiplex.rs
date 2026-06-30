@@ -186,8 +186,7 @@ impl TagUser for PartialTaggedVariant<PartialDemultiplex> {
                                     .get(in_label)
                                     .map_or(&StringTagContent::Undefined, |meta| &meta.contents);
                                 match upstream_contents {
-                                    StringTagContent::Undefined => { // require the user to set it
-                                    }
+                                    StringTagContent::Undefined => { } // require the user to set it // cov:excl-line
                                     StringTagContent::Barcodes => {
                                         inner.lookup_mode = Some(LookupMode::Barcode);
 
@@ -257,7 +256,7 @@ impl TagUser for PartialTaggedVariant<PartialDemultiplex> {
                 None
             }
         } else {
-            None
+            None // cov:excl-line
         }
     }
 }
@@ -337,7 +336,7 @@ impl Step for Demultiplex {
                             self.any_hit_observed
                                 .store(true, std::sync::atomic::Ordering::Relaxed);
                         }
-                    } // cov:excl-line
+                    } 
                     }
                 }
             } //else =missing, leave output tag at 0, which means unmatched

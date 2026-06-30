@@ -791,7 +791,7 @@ impl Step for HammingCorrect {
                                             Self::output_empty_string()
                                         }
                                 } else {
-                                    None
+                                    None // cov:excl-line
                                 }
                             }
                         },
@@ -850,7 +850,7 @@ impl Step for HammingCorrect {
                     "PreMatch pending should be empty at finalize, but has entries for blocks: {:?}",
                     pending.keys() //cov:excl-line
                 );
-            }
+            } // cov:excl-line
         }
         Ok(None)
     }

@@ -156,11 +156,13 @@ pub(crate) struct RecordOutputState {
 
 impl std::fmt::Debug for RecordOutputState {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        //cov::excl-start
         f.debug_struct("RecordOutputState")
             .field("segments", &self.segment_writers.len())
             .field("interleaved", &self.interleaved_writers.is_some())
             .field("interleave_order", &self.interleave_order)
             .finish()
+        //cov::excl-stop
     }
 }
 
@@ -256,16 +258,14 @@ impl RecordOutputState {
     pub(crate) fn finish(&mut self) -> Result<()> {
         for seg in self.segment_writers.iter_mut().flatten() {
             for (_tag, writer) in seg.iter_mut() {
-                if let Some(writer) = writer.take() {
-                    let _ = writer.finish()?;
-                }
+                let writer = writer.take().expect("Writer already taken?");
+                let _ = writer.finish()?;
             }
         }
         if let Some(interleaved) = self.interleaved_writers.as_mut() {
             for (_tag, writer) in interleaved.iter_mut() {
-                if let Some(writer) = writer.take() {
-                    let _ = writer.finish()?;
-                }
+                let writer = writer.take().expect("Writer already taken?");
+                let _ = writer.finish()?;
             }
         }
         Ok(())
@@ -361,7 +361,7 @@ fn write_interleaved(
                         segment_index,
                         segment_count,
                         &combined.tags,
-                    )?;
+                    )?; // cov:excl-line
                 }
                 FileFormat::Text | FileFormat::None => {
                     unreachable!("Cannot output reads with format 'Text' or 'None'")

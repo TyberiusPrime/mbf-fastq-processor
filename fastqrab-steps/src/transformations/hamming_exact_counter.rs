@@ -53,10 +53,12 @@ impl MajorityData {
         //then get 'tag_histogram',then the cfr.tag_name
         let mut raw = String::new();
         report_file.read_to_string(&mut raw).map_err(|err| {
+            //cov:excl-start - outside our control
             anyhow!(
                 "Failed to read counts from report file {}: {err}",
                 cfr.filename
             )
+            //cov:excl-stop
         })?;
         let json = serde_json::from_str::<serde_json::Value>(&raw).map_err(|err| {
             anyhow!(

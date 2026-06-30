@@ -34,9 +34,11 @@ pub struct StepInputFiles(pub HashMap<String, ex::fs::File>);
 impl std::fmt::Debug for StepInputFiles {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // `ex::fs::File` is not `Debug`; the ids are the useful part anyway.
+        //cov::excl-start
         f.debug_struct("StepInputFiles")
             .field("ids", &self.0.keys().collect::<Vec<_>>())
             .finish()
+        //cov::excl-stop
     }
 }
 
@@ -66,7 +68,7 @@ impl StepInputFiles {
         assert!(
             self.0.is_empty(),
             "StepInputFiles: declared input(s) not consumed in init: {:?}",
-            self.0.keys().collect::<Vec<_>>()
+            self.0.keys().collect::<Vec<_>>() // cov:excl-line
         );
     }
 }
