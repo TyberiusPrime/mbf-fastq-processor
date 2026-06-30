@@ -16,9 +16,17 @@ Lines can be excluded from coverage statistics by adding these comments:
     }
     // cov:excl-stop
 
-HTML reports use genhtml's native exclusion support (--rc lcov_excl_*) so
-excluded lines are visually marked as excluded.  Summary and --lcov modes use
-the same keywords via lcov post-processing.  JSON is generated directly by
+Excluded lines are stripped from the lcov data before reporting, so they show
+up as uninstrumented (neither covered nor uncovered) in every format.  Lines
+marked via these comments that are nonetheless executed by a test are reported
+as "wrong exclusions" so they can be fixed.
+
+## Auto-ignored panic lines
+
+Lines containing `panic!(` or `unreachable!(` are detected automatically and
+stripped from coverage statistics like excluded lines, but kept in a separate
+category: a panic arm may legitimately be hit or not depending on the tests, so
+it is never reported as a wrong exclusion.  JSON is generated directly by
 cargo-llvm-cov and does not reflect exclusions.
 """
 
@@ -54,13 +62,24 @@ def run_command(cmd, description):
         sys.exit(1)
 
 
-def get_excluded_lines(source_path: Path) -> set:
-    """Return the set of line numbers excluded via coverage comments."""
-    excluded = set()
+def get_excluded_lines(source_path: Path) -> tuple[set, set]:
+    """Return ``(excluded, ignored)`` line-number sets for a source file.
+
+    ``excluded`` holds lines marked via ``cov:excl-*`` comments.  These are
+    removed from coverage statistics, and any that are nonetheless executed by a
+    test are reported as wrong exclusions.
+
+    ``ignored`` holds lines auto-detected as ``panic!(`` / ``unreachable!(``
+    arms.  These are also removed from coverage statistics, but they live in
+    their own category: a panic line may legitimately be hit or not depending on
+    the tests, so it is never flagged as a wrong exclusion.
+    """
+    excluded: set = set()
+    ignored: set = set()
     try:
         text = source_path.read_text(errors="replace")
     except OSError:
-        return excluded
+        return excluded, ignored
 
     in_block = False
     for lineno, line in enumerate(text.splitlines(), 1):
@@ -73,9 +92,9 @@ def get_excluded_lines(source_path: Path) -> set:
         elif EXCL_LINE in line:
             excluded.add(lineno)
         elif not in_block and ('unreachable!(' in line or 'panic!(' in line):
-            excluded.add(lineno)
+            ignored.add(lineno)
 
-    return excluded
+    return excluded, ignored
 
 
 def apply_exclusions_to_lcov(lcov_path: Path, base_dir: Path = None, strip_excl: bool = True) -> tuple:
@@ -86,9 +105,13 @@ def apply_exclusions_to_lcov(lcov_path: Path, base_dir: Path = None, strip_excl:
     or cwd) so genhtml sees a consistent path tree.
 
     When strip_excl is True (default), also removes DA/BRDA entries for lines
-    marked with coverage exclusion comments and recomputes LF/LH/BRF/BRH.
+    marked with coverage exclusion comments (and auto-detected panic!/unreachable!
+    arms) and recomputes LF/LH/BRF/BRH.  Only comment-excluded lines that are
+    nonetheless executed count as wrong exclusions; panic/unreachable lines are
+    ignored silently.
 
-    Returns (excluded_line_count, files_with_exclusions, total_lf, total_lh).
+    Returns (excluded_line_count, files_with_exclusions, total_lf, total_lh,
+    ignored_line_count, wrong_exclusions).
     """
     if base_dir is None:
         base_dir = Path.cwd()
@@ -98,12 +121,13 @@ def apply_exclusions_to_lcov(lcov_path: Path, base_dir: Path = None, strip_excl:
     # Per-record state
     current_source = None
     excluded: set = set()
+    ignored: set = set()
     record_header: list = []
     da_lines: list = []
     brda_lines: list = []
     lf = lh = brf = brh = 0
 
-    total_excl = files_with_excl = total_lf = total_lh = 0
+    total_excl = files_with_excl = total_lf = total_lh = total_ignored = 0
     wrong_exclusions: dict = {}  # src Path -> [lineno, ...]
 
     for line in raw.splitlines():
@@ -112,7 +136,7 @@ def apply_exclusions_to_lcov(lcov_path: Path, base_dir: Path = None, strip_excl:
             if not sf.is_absolute():
                 sf = (base_dir / sf).resolve()
             current_source = sf
-            excluded = get_excluded_lines(current_source)
+            excluded, ignored = get_excluded_lines(current_source)
             if excluded:
                 files_with_excl += 1
             record_header = [f"SF:{current_source}"]
@@ -124,7 +148,10 @@ def apply_exclusions_to_lcov(lcov_path: Path, base_dir: Path = None, strip_excl:
             parts = line[3:].split(",")
             lineno = int(parts[0])
             hits = int(parts[1])
-            if strip_excl and lineno in excluded:
+            if strip_excl and lineno in ignored:
+                # panic!/unreachable!(): excluded from totals but never "wrong"
+                total_ignored += 1
+            elif strip_excl and lineno in excluded:
                 total_excl += 1
                 if hits > 0:
                     wrong_exclusions.setdefault(current_source, []).append(lineno)
@@ -138,7 +165,7 @@ def apply_exclusions_to_lcov(lcov_path: Path, base_dir: Path = None, strip_excl:
             # BRDA:line_number,block,branch,taken
             parts = line[5:].split(",")
             lineno = int(parts[0])
-            if not (strip_excl and lineno in excluded):
+            if not (strip_excl and (lineno in excluded or lineno in ignored)):
                 taken = parts[3]
                 brf += 1
                 if taken not in ("-", "0"):
@@ -173,7 +200,8 @@ def apply_exclusions_to_lcov(lcov_path: Path, base_dir: Path = None, strip_excl:
                 output.append(line)
 
     lcov_path.write_text("\n".join(output) + "\n")
-    return total_excl, files_with_excl, total_lf, total_lh, wrong_exclusions
+    return (total_excl, files_with_excl, total_lf, total_lh,
+            total_ignored, wrong_exclusions)
 
 
 def sum_lcov(lcov_path: Path) -> tuple:
@@ -187,13 +215,16 @@ def sum_lcov(lcov_path: Path) -> tuple:
     return lf, lh
 
 
-def print_lcov_summary(total_excl: int, files_with_excl: int, total_lf: int, total_lh: int):
+def print_lcov_summary(total_excl: int, files_with_excl: int, total_lf: int, total_lh: int,
+                       total_ignored: int = 0):
     """Print a concise coverage summary."""
     pct = (100.0 * total_lh / total_lf) if total_lf else 0.0
     print(f"\nCoverage summary:")
     print(f"  Lines: {total_lh}/{total_lf} ({pct:.1f}%)")
     if total_excl:
         print(f"  Excluded: {total_excl} line(s) across {files_with_excl} file(s)")
+    if total_ignored:
+        print(f"  Ignored: {total_ignored} panic/unreachable line(s)")
 
 
 def check_genhtml():
@@ -427,7 +458,7 @@ def main():
 
         # Normalize SF: paths and optionally strip excluded lines.
         # All subsequent consumers (genhtml, summary, coverage.lcov) get this file.
-        excl, files, lf, lh, wrong_exclusions = apply_exclusions_to_lcov(
+        excl, files, lf, lh, ignored, wrong_exclusions = apply_exclusions_to_lcov(
             raw_lcov, base_dir=project_root, strip_excl=not args.no_excl
         )
 
@@ -451,7 +482,7 @@ def main():
 
         # --- Summary / LCOV ---
         if need_summary:
-            print_lcov_summary(excl, files, lf, lh)
+            print_lcov_summary(excl, files, lf, lh, ignored)
 
         # --- Wrong exclusions ---
         if wrong_exclusions:
