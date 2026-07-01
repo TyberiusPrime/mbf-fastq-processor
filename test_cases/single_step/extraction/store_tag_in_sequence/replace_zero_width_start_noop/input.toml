@@ -1,0 +1,24 @@
+# StoreTagBackInSequence on a zero-width location captured at the very start of
+# the read (not the end, unlike the `$`-anchored growing case elsewhere): an
+# interior (in fact leftmost) zero-length region lifted through `map_position`
+# with no edits since capture -- a true no-op write-back.
+
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'ExtractRegex'
+    source = 'read1'
+    out_label = 'tag'
+    search = '^'
+
+[[step]]
+    action = 'StoreTagBackInSequence'
+    in_label = 'tag'
+
+[output]
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

@@ -1,0 +1,40 @@
+# StoreTagInSequence anchor = 'Start', on_lost = 'Complain', where the position
+# tag's captured point is cut away by a later edit -- the error message must
+# describe an insertion anchor ("anchored at N"), not a replaced region.
+
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'ExtractRegion'
+    segment = 'read1'
+    start = 0
+    length = 3
+    out_label = 'val_tag'
+    anchor = 'Start'
+
+[[step]]
+    action = 'ExtractRegion'
+    segment = 'read1'
+    start = 2
+    length = 3
+    out_label = 'pos_tag'
+    anchor = 'Start'
+
+[[step]]
+    action = 'CutStart'
+    n = 10
+
+[[step]]
+    action = 'StoreTagInSequence'
+    in_value_label = 'val_tag'
+    in_position_label = 'pos_tag'
+    anchor = 'Start'
+    on_lost = 'Complain'
+
+[output]
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

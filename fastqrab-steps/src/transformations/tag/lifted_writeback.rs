@@ -401,3 +401,143 @@ fn resolve(segment: &FastQChunk, row: usize, plan: &Plan) -> Resolved {
         Resolved::Invalid
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use stringpod::StringPod;
+
+    /// A one-read segment, seq/qual as given, named `Read0`.
+    fn one_read_segment(seq: &[u8], qual: &[u8]) -> FastQChunk {
+        let mut seq_bld = DualStringPodBuilder::with_capacity(0, 1);
+        seq_bld.push(seq, qual);
+        let mut name_bld = StringPodBuilder::new();
+        name_bld.push(b"Read0");
+        FastQChunk {
+            names: name_bld.finish(),
+            seq_quals: seq_bld.finish(),
+            pluses: StringPod::new_all_empty(1),
+        }
+    }
+
+    // `apply_plans` trusts that the tag column and the segment were built from
+    // the same block, so their row counts can never diverge in practice — this
+    // asserts that invariant defensively. Constructing a mismatch (a position
+    // tag aliasing an unrelated one-row pod, checked against a two-row segment)
+    // is the only way to exercise it.
+    #[test]
+    #[should_panic(expected = "row counts must match")]
+    fn apply_plans_panics_on_row_count_mismatch() {
+        let mut segment_bld = DualStringPodBuilder::with_capacity(0, 2);
+        segment_bld.push(b"AAAA", b"IIII");
+        segment_bld.push(b"CCCC", b"IIII");
+        let mut name_bld = StringPodBuilder::new();
+        name_bld.push(b"Read0");
+        name_bld.push(b"Read1");
+        let mut segment = FastQChunk {
+            names: name_bld.finish(),
+            seq_quals: segment_bld.finish(),
+            pluses: StringPod::new_all_empty(2),
+        };
+
+        // A position tag aliasing an unrelated, one-row pod: row count 1 vs the
+        // segment's 2.
+        let mut pos_pod_bld = DualStringPodBuilder::with_capacity(0, 1);
+        pos_pod_bld.push(b"AAAA", b"IIII");
+        let pos_pod = pos_pod_bld.finish();
+        let position = {
+            let mut b = pos_pod.multi_location_alias_builder();
+            b.push_row(&[(0, 4)]);
+            b.finish()
+        };
+        let value = TagColumn::Location(position.clone());
+
+        let _ = store_tag_into_segment(
+            &mut segment,
+            &position,
+            &value,
+            WriteAnchor::Replace,
+            OnLost::Ignore,
+            "test",
+        );
+    }
+
+    // `resolve` unconditionally trusts `ops_since` to succeed (it captured
+    // `born_generation` from this very pod), so `describe_lost`'s fallback for a
+    // `born_generation` the row's recorded history doesn't reach that far back
+    // can only be reached with a fabricated, out-of-range generation.
+    #[test]
+    fn describe_lost_falls_back_when_edit_history_unavailable() {
+        let segment = one_read_segment(b"AAAACCCC", b"IIIIIIII");
+        let plan = Plan {
+            born_generation: 999,
+            born_len: 8,
+            target: Target::Replace {
+                regions: vec![(0, 4)],
+            },
+            seq: b"AAAA".to_vec(),
+            qual: b"IIII".to_vec(),
+        };
+        let msg = describe_lost(&segment, 0, &plan);
+        assert!(
+            msg.contains("(edit history unavailable)"),
+            "expected the edit-history fallback text, got: {msg}"
+        );
+    }
+
+    #[test]
+    fn describe_lost_reports_replaced_regions_and_edits() {
+        let mut segment = one_read_segment(b"AAAACCCCGG", b"IIIIIIIIII");
+        let born = segment.seq_quals.generation(0).expect("row 0 exists");
+        segment.seq_quals.cut_start(2, None);
+        let plan = Plan {
+            born_generation: born,
+            born_len: 10,
+            target: Target::Replace {
+                regions: vec![(0, 4)],
+            },
+            seq: Vec::new(),
+            qual: Vec::new(),
+        };
+        let msg = describe_lost(&segment, 0, &plan);
+        assert!(msg.contains("read 'Read0'"), "{msg}");
+        assert!(msg.contains("covering 0..4"), "{msg}");
+        assert!(msg.contains("in a 10bp read"), "{msg}");
+        assert!(msg.contains("cut 2 from the start"), "{msg}");
+    }
+
+    #[test]
+    fn describe_lost_reports_insert_anchor() {
+        let segment = one_read_segment(b"AAAACCCCGG", b"IIIIIIIIII");
+        let born = segment.seq_quals.generation(0).expect("row 0 exists");
+        let plan = Plan {
+            born_generation: born,
+            born_len: 10,
+            target: Target::InsertAt { at: 5 },
+            seq: Vec::new(),
+            qual: Vec::new(),
+        };
+        let msg = describe_lost(&segment, 0, &plan);
+        assert!(msg.contains("anchored at 5"), "{msg}");
+    }
+
+    // Every region of a non-empty `regions` vec either lifts into `lifted` or
+    // returns `Lost` early, so `lifted` can only end up empty if `regions` was
+    // empty to begin with -- which `store_tag_into_segment` never constructs (an
+    // empty location is filtered out via `row_is_empty` before a `Plan` is even
+    // built). Exercise the defensive fallback directly.
+    #[test]
+    fn resolve_replace_with_no_regions_is_lost() {
+        let segment = one_read_segment(b"AAAACCCC", b"IIIIIIII");
+        let plan = Plan {
+            born_generation: 0,
+            born_len: 8,
+            target: Target::Replace {
+                regions: Vec::new(),
+            },
+            seq: b"AAAA".to_vec(),
+            qual: b"IIII".to_vec(),
+        };
+        assert!(matches!(resolve(&segment, 0, &plan), Resolved::Lost));
+    }
+}

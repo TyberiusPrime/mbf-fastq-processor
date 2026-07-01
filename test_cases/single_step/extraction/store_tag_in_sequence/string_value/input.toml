@@ -1,0 +1,36 @@
+# StoreTagInSequence with a String tag (not a Location tag) as the value: the
+# tag's bytes get `~` (Phred 93) quality since a string has none of its own.
+
+[input]
+    read1 = 'input_read1.fq'
+
+# String value: the first 3 characters of the read's name.
+[[step]]
+    action = 'ExtractRegex'
+    source = 'name:read1'
+    search = '^(...)'
+    replacement = '$1'
+    out_label = 'val_tag'
+
+# Insertion position: bases 3-6.
+[[step]]
+    action = 'ExtractRegion'
+    segment = 'read1'
+    start = 3
+    length = 3
+    out_label = 'pos_tag'
+    anchor = 'Start'
+
+# Insert val_tag (from the read's name) before pos_tag's start (position 3).
+[[step]]
+    action = 'StoreTagInSequence'
+    in_value_label = 'val_tag'
+    in_position_label = 'pos_tag'
+    anchor = 'Start'
+
+[output]
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

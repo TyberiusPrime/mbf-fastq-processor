@@ -1,0 +1,37 @@
+# StoreTagInSequence where the value tag's content is empty (a zero-width regex
+# match) and the anchor is an insertion (Start/End, not Replace). Inserting
+# empty content is a true no-op, distinct from replacing a region with empty
+# content (which deletes it) -- the read must come out byte-for-byte unchanged.
+
+[input]
+    read1 = 'input_read1.fq'
+
+# Zero-width match at the start of the read: an empty value to insert.
+[[step]]
+    action = 'ExtractRegex'
+    source = 'read1'
+    search = '^'
+    out_label = 'val_tag'
+
+# Insertion position: bases 3-6.
+[[step]]
+    action = 'ExtractRegion'
+    segment = 'read1'
+    start = 3
+    length = 3
+    out_label = 'pos_tag'
+    anchor = 'Start'
+
+# Insert the empty val_tag before pos_tag's start -- nothing should change.
+[[step]]
+    action = 'StoreTagInSequence'
+    in_value_label = 'val_tag'
+    in_position_label = 'pos_tag'
+    anchor = 'Start'
+
+[output]
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

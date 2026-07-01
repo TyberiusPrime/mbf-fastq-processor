@@ -1,0 +1,28 @@
+# A zero-width location captured at the start of the read (`map_position`, not
+# `map_region`) is later cut away by an edit -- the write-back has nowhere to
+# land and the read is left unchanged (on_lost = 'Ignore').
+
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'ExtractRegex'
+    source = 'read1'
+    out_label = 'tag'
+    search = '^'
+
+[[step]]
+    action = 'CutStart'
+    n = 1
+
+[[step]]
+    action = 'StoreTagBackInSequence'
+    in_label = 'tag'
+    on_lost = 'Ignore'
+
+[output]
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

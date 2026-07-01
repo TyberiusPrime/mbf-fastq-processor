@@ -9382,11 +9382,56 @@ fn test_cases_x_single_step_x_extraction_x_store_tag_in_sequence_x_basic() {
 
 #[test]
 
+fn test_cases_x_single_step_x_extraction_x_store_tag_in_sequence_x_empty_value_insert_noop() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/store_tag_in_sequence/empty_value_insert_noop"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/store_tag_in_sequence/empty_value_insert_noop",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_extraction_x_store_tag_in_sequence_x_end_anchor() {
     println!("Test case is in: test_cases/single_step/extraction/store_tag_in_sequence/end_anchor");
     run_test(
         std::path::Path::new(
             "../test_cases/single_step/extraction/store_tag_in_sequence/end_anchor",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_extraction_x_store_tag_in_sequence_x_insert_after_read_end() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/store_tag_in_sequence/insert_after_read_end"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/store_tag_in_sequence/insert_after_read_end",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_extraction_x_store_tag_in_sequence_x_insert_lost_location_complain() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/store_tag_in_sequence/insert_lost_location_complain"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/store_tag_in_sequence/insert_lost_location_complain",
         ),
         "input.toml",
         1,
@@ -9402,6 +9447,37 @@ fn test_cases_x_single_step_x_extraction_x_store_tag_in_sequence_x_replace_disjo
     run_test(
         std::path::Path::new(
             "../test_cases/single_step/extraction/store_tag_in_sequence/replace_disjoint_length_error",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_extraction_x_store_tag_in_sequence_x_replace_zero_width_lost_after_cut()
+ {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/store_tag_in_sequence/replace_zero_width_lost_after_cut"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/store_tag_in_sequence/replace_zero_width_lost_after_cut",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_extraction_x_store_tag_in_sequence_x_replace_zero_width_start_noop() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/store_tag_in_sequence/replace_zero_width_start_noop"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/store_tag_in_sequence/replace_zero_width_start_noop",
         ),
         "input.toml",
         1,
@@ -9433,6 +9509,21 @@ fn test_cases_x_single_step_x_extraction_x_store_tag_in_sequence_x_replacement_w
     run_test(
         std::path::Path::new(
             "../test_cases/single_step/extraction/store_tag_in_sequence/replacement_with_location_shift",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_extraction_x_store_tag_in_sequence_x_string_value() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/store_tag_in_sequence/string_value"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/store_tag_in_sequence/string_value",
         ),
         "input.toml",
         1,

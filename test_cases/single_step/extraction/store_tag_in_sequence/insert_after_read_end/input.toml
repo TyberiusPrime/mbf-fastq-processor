@@ -1,0 +1,39 @@
+# StoreTagInSequence anchor = 'End' where the position tag's rightmost end
+# coincides exactly with the read's own (birth-frame) length -- the "insert at
+# or past the end" fast path that appends at the read's current end, rather
+# than lifting an interior point.
+
+[input]
+    read1 = 'input_read1.fq'
+
+# Value to append: the first 3 bases.
+[[step]]
+    action = 'ExtractRegion'
+    segment = 'read1'
+    start = 0
+    length = 3
+    out_label = 'val_tag'
+    anchor = 'Start'
+
+# Position: the last 3 bases (end coincides with the read's length, 9).
+[[step]]
+    action = 'ExtractRegion'
+    segment = 'read1'
+    start = 6
+    length = 3
+    out_label = 'pos_tag'
+    anchor = 'Start'
+
+# Insert val_tag after pos_tag's end (position 9 == read length).
+[[step]]
+    action = 'StoreTagInSequence'
+    in_value_label = 'val_tag'
+    in_position_label = 'pos_tag'
+    anchor = 'End'
+
+[output]
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
