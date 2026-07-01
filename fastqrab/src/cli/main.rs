@@ -11,7 +11,7 @@ pub struct EarlyExit;
 
 impl std::fmt::Display for EarlyExit {
     fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        Ok(())
+        Ok(()) // cov:excl-line -- since it's not getting printed!
     }
 }
 

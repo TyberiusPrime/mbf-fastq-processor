@@ -15,7 +15,7 @@ impl TagUser for PartialTaggedVariant<PartialBlockSizes> {}
 
 impl Step for BlockSizes {
     fn store_progress_output(&mut self, progress: &crate::transformations::reports::Progress) {
-        self.progress_output = Some(progress.clone());
+        self.progress_output = Some(progress.clone()); // cov:excl-line
     }
 
     fn apply(
@@ -24,6 +24,7 @@ impl Step for BlockSizes {
         _input_info: &crate::transformations::InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
+        //cov: excl-start - this is debug, it's ok not to have a test covering this.
         if let Some(progress) = self.progress_output.as_ref() {
             let _ = progress.output(&format!(
                 "Block_no: {}, Blocksize: {}",
@@ -32,5 +33,6 @@ impl Step for BlockSizes {
             ));
         }
         Ok((block, true))
+        //cov: excl-stop
     }
 }

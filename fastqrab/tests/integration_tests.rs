@@ -1892,6 +1892,29 @@ prefix = 'output2'
 }
 
 #[test]
+fn test_json_schema_command() {
+    let cmd = std::process::Command::new(get_bin_path())
+        .arg("json-schema")
+        .output()
+        .unwrap();
+
+    let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
+    let stderr = std::str::from_utf8(&cmd.stderr).unwrap().to_string();
+
+    assert!(cmd.status.success(), "stderr: {stderr}");
+    assert!(stderr.is_empty(), "stderr should be empty, got: {stderr}");
+
+    // stdout must be exactly a JSON schema document, nothing else
+    let value: serde_json::Value = serde_json::from_str(stdout.trim())
+        .unwrap_or_else(|e| panic!("stdout was not valid JSON: {e}\nstdout was: {stdout}"));
+    assert!(value.is_object(), "schema should be a JSON object");
+    assert!(
+        value.get("$schema").is_some(),
+        "expected a $schema marker identifying this as a JSON schema, got: {stdout}"
+    );
+}
+
+#[test]
 fn test_completions_command_bash() {
     let cmd = std::process::Command::new(get_bin_path())
         .arg("completions")

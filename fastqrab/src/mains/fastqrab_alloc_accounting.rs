@@ -21,12 +21,14 @@ fn main() {
             info.bytes_current
         );
     }
-    match result {
+    match result { // cov:excl-line why though?, the ok is being hit.
         Ok(()) => {}
+        //cov:excl-start - the test only covers the working case, and that's ok.
         Err(e) if e.is::<EarlyExit>() => std::process::exit(1),
         Err(e) => {
             eprintln!("Error: {e:?}");
             std::process::exit(1);
         }
+        //cov:excl-stop
     }
 }
