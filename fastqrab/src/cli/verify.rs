@@ -83,12 +83,14 @@ pub fn verify_outputs(
     if needs_alloc_measurement
         && current_exe.file_name().and_then(|n| n.to_str()) != Some("fastqrab_alloc_accounting")
     {
+        //cov:excl-start
         bail!(
             "measure_alloc file found in {} but current executable is not the allocation-measuring variant. \
             To perform allocation measurement tests,\
             use the fastqrab_alloc_accounting binary.",
             toml_dir.display()
         );
+        //cov:excl-stop
     }
     let stdin_config = toml_dir.join("stdin_config").exists();
     let stdin_file = if stdin_config {
@@ -212,9 +214,7 @@ fn create_working_dir(output_dir: Option<&Path>) -> Result<(tempfile::TempDir, P
     let temp_dir = tempfile::tempdir().context("Failed to create temporary directory")?;
     let temp_path = if let Some(output_dir) = output_dir {
         if output_dir.exists() {
-            // cov:excl-start
             cleanup_output_dir(Some(output_dir))?;
-            // cov:excl-stop
         }
         std::fs::create_dir_all(output_dir).with_context(|| {
             // cov:excl-start
@@ -503,10 +503,8 @@ fn verify_processor_success(
             .context("Failed to write stdout to temp directory")?;
     }
     if !output.stderr.is_empty() {
-        // cov:excl-start
         ex::fs::write(temp_path.join("stderr"), &output.stderr)
             .context("Failed to write stderr to temp directory")?;
-        // cov:excl-stop
     }
 
     let mut mismatches = Vec::new();
@@ -685,7 +683,7 @@ fn cleanup_output_dir(output_dir: Option<&Path>) -> Result<()> {
             let path = entry.path();
             if path.is_dir() {
                 let _ = ex::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755));
-            } // cov:excl-line
+            }
         }
         ex::fs::remove_dir_all(output_dir).with_context(|| {
             // cov:excl-start
@@ -965,16 +963,14 @@ enum ExpectedFailure {
     Regex(Regex),
 }
 
-// cov:excl-start
 impl std::fmt::Display for ExpectedFailure {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ExpectedFailure::ExactText(text) => write!(f, "{text}"),
+            ExpectedFailure::ExactText(text) => write!(f, "{text}"), // cov:excl-line
             ExpectedFailure::Regex(regex) => write!(f, "/{}/", regex.as_str()),
         }
     }
 }
-// cov:excl-stop
 
 impl ExpectedFailure {
     fn new(toml_dir: &Path, key: &str) -> Result<Option<Self>> {
@@ -995,26 +991,22 @@ impl ExpectedFailure {
                 .context("Read expected failure file")?
                 .trim()
                 .to_string();
-            // cov:excl-start
             assert!(
                 content.trim() != "",
                 "{}.txt was empty!",
-                expected_failure_file.display()
+                expected_failure_file.display() // cov:excl-line
             );
-            // cov:excl-stop
             Ok(Some(ExpectedFailure::ExactText(content)))
         } else if expected_failure_regex_file.exists() {
             let content = ex::fs::read_to_string(&expected_failure_regex_file)
                 .context("Read expected failure regex file")?
                 .trim()
                 .to_string();
-            // cov:excl-start
             assert!(
                 content.trim() != "",
                 "{}.txt was empty!",
-                expected_failure_regex_file.display()
+                expected_failure_regex_file.display() // cov:excl-line
             );
-            // cov:excl-stop
             let regex = Regex::new(&content).context("Compile expected failure regex failed")?;
             Ok(Some(ExpectedFailure::Regex(regex)))
         } else {

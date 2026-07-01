@@ -21,6 +21,10 @@ pub struct FillMissing {
 
     /// Output tag label for the result.
     out_label: TagLabel,
+
+    #[tpd(skip)]
+    #[schemars(skip)]
+    output_type: TagValueType,
 }
 
 impl VerifyIn<PartialConfig> for PartialFillMissing {
@@ -55,12 +59,32 @@ impl TagUser for PartialTaggedVariant<PartialFillMissing> {
                 .map(|m| &m.tag_type);
 
             let output_type = match (type0, type1) {
+                (Some(TagValueType::Location), Some(TagValueType::Location)) => {
+                    let segment_0 = inner
+                        .in_label_primary
+                        .as_ref()
+                        .and_then(|l| tags_available.get(l))
+                        .map(|m| m.segment)
+                        .expect("checked above");
+                    let segment_1 = inner
+                        .in_label_secondary
+                        .as_ref()
+                        .and_then(|l| tags_available.get(l))
+                        .map(|m| m.segment)
+                        .expect("checked above");
+                    if segment_0 == segment_1 {
+                        TagValueType::Location
+                    } else {
+                        TagValueType::String
+                    }
+                }
                 (Some(TagValueType::Location), Some(TagValueType::String))
                 | (Some(TagValueType::String), Some(TagValueType::Location)) => {
                     TagValueType::String
                 }
                 _ => TagValueType::String, //doesn't mater, will get rejected
             };
+            inner.output_type = Some(output_type);
 
             Some(TagUsageInfo {
                 used_tags: vec![
@@ -97,13 +121,12 @@ impl Step for FillMissing {
             .get(&self.in_label_secondary)
             .expect("Secondary tag not found in block. Verification failure");
 
-        let output_col = match (primary_vec, secondary_vec) {
-            (TagColumn::Location(prim), TagColumn::Location(sec)) => {
-                if prim.source_id() != sec.source_id() {
-                    anyhow::bail!(
-                        "FillMissing: primary and secondary Location tags must have the same source segment"
-                    );
-                }
+        let output_col = match (self.output_type, primary_vec, secondary_vec) {
+            (TagValueType::Location, TagColumn::Location(prim), TagColumn::Location(sec)) => {
+                assert!(
+                    prim.source_id() == sec.source_id(),
+                    "Validation failed to detect different sources"
+                );
                 let mut out = block.location_column_builder(prim.source_id().into());
                 for (prim_hit, sec_hit) in prim.iter_row_regions().zip(sec.iter_row_regions()) {
                     if !prim_hit.is_empty() {
@@ -114,30 +137,57 @@ impl Step for FillMissing {
                 }
                 TagColumn::Location(out.finish())
             }
-            (TagColumn::String(prim), TagColumn::String(sec)) => {
+            (TagValueType::String, TagColumn::Location(prim), TagColumn::Location(sec)) => {
+                TagColumn::String(
+                    prim.iter_seq()
+                        .zip(sec.iter_seq())
+                        .map(|(prim_hit, sec_hit)| {
+                            match (prim_hit.is_empty(), sec_hit.is_empty()) {
+                                (false, _) => Some(BString::new(prim_hit.to_vec())),
+                                (true, false) => Some(BString::new(sec_hit.to_vec())),
+                                (true, true) => None,
+                            }
+                        })
+                        .collect(),
+                )
+            }
+            (TagValueType::String, TagColumn::String(prim), TagColumn::String(sec)) => {
                 TagColumn::String(prim.iter().zip(sec.iter()).map(|(p, s)| p.or(s)).collect())
             }
-            (TagColumn::Location(prim), TagColumn::String(sec)) => TagColumn::String(
-                prim.iter_seq()
-                    .zip(sec.iter())
-                    .map(|(prim_hit, sec_str)| {
-                        (!prim_hit.is_empty())
-                            .then(|| BString::new(prim_hit.to_vec()))
-                            .or(sec_str.as_ref().map(|x| BString::new(x.to_vec())))
-                    })
-                    .collect(),
-            ),
-            (TagColumn::String(prim), TagColumn::Location(sec)) => TagColumn::String(
-                prim.iter()
-                    .zip(sec.iter_seq())
-                    .map(|(prim_str, sec_hit)| {
-                        prim_str
-                            .map(Cow::Borrowed)
-                            .or_else(|| (!sec_hit.is_empty()).then_some(sec_hit))
-                    })
-                    .collect(),
-            ),
-            _ => unreachable!("FillMissing: unsupported tag type combination"),
+            (TagValueType::String, TagColumn::Location(prim), TagColumn::String(sec)) => {
+                TagColumn::String(
+                    prim.iter_seq()
+                        .zip(sec.iter())
+                        .map(|(prim_hit, sec_str)| {
+                            (!prim_hit.is_empty())
+                                .then(|| BString::new(prim_hit.to_vec()))
+                                .or(sec_str.as_ref().map(|x| BString::new(x.to_vec())))
+                        })
+                        .collect(),
+                )
+            }
+            (TagValueType::String, TagColumn::String(prim), TagColumn::Location(sec)) => {
+                TagColumn::String(
+                    prim.iter()
+                        .zip(sec.iter_seq())
+                        .map(|(prim_str, sec_hit)| {
+                            prim_str
+                                .map(Cow::Borrowed)
+                                .or_else(|| (!sec_hit.is_empty()).then_some(sec_hit))
+                        })
+                        .collect(),
+                )
+            }
+            _ => {
+                //cov:excl-start
+                unreachable!(
+                    "FillMissing: unsupported tag type combination {:?} {:?} {:?}",
+                    &self.output_type,
+                    primary_vec,
+                    secondary_vec // cov:excl-line
+                )
+                //cov:excl-end
+            }
         };
 
         block.tags.insert(self.out_label.clone(), output_col);

@@ -96,6 +96,7 @@ impl Step for ValidateAllReadsSameLength {
                         TagColumn::Location(col) => {
                             for len in col.iter_row_lengths(None) {
                                 if len > 0 {
+                                    // empty / missing regions are being ignored
                                     self.check(len)?;
                                 }
                             }

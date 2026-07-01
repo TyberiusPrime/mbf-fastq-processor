@@ -69,9 +69,9 @@ pub fn umi_cluster_count(umis: &[Umi], umi_length: u16) -> u32 {
     } else {
         //cov:excl-start
         neighbor_union_hash(values, &mut uf, umi_length);
-        // but we verify accurance in  test_pairwise_neighbor_aggreement
-        // cov:excl-end
+        // but we verify accuracy in  test_pairwise_neighbor_aggreement
     }
+    //cov:excl-end
 
     let mut roots = FxHashSet::default();
 

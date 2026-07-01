@@ -10,9 +10,12 @@ use std::path::{Path, PathBuf};
 pub struct EarlyExit;
 
 impl std::fmt::Display for EarlyExit {
+    //cov:excl-start
+    //since not printing is the whole point
     fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        Ok(()) // cov:excl-line -- since it's not getting printed!
+        Ok(())
     }
+    //cov:excl-stop
 }
 
 impl std::error::Error for EarlyExit {}
@@ -441,7 +444,7 @@ pub fn entry_point() -> Result<()> {
             if let Some(shell) = sub_matches.get_one::<Shell>("shell") {
                 let mut cmd = build_cli();
                 print_completions(*shell, &mut cmd);
-            } // cov:excl-line
+            }
         }
         Some(("json-schema", _sub_matches)) => {
             print_schema();
@@ -560,8 +563,8 @@ fn run_interactive_mode(
     ) {
         eprintln!("Interactive mode error: {e:?}");
         return Err(early_exit());
-    } // cov:excl-line
-    Ok(()) // cov:excl-line
+    }
+    Ok(())
 }
 
 /// Find a single .toml file in the current directory that has both [input] and [output] sections
@@ -623,7 +626,7 @@ fn find_single_valid_toml() -> Result<PathBuf> {
 
 fn print_peak_rss_kb() {
     let Ok(status) = std::fs::read_to_string("/proc/self/status") else {
-        return;
+        return; // cov:excl-line
     };
     for line in status.lines() {
         let Some(rest) = line.strip_prefix("VmHWM:") else {

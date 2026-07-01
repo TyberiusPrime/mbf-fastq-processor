@@ -4504,6 +4504,143 @@ action = 'OutputFASTQ'
 }
 
 #[test]
+fn test_output_files_no_output_producing_step_fails() {
+    // An [output] section with no Output*/Report step behind it produces
+    // nothing, so `output-files` (like `process`) must reject it up front
+    // instead of silently reporting an empty file list.
+    let dir = tempfile::tempdir().unwrap();
+    let config_path = dir.path().join("config.toml");
+    fs::write(
+        &config_path,
+        r"[input]
+read1 = 'in.fq'
+read2 = 'in2.fq'
+
+[output]
+prefix = 'output'
+",
+    )
+    .unwrap();
+
+    let cmd = std::process::Command::new(get_bin_path())
+        .arg("output-files")
+        .arg(&config_path)
+        .output()
+        .unwrap();
+
+    let stderr = std::str::from_utf8(&cmd.stderr).unwrap();
+    assert!(
+        !cmd.status.success(),
+        "expected failure, stdout: {}",
+        std::str::from_utf8(&cmd.stdout).unwrap()
+    );
+    assert!(
+        stderr.contains("No output files and no reports requested"),
+        "got: {stderr}"
+    );
+}
+
+#[test]
+fn test_output_files_stdin_config_incompatible_with_stdin_fastq() {
+    // Reading the config itself from stdin while the config *also* points a
+    // FASTQ input at stdin is ambiguous (both would try to read the same
+    // stream), so `list_config_output_files` rejects it explicitly
+    // (output_files.rs:47) rather than deadlocking or silently misreading.
+    let stdin_config = r"[input]
+read1 = '--stdin--'
+
+[[step]]
+action = 'Head'
+n = 1
+
+[output]
+prefix = 'output'
+[[step]]
+action = 'OutputFASTQ'
+";
+
+    let mut cmd = std::process::Command::new(get_bin_path())
+        .arg("output-files")
+        .arg("-")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+
+    cmd.stdin
+        .take()
+        .unwrap()
+        .write_all(stdin_config.as_bytes())
+        .unwrap();
+    let output = cmd.wait_with_output().unwrap();
+
+    let stderr = std::str::from_utf8(&output.stderr).unwrap();
+    assert!(!output.status.success(), "expected failure");
+    assert!(
+        stderr.contains(
+            "Cannot read configuration from stdin ('-') when the configuration also uses stdin ('--stdin--') for FASTQ input"
+        ),
+        "expected incompatibility error, got: {stderr}"
+    );
+}
+
+#[test]
+fn test_output_files_benchmark_config_has_no_output_files() {
+    // A benchmark config has no [output] section at all (it measures
+    // throughput rather than writing files), so `output-files` must report an
+    // empty listing rather than treating "no output section" as an error.
+    let dir = tempfile::tempdir().unwrap();
+    let config_path = dir.path().join("config.toml");
+    fs::write(
+        &config_path,
+        r"[input]
+read1 = 'in.fq'
+
+[benchmark]
+enable = true
+molecule_count = 1000
+",
+    )
+    .unwrap();
+
+    let cmd = std::process::Command::new(get_bin_path())
+        .arg("output-files")
+        .arg(&config_path)
+        .output()
+        .unwrap();
+
+    let stdout = std::str::from_utf8(&cmd.stdout).unwrap();
+    let stderr = std::str::from_utf8(&cmd.stderr).unwrap();
+    assert!(cmd.status.success(), "stderr: {stderr}");
+    assert!(
+        stdout.contains("No output files would be produced"),
+        "got: {stdout}"
+    );
+}
+
+#[test]
+fn test_output_files_stdout_output() {
+    // `OutputFASTQ` with `stdout = true` writes to stdout instead of a file;
+    // the listing must report that as the `--stdout--` sentinel rather than a
+    // real filename.
+    let files = output_files_lines(
+        r"[input]
+read1 = 'in.fq'
+read2 = 'in2.fq'
+
+[output]
+prefix = 'output'
+
+[[step]]
+action = 'OutputFASTQ'
+stdout = true
+",
+    );
+    assert_eq!(files, vec!["--stdout--"]);
+}
+
+#[test]
 fn test_output_files_demultiplex() {
     // OutputFASTQ after a Demultiplex must list one file per barcode tag
     // (plus the no-barcode bucket because output_unmatched = true), not a

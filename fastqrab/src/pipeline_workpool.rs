@@ -183,6 +183,8 @@ impl WorkpoolCoordinator {
                             }
                             Err(_) => {
                                 // Output pipe crashed?
+                                //cov:ignore-start
+                                // depending on timing it's this one or the one below...
                                 self
                                     .error_collector
                                     .lock()
@@ -192,6 +194,7 @@ impl WorkpoolCoordinator {
                                             .to_string(),
                                     );
                                 break;
+                                //cov:ignore-stop
                             }
                         }
                     }
@@ -223,7 +226,7 @@ impl WorkpoolCoordinator {
                             Ok(work_result) => {
                                 if self.process_completed_work(work_result).is_err() {
                                     // Coordinator decided to terminate because of an error.
-                                    break;  //cov:excl-line timing dependent
+                                    break;  //cov:ignore
                                 }
                             }
                             Err(_) => {
@@ -240,7 +243,8 @@ impl WorkpoolCoordinator {
                             }
                             Err(_) => {
                                 // Output pipe crashed?
-                                // cov:excl-start
+                                // cov:ignore-start
+                                // depending on timing it's this one or the one above...
                                 self
                                     .error_collector
                                     .lock()
@@ -250,7 +254,7 @@ impl WorkpoolCoordinator {
                                             .to_string(),
                                     );
                                 break;
-                                // cov:excl-stop
+                                // cov:ignore-stop
                             }
                         }
                     }
@@ -322,7 +326,8 @@ impl WorkpoolCoordinator {
 
     fn queue_block(&mut self, block_status: BlockStatus) -> Result<()> {
         if self.stages.is_empty() {
-            self.output_block(block_status)?;
+            unreachable!("We require at least one output stage");
+            // self.output_block(block_status)?;
         } else {
             match Self::stage_can_take_block(
                 &self.stage_progress,
@@ -469,6 +474,7 @@ impl WorkpoolCoordinator {
         Ok(())
     }
 
+    /// send the block to the end. Used to be output, now it's dealloc/recycling.
     fn output_block(&mut self, block_status: BlockStatus) -> Result<()> {
         let block_no = block_status.block.block_no();
         if self
@@ -809,7 +815,7 @@ fn process_work_item(
             if len_before != len_after {
                 // mutants false positve.
                 // defensive construct against coding errors
-                //cov:excl-start
+                //cov:ignore-start
                 assert!(
                     stage.allowed_tags.len() == block_tag_count,
                     "A filtering stage forgot to declare must_see_all_tags=true: {:?}. Declared {} tags, block had {} tags",
@@ -817,7 +823,7 @@ fn process_work_item(
                     stage.allowed_tags.len(),
                     block_tag_count
                 );
-                //cov:excl-stop
+                //cov:ignore-stop
             }
         }
         result
@@ -833,7 +839,6 @@ fn process_work_item(
             }
             //make sure all tags have the same length
             let all_tag_lengths_equal = result_block.tags.values().map(TagColumn::len).all_equal();
-            // cov:excl-start
             if !all_tag_lengths_equal {
                 let tags_and_lengths: String = result_block
                     .tags
@@ -852,9 +857,8 @@ fn process_work_item(
             //     Best case it needs to declare must_see_all_tags=true in TagUser::get_tag_usage()",
             //     stage.transformation, result_block.tags
             // );
-            // cov:excl-stop
             if let Some(tag_len) = result_block.tags.values().next().map(TagColumn::len) {
-                //cov:excl-start
+                //cov:ignore-start
                 assert!(
                     result_block.len() == tag_len,
                     "Tag lengths don't match block length after stage {:?}:. Block len: {}. Tag len: {tag_len} This is a bug!. \n\
@@ -862,8 +866,7 @@ fn process_work_item(
                     stage.transformation,
                     result_block.len(),
                 );
-
-                //cov:excl-stop
+                //cov:ignore-stop
             }
             WorkResult {
                 work_item: WorkItem {

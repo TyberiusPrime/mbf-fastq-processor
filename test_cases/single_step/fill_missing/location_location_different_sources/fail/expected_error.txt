@@ -1,0 +1,20 @@
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+33 │ [[step]]
+34 │     action = 'StoreTagInComment'
+   ┆              ─────────┬─────────
+   ┆                       │
+   ┆                       ╰────────── In this step
+35 │     in_label = ['result', 'location_result']
+   ┆                           ────────┬────────
+   ┆                                   │
+   ┆                                   ╰────────── Incompatible tag type
+───╯
+Hint: This transform requires tag 'result' to be one of the following types: ['Location'],
+      but it is actually of type 'String'.
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/StoreTagInComment
+      Or run: `fastqrab template StoreTagInComment` for more information.
+
+

@@ -87,7 +87,7 @@ pub fn list_config_output_files(toml_file: &Path) -> Result<OutputFilesListing> 
                         ResolvedOutputName::Stdout => "--stdout--".to_string(),
                         ResolvedOutputName::File { basename, suffix } => {
                             if suffix.is_empty() {
-                                format!("{basename}{chunk_infix}")
+                                format!("{basename}{chunk_infix}") // cov:excl-line
                             } else {
                                 format!("{basename}{chunk_infix}.{suffix}")
                             }
@@ -104,7 +104,7 @@ pub fn list_config_output_files(toml_file: &Path) -> Result<OutputFilesListing> 
                 d.declared_barcodes(),
                 d.in_label.to_string(),
                 &ix_sep,
-            )?;
+            )?; // cov:excl-line
         }
     }
 

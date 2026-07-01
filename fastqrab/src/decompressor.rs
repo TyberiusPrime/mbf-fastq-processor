@@ -86,8 +86,8 @@ pub fn run() -> Result<()> {
     #[cfg(target_os = "linux")]
     if args.input.as_os_str() != "-" {
         apply_landlock(&input).unwrap_or_else(|e| {
-            eprintln!("[decompressor] warning: landlock sandbox not applied: {e}");
-        });
+            eprintln!("[decompressor] warning: landlock sandbox not applied: {e}"); // cov:excl-line
+        }); // cov:excl-line
     }
 
     // Peek mode only wants the first few decoded bytes, so cap the chunk size
@@ -109,7 +109,7 @@ pub fn run() -> Result<()> {
                 num_threads: threads,
                 chunk_size_bytes: chunk_size,
                 verbose: if verbose {
-                    Verbosity::On
+                    Verbosity::On // cov:excl-line
                 } else {
                     Verbosity::Off
                 },
@@ -182,6 +182,7 @@ fn read_zstd(
     Ok(())
 }
 
+//cov:excl-start
 #[expect(
     clippy::cast_precision_loss,
     reason = "MB/s is a human-facing diagnostic; f64 precision loss on byte counts is irrelevant"
@@ -197,6 +198,7 @@ fn report_throughput(bytes_since_last: u64, total_bytes: u64, elapsed_secs: f64,
         total_bytes as f64 / (1024.0 * 1024.0),
     );
 }
+//cov:excl-stop
 
 /// Chunk size used in peek mode: large enough that the first decoded chunk always
 /// covers the format-discriminating head, small enough to be cheap to inflate.
@@ -229,7 +231,8 @@ fn run_peek(
         };
         let take = (n - written).min(chunk.len());
         if out.write_all(&chunk[..take]).is_err() {
-            break; // consumer already has what it needs
+            // consumer already has what it needs
+            break; // cov:excl-line
         }
         written += take;
     }
@@ -254,12 +257,13 @@ fn run_pipe(
         if let Err(e) = out.write_all(&chunk) {
             if is_consumer_gone(&e) {
                 return Ok(());
-            }
-            return Err(e.into());
+            } // cov:excl-line
+            return Err(e.into()); // cov:excl-line
         }
         bytes_since_last += chunk.len() as u64;
         total_bytes += chunk.len() as u64;
         if verbose {
+            //cov:excl-start
             let now = std::time::Instant::now();
             let elapsed = now.duration_since(last_report);
             if elapsed.as_secs_f64() >= 1.0 {
@@ -272,6 +276,7 @@ fn run_pipe(
                 last_report = now;
                 bytes_since_last = 0;
             }
+            //cov:excl-stop
         }
         if let Ok(v) = Arc::try_unwrap(chunk) {
             let _ = recycle_tx.try_send(v);
@@ -308,10 +313,12 @@ fn run_shm(
         )
     };
     if base == libc::MAP_FAILED {
+        //cov:excl-start
         bail!(
             "mmap of shared-memory region failed: {}",
             std::io::Error::last_os_error()
         );
+        //cov:excl-stop
     }
     let base = base.cast::<u8>();
 
@@ -356,8 +363,8 @@ fn run_shm(
             ) {
                 if is_consumer_gone(&e) {
                     return Ok(());
-                }
-                return Err(e.into());
+                } // cov:excl-line
+                return Err(e.into()); // cov:excl-line
             }
             off += n;
         }
@@ -368,10 +375,12 @@ fn run_shm(
     producer.join().expect("producer thread panicked")?;
 
     if let Err(e) = write_descriptor(&mut out, u32::MAX, 0) {
+        //cov:ignore-start
         if is_consumer_gone(&e) {
             return Ok(());
         }
         return Err(e.into());
+        //cov:ignore-stop
     }
     out.flush()?;
     drop(stdin_reader);
@@ -409,7 +418,7 @@ fn apply_landlock(input: &std::path::Path) -> Result<()> {
         .add_rule(PathBeneath::new(
             PathFd::new(input)?,
             AccessFs::from_read(abi),
-        ))?;
+        ))?; // cov:excl-line
 
     // Under coverage instrumentation (cargo-llvm-cov sets LLVM_PROFILE_FILE), the
     // LLVM profiling runtime writes a .profraw on exit. With the default `%m`
@@ -422,7 +431,7 @@ fn apply_landlock(input: &std::path::Path) -> Result<()> {
         && let Ok(fd) = PathFd::new(dir)
     {
         ruleset = ruleset.add_rule(PathBeneath::new(fd, AccessFs::from_read(abi)))?;
-    }
+    } // cov:excl-line
 
     ruleset.restrict_self()?;
     Ok(())

@@ -1,0 +1,12 @@
+@read1_has_primary|result=AAAA|location_result=read1:0-4
+AAAACGTACGTTTT
++
+IIIIIIIIIIIIII
+@read2_has_fallback|result=TTTT|location_result=read1:10-14
+CGCGCGTACGTTTT
++
+IIIIIIIIIIIIII
+@read3_both_missing|result=|location_result=
+CGCGCGTACGCGCG
++
+IIIIIIIIIIIIII

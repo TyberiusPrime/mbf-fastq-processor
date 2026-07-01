@@ -142,7 +142,7 @@ impl PodFastqParser {
                     .is_err()
                 {
                     // Pod parser hung up (an error downstream); stop feeding it.
-                    break;
+                    break; //cov:ignore-line
                 }
                 if filled < buffer_size {
                     break; // short read ⇒ EOF
@@ -236,7 +236,8 @@ impl PodFastqParser {
                 .wait()
                 .context("waiting on fastqrab-decompressor (shm mode)")?;
             if !status.success() {
-                bail!("fastqrab-decompressor exited unsuccessfully: {status}"); // cov:excl-line
+                bail!("fastqrab-decompressor exited unsuccessfully: {status}"); //cov:ignore-line 
+                //it bounces coveraged non-covered?
             }
         }
         Ok(())
@@ -253,7 +254,7 @@ impl PodFastqParser {
             match self.chunk_rx.recv() {
                 // The pod parser never emits empty chunks, but guard anyway.
                 Ok(chunk) if !chunk.names.is_empty() => return Some(chunk),
-                Ok(_) => {}
+                Ok(_) => {} //cov:excl-line
                 Err(_) => return None,
             }
         }

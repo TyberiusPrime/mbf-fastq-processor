@@ -9921,6 +9921,47 @@ fn test_cases_x_single_step_x_fill_missing_x_basic() {
 
 #[test]
 
+fn test_cases_x_single_step_x_fill_missing_x_location_location() {
+    println!("Test case is in: test_cases/single_step/fill_missing/location_location");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/fill_missing/location_location"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_fill_missing_x_location_location_different_sources_x_fail() {
+    println!(
+        "Test case is in: test_cases/single_step/fill_missing/location_location_different_sources/fail"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/fill_missing/location_location_different_sources/fail",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_fill_missing_x_location_location_different_sources_x_ok() {
+    println!(
+        "Test case is in: test_cases/single_step/fill_missing/location_location_different_sources/ok"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/fill_missing/location_location_different_sources/ok",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_fill_missing_x_mixed_location_string() {
     println!("Test case is in: test_cases/single_step/fill_missing/mixed_location_string");
     run_test(
@@ -13306,6 +13347,22 @@ fn test_cases_x_single_step_x_validation_x_validate_all_reads_same_length_x_no_s
     run_test(
         std::path::Path::new(
             "../test_cases/single_step/validation/validate_all_reads_same_length/no_source",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_validation_x_validate_all_reads_same_length_x_with_location_tag_missing()
+ {
+    println!(
+        "Test case is in: test_cases/single_step/validation/validate_all_reads_same_length/with_location_tag_missing"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/validation/validate_all_reads_same_length/with_location_tag_missing",
         ),
         "input.toml",
         1,

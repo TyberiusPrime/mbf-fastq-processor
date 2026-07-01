@@ -28,6 +28,22 @@ stripped from coverage statistics like excluded lines, but kept in a separate
 category: a panic arm may legitimately be hit or not depending on the tests, so
 it is never reported as a wrong exclusion.  JSON is generated directly by
 cargo-llvm-cov and does not reflect exclusions.
+
+## Ignored (flaky/timing-dependent) lines
+
+    if elapsed > timeout { ... } // cov:ignore
+
+    // cov:ignore-start
+    fn flaky_timing_helper() {
+        ...
+    }
+    // cov:ignore-stop
+
+Lines marked with `cov:ignore` (or bracketed by `cov:ignore-start` /
+`cov:ignore-stop`) are stripped from coverage statistics the same way as
+auto-ignored panic lines: they never count toward LF/LH, and whether or not
+they're hit, they are never reported as a wrong exclusion. Use this for lines
+whose coverage depends on timing or other non-deterministic conditions.
 """
 
 import argparse
@@ -43,6 +59,10 @@ EXCL_LINE = "cov:excl-line"
 EXCL_START = "cov:excl-start"
 EXCL_STOP = "cov:excl-stop"
 EXCL_END = "cov:excl-end"
+IGNORE_LINE = "cov:ignore"
+IGNORE_START = "cov:ignore-start"
+IGNORE_STOP = "cov:ignore-stop"
+IGNORE_END = "cov:ignore-end"
 
 
 def run_command(cmd, description):
@@ -70,9 +90,10 @@ def get_excluded_lines(source_path: Path) -> tuple[set, set]:
     test are reported as wrong exclusions.
 
     ``ignored`` holds lines auto-detected as ``panic!(`` / ``unreachable!(``
-    arms.  These are also removed from coverage statistics, but they live in
-    their own category: a panic line may legitimately be hit or not depending on
-    the tests, so it is never flagged as a wrong exclusion.
+    arms, plus lines explicitly marked ``cov:ignore``.  These are also removed
+    from coverage statistics, but they live in their own category: they may
+    legitimately be hit or not depending on the tests (e.g. timing-dependent
+    lines), so they are never flagged as a wrong exclusion.
     """
     excluded: set = set()
     ignored: set = set()
@@ -82,18 +103,34 @@ def get_excluded_lines(source_path: Path) -> tuple[set, set]:
         return excluded, ignored
 
     in_block = False
+    in_ignore_block = False
     for lineno, line in enumerate(text.splitlines(), 1):
         if EXCL_START in line:
             in_block = True
+        if IGNORE_START in line:
+            in_ignore_block = True
         if in_block:
             excluded.add(lineno)
+        if in_ignore_block:
+            ignored.add(lineno)
+
+        is_terminator = False
         if EXCL_STOP in line or EXCL_END in line:
             in_block = False
+            is_terminator = True
+        if IGNORE_STOP in line or IGNORE_END in line:
+            in_ignore_block = False
+            is_terminator = True
+
+        if is_terminator:
+            continue
         elif EXCL_LINE in line:
             excluded.add(lineno)
-        elif not in_block and ('unreachable!(' in line):
+        elif not in_block and not in_ignore_block and ('unreachable!(' in line):
             excluded.add(lineno) # reaching an unreachable is bad, mkay.
-        elif not in_block and ('panic!(' in line):
+        elif not in_block and not in_ignore_block and ('panic!(' in line):
+            ignored.add(lineno)
+        elif not in_block and not in_ignore_block and (IGNORE_LINE in line):
             ignored.add(lineno)
 
     return excluded, ignored

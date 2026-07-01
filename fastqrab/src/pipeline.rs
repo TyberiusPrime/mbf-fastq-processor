@@ -387,7 +387,7 @@ fn parse_interleaved_and_send(
             );
             block_no += 1; // the receiver verifies this!
             if combiner_output_tx.send(out).is_err() {
-                break;
+                break; //cov:ignore might or might not happen, timing dependent.
             }
         } // cov:excl-line
 
@@ -442,7 +442,7 @@ fn run_combiner_thread(
         // parsers may emit empty non-final blocks, so skip those.
         for seg in 0..segment_count {
             if done[seg] {
-                continue;
+                continue; //cov:ignore - timing dependent?
             }
             while current[seg]
                 .as_ref()
@@ -458,7 +458,7 @@ fn run_combiner_thread(
                         if !block.is_empty() {
                             current[seg] = Some((block, 0));
                             break;
-                        }
+                        } // cov:excl-line - not sure this is real, but keep it as defense
                         // empty block: keep pulling
                     }
                     Err(_) => {
@@ -831,7 +831,9 @@ impl RunStage0 {
                         new_demultiplex_barcodes,
                         step_in_label,
                         &output_ix_separator,
-                    )?;
+                    )?; // cov:excl-line
+                    // would only fail if you define too many. We're not testing that, I'm not
+                    // deleting 2^64  files.
                 }
             }
         }

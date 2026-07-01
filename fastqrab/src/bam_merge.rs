@@ -406,8 +406,8 @@ fn write_merged_bai(
     // magic + n_ref
     w.write_all(b"BAI\x01")?;
     if n_ref > 2_147_483_648 {
-        //bam actually has 2^31 as max number of sequences
-        bail!("Maximum number of references in BAM exceeded");
+        //BAM actually has 2^31 as max number of sequences
+        bail!("Maximum number of references in BAM exceeded"); // cov:excl-line
     }
     w.write_all(&(u32::try_from(n_ref).expect("Too many segments for BAM format")).to_le_bytes())?;
 

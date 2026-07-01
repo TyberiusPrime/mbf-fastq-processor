@@ -10,5 +10,9 @@ Validates that all reads have the same sequence (or name or tag value) length.
 
 Useful when you want to verify read length consistency in your pipeline.
 
-(For names, the names without comments -
-that is up to the first input.options.read_comment_character - are used).
+For names, the names without comments -
+that is up to the first input.options.read_comment_character - are used)
+
+For tag values, missing / zero length entries are ignored.
+
+

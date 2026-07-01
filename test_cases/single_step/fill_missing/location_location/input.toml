@@ -1,0 +1,36 @@
+[input]
+    read1 = 'input_read1.fq'
+
+# Extract primary tag: matches AAAA at start (only read1)
+[[step]]
+    action = 'ExtractIUPAC'
+    search = "AAAA"
+    out_label = 'primary'
+    anchor = 'Left'
+    max_mismatches = 0
+
+# Extract secondary tag: matches TTTT at end (read1 and read2)
+[[step]]
+    action = 'ExtractIUPAC'
+    search = "TTTT"
+    out_label = 'secondary'
+    anchor = 'Right'
+    max_mismatches = 0
+
+# FillMissing: use primary if present, else secondary
+[[step]]
+    action = 'FillMissing'
+    in_label_primary = 'primary'
+    in_label_secondary = 'secondary'
+    out_label = 'result'
+
+[[step]]
+    action = 'StoreTagInComment'
+    in_label = ['result', 'location_result']
+
+[output]
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

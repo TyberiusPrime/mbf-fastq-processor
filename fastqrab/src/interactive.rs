@@ -92,7 +92,6 @@ pub fn run_interactive(
         .canonicalize()
         .with_context(|| format!("Failed to canonicalize path: {}", toml_path.display()))?;
 
-    // cov:excl-start
     let mut last_content = b"".into();
     let mut first_run = true;
     let mut run_count: u64 = 0;
@@ -143,7 +142,6 @@ pub fn run_interactive(
 
         interruptible_sleep(poll_interval_ms);
     }
-    // cov:excl-stop
 }
 
 /// Process a TOML file in interactive mode

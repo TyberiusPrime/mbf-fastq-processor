@@ -1,0 +1,21 @@
+[input]
+    read1 = 'input_read1.fq'
+[[step]]
+    action = 'ExtractRegex'
+	source = "read1"
+    out_label = 'read_length'
+    pattern = 'AC'
+
+[[step]]
+    action = 'ValidateAllReadsSameLength'
+    source = 'tag:read_length'
+
+[output]
+    prefix = "output"
+
+[[step]]
+  action = 'StoreTagInComment'
+  inlabel = 'read_length'
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
