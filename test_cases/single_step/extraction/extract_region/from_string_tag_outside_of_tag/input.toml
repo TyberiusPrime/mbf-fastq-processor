@@ -1,0 +1,57 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'Head'
+    n = 4
+
+[[step]]
+  action = "ExtractRegex"
+  out_label = "sample_id"
+  query = "Read."
+  source = "name:read1"
+
+
+[[step]]
+    action = 'ExtractRegions'
+    out_label='inside'
+    regions = [
+        { start = -1, length = 1, anchor="End"},
+    ]
+    segment = 'tag:sample_id'
+
+
+[[step]]
+    action = 'ExtractRegions'
+    out_label='umi'
+    regions = [
+        { start = -1, length = 10, anchor="End"},
+    ]
+    segment = 'tag:sample_id'
+
+
+[[step]]
+    action = 'ExtractRegions'
+    out_label='umi_before_start'
+    regions = [
+        { start = -100, length = 10, anchor="End"},
+    ]
+    segment = 'tag:sample_id'
+
+[[step]]
+    action = 'StoreTagInComment'
+	region_separator = '-'
+    in_label = 'sample_id'
+
+
+[[step]]
+    action = 'StoreTagInComment'
+	region_separator = '-'
+    in_label = ['umi', 'umi_before_start', 'inside']
+
+[output]
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

@@ -1,0 +1,43 @@
+[input]
+	read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'EvalExpression'
+    out_label = 'should_rc'
+    expression = 'len_read1 > 6'
+
+[[step]]
+	action = 'Head'
+	n = 10
+
+[[step]]
+	action = 'ExtractIUPAC'
+	out_label = 'tag'
+	search = 'NNN'
+	anchor = 'left'
+	max_mismatches = 0
+
+[[step]]
+    action ='ReverseComplement'
+    source = 'tag:tag'
+    iftag = 'should_rc'
+
+[[step]]
+	action='StoreTagInComment'
+	in_label = 'location_tag'
+
+[[step]]
+	action='Lowercase'
+	source = 'tag:tag'
+    iftag = 'should_rc'
+
+[[step]]
+	action = 'StoreTagBackInSequence'
+ 	in_label ='tag'
+
+[output]
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

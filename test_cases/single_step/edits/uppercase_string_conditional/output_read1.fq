@@ -1,0 +1,16 @@
+@seq1|test=SEQ1|sometimesmissing=SEQ1
+cTAacgtTGCAG
++
+IIIIIIIIIIII
+@seq2|test=seq2|sometimesmissing=seq2
+CtgacgtTGCAG
++
+IIIIIIIIIIII
+@seq3|test=SEQ3|sometimesmissing=
+CtCacgtTGCAG
++
+IIIIIIIIIIII
+@seq4|test=seq4|sometimesmissing=
+acGacgtTGCAG
++
+IIIIIIIIIIII

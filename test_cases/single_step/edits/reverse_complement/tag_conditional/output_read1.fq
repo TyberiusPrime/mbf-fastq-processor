@@ -1,0 +1,16 @@
+@read1_short|location_tag=read1:0-3
+ACGT
++
+IIII
+@read2_long|location_tag=read1:0-3
+cgtTACGTACGA
++
+IBCIIIIIII;/
+@read3_short|location_tag=read1:0-3
+GGGG
++
+IIII
+@read4_long|location_tag=read1:0-3
+aaaTTTTTTTTT
++
+BDCBBCCIICDD

@@ -112,7 +112,9 @@ impl TrimAtTag {
                     min_start = min_start.min(start);
                     max_end = max_end.max(start + len);
                 }
-                Ok(RegionLift::Dropped) | Err(_) => return None,
+                Ok(RegionLift::Dropped) | Err(_) => {
+                    return None;
+                }
             }
         }
 

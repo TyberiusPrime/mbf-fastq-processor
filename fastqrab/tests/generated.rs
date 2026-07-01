@@ -4625,6 +4625,17 @@ fn test_cases_x_single_step_x_edits_x_reverse_complement_x_tag() {
 
 #[test]
 
+fn test_cases_x_single_step_x_edits_x_reverse_complement_x_tag_conditional() {
+    println!("Test case is in: test_cases/single_step/edits/reverse_complement/tag_conditional");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/edits/reverse_complement/tag_conditional"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_edits_x_reverse_complement_x_tag_lost_location() {
     println!("Test case is in: test_cases/single_step/edits/reverse_complement/tag_lost_location");
     run_test(
@@ -4683,6 +4694,21 @@ fn test_cases_x_single_step_x_edits_x_reverse_complement_x_tag_string_value() {
     println!("Test case is in: test_cases/single_step/edits/reverse_complement/tag_string_value");
     run_test(
         std::path::Path::new("../test_cases/single_step/edits/reverse_complement/tag_string_value"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_edits_x_reverse_complement_x_tag_string_value_conditional() {
+    println!(
+        "Test case is in: test_cases/single_step/edits/reverse_complement/tag_string_value_conditional"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/edits/reverse_complement/tag_string_value_conditional",
+        ),
         "input.toml",
         1,
     );
@@ -4811,6 +4837,28 @@ fn test_cases_x_single_step_x_edits_x_swap_x_unequal_lengths_conditional() {
 
 #[test]
 
+fn test_cases_x_single_step_x_edits_x_uppercase_location_tag() {
+    println!("Test case is in: test_cases/single_step/edits/uppercase_location_tag");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/edits/uppercase_location_tag"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_edits_x_uppercase_location_tag_conditional() {
+    println!("Test case is in: test_cases/single_step/edits/uppercase_location_tag_conditional");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/edits/uppercase_location_tag_conditional"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_edits_x_uppercase_sequence() {
     println!("Test case is in: test_cases/single_step/edits/uppercase_sequence");
     run_test(
@@ -4833,10 +4881,10 @@ fn test_cases_x_single_step_x_edits_x_uppercase_sequence_conditional() {
 
 #[test]
 
-fn test_cases_x_single_step_x_edits_x_uppercase_tag() {
-    println!("Test case is in: test_cases/single_step/edits/uppercase_tag");
+fn test_cases_x_single_step_x_edits_x_uppercase_string_conditional() {
+    println!("Test case is in: test_cases/single_step/edits/uppercase_string_conditional");
     run_test(
-        std::path::Path::new("../test_cases/single_step/edits/uppercase_tag"),
+        std::path::Path::new("../test_cases/single_step/edits/uppercase_string_conditional"),
         "input.toml",
         1,
     );
@@ -8831,6 +8879,21 @@ fn test_cases_x_single_step_x_extraction_x_extract_region_x_from_string_tag() {
 
 #[test]
 
+fn test_cases_x_single_step_x_extraction_x_extract_region_x_from_string_tag_outside_of_tag() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/extract_region/from_string_tag_outside_of_tag"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/extract_region/from_string_tag_outside_of_tag",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_extraction_x_extract_region_x_read_too_short() {
     println!("Test case is in: test_cases/single_step/extraction/extract_region/read_too_short");
     run_test(
@@ -12800,10 +12863,32 @@ fn test_cases_x_single_step_x_trim_x_cut_end_x_if_tag() {
 
 #[test]
 
+fn test_cases_x_single_step_x_trim_x_cut_end_x_lifting_location() {
+    println!("Test case is in: test_cases/single_step/trim/cut_end/lifting_location");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/trim/cut_end/lifting_location"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_trim_x_cut_start() {
     println!("Test case is in: test_cases/single_step/trim/cut_start");
     run_test(
         std::path::Path::new("../test_cases/single_step/trim/cut_start"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_trim_x_trim_at_tag_lifting_location() {
+    println!("Test case is in: test_cases/single_step/trim/trim_at_tag_lifting_location");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/trim/trim_at_tag_lifting_location"),
         "input.toml",
         1,
     );

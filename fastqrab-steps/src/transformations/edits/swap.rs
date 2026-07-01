@@ -189,7 +189,7 @@ impl Step for Swap {
                     } else if sid == u32::from(index_b) {
                         loc.set_source_id(u32::from(index_a));
                     }
-                }
+                } // cov:excl-line not swapping non string tags is fine, no need for a test
             }
 
             return Ok((block, true));

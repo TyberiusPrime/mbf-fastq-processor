@@ -198,7 +198,7 @@ impl TagUser for PartialTaggedVariant<PartialMergeReads> {
                         RemovedTags::SomeOwned(removed)
                     }
                 } else {
-                    RemovedTags::None // cov:excl-line
+                    RemovedTags::None
                 }
             };
             Some(TagUsageInfo {

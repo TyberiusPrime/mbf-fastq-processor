@@ -1,0 +1,44 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+  action = 'EvalExpression'
+  out_label = 'even'
+  expr = 'read_no % 2 == 0'
+
+[[step]]
+    action = 'ExtractRegion'
+    out_label = 'test'
+    anchor = 'Left'
+    start = 0
+    len = 4
+    source = 'name:read1'
+
+
+[[step]]
+    action = 'ExtractRegex'
+    out_label = 'sometimesmissing'
+    source = 'name:read1'
+    query = '^seq[12]'
+
+[[step]]
+    action = 'Uppercase'
+    target = 'tag:test'
+    if_tag = 'even'
+
+[[step]]
+    action = 'Uppercase'
+    target = 'tag:sometimesmissing'
+    if_tag = 'even'
+
+
+[[step]]
+    action = 'StoreTagInComment'
+    in_label = ['test', 'sometimesmissing']
+
+[output]
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

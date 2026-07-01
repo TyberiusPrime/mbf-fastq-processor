@@ -1,0 +1,29 @@
+[input]
+	read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'EvalExpression'
+    out_label = 'should_rc'
+    expression = 'len_read1 > 6'
+
+[[step]]
+	action = 'Head'
+	n = 10
+
+[[step]]
+	action = 'ExtractRegex'
+	out_label = 'tag'
+    source = 'name:'
+    query = "^read[12]"
+  
+[[step]]
+    action ='ReverseComplement'
+    source = 'tag:tag'
+    iftag= 'should_rc'
+
+[[step]]
+	action = 'StoreTagsInTable'
+
+[output]
+    prefix = "output"
+

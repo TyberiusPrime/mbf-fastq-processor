@@ -111,7 +111,7 @@ impl TagUser for PartialTaggedVariant<PartialRegions> {
                                 }
                             }
                         }
-                    }
+                    } // cov:excl-line
                 }
                 all_segments
             } else {

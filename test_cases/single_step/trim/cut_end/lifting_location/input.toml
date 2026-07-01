@@ -1,0 +1,23 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]    
+  action ='ExtractIUPAC'
+  query = 'A'
+  anchor = 'anywhere'
+  outlabel = 'aa'
+  max_mismatches = 0
+
+[[step]]
+    action = 'CutEnd'
+    n = 40
+
+[output]
+    prefix = "output"
+[[step]]
+  action = 'StoreTagInComment'
+  in_label=['aa', 'location_aa', 'initial_location_aa']
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

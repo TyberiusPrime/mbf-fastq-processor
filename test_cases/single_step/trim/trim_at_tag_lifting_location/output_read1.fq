@@ -1,0 +1,16 @@
+@one|initial_location_elq=read1:4-8,12-16|location_elq=|aa=A|initial_location_aa=read1:4-5|location_aa=
+tttt
++
+zzzz
+@two-keep|initial_location_elq=read1:16-20|location_elq=|aa=A|initial_location_aa=read1:12-13|location_aa=read1:12-13
+ttttcGTCggggAGTCc
++
+zzzzzzzzzzzzzzzzI
+@three-overlap|initial_location_elq=read1:12-20|location_elq=|aa=A|initial_location_aa=read1:12-13|location_aa=read1:12-13
+ttttcGTCggggAGTCc
++
+zzzzzzzzzzzzIIIII
+@four-$Before|initial_location_elq=read1:1-7|location_elq=|aa=A|initial_location_aa=read1:12-13|location_aa=
+t
++
+z

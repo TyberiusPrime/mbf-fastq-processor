@@ -1,0 +1,16 @@
+@one
+ttttAGTCggggAGTCcccc
++
+zzzzIIIIzzzzIIIIzzzz
+@two-keep
+ttttcGTCggggAGTCcccc
++
+zzzzzzzzzzzzzzzzIIII
+@three-overlap
+ttttcGTCggggAGTCcccc
++
+zzzzzzzzzzzzIIIIIIII
+@four-$Before
+ttttcGTCggggAGTCcccc
++
+zIIIIIIzzzzzzzzzzzzz
