@@ -130,6 +130,22 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagsInTable> {
                             .cloned()
                             .collect(),
                     );
+
+                    // Each tag keeps its own toml-value state/span here, so a
+                    // "no such tag" error (set further up the pipeline once
+                    // tags_available is known) points at that tag's own
+                    // location in the list, not at the whole step.
+                    let used_tags = in_labels
+                        .iter_mut()
+                        .map(|tag| tag.to_used_tag(ANY_TAG_TYPE))
+                        .collect();
+
+                    Some(TagUsageInfo {
+                        must_see_all_tags: true, // while this means the apply() sees them all, it does not
+                        // register them as 'used tags'
+                        used_tags,
+                        ..Default::default()
+                    })
                 }
                 Some(None) | None => {
                     if tags_available.is_empty() {
@@ -141,38 +157,36 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagsInTable> {
                     }
                     let mut final_in_labels: Vec<_> = tags_available.keys().cloned().collect();
                     final_in_labels.sort_unstable();
-                    inner.final_in_labels = Some(final_in_labels);
+                    inner.final_in_labels = Some(final_in_labels.clone());
+
+                    // No explicit tag list was given: every currently
+                    // available tag is used, so there's no per-tag span to
+                    // point at on failure. These tags always exist (they came
+                    // straight from tags_available), so the step-level span
+                    // is only ever a fallback, never actually shown.
+                    let toml_source = Rc::new(RefCell::new((
+                        &mut inner.in_labels.state,
+                        &mut inner.in_labels.help,
+                    )));
+                    let used_tags = final_in_labels
+                        .into_iter()
+                        .map(|tag| {
+                            Some(UsedTag {
+                                name: tag,
+                                accepted_tag_types: ANY_TAG_TYPE,
+                                toml_source: toml_source.clone(),
+                                further_help: None,
+                            })
+                        })
+                        .collect();
+
+                    Some(TagUsageInfo {
+                        must_see_all_tags: true,
+                        used_tags,
+                        ..Default::default()
+                    })
                 }
             }
-
-            let final_in_labels: Vec<_> = inner
-                .final_in_labels
-                .as_ref()
-                .expect("set just above")
-                .clone();
-
-            let toml_source = Rc::new(RefCell::new((
-                &mut self.toml_value.state,
-                &mut self.toml_value.help,
-            )));
-            let used_tags = final_in_labels
-                .into_iter()
-                .map(|tag| {
-                    Some(UsedTag {
-                        name: tag,
-                        accepted_tag_types: ANY_TAG_TYPE,
-                        toml_source: toml_source.clone(),
-                        further_help: None,
-                    })
-                })
-                .collect();
-
-            Some(TagUsageInfo {
-                must_see_all_tags: true, // while this means the apply() sees them all, it does not
-                // register them as 'used tags'
-                used_tags,
-                ..Default::default()
-            })
         } else {
             None // cov:excl-line
         }

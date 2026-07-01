@@ -23,15 +23,15 @@ max_mismatches = 0
 action = "StoreTagsInTable"
 infix = "tags"
 tags = [
+  "barcode3",
+  "barcode4",
+  "len_barcode3",
+  "len_barcode4",
+  "read_nox",
+  "location_barcode3",
+  "location_barcode4",
+  "initial_location_barcode4",
   "barcode1",
-  "barcode2",
-  "len_barcode1",
-  "len_barcode2",
-  "read_no",
-  "location_barcode1",
-  "location_barcode2",
-  "initial_location_barcode2",
-
 ]
 # format = 'TSV'
 

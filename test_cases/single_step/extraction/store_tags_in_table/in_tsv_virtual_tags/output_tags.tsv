@@ -1,5 +1,5 @@
-ReadName	barcode1	barcode2	len_barcode1	len_barcode2	ReadNo	location_barcode1	location_barcode2
-Read1	CTC	CAA	3	3	0	read1:0-3	read1:11-14
-Read2		CAA	0	3	1		read1:8-11
-Read3			0	0	2		
-Read4			0	0	3		
+ReadName	barcode1	barcode2	len_barcode1	len_barcode2	ReadNo	location_barcode1	location_barcode2	initial_location_barcode2
+Read1	CTC	CAA	3	3	0	read1:0-3	read1:11-14	read1:11-14
+Read2		CAA	0	3	1		read1:8-11	read1:8-11
+Read3			0	0	2			
+Read4			0	0	3			

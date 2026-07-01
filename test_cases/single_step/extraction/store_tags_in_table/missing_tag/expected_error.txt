@@ -10,9 +10,9 @@ Error 1/1
    ┆
 24 │     infix = 'tags'
 25 │     tags=['barcode1', 'barcode2', 'barcode3']
-   ┆                                              ┬
-   ┆                                              │
-   ┆                                              ╰─ No such tag: 'barcode3'
+   ┆                                   ─────┬────
+   ┆                                        │
+   ┆                                        ╰────── No such tag: 'barcode3'
 ───╯
 Hint: Did you mean: 'barcode1' or 'barcode2'?
       See https://doc_url.example/version-stripped-from-test/docs/redirects/StoreTagsInTable

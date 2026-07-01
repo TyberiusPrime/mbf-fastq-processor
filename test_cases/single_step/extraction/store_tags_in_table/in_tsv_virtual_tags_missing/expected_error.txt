@@ -1,0 +1,195 @@
+Error Details ==
+Error 1/8
+   ╭─config.toml
+   ┆
+22 │ [[step]]
+23 │ action = "StoreTagsInTable"
+   ┆          ─────────┬────────
+   ┆                   │
+   ┆                   ╰───────── In this step
+   ┆
+24 │ infix = "tags"
+25 │ tags = [
+26 │   "barcode3",
+   ┆   ─────┬────
+   ┆        │
+   ┆        ╰────── No such tag: 'barcode3'
+───╯
+Hint: Did you mean: 'barcode1' or 'barcode2'?
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/StoreTagsInTable
+      Or run: `fastqrab template StoreTagsInTable` for more information.
+
+Error 2/8
+   ╭─config.toml
+   ┆
+22 │ [[step]]
+23 │ action = "StoreTagsInTable"
+   ┆          ─────────┬────────
+   ┆                   │
+   ┆                   ╰───────── In this step
+   ┆
+24 │ infix = "tags"
+25 │ tags = [
+26 │   "barcode3",
+27 │   "barcode4",
+   ┆   ─────┬────
+   ┆        │
+   ┆        ╰────── No such tag: 'barcode4'
+───╯
+Hint: Did you mean: 'barcode1' or 'barcode2'?
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/StoreTagsInTable
+      Or run: `fastqrab template StoreTagsInTable` for more information.
+
+Error 3/8
+   ╭─config.toml
+   ┆
+22 │ [[step]]
+23 │ action = "StoreTagsInTable"
+   ┆          ─────────┬────────
+   ┆                   │
+   ┆                   ╰───────── In this step
+   ┆
+24 │ infix = "tags"
+25 │ tags = [
+26 │   "barcode3",
+27 │   "barcode4",
+28 │   "len_barcode3",
+   ┆   ───────┬──────
+   ┆          │
+   ┆          ╰──────── Unknown length tag label
+───╯
+Hint: 'barcode3' is neither a segment nor an available tag name. Choose an existing name.
+      Did you mean: 'barcode1', 'barcode2', or 'len_read1'?
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/StoreTagsInTable
+      Or run: `fastqrab template StoreTagsInTable` for more information.
+
+Error 4/8
+   ╭─config.toml
+   ┆
+22 │ [[step]]
+23 │ action = "StoreTagsInTable"
+   ┆          ─────────┬────────
+   ┆                   │
+   ┆                   ╰───────── In this step
+   ┆
+24 │ infix = "tags"
+25 │ tags = [
+26 │   "barcode3",
+27 │   "barcode4",
+28 │   "len_barcode3",
+29 │   "len_barcode4",
+   ┆   ───────┬──────
+   ┆          │
+   ┆          ╰──────── Unknown length tag label
+───╯
+Hint: 'barcode4' is neither a segment nor an available tag name. Choose an existing name.
+      Did you mean: 'barcode1', 'barcode2', or 'len_read1'?
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/StoreTagsInTable
+      Or run: `fastqrab template StoreTagsInTable` for more information.
+
+Error 5/8
+   ╭─config.toml
+   ┆
+22 │ [[step]]
+23 │ action = "StoreTagsInTable"
+   ┆          ─────────┬────────
+   ┆                   │
+   ┆                   ╰───────── In this step
+   ┆
+24 │ infix = "tags"
+25 │ tags = [
+26 │   "barcode3",
+27 │   "barcode4",
+28 │   "len_barcode3",
+29 │   "len_barcode4",
+30 │   "read_nox",
+   ┆   ─────┬────
+   ┆        │
+   ┆        ╰────── No such tag: 'read_nox'
+───╯
+Hint: Did you mean: 'barcode1' or 'barcode2'?
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/StoreTagsInTable
+      Or run: `fastqrab template StoreTagsInTable` for more information.
+
+Error 6/8
+   ╭─config.toml
+   ┆
+22 │ [[step]]
+23 │ action = "StoreTagsInTable"
+   ┆          ─────────┬────────
+   ┆                   │
+   ┆                   ╰───────── In this step
+   ┆
+24 │ infix = "tags"
+25 │ tags = [
+26 │   "barcode3",
+27 │   "barcode4",
+28 │   "len_barcode3",
+29 │   "len_barcode4",
+30 │   "read_nox",
+31 │   "location_barcode3",
+   ┆   ─────────┬─────────
+   ┆            │
+   ┆            ╰─────────── Unknown location tag label
+───╯
+Hint: 'barcode3' is not a tag name. Choose an existing name.
+      Did you mean: 'barcode1' or 'barcode2'?
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/StoreTagsInTable
+      Or run: `fastqrab template StoreTagsInTable` for more information.
+
+Error 7/8
+   ╭─config.toml
+   ┆
+22 │ [[step]]
+23 │ action = "StoreTagsInTable"
+   ┆          ─────────┬────────
+   ┆                   │
+   ┆                   ╰───────── In this step
+   ┆
+24 │ infix = "tags"
+25 │ tags = [
+26 │   "barcode3",
+27 │   "barcode4",
+28 │   "len_barcode3",
+29 │   "len_barcode4",
+30 │   "read_nox",
+31 │   "location_barcode3",
+32 │   "location_barcode4",
+   ┆   ─────────┬─────────
+   ┆            │
+   ┆            ╰─────────── Unknown location tag label
+───╯
+Hint: 'barcode4' is not a tag name. Choose an existing name.
+      Did you mean: 'barcode1' or 'barcode2'?
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/StoreTagsInTable
+      Or run: `fastqrab template StoreTagsInTable` for more information.
+
+Error 8/8
+   ╭─config.toml
+   ┆
+22 │ [[step]]
+23 │ action = "StoreTagsInTable"
+   ┆          ─────────┬────────
+   ┆                   │
+   ┆                   ╰───────── In this step
+   ┆
+24 │ infix = "tags"
+25 │ tags = [
+26 │   "barcode3",
+27 │   "barcode4",
+28 │   "len_barcode3",
+29 │   "len_barcode4",
+30 │   "read_nox",
+31 │   "location_barcode3",
+32 │   "location_barcode4",
+33 │   "initial_location_barcode4",
+   ┆   ─────────────┬─────────────
+   ┆                │
+   ┆                ╰─────────────── Unknown location tag label
+───╯
+Hint: 'barcode4' is not a tag name. Choose an existing name.
+      Did you mean: 'barcode1' or 'barcode2'?
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/StoreTagsInTable
+      Or run: `fastqrab template StoreTagsInTable` for more information.
+
+

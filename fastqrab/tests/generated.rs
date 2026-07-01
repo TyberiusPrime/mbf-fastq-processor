@@ -9498,6 +9498,21 @@ fn test_cases_x_single_step_x_extraction_x_store_tags_in_table_x_in_tsv_virtual_
 
 #[test]
 
+fn test_cases_x_single_step_x_extraction_x_store_tags_in_table_x_in_tsv_virtual_tags_missing() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/store_tags_in_table/in_tsv_virtual_tags_missing"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/store_tags_in_table/in_tsv_virtual_tags_missing",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_extraction_x_store_tags_in_table_x_missing_tag() {
     println!("Test case is in: test_cases/single_step/extraction/store_tags_in_table/missing_tag");
     run_test(

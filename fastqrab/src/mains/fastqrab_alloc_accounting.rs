@@ -21,7 +21,8 @@ fn main() {
             info.bytes_current
         );
     }
-    match result { // cov:excl-line 
+    match result // cov:excl-line
+    {
         // why though?, the ok is being hit.
         Ok(()) => {}
         //cov:excl-start - the test only covers the working case, and that's ok.

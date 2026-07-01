@@ -1390,7 +1390,7 @@ impl PartialConfig {
                             } else {
                                 any_tag_errors = true;
                                 toml_source.state = TomlValueState::new_validation_failed(format!(
-                                    "No such tag: '{tag_name}'",
+                                    "No such tag to remove: '{tag_name}'",
                                 ));
                                 toml_source.help = Some(offer_alternatives(
                                     tag_name.as_ref(),
