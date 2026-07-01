@@ -1,0 +1,22 @@
+[input]
+read1 = "input_read1.fq"
+
+[[step]]
+action = "ExtractRegion"
+out_label = "read_len"
+segment = "name:read1"
+start = 0
+len = 5
+anchor = "left"
+
+[[step]]
+action = "CalcWorstQuality"
+out_label = "worst_q"
+source = "tag:read_len"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+action = "OutputTable"
+
+[output]
+prefix = "output"

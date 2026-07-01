@@ -1,0 +1,18 @@
+Error 1/1
+   ╭─config.toml
+   ┆
+14 │ [[step]]
+15 │     action = "OutputFASTQ"
+   ┆              ──────┬──────
+   ┆                    │
+   ┆                    ╰─────── In this step
+16 │     interleave = []
+   ┆                  ─┬
+   ┆                   │
+   ┆                   ╰─ Add segments here / remove `interleave = ..` (and fill `output =`) =
+17 │     output = []
+   ┆              ─┬
+   ┆               │
+   ┆               ╰─ Add segments here (or at `interleave =`) or remove 'output = ...`
+───╯
+Hint: Either add segments to `output` or to `interleave`, or remove both options to get the default behaviour

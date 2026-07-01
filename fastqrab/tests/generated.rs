@@ -2918,6 +2918,28 @@ fn test_cases_x_output_x_hash_output_compressed() {
 
 #[test]
 
+fn test_cases_x_output_x_interleaved_empty_output_empty() {
+    println!("Test case is in: test_cases/output/interleaved_empty_output_empty");
+    run_test(
+        std::path::Path::new("../test_cases/output/interleaved_empty_output_empty"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_output_x_interleaved_empty_output_ok() {
+    println!("Test case is in: test_cases/output/interleaved_empty_output_ok");
+    run_test(
+        std::path::Path::new("../test_cases/output/interleaved_empty_output_ok"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_output_x_interleaved_output() {
     println!("Test case is in: test_cases/output/interleaved_output");
     run_test(
@@ -3499,6 +3521,17 @@ fn test_cases_x_single_step_x_calc_x_worst_quality_x_wrong_tag_kind() {
     println!("Test case is in: test_cases/single_step/calc/worst_quality/wrong_tag_kind");
     run_test(
         std::path::Path::new("../test_cases/single_step/calc/worst_quality/wrong_tag_kind"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_calc_x_worst_quality_x_wrong_tag_kind_string() {
+    println!("Test case is in: test_cases/single_step/calc/worst_quality/wrong_tag_kind_string");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/calc/worst_quality/wrong_tag_kind_string"),
         "input.toml",
         1,
     );

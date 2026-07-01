@@ -461,7 +461,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceAll>> {
                                 .collect::<Vec<&str>>())
                         )
                     ));
-                } // cov:excl-line
+                }
             }
         } // cov:excl-line
     }

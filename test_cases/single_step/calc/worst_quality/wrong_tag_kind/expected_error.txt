@@ -14,7 +14,7 @@ Error 1/1
    ┆                     │
    ┆                     ╰─────── Incompatible tag type
 ───╯
-Hint: This transform requires tag 'read_len' to be one of the following types: ['String', 'Location'],
+Hint: This transform requires tag 'read_len' to be one of the following types: ['Location'],
       but it is actually of type 'Numeric (0..)'.
       See https://doc_url.example/version-stripped-from-test/docs/redirects/CalcWorstQuality
       Or run: `fastqrab template CalcWorstQuality` for more information.

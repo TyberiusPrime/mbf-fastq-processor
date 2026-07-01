@@ -40,11 +40,15 @@ impl TagUser for PartialTaggedVariant<PartialWorstQuality> {
         _segment_order: &[String],
     ) -> Option<TagUsageInfo<'_>> {
         if let Some(inner) = self.toml_value.value.as_mut() {
+            let mut used_tags = inner.source.to_used_tags();
+            for ut in used_tags.iter_mut().flatten() {
+                ut.accepted_tag_types = &[TagValueType::Location];
+            }
             Some(TagUsageInfo {
                 declared_tag: inner
                     .out_label
                     .to_declared_tag(TagValueType::Numeric((None, None))),
-                used_tags: inner.source.to_used_tags(),
+                used_tags,
                 ..Default::default()
             })
         } else {
@@ -86,7 +90,9 @@ impl Step for WorstQuality {
                     .clone();
 
                 let TagColumn::Location(location_items) = &tag_values else {
-                    anyhow::bail!("WorstQuality source tag must be a Location column");
+                    unreachable!(
+                        "WorstQuality source tag must be a Location column, and verify should check that"
+                    );
                 };
 
                 let missing_value = 33.0 + f64::from(self.offset);

@@ -1,0 +1,17 @@
+[input]
+    read1 = 'input_read1.fq.zst'
+    read2 = 'input_read2.fq.zst'
+
+[[step]]
+    action = 'Head'
+    n = 10
+
+
+[output]
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    interleave = []
+    output = ['read2']

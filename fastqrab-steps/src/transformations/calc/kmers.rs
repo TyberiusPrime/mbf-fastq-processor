@@ -142,7 +142,7 @@ impl Step for Kmers {
         let files: Vec<ex::fs::File> = (0..self.filename.len())
             .map(|i| input_files.take(&kmer_db_id(i)))
             .collect();
-        let db = build_kmer_database(files, self.k, self.min_count, self.count_reverse_complement)?; // cov:excl-line
+        let db = build_kmer_database(files, self.k, self.min_count, self.count_reverse_complement)?;
         self.resolved_kmer_db = Some(db);
 
         Ok(None)

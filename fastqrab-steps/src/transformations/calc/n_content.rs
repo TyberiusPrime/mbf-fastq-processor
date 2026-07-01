@@ -28,7 +28,6 @@ impl VerifyIn<PartialConfig> for PartialNContent {
     }
 }
 
-// cov:excl-start
 impl TagUser for PartialTaggedVariant<PartialNContent> {
     #[mutants::skip]
     fn get_tag_usage(
@@ -37,12 +36,12 @@ impl TagUser for PartialTaggedVariant<PartialNContent> {
         _segment_order: &[String],
     ) -> Option<TagUsageInfo<'_>> {
         //unreachable!("Should have been swapped for BaseCount in expansion");
-        //this is totally rechable since we *must* call get_tag_usage on not-fully
+        //this is totally reachable since we *must* call get_tag_usage on not-fully
         //validated transforms
         None
     }
 }
-
+// cov:excl-start
 impl Step for NContent {
     fn apply(
         &self,

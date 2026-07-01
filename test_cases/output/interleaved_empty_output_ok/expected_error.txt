@@ -1,0 +1,14 @@
+Error 1/1
+   ╭─config.toml
+   ┆
+14 │ [[step]]
+15 │     action = "OutputFASTQ"
+   ┆              ──────┬──────
+   ┆                    │
+   ┆                    ╰─────── In this step
+16 │     interleave = []
+   ┆                  ─┬
+   ┆                   │
+   ┆                   ╰─ Must contain at least two segments to interleave.
+───╯
+Hint: Either add another segment to interleave, or remove interleave.

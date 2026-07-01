@@ -59,7 +59,7 @@ impl MajorityData {
                 cfr.filename
             )
             //cov:excl-stop
-        })?;
+        })?; // cov:excl-line
         let json = serde_json::from_str::<serde_json::Value>(&raw).map_err(|err| {
             anyhow!(
                 "Failed to parse json for counts from report file {}: {err}",
@@ -235,7 +235,7 @@ impl Step for HammingExactCounter {
                 // blocks_counted == our block_no means they are all in.
                 while self.majority_data.blocks_counted.load(Ordering::SeqCst) < block.block_no() {
                     // yeah it's a busy wait. Shouldn't last long though.
-                    std::thread::yield_now();
+                    std::thread::yield_now(); // cov:excl-line
                 }
                 self.signal_downstream_go(block.block_no())?;
             }

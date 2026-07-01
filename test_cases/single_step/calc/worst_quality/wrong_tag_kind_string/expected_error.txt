@@ -1,0 +1,16 @@
+Error 1/1
+   ╭─config.toml
+   ┆
+12 │ [[step]]
+13 │ action = "CalcWorstQuality"
+   ┆          ─────────┬────────
+   ┆                   │
+   ┆                   ╰───────── In this step
+   ┆
+14 │ out_label = "worst_q"
+15 │ source = "tag:read_len"
+   ┆          ───────┬──────
+   ┆                 │
+   ┆                 ╰─────── Incompatible tag type
+───╯
+Hint: This transform requires tag 'read_len' to be one of the following types: ['Location'],

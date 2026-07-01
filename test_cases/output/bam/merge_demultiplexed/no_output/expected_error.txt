@@ -12,7 +12,7 @@ Error 1/1
    ┆               │
    ┆               ╰─ Add segments here (or at `interleave =`) or remove 'output = ...`
 ───╯
-Hint: Either add segments to `output` or to `interleave`, or remove both options to get the default behaviour
+Hint: Either add segments to `output` or to `interleave`, or remove both options to get the default behaviour.
       See https://doc_url.example/version-stripped-from-test/docs/redirects/OutputBAM
       Or run: `fastqrab template OutputBAM` for more information.
 

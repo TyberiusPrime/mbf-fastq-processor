@@ -155,15 +155,15 @@ pub(crate) struct RecordOutputState {
 }
 
 impl std::fmt::Debug for RecordOutputState {
+    //cov:excl-start
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        //cov::excl-start
         f.debug_struct("RecordOutputState")
             .field("segments", &self.segment_writers.len())
             .field("interleaved", &self.interleaved_writers.is_some())
             .field("interleave_order", &self.interleave_order)
             .finish()
-        //cov::excl-stop
     }
+    //cov:excl-stop
 }
 
 impl RecordOutputState {
@@ -440,41 +440,6 @@ pub(crate) fn verify_record_targets(
     {
         output.state = TomlValueState::Nested;
     }
-
-    if let Some(Some(interleave_order)) = interleave.as_mut() {
-        let failed = validate_segment_names(interleave_order, &valid, "interleave order");
-        if failed {
-            if matches!(interleave.state, TomlValueState::Ok) {
-                interleave.state = TomlValueState::Nested;
-            }
-        } else if interleave_order.len() < 2 && !stdout_set {
-            interleave.state = TomlValueState::new_validation_failed(
-                "Must contain at least two segments to interleave.",
-            );
-            interleave.help = Some(
-                "Either add another segment to interleave, \
-                    or remove interleave."
-                    .to_string(),
-            );
-        } else if let Some(Some(output_segments)) = output.as_ref() {
-            // no overlap between interleave and output
-            for segment in output_segments {
-                if let Some(segment_str) = segment.as_ref()
-                    && let Some(found) = interleave_order
-                        .iter_mut()
-                        .find(|x| x.as_ref() == Some(segment_str))
-                {
-                    let spans = vec![
-                        (found.span(), "Duplicate output & interleave".to_string()),
-                        (segment.span(), "Duplicate output & interleave".to_string()),
-                    ];
-                    found.state = TomlValueState::Custom { spans };
-                    found.help =
-                        Some("Remove from either 'interleave' or from 'output'".to_string());
-                }
-            }
-        }
-    }
     //we still need to check if output is set to empty & interleave is set to empty
     let interleave_is_empty = if let Some(Some(interleaved_segments)) = interleave.as_ref()
         && interleaved_segments.is_empty()
@@ -499,9 +464,45 @@ pub(crate) fn verify_record_targets(
         }
         output.state = TomlValueState::Custom { spans };
         output.help = Some(
-            "Either add segments to `output` or to `interleave`, or remove both options to get the default behaviour"
+            "Either add segments to `output` or to `interleave`, \
+                or remove both options to get the default behaviour."
                 .to_string(),
         );
+    } else {
+        if let Some(Some(interleave_order)) = interleave.as_mut() {
+            let failed = validate_segment_names(interleave_order, &valid, "interleave order");
+            if failed {
+                if matches!(interleave.state, TomlValueState::Ok) {
+                    interleave.state = TomlValueState::Nested;
+                }
+            } else if interleave_order.len() < 2 && !stdout_set {
+                interleave.state = TomlValueState::new_validation_failed(
+                    "Must contain at least two segments to interleave.",
+                );
+                interleave.help = Some(
+                    "Either add another segment to interleave, \
+                    or remove interleave."
+                        .to_string(),
+                );
+            } else if let Some(Some(output_segments)) = output.as_ref() {
+                // no overlap between interleave and output
+                for segment in output_segments {
+                    if let Some(segment_str) = segment.as_ref()
+                        && let Some(found) = interleave_order
+                            .iter_mut()
+                            .find(|x| x.as_ref() == Some(segment_str))
+                    {
+                        let spans = vec![
+                            (found.span(), "Duplicate output & interleave".to_string()),
+                            (segment.span(), "Duplicate output & interleave".to_string()),
+                        ];
+                        found.state = TomlValueState::Custom { spans };
+                        found.help =
+                            Some("Remove from either 'interleave' or from 'output'".to_string());
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -550,7 +551,7 @@ fn validate_segment_names(
                     TomlValueState::new_validation_failed("Not found in input segments");
                 any_failed = true;
             }
-        }
+        } // cov:excl-line
     }
     any_failed
 }
@@ -661,7 +662,7 @@ pub(crate) fn render_html_report(json_report_string: &str) -> Result<String> {
         .to_ascii_lowercase()
         .contains("</script>")
     {
-        bail!("JSON output contained </script> which will break html parsing.");
+        bail!("JSON output contained </script> which will break html parsing."); // cov:excl-line
     }
     let template = include_str!("../../../fastqrab/src/html/template.html");
     let chartjs = include_str!("../../../fastqrab/src/html/chart/chart.umd.min.js");
