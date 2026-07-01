@@ -32,14 +32,14 @@ pub struct InputDeclaration {
 pub struct StepInputFiles(pub HashMap<String, ex::fs::File>);
 
 impl std::fmt::Debug for StepInputFiles {
+    //cov::excl-start
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // `ex::fs::File` is not `Debug`; the ids are the useful part anyway.
-        //cov::excl-start
         f.debug_struct("StepInputFiles")
             .field("ids", &self.0.keys().collect::<Vec<_>>())
             .finish()
-        //cov::excl-stop
     }
+    //cov::excl-stop
 }
 
 impl StepInputFiles {

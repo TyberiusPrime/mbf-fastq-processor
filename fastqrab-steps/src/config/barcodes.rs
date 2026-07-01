@@ -119,13 +119,11 @@ impl PartialBarcodesFromFile {
             }
         }
         if entries.is_empty() {
-            // cov:excl-start
-            // empty file would lead to 'can't detect file format' before we reach this
+            // empty file would be fastq, so possible.?
             Err(ValidationFailure::new(
                 format!("Barcodes: reference file '{filename}' contains no sequences.",),
                 Some("Check your input file.".to_string()),
             ))
-            //cov:excl-end
         } else {
             Ok(entries)
         }

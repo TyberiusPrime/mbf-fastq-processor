@@ -1443,6 +1443,17 @@ fn test_cases_x_input_x_error_handling_x_zero_blocksize() {
 
 #[test]
 
+fn test_cases_x_input_x_fasta_x_finish_stream() {
+    println!("Test case is in: test_cases/input/fasta/finish_stream");
+    run_test(
+        std::path::Path::new("../test_cases/input/fasta/finish_stream"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_input_x_interleaved_x_double() {
     println!("Test case is in: test_cases/input/interleaved/double");
     run_test(

@@ -118,7 +118,10 @@ impl ChainedParser {
                         self.buffer_size,
                         self.thread_counts,
                         &self.options,
-                    )?;
+                    )?; // cov:excl-line - would only happen if the file had something happen to it
+                    // between format detection & opening it for output
+                    // possible, since we're format detecting everything at the start,
+                    // but not worth a test for coverag.
                     self.current = Some(parser);
                 }
                 None => return Ok(false), // cov:excl-line -- see below
@@ -136,11 +139,14 @@ impl ChainedParser {
     )]
     pub fn parse(&mut self) -> Result<ChainParseResult> {
         if !self.ensure_parser()? {
+            //cov:excl-start
+            //see ensure_parser comment
             return Ok(ChainParseResult {
                 fastq_block: FastQChunk::new_empty(),
                 was_final: true,
                 expected_read_count: self.expected_read_count_power_of_two,
             });
+            //cov:excl-end
         }
 
         let res = self

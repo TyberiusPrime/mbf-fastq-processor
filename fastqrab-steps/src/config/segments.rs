@@ -316,7 +316,7 @@ impl ValidateSegment for TomlValue<MustAdapt<String, ResolvedSourceNoAll>> {
                     }
                 }
                 //no default for missing.
-            } // cov:excl-line
+            }
         }
     }
 }

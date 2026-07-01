@@ -1,0 +1,21 @@
+[input]
+    read1 = 'input_read1.fasta'
+
+[input.options]
+    fasta_fake_quality = 'a'
+
+[options]
+    # The file has no trailing newline after the last record's sequence
+    # ("TGCA"), so at end-of-stream `carry` still holds that unterminated
+    # line. A small buffer_size forces multiple fill() calls (instead of
+    # slurping the whole 23-byte file in one read), so the reader path
+    # genuinely reaches EOF via a zero-byte read with `carry` non-empty,
+    # exercising the `!self.carry.is_empty()` branch in
+    # FastaPods::finish_stream (fasta.rs).
+    buffer_size = 4
+
+[output]
+    prefix = "output"
+
+[[step]]
+    action = "OutputFASTQ"

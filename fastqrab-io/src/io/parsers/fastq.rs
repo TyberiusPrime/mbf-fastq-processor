@@ -127,7 +127,7 @@ impl PodFastqParser {
                 }
                 let mut filled = 0;
                 while filled < buffer_size {
-                    let n = reader.read(&mut buf[filled..])?; // cov:excl-line
+                    let n = reader.read(&mut buf[filled..])?;
                     if n == 0 {
                         break;
                     }
@@ -142,7 +142,7 @@ impl PodFastqParser {
                     .is_err()
                 {
                     // Pod parser hung up (an error downstream); stop feeding it.
-                    break; // cov:excl-line
+                    break;
                 }
                 if filled < buffer_size {
                     break; // short read ⇒ EOF
@@ -213,12 +213,12 @@ impl PodFastqParser {
             handle
                 .join()
                 .map_err(|e| anyhow::anyhow!("pod fastq parser thread panicked: {e:?}"))??;
-        }
+        } // cov:excl-line
         if let Some(handle) = self.reader_handle.take() {
             handle
                 .join()
                 .map_err(|e| anyhow::anyhow!("pod fastq reader thread panicked: {e:?}"))??;
-        }
+        } // cov:excl-line
         // shm mode: the parser + reader are done, so every borrowed chunk has
         // dropped and returned its slot id; the slot-return channel is now closed
         // and the writer thread can finish relaying.
@@ -236,7 +236,7 @@ impl PodFastqParser {
                 .wait()
                 .context("waiting on fastqrab-decompressor (shm mode)")?;
             if !status.success() {
-                bail!("fastqrab-decompressor exited unsuccessfully: {status}");
+                bail!("fastqrab-decompressor exited unsuccessfully: {status}"); // cov:excl-line
             }
         }
         Ok(())
