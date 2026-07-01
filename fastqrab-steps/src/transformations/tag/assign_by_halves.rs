@@ -137,7 +137,7 @@ impl Step for AssignByHalves {
             TagColumn::Location(col) => {
                 for seq in col.iter_seq() {
                     let hit = if seq.is_empty() {
-                        None
+                        None // cov:excl-line
                     } else {
                         engine.query(seq.as_ref())
                         //BStr::new(&col.joined_sequence(slot_hits, None)))

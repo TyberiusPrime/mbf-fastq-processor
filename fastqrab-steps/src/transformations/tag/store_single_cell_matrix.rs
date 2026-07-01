@@ -232,7 +232,7 @@ fn determine_lookup_mode(
                     match meta.contents {
                         StringTagContent::Undefined => {
                             // require the user to set it
-                            None
+                            None // cov:excl-line
                         }
                         StringTagContent::Barcodes => Some(LookupMode::Barcode),
                         StringTagContent::Labels => Some(LookupMode::Label),
@@ -422,22 +422,24 @@ impl Step for StoreSingleCellMatrix {
             .get(&self.gene_barcodes)
             .expect("gene_barcodes section missing from InputInfo");
 
-        // cov:excl-start
         if cell_bc.seq_to_name.len() >= (u32::MAX - 1) as usize {
+            //cov:excl-start
             anyhow::bail!(
                 "Too many cell barcodes: {} (max {})",
                 cell_bc.seq_to_name.len(),
                 u32::MAX as usize - 1
             );
+            //cov:excl-stop
         }
         if gene_bc.seq_to_name.len() >= (u32::MAX - 1) as usize {
+            //cov:excl-start
             anyhow::bail!(
                 "Too many gene barcodes: {} (max {})",
                 gene_bc.seq_to_name.len(),
                 u32::MAX as usize - 1
             );
+            //cov:excl-stop
         }
-        // cov:excl-end
         self.gene_lookup = Self::create_lookup(&gene_bc.seq_to_name, self.gene_lookup_mode);
         self.cell_lookup = Self::create_lookup(&cell_bc.seq_to_name, self.cell_lookup_mode);
 
@@ -492,33 +494,33 @@ impl Step for StoreSingleCellMatrix {
             let cell_idx = match cell_tags {
                 TagColumn::String(items) => match items.get_string(ii) {
                     Some(s) => seq_to_idx(s, cell_map),
-                    None => 0,
+                    None => 0, // cov:excl-line
                 },
                 TagColumn::Location(col) => {
                     let seq = col.joined_seq(ii, None);
                     if seq.is_empty() {
-                        0
+                        0 // cov:excl-line
                     } else {
                         seq_to_idx(&seq, cell_map)
                     }
                 }
-                _ => 0,
+                _ => 0, // cov:excl-line
             };
 
             let gene_idx = match gene_tags {
                 TagColumn::String(items) => match items.get_string(ii) {
                     Some(s) => seq_to_idx(s, gene_map),
-                    None => 0,
+                    None => 0, // cov:excl-line
                 },
                 TagColumn::Location(col) => {
                     let seq = col.joined_seq(ii, None);
                     if seq.is_empty() {
-                        0
+                        0 // cov:excl-line
                     } else {
                         seq_to_idx(&seq, gene_map)
                     }
                 }
-                _ => 0,
+                _ => 0, // cov:excl-line
             };
 
             #[expect(clippy::cast_possible_truncation, reason = "umi max length 16")]
@@ -546,7 +548,7 @@ impl Step for StoreSingleCellMatrix {
                         (encode_umi(&seq), seq.len() as u8)
                     }
                 }
-                _ => (Umi::new_unmatched(), 0),
+                _ => unreachable!("Colum type was verified to be string or location"),
             };
 
             {
@@ -701,8 +703,8 @@ impl Step for StoreSingleCellMatrix {
                             .try_into()
                             .expect("cell_lookup.len() + 1 exceeds u32::MAX"),
                         writer,
-                    )?;
-                }
+                    )?; // cov:excl-line
+                } // cov:excl-line
                 if let Some(Some(writer)) = stat_guard.get_mut(&tag) {
                     writer.write_text_record(b"Metric\tValue\n")?;
 
@@ -717,9 +719,9 @@ impl Step for StoreSingleCellMatrix {
                     for (metric, value) in &rows {
                         writer.write_text_record(
                             format!("{metric}\t{value:>col_width$}\n").as_bytes(),
-                        )?;
+                        )?; // cov:excl-line
                     }
-                }
+                } // cov:excl-line
             }
             if !any_gene_matches && !any_cell_matches {
                 bail!(
@@ -757,7 +759,7 @@ impl Step for StoreSingleCellMatrix {
         {
             if let Some(w) = writer.take() {
                 let _summary = w.finish()?;
-            }
+            } // cov:excl-line
         }
 
         // Write cell barcode lookup table (line 0 = "unmatched", then ordered names)
@@ -773,13 +775,13 @@ impl Step for StoreSingleCellMatrix {
                 let mut line = name.as_bytes().to_vec();
                 line.push(b'\n');
                 writer.write_text_record(&line)?;
-            }
+            } // cov:excl-line
         }
         finish_writer(
             self.cell_barcodes_writer
                 .as_ref()
                 .expect("cell_barcodes_writer set in init"),
-        )?;
+        )?; // cov:excl-line
 
         // Write gene lookup table
         {
@@ -800,7 +802,7 @@ impl Step for StoreSingleCellMatrix {
             self.genes_writer
                 .as_ref()
                 .expect("genes_writer set in init"),
-        )?;
+        )?; // cov:excl-line
 
         Ok(None)
     }

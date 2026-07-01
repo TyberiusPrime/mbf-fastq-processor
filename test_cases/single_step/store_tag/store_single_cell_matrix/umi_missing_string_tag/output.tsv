@@ -1,0 +1,9 @@
+ReadName	cell_bc	gene_bc	str_umi	umi
+read2	TTTT	GGGG		
+read1	AAAA	CCCC	AAAACCCCTTTTAAAA	AAAACCCCTTTTAAAA
+read1	AAAA	CCCC		
+read2	TTTT	GGGG		
+read1	AAAA	CCCC		
+read2	TTTT	GGGG		
+read1	AAAA	CCCC		
+read2	TTTT	GGGG		

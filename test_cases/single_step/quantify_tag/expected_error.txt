@@ -1,0 +1,19 @@
+Error Details ==
+Error 1/1
+  ╭─config.toml
+  ┆
+5 │ [[step]]
+6 │     action = 'QuantifyTag'
+  ┆              ──────┬──────
+  ┆                    │
+  ┆                    ╰─────── In this step
+7 │     in_label = 'kmer'
+  ┆                ───┬──
+  ┆                   │
+  ┆                   ╰─── No such tag: 'kmer'
+──╯
+Hint: All known accepted values have been used.
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/QuantifyTag
+      Or run: `fastqrab template QuantifyTag` for more information.
+
+

@@ -132,7 +132,7 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagInComment> {
                             BString::new(vec![ins])
                         ));
                     }
-                } //cov:excl-line
+                }
             }
 
             let mut used_tags = Vec::new();

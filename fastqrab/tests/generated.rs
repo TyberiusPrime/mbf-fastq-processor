@@ -11855,6 +11855,17 @@ fn test_cases_x_single_step_x_output_x_output_neither_r1_nor_r2_but_index() {
 
 #[test]
 
+fn test_cases_x_single_step_x_quantify_tag() {
+    println!("Test case is in: test_cases/single_step/quantify_tag");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/quantify_tag"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_rename_x_rename_read_index_placeholder() {
     println!("Test case is in: test_cases/single_step/rename/rename_read_index_placeholder");
     run_test(
@@ -12789,6 +12800,51 @@ fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_umi_aggr_no
     run_test(
         std::path::Path::new(
             "../test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_none/zero_reads",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_umi_missing_string_tag() {
+    println!(
+        "Test case is in: test_cases/single_step/store_tag/store_single_cell_matrix/umi_missing_string_tag"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/store_tag/store_single_cell_matrix/umi_missing_string_tag",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_umi_too_long_x_basic() {
+    println!(
+        "Test case is in: test_cases/single_step/store_tag/store_single_cell_matrix/umi_too_long/basic"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/store_tag/store_single_cell_matrix/umi_too_long/basic",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_umi_too_long_x_string_tag() {
+    println!(
+        "Test case is in: test_cases/single_step/store_tag/store_single_cell_matrix/umi_too_long/string_tag"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/store_tag/store_single_cell_matrix/umi_too_long/string_tag",
         ),
         "input.toml",
         1,

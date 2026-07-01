@@ -91,10 +91,11 @@ impl Step for FillMissing {
         let primary_vec = block
             .tags
             .get(&self.in_label_primary)
-            .ok_or_else(|| anyhow::anyhow!("Tag '{}' not found in block", self.in_label_primary))?;
-        let secondary_vec = block.tags.get(&self.in_label_secondary).ok_or_else(|| {
-            anyhow::anyhow!("Tag '{}' not found in block", self.in_label_secondary)
-        })?;
+            .expect("Tag not found in block. Verification failure");
+        let secondary_vec = block
+            .tags
+            .get(&self.in_label_secondary)
+            .expect("Secondary tag not found in block. Verification failure");
 
         let output_col = match (primary_vec, secondary_vec) {
             (TagColumn::Location(prim), TagColumn::Location(sec)) => {
@@ -136,7 +137,7 @@ impl Step for FillMissing {
                     })
                     .collect(),
             ),
-            _ => anyhow::bail!("FillMissing: unsupported tag type combination"),
+            _ => unreachable!("FillMissing: unsupported tag type combination"),
         };
 
         block.tags.insert(self.out_label.clone(), output_col);

@@ -1,0 +1,13 @@
+[input]
+    read1 = 'input_read1.fq'
+
+
+[[step]]
+	action = 'QuantifyTag'
+	in_label = 'kmer'
+	infix = "quantify"
+
+[output]
+    prefix = "output"
+
+# all we want to see is that we get *one* error, not another 'no output file'

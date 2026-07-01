@@ -1,0 +1,2 @@
+Error in stage 3: UMI is 17bp, maximum supported length is 16bp
+Error finalizing report: No reads matched the gene nor the cell barcode/label. Check your barcodes and possibly set `gene_tag_contains_barcode` and `cell_tag_contains_barcode` to either 'barcode' or 'label' if the auto-detection has failed you.

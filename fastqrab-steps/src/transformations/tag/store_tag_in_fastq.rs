@@ -215,78 +215,81 @@ impl Step for StoreTagInFastQ {
             .tags
             .get(&self.in_label)
             .expect("in_label tag must exist in block");
-        if let Some(col) = in_tag_col.as_locations() {
-            for (idx, ((name, tag_seq), tag_qual)) in block.segments[col.source_id() as usize]
-                .names
-                .iter()
-                .zip(col.iter_seq_joined(Some(self.region_separator.as_ref())))
-                .zip(col.iter_qual_joined(Some(self.region_separator.as_ref())))
-                .enumerate()
-            //todo: do we want itertools izip for this?
-            {
-                if !tag_seq.is_empty() {
-                    // Determine which output stream to use based on demultiplexing
-                    let output_idx = block.output_tags.as_ref().map_or(0, |x| x[idx]);
+        let col = in_tag_col
+            .as_locations()
+            .expect("tag was verified to be column!)");
 
-                    let mut output_handles = self
-                        .output_handles
-                        .as_ref()
-                        .expect("Should have been set in init")
-                        .lock()
-                        .expect("lock poisoned");
-                    if let Some(Some(writer)) = output_handles.get_mut(&output_idx) {
-                        //if we have demultiplex & no-unmatched-output, this happens
-                        let name = if let Some(comment_tags) = self.comment_tags.as_ref() {
-                            let mut name: BString = BString::from(name);
-                            for tag in comment_tags {
-                                let tag_col = block.tags.get(tag).expect("tag must exist in block");
-                                let tag_bytes = tag_col.to_bstr(
-                                    idx,
-                                    format_numeric_for_comment,
-                                    Some(self.region_separator.as_ref()),
-                                );
-                                name = store_tag_in_comment(
-                                    &name,
-                                    tag.as_ref().as_bytes(),
-                                    &tag_bytes,
-                                    self.comment_separator,
-                                    self.comment_insert_char,
-                                )?
-                                .into();
-                            }
-                            Cow::Owned(name)
-                        } else {
-                            Cow::Borrowed(name)
-                        };
+        for (idx, ((name, tag_seq), tag_qual)) in block.segments[col.source_id() as usize]
+            .names
+            .iter()
+            .zip(col.iter_seq_joined(Some(self.region_separator.as_ref())))
+            .zip(col.iter_qual_joined(Some(self.region_separator.as_ref())))
+            .enumerate()
+        //todo: do we want itertools izip for this?
+        {
+            if !tag_seq.is_empty() {
+                // Determine which output stream to use based on demultiplexing
+                let output_idx = block.output_tags.as_ref().map_or(0, |x| x[idx]);
 
-                        let mut buf = Vec::new();
-                        match self.format {
-                            FileFormat::Fastq | FileFormat::None | FileFormat::Text => {
-                                buf.push(b'@');
-                                buf.extend_from_slice(&name);
-                                buf.push(b'\n');
-                                buf.extend_from_slice(&tag_seq);
-                                buf.extend_from_slice(b"\n+\n");
-                                buf.extend_from_slice(&tag_qual);
-                                buf.push(b'\n');
-                            }
-                            FileFormat::Fasta => {
-                                buf.push(b'>');
-                                buf.extend_from_slice(&name);
-                                buf.push(b'\n');
-                                buf.extend_from_slice(&tag_seq);
-                                buf.push(b'\n');
-                            }
-                            // cov:excl-start
-                            FileFormat::Bam => {
-                                unreachable!("Unsupported format encountered after validation")
-                            } // cov:excl-stop
+                let mut output_handles = self
+                    .output_handles
+                    .as_ref()
+                    .expect("Should have been set in init")
+                    .lock()
+                    .expect("lock poisoned");
+                if let Some(Some(writer)) = output_handles.get_mut(&output_idx) {
+                    //if we have demultiplex & no-unmatched-output, this happens
+                    let name = if let Some(comment_tags) = self.comment_tags.as_ref() {
+                        let mut name: BString = BString::from(name);
+                        for tag in comment_tags {
+                            let tag_col = block.tags.get(tag).expect("tag must exist in block");
+                            let tag_bytes = tag_col.to_bstr(
+                                idx,
+                                format_numeric_for_comment,
+                                Some(self.region_separator.as_ref()),
+                            );
+                            name = store_tag_in_comment(
+                                &name,
+                                tag.as_ref().as_bytes(),
+                                &tag_bytes,
+                                self.comment_separator,
+                                self.comment_insert_char,
+                            )?
+                            .into();
                         }
-                        writer.write_text_record(&buf)?;
+                        Cow::Owned(name)
+                    } else {
+                        Cow::Borrowed(name)
+                    };
+
+                    let mut buf = Vec::new();
+                    match self.format {
+                        FileFormat::Fastq | FileFormat::None | FileFormat::Text => {
+                            buf.push(b'@');
+                            buf.extend_from_slice(&name);
+                            buf.push(b'\n');
+                            buf.extend_from_slice(&tag_seq);
+                            buf.extend_from_slice(b"\n+\n");
+                            buf.extend_from_slice(&tag_qual);
+                            buf.push(b'\n');
+                        }
+                        FileFormat::Fasta => {
+                            buf.push(b'>');
+                            buf.extend_from_slice(&name);
+                            buf.push(b'\n');
+                            buf.extend_from_slice(&tag_seq);
+                            buf.push(b'\n');
+                        }
+                        // cov:excl-start
+                        FileFormat::Bam => {
+                            unreachable!("Unsupported format encountered after validation")
+                        } // cov:excl-stop
                     }
+                    writer.write_text_record(&buf)?;
                 }
-            } // cov:excl-line // end of as_location
-        }
+            }
+        } // cov:excl-line // end of as_location
+
         Ok((block, true))
     }
 
