@@ -1,0 +1,23 @@
+[input]
+    read1 = 'input_read1.fq'
+
+# Extract first 5 bases and store as tag
+[[step]]
+    action = 'ExtractRegex'
+    source = 'name:read1'
+    query = '^Read[123]'
+    out_label = 'prefix_5'
+
+[[step]]
+    action = 'Report'
+    name = 'test_histogram'
+    count = false
+    tag_histograms = ['prefix_5']
+
+[output]
+    prefix = "output"
+
+[[step]]
+    action = "OutputReport"
+    json = true
+    html = true

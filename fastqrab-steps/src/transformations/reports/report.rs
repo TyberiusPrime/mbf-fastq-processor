@@ -62,7 +62,6 @@ impl VerifyIn<PartialConfig> for PartialReport {
     }
 }
 //
-// cov:excl-start
 impl TagUser for PartialTaggedVariant<PartialReport> {
     #[mutants::skip]
     fn get_tag_usage(
@@ -73,10 +72,8 @@ impl TagUser for PartialTaggedVariant<PartialReport> {
         //reachable if report failed to validate
         Some(TagUsageInfo::default())
     }
-
-    //report name dupliaction is being done in config verify_reports
+    //report name duplication is being done in config verify_reports
 }
-// cov:excl-stop
 
 // cov:excl-start
 impl Step for Report {

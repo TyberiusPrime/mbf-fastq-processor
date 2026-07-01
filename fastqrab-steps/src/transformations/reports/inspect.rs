@@ -316,7 +316,7 @@ impl Step for Inspect {
                     panic!("Bam not valid - should have been caught in verify");
                 } // cov:excl-stop
             }
-        } // cov:excl-line
+        }
 
         let _ = writer.finish()?;
         Ok(None)

@@ -108,7 +108,7 @@ impl Step for Box<_ReportDuplicateCount> {
         let mut data_lock = self.data_per_segment.lock().expect("lock poisoned");
         if block.block_no() == 1 {
             let false_positive_probability = if self.debug_reproducibility {
-                0.1 // cov:excl-line
+                0.1
             } else {
                 0.01
             };

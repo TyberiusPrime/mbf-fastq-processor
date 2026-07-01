@@ -57,18 +57,18 @@ impl HistogramData {
                     let s = String::from_utf8_lossy(&col.joined_seq(idx, Some(b"_"))).into_owned();
                     *map.entry(s).or_insert(0) += 1;
                 } else {
-                    unreachable!() // cov:excl-line
+                    unreachable!()
                 }
             }
             TagColumn::String(items) => {
                 if let HistogramData::String(map) = self {
                     let s = match items.get_string(idx) {
-                        None => String::new(),
+                        None => "(missing)".to_string(),
                         Some(s) => s.to_string(),
                     };
                     *map.entry(s).or_insert(0) += 1;
                 } else {
-                    unreachable!() // cov:excl-line
+                    unreachable!()
                 }
             }
             TagColumn::Numeric(items) => {
@@ -83,7 +83,7 @@ impl HistogramData {
                             .expect("NaN value for histogram - not supported");
                         *map.entry(bucket).or_insert(0) += 1;
                     }
-                    _ => unreachable!(), // cov:excl-line
+                    _ => unreachable!(),
                 }
             }
             TagColumn::Bool(items) => {

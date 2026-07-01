@@ -1,0 +1,16 @@
+Error 1/1
+   ╭─config.toml
+   ┆
+15 │ [[step]]
+16 │     action = "OutputReport"
+   ┆              ───────┬──────
+   ┆                     │
+   ┆                     ╰─────── In this step
+   ┆
+17 │     json = false
+18 │     html = false
+   ┆                 ┬
+   ┆                 │
+   ┆                 ╰─ OutputReport writes nothing
+───╯
+Hint: Set 'json = true' and/or 'html = true'

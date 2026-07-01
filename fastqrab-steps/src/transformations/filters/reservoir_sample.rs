@@ -184,7 +184,9 @@ impl Step for ReservoirSample {
                         let col = {
                             let mut builder = output.location_column_builder(segment);
                             for (_, buf) in &groups {
-                                let Some(TagColumnInAssembly::Location { rows, .. }) = buf.tags.get(&label) else {
+                                let Some(TagColumnInAssembly::Location { rows, .. }) =
+                                    buf.tags.get(&label)
+                                else {
                                     unreachable!("Not all demultiplex groups hat the same tags?");
                                 };
                                 for row in rows {

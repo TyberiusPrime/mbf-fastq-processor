@@ -175,8 +175,8 @@ impl Step for Progress {
                 // Drop samples older than the window, but always keep at least
                 // two so there is an interval to measure even on slow streams.
                 while samples.len() > 2 && samples[1].0 < elapsed - RATE_WINDOW_SECONDS {
-                    samples.pop_front();
-                }
+                    samples.pop_front(); // cov:excl-line not happening in test
+                } // cov:excl-line
                 let (front_elapsed, front_ii) = samples[0];
                 let dt = elapsed - front_elapsed;
                 let dn = ii as f64 - front_ii as f64;

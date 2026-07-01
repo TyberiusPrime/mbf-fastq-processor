@@ -1,0 +1,19 @@
+Error Details ==
+Error 1/1
+  ╭─config.toml
+  ┆
+4 │ [[step]]
+5 │     action = 'Progress'
+  ┆              ─────┬────
+  ┆                   │
+  ┆                   ╰───── In this step
+6 │     n = "aoeu"
+  ┆         ───┬──
+  ┆            │
+  ┆            ╰─── Wrong type: expected usize, found string.
+──╯
+Hint: This value has the wrong type.
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/Progress
+      Or run: `fastqrab template Progress` for more information.
+
+

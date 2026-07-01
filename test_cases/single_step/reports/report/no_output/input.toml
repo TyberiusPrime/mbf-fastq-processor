@@ -3,6 +3,7 @@
 
 [output]
     prefix = "output"
+
 [[step]]
     action = 'Report'
     name = 'xyz'
@@ -11,8 +12,7 @@
     length_distribution = true
     duplicate_count_per_read = true
 
-# --- Output steps (migrated from [output]) ---
 [[step]]
     action = "OutputReport"
-    json = true
+    json = false
     html = false

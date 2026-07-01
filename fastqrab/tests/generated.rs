@@ -11967,6 +11967,17 @@ fn test_cases_x_single_step_x_reports_x_oligo_counts_x_demultiplex() {
 
 #[test]
 
+fn test_cases_x_single_step_x_reports_x_progress_error_check() {
+    println!("Test case is in: test_cases/single_step/reports/progress_error_check");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/reports/progress_error_check"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_reports_x_progress_init_messages() {
     println!("Test case is in: test_cases/single_step/reports/progress_init_messages");
     run_test(
@@ -12105,6 +12116,21 @@ fn test_cases_x_single_step_x_reports_x_report_x_tag_histogram_x_basic() {
     println!("Test case is in: test_cases/single_step/reports/report/tag_histogram/basic");
     run_test(
         std::path::Path::new("../test_cases/single_step/reports/report/tag_histogram/basic"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_reports_x_report_x_tag_histogram_x_missing_strings() {
+    println!(
+        "Test case is in: test_cases/single_step/reports/report/tag_histogram/missing_strings"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/reports/report/tag_histogram/missing_strings",
+        ),
         "input.toml",
         1,
     );

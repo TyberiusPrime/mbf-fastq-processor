@@ -1,0 +1,12 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'Progress'
+    n = "aoeu"
+    output_infix = 'progress'
+
+[output]
+    prefix = "output"
+
+# no non progress output files

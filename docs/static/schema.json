@@ -2341,7 +2341,7 @@
             "compression_threads": {
               "type": "integer",
               "format": "uint",
-              "minimum": 0
+              "minimum": 1
             },
             "output": {
               "description": "Segments to write to individual files. Defaults to all input segments.",
@@ -2425,7 +2425,7 @@
             "compression_threads": {
               "type": "integer",
               "format": "uint",
-              "minimum": 0
+              "minimum": 1
             },
             "output": {
               "description": "Segments to write to individual files. Defaults to all input segments.",
@@ -5105,7 +5105,7 @@
         "compression_threads": {
           "type": "integer",
           "format": "uint",
-          "minimum": 0
+          "minimum": 1
         },
         "output": {
           "description": "Segments to write to individual files. Defaults to all input segments.",
@@ -5205,7 +5205,7 @@
         "compression_threads": {
           "type": "integer",
           "format": "uint",
-          "minimum": 0
+          "minimum": 1
         },
         "output": {
           "description": "Segments to write to individual files. Defaults to all input segments.",

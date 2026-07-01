@@ -1,0 +1,31 @@
+{
+  "__": {
+    "version": "0.9.1",
+    "cwd": "/home/user/single_step",
+    "input_files": {
+      "interleaved": null,
+      "read1": [
+        "input_read1.fq"
+      ]
+    },
+    "repository": "https://tyberiusprime.github.io/fastqrab/"
+  },
+  "test_histogram": {
+    "histogram": {
+      "prefix_5": {
+        "(missing)": 6,
+        "Read1": 2,
+        "Read2": 1,
+        "Read3": 1
+      }
+    }
+  },
+  "run_info": {
+    "program_version": "0.9.1",
+    "input_toml": "[input]\n    read1 = 'input_read1.fq'\n\n# Extract first 5 bases and store as tag\n[[step]]\n    action = 'ExtractRegex'\n    source = 'name:read1'\n    query = '^Read[123]'\n    out_label = 'prefix_5'\n\n[[step]]\n    action = 'Report'\n    name = 'test_histogram'\n    count = false\n    tag_histograms = ['prefix_5']\n\n[output]\n    prefix = \"output\"\n\n[[step]]\n    action = \"OutputReport\"\n    json = true\n    html = true\n",
+    "working_directory": "/home/user/single_step"
+  },
+  "report_order": [
+    "test_histogram"
+  ]
+}

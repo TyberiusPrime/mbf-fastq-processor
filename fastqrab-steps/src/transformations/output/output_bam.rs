@@ -287,7 +287,7 @@ impl VerifyIn<PartialConfig> for PartialOutputBAM {
                                 .to_string(),
                         );
                     }
-                }
+                } // cov:excl-line
             }
         }
 
@@ -335,19 +335,6 @@ impl VerifyIn<PartialConfig> for PartialOutputBAM {
     }
 }
 
-/// Build the (currently minimal) BAM sink options carried in each declaration.
-///
-/// Only `comment_separation_char` is applied today; tag export / reference
-/// resolution are deferred (see the type-level note).
-fn declare_bam_options(comment_separation_char: u8) -> BamSinkOptions {
-    BamSinkOptions {
-        comment_separation_char,
-        tag_to_bam_tags: Vec::new(),
-        tag_to_reference: None,
-        header: SharedBamHeader::default(),
-    }
-}
-
 /// Resolve the full [`BamSinkOptions`] for an `OutputBAM` step at config-verify
 /// time and stash them on the partial (read later by `declare_output_files`).
 ///
@@ -378,7 +365,7 @@ pub(crate) fn resolve_output_bam(
                 tag_to_bam_tags.push((bam_tag.0, tag_label.to_string()));
             }
         }
-    }
+    } // cov:excl-line
 
     if let Some(tag_to_ref) = partial
         .tag_to_reference
@@ -445,32 +432,25 @@ pub(crate) fn verify_output_bam_merge(
     partial: &mut PartialOutputBAM,
     available_demultiplex_labels: &[String],
 ) {
-    let interleave_empty = match partial.interleave.as_ref() {
-        Some(Some(x)) => x.is_empty(),
-        Some(None) => true,
-        None => false,
-    };
-    let output_empty = matches!(partial.output.as_ref(), Some(Some(x)) if x.is_empty());
-    let output_span = partial.output.span();
-
     if !matches!(partial.merge_demultiplexed.as_ref(), Some(Some(true))) {
         return;
     }
 
-    if output_empty && interleave_empty {
-        partial.merge_demultiplexed.state = TomlValueState::Custom {
-            spans: vec![
-                (
-                    partial.merge_demultiplexed.span(),
-                    "Incompatible with empty outputs".to_string(),
-                ),
-                (output_span, "These output segments are empty".to_string()),
-            ],
-        };
-        partial.merge_demultiplexed.help = Some(
-            "Either remove 'merge_demultiplexed' or specify either output segments or interleaved output.".to_string(),
-        );
-    }
+    //if output_empty && interleave_empty {
+    // already checked in  verify_record_targets
+    // partial.merge_demultiplexed.state = TomlValueState::Custom {
+    //     spans: vec![
+    //         (
+    //             partial.merge_demultiplexed.span(),
+    //             "Incompatible with empty outputs".to_string(),
+    //         ),
+    //         (output_span, "These output segments are empty".to_string()),
+    //     ],
+    // };
+    // partial.merge_demultiplexed.help = Some(
+    //     "Either remove 'merge_demultiplexed' or specify either output segments or interleaved output.".to_string(),
+    // );
+    //}
 
     match partial.tag_to_reference.as_ref() {
         Some(Some(tag_to_reference)) => {
@@ -501,7 +481,7 @@ pub(crate) fn verify_output_bam_merge(
                     .to_string(),
             );
         }
-        None => {} // cov:excl-line
+        None => {}
     }
 }
 
@@ -528,8 +508,8 @@ impl TagUser for PartialTaggedVariant<PartialOutputBAM> {
                         further_help: None,
                     }));
                 }
-            }
-        }
+            } // cov:excl-line
+        } // cov:excl-line
         // The reference-selecting tag must exist; `from_barcodes` names a
         // barcode section we then count as "used".
         if let Some(tag_to_ref) = inner
@@ -573,19 +553,13 @@ impl TagUser for PartialTaggedVariant<PartialOutputBAM> {
 
     fn declare_output_files(&self) -> Option<Vec<OutputDeclaration>> {
         if let Some(inner) = self.toml_value.as_ref() {
-            let comment_separation_char = inner
-                .comment_separation_char
-                .as_ref()
-                .copied()
-                .unwrap_or(b' ');
-
             // Reference sequences / header / tag exports are resolved earlier by
             // `resolve_output_bam`; fall back to a minimal header if (somehow) absent.
             let bam_options = inner
                 .resolved_bam_options
                 .clone()
                 .flatten()
-                .unwrap_or_else(|| declare_bam_options(comment_separation_char));
+                .expect("inner can't be ok if resolved_bam_options isn't");
 
             let segments = collect_segment_list(&inner.output);
             let interleave = interleave_present(&inner.interleave)

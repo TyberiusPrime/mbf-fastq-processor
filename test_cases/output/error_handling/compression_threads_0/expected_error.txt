@@ -12,9 +12,9 @@ Error 1/1
 14 │     compression_threads = 0
    ┆                           ┬
    ┆                           │
-   ┆                           ╰─ Must not be 0.
+   ┆                           ╰─ integer (NonZero<usize>), must not be zero
 ───╯
-Hint: 'compression_threads' must be greater than zero.
+Hint: Use a non-zero value.
       See https://doc_url.example/version-stripped-from-test/docs/redirects/OutputFASTQ
       Or run: `fastqrab template OutputFASTQ` for more information.
 

@@ -1,3 +1,5 @@
+use std::num::NonZero;
+
 use crate::transformations::prelude::*;
 use crate::verify_opt_path_component;
 use fastqrab_io::CompressionFormat;
@@ -42,7 +44,7 @@ pub struct OutputFASTA {
         dead_code,
         reason = "read in declare_output_files via the partial config"
     )]
-    compression_threads: usize,
+    compression_threads: NonZero<usize>,
 
     /// Segments to write to individual files. Defaults to all input segments.
     #[tpd(default, alias = "segments")]
@@ -91,17 +93,7 @@ impl VerifyIn<PartialConfig> for PartialOutputFASTA {
     where
         Self: Sized + toml_pretty_deser::Visitor,
     {
-        self.compression_threads.or(1);
-        self.compression_threads.verify(|threads| {
-            if *threads == 0 {
-                Err(ValidationFailure::new(
-                    "Must not be 0.",
-                    Some("'compression_threads' must be greater than zero."),
-                ))
-            } else {
-                Ok(())
-            }
-        });
+        self.compression_threads.or(NonZero::<usize>::MIN);
         if let Some(Some(_)) = self.compression_level.value {
             validate_compression_level_u8(&self.compression, &mut self.compression_level);
         }
