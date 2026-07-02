@@ -33,6 +33,7 @@ pub struct Inspect {
     #[schemars(skip)]
     pub collector: Arc<Mutex<Vec<(OwnedMolecule, DemultiplexTag)>>>,
     #[tpd(skip)]
+    #[schemars(skip)]
     collected: std::sync::atomic::AtomicUsize,
 
     #[tpd(skip, default)]

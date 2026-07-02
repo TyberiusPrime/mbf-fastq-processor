@@ -13,15 +13,16 @@ Correct a tag to one of a predefined set of 'barcodes' using closest hamming dis
 
     max_hamming_distance = 1
     on_no_match = 'remove' # 'remove', 'keep'
-    on_tie = 'remove' # 'remove', 'keep', 'first', 'first_strict', 'fail', 'by_majority', 'by_edit_probability'
+    on_tie = 'by_majority' # 'remove', 'keep', 'first', 'first_strict', 'fail', 'by_majority', 'by_edit_probability'
     name_split_character = '|' # optional
+
     on_tie_threshold = 0.975 # optional, default 0.975. Adjusted frequency: (n+1) / (N+k)
     on_tie_min_molecules_to_start = 1_000_000 # optional, default 1_000_000. See below
-    # on_tie_use_counts_from_report = { # optional, See below
-    #        file_name = "report.json",
-    #       report_name = "barcodes",
-    #       tag_name = "whitelisted"
-    # }
+    on_tie_use_counts_from_report = { # optional, See below
+            file_name = "report.json",
+           report_name = "barcodes",
+           tag_name = "whitelisted"
+    }
 
 [barcodes.mybarcodelist]
     "AAAA" = "label_ignored" # only read when demultiplexing 
@@ -123,9 +124,9 @@ Use a configuration like this adapted to your needs to generate the necessary re
 ```
 
 Then in your actual run 
-```toml
+```toml # ignore_in_test
 [[step]]
-    action = 'HammingCorrect
+    action = "HammingCorrect"
 #   ...
 on_tie_use_counts_from_report = {
     file_name = "barcode_histogram.json,

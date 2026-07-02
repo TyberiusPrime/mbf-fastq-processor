@@ -10,7 +10,8 @@ Store the tags in a TSV table.
 [[step]]
     action = "StoreTagsInTable"
     infix = "tags"
-    compression = "Raw" # Raw, Gzip, Zstd
+    compression = "Gzip" # Raw, Gzip, Zstd
+    compression_level = 5 # (optional) 0..9 for gzip, zstd 1..22
     region_separator = "_" # (optional) char to separate regions in a tag, if it has multiple
     in_labels = ["mytag", ] # Store just these tags. Optional, all tags store if not set
     include_read_name = true # (optional) include the ReadName column. Default: true

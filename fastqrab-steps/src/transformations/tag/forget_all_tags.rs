@@ -7,6 +7,7 @@ use crate::transformations::prelude::*;
 #[derive(Debug)]
 #[expect(dead_code, reason = "TDP needs at least one field")]
 pub struct ForgetAllTags {
+    #[schemars(skip)]
     ignored: Option<u8>, //tdp dislikes empty structs
 }
 

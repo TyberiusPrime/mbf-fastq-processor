@@ -935,7 +935,7 @@ impl ChunkPaths {
                             path.display(),
                             new_name.display()
                         ) //cov:excl-stop
-                    })?;  // cov:excl-line
+                    })?; // cov:excl-line
                 }
             }
         }

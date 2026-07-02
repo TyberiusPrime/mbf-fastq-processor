@@ -1,6 +1,7 @@
 ---
 weight: 5
 title: "Barcodes section"
+not-a-transformation: true
 ---
 
 # `[barcodes.*]` section

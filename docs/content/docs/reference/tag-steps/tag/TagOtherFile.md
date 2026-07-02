@@ -19,7 +19,7 @@ Supports comparing by read sequence, read name, and tags.
     seed = 42 # seed for randomness
     include_mapped = true # in case of BAM/SAM, whether to include aligned reads
     include_unmapped = true # in case of BAM/SAM, whether to include unaligned reads
-    # other_read_name_end_character " " # in name: mode, Cut the other files read names at this character
+    other_readname_end_character = " " # (optional), in name: mode, Cut the other files read names at this character
 
 
 ```

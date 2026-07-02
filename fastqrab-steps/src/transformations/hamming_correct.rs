@@ -56,6 +56,7 @@ pub struct HammingCorrect {
     pub on_tie_use_counts_from_report: Option<CountsFromReport>,
 
     #[tpd(default)]
+    #[schemars(skip)]
     pub on_tie_dump_counts: bool, //debug option.
     //
     #[tpd(skip)]

@@ -77,7 +77,8 @@ Many steps operate on specific segments via the `segment` parameter:
 
 [[step]]
     action = "ValidateSeq"
-    segment = "index1"    # Only validate index1 sequences
+    segment = "read1"    # Only validate read1 sequences
+    allowed  = "AGCT"
 ```
 
 ### The "All" Pseudo-Segment

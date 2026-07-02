@@ -1,11 +1,12 @@
 #![expect(clippy::unwrap_used, reason = "it's tests")]
+use anyhow::Context;
 use indexmap::IndexMap;
 use regex::Regex;
 use schemars::schema_for;
 use std::collections::HashSet;
 use std::fmt::Write;
 use std::fs;
-use std::io::{ErrorKind, Write as IOWrite};
+use std::io::Write as IOWrite;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::OnceLock;
@@ -14,7 +15,9 @@ use tempfile::{TempDir, tempdir};
 use fastqrab::config::config_from_string;
 
 static STRUCT_REGEX: OnceLock<Regex> = OnceLock::new();
+static ALIAS_REGEX: OnceLock<Regex> = OnceLock::new();
 static TRANSFORMATION_SCHEMA: OnceLock<serde_json::Value> = OnceLock::new();
+static CONFIG_SCHEMA: OnceLock<serde_json::Value> = OnceLock::new();
 
 /// Get all transformation names from the JSON schema
 fn get_all_transformations() -> Vec<String> {
@@ -114,9 +117,10 @@ fn check_target_pattern_in_text(text: &str, expected_pattern: &str) -> bool {
         // Should contain the 4 base targets but not "All"
         return text.contains("Any of your input segments")
             && !text.contains("Any of your input segments, or 'All'");
+    } else {
+        unreachable!("should not be called for steps without target/segment/source");
+        // Skip transformations without target fields
     }
-
-    true // Skip transformations without target fields
 }
 
 #[expect(clippy::string_slice, reason = "using find")]
@@ -146,6 +150,8 @@ fn collect_actions(section: &str) -> Vec<String> {
                 let remaining = &rest[first_quote + 1..];
                 if let Some(end_quote) = remaining.find('"') {
                     return Some(remaining[..end_quote].to_string());
+                } else {
+                    unreachable!("Missing end quote");
                 }
             }
             None
@@ -346,18 +352,6 @@ prefix = "output"
         )
     });
 
-    // Determine if we need bool or numeric tags based on the action
-    let needs_bool_for_in_label = actions.iter().any(|a| {
-        matches!(
-            a.as_str(),
-            "ReverseComplementConditional" | "SwapConditional"
-        )
-    });
-
-    let needs_numeric_for_in_label = actions
-        .iter()
-        .any(|a| matches!(a.as_str(), "FilterByNumericTag"));
-
     if extracted_section.contains("in_label") && !skip_tag_creation {
         // Collect all labels that already exist in the section (from out_label)
         let mut existing_labels = std::collections::HashSet::new();
@@ -372,7 +366,7 @@ prefix = "output"
                     if let Some(quote_end) = after_quote.find(quote_char) {
                         existing_labels.insert(after_quote[..quote_end].to_string());
                     }
-                }
+                } // cov:excl-line
             }
         }
 
@@ -395,36 +389,10 @@ prefix = "output"
                             }
 
                             // Create appropriate tag type based on the action
-                            if needs_bool_for_in_label {
-                                write!(
-                                    &mut config,
-                                    r#"
-                [[step]]
-                    action = "TagDuplicates"
-                    source = "read1"
-                    out_label = "{label}"
-                    false_positive_rate = 0.0
-                    seed = 42
-            "#
-                                )
-                                .unwrap();
-                                created_tags.insert(label.to_string());
-                            } else if needs_numeric_for_in_label {
-                                write!(
-                                    &mut config,
-                                    r#"
-                [[step]]
-                    action = "CalcLength"
-                    segment = "read1"
-                    out_label = "{label}"
-            "#
-                                )
-                                .unwrap();
-                                created_tags.insert(label.to_string());
-                            } else {
-                                write!(
-                                    &mut config,
-                                    r#"
+
+                            write!(
+                                &mut config,
+                                r#"
                 [[step]]
                     action = "ExtractRegion"
                     segment = "read1"
@@ -433,13 +401,12 @@ prefix = "output"
                     out_label = "{label}"
                     anchor = "Start"
             "#
-                                )
-                                .unwrap();
-                                created_tags.insert(label.to_string());
-                            }
-                        }
+                            )
+                            .unwrap();
+                            created_tags.insert(label.to_string());
+                        } // cov:excl-line
                     }
-                }
+                } // cov:excl-line
             }
         }
     }
@@ -474,7 +441,7 @@ prefix = "output"
                                 .unwrap();
                                 created_tags.insert(label.to_string());
                             }
-                        }
+                        } // cov:excl-line
                     }
                 }
             }
@@ -508,55 +475,11 @@ prefix = "output"
                                     )
                                     .unwrap();
                                 }
-                            }
-                        }
-                    }
+                            } // cov:excl-line
+                        } // cov:excl-line
+                    } // cov:excl-line
                 }
             }
-        }
-    }
-
-    // Add barcodes section if Demultiplex or HammingCorrect is present
-    if actions
-        .iter()
-        .any(|a| a == "Demultiplex" || a == "HammingCorrect")
-        && extracted_section.contains("barcodes = ")
-        && !extracted_section.contains("[barcodes.")
-    {
-        // Extract barcode name from the config
-        let barcode_name = if let Some(line) = extracted_section
-            .lines()
-            .find(|l| l.contains("barcodes = "))
-        {
-            if let Some(start) = line.find("barcodes = ") {
-                let after = &line[start + 11..];
-                if let Some(quote_start) = after.find(['\'', '"']) {
-                    let quote_char = after.chars().nth(quote_start).unwrap();
-                    let after_quote = &after[quote_start + 1..];
-                    after_quote
-                        .find(quote_char)
-                        .map(|quote_end| &after_quote[..quote_end])
-                } else {
-                    None
-                }
-            } else {
-                None
-            }
-        } else {
-            None
-        };
-
-        if let Some(name) = barcode_name {
-            write!(
-                &mut config,
-                r"
-
-[barcodes.{name}]
-    'AAAAAAAA' = 'sample-1'
-    'CCCCCCCC' = 'sample-2'
-            ",
-            )
-            .unwrap();
         }
     }
 
@@ -644,22 +567,29 @@ prefix = "output"
     config
 }
 
+/// Get or generate the full JSON schema for the Config type, `$defs`/`definitions`
+/// and all. Kept around (rather than just the `Transformation` sub-schema) because
+/// resolving a variant's `$ref` requires looking siblings up in this map.
+fn get_config_schema() -> &'static serde_json::Value {
+    CONFIG_SCHEMA.get_or_init(|| {
+        let config_schema = schema_for!(fastqrab::config::Config);
+        serde_json::to_value(&config_schema).expect("Failed to convert config schema to JSON")
+    })
+}
+
+fn get_schema_definitions() -> &'static serde_json::Map<String, serde_json::Value> {
+    get_config_schema()
+        .get("$defs")
+        .or_else(|| get_config_schema().get("definitions"))
+        .and_then(|d| d.as_object())
+        .expect("Config schema does not contain definitions")
+}
+
 /// Get or generate the JSON schema for Transformation enum
 /// We extract this from the Config schema since Transformation is not publicly exported
 fn get_transformation_schema() -> &'static serde_json::Value {
     TRANSFORMATION_SCHEMA.get_or_init(|| {
-        let config_schema = schema_for!(fastqrab::config::Config);
-        let config_schema_value =
-            serde_json::to_value(&config_schema).expect("Failed to convert config schema to JSON");
-
-        // Extract the Transformation schema from the definitions
-        let definitions = config_schema_value
-            .get("$defs")
-            .or_else(|| config_schema_value.get("definitions"))
-            .and_then(|d| d.as_object())
-            .expect("Config schema does not contain definitions");
-
-        definitions
+        get_schema_definitions()
             .get("Transformation")
             .expect("Transformation not found in schema definitions")
             .clone()
@@ -678,6 +608,13 @@ fn extract_schema_fields_with_aliases(transformation: &str) -> IndexMap<String, 
         .and_then(|o| o.as_array())
         .expect("Schema does not contain oneOf array");
 
+    // Distinguishes "resolved to a struct with zero fields" (e.g. a marker
+    // transformation like ValidateReadNamesPrintable, whose only field is
+    // `#[schemars(skip)]`'d) from "couldn't resolve the variant's fields at
+    // all" (the $ref-resolution assumption below broke) — only the latter is
+    // a bug worth panicking over.
+    let mut resolved = false;
+
     for variant in one_ofs {
         if let Some(action_const) = variant
             .get("properties")
@@ -686,16 +623,38 @@ fn extract_schema_fields_with_aliases(transformation: &str) -> IndexMap<String, 
             .and_then(|c| c.as_str())
             && action_const == transformation
         {
-            if let Some(properties) = variant.get("properties").and_then(|p| p.as_object()) {
-                for field_name in properties.keys() {
-                    if field_name != "action" {
-                        field_map.insert(field_name.clone(), Vec::new());
+            // A variant's own `properties` only ever carries the `action` tag.
+            // schemars represents the rest of an internally-tagged variant's
+            // fields via a sibling `$ref` into `$defs`/`definitions`, so that's
+            // where the actual field list has to come from. A struct with no
+            // (non-skipped) fields, e.g. ValidateReadNamesPrintable, resolves to
+            // a def with no `properties` key at all — that's still "resolved",
+            // just to zero fields.
+            if let Some(def) = variant
+                .get("$ref")
+                .and_then(|r| r.as_str())
+                .and_then(|r| r.rsplit('/').next())
+                .and_then(|def_name| get_schema_definitions().get(def_name))
+            {
+                resolved = true;
+                if let Some(def_properties) = def.get("properties").and_then(|p| p.as_object()) {
+                    for field_name in def_properties.keys() {
+                        if field_name != "action" {
+                            field_map.insert(field_name.clone(), Vec::new());
+                        }
                     }
                 }
-            }
+            } // cov:excl-line
             break;
         }
     }
+
+    assert!(
+        resolved,
+        "Schema for transformation '{transformation}' has no resolvable field list — \
+         extract_schema_fields_with_aliases's schemars $ref-resolution assumption may no \
+         longer hold; check get_transformation_schema()'s output shape."
+    );
 
     // Now try to extract aliases from Rust source
     if let Some(aliases_map) = extract_field_aliases_from_source(transformation) {
@@ -704,9 +663,28 @@ fn extract_schema_fields_with_aliases(transformation: &str) -> IndexMap<String, 
                 *field_aliases = aliases;
             }
         }
-    }
+    } // cov:excl-line
 
     field_map
+}
+
+/// Whether a (trimmed) struct-body line declares a field, e.g. `pub segment: SegmentIndex,`
+/// or `target: ResolvedSourceAll,` — schemars serializes fields regardless of Rust
+/// visibility, so a private field is just as much a schema field as a `pub` one.
+fn is_field_declaration_line(line: &str) -> bool {
+    let candidate = line
+        .trim_start_matches("pub(crate) ")
+        .trim_start_matches("pub ");
+    if candidate.starts_with('#') || candidate.starts_with("//") || candidate.starts_with('}') {
+        return false;
+    }
+    let Some((name, _rest)) = candidate.split_once(':') else {
+        return false;
+    };
+    let name = name.trim();
+    !name.is_empty()
+        && name.starts_with(|c: char| c.is_alphabetic() || c == '_')
+        && name.chars().all(|c| c.is_alphanumeric() || c == '_')
 }
 
 /// Extract field aliases from Rust source code for a given transformation
@@ -716,7 +694,9 @@ fn extract_field_aliases_from_source(
     transformation: &str,
 ) -> Option<IndexMap<String, Vec<String>>> {
     // Find the struct file
-    let struct_file = find_struct_file_for_transformation(transformation)?;
+    let struct_file = find_struct_file_for_transformation(transformation)
+        .with_context(|| format!("Could not find struct file for {transformation}"))
+        .unwrap();
     let content = fs::read_to_string(&struct_file).ok()?;
 
     let mut aliases_map: IndexMap<String, Vec<String>> = IndexMap::new();
@@ -738,35 +718,37 @@ fn extract_field_aliases_from_source(
         }
 
         // Check if this is a field definition
-        if line.starts_with("pub ")
-            && line.contains(':')
-            && let Some(field_name) = line.split_whitespace().nth(1)
-        {
-            let field_name = field_name.trim_end_matches(':');
+        if is_field_declaration_line(line) {
+            let field_name = line
+                .trim_start_matches("pub(crate) ")
+                .trim_start_matches("pub ")
+                .split(':')
+                .next()
+                .unwrap()
+                .trim();
 
-            // Look back for alias attributes
-            let mut aliases = Vec::new();
+            // Walk back to find the start of this field's attribute block (the
+            // previous field, or the struct definition), then regex-search that
+            // whole block for `alias = "..."` in one pass. This has to be a block
+            // search rather than a per-line one: `#[tpd(...)]` attributes routinely
+            // span multiple lines (e.g. `#[tpd(\n  with = "...",\n  alias = "...",\n)]`)
+            // and `alias` isn't always the first key inside the parens, so a
+            // substring check like `line.contains("#[tpd(alias")` misses both cases.
+            let mut block_start = struct_start + 1;
             for j in (struct_start + 1..i).rev() {
                 let attr_line = lines[j].trim();
-
-                // Stop when we hit another pub field or the struct definition
-                if attr_line.starts_with("pub ") || attr_line.contains("pub struct") {
+                if is_field_declaration_line(attr_line) || attr_line.contains("pub struct") {
+                    block_start = j + 1;
                     break;
                 }
-
-                // Look for alias attribute
-                if attr_line.contains("#[tpd_alias")
-                    && let Some(alias_start) = attr_line.find("alias")
-                {
-                    let after_alias = &attr_line[alias_start..];
-                    if let Some(quote_start) = after_alias.find('"') {
-                        let after_quote = &after_alias[quote_start + 1..];
-                        if let Some(quote_end) = after_quote.find('"') {
-                            aliases.push(after_quote[..quote_end].to_string());
-                        }
-                    }
-                }
             }
+            let attr_block = lines[block_start..i].join("\n");
+            let alias_regex =
+                ALIAS_REGEX.get_or_init(|| Regex::new(r#"alias\s*=\s*"([^"]+)""#).unwrap());
+            let aliases: Vec<String> = alias_regex
+                .captures_iter(&attr_block)
+                .map(|c| c[1].to_string())
+                .collect();
 
             if !aliases.is_empty() {
                 aliases_map.insert(field_name.to_string(), aliases);
@@ -779,81 +761,62 @@ fn extract_field_aliases_from_source(
     Some(aliases_map)
 }
 
-/// Find the struct file for a transformation (enum name).
-#[expect(clippy::string_slice, reason = "using find")]
-fn find_struct_file_for_transformation(transformation: &str) -> Option<PathBuf> {
-    //todo: find a better method
-    let transformations_content = fs::read_to_string("src/transformations.rs").ok()?;
-    let enum_start = transformations_content.find("pub enum Transformation {")?;
-    let content_after_enum = &transformations_content[enum_start..];
-    let enum_end = content_after_enum.find("\n}\n")?;
-    let enum_content = &content_after_enum[..enum_end];
+/// Index of struct name -> defining file, built once by scanning every `.rs`
+/// file under `fastqrab-steps/src/transformations` for `pub struct Name { ... }`.
+/// This replaces a previous approach that *guessed* the file path from the
+/// struct name (camelCase -> snake_case, plus half a dozen hardcoded
+/// exceptions) — that guessing was also rooted at the wrong directory
+/// (`src/transformations` instead of `../fastqrab-steps/src/transformations`),
+/// so it silently found nothing for every transformation.
+static STRUCT_FILE_INDEX: OnceLock<IndexMap<String, PathBuf>> = OnceLock::new();
 
-    for line in enum_content.lines() {
-        if line.contains(&format!("{transformation}("))
-            && let Some(paren_pos) = line.find('(')
-        {
-            let after_name = &line[paren_pos + 1..];
-            if let Some(paren_close) = after_name.find(')') {
-                let module_path = &after_name[..paren_close];
-                let parts: Vec<&str> = module_path.split("::").collect();
+fn struct_file_index() -> &'static IndexMap<String, PathBuf> {
+    STRUCT_FILE_INDEX.get_or_init(|| {
+        let transformations_dir = Path::new("../fastqrab-steps/src/transformations");
+        let mut rs_files = Vec::new();
+        collect_rs_files(transformations_dir, &mut rs_files);
+        let struct_regex =
+            STRUCT_REGEX.get_or_init(|| Regex::new(r"(?s)pub struct (\w+)\s*\{([^}]+)\}").unwrap());
 
-                if parts.len() >= 2 {
-                    let struct_name = parts[parts.len() - 1];
-                    let struct_name = struct_name.strip_prefix("Validate").unwrap_or(struct_name);
-                    //we got a wee bit of a problem with the logic for these special names.
-                    //easier than to devise a general method
-                    let file_name = if struct_name == "GCContent" {
-                        "gc_content".to_string()
-                    } else if struct_name == "IUPAC" {
-                        "iupac".to_string()
-                    } else if struct_name == "IUPACSuffix" {
-                        "iupac_suffix".to_string()
-                    } else if struct_name == "IUPACWithIndel" {
-                        "iupac_with_indel".to_string()
-                    } else if struct_name == "StoreTagInFastQ" {
-                        "store_tag_in_fastq".to_string()
-                    } else {
-                        struct_name.chars().fold(String::new(), |mut acc, c| {
-                            if c.is_uppercase() && !acc.is_empty() {
-                                acc.push('_');
-                            }
-                            acc.push(c.to_ascii_lowercase());
-                            acc
-                        })
-                    };
-
-                    let file_path = if struct_name == "Demultiplex" {
-                        PathBuf::from("src/transformations/demultiplex.rs")
-                    } else if struct_name == "HammingCorrect" {
-                        PathBuf::from("src/transformations/hamming_correct.rs")
-                    } else if struct_name == "Duplicates" {
-                        PathBuf::from("src/transformations/extract/tag/duplicates.rs")
-                    } else if struct_name == "OtherFile" {
-                        PathBuf::from("src/transformations/extract/tag/other_file.rs")
-                    } else if struct_name == "ValidateAllReadsSameLength" {
-                        PathBuf::from("src/transformations/validation/all_reads_same_length.rs")
-                    } else if struct_name == "EvalExpression>" {
-                        //todo: fix this more sensibly...
-                        PathBuf::from("src/transformations/convert/eval_expression.rs")
-                    } else {
-                        PathBuf::from(format!("src/transformations/{}/{}.rs", parts[0], file_name))
-                    };
-
-                    if file_path.exists() {
-                        return Some(file_path);
-                    } else {
-                        panic!(
-                            "Could not find struct file at expected path: {} for {struct_name}",
-                            file_path.display()
-                        );
-                    }
-                }
+        let mut index = IndexMap::new();
+        for path in rs_files {
+            let content = fs::read_to_string(&path).expect("Could not read file");
+            for captures in struct_regex.captures_iter(&content) {
+                let name = captures.get(1).unwrap().as_str().to_string();
+                index.entry(name).or_insert_with(|| path.clone());
             }
         }
-    }
+        index
+    })
+}
 
-    None
+/// Find the struct file for a transformation (enum name).
+fn find_struct_file_for_transformation(transformation: &str) -> Option<PathBuf> {
+    let transformations_content =
+        fs::read_to_string("../fastqrab-steps/src/transformations.rs").unwrap();
+    let (_, after_enum) = transformations_content.split_once("pub enum Transformation {")?;
+    let (enum_content, _) = after_enum.split_once("\n}\n")?;
+
+    let variant_prefix = format!("{transformation}(");
+    for line in enum_content.lines() {
+        let Some((_, after_variant)) = line.split_once(&variant_prefix) else {
+            continue;
+        };
+        let (module_path, _) = after_variant.split_once(')').expect("missing )");
+        // Strip a `Box<...>` wrapper (e.g. `Box<convert::EvalExpression>`) before
+        // taking the last `::`-separated segment as the struct name.
+        let struct_name = module_path
+            .trim_start_matches("Box<")
+            .trim_end_matches('>')
+            .rsplit("::")
+            .next()
+            .unwrap_or(module_path);
+        if let Some(path) = struct_file_index().get(struct_name) {
+            return Some(path.clone());
+        } // cov:excl-line
+    } // cov:excl-line
+
+    None // cov:excl-line
 }
 
 /// Check if a field (or any of its aliases) is documented in the given text
@@ -876,7 +839,7 @@ fn is_field_in_text(text: &str, field_name: &str, aliases: &[String]) -> bool {
         }
     }
 
-    false
+    false // cov:excl-line
 }
 
 #[test]
@@ -898,10 +861,12 @@ fn test_every_step_has_a_template_section() {
 
     for (section_name, line_no) in get_template_section_names(&template_content) {
         if !documented_sections.insert(section_name.clone()) {
+            //cov:excl-start
             errors.push(format!(
                 "Duplicate section {section_name} found in template.toml"
             ));
             continue;
+            //cov:excl-stop
         }
 
         let extracted_section = match extract_section_from_template(
@@ -909,25 +874,26 @@ fn test_every_step_has_a_template_section() {
             &section_name,
         ) {
             section if section.is_empty() => {
+                //cov:excl-start
                 errors.push(format!(
                         "Failed to extract section for {section_name}, line_no {line_no} from template.toml"
                     ));
                 continue;
+                //cov:excl-stop
             }
             section => section,
         };
 
         // Check target pattern consistency if transformation has a target field
-        // Skip deprecated transformations
-        if extracted_section.contains("deprecated") {
-            // Skip pattern checking for deprecated transformations
-        } else if let Some(expected_pattern) = target_patterns.get(&section_name)
+        if let Some(expected_pattern) = target_patterns.get(&section_name)
             && !check_target_pattern_in_text(&extracted_section, expected_pattern)
+        //cov:excl-start
         {
             errors.push(format!(
                     "Template section for {section_name}, line_no {line_no} does not contain the correct target pattern.\nExpected pattern like: {expected_pattern}\nActual section:\n{extracted_section}"
                 ));
         }
+        //cov:excl-stop
 
         let extracted_section =
             extracted_section.replace("reference.fa", ref_file.to_str().unwrap());
@@ -939,23 +905,27 @@ fn test_every_step_has_a_template_section() {
         match config_from_string(&config) {
             Ok(parsed) => {
                 if let Err(e) = parsed.check() {
+                    //cov:excl-start
                     errors.push(format!(
                         "Error in parsing configuration for {section_name}, line_no {line_no}: {e:?}\n{config}",
                     ));
+                    //cov:excl-stop
                 }
             }
+            //cov:excl-start
             Err(e) => {
                 errors.push(format!(
                     "Could not parse section for {section_name}, line_no {line_no}: {}.\n{config}",
                     e.pretty("debug.toml")
                 ));
-            }
+            } //cov:excl-stop
         }
 
         // Check that all struct fields are documented in the template section
         let fields_with_aliases = extract_schema_fields_with_aliases(&section_name);
         for (field, aliases) in &fields_with_aliases {
             if !is_field_in_text(&extracted_section, field, aliases) {
+                //cov:excl-start
                 let alias_info = if aliases.is_empty() {
                     String::new()
                 } else {
@@ -964,6 +934,7 @@ fn test_every_step_has_a_template_section() {
                 errors.push(format!(
                     "Template section for {section_name} is missing field '{field}'{alias_info} (from schema)"
                 ));
+                //cov:excl-stop
             }
         }
     }
@@ -974,12 +945,14 @@ fn test_every_step_has_a_template_section() {
         .cloned()
         .collect();
     if !missing.is_empty() {
+        //cov:excl-start
         let mut missing_sorted = missing;
         missing_sorted.sort();
         errors.push(format!(
             "The following transformations are missing in template.toml:\n{}",
             missing_sorted.join(", ")
         ));
+        //cov:excl-stop
     }
 
     let extra: Vec<_> = documented_sections
@@ -988,18 +961,20 @@ fn test_every_step_has_a_template_section() {
         .cloned()
         .collect();
     if !extra.is_empty() {
+        //cov:excl-start
         let mut extra_sorted = extra;
         extra_sorted.sort();
         errors.push(format!(
             "The following sections document unknown transformations:\n{}",
             extra_sorted.join(", ")
         ));
+        //cov:excl-stop
     }
 
     assert!(
         errors.is_empty(),
         "Template validation failed:\n{}",
-        errors.join("\n")
+        errors.join("\n") // cov:excl-line
     );
     drop(td);
 }
@@ -1039,7 +1014,7 @@ fn visit_dir_recursive(dir: &Path, doc_files: &mut Vec<PathBuf>) {
                 }
             }
         }
-    }
+    } // cov:excl-line
 }
 
 fn extract_transformation_from_filename(file_path: &Path) -> Option<String> {
@@ -1060,7 +1035,7 @@ fn extract_toml_from_markdown(
     // checks (action matching, target patterns, schema field presence) in the caller.
     // TOML blocks are still extracted and validated so e.g. `[output]` examples can't
     // drift away from the schema unnoticed.
-    let content = fs::read_to_string(file_path)?;
+    let content = fs::read_to_string(file_path).unwrap();
 
     let mut toml_blocks = Vec::new();
     let mut in_toml_block = false;
@@ -1070,10 +1045,12 @@ fn extract_toml_from_markdown(
 
     for (line_no, line) in content.lines().enumerate() {
         if line.trim().starts_with("```toml") {
-            if line.contains("# ignore_in_test") {
-                skip_this = true;
-                continue;
-            }
+            // Still open the block (rather than `continue`ing past it) so its own
+            // closing fence sees `in_toml_block == true` and resets `skip_this`
+            // there. Previously an ignored block's open was skipped entirely,
+            // which left `skip_this` stuck true past its closing fence and
+            // silently swallowed the *next* (non-ignored) block instead.
+            skip_this = line.contains("# ignore_in_test");
             start_line = line_no;
             in_toml_block = true;
             current_block.clear();
@@ -1108,17 +1085,16 @@ fn test_every_transformation_has_documentation() {
     let mut missing_docs = Vec::new();
     for transformation in &transformations {
         if !documented_transformations.contains(transformation) {
-            missing_docs.push(transformation.clone());
+            missing_docs.push(transformation.clone()); // cov:excl-line
         }
     }
 
-    if !missing_docs.is_empty() {
-        missing_docs.sort();
-        panic!(
-            "The following transformations are missing documentation files:\n{}",
-            missing_docs.join(", ")
-        );
-    }
+    missing_docs.sort();
+    assert!(
+        missing_docs.is_empty(),
+        "The following transformations are missing documentation files:\n{}",
+        missing_docs.join(", ") // cov:excl-line
+    );
 }
 
 fn prep_temp_reference_fasta() -> (TempDir, PathBuf) {
@@ -1153,6 +1129,7 @@ fn test_documentation_toml_examples_parse() {
         // Read the markdown content once for field checking
         let markdown_content = match fs::read_to_string(doc_file) {
             Ok(content) => content,
+            //cov:excl-start
             Err(e) => {
                 failed_files.push(format!(
                     "{}: Failed to read file: {}",
@@ -1160,7 +1137,7 @@ fn test_documentation_toml_examples_parse() {
                     e
                 ));
                 continue;
-            }
+            } //cov:excl-stop
         };
 
         // `not-a-transformation: true` marks reference pages that document a config
@@ -1176,6 +1153,7 @@ fn test_documentation_toml_examples_parse() {
             let fields_with_aliases = extract_schema_fields_with_aliases(transformation);
             for (field, aliases) in &fields_with_aliases {
                 if !is_field_in_text(&markdown_content, field, aliases) {
+                    //cov:excl-start
                     let alias_info = if aliases.is_empty() {
                         String::new()
                     } else {
@@ -1185,6 +1163,7 @@ fn test_documentation_toml_examples_parse() {
                         "{}: Documentation is missing field '{field}'{alias_info} (from schema)",
                         doc_file.display()
                     ));
+                    //cov:excl-stop
                 }
             }
         }
@@ -1199,8 +1178,8 @@ fn test_documentation_toml_examples_parse() {
                     && !ignored.contains(&doc_file.file_name().and_then(|o| o.to_str()).unwrap())
                     && !doc_file.components().any(|c| c.as_os_str() == "concepts")
                 {
-                    failed_files.push(format!("{}: No TOML examples found", doc_file.display()));
-                    continue;
+                    failed_files.push(format!("{}: No TOML examples found", doc_file.display())); // cov:excl-line
+                    continue; // cov:excl-line
                 }
 
                 let target_patterns = get_transformation_target_patterns();
@@ -1223,14 +1202,16 @@ fn test_documentation_toml_examples_parse() {
                     {
                         if !is_concept_file
                             && !toml_block.contains(&format!("action = \"{transformation}\""))
+                            //cov:excl-start
                             && !toml_block.contains("[barcodes.")
                         {
                             failed_files.push(format!(
-                                "{}: TOML block {} does not contain action = \"{transformation}\"",
+                                "{}: TOML block {}, line: {start_line_no} does not contain action = \"{transformation}\"",
                                 doc_file.display(),
                                 i + 1,
                             ));
                             continue;
+                            //cov:excl-stop
                         }
 
                         // Check target pattern consistency if transformation has a target field
@@ -1238,6 +1219,7 @@ fn test_documentation_toml_examples_parse() {
                         if !is_concept_file
                             && let Some(expected_pattern) = target_patterns.get(&transformation[..])
                             && !check_target_pattern_in_text(toml_block, expected_pattern)
+                        //cov:excl-start
                         {
                             failed_files.push(format!(
                                     "{}: TOML block {}, line: {start_line_no} does not contain the correct target pattern.\nExpected pattern like: {}\nActual block:\n{}",
@@ -1247,6 +1229,7 @@ fn test_documentation_toml_examples_parse() {
                                     toml_block
                                 ));
                         }
+                        //cov:excl-stop
                     }
 
                     let toml_block = toml_block.replace(
@@ -1261,6 +1244,7 @@ fn test_documentation_toml_examples_parse() {
                     match config_from_string(&config) {
                         Ok(parsed_config) => {
                             if let Err(e) = parsed_config.check() {
+                                //cov:excl-start
                                 failed_files.push(format!(
                                     "{}: TOML block {}, line: {start_line_no} failed validation: {:?}\n{}",
                                     doc_file.display(),
@@ -1268,8 +1252,10 @@ fn test_documentation_toml_examples_parse() {
                                     e,
                                     config,
                                 ));
+                                //cov:excl-stop
                             }
                         }
+                        //cov:excl-start
                         Err(e) => {
                             failed_files.push(format!(
                                 "{}: TOML block {}, line: {start_line_no} failed to parse: {}",
@@ -1277,24 +1263,25 @@ fn test_documentation_toml_examples_parse() {
                                 i + 1,
                                 e.pretty("debug.toml")
                             ));
-                        }
+                        } //cov:excl-stop
                     }
                 }
             }
+            //cov:excl-start
             Err(e) => {
                 failed_files.push(format!(
                     "{}: Failed to read file: {}",
                     doc_file.display(),
                     e
                 ));
-            }
+            } //cov:excl-stop
         }
     }
 
     assert!(
         failed_files.is_empty(),
         "Documentation TOML validation failed:\n{}",
-        failed_files.join("\n")
+        failed_files.join("\n") // cov:excl-line
     );
     drop(td);
 }
@@ -1308,7 +1295,7 @@ fn test_llm_guide_covers_all_transformations() {
     assert!(
         llm_guide_path.exists(),
         "LLM guide not found at {}",
-        llm_guide_path.display()
+        llm_guide_path.display() // cov:excl-line
     );
 
     // Read the LLM guide
@@ -1326,36 +1313,39 @@ fn test_llm_guide_covers_all_transformations() {
         // 3. As a step reference
         let heading_pattern = format!("### {transformation}");
         let action_pattern_single = format!("action = '{transformation}'");
-        let action_pattern_double = format!("action = \"{transformation}\"");
 
         if llm_guide_content.contains(&heading_pattern)
             || llm_guide_content.contains(&action_pattern_single)
-            || llm_guide_content.contains(&action_pattern_double)
+        // intentionally ' only
         {
             documented_transformations.insert(transformation.clone());
         } else {
+            //cov:excl-start
             errors.push(format!(
                 "Transformation '{transformation}' is not documented in llm-guide.md"
             ));
         }
+        //cov:excl-stop
     }
 
     // Report missing transformations
     if !errors.is_empty() {
+        //cov:excl-start
         let mut missing_sorted = errors;
         missing_sorted.sort();
         panic!(
             "LLM guide validation failed:\n{}",
             missing_sorted.join("\n")
         );
+        //cov:excl-stop
     }
 
     // Verify we found a reasonable number of transformations
     assert!(
         documented_transformations.len() == transformations.len(),
         "LLM guide coverage is too low: (documented {}/{} transformations)",
-        documented_transformations.len(),
-        transformations.len()
+        documented_transformations.len(), // cov:excl-line
+        transformations.len()             // cov:excl-line
     );
 }
 
@@ -1392,7 +1382,7 @@ fn test_llm_guide_toml_examples_parse() {
     assert!(
         llm_guide_path.exists(),
         "LLM guide not found at {}",
-        llm_guide_path.display()
+        llm_guide_path.display() // cov:excl-line
     );
 
     let llm_guide_content =
@@ -1422,14 +1412,17 @@ fn test_llm_guide_toml_examples_parse() {
             match config_from_string(&config) {
                 Ok(parsed_config) => {
                     if let Err(e) = parsed_config.check() {
+                        //cov:excl-start
                         failed_examples.push(format!(
                             "LLM guide TOML block {} , line_no {line_no}failed validation: {:?}\nBlock:\n{}",
                             i + 1,
                             e,
                             toml_block
                         ));
+                        //cov:excl-stop
                     }
                 }
+                //cov:excl-start
                 Err(e) => {
                     failed_examples.push(format!(
                         "LLM guide TOML block {}, line_no {line_no} failed to parse: {}\nBlock:\n{}",
@@ -1437,21 +1430,24 @@ fn test_llm_guide_toml_examples_parse() {
                         e.pretty("template.toml"),
                         toml_block
                     ));
-                }
+                } //cov:excl-stop
             }
         } else {
             // This is a complete configuration, parse directly
             match config_from_string(&toml_block) {
                 Ok(parsed_config) => {
                     if let Err(e) = parsed_config.check() {
+                        //cov:excl-start
                         failed_examples.push(format!(
                             "LLM guide complete config block {}, line_no {line_no} failed validation: {:?}\nBlock:\n{}",
                             i + 1,
                             e,
                             toml_block
                         ));
+                        //cov:excl-stop
                     }
                 }
+                //cov:excl-start
                 Err(e) => {
                     failed_examples.push(format!(
                         "LLM guide complete config block {}, line_no {line_no} failed to parse: {}\nBlock:\n{}",
@@ -1459,7 +1455,7 @@ fn test_llm_guide_toml_examples_parse() {
                         e.pretty("template.toml"),
                         toml_block
                     ));
-                }
+                } //cov:excl-stop
             }
         }
     }
@@ -1467,7 +1463,7 @@ fn test_llm_guide_toml_examples_parse() {
     assert!(
         failed_examples.is_empty(),
         "LLM guide TOML examples validation failed:\n{}",
-        failed_examples.join("\n\n")
+        failed_examples.join("\n\n") // cov:excl-line
     );
     drop(td);
 }
@@ -1490,10 +1486,11 @@ fn test_hugo_builds_documentation_site() {
 
     let output = match command.output() {
         Ok(output) => output,
-        Err(error) if error.kind() == ErrorKind::NotFound => {
-            eprintln!("Skipping Hugo documentation build test: `hugo` binary not found in PATH.");
-            return;
-        }
+        // complain loudly over missing hugo!
+        // Err(error) if error.kind() == ErrorKind::NotFound => {
+        //     eprintln!("Skipping Hugo documentation build test: `hugo` binary not found in PATH.");
+        //     return;
+        // }
         Err(error) => panic!("Failed to execute `hugo`: {error}"),
     };
 
@@ -1501,8 +1498,8 @@ fn test_hugo_builds_documentation_site() {
         output.status.success(),
         "Hugo failed to build documentation (status {}).\nstdout:\n{}\nstderr:\n{}",
         output.status,
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
+        String::from_utf8_lossy(&output.stdout), // cov:excl-line
+        String::from_utf8_lossy(&output.stderr)  // cov:excl-line
     );
 }
 
@@ -1528,16 +1525,18 @@ fn test_every_transformation_has_benchmark() {
         if benchmark_file.contains(&quoted_pattern) || benchmark_file.contains(&action_pattern) {
             found_benchmarks.push(transformation.clone());
         } else {
-            missing_benchmarks.push(transformation.clone());
-        }
+            missing_benchmarks.push(transformation.clone()); // cov:excl-line
+        } // cov:excl-line
     }
 
     if !missing_benchmarks.is_empty() {
+        //cov:excl-start
         missing_benchmarks.sort();
         panic!(
             "The following transformations are missing benchmarks in simple_benchmarks.rs:\n{}",
             missing_benchmarks.join(", ")
         );
+        //cov:excl-stop
     }
 
     println!(
@@ -1595,7 +1594,8 @@ fn test_readme_toml_examples_validate() {
         let parsed = match config_from_string(toml_content) {
             Ok(config) => config,
             Err(e) => {
-                panic!("README.md TOML block at line {line_no} failed to parse:\n{e:?}",);
+                // cov:excl-line
+                panic!("README.md TOML block at line {line_no} failed to parse:\n{e:?}",); // cov:excl-line
             }
         };
 
@@ -1606,6 +1606,7 @@ fn test_readme_toml_examples_validate() {
             Ok(_) => {
                 println!("    ✓ TOML block at line {line_no} validated successfully",);
             }
+            //cov:excl-start
             Err(e) => {
                 let error_msg = format!("{e:?}");
                 // Allow errors about missing input files, but catch everything else
@@ -1621,7 +1622,7 @@ fn test_readme_toml_examples_validate() {
                         "README.md TOML block at line {line_no} failed validation:\n{error_msg}",
                     );
                 }
-            }
+            } //cov:excl-stop
         }
     }
 
@@ -1635,14 +1636,14 @@ fn test_readme_toml_examples_validate() {
 // }
 
 fn collect_rs_files(dir: &Path, out: &mut Vec<PathBuf>) {
-    if let Ok(entries) = fs::read_dir(dir) {
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.is_dir() {
-                collect_rs_files(&path, out);
-            } else if path.extension().and_then(|e| e.to_str()) == Some("rs") {
-                out.push(path);
-            }
+    let entries = fs::read_dir(dir).unwrap();
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            collect_rs_files(&path, out);
+        } else if path.extension().and_then(|e| e.to_str()) == Some("rs") {
+            out.push(path);
         }
     }
 }
@@ -1662,22 +1663,24 @@ fn test_every_link_docs_target_has_a_redirect_page() {
     // --- 2. Literal link_docs("...") call sites ---
     let link_docs_re = Regex::new(r#"link_docs\(\s*"([^"]+)"\s*\)"#).unwrap();
 
-    let src_roots = [Path::new("src"), Path::new("../fastqrab-steps/src")];
+    let src_roots = [
+        Path::new("src"),
+        Path::new("../fastqrab-steps/src"),
+        Path::new("../fastqrab/src/cli/"),
+    ];
     let mut literal_targets: Vec<(String, PathBuf)> = Vec::new();
     for root in &src_roots {
         if !root.exists() {
-            continue;
+            panic!("Missing root {root:?}");
         }
         let mut rs_files = Vec::new();
         collect_rs_files(root, &mut rs_files);
         for file in rs_files {
-            let Ok(content) = fs::read_to_string(&file) else {
-                continue;
-            };
+            let content = fs::read_to_string(&file).unwrap();
             for cap in link_docs_re.captures_iter(&content) {
-                literal_targets.push((cap[1].to_string(), file.clone()));
+                literal_targets.push((cap[1].to_string(), file.clone())); // cov:excl-line
             }
-        }
+        } // cov:excl-line
     }
 
     // --- Check everything ---
@@ -1685,21 +1688,30 @@ fn test_every_link_docs_target_has_a_redirect_page() {
 
     for name in &transformations {
         if !redirects_dir.join(format!("{name}.md")).exists() {
+            //cov:excl-start
             missing.push(format!(
                 "  {name}  (transformation — run dev/update_generated.sh)"
             ));
+            //cov:excl-stop
         }
     }
     for (target, source_file) in &literal_targets {
+        //currently empty
+        //cov:excl-start
         if !redirects_dir.join(format!("{target}.md")).exists() {
             missing.push(format!(
                 "  {target}  (literal call in {})",
                 source_file.display()
             ));
         }
+        //cov:excl-stop
+        unreachable!(
+            "Currently empty - no longer true, go and verify the link doc test actually works"
+        );
     }
 
     if !missing.is_empty() {
+        //cov:excl-start
         missing.sort();
         missing.dedup();
         panic!(
@@ -1707,6 +1719,7 @@ fn test_every_link_docs_target_has_a_redirect_page() {
              Run dev/update_generated.sh to regenerate, or add a doc page for missing entries:\n{}",
             missing.join("\n")
         );
+        //cov:excl-stop
     }
 
     println!(

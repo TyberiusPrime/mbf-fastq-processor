@@ -23,11 +23,12 @@ Demultiplexing can be done on barcodes, or on boolean tags, and can happen multi
     barcodes = "mybarcodes"
     output_unmatched  = true # if set, write reads not matching any barcode
                              #  to a file like ouput_prefix_no-barcode_1.fq
-    tag_contains_barcode = true # Whether the tag contains barcodes to lookup (true)
+    in_label_contains_barcode = true # Whether the tag contains barcodes to lookup (true)
                                 # or barcode-names (invalid names get translated to 'nobarcode')
                                 # By default, auto detected on tag type: 
-                                # location -> true, string -> false
-                                # overwrite if your strings contain dna sequence to look up
+                                # location -> true,
+                                # string -> auto set by HammingCorrect
+                                #           manual specification necessary otherwise
 
 [barcodes.mybarcodes] # can be before and after.
 # separate multiple regions with a _

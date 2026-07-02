@@ -26,13 +26,6 @@ pub struct OutputFASTA {
     suffix: Option<String>,
 
     #[tpd(default)]
-    #[expect(
-        dead_code,
-        reason = "read in declare_output_files via the partial config"
-    )]
-    infix: Option<String>,
-
-    #[tpd(default)]
     pub compression: CompressionFormat,
     #[tpd(default)]
     #[expect(
@@ -100,7 +93,6 @@ impl VerifyIn<PartialConfig> for PartialOutputFASTA {
         self.chunksize
             .verify(|chunk_size| verify_chunk_size(chunk_size.as_ref(), &self.stdout));
         self.suffix.verify(verify_opt_path_component);
-        self.infix.verify(verify_opt_path_component);
         verify_record_targets(
             parent,
             &mut self.output,

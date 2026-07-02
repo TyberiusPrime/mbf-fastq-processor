@@ -162,7 +162,7 @@
 ## Extract from fixed position regions
 # [[step]]
 #    action = "ExtractRegions"
-#    source= "read1"
+#    source = "read1"
 #    regions = [
 #       { start = 0, length = 8, anchor= "Start"},
 #       { start = 12, length = 4, anchor= "Start"},
@@ -389,7 +389,7 @@
 #    seed = 42 # seed for randomness
 #    include_mapped = true # in case of BAM/SAM, whether to include aligned reads
 #    include_unmapped = true # in case of BAM/SAM, whether to include unaligned reads
- #    other_read_name_end_character # if set, truncate names in other file at this character
+#    other_readname_end_character = " " # if set, truncate names in other file at this character
 
 
 
@@ -628,7 +628,17 @@
 #    barcodes = "mybarcodelist"
 #    max_hamming_distance = 1
 #    on_no_match = "remove" # 'remove', 'empty', 'keep'
-#    on_tie = "remove" # 'remove', 'empty', 'keep', 'first', 'first_strict', 'fail', 'by_majority'
+#    on_tie = "remove" # 'remove', 'empty', 'keep', 'first', 'first_strict', 'fail', 'by_majority', 'by_edit_probability'
+#    name_split_character = '|' # optional, see full docs
+##    Further options for by_majority and by_edit_probability
+##    on_tie_threshold = 0.975 # optional, default 0.975. Adjusted frequency: (n+1) / (N+k)
+##    on_tie_min_molecules_to_start = 1_000_000 # optional, default 1_000_000. See below
+##    on_tie_use_counts_from_report = { # optional, read counts from previous report, see full docs
+##           file_name = "report.json",
+##           report_name = "barcodes",
+##           tag_name = "whitelisted"
+##    }
+
 #
 #[barcodes.mybarcodelist]
 #    "AAAA" = "ignored" # only read when demultiplexing
@@ -924,6 +934,12 @@
 # [[step]]
 #    action = "Demultiplex"
 #    in_label = "mytag"
+#    in_label_contains_barcode = true # Whether the tag contains barcodes to lookup (true)
+#                                     # or barcode-names (invalid names get translated to 'nobarcode')
+#                                     # By default, auto detected on tag type: 
+#                                     # location -> true,
+#                                     # string -> auto set by HammingCorrect
+#                                     #           manual specification necessary otherwise
 #    barcodes = "mybarcodes"
 #    output_unmatched = true # if set, write reads not matching any barcode
 #                             #  to a file like ouput_prefix_no-barcode_1.fq
@@ -947,7 +963,8 @@
 # [[step]]
 #    action = "StoreTagsInTable"
 #    infix = "tags"
-#    compression = "Raw" # Raw, Gzip, Zstd
+#    compression = "Gzip" # Raw, Gzip, Zstd
+#    compression_level = 5 # (optional) 0..9 for gzip, zstd 1..22
 #    region_separator = "_" # (optional) char to separate regions in a tag, if it has multiple
 #    in_labels = ["mytag", ] # Store just these tags. Optional, all tags store if not set
 #    include_read_name = true # (optional) include the ReadName column. Default: true
@@ -970,7 +987,8 @@
 ##   cell_tag_contains_barcode = true    # (optional) true=sequence, false=label; auto-detected if omitted
 ##   gene_tag_contains_barcode = true    # (optional) true=sequence, false=label; auto-detected if omitted
 ##   infix = ""                     # (optional) filename infix
-##   compression = "Raw"            # (optional) Raw, Gzip, Zstd — for all output files
+##    compression = "Gzip" # Raw, Gzip, Zstd
+##    compression_level = 5 # (optional) 0..9 for gzip, zstd 1..22
 
 
 # ==== StoreTagInFastQ ====
@@ -1044,7 +1062,7 @@
 ##   compression_level = 6   # (optional) BGZF level 0-9
 ##   chunksize = 1000000     # (optional) split into chunks of N molecules
 #    output_hash_compressed = false
-#    tag_to_bam_tag  = { 'mytag' = 'XX'} # optional
+#    tag_to_bam_tag = { 'mytag' = 'XX'} # optional
 #    comment_separation_char = ' ' # split read names at this char into read name and CO tag.
 #    tag_to_reference = {
 #       tag = "mytag",
