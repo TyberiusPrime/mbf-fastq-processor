@@ -46,9 +46,9 @@ checksum = "940b3a0ca603d1eade50a4846a2afffd5ef57a9feac2c0e2ec2e14f9ead76000"
 
 [[package]]
 name = "anyhow"
-version = "1.0.102"
+version = "1.0.103"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f202df86484c868dbad7eaa557ef785d5c66295e41b460ef922eca0723b842c"
+checksum = "2a4385e2e34eb35d6b3efe798b9eb88096925d87726c0798709bf56d9ed84af3"
 
 [[package]]
 name = "approx"
@@ -1976,7 +1976,9 @@ checksum = "b39cdef0fa800fc44525c84ccb54a029961a8215f9619753635a9c0d2538d46d"
 
 [[package]]
 name = "rusty-rapidgzip"
-version = "0.2.0"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cab4246c5e2984a78c91629f3c5f96bdda483848459d7054b124bbb461652975"
 dependencies = [
  "cc",
  "crc32fast",
@@ -2198,7 +2200,9 @@ dependencies = [
 
 [[package]]
 name = "stringpod"
-version = "0.2.0"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "62af828d2953c9d6ae625ff3bc759321719f385e3b041678ab06eb1947793c85"
 dependencies = [
  "bstr",
  "smallvec",
