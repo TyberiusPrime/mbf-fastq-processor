@@ -303,13 +303,14 @@
             # run the friendly panic test, expect a non 0 return code.
             # capture stderr
 
-            result=$( { cargo run --release --bin fastqrab -- --test-friendly-panic 1>/dev/null; } 2>&1 ) || status=$? : "${"status:=0"}"
+            result=$( { cargo run --release --bin fastqrab -- --test-friendly-panic; } 2>&1 ) || status=$? : "${"status:=0"}"
             if [ "$status" -eq 0 ]; then
               echo "Unexpected success"
               exit 1
             fi
-            if [[ ! $result =~ "this is embarrassing" ]]; then
+            if [[ ! $result =~ "To help us diagnose the problem" ]]; then
                 echo "Error: friendly panic message ' not found in stderr"
+                echo "output was '$result'"
                 exit 1
             fi
             cargo test --release 
