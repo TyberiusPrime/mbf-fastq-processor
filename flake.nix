@@ -292,6 +292,7 @@
             which
             mold
             pkgs.shellcheck
+            hugo
           ];
           buildInputs = with pkgs; [ openssl ];
           release = true;
@@ -313,7 +314,15 @@
                 echo "output was '$result'"
                 exit 1
             fi
-            cargo test --release 
+
+            # The Hugo site references generated cookbook pages, template.toml
+            # and schema.json that are gitignored (regenerated locally by
+            # developers) and therefore aren't part of the flake's filtered
+            # (git-tracked-only) source. Regenerate them here so
+            # test_hugo_builds_documentation_site has something to build.
+            python3 dev/ci/generate_local_docs.py
+
+            cargo test --release
 
           '';
 
