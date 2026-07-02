@@ -896,7 +896,8 @@ impl ChunkPaths {
                             "Could not read output directory entry for renaming files: {}",
                             self.directory.display()
                         )
-                    })? //cov:excl-stop
+                        //cov:excl-stop
+                    })? // cov:excl-line
                     .path(),
             );
         }
@@ -933,8 +934,8 @@ impl ChunkPaths {
                             "Could not rename output chunk file from {} to {}",
                             path.display(),
                             new_name.display()
-                        )
-                    })?; //cov:excl-stop
+                        ) //cov:excl-stop
+                    })?;  // cov:excl-line
                 }
             }
         }

@@ -15,7 +15,9 @@ title: Convert To Rate
     action = "ConvertToRate"
     in_label = "a_count"    # The numeric tag to divide by read length
     out_label = "a_rate"    # Output tag label
-    segment = "read1"       # Segment to measure length from, or 'All' for total length (default: only segment if single-read input)
+    segment = "read1" # Any of your input segments, or 'All' 
+                     # measure length from this segment, 
+                     # or total length if 'All' (default: only segment if single-read input, otherwise required)
 ```
 
 Divide an existing numeric tag by the read length to produce a normalized rate.

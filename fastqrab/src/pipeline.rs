@@ -1036,12 +1036,12 @@ impl RunStage1 {
                             block_size,
                             options,
                         ) {
-                            // cov:excl-start
+                            //cov:excl-start
                             error_collector
                                 .lock()
                                 .unwrap_or_else(std::sync::PoisonError::into_inner)
                                 .push(format!("Error in interleaved parsing thread: {e:?}"));
-                            // cov:excl-stop
+                            //cov:excl-stop
                         }
                         })
                         .expect("Thread spawning failed. OS resource exhaustion?");

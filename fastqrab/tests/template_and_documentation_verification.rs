@@ -56,17 +56,19 @@ fn get_all_transformations() -> Vec<String> {
 fn get_transformation_target_patterns() -> IndexMap<String, &'static str> {
     let mut patterns = IndexMap::new();
 
-    // Dynamically discover all Rust files in src/transformations/
-    let transformations_dir = Path::new("src/transformations");
-    if let Ok(entries) = fs::read_dir(transformations_dir) {
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.extension().and_then(|s| s.to_str()) == Some("rs")
-                && let Ok(content) = fs::read_to_string(&path)
-            {
-                analyze_transformations_in_file(&content, &mut patterns);
-            }
+    // Dynamically discover all Rust files in src/transformations/, including subfolders
+    let transformations_dir = Path::new("../fastqrab-steps/src/transformations");
+    let mut rs_files = Vec::new();
+    collect_rs_files(transformations_dir, &mut rs_files);
+    let mut any = false;
+    for path in rs_files {
+        if let Ok(content) = fs::read_to_string(&path) {
+            analyze_transformations_in_file(&content, &mut patterns);
+            any = true;
         }
+    }
+    if !any {
+        panic!("No Rust files found in src/transformations/");
     }
 
     // Handle deprecated transformations that have target fields but are deprecated
@@ -91,27 +93,19 @@ fn analyze_transformations_in_file(content: &str, patterns: &mut IndexMap<String
             if struct_body.contains("SegmentIndexOrAll") {
                 patterns.insert(
                     struct_name.to_string(),
-                    r#"target = "read1" # Any of your input segments, or 'All'"#,
+                    r#"segment = "read1" # Any of your input segments, or 'All'"#,
                 );
             } else if struct_body.contains("SegmentIndex") {
                 patterns.insert(
                     struct_name.to_string(),
-                    r#"target = "read1" # Any of your input segments"#,
+                    r#"segment = "read1" # Any of your input segments"#,
                 );
             }
-        }
-
-        // Check for source field (special case for ExtractRegion)
-        if struct_body.contains("pub segment:") && struct_body.contains("SegmentIndex") {
-            patterns.insert(
-                struct_name.to_string(),
-                r#"target = "read1" # Any of your input segments"#,
-            );
         }
     }
 }
 
-fn check_target_pattern_in_text(text: &str, transformation: &str, expected_pattern: &str) -> bool {
+fn check_target_pattern_in_text(text: &str, expected_pattern: &str) -> bool {
     // Check for target patterns - simplified version
     if expected_pattern.contains("Any of your input segments, or 'All'") {
         // Should contain "All" in the comment
@@ -120,11 +114,6 @@ fn check_target_pattern_in_text(text: &str, transformation: &str, expected_patte
         // Should contain the 4 base targets but not "All"
         return text.contains("Any of your input segments")
             && !text.contains("Any of your input segments, or 'All'");
-    }
-
-    // Handle special case for ExtractRegion which uses "source" instead of "target"
-    if transformation == "ExtractRegion" {
-        return text.contains("segment") && text.contains("Any of your input segments");
     }
 
     true // Skip transformations without target fields
@@ -933,7 +922,7 @@ fn test_every_step_has_a_template_section() {
         if extracted_section.contains("deprecated") {
             // Skip pattern checking for deprecated transformations
         } else if let Some(expected_pattern) = target_patterns.get(&section_name)
-            && !check_target_pattern_in_text(&extracted_section, &section_name, expected_pattern)
+            && !check_target_pattern_in_text(&extracted_section, expected_pattern)
         {
             errors.push(format!(
                     "Template section for {section_name}, line_no {line_no} does not contain the correct target pattern.\nExpected pattern like: {expected_pattern}\nActual section:\n{extracted_section}"
@@ -1248,11 +1237,7 @@ fn test_documentation_toml_examples_parse() {
                         // Skip this check for concept files since they contain examples using multiple transformations
                         if !is_concept_file
                             && let Some(expected_pattern) = target_patterns.get(&transformation[..])
-                            && !check_target_pattern_in_text(
-                                toml_block,
-                                transformation,
-                                expected_pattern,
-                            )
+                            && !check_target_pattern_in_text(toml_block, expected_pattern)
                         {
                             failed_files.push(format!(
                                     "{}: TOML block {}, line: {start_line_no} does not contain the correct target pattern.\nExpected pattern like: {}\nActual block:\n{}",
