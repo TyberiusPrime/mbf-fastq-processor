@@ -1593,10 +1593,10 @@ fn test_readme_toml_examples_validate() {
 
         let parsed = match config_from_string(toml_content) {
             Ok(config) => config,
+            //cov:excl-start
             Err(e) => {
-                // cov:excl-line
                 panic!("README.md TOML block at line {line_no} failed to parse:\n{e:?}",); // cov:excl-line
-            }
+            } //cov:excl-stop
         };
 
         // Validate the config using check() (same as in run())
@@ -1679,7 +1679,7 @@ fn test_every_link_docs_target_has_a_redirect_page() {
             let content = fs::read_to_string(&file).unwrap();
             for cap in link_docs_re.captures_iter(&content) {
                 literal_targets.push((cap[1].to_string(), file.clone())); // cov:excl-line
-            }
+            } // cov:excl-line 
         } // cov:excl-line
     }
 

@@ -78,7 +78,7 @@ fn decompressor_exits_cleanly_when_consumer_closes_pipe() {
         output.status.success(),
         "decompressor should treat a closed stdout pipe as a clean exit, got {:?}\nstderr:\n{}",
         output.status,
-        String::from_utf8_lossy(&output.stderr),
+        String::from_utf8_lossy(&output.stderr), // cov:excl-line
     );
 }
 
@@ -113,7 +113,7 @@ fn decompressor_shm_exits_cleanly_when_consumer_closes_pipe() {
     assert!(
         fd >= 0,
         "memfd_create failed: {}",
-        std::io::Error::last_os_error()
+        std::io::Error::last_os_error() // cov:excl-line
     );
     // SAFETY: `fd` is the memfd just created above.
     let rc = unsafe { libc::ftruncate(fd, libc::off_t::try_from(total).unwrap()) };
@@ -121,7 +121,7 @@ fn decompressor_shm_exits_cleanly_when_consumer_closes_pipe() {
         rc,
         0,
         "ftruncate failed: {}",
-        std::io::Error::last_os_error()
+        std::io::Error::last_os_error() // cov:excl-line
     );
 
     let mut child = Command::new(common::decompressor())
@@ -155,6 +155,6 @@ fn decompressor_shm_exits_cleanly_when_consumer_closes_pipe() {
         output.status.success(),
         "shm decompressor should treat a closed descriptor pipe as a clean exit, got {:?}\nstderr:\n{}",
         output.status,
-        String::from_utf8_lossy(&output.stderr),
+        String::from_utf8_lossy(&output.stderr), // cov:excl-line
     );
 }

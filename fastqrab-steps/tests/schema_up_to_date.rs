@@ -29,11 +29,13 @@ fn committed_schema_is_up_to_date() {
     // Compare ignoring trailing-newline differences only; everything else must
     // match byte-for-byte.
     if committed.trim_end() != rendered_schema().trim_end() {
+        //cov:ignore-start
         std::process::Command::new("bash")
             .arg("./dev/ci/update_generated.sh")
             .current_dir("..")
             .status()
             .expect("Failed to run update_generated.sh when test cases were missing");
         panic!("Documented schema out of date. Was regenerated, rerun tests",);
+        //cov:ignore-stop
     }
 }

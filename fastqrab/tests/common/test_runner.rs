@@ -42,11 +42,13 @@ pub fn run_test(path: &std::path::Path, toml_name: &str, test_no_in_directory: u
         return;
     }
     if env::var_os("GITHUB_ACTIONS").is_some() && path.join("skip_github").exists() {
+        //cov:excl-start
         println!(
             "Skipping {} on GitHub Actions (skip_github marker present)",
             path.display()
         );
         return;
+        //cov:excl-stop
     }
 
     // Always use verify command - it handles both panic and non-panic tests

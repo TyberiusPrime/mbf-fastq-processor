@@ -16,7 +16,7 @@ fn all_test_cases_are_generated() {
         assert!(
             search_dir.exists(),
             "{} directory does not exist",
-            search_dir.display()
+            search_dir.display() // cov:excl-line
         );
 
         let mut counters = IndexMap::new();
@@ -36,7 +36,7 @@ fn all_test_cases_are_generated() {
                 .to_string_lossy()
                 .starts_with("actual")
             {
-                continue;
+                continue; // cov:excl-line
             }
             {
                 *counters.entry(case_dir.clone()).or_insert(0) += 1;
@@ -62,6 +62,7 @@ fn all_test_cases_are_generated() {
     }
     for test_fn in expected_tests {
         if !generated.contains(&test_fn) {
+            //cov:ignore-start
             std::process::Command::new("bash")
                 .arg("./dev/ci/update_generated.sh")
                 .current_dir("..")
@@ -70,6 +71,7 @@ fn all_test_cases_are_generated() {
             panic!(
                 "Missing test function: {test_fn}. Reran ./dev/ci/update_generated.sh, so it should just work if you try again",
             );
+            //cov:ignore-stop
         }
     }
 }
@@ -92,7 +94,7 @@ fn verify_all_shell_scripts_pass_shellcheck() {
         PathBuf::from("tests"),
     ] {
         if !search_dir.exists() {
-            continue;
+            panic!("Search dir not present {search_dir:?}");
         }
 
         for entry in WalkDir::new(search_dir)
@@ -114,9 +116,9 @@ fn verify_all_shell_scripts_pass_shellcheck() {
             assert!(
                 output.status.success(),
                 "shellcheck failed for {} .\nstdout: {}\nstderr: {}",
-                entry.path().display(),
-                String::from_utf8_lossy(&output.stdout),
-                String::from_utf8_lossy(&output.stderr)
+                entry.path().display(), // cov:excl-line
+                String::from_utf8_lossy(&output.stdout), // cov:excl-line
+                String::from_utf8_lossy(&output.stderr) // cov:excl-line
             );
         }
     }
@@ -132,7 +134,7 @@ fn verify_coobooks_censored() {
         assert!(
             search_dir.exists(),
             "{} directory does not exist",
-            search_dir.display()
+            search_dir.display() // cov:excl-line
         );
 
         for entry in WalkDir::new(search_dir)
@@ -157,7 +159,7 @@ fn verify_coobooks_censored() {
             {
                 panic!(
                     "found not /home/user home path in {}: {}. Rerun ./dev/scripts/censor_cookbooks.py",
-                    entry.path().display(),
+                    entry.path().display(), // cov:excl-line
                     hit.get(0).expect("Regex hit = group 0 present").as_str()
                 )
             }

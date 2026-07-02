@@ -28,15 +28,15 @@ fn test_cookbooks_in_sync() {
     //contents always matches since they"re include_str!()ed
 
     let mut fs_cookbooks = HashSet::new();
-    if let Ok(entries) = std::fs::read_dir(cookbooks_dir) {
-        for entry in entries.flatten() {
-            if entry.path().is_dir() {
-                let input_toml = entry.path().join("input.toml");
-                if input_toml.exists()
-                    && let Some(name) = entry.file_name().to_str()
-                {
-                    fs_cookbooks.insert(name.to_string());
-                }
+    let entries = std::fs::read_dir(cookbooks_dir).unwrap();
+
+    for entry in entries.flatten() {
+        if entry.path().is_dir() {
+            let input_toml = entry.path().join("input.toml");
+            if input_toml.exists()
+                && let Some(name) = entry.file_name().to_str()
+            {
+                fs_cookbooks.insert(name.to_string());
             }
         }
     }
@@ -46,6 +46,7 @@ fn test_cookbooks_in_sync() {
     let extra_in_generated: Vec<_> = generated_cookbooks.difference(&fs_cookbooks).collect();
 
     if !missing_in_generated.is_empty() || !extra_in_generated.is_empty() {
+        //cov:excl-start
         eprintln!("\n❌ Cookbook synchronization mismatch!");
         if !missing_in_generated.is_empty() {
             eprintln!("  Missing in generated code: {missing_in_generated:?}");
@@ -55,6 +56,7 @@ fn test_cookbooks_in_sync() {
         }
         eprintln!("\n  Run: python3 dev/updated_generated.sh");
         panic!("Cookbooks out of sync. Run dev/update_generated.sh to regenerate.");
+        //cov:excl-stop
     }
 }
 
@@ -481,12 +483,12 @@ fn test_interactive_ctrl_c_removes_temp_dir() {
 
     let deadline = Instant::now() + Duration::from_secs(30);
     while Instant::now() < deadline && !temp_dir.exists() {
-        std::thread::sleep(Duration::from_millis(50));
+        std::thread::sleep(Duration::from_millis(50)); // cov:excl-line
     }
     assert!(
         temp_dir.exists(),
         "interactive never created temp dir at {}",
-        temp_dir.display()
+        temp_dir.display() // cov:excl-line
     );
 
     // Send SIGINT, mimicking a Ctrl+C from the user's terminal.
@@ -502,48 +504,46 @@ fn test_interactive_ctrl_c_removes_temp_dir() {
     assert!(
         !temp_dir.exists(),
         "temp dir not cleaned up after Ctrl+C: {}",
-        temp_dir.display()
+        temp_dir.display() // cov:excl-line
     );
 }
 
 fn scan_dir(dir: &Path, files: &mut HashSet<std::path::PathBuf>) {
-    if let Ok(entries) = fs::read_dir(dir) {
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.is_dir() {
-                scan_dir(&path, files);
-            } else if path.extension().and_then(|s| s.to_str()) == Some("rs")
-                && let Ok(content) = fs::read_to_string(&path)
-            {
-                // Check if file contains DemultiplexedData field declarations
-                // but skip if it's only imports/uses
-                let has_demux_field = content.lines().any(|line| {
-                    let trimmed = line.trim();
-                    trimmed.contains("DemultiplexedData<")
-                        && !trimmed.contains("use ")
-                        && !trimmed.starts_with("//")
-                        && (trimmed.contains("pub ")
-                            || trimmed.contains(": ")
-                            || trimmed.ends_with("DemultiplexedData,"))
-                });
+    let entries = fs::read_dir(dir).unwrap();
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            scan_dir(&path, files);
+        } else if path.extension().and_then(|s| s.to_str()) == Some("rs")
+            && let Ok(content) = fs::read_to_string(&path)
+        {
+            // Check if file contains DemultiplexedData field declarations
+            // but skip if it's only imports/uses
+            let has_demux_field = content.lines().any(|line| {
+                let trimmed = line.trim();
+                trimmed.contains("DemultiplexedData<")
+                    && !trimmed.contains("use ")
+                    && !trimmed.starts_with("//")
+                    && (trimmed.contains("pub ")
+                        || trimmed.contains(": ")
+                        || trimmed.ends_with("DemultiplexedData,"))
+            });
 
-                if has_demux_field {
-                    files.insert(path);
-                }
+            if has_demux_field {
+                files.insert(path);
             }
-        }
+        } // cov:excl-line
     }
 }
 
 fn find_toml_files(dir: &Path, files: &mut Vec<std::path::PathBuf>) {
-    if let Ok(entries) = std::fs::read_dir(dir) {
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.is_dir() {
-                find_toml_files(&path, files);
-            } else if path.extension().and_then(|s| s.to_str()) == Some("toml") {
-                files.push(path);
-            }
+    let entries = std::fs::read_dir(dir).unwrap();
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            find_toml_files(&path, files);
+        } else if path.extension().and_then(|s| s.to_str()) == Some("toml") {
+            files.push(path);
         }
     }
 }
@@ -565,24 +565,23 @@ fn test_every_demultiplexed_data_transform_has_test() {
     // Step 2: Extract public struct names from these files (excluding internal ones)
     let mut struct_names = HashSet::new();
     for file_path in &files_with_demux {
-        if let Ok(content) = fs::read_to_string(file_path) {
-            for line in content.lines() {
-                if line.contains("pub struct")
-                    && !line.contains("pub(crate)")
-                    && let Some(struct_part) = line.split("pub struct").nth(1)
-                {
-                    // Extract the name - it's the first word after "pub struct"
-                    let name = struct_part
-                        .trim()
-                        .split(|c: char| c == '{' || c == '<' || c.is_whitespace())
-                        .find(|s| !s.is_empty())
-                        .unwrap_or("")
-                        .to_string();
+        let content = fs::read_to_string(file_path).unwrap();
+        for line in content.lines() {
+            if line.contains("pub struct")
+                && !line.contains("pub(crate)")
+                && let Some(struct_part) = line.split("pub struct").nth(1)
+            {
+                // Extract the name - it's the first word after "pub struct"
+                let name = struct_part
+                    .trim()
+                    .split(|c: char| c == '{' || c == '<' || c.is_whitespace())
+                    .find(|s| !s.is_empty())
+                    .unwrap_or("")
+                    .to_string();
 
-                    // Skip internal structs (starting with _)
-                    if !name.is_empty() && !name.starts_with('_') {
-                        struct_names.insert(name);
-                    }
+                // Skip internal structs (starting with _)
+                if !name.is_empty() && !name.starts_with('_') {
+                    struct_names.insert(name);
                 }
             }
         }
@@ -612,6 +611,9 @@ fn test_every_demultiplexed_data_transform_has_test() {
             if line.contains("#[tpd(skip)]") || line.trim().starts_with("//") {
                 continue;
             }
+            if line.trim().is_empty() {
+                continue;
+            }
 
             // Parse enum variants: ActionName(module::path::StructName)
             if let Some(variant) = line.trim().strip_suffix(',').or(Some(line.trim()))
@@ -628,7 +630,11 @@ fn test_every_demultiplexed_data_transform_has_test() {
                     if struct_names.contains(struct_name) {
                         struct_to_action.insert(struct_name.to_string(), action_name.to_string());
                     }
+                } else {
+                    panic!("no :: in struct name!?");
                 }
+            } else {
+                panic!("enum variant parsing failure variant: line: {line}");
             }
         }
     }
@@ -692,6 +698,7 @@ fn test_every_demultiplexed_data_transform_has_test() {
         .collect();
 
     if !missing_tests.is_empty() {
+        //cov:excl-start
         eprintln!("\n❌ The following transforms use DemultiplexedData but have no test cases");
         eprintln!("   where they occur after a Demultiplex step:");
         for transform in &missing_tests {
@@ -702,6 +709,7 @@ fn test_every_demultiplexed_data_transform_has_test() {
             "Missing demultiplex tests for {} transform(s)",
             missing_tests.len()
         );
+        //cov:excl-stop
     }
 
     // Print success message
@@ -1486,8 +1494,8 @@ count = true
     // This should fail because output is required when there's a Report step
     assert!(
         stderr.contains("Configuration validation failed")
-            || stderr.contains("Report")
-            || stderr.contains("No output"),
+            || stderr.contains("Report") // cov:excl-line
+            || stderr.contains("No output"), // cov:excl-line
         "Expected error about missing output configuration: {stderr}"
     );
     assert!(!cmd.status.success(), "Exit code should be non-zero");
@@ -4913,7 +4921,7 @@ fn write_gz_process_case(dir: &Path) -> PathBuf {
     assert!(
         sample.exists(),
         "sample gzip input missing at {}",
-        sample.display()
+        sample.display() // cov:excl-line
     );
     fs::copy(sample, dir.join("input_read1.fq.gz")).unwrap();
 
@@ -4992,7 +5000,7 @@ fn run_incompatible_decompressor(extra_env: &[(&str, &str)]) -> Option<String> {
     assert!(
         !output.status.success(),
         "expected failure for incompatible decompressor ({}), stderr: {stderr}",
-        gzip.display()
+        gzip.display() // cov:excl-line
     );
     Some(stderr)
 }
@@ -5004,8 +5012,10 @@ fn run_incompatible_decompressor(extra_env: &[(&str, &str)]) -> Option<String> {
 #[test]
 fn test_decompressor_incompatible_binary_default_transport() {
     let Some(stderr) = run_incompatible_decompressor(&[]) else {
+        //cov:excl-start
         eprintln!("skipping: gzip not found on PATH");
         return;
+        //cov:excl-stop
     };
     assert!(
         stderr.contains("fastqrab-decompressor exited unsuccessfully")
@@ -5021,8 +5031,10 @@ fn test_decompressor_incompatible_binary_default_transport() {
 #[test]
 fn test_decompressor_incompatible_binary_pipe_transport() {
     let Some(stderr) = run_incompatible_decompressor(&[("FASTQRAB_DECOMP_SHM", "0")]) else {
+        //cov:excl-start
         eprintln!("skipping: gzip not found on PATH");
         return;
+        //cov:excl-stop
     };
     assert!(
         stderr.contains("decompressor subprocess exited unsuccessfully"),

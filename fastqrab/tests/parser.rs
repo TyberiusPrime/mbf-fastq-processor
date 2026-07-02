@@ -76,7 +76,7 @@ fn test_bufsize_variations(input_fastq_filename: &str, bufsize_range: &[usize]) 
             }
             if pr.was_final {
                 break;
-            }
+            } // cov:excl-line
         }
 
         if let Some(last) = last {

@@ -16,12 +16,14 @@ fn no_hashmaps_in_src() {
 
         for (line_no, line) in content.lines().enumerate() {
             if line.contains("HashMap") {
+                //cov:excl-start
                 violations.push(format!(
                     "{}:{}: {}",
                     path.display(),
                     line_no + 1,
                     line.trim()
                 ));
+                //cov:excl-stop
             }
         }
     }
@@ -29,7 +31,7 @@ fn no_hashmaps_in_src() {
     assert!(
         violations.is_empty(),
         "Found HashMap usage(s) in src/ (use IndexMap instead):\n{}",
-        violations.join("\n")
+        violations.join("\n") // cov:excl-line
     );
 }
 
@@ -60,22 +62,25 @@ fn symlinks_in_test_cases_are_relative_and_within_repo() {
 
         let target = match std::fs::read_link(link_path) {
             Ok(t) => t,
+            //cov:excl-start
             Err(e) => {
                 violations.push(format!(
                     "{}: failed to read symlink: {e}",
                     link_path.display()
                 ));
                 continue;
-            }
+            } //cov:excl-stop
         };
 
         if target.is_absolute() {
+            //cov:excl-start
             violations.push(format!(
                 "{} -> {} (absolute path; must be relative)",
                 link_path.display(),
                 target.display()
             ));
             continue;
+            //cov:excl-stop
         }
 
         // Resolve the target relative to the symlink's parent directory
@@ -84,6 +89,7 @@ fn symlinks_in_test_cases_are_relative_and_within_repo() {
             .expect("symlink has no parent")
             .join(&target);
         match resolved.canonicalize() {
+            //cov:excl-start
             Ok(canon) if !canon.starts_with(&canon_repo_root) => {
                 violations.push(format!(
                     "{} -> {} (resolves outside the repo to {})",
@@ -99,6 +105,7 @@ fn symlinks_in_test_cases_are_relative_and_within_repo() {
                     target.display()
                 ));
             }
+            //cov:excl-stop
             Ok(_) => {}
         }
     }
@@ -106,6 +113,6 @@ fn symlinks_in_test_cases_are_relative_and_within_repo() {
     assert!(
         violations.is_empty(),
         "Found symlink violation(s) in test_cases/ (all symlinks must be relative and resolve within the repo):\n{}",
-        violations.join("\n")
+        violations.join("\n") // cov:excl-line
     );
 }

@@ -129,8 +129,8 @@ fn run_verify_case(
     assert!(
         output.status.success(),
         "verify failed (input={input_name}, env={env:?})\nstdout:\n{}\nstderr:\n{}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr),
+        String::from_utf8_lossy(&output.stdout), // cov:excl-line
+        String::from_utf8_lossy(&output.stderr), // cov:excl-line
     );
 }
 
@@ -183,8 +183,8 @@ fn run_process_fasta(input_name: &str, compressed: &[u8], env: &[(&str, &str)]) 
     assert!(
         output.status.success(),
         "process failed (input={input_name}, env={env:?})\nstdout:\n{}\nstderr:\n{}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr),
+        String::from_utf8_lossy(&output.stdout), // cov:excl-line
+        String::from_utf8_lossy(&output.stderr), // cov:excl-line
     );
     std::fs::read(dir.join("output_read1.fq")).expect("read FASTA pipeline output")
 }
