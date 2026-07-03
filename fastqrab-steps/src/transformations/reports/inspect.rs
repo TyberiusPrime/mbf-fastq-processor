@@ -176,7 +176,6 @@ impl TagUser for PartialTaggedVariant<PartialInspect> {
             .collect();
         Some(TagUsageInfo {
             used_tags,
-            must_see_all_tags: true,
             ..Default::default()
         })
     }

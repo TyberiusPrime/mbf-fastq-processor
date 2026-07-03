@@ -79,10 +79,11 @@ impl TagUser for PartialTaggedVariant<PartialFillMissing> {
                     }
                 }
                 (Some(TagValueType::Location), Some(TagValueType::String))
-                | (Some(TagValueType::String), Some(TagValueType::Location)) => {
+                | (Some(TagValueType::String), Some(TagValueType::Location))
+                | _ //doesn't mater, will get rejected
+                =>  {
                     TagValueType::String
-                }
-                _ => TagValueType::String, //doesn't mater, will get rejected
+                }, 
             };
             inner.output_type = Some(output_type);
 
@@ -96,7 +97,7 @@ impl TagUser for PartialTaggedVariant<PartialFillMissing> {
                         .to_used_tag(&[TagValueType::Location, TagValueType::String]),
                 ],
                 declared_tag: inner.out_label.to_declared_tag(output_type),
-                must_see_all_tags: true,
+                must_see_all_tags: false,
                 ..Default::default()
             })
         } else {

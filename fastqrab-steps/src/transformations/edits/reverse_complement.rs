@@ -44,7 +44,6 @@ impl TagUser for PartialTaggedVariant<PartialReverseComplement> {
             used_tags.extend(inner.target.to_used_tags());
             Some(TagUsageInfo {
                 used_tags,
-                must_see_all_tags: true,
                 ..Default::default()
             })
         } else {

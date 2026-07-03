@@ -107,7 +107,6 @@ impl TagUser for PartialTaggedVariant<PartialConcatTags> {
             Some(TagUsageInfo {
                 used_tags,
                 declared_tag: inner.out_label.to_declared_tag(TagValueType::String),
-                must_see_all_tags: true,
                 ..Default::default()
             })
         } else {

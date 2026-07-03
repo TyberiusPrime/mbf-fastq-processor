@@ -141,8 +141,6 @@ impl TagUser for PartialTaggedVariant<PartialStoreTagsInTable> {
                         .collect();
 
                     Some(TagUsageInfo {
-                        must_see_all_tags: true, // while this means the apply() sees them all, it does not
-                        // register them as 'used tags'
                         used_tags,
                         ..Default::default()
                     })
