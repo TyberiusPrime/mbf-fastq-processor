@@ -186,7 +186,7 @@ impl Step for FillMissing {
                     primary_vec,
                     secondary_vec // cov:excl-line
                 )
-                //cov:excl-end
+                //cov:excl-stop
             }
         };
 

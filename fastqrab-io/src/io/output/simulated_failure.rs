@@ -81,7 +81,7 @@ impl<T: Write> Write for FailForTestWriter<T> {
     fn flush(&mut self) -> io::Result<()> {
         self.inner.flush()
     }
-    //cov:excl-end
+    //cov:excl-stop
 }
 
 #[cfg(test)]

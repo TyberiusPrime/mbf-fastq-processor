@@ -483,7 +483,7 @@ fn test_interactive_ctrl_c_removes_temp_dir() {
 
     let deadline = Instant::now() + Duration::from_secs(30);
     while Instant::now() < deadline && !temp_dir.exists() {
-        std::thread::sleep(Duration::from_millis(50)); // cov:excl-line
+        std::thread::sleep(Duration::from_millis(50)); // cov:ignore-line
     }
     assert!(
         temp_dir.exists(),
@@ -660,32 +660,31 @@ fn test_every_demultiplexed_data_transform_has_test() {
 
     // Check each TOML file for Demultiplex followed by our transforms
     for toml_path in &toml_files {
-        if let Ok(content) = std::fs::read_to_string(toml_path) {
-            let lines: Vec<&str> = content.lines().collect();
-            let mut found_demultiplex = false;
+        let content = std::fs::read_to_string(toml_path).unwrap();
+        let lines: Vec<&str> = content.lines().collect();
+        let mut found_demultiplex = false;
 
-            for line in lines {
-                let trimmed = line.trim();
+        for line in lines {
+            let trimmed = line.trim();
 
-                // Check for Demultiplex action
-                if trimmed.contains("action")
-                    && (trimmed.contains("'Demultiplex'") || trimmed.contains("\"Demultiplex\""))
-                {
-                    found_demultiplex = true;
-                }
+            // Check for Demultiplex action
+            if trimmed.contains("action")
+                && (trimmed.contains("'Demultiplex'") || trimmed.contains("\"Demultiplex\""))
+            {
+                found_demultiplex = true;
+            }
 
-                // If we've seen a Demultiplex, check for our transforms
-                if found_demultiplex && trimmed.contains("action") {
-                    for transform in &transforms_with_demultiplexed_data {
-                        if trimmed.contains(&format!("'{transform}'"))
-                            || trimmed.contains(&format!("\"{transform}\""))
-                        {
-                            tested_transforms.insert(transform.clone());
-                            println!(
-                                "✓ Found test for transform '{transform}' after Demultiplex in {}",
-                                toml_path.display()
-                            );
-                        }
+            // If we've seen a Demultiplex, check for our transforms
+            if found_demultiplex && trimmed.contains("action") {
+                for transform in &transforms_with_demultiplexed_data {
+                    if trimmed.contains(&format!("'{transform}'"))
+                        || trimmed.contains(&format!("\"{transform}\""))
+                    {
+                        tested_transforms.insert(transform.clone());
+                        println!(
+                            "✓ Found test for transform '{transform}' after Demultiplex in {}",
+                            toml_path.display()
+                        );
                     }
                 }
             }

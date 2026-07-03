@@ -203,7 +203,7 @@ impl Step for Progress {
                         .elapsed()
                         .as_secs()
                 )
-                // cov:excl-end
+                // cov:excl-stop
             } else {
                 format!(
                     "Processed Total: {:>15}, in-flight: {:>4}, Elapsed: {:>6}s",

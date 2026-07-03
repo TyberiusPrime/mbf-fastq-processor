@@ -112,7 +112,7 @@ pub(crate) fn spawn_shm_chunk_reader(
                 // cov:excl-start
                 return Err(anyhow::Error::new(e)
                     .context("fastqrab-decompressor closed before sending its EOF sentinel"));
-                // cov:excl-end
+                // cov:excl-stop
             }
             let slot = u32::from_le_bytes(desc[0..4].try_into().expect("4 bytes"));
             let len = u32::from_le_bytes(desc[4..8].try_into().expect("4 bytes")) as usize;

@@ -164,7 +164,7 @@ pub fn merge_demultiplexed_bam(
                             "ref_seq {ref_seq} not found in references {ref_order:?} - validation has failed us. Bug",
                             ref_seq = group_info.ref_seq
                         )
-                    }) //cov:excl-end
+                    }) //cov:excl-stop
                     .expect("?")
             }
         });
@@ -325,7 +325,7 @@ fn merge_bam_files(
             anyhow::bail!(
                 "Unexpected header size: copied {copied} bytes but expected {header_size} bytes. Some kind of IO issue?"
             );
-            //cov:excl-end
+            //cov:excl-stop
         }
     }
 

@@ -146,7 +146,7 @@ impl ChainedParser {
                 was_final: true,
                 expected_read_count: self.expected_read_count_power_of_two,
             });
-            //cov:excl-end
+            //cov:excl-stop
         }
 
         let res = self

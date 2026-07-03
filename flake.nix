@@ -124,6 +124,18 @@
           name = "fastqrab-docker-src";
         };
 
+       cargo-testmap= pkgs.rustPlatform.buildRustPackage rec {
+          pname = "cargo-testmap";
+          version = "0.2.0";
+          src = pkgs.fetchCrate {
+            inherit pname version;
+            hash = "sha256-4YaqriXA526ZzBOrtrspwpKPhnDmuFT2v5HY+3fF6V4=";
+          };
+          cargoLock.lockFile = "${src}/Cargo.lock";
+          doCheck = false;
+        };
+
+
         # Shared developer tooling for the stable and nightly devShells.
         # The rust toolchain itself is appended per-shell.
         devTools = with pkgs; [
@@ -147,6 +159,7 @@
           cargo-nextest
           cargo-outdated
           cargo-shear
+          cargo-testmap
           #cargo-udeps
           cargo-vet
           cmake

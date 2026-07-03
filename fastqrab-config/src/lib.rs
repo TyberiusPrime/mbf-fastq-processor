@@ -528,7 +528,7 @@ impl ToDeclaredTag for TomlValue<TagLabel> {
         } else {
             // Since the virtual tag introduction, we do reach this on invalid TagLabes.
             None
-            // cov:excl-end
+            // cov:excl-stop
         }
     }
 }

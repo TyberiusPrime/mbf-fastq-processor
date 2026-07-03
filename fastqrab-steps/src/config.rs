@@ -1803,7 +1803,7 @@ impl PartialConfig {
                                             has neglected to verify this earlier in verification".to_string(),
                                     );
                                 return;
-                                //cov:excl-end
+                                //cov:excl-stop
                             }
 
                             key_to_entries
