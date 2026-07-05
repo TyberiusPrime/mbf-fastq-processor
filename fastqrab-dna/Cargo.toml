@@ -20,10 +20,11 @@ exclude.workspace = true
 	bstr = {workspace = true}
     hamming-resonate = {workspace = true}
     indexmap = {workspace = true}
+	mutants = {workspace = true}
 	schemars = {workspace = true}
-	toml-pretty-deser = {workspace = true}
 	smallvec = {workspace = true}
     stringpod = {workspace = true}
+	toml-pretty-deser = {workspace = true}
 	triple_accel = {workspace = true}
 
 [lints]

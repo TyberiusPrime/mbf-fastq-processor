@@ -754,6 +754,7 @@ dependencies = [
  "bstr",
  "hamming-resonate",
  "indexmap",
+ "mutants 0.0.3",
  "schemars",
  "smallvec",
  "stringpod",

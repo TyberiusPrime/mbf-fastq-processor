@@ -44,57 +44,65 @@ impl VerifyIn<PartialConfig> for PartialSwap {
             .expect("Input definition must be set before config for Swap step validation");
         let segment_order = input_def.get_segment_order();
 
-        if self.segment_a.is_missing() ^ self.segment_b.is_missing() {
-            self.segment_a.state = TomlValueState::Nested;
-            self.segment_b.state = TomlValueState::Nested;
-            return Err(ValidationFailure::new(
-                "Insuffient swap definition",
-                Some(
-                    "Please either specify both segment_a and segment_b, or omit both for auto-detection.",
-                ),
-            ));
-        } else if self.segment_a.is_missing() && self.segment_b.is_missing() {
-            if segment_order.len() == 2 {
-                self.segment_a = TomlValue::new_ok(MustAdapt::PostVerify(SegmentIndex(0)), 0..0);
-                self.segment_b = TomlValue::new_ok(MustAdapt::PostVerify(SegmentIndex(1)), 0..0);
-            } else {
+        match (self.segment_a.is_missing(), self.segment_b.is_missing()) {
+            (true, false) | (false, true) => {
                 self.segment_a.state = TomlValueState::Nested;
                 self.segment_b.state = TomlValueState::Nested;
                 return Err(ValidationFailure::new(
                     "Insuffient swap definition",
                     Some(
-                        "There were more (or fewer) than 2 segments, and you did not specify both segment_a and segment_b.",
+                        "Please either specify both segment_a and segment_b, or omit both for auto-detection.",
                     ),
                 ));
             }
-        } else if self.segment_a.is_needs_further_validation()
-        //|| self.segment_b.is_needs_further_validation()
-        {
-            self.segment_a.validate_segment(parent);
-            self.segment_b.validate_segment(parent);
-            if self.segment_a.is_ok()
-                && self.segment_b.is_ok()
-                && self
-                    .segment_a
-                    .as_ref()
-                    .expect("just checked is._ok")
-                    .as_ref_post()
-                    == self
-                        .segment_b
-                        .as_ref()
-                        .expect("just checked is._ok")
-                        .as_ref_post()
-            {
-                let spans = vec![
-                    (self.segment_a.span(), "Identical to segment_b".to_string()),
-                    (self.segment_b.span(), "Identical to segment_a".to_string()),
-                ];
-                self.segment_a.state = TomlValueState::Custom { spans };
-                self.segment_a.help =
-                    Some("Please specify two different segments to swap.".to_string());
-                self.segment_b.state = TomlValueState::Nested;
+            (true, true) => {
+                if segment_order.len() == 2 {
+                    self.segment_a =
+                        TomlValue::new_ok(MustAdapt::PostVerify(SegmentIndex(0)), 0..0);
+                    self.segment_b =
+                        TomlValue::new_ok(MustAdapt::PostVerify(SegmentIndex(1)), 0..0);
+                } else {
+                    self.segment_a.state = TomlValueState::Nested;
+                    self.segment_b.state = TomlValueState::Nested;
+                    return Err(ValidationFailure::new(
+                        "Insuffient swap definition",
+                        Some(
+                            "There were more (or fewer) than 2 segments, and you did not specify both segment_a and segment_b.",
+                        ),
+                    ));
+                }
             }
-        } // cov:excl-line
+            (false, false) => {
+                if self.segment_a.is_needs_further_validation()
+                //|| self.segment_b.is_needs_further_validation()
+                {
+                    self.segment_a.validate_segment(parent);
+                    self.segment_b.validate_segment(parent);
+                    if self.segment_a.is_ok()
+                        && self.segment_b.is_ok()
+                        && self
+                            .segment_a
+                            .as_ref()
+                            .expect("just checked is._ok")
+                            .as_ref_post()
+                            == self
+                                .segment_b
+                                .as_ref()
+                                .expect("just checked is._ok")
+                                .as_ref_post()
+                    {
+                        let spans = vec![
+                            (self.segment_a.span(), "Identical to segment_b".to_string()),
+                            (self.segment_b.span(), "Identical to segment_a".to_string()),
+                        ];
+                        self.segment_a.state = TomlValueState::Custom { spans };
+                        self.segment_a.help =
+                            Some("Please specify two different segments to swap.".to_string());
+                        self.segment_b.state = TomlValueState::Nested;
+                    }
+                } // cov:excl-line
+            }
+        }
         //all other errors we pass straight on
         Ok(())
     }

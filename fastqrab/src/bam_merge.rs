@@ -361,6 +361,15 @@ fn merge_bam_files(
     Ok(spans)
 }
 
+#[mutants::skip]
+fn ensure_bam_reference_small_enough(n_ref: usize) -> Result<()> {
+    if n_ref > 2_147_483_648 {
+        //BAM actually has 2^31 as max number of sequences
+        bail!("Maximum number of references in BAM exceeded"); // cov:excl-line
+    }
+    Ok(())
+}
+
 /// Write a BAI index for a merged BAM whose reads all sit at reference position 1 (1-based).
 ///
 /// All reads for a given reference come from one source file and are contiguous in the merged
@@ -402,13 +411,10 @@ fn write_merged_bai(
     }
 
     let mut w = std::io::BufWriter::new(f);
+    ensure_bam_reference_small_enough(n_ref)?;
 
     // magic + n_ref
     w.write_all(b"BAI\x01")?;
-    if n_ref > 2_147_483_648 {
-        //BAM actually has 2^31 as max number of sequences
-        bail!("Maximum number of references in BAM exceeded"); // cov:excl-line
-    }
     w.write_all(&(u32::try_from(n_ref).expect("Too many segments for BAM format")).to_le_bytes())?;
 
     for ref_span in ref_spans {
@@ -450,3 +456,4 @@ fn write_merged_bai(
 
     Ok(())
 }
+

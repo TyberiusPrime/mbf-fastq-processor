@@ -21,7 +21,13 @@ run_case() {
 extract_metric() {
     local label=$1
     local payload=$2
-    printf '%s' "$payload" | sed -n "s/.*${label}=\([0-9][0-9]*\).*/\\1/p"
+    local value
+    value=$(printf '%s' "$payload" | sed -n "s/.*${label}=\([0-9][0-9]*\).*/\\1/p")
+    if [ -z "$value" ]; then
+        echo "extract_metric: no value found for ${label}" >&2
+        return 1
+    fi
+    printf '%s' "$value"
 }
 
 single_output=$(run_case "config.toml")

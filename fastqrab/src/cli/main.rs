@@ -12,6 +12,7 @@ pub struct EarlyExit;
 impl std::fmt::Display for EarlyExit {
     //cov:excl-start
     //since not printing is the whole point
+    #[mutants::skip]
     fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         Ok(())
     }
@@ -334,25 +335,8 @@ fn handle_toml_arg(config_file: Option<&String>) -> Result<PathBuf> {
     }
 }
 
-/// # Panics
-/// on friendly panic test
-pub fn entry_point() -> Result<()> {
-    // Internal decompressor dispatch: `fastqrab __decompressor <args...>`.
-    // Checked before build_cli() so the subcommand never needs to be defined there.
-    if std::env::args_os().nth(1).as_deref() == Some(std::ffi::OsStr::new("__decompressor")) {
-        return crate::decompressor::run();
-    }
-
-    // Support environment-based completion generation (modern approach)
-    // Usage: COMPLETE=bash fastqrab
-    if let Ok(shell_str) = std::env::var("COMPLETE")
-        && let Ok(shell) = shell_str.parse::<Shell>()
-    {
-        let mut cmd = build_cli();
-        print_completions(shell, &mut cmd);
-        return Ok(());
-    }
-
+#[mutants::skip]
+fn handle_friendly_panic() {
     //this will trigger a mutant false positive, since we're only testing it in nix tests (needs
     //the release binary)
     if std::env::var("NO_FRIENDLY_PANIC").is_err() && std::env::var("RUST_BACKTRACE").is_err() {
@@ -375,7 +359,28 @@ pub fn entry_point() -> Result<()> {
         !std::env::args().any(|x| x == "--test-friendly-panic"),
         "friendly panic test!"
     );
+}
 
+/// # Panics
+/// on friendly panic test
+pub fn entry_point() -> Result<()> {
+    // Internal decompressor dispatch: `fastqrab __decompressor <args...>`.
+    // Checked before build_cli() so the subcommand never needs to be defined there.
+    if std::env::args_os().nth(1).as_deref() == Some(std::ffi::OsStr::new("__decompressor")) {
+        return crate::decompressor::run();
+    }
+
+    // Support environment-based completion generation (modern approach)
+    // Usage: COMPLETE=bash fastqrab
+    if let Ok(shell_str) = std::env::var("COMPLETE")
+        && let Ok(shell) = shell_str.parse::<Shell>()
+    {
+        let mut cmd = build_cli();
+        print_completions(shell, &mut cmd);
+        return Ok(());
+    }
+
+    handle_friendly_panic();
     // // Check for backward compatibility: direct .toml file path as first argument
     // if let Some(first_arg) = std::env::args().nth(1) {
     //     if first_arg.ends_with(".toml") && !first_arg.starts_with('-') {
@@ -392,9 +397,6 @@ pub fn entry_point() -> Result<()> {
             let toml_path = handle_toml_arg(sub_matches.get_one::<String>("config"))?;
             let allow_overwrites = sub_matches.get_flag("allow-overwrite");
             process_from_toml_file(&toml_path, allow_overwrites)?;
-            if std::env::var("RUST_MEASURE_ALLOC").as_deref() == Ok("1") {
-                print_peak_rss_kb();
-            }
         }
         Some(("template", sub_matches)) => {
             let section = sub_matches.get_one::<String>("section");
@@ -596,7 +598,10 @@ fn find_single_valid_toml() -> Result<PathBuf> {
         0 => {
             if any_tomls {
                 bail!(
-                    "TOML file(s) found in current directory, but none were valid TOML configuration files.\n A valid configuration must contain both [input] and [output] sections."
+                    "TOML file(s) found in current directory, \
+                    but none were valid TOML configuration files.\n \
+                    A valid configuration must contain both [input] and [output] sections.\n \
+                    Symlinks are not being followed."
                 );
             }
             bail!(
@@ -624,21 +629,3 @@ fn find_single_valid_toml() -> Result<PathBuf> {
     }
 }
 
-fn print_peak_rss_kb() {
-    let Ok(status) = std::fs::read_to_string("/proc/self/status") else {
-        return; // cov:excl-line
-    };
-    for line in status.lines() {
-        let Some(rest) = line.strip_prefix("VmHWM:") else {
-            continue;
-        };
-        if let Some(kb) = rest
-            .split_whitespace()
-            .next()
-            .and_then(|s| s.parse::<u64>().ok())
-        {
-            eprintln!("peak_rss_kb={kb}");
-        }
-        return;
-    }
-}

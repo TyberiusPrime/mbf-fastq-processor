@@ -68,74 +68,72 @@ impl Step for ValidateAllReadsSameLength {
         _input_info: &InputInfo,
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<(FastQBlocksCombined, bool)> {
-        if !block.is_empty() {
-            match &self.source {
-                ResolvedSourceAll::Segment(segment_index_or_all) => match segment_index_or_all {
-                    SegmentIndexOrAll::All => {
-                        for molecule in block.molecules() {
-                            let mut length_here = 0;
-                            for read in &molecule {
-                                length_here += read.seq.len();
-                            }
-                            self.check(length_here)?;
+        match &self.source {
+            ResolvedSourceAll::Segment(segment_index_or_all) => match segment_index_or_all {
+                SegmentIndexOrAll::All => {
+                    for molecule in block.molecules() {
+                        let mut length_here = 0;
+                        for read in &molecule {
+                            length_here += read.seq.len();
                         }
-                    }
-                    SegmentIndexOrAll::Indexed(segment_index) => {
-                        for read in block.segments[segment_index.as_index()].iter() {
-                            let length_here = read.seq.len();
-                            self.check(length_here)?;
-                        }
-                    }
-                },
-                ResolvedSourceAll::Tag(name) => {
-                    let col = block
-                        .tags
-                        .get(name)
-                        .expect("Tag not set?! should have been caught earlier. bug");
-                    match col {
-                        TagColumn::Location(col) => {
-                            for len in col.iter_row_lengths(None) {
-                                if len > 0 {
-                                    // empty / missing regions are being ignored
-                                    self.check(len)?;
-                                }
-                            }
-                        }
-                        TagColumn::String(items) => {
-                            for bstring in items.iter().flatten()
-                            //flatten removes None
-                            {
-                                self.check(bstring.len())?;
-                            }
-                        }
-                        // cov:excl-start
-                        _ => unreachable!(),
-                        // cov:excl-stop
+                        self.check(length_here)?;
                     }
                 }
-                ResolvedSourceAll::Name {
-                    segment_index_or_all,
-                    split_character,
-                } => match segment_index_or_all {
-                    SegmentIndexOrAll::All => {
-                        for molecule in block.molecules() {
-                            //todo: We want an iter_names?
-                            let mut length_here = 0;
-                            for read in &molecule {
-                                let nn = split_name_and_comment(read.name, *split_character).0;
-                                length_here += nn.len();
+                SegmentIndexOrAll::Indexed(segment_index) => {
+                    for read in block.segments[segment_index.as_index()].iter() {
+                        let length_here = read.seq.len();
+                        self.check(length_here)?;
+                    }
+                }
+            },
+            ResolvedSourceAll::Tag(name) => {
+                let col = block
+                    .tags
+                    .get(name)
+                    .expect("Tag not set?! should have been caught earlier. bug");
+                match col {
+                    TagColumn::Location(col) => {
+                        for len in col.iter_row_lengths(None) {
+                            if len > 0 {
+                                // empty / missing regions are being ignored
+                                self.check(len)?;
                             }
-                            self.check(length_here)?;
                         }
                     }
-                    SegmentIndexOrAll::Indexed(segment_index) => {
-                        for name in &block.segments[segment_index.as_index()].names {
-                            let nn = split_name_and_comment(name, *split_character).0;
-                            self.check(nn.len())?;
+                    TagColumn::String(items) => {
+                        for bstring in items.iter().flatten()
+                        //flatten removes None
+                        {
+                            self.check(bstring.len())?;
                         }
                     }
-                },
+                    // cov:excl-start
+                    _ => unreachable!(),
+                    // cov:excl-stop
+                }
             }
+            ResolvedSourceAll::Name {
+                segment_index_or_all,
+                split_character,
+            } => match segment_index_or_all {
+                SegmentIndexOrAll::All => {
+                    for molecule in block.molecules() {
+                        //todo: We want an iter_names?
+                        let mut length_here = 0;
+                        for read in &molecule {
+                            let nn = split_name_and_comment(read.name, *split_character).0;
+                            length_here += nn.len();
+                        }
+                        self.check(length_here)?;
+                    }
+                }
+                SegmentIndexOrAll::Indexed(segment_index) => {
+                    for name in &block.segments[segment_index.as_index()].names {
+                        let nn = split_name_and_comment(name, *split_character).0;
+                        self.check(nn.len())?;
+                    }
+                }
+            },
         }
 
         Ok((block, true))

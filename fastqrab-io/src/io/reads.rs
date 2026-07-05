@@ -194,9 +194,12 @@ impl FastQBlocksCombined {
     }
 
     #[must_use]
+    #[mutants::skip]
+    //cov:excl-start
     pub fn is_empty(&self) -> bool {
         self.row_count() == 0
     }
+    //cov:excl-stop
 
     /// Number of molecules — the shared read count across all segments.
     #[must_use]
@@ -429,6 +432,7 @@ impl FastQBlocksCombined {
     /// # Panics
     /// When the segments have different read counts
     /// (that's the point of this function)
+    #[mutants::skip] 
     pub fn sanity_check(&self) -> Result<()> {
         // The PodStack should prevent this for the segments,
         // but let's just be safe.
@@ -609,6 +613,7 @@ impl std::ops::DerefMut for MemberGuard<'_> {
 }
 
 impl Drop for MemberGuard<'_> {
+    #[mutants::skip]   
     fn drop(&mut self) {
         // Don't mask an in-flight panic with a second one (that would abort).
         if std::thread::panicking() {

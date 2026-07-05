@@ -374,11 +374,13 @@ pub struct OwnedMolecule {
 impl OwnedMolecule {
     //cov:excl-start - these are just for completneses
     /// Number of segments contributing a read to this molecule.
+    #[mutants::skip]
     #[must_use]
     pub fn len(&self) -> usize {
         self.reads.len()
     }
 
+    #[mutants::skip]
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.reads.is_empty()

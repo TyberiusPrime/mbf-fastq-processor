@@ -1237,7 +1237,7 @@ fn create_symlinks_for_files(
 }
 
 #[cfg(unix)]
-fn create_symlink(source: &Path, target: &Path) -> Result<()> {
+pub fn create_symlink(source: &Path, target: &Path) -> Result<()> {
     // Use symlink_metadata (does NOT follow symlinks) so dangling symlinks are
     // detected as already existing and we don't attempt to recreate them.
     if std::fs::symlink_metadata(target).is_err() {

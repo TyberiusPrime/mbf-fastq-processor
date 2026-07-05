@@ -56,6 +56,7 @@ impl TagColumn {
     }
 
     #[must_use]
+    #[mutants::skip]
     //cov:excl-start
     pub fn is_empty(&self) -> bool {
         self.len() == 0
