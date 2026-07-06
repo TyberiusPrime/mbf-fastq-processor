@@ -7,6 +7,7 @@ use crate::{
     demultiplex::StepOutputFiles, transformations::tag::store_single_cell_matrix::WriterHandle,
 };
 
+#[mutants::skip] // | is ^ on disjoint bytes.
 pub fn encode_umi(umi: &[u8]) -> Umi {
     let mut v = 0u32;
     for &b in umi.iter().take(16) {

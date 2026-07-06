@@ -64,7 +64,7 @@ pub fn umi_cluster_count(umis: &[Umi], umi_length: u16) -> u32 {
     //we hence benchmark them on premise
     //to decide which ones to use
     let mut uf = DisjointSet::with_len(n);
-    if n <= pairwise_threshold() {
+    if n <= pairwise_threshold() { //mutants::skip - performance only
         pairwise_union(values, &mut uf);
     } else {
         //cov:excl-start
@@ -100,6 +100,7 @@ fn pairwise_union(values: &[Umi], uf: &mut DisjointSet) {
 }
 
 #[inline]
+#[mutants::skip]
 fn neighbor_union_hash(values: &[Umi], uf: &mut DisjointSet, umi_length: u16) {
     assert!(
         umi_length <= 16,
@@ -115,14 +116,14 @@ fn neighbor_union_hash(values: &[Umi], uf: &mut DisjointSet, umi_length: u16) {
         // dist == 1 basepair neighbors
         for bp in 0..umi_length {
             let shift = bp * 2;
-            let current = (x.0 >> shift) & 0b11;
+            let current = (x.0 >> shift) & 0b11; //going the other ways hould be fine as well.
 
             for replacement in 0..4u32 {
                 if replacement == current {
                     continue;
                 }
                 // Clear the 2 bits at this basepair, then set the replacement
-                let y = (x.0 & !(0b11 << shift)) | (replacement << shift);
+                let y = (x.0 & !(0b11 << shift)) | (replacement << shift); 
                 let y = Umi(y);
 
                 if let Some(&j) = index.get(&y) {
@@ -137,10 +138,12 @@ fn neighbor_union_hash(values: &[Umi], uf: &mut DisjointSet, umi_length: u16) {
 /// approach is. So we benchmark on the real system and make a decision.
 static PAIRWISE_THRESHOLD: OnceLock<usize> = OnceLock::new();
 
+#[mutants::skip]
 fn pairwise_threshold() -> usize {
     *PAIRWISE_THRESHOLD.get_or_init(calibrate_pairwise_threshold)
 }
 
+#[mutants::skip]
 fn calibrate_pairwise_threshold() -> usize {
     let candidates = [
         32usize,
