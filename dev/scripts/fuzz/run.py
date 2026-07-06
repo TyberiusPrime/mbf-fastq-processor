@@ -2,8 +2,15 @@
 """Drive an AFL++ fuzzing run against one of the fastq parser fuzz targets.
 
 Available targets (under `dev/fuzz/<target>`):
-    fastq_parser        — full pipeline, includes niffler decompression
+    fastq_parser        — full pipeline; gzip/zstd inputs are decoded
+                          out-of-process by `fastqrab __decompressor`
     fastq_parser_nogz   — parser-only, rejects compressed inputs up-front
+
+The full-pipeline target decodes compressed input by spawning the real
+`fastqrab` binary as `fastqrab __decompressor`. This script builds that binary
+(plain cargo, no AFL instrumentation — it's a black box to the fuzzer) and
+points FASTQRAB_DECOMPRESSOR at it so the fuzz harness doesn't re-invoke itself.
+Set FASTQRAB_DECOMPRESSOR yourself to skip that build and use an existing binary.
 
 Builds the instrumented fuzz target with cargo-afl, then launches one or
 more parallel `afl-fuzz` instances against its seed corpus. With `-j N`
@@ -41,8 +48,16 @@ TARGET_BIN_NAMES = {
     "fastq_parser": "fastq_parser_fuzz",
     "fastq_parser_nogz": "fastq_parser_nogz_fuzz",
 }
+# Targets that reach the out-of-process decompressor (`fastqrab __decompressor`).
+# The parser-only target rejects compressed inputs up-front, so it never spawns
+# it and needs no FASTQRAB_DECOMPRESSOR.
+TARGET_NEEDS_DECOMPRESSOR = {
+    "fastq_parser": True,
+    "fastq_parser_nogz": False,
+}
 
 CARGO_AFL = os.environ.get("CARGO_AFL") or shutil.which("cargo-afl")
+CARGO = os.environ.get("CARGO") or shutil.which("cargo")
 
 # Per-target paths, populated by `set_target()` once we've parsed --target.
 FUZZ_DIR: Path
@@ -74,6 +89,31 @@ def set_target(target: str) -> None:
 def run(cmd, **kwargs):
     print("+", " ".join(str(c) for c in cmd), flush=True)
     return subprocess.run(cmd, **kwargs)
+
+
+# Where the real `fastqrab` binary (used as the decompressor subprocess) is built.
+# Pinned like TARGET_DIR so we don't chase a user-wide CARGO_TARGET_DIR, and kept
+# separate from the AFL-instrumented per-target dirs — this build is plain cargo.
+DECOMPRESSOR_TARGET_DIR = REPO_ROOT / "target"
+DECOMPRESSOR_BIN = DECOMPRESSOR_TARGET_DIR / "release" / "fastqrab"
+
+
+def build_decompressor() -> int:
+    """Build the real `fastqrab` binary that serves as the decompressor subprocess.
+
+    The full-pipeline target decodes gzip/zstd out-of-process by spawning
+    `fastqrab __decompressor`; fastqrab-io's `find_decompressor` picks it up from
+    the FASTQRAB_DECOMPRESSOR env var main() sets. Built with plain cargo (no AFL
+    instrumentation — the subprocess is a black box to the fuzzer's coverage).
+    """
+    build_env = os.environ.copy()
+    build_env.pop("CARGO_TARGET_DIR", None)
+    build_cmd = [
+        CARGO, "build", "--release",
+        "-p", "fastqrab", "--bin", "fastqrab",
+        "--target-dir", str(DECOMPRESSOR_TARGET_DIR),
+    ]
+    return run(build_cmd, cwd=REPO_ROOT, env=build_env).returncode
 
 
 def build_afl_cmd(role_flag: str, name: str, extra: list[str]) -> list[str]:
@@ -272,6 +312,42 @@ def main() -> int:
     run_env = os.environ.copy()
     if args.no_affinity:
         run_env["AFL_NO_AFFINITY"] = "1"
+
+    # Full-pipeline target: make sure a real `fastqrab` binary exists for the
+    # out-of-process decompressor and point FASTQRAB_DECOMPRESSOR at it. A
+    # user-supplied FASTQRAB_DECOMPRESSOR is respected as-is (and skips the build).
+    if TARGET_NEEDS_DECOMPRESSOR[args.target]:
+        override = os.environ.get("FASTQRAB_DECOMPRESSOR")
+        if override:
+            if not Path(override).is_file():
+                print(
+                    f"error: FASTQRAB_DECOMPRESSOR is set but not a file: {override}",
+                    file=sys.stderr,
+                )
+                return 2
+            decomp_bin = Path(override)
+        else:
+            if not args.no_build:
+                if not CARGO or not Path(CARGO).is_file():
+                    print(
+                        "error: cargo not found on PATH; needed to build the fastqrab "
+                        "decompressor. Run inside `nix develop`, set CARGO, or set "
+                        "FASTQRAB_DECOMPRESSOR to a prebuilt fastqrab binary.",
+                        file=sys.stderr,
+                    )
+                    return 2
+                if build_decompressor() != 0:
+                    return 1
+            decomp_bin = DECOMPRESSOR_BIN
+            if not decomp_bin.is_file():
+                print(
+                    f"error: fastqrab decompressor binary not found at {decomp_bin}; "
+                    "run without --no-build first, or set FASTQRAB_DECOMPRESSOR.",
+                    file=sys.stderr,
+                )
+                return 1
+        run_env["FASTQRAB_DECOMPRESSOR"] = str(decomp_bin)
+
     # Resume from an existing output dir (queue, crashes, coverage bitmap) when
     # one is present. Without this AFL refuses to reuse the dir; with --clean
     # the dir was just wiped so there's nothing to resume from and AFL starts

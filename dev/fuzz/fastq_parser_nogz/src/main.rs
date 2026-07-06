@@ -1,14 +1,19 @@
 use std::fs::File;
 use std::io::{Seek, Write};
+use std::num::NonZero;
 use std::os::fd::FromRawFd;
 
 use fastqrab_io::io::input::DecompressionOptions;
-use fastqrab_io::io::parsers::{FastqParser, Parser};
-#[cfg(feature = "afl-positive-control")]
-use fastqrab_io::io::reads::WrappedFastQReadCommon;
+use fastqrab_io::io::parsers::{Parser, PodFastqParser, ThreadCount};
 
 #[cfg(feature = "afl-positive-control")]
 const CANARY_MARKER: &[u8] = b"AFL_POSITIVE_CONTROL";
+
+// target_reads_per_block is now only an API hint; a tiny buffer_size still
+// forces many short reads → many decode-chunk / block boundaries, exercising
+// the partial-read state machine on short inputs.
+const TARGET_READS_PER_BLOCK: NonZero<usize> = NonZero::new(4).unwrap();
+const BUFFER_SIZE: usize = 16;
 
 // memfd_create makes an anonymous, memory-backed file that never touches any
 // filesystem — critical for parallel fuzzing throughput, where per-exec
@@ -25,16 +30,17 @@ fn memfd() -> std::io::Result<File> {
     Ok(unsafe { File::from_raw_fd(fd) })
 }
 
-// Mirrors `niffler::send::compression::bytes2type`: any input starting with
-// these magics would be intercepted by FastqParser::new and decompressed,
-// which is exactly what this fuzzer wants to avoid.
+// Mirrors `sniff_compression` in fastqrab-io: any input starting with these
+// magics would be intercepted by open_decompressed_reader and decoded
+// out-of-process, which is exactly what this parser-only fuzzer avoids. The
+// decompression layer only recognizes gzip and zstd now (bzip2/xz were dropped
+// when niffler was replaced by the out-of-process decompressor), so an input
+// starting with any other bytes reaches the fastq parser as-is.
 fn looks_compressed(data: &[u8]) -> bool {
     matches!(
         data,
-        [0x1f, 0x8b, ..]                       // gzip
-        | [0x42, 0x5a, ..]                     // bzip2
-        | [0xfd, 0x37, 0x7a, 0x58, 0x5a, ..]   // xz / lzma
-        | [0x28, 0xb5, 0x2f, 0xfd, ..]         // zstd
+        [0x1f, 0x8b, ..]               // gzip
+        | [0x28, 0xb5, 0x2f, 0xfd, ..] // zstd
     )
 }
 
@@ -54,15 +60,15 @@ fn main() {
             return;
         }
 
-        // Same tight buf parameters as the gzip-aware fuzzer: forces many
-        // block boundaries so the partial-read state machine gets exercised
-        // on short inputs.
-        let mut parser = match FastqParser::new(
+        let mut parser = match PodFastqParser::new(
             file,
             None,
-            4,
-            16,
-            DecompressionOptions::Default,
+            TARGET_READS_PER_BLOCK,
+            BUFFER_SIZE,
+            1,
+            DecompressionOptions {
+                thread_count: ThreadCount(NonZero::<usize>::MIN),
+            },
         ) {
             Ok(p) => p,
             Err(_) => return,
@@ -73,10 +79,10 @@ fn main() {
                 Ok(res) => {
                     #[cfg(feature = "afl-positive-control")]
                     {
-                        for i in 0..res.fastq_block.entries.len() {
-                            let read = res.fastq_block.get(i);
-                            if read
-                                .name()
+                        let names = &res.output.names;
+                        for i in 0..names.len() {
+                            let name: &[u8] = names.get(i);
+                            if name
                                 .windows(CANARY_MARKER.len())
                                 .any(|w| w == CANARY_MARKER)
                             {
