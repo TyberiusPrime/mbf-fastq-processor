@@ -86,6 +86,7 @@ impl FastQChunk {
             );
         }
         let per_segment = total / n;
+        debug_assert!(per_segment <= total);
 
         let mut names: Vec<StringPodBuilder> = (0..n)
             .map(|_| StringPodBuilder::with_capacity(0, per_segment))
@@ -470,7 +471,7 @@ impl<'a> Iterator for Molecules<'a> {
         for (index, member) in self.members.iter_mut().enumerate() {
             match member.next() {
                 Some(read) => molecule.push(read),
-                None if index == 0 => return None,
+                None if index == 0 => return None, //mutants::skip
                 None => unreachable!("FastQ segments fell out of lockstep during iteration"), //cov:excl-line
             }
         }
@@ -478,6 +479,7 @@ impl<'a> Iterator for Molecules<'a> {
     }
 
     //cov:excl-start
+    #[mutants::skip]
     fn size_hint(&self) -> (usize, Option<usize>) {
         self.members
             .first()
@@ -504,7 +506,7 @@ impl<'a> Iterator for MoleculesMut<'a> {
         for (index, member) in self.members.iter_mut().enumerate() {
             match member.next() {
                 Some(read) => molecule.push(read),
-                None if index == 0 => return None,
+                None if index == 0 => return None, //mutants:skip
                 None => panic!("FastQ segments fell out of lockstep during iteration"),
             }
         }
@@ -512,6 +514,7 @@ impl<'a> Iterator for MoleculesMut<'a> {
     }
 
     //cov:excl-start
+    #[mutants::skip]
     fn size_hint(&self) -> (usize, Option<usize>) {
         self.members
             .first()
@@ -528,7 +531,7 @@ pub fn split_name_and_comment(name: &BStr, read_comment_insert_char: u8) -> (&BS
     use bstr::ByteSlice;
     //let pos_of_first_space = name.iter().position(|&x| x == read_comment_insert_char);
     match name.find_byte(read_comment_insert_char) {
-        Some(pos) => (name[..pos].as_ref(), name[pos - 2..].as_ref()),
+        Some(pos) => (name[..pos].as_ref(), name[pos + 1..].as_ref()),
         None => (name, BStr::new("")),
     }
 }

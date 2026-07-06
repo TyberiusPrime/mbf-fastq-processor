@@ -54,7 +54,6 @@ pub struct ChainedParser {
     expected_read_count_power_of_two: Option<usize>,
     first_block_done: bool,
     total_input_file_size: Option<u64>,
-    reads_so_far: usize,
 }
 
 pub struct ChainParseResult {
@@ -104,7 +103,6 @@ impl ChainedParser {
             expected_read_count_power_of_two: None,
             first_block_done: false,
             total_input_file_size,
-            reads_so_far: 0,
         }
     }
 
@@ -227,7 +225,6 @@ impl ChainedParser {
         }
 
         let fastq_block = output;
-        self.reads_so_far += fastq_block.row_count();
         Ok(ChainParseResult {
             fastq_block,
             was_final,

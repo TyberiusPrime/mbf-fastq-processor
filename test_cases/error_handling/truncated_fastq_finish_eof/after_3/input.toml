@@ -1,0 +1,18 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[options]
+    # Force a decode-chunk boundary inside the single record so the qual line
+    # arrives in its own chunk and completes the held record with nothing left
+    # over. That leaves `held = None` at end-of-stream while the final
+    # unterminated line (`@read2`) is still pending as the carry, which is the
+    # exact state that trips the `held = None` truncation branch in `finish_eof`
+    # (pod_parser.rs). A larger buffer would swallow the whole record in one
+    # chunk and hit the other (`held = Some`) branch instead.
+    buffer_size = 18
+
+[output]
+    prefix = "output"
+
+[[step]]
+    action = "OutputFASTQ"

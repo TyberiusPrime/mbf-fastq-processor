@@ -1,5 +1,5 @@
 ReadName	ReadComment	barcode1	barcode2
-Read1	d1 not ignored	CTC	CAA
-Read2	d2 also		CAA
-Read3	d3 in		
-Read4	d4 the output as comment		
+Read1	not ignored	CTC	CAA
+Read2	also		CAA
+Read3	in		
+Read4	the output as comment		

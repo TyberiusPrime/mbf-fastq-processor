@@ -1201,10 +1201,43 @@ fn test_cases_x_error_handling_x_replace_tag_with_letter_x_no_letter() {
 
 #[test]
 
-fn test_cases_x_error_handling_x_truncated_fastq_finish_eof() {
-    println!("Test case is in: test_cases/error_handling/truncated_fastq_finish_eof");
+fn test_cases_x_error_handling_x_truncated_fastq_finish_eof_x_after_1() {
+    println!("Test case is in: test_cases/error_handling/truncated_fastq_finish_eof/after_1");
     run_test(
-        std::path::Path::new("../test_cases/error_handling/truncated_fastq_finish_eof"),
+        std::path::Path::new("../test_cases/error_handling/truncated_fastq_finish_eof/after_1"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_error_handling_x_truncated_fastq_finish_eof_x_after_2() {
+    println!("Test case is in: test_cases/error_handling/truncated_fastq_finish_eof/after_2");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/truncated_fastq_finish_eof/after_2"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_error_handling_x_truncated_fastq_finish_eof_x_after_3() {
+    println!("Test case is in: test_cases/error_handling/truncated_fastq_finish_eof/after_3");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/truncated_fastq_finish_eof/after_3"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_error_handling_x_truncated_fastq_finish_eof_x_within_4() {
+    println!("Test case is in: test_cases/error_handling/truncated_fastq_finish_eof/within_4");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/truncated_fastq_finish_eof/within_4"),
         "input.toml",
         1,
     );

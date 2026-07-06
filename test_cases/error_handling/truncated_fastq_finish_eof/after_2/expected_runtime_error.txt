@@ -1,0 +1,2 @@
+Error Details ==
+Error in reading thread for segment read1: truncated FASTQ: incomplete record at end of stream (read 1 complete reads before truncation)

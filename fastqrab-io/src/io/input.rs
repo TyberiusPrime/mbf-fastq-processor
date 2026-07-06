@@ -90,6 +90,7 @@ fn peek_magic(mut reader: Box<dyn Read + Send>) -> Result<([u8; 4], usize, Box<d
     let mut magic = [0u8; 4];
     let mut filled = 0;
     while filled < magic.len() {
+        //mutants::skip, <= would noop in the last loop.
         let n = reader.read(&mut magic[filled..])?;
         if n == 0 {
             break;
@@ -381,6 +382,8 @@ pub fn detect_input_format(path: &Path) -> Result<(DetectedInputFormat, Compress
     // BAM payloads are BGZF, but their bgzf is decoded in-process by noodles, so
     // report BAM as uncompressed (matching the historical detection contract).
     let reported = if format == DetectedInputFormat::Bam {
+        //mutants::skip - nobody looks at this
+        //for BAM afterwards.
         CompressionFormat::Uncompressed
     } else {
         compression

@@ -232,8 +232,8 @@ pub fn parse_pods_from_channel(
     let demux_threads = 1; //we found that additional threads are not helpful
 
     // Demux pool — phase-agnostic per-chunk bucketing (the heavy scan + copy).
-    let (job_tx, job_rx) = channel::bounded::<DemuxJob>(demux_threads * 2);
-    let (done_tx, done_rx) = channel::bounded::<Result<DemuxResult>>(demux_threads * 2);
+    let (job_tx, job_rx) = channel::bounded::<DemuxJob>(demux_threads * 2); //mutants::skip
+    let (done_tx, done_rx) = channel::bounded::<Result<DemuxResult>>(demux_threads * 2); //mutants::skip
     let mut workers = Vec::with_capacity(demux_threads);
     for _ in 0..demux_threads {
         let job_rx = job_rx.clone();
@@ -350,7 +350,7 @@ fn push_line(bucket: &mut Option<StringPodBuilder>, est: usize, line: &[u8]) -> 
 /// After the collector's rotation this lands in the correct role column, in
 /// order, with no further copy. `data` is guaranteed to contain ≥1 newline.
 fn demux_chunk(idx: u64, data: &[u8], prev_tail: &[u8]) -> Result<DemuxResult> {
-    let est = (data.len() / 300).max(16);
+    let est = (data.len() / 300).max(16); //mutants::skip - just an estimate for capacity planning
     let mut builders: [Option<StringPodBuilder>; 4] = [None, None, None, None];
 
     let first_nl = memchr::memchr(b'\n', data).expect("≥1 newline");
@@ -578,7 +578,10 @@ fn finish_eof(
             col.truncate(complete);
         }
     }
-    if h[0].len() != complete || h[1].len() != complete || h[3].len() != complete {
+    if h[0].len() != complete || h[1].len() != complete 
+        || h[3].len() != complete  //mutants::skip - we capture this as 'unequal seq & qual' 
+        // before, but I want to keep it defensively in there
+    {
         bail!(
             "truncated FASTQ: incomplete record at end of stream (read {} complete reads before truncation)",
             global_lines / 4
