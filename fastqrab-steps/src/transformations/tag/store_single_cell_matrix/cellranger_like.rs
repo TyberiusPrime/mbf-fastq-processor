@@ -26,14 +26,7 @@ pub fn aggregate_to_matrix_cellranger_like(
             }
             let mut counts = count_umis(cell_chunk, umi_length);
             let corrections = correct_umis_to_next_by_hamming(&counts, umi_length);
-            //cell ranger 3 special. Count 1 before
-            for (raw_key, corrected_key) in &corrections {
-                // One read has been counted before determining low-support UMI-genes.
-                *counts.get_mut(raw_key).expect("Key not found?") -= 1;
-                *counts
-                    .get_mut(corrected_key)
-                    .expect("correcected key not found?") += 1;
-            }
+            apply_recount_adjustment(&mut counts, &corrections);
 
             let low_support_umigenes = find_umis_with_conflicting_genes(&counts);
 
@@ -67,6 +60,21 @@ pub fn aggregate_to_matrix_cellranger_like(
         })
         .collect();
     entries.into_iter().flatten().collect()
+}
+
+///cell ranger 3 special: one read has already been counted under `raw_key`
+///before the correction to `corrected_key` was decided. Move that one count
+///over so low-support UMI-genes are determined on the corrected tallies.
+fn apply_recount_adjustment(
+    counts: &mut FxIndexMap<(GeneIdx, Umi), u32>,
+    corrections: &FxIndexMap<(GeneIdx, Umi), (GeneIdx, Umi)>,
+) {
+    for (raw_key, corrected_key) in corrections {
+        *counts.get_mut(raw_key).expect("Key not found?") -= 1;
+        *counts
+            .get_mut(corrected_key)
+            .expect("correcected key not found?") += 1;
+    }
 }
 
 fn count_umis(
@@ -110,11 +118,17 @@ fn correct_umis_to_next_by_hamming(
                         continue;
                     }
                     // Clear the 2 bits at this basepair, then set the replacement
+                    // `|` and `^` are equivalent here: the cleared bits are always 0
+                    // where `replacement << shift` is nonzero, and vice versa.
                     let test_umi = (this_umi.0 & !(0b11 << shift)) | (replacement << shift);
                     let test_umi = Umi(test_umi);
 
                     if let Some(&y_count) = umi_counts.get(&(x.0, test_umi)) {
                         let cmp = y_count.cmp(&best_count);
+                        // `>` vs `>=` is equivalent: every test_umi generated in this
+                        // double loop is distinct from every other one and from x.1
+                        // itself (each is a single-base edit at a different position
+                        // from a base guaranteed != current), so it can never equal best.1.
                         if (cmp == std::cmp::Ordering::Greater)
                             || (cmp == std::cmp::Ordering::Equal && test_umi > best.1)
                         {
@@ -178,6 +192,21 @@ fn test_find_umis_with_conflicting_genes() {
 }
 
 #[test]
+fn test_apply_recount_adjustment() {
+    let mut counts: FxIndexMap<(GeneIdx, Umi), u32> =
+        vec![((GeneIdx(1), Umi(0)), 3u32), ((GeneIdx(1), Umi(1)), 5u32)]
+            .into_iter()
+            .collect();
+    let corrections: FxIndexMap<(GeneIdx, Umi), (GeneIdx, Umi)> =
+        vec![((GeneIdx(1), Umi(0)), (GeneIdx(1), Umi(1)))]
+            .into_iter()
+            .collect();
+    apply_recount_adjustment(&mut counts, &corrections);
+    assert_eq!(counts[&(GeneIdx(1), Umi(0))], 2);
+    assert_eq!(counts[&(GeneIdx(1), Umi(1))], 6);
+}
+
+#[test]
 fn test_umi_correction() {
     let counts: FxIndexMap<(GeneIdx, Umi), u32> = vec![
         ((GeneIdx(772), Umi(10_849_786)), 2),
@@ -185,5 +214,80 @@ fn test_umi_correction() {
     ]
     .into_iter()
     .collect();
-    dbg!(correct_umis_to_next_by_hamming(&counts, 12));
+    let corrections = correct_umis_to_next_by_hamming(&counts, 12);
+    assert_eq!(
+        corrections.get(&(GeneIdx(772), Umi(10_849_738))),
+        Some(&(GeneIdx(772), Umi(10_849_786)))
+    );
+    assert!(!corrections.contains_key(&(GeneIdx(772), Umi(10_849_786))));
+}
+
+/// Regression test: `current` must be the *actual* base at this bp, not some
+/// garbage derived from OR-ing or XOR-ing with 0b11. Uses umi_length == 1 so
+/// there are no higher-order bits to mask off, making the true base's effect
+/// on which replacement gets (wrongly) skipped visible.
+#[test]
+fn test_umi_correction_uses_actual_current_base() {
+    let counts: FxIndexMap<(GeneIdx, Umi), u32> = vec![
+        // gene 1: current base is 1 (0b01); the only better neighbour is base 3.
+        // A mutant that ORs with 0b11 always thinks `current == 3` and would
+        // skip ever testing replacement 3, missing this correction.
+        ((GeneIdx(1), Umi(1)), 1u32),
+        ((GeneIdx(1), Umi(3)), 50u32),
+        // gene 2: current base is 1 (0b01); the only better neighbour is base 2,
+        // the complement of 1 (1 ^ 0b11 == 2). A mutant that XORs with 0b11
+        // would think `current == 2` and skip testing replacement 2.
+        ((GeneIdx(2), Umi(1)), 1u32),
+        ((GeneIdx(2), Umi(2)), 50u32),
+    ]
+    .into_iter()
+    .collect();
+    let corrections = correct_umis_to_next_by_hamming(&counts, 1);
+    assert_eq!(
+        corrections.get(&(GeneIdx(1), Umi(1))),
+        Some(&(GeneIdx(1), Umi(3)))
+    );
+    assert_eq!(
+        corrections.get(&(GeneIdx(2), Umi(1))),
+        Some(&(GeneIdx(2), Umi(2)))
+    );
+}
+
+/// Regression test: the mask/replacement shifts must move with `bp`. At
+/// bp == 0 (shift == 0) `<<` and `>>` coincide, so this only exercises bp > 0
+/// (umi_length == 2, correction needed on the higher-order base).
+#[test]
+fn test_umi_correction_shifts_by_bp() {
+    // x = 0b0101 (base0 = 1, base1 = 1). Correcting base1 (2 -> value 0b1001 = 9)
+    // is only reachable if both the clear-mask and the replacement are shifted
+    // by `shift`, not left un-shifted or shifted the wrong way.
+    let counts: FxIndexMap<(GeneIdx, Umi), u32> = vec![
+        ((GeneIdx(1), Umi(0b0101)), 1u32),
+        ((GeneIdx(1), Umi(0b1001)), 50u32),
+    ]
+    .into_iter()
+    .collect();
+    let corrections = correct_umis_to_next_by_hamming(&counts, 2);
+    assert_eq!(
+        corrections.get(&(GeneIdx(1), Umi(0b0101))),
+        Some(&(GeneIdx(1), Umi(0b1001)))
+    );
+}
+
+/// Regression test: a higher-count neighbour must win over a merely
+/// lexically-larger one, and a lower count must never win outright.
+#[test]
+fn test_umi_correction_picks_highest_count_not_lexical_max() {
+    let counts: FxIndexMap<(GeneIdx, Umi), u32> = vec![
+        ((GeneIdx(1), Umi(1)), 1u32),
+        ((GeneIdx(1), Umi(0)), 5u32), // strictly higher count, lexically smaller
+        ((GeneIdx(1), Umi(2)), 3u32), // lower count, lexically larger
+    ]
+    .into_iter()
+    .collect();
+    let corrections = correct_umis_to_next_by_hamming(&counts, 1);
+    assert_eq!(
+        corrections.get(&(GeneIdx(1), Umi(1))),
+        Some(&(GeneIdx(1), Umi(0)))
+    );
 }

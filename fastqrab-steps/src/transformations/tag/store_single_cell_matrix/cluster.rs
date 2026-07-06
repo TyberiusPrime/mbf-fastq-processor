@@ -10,30 +10,20 @@ pub fn aggregate_to_matrix_cluster(
     umi_length: u16,
 ) -> Vec<(GeneIdx, CellIdx, u32)> {
     debug_assert!(!entries.is_empty(), "Checked in caller");
-    // Find split indices where (cell, gene) key changes
-    // TODO: use chunk_by!
-    let splits: Vec<usize> = (1..entries.len())
-        .filter(|&i| {
-            entries[i].gene != entries[i - 1].gene || entries[i].cell != entries[i - 1].cell
-        })
+    // Group consecutive entries sharing the same (gene, cell) key, then
+    // process each group in parallel.
+    let groups: Vec<&[super::ObservedEvent]> = entries
+        .chunk_by(|a, b| a.gene == b.gene && a.cell == b.cell)
         .collect();
-    // Build range pairs [start, end) for each group
-    let mut starts = Vec::with_capacity(splits.len() + 1);
-    starts.push(0);
-    let mut ends = splits.clone();
-    ends.push(entries.len());
-    starts.extend(splits);
-    // Process each (gene, cell) group in parallel
-    let results: Vec<(GeneIdx, CellIdx, u32)> = starts
+    let results: Vec<(GeneIdx, CellIdx, u32)> = groups
         .into_par_iter()
-        .zip(ends.into_par_iter())
-        .filter_map(|(start, end)| {
-            let cell_id = entries[start].cell;
-            let gene_id = entries[start].gene;
+        .filter_map(|group| {
+            let cell_id = group[0].cell;
+            let gene_id = group[0].gene;
             let key = (gene_id, cell_id);
             //todo: we don't need to check all of them for is_n()
             //just the last one.
-            let mut seen: Vec<Umi> = entries[start..end]
+            let mut seen: Vec<Umi> = group
                 .iter()
                 .filter(|e| !e.umi.is_n())
                 .map(|e| e.umi)
@@ -64,7 +54,8 @@ pub fn umi_cluster_count(umis: &[Umi], umi_length: u16) -> u32 {
     //we hence benchmark them on premise
     //to decide which ones to use
     let mut uf = DisjointSet::with_len(n);
-    if n <= pairwise_threshold() { //mutants::skip - performance only
+    if n <= pairwise_threshold() {
+        //mutants::skip - performance only
         pairwise_union(values, &mut uf);
     } else {
         //cov:excl-start
@@ -123,7 +114,7 @@ fn neighbor_union_hash(values: &[Umi], uf: &mut DisjointSet, umi_length: u16) {
                     continue;
                 }
                 // Clear the 2 bits at this basepair, then set the replacement
-                let y = (x.0 & !(0b11 << shift)) | (replacement << shift); 
+                let y = (x.0 & !(0b11 << shift)) | (replacement << shift);
                 let y = Umi(y);
 
                 if let Some(&j) = index.get(&y) {
