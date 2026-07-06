@@ -149,7 +149,7 @@ impl WorkpoolCoordinator {
             // (A read-based budget instead of a block count keeps memory bounded
             // regardless of block_size, and never stalls a block-granular
             // pre-fetch such as HammingCorrect's ByMajority warm-up.)
-            let accept_new_incoming = self.current_reads_in_flight < self.max_molecules_in_flight;
+            let accept_new_incoming = self.current_reads_in_flight < self.max_molecules_in_flight; //mutants::skip - <, <= doesn't matter
             if self.incoming_rx.is_none() || !accept_new_incoming {
                 // Only listen for completed work when input is closed
                 select! {
@@ -400,6 +400,7 @@ impl WorkpoolCoordinator {
 
         // Update stage progress
         if self.stage_progress[stage_index].highest_completed_block < block_no {
+            //mutants::skip == block_no would be a no-op
             self.stage_progress[stage_index].highest_completed_block = block_no;
         }
 

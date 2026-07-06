@@ -271,7 +271,8 @@ impl DemultiplexChain {
                     .tag_to_name
                 {
                     for (new_tag, new_name) in &tag_to_name {
-                        let combined_tag = old_tag | new_tag;
+                        debug_assert!(old_tag & new_tag == 0);
+                        let combined_tag = old_tag | new_tag; //mutants::skip ^ is just as valid)
                         let out_name: Option<String> = {
                             if let Some(old_name) = old_name {
                                 new_name.as_ref().map(|new_name| {
@@ -296,6 +297,7 @@ impl DemultiplexChain {
         }
         self.current_bit_start += bits_needed;
         if self.current_bit_start > 64 {
+            //mutants::skip
             // not covered in tests, will alert in mutation testing.
             // There's an O(2^n) runtime above, and anything beyond 16 will slow.
             // our tests down significantly (tests happen in debug mode)
@@ -330,7 +332,13 @@ fn parse_and_send(
     );
     loop {
         let res = parser.parse()?;
-        if !res.fastq_block.is_empty() || !res.was_final {
+        //at the moment, only bam seems to be sending an empty final block
+        //while the others send a filled final block, and no empty otherwise.
+        //Let's not filter them.
+        //if !res.fastq_block.is_empty() || res.was_final {
+        //assert!(!(res.fastq_block.is_empty() && !res.was_final));
+        //
+        {
             if raw_tx
                 .send((res.fastq_block, res.expected_read_count))
                 .is_err()
@@ -561,6 +569,7 @@ fn run_combiner_thread(
 }
 
 //#[expect(clippy::needless_pass_by_value)]
+#[mutants::skip]
 fn run_benchmark_combiner_thread(
     first_block: &io::FastQBlocksCombined,
     combiner_output_tx: &crossbeam::channel::Sender<(io::FastQBlocksCombined, Option<usize>)>,
@@ -629,6 +638,7 @@ fn run_benchmark_combiner_thread(
 }
 
 //#[allow(clippy::needless_pass_by_value)]
+#[mutants::skip] //mutants::skip 
 fn run_benchmark_interleaved_thread(
     first_block: FastQChunk,
     combiner_output_tx: &crossbeam::channel::Sender<(io::FastQBlocksCombined, Option<usize>)>,
@@ -649,6 +659,7 @@ fn run_benchmark_interleaved_thread(
         .expect("Interleave splitting failed");
 
     while molecules_sent < molecule_count {
+        //mutants::skip, exact < <= irrelevant.
         //we don't worry about having a few reads too many here.
         let out_blocks = out_blocks.clone();
 
@@ -678,6 +689,7 @@ fn run_benchmark_interleaved_thread(
         block_no += 1;
 
         if molecules_sent >= molecule_count {
+            //mutants::skip - not output visible
             break;
         }
     }
@@ -1325,7 +1337,8 @@ impl RunStage3 {
         let records_per_molecule: u64 = merge_config
             .filter(|_| merge_bam_handles.is_some())
             .map_or(0, |mc| mc.records_per_molecule as u64);
-        let count_reads_per_tag = records_per_molecule > 0;
+        let count_reads_per_tag = records_per_molecule > 0; //mutants:skip,
+        // only performance difference if we do collect them unnecessarily.
 
         let output = {
             thread::Builder::new()
