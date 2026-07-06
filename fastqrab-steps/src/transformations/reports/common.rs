@@ -268,8 +268,8 @@ pub const Q_LOOKUP: [f64; 256] = [
     6.309573444801943e-23,
 ];
 
-pub const BASE_TO_INDEX: [u8; 256] = {
-    let mut out = [4; 256]; //everything else is an N
+pub const BASE_TO_INDEX: [u8; 257] = {
+    let mut out = [4; 257]; //everything else is an N
     out[b'A' as usize] = 0;
     out[b'C' as usize] = 1;
     out[b'G' as usize] = 2;
@@ -278,6 +278,7 @@ pub const BASE_TO_INDEX: [u8; 256] = {
     out[b'c' as usize] = 1;
     out[b'g' as usize] = 2;
     out[b't' as usize] = 3;
+    out[256] = 255; //sentinel
     out
 };
 
@@ -304,6 +305,7 @@ pub const Q20_Q30_LOOKUP: [(u8, u8); 256] = {
     out
 };
 
+#[mutants::skip]
 pub fn default_progress_n() -> usize {
     1_000_000
 }

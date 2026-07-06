@@ -71,15 +71,11 @@ impl Step for LowQualityEnd {
                     break;
                 }
             }
-            if cut_pos < qual.len() {
-                #[expect(
-                    clippy::cast_possible_truncation,
-                    reason = "lengths are guaranteed to be within u32 range"
-                )]
-                Some(cut_pos as u32..qual.len() as u32)
-            } else {
-                None
-            }
+            #[expect(
+                clippy::cast_possible_truncation,
+                reason = "lengths are guaranteed to be within u32 range"
+            )]
+            Some(cut_pos as u32..qual.len() as u32)
         });
 
         Ok((block, true))

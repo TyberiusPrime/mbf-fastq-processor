@@ -1,0 +1,34 @@
+{
+  "__": {
+    "version": "0.9.1",
+    "cwd": "/home/user/single_step",
+    "input_files": {
+      "interleaved": null,
+      "read1": [
+        "input_read1.fq"
+      ]
+    },
+    "repository": "https://tyberiusprime.github.io/fastqrab/"
+  },
+  "test_histogram": {
+    "histogram": {
+      "a_count": {
+        "0.02": 1,
+        "0.08": 1,
+        "0.1": 2,
+        "0.12": 2,
+        "0.14": 1,
+        "0.16": 1,
+        "0.18": 2
+      }
+    }
+  },
+  "run_info": {
+    "program_version": "0.9.1",
+    "input_toml": "[input]\n    read1 = 'input_read1.fq'\n\n# Extract first 5 bases and store as tag\n\n\n[[step]] \n  action = \"CalcBaseContent\"\n  segment = 'read1'\n  bases_to_count = 'A'\n  relative = true\n  out_label = 'a_count'\n\n# Create histogram reports\n[[step]]\n    action = 'Report'\n    name = 'test_histogram'\n    count = false\n    tag_histograms = ['a_count']\n\n[output]\n    prefix = \"output\"\n\n[[step]]\n    action = \"OutputReport\"\n    json = true\n    html = true\n",
+    "working_directory": "/home/user/single_step"
+  },
+  "report_order": [
+    "test_histogram"
+  ]
+}

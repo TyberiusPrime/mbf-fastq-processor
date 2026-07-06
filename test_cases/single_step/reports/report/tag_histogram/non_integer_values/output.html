@@ -20,64 +20,20 @@
   },
   "test_histogram": {
     "histogram": {
-      "prefix_5": {
-        "ATGTG": 1,
-        "CGGGT": 1,
-        "CTCCT": 1,
-        "CTGGA": 1,
-        "GCTTA": 1,
-        "GGAAG": 1,
-        "GGCGA": 1,
-        "GGTTC": 1,
-        "GTGCA": 1,
-        "TTCAA": 1
-      },
-      "gc_content": {
-        "0.31": 1,
-        "0.35": 1,
-        "0.38": 2,
-        "0.46": 3,
-        "0.5": 1,
-        "0.54": 1,
-        "0.65": 1
-      },
-      "gc_content_absolute": {
-        "8": 1,
-        "9": 1,
-        "10": 2,
-        "12": 3,
-        "13": 1,
-        "14": 1,
-        "17": 1
-      },
-      "read_length": {
-        "51": 10
-      },
-      "regex": {
-        "": 8,
-        "CCTG": 2
-      },
-      "read_no_lt_4": {
-        "true": 4,
-        "false": 6
-      },
-      "string_value": {
-        "1": 1,
-        "10": 1,
-        "2": 1,
-        "3": 1,
-        "4": 1,
-        "5": 1,
-        "6": 1,
-        "7": 1,
-        "8": 1,
-        "9": 1
+      "a_count": {
+        "0.02": 1,
+        "0.08": 1,
+        "0.1": 2,
+        "0.12": 2,
+        "0.14": 1,
+        "0.16": 1,
+        "0.18": 2
       }
     }
   },
   "run_info": {
     "program_version": "0.9.1",
-    "input_toml": "[input]\n    read1 = 'input_read1.fq'\n\n# Extract first 5 bases and store as tag\n[[step]]\n    action = 'ExtractRegion'\n    segment = 'read1'\n    start = 0\n    length = 5\n    out_label = 'prefix_5'\n    anchor = 'start'\n\n[[step]]\n    action = 'ExtractRegex'\n    segment = 'read1'\n    search = \"CCTG\"\n    out_label = 'regex'\n\n[[step]]\n    action = 'ExtractRegex'\n    segment = 'name:read1'\n    search = \"[0-9]+\"\n    out_label = 'string_value'\n# Calculate GC content for each read\n[[step]]\n    action = 'CalcGCContent'\n    relative = true\n    segment = 'read1'\n    out_label= 'gc_content'\n\n[[step]]\n    action = 'CalcGCContent'\n    relative = false\n    segment = 'read1'\n    out_label= 'gc_content_absolute'\n\n# Create boolean tag based on length\n[[step]]\n    action = 'CalcLength'\n    segment = 'read1'\n    out_label = 'read_length'\n\n\n[[step]] \n  action = \"EvalExpression\"\n  expression = \"read_no < 4\"\n  out_label = \"read_no_lt_4\"\n\n# Create histogram reports\n[[step]]\n    action = 'Report'\n    name = 'test_histogram'\n    count = false\n    tag_histograms = ['prefix_5', 'gc_content', 'gc_content_absolute', 'read_length', 'regex', 'read_no_lt_4', 'string_value']\n\n[output]\n    prefix = \"output\"\n\n# --- Output steps (migrated from [output]) ---\n[[step]]\n    action = \"OutputFASTQ\"\n\n[[step]]\n    action = \"OutputReport\"\n    json = true\n    html = true\n",
+    "input_toml": "[input]\n    read1 = 'input_read1.fq'\n\n# Extract first 5 bases and store as tag\n\n\n[[step]] \n  action = \"CalcBaseContent\"\n  segment = 'read1'\n  bases_to_count = 'A'\n  relative = true\n  out_label = 'a_count'\n\n# Create histogram reports\n[[step]]\n    action = 'Report'\n    name = 'test_histogram'\n    count = false\n    tag_histograms = ['a_count']\n\n[output]\n    prefix = \"output\"\n\n[[step]]\n    action = \"OutputReport\"\n    json = true\n    html = true\n",
     "working_directory": "/home/user/single_step"
   },
   "report_order": [

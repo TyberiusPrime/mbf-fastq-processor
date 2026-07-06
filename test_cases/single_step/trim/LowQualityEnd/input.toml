@@ -20,6 +20,13 @@
 [output]
     prefix = "output"
 
+[[step]]
+  action=  'LowerCase'
+  target='tag:label23'
+
+[[step]]
+  action = 'StoreTagBackInSequence'
+  in_label='label23'
 # --- Output steps (migrated from [output]) ---
 [[step]]
     action = "OutputFASTQ"

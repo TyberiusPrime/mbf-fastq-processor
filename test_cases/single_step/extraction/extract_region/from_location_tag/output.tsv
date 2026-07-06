@@ -1,0 +1,5 @@
+ReadName	sample_id	umi	umi_split	location_sample_id	location_umi	location_sample_id_split	location_umi_split
+Read1	CTCCTGCACA_TCAAC	ATCAAC	A_TCTNC	read1:0-10,10-15	read1:9-15	read1:0-10,17-22	read1:9-10,17-22
+Read2	GGCGATTTCA_ATGTC	AATGTC	A_AGGNC	read1:0-10,10-15	read1:9-15	read1:0-10,17-22	read1:9-10,17-22
+Read3	GTGCACTGCT_GCTTG	TGCTTG	T_GCTNT	read1:0-10,10-15	read1:9-15	read1:0-10,17-22	read1:9-10,17-22
+Read4	GGAAGTTGAT_CTCAT	TCTCAT	T_TGANG	read1:0-10,10-15	read1:9-15	read1:0-10,17-22	read1:9-10,17-22

@@ -3100,6 +3100,28 @@ fn test_cases_x_output_x_output_x_fastq() {
 
 #[test]
 
+fn test_cases_x_output_x_output_x_twice() {
+    println!("Test case is in: test_cases/output/output/twice");
+    run_test(
+        std::path::Path::new("../test_cases/output/output/twice"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_output_x_output_x_twice_with_head_between() {
+    println!("Test case is in: test_cases/output/output/twice_with_head_between");
+    run_test(
+        std::path::Path::new("../test_cases/output/output/twice_with_head_between"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_output_x_output_compression_gzip_level() {
     println!("Test case is in: test_cases/output/output_compression_gzip_level");
     run_test(
@@ -9033,6 +9055,19 @@ fn test_cases_x_single_step_x_extraction_x_extract_region_x_extract_from_tag_wit
 
 #[test]
 
+fn test_cases_x_single_step_x_extraction_x_extract_region_x_from_location_tag() {
+    println!("Test case is in: test_cases/single_step/extraction/extract_region/from_location_tag");
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/extract_region/from_location_tag",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_extraction_x_extract_region_x_from_string_tag() {
     println!("Test case is in: test_cases/single_step/extraction/extract_region/from_string_tag");
     run_test(
@@ -10317,6 +10352,34 @@ fn test_cases_x_single_step_x_filter_x_low_complexity_x_empty_read_all() {
 
 #[test]
 
+fn test_cases_x_single_step_x_filter_x_low_complexity_range_tests_x_max_below_min() {
+    println!(
+        "Test case is in: test_cases/single_step/filter/low_complexity_range_tests/max_below_min"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/filter/low_complexity_range_tests/max_below_min",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_filter_x_low_complexity_range_tests_x_max_is_ok() {
+    println!("Test case is in: test_cases/single_step/filter/low_complexity_range_tests/max_is_ok");
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/filter/low_complexity_range_tests/max_is_ok",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_filter_x_low_complexity_range_tests_x_max_too_high() {
     println!(
         "Test case is in: test_cases/single_step/filter/low_complexity_range_tests/max_too_high"
@@ -10339,6 +10402,34 @@ fn test_cases_x_single_step_x_filter_x_low_complexity_range_tests_x_max_too_low(
     run_test(
         std::path::Path::new(
             "../test_cases/single_step/filter/low_complexity_range_tests/max_too_low",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_filter_x_low_complexity_range_tests_x_min_above_max() {
+    println!(
+        "Test case is in: test_cases/single_step/filter/low_complexity_range_tests/min_above_max"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/filter/low_complexity_range_tests/min_above_max",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_filter_x_low_complexity_range_tests_x_min_is_ok() {
+    println!("Test case is in: test_cases/single_step/filter/low_complexity_range_tests/min_is_ok");
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/filter/low_complexity_range_tests/min_is_ok",
         ),
         "input.toml",
         1,
@@ -12453,6 +12544,21 @@ fn test_cases_x_single_step_x_reports_x_report_x_tag_histogram_x_missing_strings
     run_test(
         std::path::Path::new(
             "../test_cases/single_step/reports/report/tag_histogram/missing_strings",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_reports_x_report_x_tag_histogram_x_non_integer_values() {
+    println!(
+        "Test case is in: test_cases/single_step/reports/report/tag_histogram/non_integer_values"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/reports/report/tag_histogram/non_integer_values",
         ),
         "input.toml",
         1,

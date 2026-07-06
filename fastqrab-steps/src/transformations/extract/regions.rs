@@ -111,7 +111,7 @@ impl TagUser for PartialTaggedVariant<PartialRegions> {
                                 }
                             }
                         }
-                    } // cov:excl-line
+                    }
                 }
                 all_segments
             } else {
@@ -383,6 +383,7 @@ fn extract_from_joined(
     let mut spans: Vec<(u32, u32)> = Vec::new();
     for offset in start..start + out_length as isize {
         let read_pos = if offset < 0 {
+            //mutants::skip (first == covered[0] + (offset=0)
             first + offset
         } else if offset < joined_len {
             let offset: usize = offset.try_into().expect("Negativ offset -> bug");

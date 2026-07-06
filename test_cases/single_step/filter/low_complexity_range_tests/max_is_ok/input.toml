@@ -1,0 +1,20 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'CalcComplexity'
+    out_label = 'low_complexity_ratio'
+
+[[step]]
+    action = 'FilterByNumericTag'
+    in_label = 'low_complexity_ratio'
+    max_value = 1.0
+    keep_or_remove = 'Keep'
+
+
+[output]
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

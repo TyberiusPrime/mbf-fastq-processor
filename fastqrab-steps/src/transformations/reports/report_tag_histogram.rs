@@ -14,8 +14,8 @@ pub enum HistogramData {
     /// String values mapped to their counts
     String(FxIndexMap<String, usize>),
     /// Numeric values bucketed into bins (value -> count)
-    Integer(FxIndexMap<i64, usize>),
-    ZeroToOne(FxIndexMap<NonNaN, usize>),
+    //Integer(FxIndexMap<i64, usize>),
+    Float(FxIndexMap<NonNaN, usize>),
     /// Boolean values (false count, true count)
     Bool(usize, usize),
 }
@@ -28,12 +28,12 @@ impl HistogramData {
                     *a.entry(k).or_insert(0) += v;
                 }
             }
-            (Self::Integer(a), Self::Integer(b)) => {
-                for (k, v) in b {
-                    *a.entry(k).or_insert(0) += v;
-                }
-            }
-            (Self::ZeroToOne(a), Self::ZeroToOne(b)) => {
+            // (Self::Integer(a), Self::Integer(b)) => {
+            //     for (k, v) in b {
+            //         *a.entry(k).or_insert(0) += v;
+            //     }
+            // }
+            (Self::Float(a), Self::Float(b)) => {
                 for (k, v) in b {
                     *a.entry(k).or_insert(0) += v;
                 }
@@ -74,10 +74,10 @@ impl HistogramData {
             TagColumn::Numeric(items) => {
                 let n = items[idx];
                 match self {
-                    HistogramData::Integer(map) => {
-                        *map.entry(n.round() as i64).or_insert(0) += 1;
-                    }
-                    HistogramData::ZeroToOne(map) => {
+                    // HistogramData::Integer(map) => {
+                    //     *map.entry(n.round() as i64).or_insert(0) += 1;
+                    // }
+                    HistogramData::Float(map) => {
                         let bucket: NonNaN = ((n * 100.).round() / 100.0)
                             .try_into()
                             .expect("NaN value for histogram - not supported");
@@ -112,18 +112,19 @@ impl From<HistogramData> for serde_json::Value {
                     .collect()
             }
             //json only does string keys
-            HistogramData::Integer(map) => {
-                let mut keys: Vec<_> = map.keys().collect();
-                keys.sort();
-                keys.iter()
-                    .map(|k| (k.to_string(), *map.get(*k).expect("Keys came from map")))
-                    .collect()
-            }
-            HistogramData::ZeroToOne(map) => {
+            // HistogramData::Integer(map) => {
+            //     let mut keys: Vec<_> = map.keys().collect();
+            //     keys.sort();
+            //     keys.iter()
+            //         .map(|k| (k.to_string(), *map.get(*k).expect("Keys came from map")))
+            //         .collect()
+            // }
+            HistogramData::Float(map) => {
                 let mut keys: Vec<_> = map.keys().collect();
                 keys.sort();
                 keys.iter()
                     .map(|k| (format!("{k:.2}"), *map.get(*k).expect("Keys came from map")))
+                    //2 digits incidentially end up without .00 in json
                     .collect()
             }
 
@@ -200,15 +201,7 @@ impl _ReportTagHistogram {
             TagValueType::Location | TagValueType::String => {
                 HistogramData::String(FxIndexMap::default())
             }
-            TagValueType::Numeric((lower, upper)) => {
-                if lower == Some(NonNaN::new(0.0).expect("Can't fail"))
-                    && upper == Some(NonNaN::new(1.0).expect("can't fail"))
-                {
-                    HistogramData::ZeroToOne(FxIndexMap::default())
-                } else {
-                    HistogramData::Integer(FxIndexMap::default())
-                }
-            }
+            TagValueType::Numeric(_) => HistogramData::Float(FxIndexMap::default()),
             TagValueType::Bool => HistogramData::Bool(0, 0),
         }
     }
@@ -245,6 +238,7 @@ impl Step for Box<_ReportTagHistogram> {
         false
     }
 
+    #[mutants::skip]
     fn needs_serial(&self) -> bool {
         false
     }

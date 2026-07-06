@@ -36,15 +36,7 @@ impl VerifyIn<PartialConfig> for PartialRegion {
 }
 
 // cov:excl-start
-impl TagUser for PartialTaggedVariant<PartialRegion> {
-    fn get_tag_usage(
-        &mut self,
-        _tags_available: &IndexMap<TagLabel, TagMetadata>,
-        _segment_order: &[String],
-    ) -> Option<TagUsageInfo<'_>> {
-        Some(TagUsageInfo::default())
-    }
-}
+impl TagUser for PartialTaggedVariant<PartialRegion> {}
 // cov:excl-stop
 
 impl Step for Region {

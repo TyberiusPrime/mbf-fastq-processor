@@ -58,14 +58,19 @@ impl TagUser for PartialTaggedVariant<Box<Partial_ReportBaseStatisticsPart2>> {}
 
 //ensure the unsafe below is actually safe.
 const _: () = {
-    let mut i = 0;
-    while i < 256 {
-        assert!(
-            BASE_TO_INDEX[i] <= 4,
-            "BASE_TO_INDEX must not contain values > 4, for the unsafe optimization below to hold"
-        );
-        i += 1;
+    let mut ii = 0;
+    let mut first_larger_than_4 = BASE_TO_INDEX.len() + 1;
+    while ii < BASE_TO_INDEX.len() {
+        if BASE_TO_INDEX[ii] > 4 {
+            first_larger_than_4 = ii;
+            break;
+        }
+        ii += 1;
     }
+    assert!(
+        first_larger_than_4 == BASE_TO_INDEX.len() - 1,
+        "BASE_TO_INDEX contained a value > 4 before the sentinel, or did not contain the sentinel"
+    );
 };
 
 impl Step for Box<_ReportBaseStatisticsPart2> {

@@ -1,0 +1,27 @@
+[input]
+    read1 = 'input_read1.fq'
+
+# Extract first 5 bases and store as tag
+
+
+[[step]] 
+  action = "CalcBaseContent"
+  segment = 'read1'
+  bases_to_count = 'A'
+  relative = true
+  out_label = 'a_count'
+
+# Create histogram reports
+[[step]]
+    action = 'Report'
+    name = 'test_histogram'
+    count = false
+    tag_histograms = ['a_count']
+
+[output]
+    prefix = "output"
+
+[[step]]
+    action = "OutputReport"
+    json = true
+    html = true

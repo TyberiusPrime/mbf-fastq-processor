@@ -1,0 +1,55 @@
+[input]
+read1 = "input_read1.fq"
+
+[[step]]
+action = "Head"
+n = 4
+
+[[step]]
+action = "ExtractRegions"
+source = "read1"
+regions = [
+  { start = 0, length = 10, anchor = "Start" },
+  { start = 10, length = 5, anchor = "Start" },
+]
+out_label = "sample_id"
+
+[[step]]
+action = "ExtractRegions"
+source = "read1"
+regions = [
+  { start = 0, length = 10, anchor = "Start" },
+  { start = 17, length = 5, anchor = "Start" },
+]
+out_label = "sample_id_split"
+
+[[step]]
+action = "ExtractRegions"
+out_label = "umi"
+regions = [
+  { start = -6, length = 6, anchor = "End" },
+]
+segment = "tag:sample_id"
+
+[[step]]
+action = "ExtractRegions"
+out_label = "umi_split"
+regions = [
+  { start = -6, length = 6, anchor = "End" },
+]
+segment = "tag:sample_id_split"
+
+[[step]]
+action = "OutputTable"
+in_labels = [
+  "sample_id",
+  "umi",
+  "umi_split",
+  "location_sample_id",
+  "location_umi",
+  "location_sample_id_split",
+  "location_umi_split"
+]
+
+[output]
+prefix = "output"
