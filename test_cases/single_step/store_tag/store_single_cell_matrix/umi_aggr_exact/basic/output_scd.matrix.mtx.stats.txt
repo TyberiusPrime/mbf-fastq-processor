@@ -1,9 +1,9 @@
 Metric	Value
-Input reads	6
-Matrix size	2
-Matrix matched	2
+Input reads	8
+Matrix size	3
+Matrix matched	3
 Observed genes	2
 Observed cells	2
-Reads in matrix	5
-Reads in matrix with matched gene and cell	5
+Reads in matrix	7
+Reads in matrix with matched gene and cell	7
 Reads lost due to UMI deduplication	1

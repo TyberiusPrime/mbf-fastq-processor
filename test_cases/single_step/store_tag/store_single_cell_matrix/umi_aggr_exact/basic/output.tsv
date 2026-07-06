@@ -5,3 +5,5 @@ read3-not-counted	AAAA	CCCC	TTTT
 read4-counted	AAAA	CCCC	TTTA
 read5-counted	AAAA	CCCC	TTAA
 read6-counted	AAAA	CCCC	AAAA
+read7-counted	AAAA	CCCC	AAAT
+read8-not	AAAA	GGGG	AAAG

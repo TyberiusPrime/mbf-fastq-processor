@@ -43,6 +43,7 @@ impl Umi {
     }
 
     #[expect(clippy::unreadable_literal, reason = "they're repeating")]
+    #[mutants::skip] // all false positive
     fn is_homopolymer(self, umi_length: u16) -> bool {
         assert!(umi_length <= 16, "Max umi length exceeded");
         let x = self.0;
@@ -423,6 +424,7 @@ impl Step for StoreSingleCellMatrix {
             .expect("gene_barcodes section missing from InputInfo");
 
         if cell_bc.seq_to_name.len() >= (u32::MAX - 1) as usize {
+            //mutants::skip
             //cov:excl-start
             anyhow::bail!(
                 "Too many cell barcodes: {} (max {})",
@@ -875,7 +877,7 @@ fn aggregate_to_matrix_exact(entries: &[ObservedEvent]) -> Vec<(GeneIdx, CellIdx
                 //same gene & cell & umi. don't count
             }
             Some(last_key) if last_key.0 == key.0 && last_key.1 == key.1 => {
-                //same cell and gene
+                //same cell and gene, different umi.
                 counter = counter.saturating_add(1);
                 last = Some(key);
             }

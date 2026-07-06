@@ -12820,6 +12820,21 @@ fn test_cases_x_single_step_x_store_tag_x_in_table_output_stdout_twice() {
 
 #[test]
 
+fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_infix_invalid() {
+    println!(
+        "Test case is in: test_cases/single_step/store_tag/store_single_cell_matrix/infix_invalid"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/store_tag/store_single_cell_matrix/infix_invalid",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_umi_aggr_cellranger_x_basic() {
     println!(
         "Test case is in: test_cases/single_step/store_tag/store_single_cell_matrix/umi_aggr_cellranger/basic"
@@ -13233,6 +13248,21 @@ fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_umi_missing
     run_test(
         std::path::Path::new(
             "../test_cases/single_step/store_tag/store_single_cell_matrix/umi_missing_string_tag",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_store_tag_x_store_single_cell_matrix_x_umi_too_long_x_16bp_ok() {
+    println!(
+        "Test case is in: test_cases/single_step/store_tag/store_single_cell_matrix/umi_too_long/16bp_ok"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/store_tag/store_single_cell_matrix/umi_too_long/16bp_ok",
         ),
         "input.toml",
         1,

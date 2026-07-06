@@ -1,0 +1,26 @@
+Error Details ==
+Error 1/1
+   ╭─config.toml
+   ┆
+43 │ [[step]]
+44 │     action = "StoreSingleCellMatrix"
+   ┆              ───────────┬───────────
+   ┆                         │
+   ┆                         ╰──────────── In this step
+   ┆
+45 │     cell_tag = "cell_bc"
+46 │     gene_tag = "gene_bc"
+47 │     umi_tag = "str_umi"
+48 │     cell_barcodes = "cells"
+49 │     gene_barcodes = "genes"
+50 │     umi_aggregation = 'None'
+51 │     infix = "../haha!"
+   ┆             ─────┬────
+   ┆                  │
+   ┆                  ╰───── Invalid value
+───╯
+Hint: Must not contain '/', '\' or ':'.
+      See https://doc_url.example/version-stripped-from-test/docs/redirects/StoreSingleCellMatrix
+      Or run: `fastqrab template StoreSingleCellMatrix` for more information.
+
+

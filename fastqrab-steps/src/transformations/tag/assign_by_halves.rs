@@ -325,6 +325,7 @@ impl CellRangerProbeAssigner {
                     let score_right =
                         ((query.len() - query.len() / 2) as i32) - (2 * right_hand_distance as i32);
                     if score_left > 0 && (score_left + score_right >= self.rescue_min_score) {
+                        //mutants::skip, >= is correct
                         return Some(right_hand_name.as_str());
                     }
                 }
