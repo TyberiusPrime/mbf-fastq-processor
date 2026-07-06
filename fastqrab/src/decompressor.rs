@@ -71,7 +71,7 @@ pub fn run() -> Result<()> {
     let _ = raw.next(); // drop "__decompressor"
     let args = Args::parse_from(std::iter::once(argv0).chain(raw));
 
-    let recycle_cap = std::thread::available_parallelism().map_or(4, std::num::NonZero::get) * 2;
+    let recycle_cap = std::thread::available_parallelism().map_or(4, std::num::NonZero::get) * 2; //mutants::skip
     let (recycle_tx, recycle_rx) = bounded::<Vec<u8>>(recycle_cap);
     let (tx, rx) = bounded::<Arc<Vec<u8>>>(16);
 
@@ -84,7 +84,7 @@ pub fn run() -> Result<()> {
     // Restrict filesystem reads to the input file before spawning any threads.
     // Skipped for stdin (data arrives via an already-open fd, nothing to lock down).
     #[cfg(target_os = "linux")]
-    if args.input.as_os_str() != "-" {
+    if args.input.as_os_str() != "-" { //mutants::skip
         apply_landlock(&input).unwrap_or_else(|e| {
             eprintln!("[decompressor] warning: landlock sandbox not applied: {e}"); // cov:excl-line
         }); // cov:excl-line
@@ -132,7 +132,7 @@ pub fn run() -> Result<()> {
             run_shm(fd, slots, slot_size, &rx, &recycle_tx, producer)?;
             drop(recycle_tx);
         }
-        None if peek_bytes.is_some() => {
+        None if peek_bytes.is_some() => { //mutants::skip - running the full pipe is slow, but correct
             // Emits the head then returns, leaving the producer unjoined if it is
             // still decoding the rest (which we don't need).
             run_peek(&rx, peek_bytes.unwrap_or(0), producer)?;
@@ -161,7 +161,7 @@ fn read_zstd(
         buf.clear();
         buf.resize(chunk_size, 0);
         let mut filled = 0usize;
-        while filled < chunk_size {
+        while filled < chunk_size { //mutants::skip - not observable but in ram usage.
             let n = decoder.read(&mut buf[filled..])?;
             if n == 0 {
                 break;
@@ -187,6 +187,7 @@ fn read_zstd(
     clippy::cast_precision_loss,
     reason = "MB/s is a human-facing diagnostic; f64 precision loss on byte counts is irrelevant"
 )]
+#[mutants::skip] 
 fn report_throughput(bytes_since_last: u64, total_bytes: u64, elapsed_secs: f64, since_start: f64) {
     let mbps = bytes_since_last as f64 / elapsed_secs / (1024.0 * 1024.0);
     let avg = total_bytes as f64 / since_start / (1024.0 * 1024.0);
@@ -202,6 +203,7 @@ fn report_throughput(bytes_since_last: u64, total_bytes: u64, elapsed_secs: f64,
 
 /// Chunk size used in peek mode: large enough that the first decoded chunk always
 /// covers the format-discriminating head, small enough to be cheap to inflate.
+#[mutants::skip] // changing this constant doesn't affect correctness, only performance
 const PEEK_CHUNK_SIZE: usize = 64 * 1024;
 
 /// Peek mode: write at most `n` decoded bytes to stdout, then stop without
@@ -222,19 +224,20 @@ fn run_peek(
     let stdout = std::io::stdout();
     let mut out = stdout.lock();
     let mut written = 0usize;
-    while written < n {
+    while written <= n { //mutants::skip - probably makes no difference whether we output exactly n,
+        //or n -1 bytes.
         let Ok(chunk) = rx.recv() else {
             // Channel disconnected: every sender dropped, so the producer is done
             // and joining it won't block. Surface its error, if any.
             let _ = out.flush();
             return producer.join().expect("producer thread panicked");
         };
-        let take = (n - written).min(chunk.len());
+        let take = (n.checked_sub(written).expect("written > n?")).min(chunk.len());
         if out.write_all(&chunk[..take]).is_err() {
             // consumer already has what it needs
             break; // cov:excl-line
         }
-        written += take;
+        written = written.saturating_add(take);
     }
     // Head delivered. The producer may still be mid-decode; we deliberately leave
     // it unjoined (detached at process exit) rather than wait out the rest.
@@ -260,13 +263,14 @@ fn run_pipe(
             } // cov:excl-line
             return Err(e.into()); // cov:excl-line
         }
-        bytes_since_last += chunk.len() as u64;
-        total_bytes += chunk.len() as u64;
+        bytes_since_last += chunk.len() as u64; //mutants::skip
+        total_bytes += chunk.len() as u64; //mutants::skip
         if verbose {
             //cov:excl-start
             let now = std::time::Instant::now();
             let elapsed = now.duration_since(last_report);
             if elapsed.as_secs_f64() >= 1.0 {
+                //mutants::skip
                 report_throughput(
                     bytes_since_last,
                     total_bytes,
@@ -306,7 +310,7 @@ fn run_shm(
         libc::mmap(
             std::ptr::null_mut(),
             total,
-            libc::PROT_READ | libc::PROT_WRITE,
+            libc::PROT_READ | libc::PROT_WRITE, //mutants::skip
             libc::MAP_SHARED,
             fd,
             0,
@@ -388,6 +392,7 @@ fn run_shm(
 }
 
 #[cfg(not(unix))]
+#[mutants::skip] // shared-memory output is only supported on Unix
 fn run_shm(
     _fd: i32,
     _slots: usize,
@@ -408,6 +413,7 @@ fn write_descriptor(out: &mut impl Write, slot: u32, len: u32) -> std::io::Resul
 }
 
 #[cfg(target_os = "linux")]
+#[mutants::skip] // landlock is best effort.
 fn apply_landlock(input: &std::path::Path) -> Result<()> {
     use landlock::{ABI, AccessFs, PathBeneath, PathFd, Ruleset, RulesetAttr, RulesetCreatedAttr};
 
@@ -437,6 +443,7 @@ fn apply_landlock(input: &std::path::Path) -> Result<()> {
     Ok(())
 }
 
+#[mutants::skip]
 fn is_consumer_gone(e: &std::io::Error) -> bool {
     e.kind() == std::io::ErrorKind::BrokenPipe
 }

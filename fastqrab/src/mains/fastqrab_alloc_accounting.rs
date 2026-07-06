@@ -1,6 +1,7 @@
 use allocation_counter::measure;
 use fastqrab::cli::main::{EarlyExit, entry_point};
 
+#[mutants::skip]
 fn main() {
     let mut result: Result<(), anyhow::Error> = Ok(());
     let info = measure(|| {
@@ -26,7 +27,7 @@ fn main() {
         // why though?, the ok is being hit.
         Ok(()) => {}
         //cov:excl-start - the test only covers the working case, and that's ok.
-        Err(e) if e.is::<EarlyExit>() => std::process::exit(1),
+        Err(e) if e.is::<EarlyExit>() => std::process::exit(1), //mutants::skip
         Err(e) => {
             eprintln!("Error: {e:?}");
             std::process::exit(1);

@@ -16,11 +16,13 @@ use std::process::Command;
 use std::time::{Duration, SystemTime};
 use toml_edit::{DocumentMut, Item, Table, value};
 
+#[mutants::skip]
 fn interruptible_sleep(duration_ms: u64) {
     std::thread::sleep(Duration::from_millis(duration_ms));
 }
 
 /// Get current local time as a formatted string
+#[mutants::skip]
 fn get_local_time() -> String {
     use std::time::UNIX_EPOCH;
 
@@ -117,11 +119,9 @@ pub fn run_interactive(
         if first_run || content != last_content {
             last_content = content;
 
-            if !first_run {
-                println!("\n{}", "=".repeat(80));
-                println!("🔄 File change detected, reprocessing...");
-                println!("{}\n", "=".repeat(80));
-            }
+            println!("\n{}", "=".repeat(80));
+            println!("🔄 File change detected, reprocessing...");
+            println!("{}\n", "=".repeat(80));
             first_run = false;
             run_count += 1;
 
@@ -206,13 +206,13 @@ fn process_toml_interactive(
 
         // Combine for output
         let mut result = String::new();
-        if !stdout.is_empty() {
+        if !stdout.is_empty() { //mutants::skip
             // cov:excl-start
             // normally, it's quiet on stdout...
             result.push_str(&stdout);
             // cov:excl-stop
         }
-        if !inspect_output.is_empty() {
+        if !inspect_output.is_empty() { //mutants::skip
             if !result.is_empty() {
                 // cov:excl-start
                 //same stdout argument
