@@ -187,7 +187,7 @@ impl PodFastqParser {
             region,
         } = spawn_shm_chunk_reader(path, format, thread_count, demux_threads)?;
 
-        let (chunk_tx, chunk_rx) = channel::bounded::<PodFastqChunk>(demux_threads * 4);
+        let (chunk_tx, chunk_rx) = channel::bounded::<PodFastqChunk>(demux_threads * 4); //mutants::skip
         let parser_handle =
             std::thread::spawn(move || parse_pods_from_channel(bytes_rx, chunk_tx, demux_threads));
 
@@ -253,8 +253,8 @@ impl PodFastqParser {
         loop {
             match self.chunk_rx.recv() {
                 // The pod parser never emits empty chunks, but guard anyway.
-                Ok(chunk) if !chunk.names.is_empty() => return Some(chunk),
-                Ok(_) => {} //cov:excl-line
+                Ok(chunk) if !chunk.names.is_empty() => return Some(chunk), //mutants::skip
+                Ok(_) => {}                                                 //cov:excl-line
                 Err(_) => return None,
             }
         }

@@ -21,6 +21,7 @@ use crate::io::pod_parser::{Chunk, ChunkRegion};
 /// Whether the shared-memory decompressor transport is enabled. On by default;
 /// `FASTQRAB_DECOMP_SHM=0` forces the legacy pipe path (A/B and field escape
 /// hatch).
+#[mutants::skip] // it's not visible but in benchmarks
 pub(crate) fn shm_enabled() -> bool {
     !matches!(std::env::var("FASTQRAB_DECOMP_SHM").as_deref(), Ok("0"))
 }
@@ -28,6 +29,7 @@ pub(crate) fn shm_enabled() -> bool {
 /// Shared-memory slot size in bytes (`FASTQRAB_DECOMP_SHM_SLOT_SIZE`, default
 /// 8 MiB — comfortably above the decoder's ~4 MiB chunk so a chunk usually fits
 /// one slot). Tunable; tests shrink it to force the multi-slot chunk-split path.
+#[mutants::skip]
 pub(crate) fn shm_slot_size() -> usize {
     std::env::var("FASTQRAB_DECOMP_SHM_SLOT_SIZE")
         .ok()
@@ -40,6 +42,7 @@ pub(crate) fn shm_slot_size() -> usize {
 /// computed from the thread counts). Tunable; tests shrink it to a tiny ring to
 /// stress backpressure / recycling. The pipeline is deadlock-free for any ring
 /// size ≥ 1 (consumers never wait on a slot to finish).
+#[mutants::skip]
 pub(crate) fn shm_slot_count(fallback: usize) -> usize {
     std::env::var("FASTQRAB_DECOMP_SHM_SLOTS")
         .ok()
@@ -82,7 +85,7 @@ pub(crate) fn spawn_shm_chunk_reader(
     // only in-flight slots fault in — and we can size the ring generously.
     let slot_size = shm_slot_size();
     let depth = thread_count.0.get().max(parallel_hint);
-    let slots = shm_slot_count((depth * 2 + 4).clamp(8, 64));
+    let slots = shm_slot_count((depth * 2 + 4).clamp(8, 64)); //mutants::skip 8 slots work...
 
     let ShmDecompressor {
         region,

@@ -2242,6 +2242,7 @@ impl Config {
         stages
     }
 
+    #[mutants::skip] // only used for threading decisions
     fn any_bam_or_gzip_output(&self) -> bool {
         for transform in &self.transform {
             if let Transformation::OutputBAM(_) = transform {

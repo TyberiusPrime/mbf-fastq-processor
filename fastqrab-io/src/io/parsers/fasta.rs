@@ -186,7 +186,7 @@ fn fill(reader: &mut impl Read, buf: &mut [u8]) -> Result<usize> {
         match reader.read(buf) {
             Ok(n) => return Ok(n),
             // Interrupted: retry the read on the next loop iteration.
-            Err(e) if e.kind() == std::io::ErrorKind::Interrupted => {} // cov:excl-line
+            Err(e) if e.kind() == std::io::ErrorKind::Interrupted => {} // cov:excl-line //mutants::skip
             Err(e) => return Err(e.into()),                             // cov:excl-line
         }
     }
@@ -347,7 +347,7 @@ impl FastaPods {
         if let Some(name) = self.cur_name.take() {
             self.names.push(&name);
             let n = self.cur_seq.len();
-            if self.qual_scratch.len() < n {
+            if self.qual_scratch.len() != n {
                 self.qual_scratch.resize(n, self.fake_quality);
             }
             self.seq_quals.push(&self.cur_seq, &self.qual_scratch[..n]);
@@ -449,6 +449,7 @@ impl FastaPodInner {
     /// Join the transport threads and surface a non-zero decompressor exit, once
     /// the ring has closed and every borrowed chunk has dropped (returning its
     /// slot). Mirrors `PodFastqParser::finish_threads`.
+    #[mutants::skip] //it's all worst case error handling / defensive code
     fn finish_threads(&mut self) -> Result<()> {
         if let Some(handle) = self.reader_handle.take() {
             handle

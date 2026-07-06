@@ -25,7 +25,7 @@ At least one segment must be declared.
 
 Additional points:
 
-- fastqrab handles an arbitrary number of [segments per read]({{< relref "docs/concepts/segments.md" >}})
+- fastqrab handles up to 256 [segments per read]({{< relref "docs/concepts/segments.md" >}})
 - Segment names are user-defined and case sensitive. 
   Common conventions include `read1`, `read2`, `index1`, and `index2`. 
   They must conform to `[a-zA-Z0-9_]+$`.

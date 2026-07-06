@@ -1229,6 +1229,17 @@ fn test_cases_x_error_handling_x_replace_tag_with_letter_x_no_letter() {
 
 #[test]
 
+fn test_cases_x_error_handling_x_too_many_segments() {
+    println!("Test case is in: test_cases/error_handling/too_many_segments");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/too_many_segments"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_error_handling_x_truncated_fastq_finish_eof_x_after_1() {
     println!("Test case is in: test_cases/error_handling/truncated_fastq_finish_eof/after_1");
     run_test(
@@ -1266,6 +1277,17 @@ fn test_cases_x_error_handling_x_truncated_fastq_finish_eof_x_within_4() {
     println!("Test case is in: test_cases/error_handling/truncated_fastq_finish_eof/within_4");
     run_test(
         std::path::Path::new("../test_cases/error_handling/truncated_fastq_finish_eof/within_4"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_error_handling_x_truncated_gzip_x_fasta() {
+    println!("Test case is in: test_cases/error_handling/truncated_gzip/fasta");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/truncated_gzip/fasta"),
         "input.toml",
         1,
     );

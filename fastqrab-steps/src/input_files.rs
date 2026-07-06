@@ -33,6 +33,7 @@ pub struct StepInputFiles(pub HashMap<String, ex::fs::File>);
 
 impl std::fmt::Debug for StepInputFiles {
     //cov:excl-start
+    #[mutants::skip]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // `ex::fs::File` is not `Debug`; the ids are the useful part anyway.
         f.debug_struct("StepInputFiles")

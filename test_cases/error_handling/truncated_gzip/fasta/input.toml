@@ -1,0 +1,10 @@
+[input]
+  read1 ='input.fasta.trunc.gz'
+options.fasta_fake_quality=33
+
+[output]
+  prefix = 'output'
+
+[[step]]
+  action = 'OutputFASTA'
+  

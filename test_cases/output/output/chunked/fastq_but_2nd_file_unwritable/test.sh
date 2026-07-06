@@ -9,7 +9,6 @@ if [ ! -e "input_read1.fq" ]; then
 fi
 
 INCOMPLETE_FILENAME="output.incompleted"
-OUTPUT_FQ="output_read1.fq"
 
 echo "Testing with allow_overwrite operation..."
 if "$PROCESSOR_CMD" process config.toml --allow-overwrite 2>stderr; then

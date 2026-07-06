@@ -233,6 +233,7 @@ pub trait TagUser {
     /// `Step::init` via [`StepInputFiles`]. Mirrors `declare_output_files`.
     /// Steps that read side-input files override this; the default returns
     /// `None`.
+    //[mutants::skip]
     fn declare_input_files(&self) -> Option<Vec<InputDeclaration>> {
         None
     }

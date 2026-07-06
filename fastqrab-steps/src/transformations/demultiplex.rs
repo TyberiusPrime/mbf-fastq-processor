@@ -320,10 +320,9 @@ impl Step for Demultiplex {
                     LookupMode::Barcode => {
                         if let Some(tag) = demultiplex_info.barcode_to_tag(&key) {
                             output_tags[ii] |= tag;
-                            if tag > 0 {
-                                self.any_hit_observed
-                                    .store(true, std::sync::atomic::Ordering::Relaxed);
-                            }
+                            debug_assert!(tag != 0, "Tag should not be 0 from a barcode");
+                            self.any_hit_observed
+                                .store(true, std::sync::atomic::Ordering::Relaxed);
                         }
                     }
                     LookupMode::Label => {
@@ -332,10 +331,9 @@ impl Step for Demultiplex {
                         "Tag sequence was not utf-8, barcode names must be utf-8 unicode strings",
                     )) {
                         output_tags[ii] |= tag;
-                        if tag > 0 {
-                            self.any_hit_observed
-                                .store(true, std::sync::atomic::Ordering::Relaxed);
-                        }
+                        debug_assert!(tag != 0, "Tag should not be 0 from a barcode");
+                        self.any_hit_observed
+                            .store(true, std::sync::atomic::Ordering::Relaxed);
                     }
                     }
                 }

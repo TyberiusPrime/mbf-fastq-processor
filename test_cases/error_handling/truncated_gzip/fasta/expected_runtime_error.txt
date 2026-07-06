@@ -1,0 +1,11 @@
+Error opening input files
+
+Caused by:
+    0: Problem in segment read1 while opening 'input.fasta.trunc.gz'
+    1: decompressor subprocess exited unsuccessfully: exit status: 1. 
+       Stderr was '''
+       Error: deflate: unexpected end of input
+       
+       Caused by:
+           unexpected end of input
+       '''
