@@ -1,4 +1,4 @@
-use anyhow::Context;
+use anyhow::{Context, bail};
 
 pub mod blocks;
 pub mod io;
@@ -8,7 +8,8 @@ pub use fastqrab_config::{CompressionFormat, FileFormat, STDIN_MAGIC_PATH, get_n
 pub fn ensure_output_destination_available(
     path: &std::path::Path,
     allow_overwrite: bool,
-) -> anyhow::Result<Option<std::fs::Metadata>> {
+    allow_fifo: bool,
+) -> anyhow::Result<()> {
     use std::io::ErrorKind;
 
     match std::fs::symlink_metadata(path) {
@@ -18,24 +19,31 @@ pub fn ensure_output_destination_available(
                 use std::os::unix::fs::FileTypeExt;
 
                 if metadata.file_type().is_fifo() {
-                    return Ok(Some(metadata));
+                    if allow_fifo {
+                        return Ok(());
+                    } else {
+                        bail!(
+                            "Output file \"{}\" was a fifo, but fifo not supported for this output",
+                            path.display()
+                        )
+                    }
                 }
             }
 
             if allow_overwrite {
-                return Ok(Some(metadata));
+                Ok(())
+            } else {
+                bail!(
+                    "Output file \"{}\" already exists, refusing to overwrite. Pass --allow-overwrite to ignore this error.",
+                    path.display(),
+                );
             }
-
-            anyhow::bail!(
-                "Output file \"{}\" already exists, refusing to overwrite. Pass --allow-overwrite to ignore this error.",
-                path.display(),
-            );
         }
         Err(err) if err.kind() == ErrorKind::NotFound => {
             //mutants::skip
             // I mean that's basically expected.
             // missing directory is handled by the marker file creation
-            Ok(None)
+            Ok(())
         }
         // cov:excl-start
         Err(err) => {

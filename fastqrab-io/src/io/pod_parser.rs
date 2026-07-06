@@ -578,9 +578,9 @@ fn finish_eof(
             col.truncate(complete);
         }
     }
-    if h[0].len() != complete || h[1].len() != complete 
-        || h[3].len() != complete  //mutants::skip - we capture this as 'unequal seq & qual' 
-        // before, but I want to keep it defensively in there
+    if h[0].len() != complete || h[1].len() != complete || h[3].len() != complete
+    //mutants::skip - we capture this as 'unequal seq & qual'
+    // before, but I want to keep it defensively in there
     {
         bail!(
             "truncated FASTQ: incomplete record at end of stream (read {} complete reads before truncation)",

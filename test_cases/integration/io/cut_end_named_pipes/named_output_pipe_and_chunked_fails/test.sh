@@ -16,7 +16,7 @@ stderr_output=$("$PROCESSOR_CMD" process "$CONFIG_FILE" "$(pwd)" 2>&1 >/dev/null
     exit 1
 }
 
-expected="Chunked output is not supported when writing to named pipes"
+expected="fifo not supported for this output"
 if ! echo "$stderr_output" | grep -qF "$expected"; then
     echo "ERROR: stderr did not contain expected error text" >&2
     echo "Expected to find: $expected" >&2

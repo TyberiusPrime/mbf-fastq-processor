@@ -80,14 +80,14 @@ pub fn create_merge_output_handles(
                 format!("{prefix}{sep}{group_output_name}{tail}")
             };
             let dst_path = output_directory.join(&dst_name);
-            ensure_output_destination_available(&dst_path, allow_overwrite)?;
+            ensure_output_destination_available(&dst_path, allow_overwrite, false)?;
             let f = ex::fs::File::create(&dst_path)
                 .with_context(|| format!("Failed to create merged BAM: {}", dst_path.display()))?;
             bam_files.insert(dst_path.clone(), f);
 
             if merge_config.index_merged {
                 let bai_path = dst_path.with_extension("bam.bai");
-                ensure_output_destination_available(&bai_path, allow_overwrite)?;
+                ensure_output_destination_available(&bai_path, allow_overwrite, false)?;
                 let g = ex::fs::File::create(&bai_path)
                     .with_context(|| format!("Failed to create BAI: {}", bai_path.display()))?;
                 bai_files.insert(bai_path, g);

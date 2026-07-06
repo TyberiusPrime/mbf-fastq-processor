@@ -3028,6 +3028,17 @@ fn test_cases_x_output_x_output_x_chunked_x_fastq() {
 
 #[test]
 
+fn test_cases_x_output_x_output_x_chunked_x_fastq_but_2nd_file_unwritable() {
+    println!("Test case is in: test_cases/output/output/chunked/fastq_but_2nd_file_unwritable");
+    run_test(
+        std::path::Path::new("../test_cases/output/output/chunked/fastq_but_2nd_file_unwritable"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_output_x_output_x_fastq() {
     println!("Test case is in: test_cases/output/output/fastq");
     run_test(

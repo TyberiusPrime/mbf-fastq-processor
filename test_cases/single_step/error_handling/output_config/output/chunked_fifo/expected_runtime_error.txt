@@ -1,1 +1,1 @@
-Chunked output is not supported when writing to named pipes
+was a fifo, but fifo not supported for this output

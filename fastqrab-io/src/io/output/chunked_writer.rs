@@ -32,6 +32,7 @@
 use anyhow::{Context, Result};
 use bstr::ByteSlice;
 use fastqrab_config::{CompressionFormat, FileFormat};
+use indexmap::IndexMap;
 use sha2::Digest;
 use std::fmt::Write as StringWrite;
 use std::io::{self, BufWriter, Write};
@@ -468,6 +469,14 @@ pub struct BamRecordSink {
     options: BamSinkOptions,
 }
 
+// cov:excl-start
+impl std::fmt::Debug for BamRecordSink {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("BamRecordSink").finish_non_exhaustive()
+    }
+}
+// cov:excl-stop
+
 impl BamRecordSink {
     pub fn new(
         sink: DataSink,
@@ -876,7 +885,12 @@ impl ChunkPaths {
     /// # Panics
     /// digit count > u32. Unlikely.
     #[expect(clippy::string_slice, reason = "ascii filename arithmetic")]
-    pub fn widen_existing(&self, old_digits: usize, new_digits: usize) -> Result<()> {
+    pub fn widen_existing(
+        &self,
+        old_digits: usize,
+        new_digits: usize,
+    ) -> Result<Vec<(PathBuf, PathBuf)>> {
+        let mut renames = Vec::new();
         let max_value = 10usize.pow(u32::try_from(old_digits).expect("digit count fits u32"));
         let mut existing: Vec<PathBuf> = Vec::new();
         for entry in ex::fs::read_dir(&self.directory).with_context(|| {
@@ -928,7 +942,7 @@ impl ChunkPaths {
                         new_prefix.file_name().unwrap_or_default().to_string_lossy(),
                         suffix
                     ));
-                    ex::fs::rename(path, &new_name).with_context(|| {
+                    ex::fs::rename(&path, &new_name).with_context(|| {
                         //cov:excl-start
                         format!(
                             "Could not rename output chunk file from {} to {}",
@@ -936,10 +950,11 @@ impl ChunkPaths {
                             new_name.display()
                         ) //cov:excl-stop
                     })?; // cov:excl-line
+                    renames.push((path.clone(), new_name));
                 }
             }
         }
-        Ok(())
+        Ok(renames)
     }
 }
 
@@ -989,6 +1004,7 @@ pub struct ChunkedRecordWriter {
     completed_chunks: Vec<ChunkSummary>,
 }
 
+#[derive(Debug)]
 enum ActiveSink {
     Text(TextRecordSink),
     Bam(BamRecordSink),
@@ -1016,8 +1032,6 @@ impl ChunkedRecordWriter {
         }
         let digit_count = usize::from(chunk_policy.records_per_chunk.is_some());
 
-        #[cfg(unix)]
-        use std::os::unix::fs::FileTypeExt;
         if let WriteTarget::Files(paths) = &target {
             // Check the initial output file(s) for overwrite protection. This must
             // run for both chunked and non-chunked output: open_active_sink() only
@@ -1030,14 +1044,8 @@ impl ChunkedRecordWriter {
                 vec![paths.nth(0, 0)]
             };
             for path in &check_paths {
-                let metadata = ensure_output_destination_available(path, allow_overwrite)?;
-                let is_fifo = metadata.as_ref().is_some_and(|m| m.file_type().is_fifo());
-                if is_fifo && chunk_policy.records_per_chunk.is_some() {
-                    anyhow::bail!(
-                        "Chunked output is not supported when writing to named pipes: {}",
-                        path.display()
-                    );
-                }
+                let allow_fifo = chunk_policy.records_per_chunk.is_none();
+                ensure_output_destination_available(path, allow_overwrite, allow_fifo)?;
             }
         }
 
@@ -1163,11 +1171,16 @@ impl ChunkedRecordWriter {
             let WriteTarget::Files(paths) = &self.target else {
                 panic!("Chunking, but not files output?!"); //cov:excl-line
             };
-            paths.widen_existing(self.digit_count - 1, self.digit_count)?;
+            let renames = paths.widen_existing(self.digit_count - 1, self.digit_count)?;
+            let mut renames: IndexMap<_, _> = renames.into_iter().collect();
             // Update completed_chunks paths to reflect rename.
             for c in &mut self.completed_chunks {
                 if let Some(p) = c.path.take() {
-                    let new_p = renamed_chunk_path(&p, self.digit_count - 1, self.digit_count);
+                    let new_p = renames
+                        .swap_remove(&p)
+                        .with_context(|| format!("No rename happend for {p:?}")) //cov:excl-line
+                        .expect("rename missing for completed chunk")
+                        .clone();
                     c.path = Some(new_p);
                 }
             }
@@ -1181,7 +1194,8 @@ impl ChunkedRecordWriter {
             WriteTarget::Files(paths) => {
                 let path = paths.nth(self.chunk_index, self.digit_count);
                 if self.chunk_index > 0 {
-                    let _ = ensure_output_destination_available(&path, self.allow_overwrite)?;
+                    //chunk 0 was tested before.
+                    ensure_output_destination_available(&path, self.allow_overwrite, false)?;
                 }
                 DataSink::create_file(path)?
             }
@@ -1207,7 +1221,8 @@ impl ChunkedRecordWriter {
         };
         // Re-emit the header at the top of every chunk after the first (the
         // first chunk's header is written by set_header() itself).
-        if self.chunk_index > 0
+        if self.chunk_index > 0 //mutants::skip, since we're not chunking tables
+        //
             && let (Some(header), ActiveSink::Text(sink)) = (&self.header, &mut self.active)
         {
             //cov:excl-start
@@ -1233,7 +1248,11 @@ impl ChunkedRecordWriter {
                 s.finish()?
             }
             ActiveSink::Bam(s) => s.finish()?,
-            ActiveSink::Idle => unreachable!("finish_active_sink called on Idle"), //cov:excl-line
+            ActiveSink::Idle => {
+                // no op - happens when we could not put a new sink in place.
+                // e.g. because the output file was readonly
+                return Ok(());
+            }
         };
         let path = data_sink.path().map(Path::to_path_buf);
         if let Some(path) = &path {
@@ -1285,25 +1304,4 @@ fn write_hash_sidecar(filename: &Path, hash: &str, suffix: &str) -> Result<()> {
     fh.write_all(hash.as_bytes())?;
     fh.flush()?;
     Ok(())
-}
-
-fn renamed_chunk_path(old: &Path, old_digits: usize, new_digits: usize) -> PathBuf {
-    // Mirror what `widen_existing` does to a single recorded path.
-    let parent = old.parent().expect("Parent failed on path");
-    let name = old
-        .file_name()
-        .and_then(|s| s.to_str())
-        .expect("Could not get filename");
-    // Find the `.NNN[...]` segment after the last `.` group of the basename.
-    // We re-derive by searching for an old-width digit run.
-    // Simpler: scan dot-separated tokens for a numeric one of width `old_digits`.
-    let mut parts: Vec<String> = name.split('.').map(ToString::to_string).collect();
-    for part in &mut parts {
-        if part.len() == old_digits && part.chars().all(|c| c.is_ascii_digit()) {
-            let n: usize = part.parse().expect("digits");
-            *part = format!("{n:0new_digits$}");
-            break;
-        }
-    }
-    parent.join(parts.join("."))
 }

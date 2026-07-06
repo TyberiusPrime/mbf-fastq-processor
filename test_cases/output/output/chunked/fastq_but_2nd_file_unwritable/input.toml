@@ -1,0 +1,17 @@
+[input]
+    read1 = ["input_read1.fq", "input_read1.fq"]
+
+[options]
+    accept_duplicate_files = true
+
+[output]
+    prefix = "output"
+
+[[step]]
+  action = 'StoreTagsInTable'
+  in_labels = ['len_read1']
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"
+    chunk_size = 3
