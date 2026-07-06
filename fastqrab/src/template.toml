@@ -968,6 +968,7 @@
 #    region_separator = "_" # (optional) char to separate regions in a tag, if it has multiple
 #    in_labels = ["mytag", ] # Store just these tags. Optional, all tags store if not set
 #    include_read_name = true # (optional) include the ReadName column. Default: true
+#    include_read_comment = false # (optional) include the ReadComment column. Default: false
 
 
 # ==== StoreSingleCellMatrix ====

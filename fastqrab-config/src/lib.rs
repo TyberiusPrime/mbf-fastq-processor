@@ -163,6 +163,11 @@ pub const fn default_spot_check_read_pairing() -> bool {
 pub const fn default_include_read_name() -> bool {
     true
 }
+
+#[must_use]
+pub const fn default_include_read_comment() -> bool {
+    false
+}
 // Schema helper for string or list of strings
 #[derive(JsonSchema)]
 #[serde(untagged)]

@@ -5,7 +5,10 @@ use crate::transformations::output::validate_compression_level_u8;
 use crate::transformations::prelude::*;
 use crate::verify_opt_path_component;
 
-use fastqrab_config::{default_include_read_name, default_region_separator, tpd_adapt_bstring};
+use fastqrab_config::{
+    default_include_read_comment, default_include_read_name, default_region_separator,
+    tpd_adapt_bstring,
+};
 use fastqrab_io::CompressionFormat;
 
 type OutputHandles = Arc<Mutex<DemultiplexedData<Option<ChunkedRecordWriter>>>>;
@@ -34,6 +37,7 @@ pub struct StoreTagsInTable {
     output_handles: Option<OutputHandles>,
 
     include_read_name: bool,
+    include_read_comment: bool,
 
     #[expect(dead_code, reason = "only used in deser")]
     #[tpd(alias = "tags")]
@@ -58,6 +62,8 @@ impl VerifyIn<PartialConfig> for PartialStoreTagsInTable {
     {
         self.region_separator.or_with(default_region_separator);
         self.include_read_name.or_with(default_include_read_name);
+        self.include_read_comment
+            .or_with(default_include_read_comment);
         self.infix.verify(verify_opt_path_component);
 
         validate_compression_level_u8(&self.compression, &mut self.compression_level);
@@ -219,6 +225,9 @@ impl Step for StoreTagsInTable {
         if self.include_read_name {
             header_fields.push(Cow::Borrowed(b"ReadName".into()));
         }
+        if self.include_read_comment {
+            header_fields.push(Cow::Borrowed(b"ReadComment".into()));
+        }
         for tag in tag_list {
             header_fields.push(Cow::Borrowed(BStr::new(tag.as_ref())));
         }
@@ -261,10 +270,15 @@ impl Step for StoreTagsInTable {
             let output_tag = output_tags.map_or(0, |x| x[ii]);
             if let Some(Some(writer)) = output_handles.get_mut(&output_tag) {
                 let mut record: Vec<Cow<BStr>> = Vec::new();
-                if self.include_read_name {
-                    record.push(Cow::Borrowed(
-                        split_name_and_comment(name, input_info.comment_insert_char).0,
-                    ));
+                if self.include_read_name | self.include_read_comment {
+                    let (name, comment) =
+                        split_name_and_comment(name, input_info.comment_insert_char);
+                    if self.include_read_name {
+                        record.push(Cow::Borrowed(name));
+                    }
+                    if self.include_read_comment {
+                        record.push(Cow::Borrowed(comment));
+                    }
                 }
                 for tag in &self.final_in_labels {
                     let col = block.tags.get(tag).expect("tag must exist in block.tags");

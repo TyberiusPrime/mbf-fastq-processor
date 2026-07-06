@@ -2063,6 +2063,9 @@
             "include_read_name": {
               "type": "boolean"
             },
+            "include_read_comment": {
+              "type": "boolean"
+            },
             "in_labels": {
               "type": [
                 "array",
@@ -4778,6 +4781,9 @@
         "include_read_name": {
           "type": "boolean"
         },
+        "include_read_comment": {
+          "type": "boolean"
+        },
         "in_labels": {
           "type": [
             "array",
@@ -4800,7 +4806,8 @@
       "required": [
         "compression",
         "region_separator",
-        "include_read_name"
+        "include_read_name",
+        "include_read_comment"
       ]
     },
     "UMIAggregation": {

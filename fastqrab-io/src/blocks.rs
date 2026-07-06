@@ -528,7 +528,7 @@ pub fn split_name_and_comment(name: &BStr, read_comment_insert_char: u8) -> (&BS
     use bstr::ByteSlice;
     //let pos_of_first_space = name.iter().position(|&x| x == read_comment_insert_char);
     match name.find_byte(read_comment_insert_char) {
-        Some(pos) => (name[..pos].as_ref(), name[pos + 1..].as_ref()),
+        Some(pos) => (name[..pos].as_ref(), name[pos - 2..].as_ref()),
         None => (name, BStr::new("")),
     }
 }
