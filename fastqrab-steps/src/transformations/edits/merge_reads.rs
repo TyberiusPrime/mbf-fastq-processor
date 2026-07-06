@@ -640,4 +640,78 @@ mod tests {
         assert_eq!(&r.0, b"AAAAAAAAATTATTAAAA");
         //assert_eq!(&r.1, b"cccc");
     }
+
+    fn flip_base(b: u8) -> u8 {
+        match b {
+            b'A' => b'C',
+            b'C' => b'G',
+            b'G' => b'T',
+            _ => b'A',
+        }
+    }
+
+    /// fastp trusts long overlaps (> `complete_compare_require`, 50 bases): even if the
+    /// mismatch budget is blown, an overlap that has run past position 50 is still
+    /// accepted. Here the overlap is 60 bases with the mismatch budget (3) blown by
+    /// mismatches confined to positions 50..60, so the "forward" branch of the
+    /// acceptance check must take the `last_i > complete_compare_require` path rather
+    /// than the plain `diff <= overlap_diff_limit` one.
+    #[test]
+    fn test_find_best_overlap_fastp_forward_grace_beyond_complete_compare_require() {
+        let base: Vec<u8> = (0..60).map(|i| [b'A', b'C', b'G', b'T'][i % 4]).collect();
+        let mut seq2 = base.clone();
+        for b in &mut seq2[50..60] {
+            *b = flip_base(*b);
+        }
+
+        let result = find_best_overlap_fastp(&base, &seq2, 10, 1.0, 3);
+        assert_eq!(result, Some((0, 60)));
+    }
+
+    /// Same "trust a long overlap" grace clause as above, but exercised through the
+    /// reverse-offset branch (adapter read-through case) rather than the forward one.
+    /// `min_overlap == seq1.len()` makes the forward loop's range empty, so the only
+    /// candidate tried is the reverse loop's offset 0.
+    #[test]
+    fn test_find_best_overlap_fastp_reverse_grace_beyond_complete_compare_require() {
+        let base: Vec<u8> = (0..60).map(|i| [b'A', b'C', b'G', b'T'][i % 4]).collect();
+        let mut seq1 = base.clone();
+        for b in &mut seq1[50..60] {
+            *b = flip_base(*b);
+        }
+        let mut seq2 = base.clone();
+        seq2.push(b'A'); // len2 = 61 > min_overlap, so the reverse loop actually runs
+
+        let result = find_best_overlap_fastp(&seq1, &seq2, 60, 1.0, 3);
+        assert_eq!(result, Some((0, 60)));
+    }
+
+    /// When `offset > 0`, fastp appends whatever of `seq2` sticks out past the overlap.
+    /// The existing test above only exercises `offset == 0`, which never reaches this
+    /// branch at all.
+    #[test]
+    fn test_merge_at_offset_fastp_appends_seq2_tail_when_offset_positive() {
+        let seq1 = b"XXOOO"; // 2-base prefix (offset) + 3-base overlap
+        let qual1 = b"!!!!!";
+        let seq2 = b"OOOTT"; // 3-base overlap + 2-base tail
+        let qual2 = b"@@@@@";
+
+        let (merged_seq, merged_qual) = merge_at_offset_fastp(seq1, qual1, seq2, qual2, 2, 3);
+        assert_eq!(&merged_seq, b"XXOOOTT");
+        assert_eq!(merged_qual.len(), merged_seq.len());
+    }
+
+    /// Boundary counterpart: when the overlap covers all of `seq2` (`overlap_len ==
+    /// seq2.len()`), there is nothing left of `seq2` to append even though `offset > 0`.
+    #[test]
+    fn test_merge_at_offset_fastp_no_tail_when_overlap_covers_all_of_seq2() {
+        let seq1 = b"XXOOO"; // 2-base prefix (offset) + 3-base overlap
+        let qual1 = b"!!!!!";
+        let seq2 = b"OOO"; // overlap_len == seq2.len(): nothing to append
+        let qual2 = b"@@@";
+
+        let (merged_seq, merged_qual) = merge_at_offset_fastp(seq1, qual1, seq2, qual2, 2, 3);
+        assert_eq!(&merged_seq, b"XXOOO");
+        assert_eq!(merged_qual.len(), merged_seq.len());
+    }
 }
