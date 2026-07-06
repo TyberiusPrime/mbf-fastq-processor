@@ -76,7 +76,7 @@ impl Step for WorstQuality {
                                 .iter()
                                 .map(|r| min_quality(r, self.offset))
                                 .min()
-                                .unwrap_or(33),
+                                .unwrap_or(33 + Into::<i16>::into(self.offset)),
                         )
                     },
                     &mut block,
@@ -95,20 +95,15 @@ impl Step for WorstQuality {
                     );
                 };
 
-                let missing_value = 33.0 + f64::from(self.offset);
                 let mut values = Vec::with_capacity(location_items.row_count());
                 {
                     for qual in location_items.iter_qual() {
-                        let q = if qual.is_empty() {
-                            missing_value
-                        } else {
-                            f64::from(
-                                qual.iter()
-                                    .map(|x| Into::<i16>::into(*x) + i16::from(self.offset))
-                                    .min()
-                                    .unwrap_or(33 + i16::from(self.offset)),
-                            )
-                        };
+                        let q = f64::from(
+                            qual.iter()
+                                .map(|x| Into::<i16>::into(*x) + i16::from(self.offset))
+                                .min()
+                                .unwrap_or(33 + i16::from(self.offset)),
+                        );
                         values.push(q);
                     }
                 }
@@ -127,7 +122,8 @@ impl Step for WorstQuality {
 fn min_quality(quality: &BStr, offset: i8) -> i16 {
     quality
         .iter()
-        .map(|x| Into::<i16>::into(*x) + i16::from(offset))
+        .map(|x| Into::<i16>::into(*x))
         .min()
         .unwrap_or(33)
+        + Into::<i16>::into(offset)
 }

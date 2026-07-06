@@ -3512,6 +3512,17 @@ fn test_cases_x_single_step_x_calc_x_kmer_x_basic_higher_min_count() {
 
 #[test]
 
+fn test_cases_x_single_step_x_calc_x_kmer_x_basic_query_matches_k() {
+    println!("Test case is in: test_cases/single_step/calc/kmer/basic_query_matches_k");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/calc/kmer/basic_query_matches_k"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_calc_x_kmer_x_basic_segments() {
     println!("Test case is in: test_cases/single_step/calc/kmer/basic_segments");
     run_test(
@@ -3545,6 +3556,17 @@ fn test_cases_x_single_step_x_calc_x_kmer_x_min_count_zero_error() {
 
 #[test]
 
+fn test_cases_x_single_step_x_calc_x_kmer_x_multiple_kmer_files() {
+    println!("Test case is in: test_cases/single_step/calc/kmer/multiple_kmer_files");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/calc/kmer/multiple_kmer_files"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_calc_x_kmer_x_phix() {
     println!("Test case is in: test_cases/single_step/calc/kmer/phix");
     run_test(
@@ -3567,10 +3589,32 @@ fn test_cases_x_single_step_x_calc_x_worst_quality_x_all() {
 
 #[test]
 
+fn test_cases_x_single_step_x_calc_x_worst_quality_x_all_with_offset() {
+    println!("Test case is in: test_cases/single_step/calc/worst_quality/all_with_offset");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/calc/worst_quality/all_with_offset"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_calc_x_worst_quality_x_basic() {
     println!("Test case is in: test_cases/single_step/calc/worst_quality/basic");
     run_test(
         std::path::Path::new("../test_cases/single_step/calc/worst_quality/basic"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_calc_x_worst_quality_x_basic_with_offset() {
+    println!("Test case is in: test_cases/single_step/calc/worst_quality/basic_with_offset");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/calc/worst_quality/basic_with_offset"),
         "input.toml",
         1,
     );
@@ -7991,6 +8035,22 @@ fn test_cases_x_single_step_x_extraction_x_edits_altering_tag_locations_x_swap_c
 
 #[test]
 
+fn test_cases_x_single_step_x_extraction_x_edits_altering_tag_locations_x_swap_conditional_third_other_tag()
+ {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/edits_altering_tag_locations/swap_conditional_third_other_tag"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/edits_altering_tag_locations/swap_conditional_third_other_tag",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_extraction_x_edits_altering_tag_locations_x_swap_third() {
     println!(
         "Test case is in: test_cases/single_step/extraction/edits_altering_tag_locations/swap_third"
@@ -11641,6 +11701,21 @@ fn test_cases_x_single_step_x_hamming_x_string_tag_barcodes_too_close_but_same_l
     run_test(
         std::path::Path::new(
             "../test_cases/single_step/hamming/string_tag_barcodes_too_close_but_same_label",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_hamming_x_string_tag_barcodes_too_close_but_same_label_after_split() {
+    println!(
+        "Test case is in: test_cases/single_step/hamming/string_tag_barcodes_too_close_but_same_label_after_split"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/hamming/string_tag_barcodes_too_close_but_same_label_after_split",
         ),
         "input.toml",
         1,

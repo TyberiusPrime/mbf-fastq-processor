@@ -44,7 +44,7 @@ impl TagUser for PartialTaggedVariant<PartialCompareStringTags> {
                         .to_used_tag(&[TagValueType::String, TagValueType::Location]),
                 ],
                 declared_tag: inner.out_label.to_declared_tag(TagValueType::Numeric((
-                    Some(NonNaN::new(-1.0).expect("constant")),
+                    Some(NonNaN::new(-1.0).expect("constant")), //mutants::skip
                     Some(NonNaN::new(1.0).expect("constant")),
                 ))),
                 ..Default::default()

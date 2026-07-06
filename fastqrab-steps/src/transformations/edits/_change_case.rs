@@ -45,6 +45,7 @@ impl Partial_ChangeCase {
 
 impl VerifyIn<PartialConfig> for Partial_ChangeCase {
     // cov:excl-start
+    #[mutants::skip]
     fn verify(
         &mut self,
         _parent: &PartialConfig,

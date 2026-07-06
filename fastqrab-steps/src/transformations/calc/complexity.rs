@@ -84,8 +84,9 @@ impl Step for Complexity {
                 // Process all reads
                 for read_sequence in reads {
                     let seq = read_sequence;
-                    if seq.len() > 1 {
+                    if !seq.is_empty() {
                         for ii in 0..seq.len() - 1 {
+                            // no op for len == 1
                             if seq[ii] != seq[ii + 1] {
                                 total_transitions += 1;
                             }

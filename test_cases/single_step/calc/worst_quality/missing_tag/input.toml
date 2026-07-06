@@ -7,19 +7,29 @@
     out_label = 'region'
     query = '^AC'
 
+
+[[step]]
+  action = 'ExtractRegion'
+  source = 'read1'
+  start = 0
+  len = 0
+  anchor = 'left'
+  out_label = 'empty_region'
+
 [[step]]
     action = 'CalcWorstQuality'
     out_label = 'worst_q'
     source = 'tag:region'
-    offset = -33
+    offset = -34
 
 [[step]]
-  action = 'StoreTagInComment'
-  in_label = ['worst_q']
+    action = 'CalcWorstQuality'
+    out_label = 'worst_q_empty'
+    source = 'tag:empty_region'
+    offset = -34
 
 [output]
     prefix = "output"
 
-# --- Output steps (migrated from [output]) ---
 [[step]]
-    action = "OutputFASTQ"
+action = 'Outputtable'

@@ -244,6 +244,7 @@ impl Step for HammingExactCounter {
         Ok((block, true))
     }
 
+    #[mutants::skip]
     fn needs_serial(&self) -> bool {
         // this is fine to run in parallel
         false

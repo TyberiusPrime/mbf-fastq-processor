@@ -8,7 +8,7 @@
     action = 'CalcKmers'
     out_label = 'kmer_count'
     segment = 'read1'
-    files = 'input_kmers.fa'
+    files = ['input_kmers2.fa', 'input_kmers.fa']
     k = 4
   # min_count = 1
     canonical = false
@@ -17,7 +17,7 @@
     action = 'CalcKmers'
     out_label = 'kmer_count_kmer_read_len'
     segment = 'read1'
-    files = 'input_kmers.fa'
+    files = ['input_kmers.fa', 'input_kmers2.fa']
     k = 8
   # min_count = 1
     canonical = false

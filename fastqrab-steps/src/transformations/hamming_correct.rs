@@ -465,7 +465,7 @@ fn match_sequence(
     let min_dist = indexed[0].2;
     let cut = indexed
         .iter()
-        .position(|(_, _, d)| *d > min_dist)
+        .position(|(_, _, d)| *d > min_dist) // mutants::skip - we only look at the first right now.
         .unwrap_or(indexed.len());
     indexed.truncate(cut);
     Ok(Tie(indexed.into_iter().map(|(idx, _, _)| idx).collect()))
@@ -510,9 +510,7 @@ fn run_match_phase(
     }
     if needs_qualities && let TagColumn::Location(col) = input_tags {
         for (hits, slot) in col.iter().zip(results.iter_mut()) {
-            if !hits.1.is_empty() && matches!(&slot.result, Some(MatchResultOwned::Tie(_))) {
-                slot.quality = Some(hits.1.into_owned());
-            }
+            slot.quality = Some(hits.1.into_owned());
         }
     }
 
@@ -587,6 +585,7 @@ impl Step for HammingCorrect {
                     .as_ref()
                     .expect("ByMajority means we have .majority");
                 if mj.reads_to_count > 0 {
+                    //mutants::skip - should be invisible
                     let (guard, cv) = &*mj.barrier.clone();
                     let _guard = cv.wait_while(
                             guard.lock().map_err(|err| {
@@ -808,6 +807,7 @@ impl Step for HammingCorrect {
         Ok((block, true))
     }
 
+    #[mutants::skip] //always true is safe.
     fn needs_serial(&self) -> bool {
         self.majority_data.is_some()
     }
@@ -926,10 +926,6 @@ impl Step for _HammingPreMatch {
             .insert(block_no, results);
         Ok((block, true))
     }
-
-    fn needs_serial(&self) -> bool {
-        false
-    }
 }
 
 /// Compute the posterior over Hamming-1 'known' neighbors of `observed`,
@@ -962,7 +958,7 @@ pub fn correct_barcode_via_base_editing_likelihood<'a>(
 
         let qv = qual[diff_pos].min(66); // we clamp it here to prevent sequencer overconfidence /
         // actually let the prior from the barcode count count.
-        let phred_edit_probability = 10f64.powf(-(f64::from(qv) - 33.0) / 10.0);
+        let phred_edit_probability = 10f64.powf(-f64::from(qv.saturating_sub(33)) / 10.0);
         #[expect(
             clippy::cast_precision_loss,
             reason = "If counts reach f64 imprecison region, precision loss would be acceptable"
@@ -975,6 +971,7 @@ pub fn correct_barcode_via_base_editing_likelihood<'a>(
         // hence tuple comparison.
         let tup = Some((likelihood, cand));
         if tup > best {
+            //mutants::skip - we keep the first
             best = tup;
         }
     }

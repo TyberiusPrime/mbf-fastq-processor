@@ -1,0 +1,19 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'CalcWorstQuality'
+    out_label = 'worst_q'
+    source = 'read1'
+    offset = -33
+
+[[step]]
+    action = 'StoreTagInComment'
+    in_label = 'worst_q'
+
+[output]
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputFASTQ"

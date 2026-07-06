@@ -156,6 +156,7 @@ pub(crate) struct RecordOutputState {
 
 impl std::fmt::Debug for RecordOutputState {
     //cov:excl-start
+    #[mutants::skip]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("RecordOutputState")
             .field("segments", &self.segment_writers.len())

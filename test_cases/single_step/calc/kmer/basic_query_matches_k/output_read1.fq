@@ -1,0 +1,16 @@
+@read1|kmer_count_kmer_read_len=1
+ATGCATGC
++
+IIIIIIII
+@read2|kmer_count_kmer_read_len=0
+NNNNNNNN
++
+IIIIIIII
+@read3|kmer_count_kmer_read_len=1
+TTTTAAAA
++
+IIIIIIII
+@read4|kmer_count_kmer_read_len=0
+TAC
++
+III

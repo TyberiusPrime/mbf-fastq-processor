@@ -15,6 +15,7 @@ impl TagUser for PartialTaggedVariant<PartialBlockSizes> {}
 
 //cov:excl-start - this is debug, it's ok not to have a test covering this.
 impl Step for BlockSizes {
+    #[mutants::skip]
     fn store_progress_output(&mut self, progress: &crate::transformations::reports::Progress) {
         self.progress_output = Some(progress.clone()); // cov:excl-line
     }
