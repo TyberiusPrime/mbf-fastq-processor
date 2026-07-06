@@ -1,0 +1,23 @@
+
+[input]
+  r = ['input_interleaved.fq']
+  interleaved = ['read1', 'read2']
+
+[options]
+  block_size=200
+  accept_duplicate_files = true
+# [[step]]
+#   action = 'ExtractRegex'
+#   query = '.'
+#   out_label = 'readno'
+#   replacement = '[[read_nnumber}]]'
+#   source = 'read1'
+#
+
+[output]
+    prefix = "output"
+
+# --- Output steps (migrated from [output]) ---
+[[step]]
+    action = "OutputTSV"
+    in_labels = 'read_no'

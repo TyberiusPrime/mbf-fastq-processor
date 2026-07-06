@@ -373,7 +373,7 @@ fn parse_interleaved_and_send(
         }
         if !res.fastq_block.is_empty() {
             let out_blocks = res.fastq_block.split_interleaved(segment_count)?;
-            first_read_in_block_no += out_blocks[0].len();
+            let block_len = out_blocks[0].len();
             let out = (
                 io::FastQBlocksCombined::new(
                     out_blocks,
@@ -385,6 +385,7 @@ fn parse_interleaved_and_send(
                 ),
                 expected_read_count,
             );
+            first_read_in_block_no += block_len; //increase *after* the block
             block_no += 1; // the receiver verifies this!
             if combiner_output_tx.send(out).is_err() {
                 break; //cov:ignore might or might not happen, timing dependent.
