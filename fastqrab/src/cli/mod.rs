@@ -26,19 +26,6 @@ pub(crate) fn read_config_raw(path: &Path) -> Result<String> {
     }
 }
 
-/// Return true if any input file in the parsed config is the stdin magic path.
-pub(crate) fn config_uses_stdin_fastq(input: &crate::config::StructuredInput) -> bool {
-    use fastqrab_io::STDIN_MAGIC_PATH;
-    match input {
-        crate::config::StructuredInput::Interleaved { files, .. } => {
-            files.iter().any(|f| f == STDIN_MAGIC_PATH)
-        }
-        crate::config::StructuredInput::Segmented { segment_files, .. } => segment_files
-            .values()
-            .flatten()
-            .any(|f| f == STDIN_MAGIC_PATH),
-    }
-}
 
 pub(crate) fn improve_error_messages(
     toml_filename: &str,

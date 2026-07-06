@@ -2,8 +2,6 @@ use anyhow::Result;
 use std::path::Path;
 use toml_pretty_deser::prelude::*;
 
-use fastqrab_io::STDIN_MAGIC_PATH;
-
 use crate::pipeline::{DemultiplexChain, ResolvedOutputName, enumerate_declaration_outputs};
 use crate::transformations::Transformation;
 use crate::{cli::improve_error_messages, config::Config};
@@ -41,14 +39,7 @@ pub fn list_config_output_files(toml_file: &Path) -> Result<OutputFilesListing> 
             ));
         }
     };
-    let checked = checked.check_for_validation()?;
-    if toml_file == Path::new("-") && crate::cli::config_uses_stdin_fastq(&checked.input.structured)
-    {
-        anyhow::bail!(
-            "Cannot read configuration from stdin ('-') when the configuration also uses stdin \
-             ('{STDIN_MAGIC_PATH}') for FASTQ input. Use a config file on disk instead."
-        );
-    }
+    let checked = checked.check_for_validation(toml_file == Path::new("-"))?;
 
     // No [output] section -> no output files (e.g. benchmark configs).
     let Some(output) = checked.output.as_ref() else {

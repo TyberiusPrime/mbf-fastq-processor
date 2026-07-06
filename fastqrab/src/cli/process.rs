@@ -33,16 +33,8 @@ pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> 
             bail!("{pretty}");
         }
     };
-    let mut checked = parsed.check()?;
+    let mut checked = parsed.check(toml_file == Path::new("-"))?;
     checked.raw_config = std::sync::Arc::from(raw_config.as_str());
-    if toml_file == Path::new("-") && crate::cli::config_uses_stdin_fastq(&checked.input.structured)
-    {
-        bail!(
-            "Cannot read configuration from stdin ('-') when the configuration also uses stdin \
-             ('{}') for FASTQ input. Use a config file on disk instead.",
-            fastqrab_io::STDIN_MAGIC_PATH
-        );
-    }
     let (allow_overwrite, marker) = if let Some(output) = checked.output.as_ref() {
         let marker_prefix = output.prefix.clone();
         let marker = OutputRunMarker::create(&output_directory, &marker_prefix)?;

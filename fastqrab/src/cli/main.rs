@@ -479,7 +479,7 @@ fn process_from_toml_file(toml_file: &Path, allow_overwrites: bool) -> Result<()
 }
 
 fn validate_config_file(toml_path: &Path) -> Result<()> {
-    match crate::validate_config(toml_path) {
+    match crate::validate_config(toml_path, toml_path == Path::new("-")) {
         Ok(warnings) => {
             if warnings.is_empty() {
                 println!("✓ Configuration is valid");

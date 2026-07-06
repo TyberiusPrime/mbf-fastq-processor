@@ -39,8 +39,7 @@ pub fn verify_outputs(
         }
     };
 
-    let raw_config = ex::fs::read_to_string(toml_file)
-        .with_context(|| format!("Could not read toml file: {}", toml_file.to_string_lossy()))?;
+    let raw_config = crate::cli::read_config_raw(toml_file)?;
 
     let (_temp_dir, temp_path) = create_working_dir(output_dir.as_deref())?;
     let temp_toml_path = temp_path.join("config.toml");
@@ -75,6 +74,7 @@ pub fn verify_outputs(
         expected_validation_error.as_ref(),
         expected_runtime_error.is_some(),
         expected_validation_warning.as_ref(),
+        toml_file == Path::new("-")
     )?;
     let (output_prefix, uses_stdout) = extract_output_config(&raw_config)?;
 
@@ -134,16 +134,20 @@ fn resolve_paths(
     toml_file: &Path,
     output_dir: Option<&Path>,
 ) -> Result<(PathBuf, Option<PathBuf>)> {
-    let toml_file_abs = toml_file.canonicalize().with_context(|| {
-        format!(
-            "Failed to canonicalize TOML file path: {}",
-            toml_file.display()
-        )
-    })?;
-    let toml_dir = toml_file_abs
-        .parent()
-        .unwrap_or_else(|| Path::new("."))
-        .to_path_buf();
+    let toml_dir = if toml_file == Path::new("-") {
+        PathBuf::from(".")
+    } else {
+        let toml_file_abs = toml_file.canonicalize().with_context(|| {
+            format!(
+                "Failed to canonicalize TOML file path: {}",
+                toml_file.display()
+            )
+        })?;
+        toml_file_abs
+            .parent()
+            .unwrap_or_else(|| Path::new("."))
+            .to_path_buf()
+    };
     let resolved_output_dir = output_dir.map(|d| {
         if d.is_absolute() {
             d.to_owned()
@@ -241,8 +245,13 @@ fn populate_working_dir(
     do_copy_input_files: bool,
 ) -> Result<()> {
     // Copy the original TOML without modification
-    ex::fs::copy(toml_file, temp_path.join("config.toml"))
-        .context("Failed to copy TOML to temp directory")?;
+    if toml_file == Path::new("-") {
+        ex::fs::write(temp_path.join("config.toml"), raw_config)
+            .context("Failed to write TOML to temp directory")?;
+    } else {
+        ex::fs::copy(toml_file, temp_path.join("config.toml"))
+            .context("Failed to copy TOML to temp directory")?;
+    }
 
     // Set up input files in the temp dir. When prep/test scripts will run (do_copy_input_files),
     // we must copy files so those scripts cannot mutate the originals (e.g. via chmod).
@@ -393,10 +402,11 @@ fn validate_config_if_needed(
     expected_validation_error: Option<&ExpectedFailure>,
     has_runtime_error: bool,
     expected_validation_warning: Option<&ExpectedFailure>,
+    was_stdin: bool,
 ) -> Result<()> {
     if expected_validation_error.is_none() || expected_validation_warning.is_some() {
         let warnings =
-            crate::cli::validate::validate_config(temp_toml_path).with_context(|| {
+            crate::cli::validate::validate_config(temp_toml_path, was_stdin).with_context(|| {
                 if has_runtime_error {
                     "Configuration validation failed, but a runtime error was expected.".to_string()
                 } else {

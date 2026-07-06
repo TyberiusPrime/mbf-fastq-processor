@@ -2016,13 +2016,24 @@ impl PartialConfig {
 impl Config {
     /// There are transformations that we need to expand right away,
     /// so we can accurately check the names
-    pub fn check(self) -> Result<CheckedConfig> {
-        self.inner_check(true)
+    pub fn check(self, config_input_is_stdin: bool) -> Result<CheckedConfig> {
+        self.inner_check(true, config_input_is_stdin)
     }
 
-    fn inner_check(mut self, check_input_files_exist: bool) -> Result<CheckedConfig> {
+    fn inner_check(
+        mut self,
+        check_input_files_exist: bool,
+        config_input_is_stdin: bool,
+    ) -> Result<CheckedConfig> {
+        use fastqrab_io::STDIN_MAGIC_PATH;
         let mut errors = Vec::new();
 
+        if config_input_is_stdin && self.input.structured.any_input_is_stdin() {
+            anyhow::bail!(
+                "Cannot read configuration from stdin ('-') when the configuration also uses stdin \
+             ('{STDIN_MAGIC_PATH}') for FASTQ input. Use a config file on disk instead."
+            );
+        }
         //no point in checking them if segment definition is broken
 
         let threading_configuration = if check_input_files_exist {
@@ -2067,8 +2078,8 @@ impl Config {
     }
 
     /// Check configuration for validation mode (allows missing input files)
-    pub fn check_for_validation(self) -> Result<CheckedConfig> {
-        self.inner_check(false)
+    pub fn check_for_validation(self, config_input_is_stdin: bool) -> Result<CheckedConfig> {
+        self.inner_check(false, config_input_is_stdin)
     }
 
     #[expect(clippy::similar_names, reason = "domain names are that way")]
@@ -2526,3 +2537,4 @@ mod tests {
         );
     }
 }
+

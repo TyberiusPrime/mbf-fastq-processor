@@ -904,7 +904,7 @@ fn test_every_step_has_a_template_section() {
         //
         match config_from_string(&config) {
             Ok(parsed) => {
-                if let Err(e) = parsed.check() {
+                if let Err(e) = parsed.check(false) {
                     //cov:excl-start
                     errors.push(format!(
                         "Error in parsing configuration for {section_name}, line_no {line_no}: {e:?}\n{config}",
@@ -1243,7 +1243,7 @@ fn test_documentation_toml_examples_parse() {
                     // Try to parse the configuration
                     match config_from_string(&config) {
                         Ok(parsed_config) => {
-                            if let Err(e) = parsed_config.check() {
+                            if let Err(e) = parsed_config.check(false) {
                                 //cov:excl-start
                                 failed_files.push(format!(
                                     "{}: TOML block {}, line: {start_line_no} failed validation: {:?}\n{}",
@@ -1411,7 +1411,7 @@ fn test_llm_guide_toml_examples_parse() {
 
             match config_from_string(&config) {
                 Ok(parsed_config) => {
-                    if let Err(e) = parsed_config.check() {
+                    if let Err(e) = parsed_config.check(false) {
                         //cov:excl-start
                         failed_examples.push(format!(
                             "LLM guide TOML block {} , line_no {line_no}failed validation: {:?}\nBlock:\n{}",
@@ -1436,7 +1436,7 @@ fn test_llm_guide_toml_examples_parse() {
             // This is a complete configuration, parse directly
             match config_from_string(&toml_block) {
                 Ok(parsed_config) => {
-                    if let Err(e) = parsed_config.check() {
+                    if let Err(e) = parsed_config.check(false) {
                         //cov:excl-start
                         failed_examples.push(format!(
                             "LLM guide complete config block {}, line_no {line_no} failed validation: {:?}\nBlock:\n{}",
@@ -1602,7 +1602,7 @@ fn test_readme_toml_examples_validate() {
         // Validate the config using check() (same as in run())
         // Note: This will fail on input file validation since files don't exist,
         // but it will catch TOML syntax errors and structural issues
-        match parsed.check() {
+        match parsed.check(false) {
             Ok(_) => {
                 println!("    ✓ TOML block at line {line_no} validated successfully",);
             }

@@ -7,7 +7,7 @@ use fastqrab_io::STDIN_MAGIC_PATH;
 
 use crate::{cli::improve_error_messages, config::Config};
 
-pub fn validate_config(toml_file: &Path) -> Result<Vec<String>> {
+pub fn validate_config(toml_file: &Path, was_stdin: bool) -> Result<Vec<String>> {
     let raw_config = crate::cli::read_config_raw(toml_file)?;
     let result = Config::tpd_from_toml(&raw_config, FieldMatchMode::AnyCase, VecMode::SingleOk);
     let checked = match result {
@@ -20,14 +20,7 @@ pub fn validate_config(toml_file: &Path) -> Result<Vec<String>> {
             ));
         }
     };
-    let checked = checked.check_for_validation()?;
-    if toml_file == Path::new("-") && crate::cli::config_uses_stdin_fastq(&checked.input.structured)
-    {
-        anyhow::bail!(
-            "Cannot read configuration from stdin ('-') when the configuration also uses stdin \
-             ('{STDIN_MAGIC_PATH}') for FASTQ input. Use a config file on disk instead."
-        );
-    }
+    let checked = checked.check_for_validation(was_stdin)?;
 
     let current_dir_buf;
     let toml_dir = if toml_file == Path::new("-") {

@@ -410,6 +410,20 @@ impl StructuredInput {
     pub fn is_interleaved(&self) -> bool {
         matches!(self, StructuredInput::Interleaved { .. })
     }
+
+    #[must_use]
+    pub fn any_input_is_stdin(&self) -> bool {
+        use fastqrab_io::STDIN_MAGIC_PATH;
+        match self {
+            crate::config::StructuredInput::Interleaved { files, .. } => {
+                files.iter().any(|f| f == STDIN_MAGIC_PATH)
+            }
+            crate::config::StructuredInput::Segmented { segment_files, .. } => segment_files
+                .values()
+                .flatten()
+                .any(|f| f == STDIN_MAGIC_PATH),
+        }
+    }
 }
 
 impl Input {
