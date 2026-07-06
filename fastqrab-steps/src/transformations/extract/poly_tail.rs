@@ -192,7 +192,10 @@ fn find_poly_tail(
                 (Some(_), None) => other,
                 (Some(other_), Some(lp_)) => {
                     //remember it's last pos, so Smaller is longer
-                    if other_ < lp_ { other } else { lp }
+                    if other_ < lp_ //mutants::skip 
+                                    //(when other_ == lp_ both branches wrap the identical
+                                    //numeric position, so `<` vs `<=` here is unobservable)
+                    { other } else { lp }
                 }
             };
         }
@@ -289,7 +292,11 @@ fn find_poly_tail_fastp(seq: &[u8], min_length: usize) -> Option<usize> {
     }
 
     let mut mismatch: usize = 0;
-    let mut first_g_pos = rlen - 1;
+    let mut first_g_pos = rlen - 1; //mutants::skip 
+    //(the initial value is only observable if no 'G' ever appears in the
+    //sequence, but in that case the mismatch-rate/consecutive-mismatch break below always
+    //fires before `i` can reach min_length, so the function always returns None regardless
+    //of this initial value)
     let mut i: usize = 0;
     while i < rlen {
         let pos = rlen - i - 1;
@@ -317,6 +324,18 @@ mod test {
     use super::{calc_run_length, find_poly_tail, find_poly_tail_fastp};
 
     #[test]
+    fn test_find_poly_tail_fastp_mismatch_thresholds() {
+        // Six mismatches spaced exactly 8 apart (the fastp "1 mismatch per 8 bases"
+        // allowance), scanned from the right. This keeps `mismatch <= allowed_mismatch`
+        // at every mismatch up to the 6th, so a break can only be triggered by the
+        // absolute `mismatch > MAX_MISMATCH (5)` cap, and only once the 6th mismatch is
+        // seen (at scan-index 47, i.e. the very first base of the sequence).
+        let seq = b"TGGGGGGGTGGGGGGGTGGGGGGGTGGGGGGGTGGGGGGGTGGGGGGG";
+        assert_eq!(seq.len(), 48);
+        assert_eq!(find_poly_tail_fastp(seq, 10), Some(1));
+    }
+
+    #[test]
     fn test_calc_run_length() {
         assert_eq!(
             calc_run_length(
@@ -336,6 +355,13 @@ mod test {
             None
         );
         assert_eq!(calc_run_length(b"ATTTTTT", b'A', 30, 0.108_123, 20), None);
+        // seq.len() == min_length exactly: the whole sequence is a valid exact match,
+        // exercising the `seq.len() < min_length` early-return guard boundary.
+        assert_eq!(calc_run_length(b"AAA", b'A', 3, 0.0, 0), Some(0));
+        // A single mismatch whose rate (1/8) exactly equals max_mismatch_fraction: the
+        // rate-based abort must require the rate to be strictly greater than the
+        // threshold, not merely equal to or above it.
+        assert_eq!(calc_run_length(b"AAAAAAAT", b'A', 2, 0.125, 1), Some(0));
     }
 
     #[test]

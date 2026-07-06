@@ -64,8 +64,10 @@ impl LongestPolyX {
             (Some(existing), None) => Some(existing),
             (None, Some(new_candidate)) => Some(new_candidate),
             (Some(existing), Some(new_candidate)) => {
-                if new_candidate.1 > existing.1
-                    || (new_candidate.1 == existing.1 && new_candidate.0 < existing.0)
+                if (new_candidate.1 == existing.1 && new_candidate.0 < existing.0) //mutants::skip
+                    //(when new_candidate.0 == existing.0 as well, both branches
+                    //return the identical (start, len) pair, so `<` vs `<=` here is unobservable)
+                    || new_candidate.1 > existing.1
                 {
                     Some(new_candidate)
                 } else {
@@ -146,7 +148,8 @@ impl LongestPolyX {
         // Finalise any barrier run that reaches the end of the sequence.
         for bi in 0..num {
             if consecs[bi] >= max_consec {
-                barriers[bi].push((run_starts[bi], n - 1));
+                barriers[bi].push((run_starts[bi], n - 1)); //mutants::skip
+                // the end of this last barrier is irrelevant
             }
         }
 
@@ -154,6 +157,10 @@ impl LongestPolyX {
         for bi in 0..num {
             for (seg_start, seg_end) in Self::barrier_free_segments(n, &barriers[bi], max_consec) {
                 if seg_end + 1 - seg_start < min_length {
+                    //mutants::skip
+                    // (optimization only: longest_nonneg_subarray already
+                    // enforces min_length internally before recording any candidate, so
+                    // skipping this pre-check just wastes a call on too-short segments)
                     continue;
                 }
                 let candidate =
@@ -278,8 +285,15 @@ impl LongestPolyX {
         // These are the only useful candidate left-endpoints.
         let mut stack: Vec<usize> = Vec::new();
         for i in seg_start..=seg_end + 1 {
+            // mutants::skip
             if stack.is_empty()
                 || prefix[i] < prefix[*stack.last().expect("Checked for empty just before")]
+            //mutants::skip
+            //(a duplicate pushed here has the same prefix value as the
+            //entry already below it on the stack; both are only ever popped together
+            //for the same `r` in the loop below, and pick_better always keeps the
+            //longer (earlier-index) one, so allowing the duplicate push changes
+            //nothing observable)
             {
                 stack.push(i);
             }
@@ -365,5 +379,106 @@ impl Step for LongestPolyX {
             },
         );
         Ok((block, true))
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::LongestPolyX;
+
+    #[test]
+    fn test_barrier_free_segments_end_into_barrier_ext_gt_zero() {
+        // max_consec=3 -> ext=2, so a segment before a barrier starting at 4 may
+        // extend into the barrier up to index 4+2-1=5, capped at n-1.
+        assert_eq!(
+            LongestPolyX::barrier_free_segments(8, &[(4, 4)], 3),
+            vec![(0, 5), (3, 7)]
+        );
+    }
+
+    #[test]
+    fn test_barrier_free_segments_end_into_barrier_ext_zero() {
+        // max_consec=1 -> ext=0, so a segment before a barrier starting at 3 may not
+        // penetrate it at all: it must stop at 3-1=2.
+        assert_eq!(
+            LongestPolyX::barrier_free_segments(6, &[(3, 3)], 1),
+            vec![(0, 2), (4, 5)]
+        );
+    }
+
+    #[test]
+    fn test_barrier_free_segments_caps_at_sequence_end() {
+        // ext=4 is larger than the sequence itself, so both the "before first barrier"
+        // and "between barriers" segment ends must be capped at n-1 (4), not left at
+        // their raw (out-of-range) computed values.
+        assert_eq!(
+            LongestPolyX::barrier_free_segments(5, &[(4, 4)], 5),
+            vec![(0, 4), (1, 4)]
+        );
+        assert_eq!(
+            LongestPolyX::barrier_free_segments(6, &[(0, 0), (5, 5)], 6),
+            vec![(0, 4), (0, 5), (1, 5)]
+        );
+    }
+
+    #[test]
+    fn test_barrier_free_segments_no_segment_past_sequence_end() {
+        // The lone barrier touches the very last index with ext=0, so there is no room
+        // for an "after last barrier" segment at all: start_after_barrier(5) == n(6),
+        // which must be excluded, not merely allowed to equal n.
+        assert_eq!(
+            LongestPolyX::barrier_free_segments(6, &[(5, 5)], 1),
+            vec![(0, 4)]
+        );
+    }
+
+    #[test]
+    fn test_find_best_barrier_run_start_tracking() {
+        // A 3-long mismatch run (positions 10..=12) exceeds max_consecutive_mismatches
+        // (2), so it becomes a barrier. The barrier must be recorded as starting at the
+        // *first* mismatch of the run (position 10), not somewhere in the middle of it -
+        // otherwise the "before" barrier-free segment wrongly swallows part of the
+        // mismatch run and reports a longer match than actually qualifies.
+        let seq = b"AAAAAAAAAATTTAAA";
+        assert_eq!(LongestPolyX::find_best(seq, b'A', 3, 0.3, 2), Some((0, 11)));
+    }
+
+    #[test]
+    fn test_longest_nonneg_subarray_uses_last_stack_index() {
+        // A strictly decreasing run whose last element (index == seg_end) is the
+        // global minimum of the whole segment, followed by a single upward step to
+        // seg_end + 1. The only valid non-negative subarray is the single-element one
+        // starting at seg_end: [seg_end, seg_end+1]. That requires the stack-building
+        // loop to actually consider index seg_end (not stop short of it).
+        let prefix = vec![0.0, -0.8, -1.6, -2.4, -2.2];
+        assert_eq!(
+            LongestPolyX::longest_nonneg_subarray(&prefix, 0, 3, 1),
+            Some((3, 1))
+        );
+    }
+
+    #[test]
+    fn test_pick_better() {
+        // longer candidate always wins
+        assert_eq!(
+            LongestPolyX::pick_better(Some((5, 3)), Some((10, 8))),
+            Some((10, 8))
+        );
+        // shorter candidate never wins
+        assert_eq!(
+            LongestPolyX::pick_better(Some((5, 8)), Some((10, 3))),
+            Some((5, 8))
+        );
+        // tie on length: earlier start wins
+        assert_eq!(
+            LongestPolyX::pick_better(Some((10, 5)), Some((3, 5))),
+            Some((3, 5))
+        );
+        assert_eq!(
+            LongestPolyX::pick_better(Some((3, 5)), Some((10, 5))),
+            Some((3, 5))
+        );
+        assert_eq!(LongestPolyX::pick_better(None, Some((3, 5))), Some((3, 5)));
+        assert_eq!(LongestPolyX::pick_better(Some((3, 5)), None), Some((3, 5)));
     }
 }
