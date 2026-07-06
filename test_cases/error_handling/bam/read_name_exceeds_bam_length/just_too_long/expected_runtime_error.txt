@@ -1,0 +1,11 @@
+Error in stage 0: Error in OutputBAM stage
+
+Caused by:
+    0: During write to file: /home/user/error_handling
+    1: The read name exceeded the 254 byte limited of the SAM/BAM spec.
+       Shorten your read name, or set output.bam.comment_separation_char
+       to split your read name into a name and a 'CO' tag (which may exceed 254 bytes).
+       Read name (length: 255): '12345678912345678912345678912345678912345678912345678912345678912345678912345678912345678912345678912345678912345678912345678912345678912345678912345678912345678912345678912345678123456789123456789123456789123456789123456789123456789123456789123456789123A'
+    2: Failed to write BAM record
+    3: invalid name
+    4: invalid length: expected 1 <= n <= 254, got 256

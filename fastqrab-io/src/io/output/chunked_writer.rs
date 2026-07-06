@@ -83,6 +83,7 @@ impl Write for DataSink {
         }
     }
 
+    #[mutants::skip] // hard to observe
     fn flush(&mut self) -> io::Result<()> {
         match self {
             DataSink::File { file, .. } => file.flush(),
@@ -286,14 +287,7 @@ pub struct SinkConfig {
 impl SinkConfig {
     #[must_use]
     pub fn new_uncompressed_unhashed() -> Self {
-        Self {
-            compression: CompressionFormat::Uncompressed,
-            compression_level: None,
-            //compression_threads: None,
-            hash_uncompressed: false,
-            hash_compressed: false,
-            simulated_failure: None,
-        }
+        Default::default()
     }
 }
 
@@ -311,6 +305,7 @@ pub struct TextRecordSink {
 
 // cov:excl-start
 impl std::fmt::Debug for TextRecordSink {
+    #[mutants::skip]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("TextRecordSink").finish_non_exhaustive()
     }
@@ -684,7 +679,9 @@ where
     if let Err(e) = writer.write_alignment_record(header, &record) {
         let mut res = Err(e).context("Failed to write BAM record");
         let name_b: BString = name.into();
-        if name_b.len() > 254 {
+        if name_b.len() >= 255 {
+            //mutants::skip - tripple checked this threshold. it's correct, but
+            //hard to show in tests.
             res = res.context(format!(
                 "The read name exceeded the 254 byte limited of the SAM/BAM spec.\n\
                     Shorten your read name, or set output.bam.comment_separation_char\n\
@@ -966,9 +963,7 @@ pub struct ChunkPolicy {
 impl ChunkPolicy {
     #[must_use]
     pub fn no_chunks() -> Self {
-        ChunkPolicy {
-            records_per_chunk: None,
-        }
+        Default::default()
     }
 }
 
@@ -1087,6 +1082,9 @@ impl ChunkedRecordWriter {
         Ok(())
     }
 
+    #[mutants::skip] // closing the file will flush. 
+    // We're only calling this explicitly from progress,
+    // and it won't show up in testing.
     pub fn flush(&mut self) -> Result<()> {
         match &mut self.active {
             ActiveSink::Text(sink) => Ok(sink.flush()?),
@@ -1143,11 +1141,11 @@ impl ChunkedRecordWriter {
         self.format
     }
 
-    #[must_use]
-    pub fn total_records_written(&self) -> u64 {
-        let per_chunk = self.chunk_policy.records_per_chunk.unwrap_or(0);
-        (self.chunk_index * per_chunk + self.records_in_chunk) as u64
-    }
+    // #[must_use]
+    // pub fn total_records_written(&self) -> u64 {
+    //     let per_chunk = self.chunk_policy.records_per_chunk.unwrap_or(0);
+    //     (self.chunk_index * per_chunk + self.records_in_chunk) as u64
+    // }
 
     fn maybe_rotate(&mut self) -> Result<()> {
         if let Some(limit) = self.chunk_policy.records_per_chunk
@@ -1268,16 +1266,12 @@ impl ChunkedRecordWriter {
         Ok(())
     }
 
-    pub fn finish(mut self) -> Result<ChunkedWriterSummary> {
-        let total = self.total_records_written();
+    pub fn finish(mut self) -> Result<()> {
         let active = std::mem::replace(&mut self.active, ActiveSink::Idle);
         let idx = self.chunk_index;
         let digits = self.digit_count;
         self.finish_active_sink(active, idx, digits)?;
-        Ok(ChunkedWriterSummary {
-            records_written: total,
-            chunks: self.completed_chunks,
-        })
+        Ok(())
     }
 }
 

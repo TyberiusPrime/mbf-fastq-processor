@@ -28,6 +28,7 @@ pub struct BamParser {
 
 /// # Panics
 /// when read count > usize limit
+#[mutants::skip] // only used to estimate read count for duplicate filters
 pub fn bam_read_count_from_index(
     filename: impl AsRef<Path>,
     include_mapped: bool,

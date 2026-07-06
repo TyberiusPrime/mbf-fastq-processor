@@ -487,6 +487,34 @@ fn test_cases_x_error_handling_x_bam_x_read_name_exceeds_bam_length_x_just_fit()
 
 #[test]
 
+fn test_cases_x_error_handling_x_bam_x_read_name_exceeds_bam_length_x_just_ok() {
+    println!("Test case is in: test_cases/error_handling/bam/read_name_exceeds_bam_length/just_ok");
+    run_test(
+        std::path::Path::new(
+            "../test_cases/error_handling/bam/read_name_exceeds_bam_length/just_ok",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_error_handling_x_bam_x_read_name_exceeds_bam_length_x_just_too_long() {
+    println!(
+        "Test case is in: test_cases/error_handling/bam/read_name_exceeds_bam_length/just_too_long"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/error_handling/bam/read_name_exceeds_bam_length/just_too_long",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_error_handling_x_bam_x_read_name_exceeds_bam_length_x_too_long() {
     println!(
         "Test case is in: test_cases/error_handling/bam/read_name_exceeds_bam_length/too_long"
