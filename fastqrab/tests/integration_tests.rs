@@ -3543,6 +3543,11 @@ prefix = 'output'
         stderr.contains("Validation warnings did not match expected pattern"),
         "Should report warning mismatch, got: {stderr}"
     );
+assert!(
+        stderr.contains("This pattern will never match"),
+        "Should report pattern ('This pattern will never match'), got {stderr}"
+    );
+
 }
 
 #[test]
@@ -5121,3 +5126,62 @@ fn test_decompressor_incompatible_binary_pipe_transport() {
         "expected subprocess-exit error, got: {stderr}"
     );
 }
+
+
+#[test]
+fn test_verify_command_missing_outputs_but_stdout() {
+    // Create temp directory
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+
+    // Create test fastq file
+    let mut input_file = fs::File::create(temp_path.join("input.fq")).unwrap();
+    writeln!(input_file, "@read1\nACGT\n+\nIIII").unwrap();
+
+    let mut stdout_file = fs::File::create(temp_path.join("stdout")).unwrap();
+    writeln!(stdout_file, "@read1\nACGT\n+\nIIII").unwrap();
+
+    // Create config
+    let config_path = temp_path.join("config.toml");
+    let mut config = fs::File::create(&config_path).unwrap();
+    writeln!(
+        config,
+        r"[input]
+read1 = 'input.fq'
+
+[[step]]
+action = 'Head'
+n = 1
+
+[output]
+prefix = 'output'
+[[step]]
+    action = 'OutputFASTQ'
+    stdout = true
+"
+    )
+    .unwrap();
+
+    // Don't create any output files - verify should fail
+
+    // Run verify command - should fail due to missing expected outputs
+    let verify_cmd = std::process::Command::new(get_bin_path())
+        .arg("verify")
+        .arg(&config_path)
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+
+    let stdout = std::str::from_utf8(&verify_cmd.stdout).unwrap().to_string();
+    let stderr = std::str::from_utf8(&verify_cmd.stderr).unwrap().to_string();
+
+    assert!(
+        verify_cmd.status.success(),
+        "Expected success, got error, stderr: {stderr}"
+    );
+    assert!(
+        stdout.contains("Verification passed"),
+        "got wrong stdout?: '{stdout}'",
+    );
+}
+

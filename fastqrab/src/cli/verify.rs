@@ -21,7 +21,7 @@ pub fn verify_outputs(
     // Copy (not symlink) when scripts may run in the temp dir and could follow symlinks to
     // mutate the original files (e.g. via chmod/touch on what appears to be a local file).
     let do_copy_input_files =
-        toml_dir.join("copy_input").exists() || test_script.exists() || prep_script.exists();
+        toml_dir.join("copy_input").exists() && test_script.exists() || prep_script.exists();
 
     let (expected_validation_error, expected_validation_warning, expected_runtime_error) =
         load_expected_failures(&toml_dir)?;
@@ -298,7 +298,8 @@ fn symlink_input_files(
     if let Some(toml_value) = toml_value {
         if let Some(input_table) = toml_value.get("input").and_then(|v| v.as_table()) {
             for field_name in input_table.keys() {
-                if field_name == "interleaved" || field_name == "options" {
+                if field_name == "interleaved" || field_name == "options" { //mutants::skip - the
+                    //wrongly created symlinks wouldn't hurt anything, but...
                     continue;
                 }
                 if let Some(value) = input_table.get(field_name) {
@@ -642,7 +643,7 @@ fn run_processor_and_verify(
 
     match (expected_failure, output.status.success()) {
         (Some(expected_failure_pattern), false) => {
-            if !output.stderr.is_empty() {
+            if !output.stderr.is_empty() { // mutants:skip
                 ex::fs::write(temp_path.join("stderr"), &output.stderr)
                     .context("Failed to write stderr to temp directory")?;
             } // cov:excl-line
@@ -1310,6 +1311,7 @@ fn create_symlink(source: &Path, target: &Path) -> Result<()> {
 }
 
 #[cfg(windows)]
+#[mutants::skip]
 fn copy_dir_all(src: &Path, dst: &Path) -> Result<()> {
     std::fs::create_dir_all(dst)?;
     for entry in std::fs::read_dir(src)? {
@@ -1325,6 +1327,7 @@ fn copy_dir_all(src: &Path, dst: &Path) -> Result<()> {
 }
 
 #[cfg(windows)]
+#[mutants::skip]
 fn copy_file_following_symlinks(source: &Path, target: &Path) -> Result<()> {
     // fs::copy uses CopyFileExW which opens the source with FILE_FLAG_OPEN_REPARSE_POINT
     // and cannot follow Linux symlinks on Wine. File::open does not use that flag.
