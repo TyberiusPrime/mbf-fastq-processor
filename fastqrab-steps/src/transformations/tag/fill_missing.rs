@@ -83,7 +83,7 @@ impl TagUser for PartialTaggedVariant<PartialFillMissing> {
                 | _ //doesn't mater, will get rejected
                 =>  {
                     TagValueType::String
-                }, 
+                },
             };
             inner.output_type = Some(output_type);
 

@@ -84,7 +84,8 @@ pub fn run() -> Result<()> {
     // Restrict filesystem reads to the input file before spawning any threads.
     // Skipped for stdin (data arrives via an already-open fd, nothing to lock down).
     #[cfg(target_os = "linux")]
-    if args.input.as_os_str() != "-" { //mutants::skip
+    if args.input.as_os_str() != "-" {
+        //mutants::skip
         apply_landlock(&input).unwrap_or_else(|e| {
             eprintln!("[decompressor] warning: landlock sandbox not applied: {e}"); // cov:excl-line
         }); // cov:excl-line
@@ -132,7 +133,8 @@ pub fn run() -> Result<()> {
             run_shm(fd, slots, slot_size, &rx, &recycle_tx, producer)?;
             drop(recycle_tx);
         }
-        None if peek_bytes.is_some() => { //mutants::skip - running the full pipe is slow, but correct
+        None if peek_bytes.is_some() => {
+            //mutants::skip - running the full pipe is slow, but correct
             // Emits the head then returns, leaving the producer unjoined if it is
             // still decoding the rest (which we don't need).
             run_peek(&rx, peek_bytes.unwrap_or(0), producer)?;
@@ -161,7 +163,8 @@ fn read_zstd(
         buf.clear();
         buf.resize(chunk_size, 0);
         let mut filled = 0usize;
-        while filled < chunk_size { //mutants::skip - not observable but in ram usage.
+        while filled < chunk_size {
+            //mutants::skip - not observable but in ram usage.
             let n = decoder.read(&mut buf[filled..])?;
             if n == 0 {
                 break;
@@ -187,7 +190,7 @@ fn read_zstd(
     clippy::cast_precision_loss,
     reason = "MB/s is a human-facing diagnostic; f64 precision loss on byte counts is irrelevant"
 )]
-#[mutants::skip] 
+#[mutants::skip]
 fn report_throughput(bytes_since_last: u64, total_bytes: u64, elapsed_secs: f64, since_start: f64) {
     let mbps = bytes_since_last as f64 / elapsed_secs / (1024.0 * 1024.0);
     let avg = total_bytes as f64 / since_start / (1024.0 * 1024.0);
@@ -224,7 +227,8 @@ fn run_peek(
     let stdout = std::io::stdout();
     let mut out = stdout.lock();
     let mut written = 0usize;
-    while written <= n { //mutants::skip - probably makes no difference whether we output exactly n,
+    while written <= n {
+        //mutants::skip - probably makes no difference whether we output exactly n,
         //or n -1 bytes.
         let Ok(chunk) = rx.recv() else {
             // Channel disconnected: every sender dropped, so the producer is done

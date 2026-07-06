@@ -628,4 +628,3 @@ fn find_single_valid_toml() -> Result<PathBuf> {
         ),
     }
 }
-

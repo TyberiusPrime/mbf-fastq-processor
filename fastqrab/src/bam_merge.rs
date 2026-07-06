@@ -456,4 +456,3 @@ fn write_merged_bai(
 
     Ok(())
 }
-

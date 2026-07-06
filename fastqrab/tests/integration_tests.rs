@@ -3543,11 +3543,10 @@ prefix = 'output'
         stderr.contains("Validation warnings did not match expected pattern"),
         "Should report warning mismatch, got: {stderr}"
     );
-assert!(
+    assert!(
         stderr.contains("This pattern will never match"),
         "Should report pattern ('This pattern will never match'), got {stderr}"
     );
-
 }
 
 #[test]
@@ -5127,7 +5126,6 @@ fn test_decompressor_incompatible_binary_pipe_transport() {
     );
 }
 
-
 #[test]
 fn test_verify_command_missing_outputs_but_stdout() {
     // Create temp directory
@@ -5184,4 +5182,3 @@ prefix = 'output'
         "got wrong stdout?: '{stdout}'",
     );
 }
-

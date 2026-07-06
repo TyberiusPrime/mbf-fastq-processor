@@ -26,7 +26,6 @@ pub(crate) fn read_config_raw(path: &Path) -> Result<String> {
     }
 }
 
-
 pub(crate) fn improve_error_messages(
     toml_filename: &str,
     mut err: toml_pretty_deser::DeserError<PartialConfig>,

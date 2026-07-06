@@ -74,7 +74,7 @@ pub fn verify_outputs(
         expected_validation_error.as_ref(),
         expected_runtime_error.is_some(),
         expected_validation_warning.as_ref(),
-        toml_file == Path::new("-")
+        toml_file == Path::new("-"),
     )?;
     let (output_prefix, uses_stdout) = extract_output_config(&raw_config)?;
 
@@ -298,7 +298,8 @@ fn symlink_input_files(
     if let Some(toml_value) = toml_value {
         if let Some(input_table) = toml_value.get("input").and_then(|v| v.as_table()) {
             for field_name in input_table.keys() {
-                if field_name == "interleaved" || field_name == "options" { //mutants::skip - the
+                if field_name == "interleaved" || field_name == "options" {
+                    //mutants::skip - the
                     //wrongly created symlinks wouldn't hurt anything, but...
                     continue;
                 }
@@ -406,8 +407,8 @@ fn validate_config_if_needed(
     was_stdin: bool,
 ) -> Result<()> {
     if expected_validation_error.is_none() || expected_validation_warning.is_some() {
-        let warnings =
-            crate::cli::validate::validate_config(temp_toml_path, was_stdin).with_context(|| {
+        let warnings = crate::cli::validate::validate_config(temp_toml_path, was_stdin)
+            .with_context(|| {
                 if has_runtime_error {
                     "Configuration validation failed, but a runtime error was expected.".to_string()
                 } else {
@@ -643,7 +644,8 @@ fn run_processor_and_verify(
 
     match (expected_failure, output.status.success()) {
         (Some(expected_failure_pattern), false) => {
-            if !output.stderr.is_empty() { // mutants:skip
+            if !output.stderr.is_empty() {
+                // mutants:skip
                 ex::fs::write(temp_path.join("stderr"), &output.stderr)
                     .context("Failed to write stderr to temp directory")?;
             } // cov:excl-line

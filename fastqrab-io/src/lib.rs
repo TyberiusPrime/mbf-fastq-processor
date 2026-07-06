@@ -31,7 +31,8 @@ pub fn ensure_output_destination_available(
                 path.display(),
             );
         }
-        Err(err) if err.kind() == ErrorKind::NotFound => { //mutants::skip
+        Err(err) if err.kind() == ErrorKind::NotFound => {
+            //mutants::skip
             // I mean that's basically expected.
             // missing directory is handled by the marker file creation
             Ok(None)

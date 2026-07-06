@@ -206,13 +206,15 @@ fn process_toml_interactive(
 
         // Combine for output
         let mut result = String::new();
-        if !stdout.is_empty() { //mutants::skip
+        if !stdout.is_empty() {
+            //mutants::skip
             // cov:excl-start
             // normally, it's quiet on stdout...
             result.push_str(&stdout);
             // cov:excl-stop
         }
-        if !inspect_output.is_empty() { //mutants::skip
+        if !inspect_output.is_empty() {
+            //mutants::skip
             if !result.is_empty() {
                 // cov:excl-start
                 //same stdout argument

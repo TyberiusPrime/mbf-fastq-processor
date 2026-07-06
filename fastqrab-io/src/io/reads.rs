@@ -432,7 +432,7 @@ impl FastQBlocksCombined {
     /// # Panics
     /// When the segments have different read counts
     /// (that's the point of this function)
-    #[mutants::skip] 
+    #[mutants::skip]
     pub fn sanity_check(&self) -> Result<()> {
         // The PodStack should prevent this for the segments,
         // but let's just be safe.
@@ -613,7 +613,7 @@ impl std::ops::DerefMut for MemberGuard<'_> {
 }
 
 impl Drop for MemberGuard<'_> {
-    #[mutants::skip]   
+    #[mutants::skip]
     fn drop(&mut self) {
         // Don't mask an in-flight panic with a second one (that would abort).
         if std::thread::panicking() {

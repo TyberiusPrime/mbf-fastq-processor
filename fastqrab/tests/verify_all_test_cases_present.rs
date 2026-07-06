@@ -116,9 +116,9 @@ fn verify_all_shell_scripts_pass_shellcheck() {
             assert!(
                 output.status.success(),
                 "shellcheck failed for {} .\nstdout: {}\nstderr: {}",
-                entry.path().display(), // cov:excl-line
+                entry.path().display(),                  // cov:excl-line
                 String::from_utf8_lossy(&output.stdout), // cov:excl-line
-                String::from_utf8_lossy(&output.stderr) // cov:excl-line
+                String::from_utf8_lossy(&output.stderr)  // cov:excl-line
             );
         }
     }
