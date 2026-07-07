@@ -228,8 +228,8 @@ fn run_peek(
     let mut out = stdout.lock();
     let mut written = 0usize;
     while written <= n {
-        //mutants::skip - probably makes no difference whether we output exactly n,
-        //or n -1 bytes.
+        //makes no difference whether we output exactly n,
+        //or n -1 bytes, since both are above what the consumer needs
         let Ok(chunk) = rx.recv() else {
             // Channel disconnected: every sender dropped, so the producer is done
             // and joining it won't block. Surface its error, if any.

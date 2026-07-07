@@ -680,8 +680,6 @@ where
         let mut res = Err(e).context("Failed to write BAM record");
         let name_b: BString = name.into();
         if name_b.len() >= 255 {
-            //mutants::skip - tripple checked this threshold. it's correct, but
-            //hard to show in tests.
             res = res.context(format!(
                 "The read name exceeded the 254 byte limited of the SAM/BAM spec.\n\
                     Shorten your read name, or set output.bam.comment_separation_char\n\

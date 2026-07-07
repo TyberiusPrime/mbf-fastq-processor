@@ -253,7 +253,7 @@ impl PodFastqParser {
         loop {
             match self.chunk_rx.recv() {
                 // The pod parser never emits empty chunks, but guard anyway.
-                Ok(chunk) if !chunk.names.is_empty() => return Some(chunk), //mutants::skip
+                Ok(chunk) if !chunk.names.is_empty() => return Some(chunk), 
                 Ok(_) => {}                                                 //cov:excl-line
                 Err(_) => return None,
             }

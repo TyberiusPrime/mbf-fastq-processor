@@ -638,7 +638,7 @@ fn run_benchmark_combiner_thread(
 }
 
 //#[allow(clippy::needless_pass_by_value)]
-#[mutants::skip] //mutants::skip 
+#[mutants::skip]
 fn run_benchmark_interleaved_thread(
     first_block: FastQChunk,
     combiner_output_tx: &crossbeam::channel::Sender<(io::FastQBlocksCombined, Option<usize>)>,
@@ -659,7 +659,6 @@ fn run_benchmark_interleaved_thread(
         .expect("Interleave splitting failed");
 
     while molecules_sent < molecule_count {
-        //mutants::skip, exact < <= irrelevant.
         //we don't worry about having a few reads too many here.
         let out_blocks = out_blocks.clone();
 
@@ -689,7 +688,6 @@ fn run_benchmark_interleaved_thread(
         block_no += 1;
 
         if molecules_sent >= molecule_count {
-            //mutants::skip - not output visible
             break;
         }
     }

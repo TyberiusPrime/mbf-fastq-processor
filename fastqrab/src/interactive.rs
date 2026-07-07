@@ -214,8 +214,8 @@ fn process_toml_interactive(
             // cov:excl-stop
         }
         if !inspect_output.is_empty() {
-            //mutants::skip
             if !result.is_empty() {
+                //mutants::skip
                 // cov:excl-start
                 //same stdout argument
                 result.push_str("\n\n");

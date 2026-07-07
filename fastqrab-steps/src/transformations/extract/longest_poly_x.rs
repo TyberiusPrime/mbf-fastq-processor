@@ -64,9 +64,7 @@ impl LongestPolyX {
             (Some(existing), None) => Some(existing),
             (None, Some(new_candidate)) => Some(new_candidate),
             (Some(existing), Some(new_candidate)) => {
-                if (new_candidate.1 == existing.1 && new_candidate.0 < existing.0) //mutants::skip
-                    //(when new_candidate.0 == existing.0 as well, both branches
-                    //return the identical (start, len) pair, so `<` vs `<=` here is unobservable)
+                if (new_candidate.1 == existing.1 && new_candidate.0 < existing.0) 
                     || new_candidate.1 > existing.1
                 {
                     Some(new_candidate)
@@ -288,12 +286,6 @@ impl LongestPolyX {
             // mutants::skip
             if stack.is_empty()
                 || prefix[i] < prefix[*stack.last().expect("Checked for empty just before")]
-            //mutants::skip
-            //(a duplicate pushed here has the same prefix value as the
-            //entry already below it on the stack; both are only ever popped together
-            //for the same `r` in the loop below, and pick_better always keeps the
-            //longer (earlier-index) one, so allowing the duplicate push changes
-            //nothing observable)
             {
                 stack.push(i);
             }
