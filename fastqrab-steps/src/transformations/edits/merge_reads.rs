@@ -462,7 +462,10 @@ fn find_best_overlap_fastp(
             last_i = i + 1;
         }
         if diff <= overlap_diff_limit
-            || (diff > overlap_diff_limit && last_i > complete_compare_require)
+            || (diff > overlap_diff_limit && last_i > complete_compare_require) //mutants::skip
+            // `>` vs `>=` is equivalent here
+            // (last_i can never land exactly on complete_compare_require while diff is over
+            // budget).
         {
             return Some((offset, overlap_len as usize));
         }
@@ -493,8 +496,11 @@ fn find_best_overlap_fastp(
             last_i = i + 1;
         }
 
+        // See the forward loop above: `>` vs `>=` is equivalent here for the same reason
+        // (last_i can never land exactly on complete_compare_require while diff is over
+        // budget).
         if diff <= overlap_diff_limit
-            || (diff > overlap_diff_limit && last_i > complete_compare_require)
+            || (diff > overlap_diff_limit && last_i > complete_compare_require) //mutants::skip
         {
             return Some((offset, overlap_len as usize));
         }
@@ -581,7 +587,10 @@ fn merge_at_offset_fastp(
         );
 
         // Non-overlapping part of seq2 - ONLY if offset > 0! to match fastp
-        if offset > 0 && overlap_len < seq2.len() {
+        // `<` vs `<=` is equivalent: overlap_len is always <= seq2.len() here, so the only
+        // case they differ on is overlap_len == seq2.len(), where seq2[overlap_len..] is an
+        // empty slice and appending it is a no-op either way.
+        if offset > 0 && overlap_len < seq2.len() { //mutants::skip
             merged_seq.extend_from_slice(&seq2[overlap_len..]);
             merged_qual.extend_from_slice(&qual2[overlap_len..]);
         }

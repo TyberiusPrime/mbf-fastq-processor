@@ -103,7 +103,10 @@ fn correct_umis_to_next_by_hamming(
     let mut umis: Vec<((GeneIdx, Umi), u32)> = umi_counts.iter().map(|(a, b)| (*a, *b)).collect();
     umis.sort_unstable();
     let mut corrections = FxIndexMap::default();
+    // `==` vs `!=` is equivalent here: chunk_by always partitions the whole slice into
+    // exactly one chunk per gene regardless of the 'sign' of the predicate, 
     for gene_chunk in umis.chunk_by(|((gene, _), _), ((b_gene, _), _)| gene == b_gene) {
+        //mutants::skip
         for &(x, x_count) in gene_chunk {
             let mut best = x;
             let mut best_count = x_count;
@@ -131,6 +134,7 @@ fn correct_umis_to_next_by_hamming(
                         // from a base guaranteed != current), so it can never equal best.1.
                         if (cmp == std::cmp::Ordering::Greater)
                             || (cmp == std::cmp::Ordering::Equal && test_umi > best.1)
+                        //mutants::skip
                         {
                             best = (x.0, test_umi);
                             best_count = y_count;
@@ -271,6 +275,48 @@ fn test_umi_correction_shifts_by_bp() {
     assert_eq!(
         corrections.get(&(GeneIdx(1), Umi(0b0101))),
         Some(&(GeneIdx(1), Umi(0b1001)))
+    );
+}
+
+/// Regression test: `current` at `bp > 0` must be extracted with `>>`, not `<<`.
+/// A `<<`-based `current` computes the wrong base at this position (0 instead of
+/// the true value 1), so it wrongly skips testing replacement 0 (thinking it's a
+/// no-op) and instead "tests" replacement 1, which just reproduces `x` itself.
+/// The one candidate that actually has a much higher count (replacement 0) is
+/// never tried, so no correction is found at all.
+#[test]
+fn test_umi_correction_uses_actual_current_base_at_higher_bp() {
+    let counts: FxIndexMap<(GeneIdx, Umi), u32> = vec![
+        ((GeneIdx(1), Umi(4)), 1u32),  // base0 = 0, base1 = 1 (0b0100)
+        ((GeneIdx(1), Umi(0)), 50u32), // same but base1 = 0 (0b0000)
+    ]
+    .into_iter()
+    .collect();
+    let corrections = correct_umis_to_next_by_hamming(&counts, 2);
+    assert_eq!(
+        corrections.get(&(GeneIdx(1), Umi(4))),
+        Some(&(GeneIdx(1), Umi(0)))
+    );
+}
+
+/// Regression test: on a tied count, the tie-break must switch to a *later*,
+/// lexically-larger candidate (`test_umi > best.1`), not just keep the first one
+/// found (which a `==` mutant would do) and not prefer the *smaller* one (which a
+/// `<` mutant would do). Umi(3) is found first (bp 0) and Umi(4) second (bp 1),
+/// both tied at count 10, with Umi(4) > Umi(3).
+#[test]
+fn test_umi_correction_tie_break_prefers_larger_umi_found_later() {
+    let counts: FxIndexMap<(GeneIdx, Umi), u32> = vec![
+        ((GeneIdx(1), Umi(0)), 1u32),
+        ((GeneIdx(1), Umi(3)), 10u32),
+        ((GeneIdx(1), Umi(4)), 10u32),
+    ]
+    .into_iter()
+    .collect();
+    let corrections = correct_umis_to_next_by_hamming(&counts, 2);
+    assert_eq!(
+        corrections.get(&(GeneIdx(1), Umi(0))),
+        Some(&(GeneIdx(1), Umi(4)))
     );
 }
 
