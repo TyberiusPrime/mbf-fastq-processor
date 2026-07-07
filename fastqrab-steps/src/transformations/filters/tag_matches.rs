@@ -76,7 +76,6 @@ impl TagUser for PartialTaggedVariant<PartialTagMatches> {
         Some(TagUsageInfo {
             declared_tag: inner.out_label.to_declared_tag(TagValueType::Bool),
             used_tags,
-            must_see_all_tags: true, // for filtering them down
             ..Default::default()
         })
     }

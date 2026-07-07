@@ -234,6 +234,7 @@ impl Step for HammingExactCounter {
                 // exactly 1..=block_no and each increments once, so
                 // blocks_counted == our block_no means they are all in.
                 while self.majority_data.blocks_counted.load(Ordering::SeqCst) < block.block_no() {
+                    //mutants::skip
                     // yeah it's a busy wait. Shouldn't last long though.
                     std::thread::yield_now(); // cov:excl-line
                 }

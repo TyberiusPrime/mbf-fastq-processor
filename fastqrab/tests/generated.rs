@@ -3045,6 +3045,50 @@ fn test_cases_x_output_x_interleaved_output() {
 
 #[test]
 
+fn test_cases_x_output_x_multiple_x_bam_head_fastq() {
+    println!("Test case is in: test_cases/output/multiple/bam_head_fastq");
+    run_test(
+        std::path::Path::new("../test_cases/output/multiple/bam_head_fastq"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_output_x_multiple_x_fasta_head_bam() {
+    println!("Test case is in: test_cases/output/multiple/fasta_head_bam");
+    run_test(
+        std::path::Path::new("../test_cases/output/multiple/fasta_head_bam"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_output_x_multiple_x_fastq_head_fasta() {
+    println!("Test case is in: test_cases/output/multiple/fastq_head_fasta");
+    run_test(
+        std::path::Path::new("../test_cases/output/multiple/fastq_head_fasta"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_output_x_multiple_x_report_head_fastq() {
+    println!("Test case is in: test_cases/output/multiple/report_head_fastq");
+    run_test(
+        std::path::Path::new("../test_cases/output/multiple/report_head_fastq"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_output_x_one_report_is_enough_x_html() {
     println!("Test case is in: test_cases/output/one_report_is_enough/html");
     run_test(
@@ -11830,6 +11874,22 @@ fn test_cases_x_single_step_x_hamming_x_string_tag_barcodes_too_close_but_same_l
 
 #[test]
 
+fn test_cases_x_single_step_x_hamming_x_string_tag_barcodes_too_close_still_different_after_split()
+{
+    println!(
+        "Test case is in: test_cases/single_step/hamming/string_tag_barcodes_too_close_still_different_after_split"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/hamming/string_tag_barcodes_too_close_still_different_after_split",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
 fn test_cases_x_single_step_x_hamming_x_string_tag_correction() {
     println!("Test case is in: test_cases/single_step/hamming/string_tag_correction");
     run_test(
@@ -13991,24 +14051,13 @@ fn test_cases_x_single_step_x_validation_x_validate_phred_fail() {
 
 #[test]
 
-fn test_cases_x_single_step_x_validation_x_validate_read_names_printable() {
-    println!("Test case is in: test_cases/single_step/validation/validate_read_names_printable");
-    run_test(
-        std::path::Path::new("../test_cases/single_step/validation/validate_read_names_printable"),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-
-fn test_cases_x_single_step_x_validation_x_validate_read_names_printable_fail() {
+fn test_cases_x_single_step_x_validation_x_validate_read_names_x_just_ok_length() {
     println!(
-        "Test case is in: test_cases/single_step/validation/validate_read_names_printable_fail"
+        "Test case is in: test_cases/single_step/validation/validate_read_names/just_ok_length"
     );
     run_test(
         std::path::Path::new(
-            "../test_cases/single_step/validation/validate_read_names_printable_fail",
+            "../test_cases/single_step/validation/validate_read_names/just_ok_length",
         ),
         "input.toml",
         1,
@@ -14017,13 +14066,39 @@ fn test_cases_x_single_step_x_validation_x_validate_read_names_printable_fail() 
 
 #[test]
 
-fn test_cases_x_single_step_x_validation_x_validate_read_names_printable_fail_too_long() {
+fn test_cases_x_single_step_x_validation_x_validate_read_names_x_printable() {
+    println!("Test case is in: test_cases/single_step/validation/validate_read_names/printable");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/validation/validate_read_names/printable"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_validation_x_validate_read_names_x_printable_fail() {
     println!(
-        "Test case is in: test_cases/single_step/validation/validate_read_names_printable_fail_too_long"
+        "Test case is in: test_cases/single_step/validation/validate_read_names/printable_fail"
     );
     run_test(
         std::path::Path::new(
-            "../test_cases/single_step/validation/validate_read_names_printable_fail_too_long",
+            "../test_cases/single_step/validation/validate_read_names/printable_fail",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+
+fn test_cases_x_single_step_x_validation_x_validate_read_names_x_printable_fail_too_long() {
+    println!(
+        "Test case is in: test_cases/single_step/validation/validate_read_names/printable_fail_too_long"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/validation/validate_read_names/printable_fail_too_long",
         ),
         "input.toml",
         1,

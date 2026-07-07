@@ -533,7 +533,7 @@ impl HammingCorrect {
 
     #[expect(clippy::unnecessary_wraps, reason = "caller ergonomics")]
     fn output_empty_string() -> Option<BString> {
-        Some(BString::from(""))
+        Some(Default::default())
     }
 }
 
@@ -673,13 +673,14 @@ impl Step for HammingCorrect {
                                         .get_index(idx)
                                         .expect("seq_to_name index out of range");
                                     let bytes = name.as_bytes();
-                                    match split {
+                                    let s = match split {
                                         Some(split_char) => bytes
                                             .splitn(2, |&c| c == split_char)
                                             .next()
                                             .unwrap_or(bytes),
                                         None => bytes,
-                                    }
+                                    };
+                                    s
                                 };
                                 let first = canonical_name(items[0]);
                                 let all_the_same =

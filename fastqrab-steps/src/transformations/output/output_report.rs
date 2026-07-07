@@ -95,12 +95,15 @@ fn take_singleton(files: &mut StepOutputFiles, id: &str) -> Option<ChunkedRecord
 }
 
 impl Step for OutputReport {
-    fn needs_serial(&self) -> bool {
-        true
-    }
-    fn transmits_premature_termination(&self) -> bool {
-        false
-    }
+    // does not need serial
+    // fn needs_serial(&self) -> bool {
+    //     true
+    // }
+    // that's relevant for the count steps, but this one
+    // can safely 'hang up',
+    // fn transmits_premature_termination(&self) -> bool {
+    //     true
+    // }
 
     fn init(
         &mut self,

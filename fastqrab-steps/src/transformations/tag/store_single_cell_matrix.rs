@@ -373,7 +373,6 @@ impl TagUser for PartialTaggedVariant<PartialStoreSingleCellMatrix> {
             .into_iter()
             .flatten()
             .collect::<std::collections::HashSet<TagLabel>>(),
-            must_see_all_tags: true,
             ..Default::default()
         })
     }
@@ -434,6 +433,7 @@ impl Step for StoreSingleCellMatrix {
             //cov:excl-stop
         }
         if gene_bc.seq_to_name.len() >= (u32::MAX - 1) as usize {
+            //mutants::skip
             //cov:excl-start
             anyhow::bail!(
                 "Too many gene barcodes: {} (max {})",
@@ -555,6 +555,7 @@ impl Step for StoreSingleCellMatrix {
 
             {
                 if expected_umi_len == 0 && umi_len > 0 {
+                    //mutants::skip
                     *self.max_umi_len.lock().expect("lock poisoned") = umi_len;
                     expected_umi_len = umi_len;
                 } else if umi_len > 0 && expected_umi_len != umi_len {

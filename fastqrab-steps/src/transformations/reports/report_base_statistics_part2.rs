@@ -59,7 +59,8 @@ impl TagUser for PartialTaggedVariant<Box<Partial_ReportBaseStatisticsPart2>> {}
 //ensure the unsafe below is actually safe.
 const _: () = {
     let mut ii = 0;
-    let mut first_larger_than_4 = BASE_TO_INDEX.len() + 1;
+    let mut first_larger_than_4 = BASE_TO_INDEX.len() + 1; //mutants::skip
+    //since it's not triggering if you don't break the BASE_TO_INDEX anyway.
     while ii < BASE_TO_INDEX.len() {
         if BASE_TO_INDEX[ii] > 4 {
             first_larger_than_4 = ii;

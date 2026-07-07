@@ -394,7 +394,7 @@ fn parse_interleaved_and_send(
                 expected_read_count,
             );
             first_read_in_block_no += block_len; //increase *after* the block
-            block_no += 1; // the receiver verifies this!
+            block_no += 1; // the receiver verifies this! pipeline_workpool::process_incoming_block
             if combiner_output_tx.send(out).is_err() {
                 break; //cov:ignore might or might not happen, timing dependent.
             }
@@ -1335,7 +1335,7 @@ impl RunStage3 {
         let records_per_molecule: u64 = merge_config
             .filter(|_| merge_bam_handles.is_some())
             .map_or(0, |mc| mc.records_per_molecule as u64);
-        let count_reads_per_tag = records_per_molecule > 0; //mutants:skip,
+        let count_reads_per_tag = records_per_molecule > 0; //mutants:skip
         // only performance difference if we do collect them unnecessarily.
 
         let output = {

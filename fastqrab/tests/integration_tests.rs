@@ -1403,7 +1403,7 @@ fn test_validate_command_no_autodetect_toml() {
     );
 }
 #[test]
-fn test_validate_command_not_followyng_symlink_to_good_tomlp() {
+fn test_validate_command_not_followyng_symlink_to_good_toml() {
     // Create temp directory
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
@@ -1433,6 +1433,39 @@ interleaved = ['read1','read2']
     assert!(stderr.contains(
         "TOML file(s) found in current directory, but none were valid TOML configuration files."
     ));
+}
+
+#[test]
+fn test_validate_command_ignoring_nontoml_even_with_right_content() {
+    // Create temp directory
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+
+    // Create config with invalid action
+    let config_path = temp_path.join("input.not-a-toml");
+    let mut config = fs::File::create(&config_path).unwrap();
+    writeln!(
+        config,
+        r"[input]
+seq = 'test.fq'
+interleaved = ['read1','read2']
+"
+    )
+    .unwrap();
+
+    // Run validate command
+    let cmd = std::process::Command::new(get_bin_path())
+        .arg("validate")
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+
+    let stderr = std::str::from_utf8(&cmd.stderr).unwrap().to_string();
+
+    assert!(
+        stderr.contains("No TOML file found in current directory by auto-detection."),
+        "missing message was '{stderr}'"
+    );
 }
 
 #[test]

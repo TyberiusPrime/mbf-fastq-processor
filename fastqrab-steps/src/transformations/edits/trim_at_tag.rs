@@ -31,7 +31,6 @@ impl TagUser for PartialTaggedVariant<PartialTrimAtTag> {
         if let Some(inner) = self.toml_value.value.as_mut() {
             Some(TagUsageInfo {
                 used_tags: vec![inner.in_label.to_used_tag(&[TagValueType::Location])],
-                must_see_all_tags: true, // for cutting them down
                 ..Default::default()
             })
         } else {

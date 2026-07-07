@@ -38,7 +38,6 @@ impl TagUser for PartialTaggedVariant<PartialTruncate> {
         if let Some(inner) = self.toml_value.value.as_mut() {
             Some(TagUsageInfo {
                 used_tags: vec![inner.if_tag.to_used_tag(&[])],
-                must_see_all_tags: true,
                 ..Default::default()
             })
         } else {

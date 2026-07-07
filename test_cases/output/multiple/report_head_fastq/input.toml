@@ -1,0 +1,24 @@
+[input]
+  read1 = "input_read1.fq"
+
+[options]
+  block_size=2
+[[step]]
+  action = 'report'
+  count = true
+  name = 'xyz'
+
+[[step]]
+  action = 'outputreport'
+json = true
+
+[[step]]
+  action = 'head'
+  n = 3
+
+[[step]]
+  action = 'outputfastq'
+compression='gzip'
+
+[output]
+  prefix = 'output'

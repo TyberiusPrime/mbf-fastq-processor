@@ -1,0 +1,18 @@
+[input]
+  read1 = "input_read1.fq"
+[options]
+  block_size=2
+
+[[step]]
+  action = 'outputfasta'
+compression='gzip'
+
+[[step]]
+  action = 'head'
+  n = 3
+
+[[step]]
+  action = 'outputbam'
+
+[output]
+  prefix = 'output'

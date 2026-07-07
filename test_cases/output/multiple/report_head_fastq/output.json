@@ -1,0 +1,24 @@
+{
+  "__": {
+    "version": "0.9.1",
+    "cwd": "/home/user/output",
+    "input_files": {
+      "interleaved": null,
+      "read1": [
+        "input_read1.fq"
+      ]
+    },
+    "repository": "https://tyberiusprime.github.io/fastqrab/"
+  },
+  "xyz": {
+    "molecule_count": 20
+  },
+  "run_info": {
+    "program_version": "0.9.1",
+    "input_toml": "[input]\n  read1 = \"input_read1.fq\"\n\n[options]\n  block_size=2\n[[step]]\n  action = 'report'\n  count = true\n  name = 'xyz'\n\n[[step]]\n  action = 'outputreport'\njson = true\n\n[[step]]\n  action = 'head'\n  n = 3\n\n[[step]]\n  action = 'outputfastq'\ncompression='gzip'\n\n[output]\n  prefix = 'output'\n",
+    "working_directory": "/home/user/output"
+  },
+  "report_order": [
+    "xyz"
+  ]
+}

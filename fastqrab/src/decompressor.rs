@@ -179,6 +179,7 @@ fn read_zstd(
             break;
         }
         if filled < chunk_size {
+            //mutants::skip - early exit, otherwise the next read would get 0.
             break;
         }
     }
@@ -206,8 +207,8 @@ fn report_throughput(bytes_since_last: u64, total_bytes: u64, elapsed_secs: f64,
 
 /// Chunk size used in peek mode: large enough that the first decoded chunk always
 /// covers the format-discriminating head, small enough to be cheap to inflate.
-#[mutants::skip] // changing this constant doesn't affect correctness, only performance
-const PEEK_CHUNK_SIZE: usize = 64 * 1024;
+// changing this constant doesn't affect correctness, only performance
+const PEEK_CHUNK_SIZE: usize = 64 * 1024; //mutants:skip
 
 /// Peek mode: write at most `n` decoded bytes to stdout, then stop without
 /// decoding the rest of the input. Format detection only needs the first few

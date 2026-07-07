@@ -97,7 +97,6 @@ impl TagUser for PartialTaggedVariant<PartialFillMissing> {
                         .to_used_tag(&[TagValueType::Location, TagValueType::String]),
                 ],
                 declared_tag: inner.out_label.to_declared_tag(output_type),
-                must_see_all_tags: false,
                 ..Default::default()
             })
         } else {

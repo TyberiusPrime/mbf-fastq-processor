@@ -233,7 +233,7 @@ pub trait TagUser {
     /// `Step::init` via [`StepInputFiles`]. Mirrors `declare_output_files`.
     /// Steps that read side-input files override this; the default returns
     /// `None`.
-    //[mutants::skip]
+    #[mutants::skip]
     fn declare_input_files(&self) -> Option<Vec<InputDeclaration>> {
         None
     }
@@ -480,9 +480,13 @@ fn extract_from_sequence(
     out_length: usize,
     anchor: &RegionAnchor,
 ) -> Option<(u32, u32)> {
-    let sub_sequence_start: isize = sub_sequence_start
-        .try_into()
-        .expect("sub_sequence_start did not fit into isize");
+    assert!(
+        sub_sequence_start == 0,
+        "sub_sequence_start != 0 was never tested and needs verification"
+    );
+    // let sub_sequence_start: isize = sub_sequence_start
+    //     .try_into()
+    //     .expect("sub_sequence_start did not fit into isize");
     let sub_sequence_end: isize = sub_sequence_end
         .try_into()
         .expect("sub_sequence_end did not fit into isize");
@@ -491,7 +495,7 @@ fn extract_from_sequence(
     let actual_start: isize = match anchor {
         RegionAnchor::Start => {
             // For start anchoring, negative values count from the beginning
-            (out_start + sub_sequence_start)
+            (out_start) // + sub_sequence_start)
                 .min(seq_len.try_into().expect("seq_len did not fit into isize"))
         }
         RegionAnchor::End => {

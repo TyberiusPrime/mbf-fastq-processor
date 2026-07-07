@@ -599,6 +599,7 @@ impl Step for OutputBAM {
     fn needs_serial(&self) -> bool {
         true
     }
+
     fn transmits_premature_termination(&self) -> bool {
         false
     }

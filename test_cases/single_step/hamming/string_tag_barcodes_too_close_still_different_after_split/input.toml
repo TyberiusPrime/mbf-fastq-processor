@@ -41,7 +41,7 @@
 
 [barcodes.barcodes]
     CGC = 'label2 a'
-    CGG = 'label2 b'
+    CGT = 'label3 b'
 
 # --- Output steps (migrated from [output]) ---
 [[step]]

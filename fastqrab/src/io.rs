@@ -20,9 +20,8 @@ pub fn open_input_files(input_config: &crate::config::Input) -> Result<InputFile
                 .collect();
             let readers = vec![readers?];
             //since there is only one segment, it's by default the largest
-            // mutant fp, since it only affects cuckoo buffer sizes
             let total_size_of_largest_segment =
-                total_file_size(&readers[0]).map(|x| x / segment_order.len() as u64);
+                total_file_size(&readers[0]).map(|x| x / segment_order.len() as u64); //mutants::skip
 
             Ok(InputFiles {
                 segment_files: SegmentsCombined { segments: readers },

@@ -76,7 +76,7 @@ impl Step for WorstQuality {
                                 .iter()
                                 .map(|r| min_quality(r, self.offset))
                                 .min()
-                                .unwrap_or(33 + Into::<i16>::into(self.offset)),
+                                .expect("No segments? That's unexpected"),
                         )
                     },
                     &mut block,

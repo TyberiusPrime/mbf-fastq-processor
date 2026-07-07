@@ -293,6 +293,7 @@ fn find_poly_tail_fastp(seq: &[u8], min_length: usize) -> Option<usize> {
 
     let mut mismatch: usize = 0;
     let mut first_g_pos = rlen - 1; //mutants::skip 
+
     //(the initial value is only observable if no 'G' ever appears in the
     //sequence, but in that case the mismatch-rate/consecutive-mismatch break below always
     //fires before `i` can reach min_length, so the function always returns None regardless

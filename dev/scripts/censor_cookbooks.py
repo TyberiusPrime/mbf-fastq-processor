@@ -29,3 +29,5 @@ for search_dir in "cookbooks", "test_cases":
                     if output != input:
                         print("Censored", fn)
                     fn.write_text(output)
+
+print("done censoring")

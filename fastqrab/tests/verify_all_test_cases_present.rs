@@ -157,8 +157,12 @@ fn verify_coobooks_censored() {
                     .as_str()
                     != "user"
             {
+                std::process::Command::new("./dev/scripts/censor_cookbooks.py")
+                    .current_dir("..")
+                    .status()
+                    .expect("Failed to run censor_cookbooks.py ");
                 panic!(
-                    "found not /home/user home path in {}: {}. Rerun ./dev/scripts/censor_cookbooks.py",
+                    "found not /home/user home path in {}: {}. Automatically rerunning  ./dev/scripts/censor_cookbooks.py, test again",
                     entry.path().display(), // cov:excl-line
                     hit.get(0).expect("Regex hit = group 0 present").as_str()
                 )

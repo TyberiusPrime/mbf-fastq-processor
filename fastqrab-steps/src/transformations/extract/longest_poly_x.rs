@@ -64,7 +64,7 @@ impl LongestPolyX {
             (Some(existing), None) => Some(existing),
             (None, Some(new_candidate)) => Some(new_candidate),
             (Some(existing), Some(new_candidate)) => {
-                if (new_candidate.1 == existing.1 && new_candidate.0 < existing.0) 
+                if (new_candidate.1 == existing.1 && new_candidate.0 < existing.0)
                     || new_candidate.1 > existing.1
                 {
                     Some(new_candidate)

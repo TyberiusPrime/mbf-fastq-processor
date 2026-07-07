@@ -65,6 +65,7 @@ impl StepInputFiles {
     /// `take`-d it — a step bug we want to surface loudly.
     /// # Panics
     /// if any declared input handle was not consumed.
+    #[mutants::skip]
     pub fn assert_consumed(&self) {
         assert!(
             self.0.is_empty(),

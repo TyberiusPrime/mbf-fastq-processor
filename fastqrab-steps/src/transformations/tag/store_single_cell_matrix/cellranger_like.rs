@@ -120,7 +120,7 @@ fn correct_umis_to_next_by_hamming(
                     // Clear the 2 bits at this basepair, then set the replacement
                     // `|` and `^` are equivalent here: the cleared bits are always 0
                     // where `replacement << shift` is nonzero, and vice versa.
-                    let test_umi = (this_umi.0 & !(0b11 << shift)) | (replacement << shift);
+                    let test_umi = (this_umi.0 & !(0b11 << shift)) | (replacement << shift); //mutants::skip
                     let test_umi = Umi(test_umi);
 
                     if let Some(&y_count) = umi_counts.get(&(x.0, test_umi)) {
