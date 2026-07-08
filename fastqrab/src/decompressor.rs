@@ -54,6 +54,20 @@ struct Args {
     /// Size of each shared-memory slot in bytes.
     #[arg(long)]
     shm_slot_size: Option<usize>,
+
+    /// Test-only hook: after the landlock sandbox is applied, try to open this
+    /// path for reading and report the outcome on stdout (`PROBE_READ_OK` /
+    /// `PROBE_READ_DENIED`), then exit without decoding anything. The normal
+    /// decode path only ever opens the input file itself, so it can't exercise
+    /// whether the sandbox denies reads elsewhere; this lets integration tests
+    /// check that directly.
+    #[arg(long, hide = true)]
+    landlock_probe_read: Option<PathBuf>,
+    /// Test-only hook: after the landlock sandbox is applied, try to create
+    /// this path and report the outcome on stdout (`PROBE_WRITE_OK` /
+    /// `PROBE_WRITE_DENIED`), then exit without decoding anything.
+    #[arg(long, hide = true)]
+    landlock_probe_write: Option<PathBuf>,
 }
 
 /// Entry point when invoked as `fastqrab __decompressor <args...>`.
@@ -81,14 +95,31 @@ pub fn run() -> Result<()> {
         args.input.clone()
     };
 
-    // Restrict filesystem reads to the input file before spawning any threads.
-    // Skipped for stdin (data arrives via an already-open fd, nothing to lock down).
+    // Restrict filesystem access before spawning any threads: reads to just
+    // the input path, and writes/creates/deletes/renames everywhere, denied
+    // outright. Stdin isn't special-cased here — `input` is already
+    // `/dev/stdin` at this point, and reading it still goes through a
+    // path-based `open()` (see below) — but `apply_landlock` degrades to
+    // write-only enforcement when that open can't be scoped to a pipe.
     #[cfg(target_os = "linux")]
-    if args.input.as_os_str() != "-" {
-        //mutants::skip
-        apply_landlock(&input).unwrap_or_else(|e| {
-            eprintln!("[decompressor] warning: landlock sandbox not applied: {e}"); // cov:excl-line
-        }); // cov:excl-line
+    apply_landlock(&input).unwrap_or_else(|e| {
+        eprintln!("[decompressor] warning: landlock sandbox not applied: {e}"); // cov:excl-line
+    }); // cov:excl-line
+
+    if let Some(probe) = args.landlock_probe_read.as_deref() {
+        //mutants::skip - test-only hook, exercised directly by its own tests
+        let ok = std::fs::File::open(probe).is_ok();
+        println!("{}", if ok { "PROBE_READ_OK" } else { "PROBE_READ_DENIED" });
+        return Ok(());
+    }
+    if let Some(probe) = args.landlock_probe_write.as_deref() {
+        //mutants::skip - test-only hook, exercised directly by its own tests
+        let ok = std::fs::File::create(probe).is_ok();
+        println!(
+            "{}",
+            if ok { "PROBE_WRITE_OK" } else { "PROBE_WRITE_DENIED" }
+        );
+        return Ok(());
     }
 
     // Peek mode only wants the first few decoded bytes, so cap the chunk size
@@ -420,31 +451,61 @@ fn write_descriptor(out: &mut impl Write, slot: u32, len: u32) -> std::io::Resul
 #[cfg(target_os = "linux")]
 #[mutants::skip] // landlock is best effort.
 fn apply_landlock(input: &std::path::Path) -> Result<()> {
-    use landlock::{ABI, AccessFs, PathBeneath, PathFd, Ruleset, RulesetAttr, RulesetCreatedAttr};
+    use landlock::{
+        ABI, Access, AccessFs, BitFlags, PathBeneath, PathFd, Ruleset, RulesetAttr,
+        RulesetCreated, RulesetCreatedAttr,
+    };
 
     let abi = ABI::V1;
-    let mut ruleset = Ruleset::default()
-        .handle_access(AccessFs::from_read(abi))?
-        .create()?
-        .add_rule(PathBeneath::new(
-            PathFd::new(input)?,
-            AccessFs::from_read(abi),
-        ))?; // cov:excl-line
 
     // Under coverage instrumentation (cargo-llvm-cov sets LLVM_PROFILE_FILE), the
-    // LLVM profiling runtime writes a .profraw on exit. With the default `%m`
-    // online-merge pattern it *opens that file for reading* to merge counters
-    // across processes — a read outside the input path, which this read-only
-    // sandbox would otherwise deny ("Permission denied", leaking onto stderr and
-    // breaking tests). Allow reads beneath the profile directory when present.
-    if let Some(profile) = std::env::var_os("LLVM_PROFILE_FILE")
-        && let Some(dir) = std::path::Path::new(&profile).parent()
-        && let Ok(fd) = PathFd::new(dir)
-    {
-        ruleset = ruleset.add_rule(PathBeneath::new(fd, AccessFs::from_read(abi)))?;
-    } // cov:excl-line
+    // LLVM profiling runtime reads and writes a .profraw on exit (the default
+    // `%m` online-merge pattern opens the existing file to merge counters
+    // across processes, then rewrites it) — both outside the input path, which
+    // this sandbox would otherwise deny ("Permission denied", leaking onto
+    // stderr and breaking tests). Allow access beneath the profile directory
+    // when present, under whichever rights `ruleset` handles.
+    fn allow_profile_dir(
+        mut ruleset: RulesetCreated,
+        access: BitFlags<AccessFs>,
+    ) -> Result<RulesetCreated> {
+        if let Some(profile) = std::env::var_os("LLVM_PROFILE_FILE")
+            && let Some(dir) = std::path::Path::new(&profile).parent()
+            && let Ok(fd) = PathFd::new(dir)
+        {
+            ruleset = ruleset.add_rule(PathBeneath::new(fd, access))?;
+        } // cov:excl-line
+        Ok(ruleset)
+    }
 
-    ruleset.restrict_self()?;
+    // Strict form: deny every read except `input`, and every write anywhere.
+    // Building the `input` rule fails (EBADFD) when `input` doesn't resolve to
+    // a real filesystem path Landlock can bind a rule to — notably
+    // `/dev/stdin` when stdin is a pipe rather than a regular file, since pipes
+    // live on `pipefs`, not on any mount hierarchy Landlock can restrict.
+    let strict = (|| -> Result<()> {
+        let access = AccessFs::from_all(abi);
+        let ruleset = Ruleset::default()
+            .handle_access(access)?
+            .create()?
+            .add_rule(PathBeneath::new(
+                PathFd::new(input)?,
+                AccessFs::from_read(abi),
+            ))?; // cov:excl-line
+        allow_profile_dir(ruleset, access)?.restrict_self()?;
+        Ok(())
+    })();
+    if strict.is_ok() {
+        return strict;
+    }
+
+    // Fall back to denying every write, leaving reads unrestricted. Still real
+    // containment — a compromised decoder can no longer write, create,
+    // delete, or rename anything on disk — for inputs (like a piped stdin)
+    // that can't be scoped down for reads.
+    let access = AccessFs::from_write(abi);
+    let ruleset = Ruleset::default().handle_access(access)?.create()?;
+    allow_profile_dir(ruleset, access)?.restrict_self()?;
     Ok(())
 }
 
